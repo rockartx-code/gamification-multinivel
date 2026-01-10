@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { CoachMessageComponent } from '../../core/components/coach-message.component';
 import { UserProfileService } from '../../services/user-profile.service';
+import { getCoachCopy } from '../../shared/coach/coach-copy';
 
 @Component({
   selector: 'app-coach-header',
@@ -44,9 +45,9 @@ import { UserProfileService } from '../../services/user-profile.service';
           </div>
           <div class="min-w-[220px]">
             <app-coach-message
-              title="Tu foco hoy"
-              message="Completa la meta activa y ejecuta la siguiente acción prioritaria."
-              tone="success"
+              [title]="coachHeaderMessage.title"
+              [message]="coachHeaderMessage.message"
+              [tone]="coachHeaderMessage.tone"
             />
           </div>
         </div>
@@ -59,10 +60,13 @@ import { UserProfileService } from '../../services/user-profile.service';
 })
 export class CoachHeaderComponent {
   private readonly userProfileService = inject(UserProfileService);
+  private readonly coachCopy = getCoachCopy();
 
   protected readonly profile = toSignal(this.userProfileService.getUserProfile(), {
     initialValue: null,
   });
+
+  protected readonly coachHeaderMessage = this.coachCopy.dashboard.header.overview;
 
   protected readonly initials = computed(() => {
     const name = this.profile()?.displayName ?? 'Usuario';
