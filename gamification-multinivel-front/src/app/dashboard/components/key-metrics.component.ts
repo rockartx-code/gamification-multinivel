@@ -19,15 +19,15 @@ import { MetricsService } from '../../services/metrics.service';
       </div>
       <div class="grid gap-4 md:grid-cols-2">
         <app-metric-card
-          title="Ingresos"
-          [value]="revenue()"
-          helper="Total generado"
+          title="Impacto"
+          [value]="impactPoints()"
+          helper="Puntos logrados"
           tone="success"
         />
         <app-metric-card
-          title="Comisiones"
-          [value]="commissions()"
-          helper="Ganancia acumulada"
+          title="Avance"
+          [value]="progressPoints()"
+          helper="Puntos de progreso"
           tone="warning"
         />
         <app-metric-card
@@ -54,20 +54,20 @@ export class KeyMetricsComponent {
     initialValue: null,
   });
 
-  private readonly currencyFormatter = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'USD',
+  private readonly pointsFormatter = new Intl.NumberFormat('es-CO', {
     maximumFractionDigits: 0,
   });
 
-  protected readonly revenue = computed(() =>
-    this.metrics() ? this.currencyFormatter.format(this.metrics()!.revenue) : '$0'
+  protected readonly impactPoints = computed(() =>
+    this.metrics()
+      ? `${this.pointsFormatter.format(this.metrics()!.impactPoints)} pts`
+      : '0 pts'
   );
 
-  protected readonly commissions = computed(() =>
+  protected readonly progressPoints = computed(() =>
     this.metrics()
-      ? this.currencyFormatter.format(this.metrics()!.commissions)
-      : '$0'
+      ? `${this.pointsFormatter.format(this.metrics()!.progressPoints)} pts`
+      : '0 pts'
   );
 
   protected readonly newMembers = computed(() =>

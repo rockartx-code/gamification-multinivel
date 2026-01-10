@@ -42,10 +42,10 @@ export interface NextAction {
 }
 
 export interface Metrics {
-  /** Total revenue generated in the current period. */
-  revenue: number;
-  /** Total commissions earned in the current period. */
-  commissions: number;
+  /** Total impact points generated in the current period. */
+  impactPoints: number;
+  /** Total progress points earned in the current period. */
+  progressPoints: number;
   /** Number of new members added in the current period. */
   newMembers: number;
   /** Conversion rate for the current period expressed as a percentage. */
@@ -83,8 +83,8 @@ export interface Achievement {
 export interface Order {
   /** Unique identifier for the order. */
   id: string;
-  /** Total monetary amount of the order. */
-  totalAmount: number;
+  /** Total points associated with the activity. */
+  impactPoints: number;
   /** ISO timestamp representing when the order was placed. */
   createdAt: string;
   /** Status of the order lifecycle. */
@@ -94,17 +94,17 @@ export interface Order {
 }
 
 export interface Commission {
-  /** Unique identifier for the commission entry. */
+  /** Unique identifier for the recognition entry. */
   id: string;
-  /** Monetary amount of the commission earned. */
-  amount: number;
-  /** Percentage rate applied to calculate the commission. */
-  ratePercent: number;
-  /** Associated order identifier that generated the commission. */
+  /** Points earned for the recognition. */
+  rewardPoints: number;
+  /** Percentage rate applied to calculate the recognition. */
+  contributionPercent: number;
+  /** Associated order identifier that generated the recognition. */
   orderId: string;
-  /** ISO timestamp for when the commission was earned. */
+  /** ISO timestamp for when the recognition was earned. */
   earnedAt: string;
-  /** Status of the commission payout. */
+  /** Status of the recognition review. */
   status: 'pending' | 'paid' | 'cancelled';
 }
 

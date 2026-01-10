@@ -60,10 +60,14 @@ import { LandingService } from '../../services/landing.service';
                   type="text"
                   formControlName="fullName"
                   autocomplete="name"
+                  [attr.aria-invalid]="showFullNameError()"
+                  [attr.aria-describedby]="showFullNameError() ? 'full-name-error' : null"
                   required
                 />
                 @if (showFullNameError()) {
-                  <p class="text-xs text-red-600">Ingresa tu nombre completo.</p>
+                  <p id="full-name-error" class="text-xs text-red-600" role="alert">
+                    Ingresa tu nombre completo.
+                  </p>
                 }
               </div>
               <div class="space-y-2">
@@ -74,10 +78,14 @@ import { LandingService } from '../../services/landing.service';
                   type="email"
                   formControlName="email"
                   autocomplete="email"
+                  [attr.aria-invalid]="showEmailError()"
+                  [attr.aria-describedby]="showEmailError() ? 'email-error' : null"
                   required
                 />
                 @if (showEmailError()) {
-                  <p class="text-xs text-red-600">Comparte un correo válido para continuar.</p>
+                  <p id="email-error" class="text-xs text-red-600" role="alert">
+                    Comparte un correo válido para continuar.
+                  </p>
                 }
               </div>
               <div class="space-y-2">

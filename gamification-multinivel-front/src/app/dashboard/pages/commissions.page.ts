@@ -2,16 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
+import { CoachMessageComponent } from '../../core/components/coach-message.component';
+import { CurrentStatusComponent } from '../../core/components/current-status.component';
 import { MetricCardComponent } from '../../core/components/metric-card.component';
 import { StatusBadgeComponent } from '../../core/components/status-badge.component';
+import { ActiveGoalComponent } from '../components/active-goal.component';
+import { NextActionComponent } from '../components/next-action.component';
 import { CommissionsService } from '../../services/commissions.service';
 
 type StatusTone = 'success' | 'warning' | 'danger';
 
 interface CommissionViewModel {
   id: string;
-  amountLabel: string;
-  rateLabel: string;
+  pointsLabel: string;
+  contributionLabel: string;
   orderId: string;
   earnedAtLabel: string;
   statusLabel: string;
@@ -20,17 +24,25 @@ interface CommissionViewModel {
 
 @Component({
   selector: 'app-commissions-page',
-  imports: [MetricCardComponent, RouterLink, StatusBadgeComponent],
+  imports: [
+    ActiveGoalComponent,
+    CoachMessageComponent,
+    CurrentStatusComponent,
+    MetricCardComponent,
+    NextActionComponent,
+    RouterLink,
+    StatusBadgeComponent,
+  ],
   template: `
     <main class="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
       <header class="flex flex-wrap items-start justify-between gap-4">
         <div class="space-y-2">
           <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Finanzas
+            Reconocimiento
           </p>
-          <h1 class="text-2xl font-semibold text-slate-900">Comisiones</h1>
+          <h1 class="text-2xl font-semibold text-slate-900">Reconocimientos</h1>
           <p class="text-sm text-slate-600">
-            Visibilidad clara de los pagos generados por la red.
+            Seguimiento claro de los puntos ganados por tu liderazgo.
           </p>
         </div>
         <a
@@ -41,35 +53,61 @@ interface CommissionViewModel {
         </a>
       </header>
 
+      <section class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div class="space-y-4">
+          <app-current-status
+            label="En crecimiento"
+            description="Suma puntos con cada reconocimiento consolidado."
+            tone="success"
+          />
+          <app-active-goal />
+          <app-next-action />
+        </div>
+        <div class="space-y-4">
+          <app-coach-message
+            [title]="coachMessage.title"
+            [message]="coachMessage.message"
+            [tone]="coachMessage.tone"
+          />
+        </div>
+      </section>
+
       <section class="mt-6 grid gap-4 md:grid-cols-3">
-        <app-metric-card title="Entradas" [value]="totalCommissions()" helper="Registros" />
         <app-metric-card
-          title="Monto"
-          [value]="totalAmount()"
+          title="Entradas"
+          [value]="totalCommissions()"
+          helper="Registros"
+        />
+        <app-metric-card
+          title="Puntos"
+          [value]="totalPoints()"
           helper="Total consolidado"
           tone="success"
         />
         <app-metric-card
           title="Pendientes"
           [value]="pendingCommissions()"
-          helper="Por liquidar"
+          helper="Por validar"
           tone="warning"
         />
       </section>
 
       <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div class="border-b border-slate-200 px-4 py-3">
-          <h2 class="text-sm font-semibold text-slate-800">Detalle de comisiones</h2>
+          <h2 class="text-sm font-semibold text-slate-800">Detalle de reconocimientos</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
+            <caption class="sr-only">
+              Reconocimientos con puntos, participación y estado actual.
+            </caption>
             <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th class="px-4 py-3" scope="col">Comisión</th>
+                <th class="px-4 py-3" scope="col">Reconocimiento</th>
                 <th class="px-4 py-3" scope="col">Orden</th>
                 <th class="px-4 py-3" scope="col">Fecha</th>
-                <th class="px-4 py-3" scope="col">Tasa</th>
-                <th class="px-4 py-3" scope="col">Monto</th>
+                <th class="px-4 py-3" scope="col">Participación</th>
+                <th class="px-4 py-3" scope="col">Puntos</th>
                 <th class="px-4 py-3" scope="col">Estado</th>
               </tr>
             </thead>
@@ -79,8 +117,8 @@ interface CommissionViewModel {
                   <td class="px-4 py-3 font-semibold text-slate-900">{{ commission.id }}</td>
                   <td class="px-4 py-3">{{ commission.orderId }}</td>
                   <td class="px-4 py-3">{{ commission.earnedAtLabel }}</td>
-                  <td class="px-4 py-3">{{ commission.rateLabel }}</td>
-                  <td class="px-4 py-3">{{ commission.amountLabel }}</td>
+                  <td class="px-4 py-3">{{ commission.contributionLabel }}</td>
+                  <td class="px-4 py-3">{{ commission.pointsLabel }}</td>
                   <td class="px-4 py-3">
                     <app-status-badge
                       [label]="commission.statusLabel"
@@ -110,9 +148,7 @@ export class CommissionsPage {
     initialValue: [],
   });
 
-  private readonly currencyFormatter = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'USD',
+  private readonly pointsFormatter = new Intl.NumberFormat('es-CO', {
     maximumFractionDigits: 0,
   });
 
@@ -122,13 +158,21 @@ export class CommissionsPage {
     year: 'numeric',
   });
 
+  protected readonly coachMessage = {
+    title: 'Coach: Reconoce tu avance',
+    message: 'Valida cada reconocimiento y suma puntos consistentes.',
+    tone: 'success' as const,
+  };
+
   protected readonly totalCommissions = computed(() => `${this.commissions().length}`);
 
-  protected readonly totalAmount = computed(() =>
-    this.currencyFormatter.format(
-      this.commissions().reduce((total, commission) => total + commission.amount, 0)
-    )
-  );
+  protected readonly totalPoints = computed(() => {
+    const points = this.commissions().reduce(
+      (total, commission) => total + commission.rewardPoints,
+      0
+    );
+    return `${this.pointsFormatter.format(points)} pts`;
+  });
 
   protected readonly pendingCommissions = computed(() =>
     `${this.commissions().filter((commission) => commission.status === 'pending').length}`
@@ -137,8 +181,8 @@ export class CommissionsPage {
   protected readonly commissionsView = computed<CommissionViewModel[]>(() =>
     this.commissions().map((commission) => ({
       id: commission.id,
-      amountLabel: this.currencyFormatter.format(commission.amount),
-      rateLabel: `${commission.ratePercent}%`,
+      pointsLabel: `${this.pointsFormatter.format(commission.rewardPoints)} pts`,
+      contributionLabel: `${commission.contributionPercent}%`,
       orderId: commission.orderId,
       earnedAtLabel: this.dateFormatter.format(new Date(commission.earnedAt)),
       statusLabel: this.getStatusLabel(commission.status),
@@ -149,7 +193,7 @@ export class CommissionsPage {
   private getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       pending: 'Pendiente',
-      paid: 'Pagada',
+      paid: 'Validada',
       cancelled: 'Cancelada',
     };
     return labels[status] ?? 'Pendiente';
