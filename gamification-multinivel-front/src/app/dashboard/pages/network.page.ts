@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
-import { CoachMessageComponent } from '../../core/components/coach-message.component';
 import { CurrentStatusComponent } from '../../core/components/current-status.component';
 import { MetricCardComponent } from '../../core/components/metric-card.component';
 import { StatusBadgeComponent } from '../../core/components/status-badge.component';
 import { ActiveGoalComponent } from '../components/active-goal.component';
+import { CoachHeaderComponent } from '../components/coach-header.component';
 import { NextActionComponent } from '../components/next-action.component';
 import { NetworkService } from '../../services/network.service';
 
@@ -25,7 +25,7 @@ interface NetworkMemberViewModel {
   selector: 'app-network-page',
   imports: [
     ActiveGoalComponent,
-    CoachMessageComponent,
+    CoachHeaderComponent,
     CurrentStatusComponent,
     MetricCardComponent,
     NextActionComponent,
@@ -34,6 +34,13 @@ interface NetworkMemberViewModel {
   ],
   template: `
     <main class="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
+      <app-coach-header
+        [messageTitle]="coachMessage.title"
+        [messageBody]="coachMessage.message"
+        [messageTone]="coachMessage.tone"
+        actionLabel="Contactar líderes clave"
+        actionHref="#next-action"
+      />
       <header class="flex flex-wrap items-start justify-between gap-4">
         <div class="space-y-2">
           <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -52,23 +59,14 @@ interface NetworkMemberViewModel {
         </a>
       </header>
 
-      <section class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div class="space-y-4">
-          <app-current-status
-            label="Equipo activo"
-            description="Acompaña a los líderes con más potencial hoy."
-            tone="success"
-          />
-          <app-active-goal />
-          <app-next-action />
-        </div>
-        <div class="space-y-4">
-          <app-coach-message
-            [title]="coachMessage.title"
-            [message]="coachMessage.message"
-            [tone]="coachMessage.tone"
-          />
-        </div>
+      <section class="mt-6 space-y-4">
+        <app-current-status
+          label="Equipo activo"
+          description="Acompaña a los líderes con más potencial hoy."
+          tone="success"
+        />
+        <app-active-goal />
+        <app-next-action />
       </section>
 
       <section class="mt-6 grid gap-4 md:grid-cols-3">

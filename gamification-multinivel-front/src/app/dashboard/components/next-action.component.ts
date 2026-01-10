@@ -8,6 +8,10 @@ import { NextActionsService } from '../../services/next-actions.service';
 @Component({
   selector: 'app-next-action',
   imports: [StatusBadgeComponent],
+  host: {
+    id: 'next-action',
+    class: 'scroll-mt-24',
+  },
   template: `
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div class="flex items-center justify-between">
