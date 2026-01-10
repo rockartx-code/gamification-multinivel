@@ -137,3 +137,27 @@ export interface Landing {
   /** Highlights shown as bullet points or cards. */
   highlights: string[];
 }
+
+export interface AuthCoachMessage {
+  /** Unique identifier for the coach message. */
+  id: string;
+  /** Short headline that names the guidance from the coach. */
+  title: string;
+  /** Message body shown inline near the auth form. */
+  body: string;
+}
+
+export interface AuthContext {
+  /** Main headline for the authentication view. */
+  title: string;
+  /** Supporting subtitle under the headline. */
+  subtitle: string;
+  /** Helper text reassuring the user about the flow. */
+  helperText: string;
+  /** Label for the primary submit action. */
+  primaryActionLabel: string;
+  /** Label for the secondary submit action. */
+  secondaryActionLabel: string;
+  /** Inline guidance from the coach. */
+  coachMessages: AuthCoachMessage[];
+}
