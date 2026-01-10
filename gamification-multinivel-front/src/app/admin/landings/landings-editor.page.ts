@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, WritableSignal } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,6 +12,8 @@ type LandingFormValue = {
   slug: string;
   status: 'Borrador' | 'Publicado';
 };
+
+type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
 
 @Component({
   selector: 'app-landings-editor-page',
@@ -31,6 +33,26 @@ type LandingFormValue = {
 
       <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <form class="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" [formGroup]="form">
+          @if (saveState() === 'success') {
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+              Landing guardada correctamente.
+            </div>
+          }
+          @if (saveState() === 'error') {
+            <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+              Revisa los campos obligatorios antes de guardar.
+            </div>
+          }
+          @if (previewState() === 'success') {
+            <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800" role="status">
+              Previsualización actualizada (mock).
+            </div>
+          }
+          @if (previewState() === 'error') {
+            <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+              Completa los campos obligatorios antes de previsualizar.
+            </div>
+          }
           <div class="space-y-2">
             <label class="text-sm font-semibold text-slate-700" for="h1">H1</label>
             <input
@@ -110,12 +132,21 @@ type LandingFormValue = {
           <div class="flex flex-wrap gap-3 pt-2">
             <button
               class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              [class.opacity-70]="isSaving()"
+              [class.pointer-events-none]="isSaving()"
               type="button"
+              (click)="handleSave()"
             >
-              Guardar
+              {{ isSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
-            <button class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold" type="button">
-              Previsualizar
+            <button
+              class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              [class.opacity-70]="isPreviewing()"
+              [class.pointer-events-none]="isPreviewing()"
+              type="button"
+              (click)="handlePreview()"
+            >
+              {{ isPreviewing() ? 'Actualizando...' : 'Previsualizar' }}
             </button>
           </div>
         </form>
@@ -147,7 +178,7 @@ type LandingFormValue = {
                 </div>
               }
               <button
-                class="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white"
+                class="inline-flex items-center justify-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700"
                 type="button"
               >
                 {{ preview().ctaLabel }}
@@ -163,6 +194,9 @@ type LandingFormValue = {
 export class LandingsEditorPage {
   private readonly fb = inject(NonNullableFormBuilder);
 
+  readonly saveState = signal<UiRequestState>('idle');
+  readonly previewState = signal<UiRequestState>('idle');
+
   readonly form = this.fb.group({
     h1: this.fb.control('Impulsa tu red con retos y recompensas', Validators.required),
     text: this.fb.control(
@@ -176,6 +210,8 @@ export class LandingsEditorPage {
   });
 
   readonly statuses = signal<LandingFormValue['status'][]>(['Borrador', 'Publicado']);
+  readonly isSaving = computed(() => this.saveState() === 'loading');
+  readonly isPreviewing = computed(() => this.previewState() === 'loading');
 
   private readonly formValue = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
@@ -193,4 +229,36 @@ export class LandingsEditorPage {
       status: value.status,
     };
   });
+
+  handleSave(): void {
+    this.previewState.set('idle');
+    this.triggerMockRequest(this.saveState);
+  }
+
+  handlePreview(): void {
+    this.saveState.set('idle');
+    this.triggerMockRequest(this.previewState);
+  }
+
+  private triggerMockRequest(state: WritableSignal<UiRequestState>): void {
+    if (this.form.invalid) {
+      state.set('error');
+      this.clearStateLater(state, 'error');
+      return;
+    }
+
+    state.set('loading');
+    setTimeout(() => {
+      state.set('success');
+      this.clearStateLater(state, 'success');
+    }, 800);
+  }
+
+  private clearStateLater(state: WritableSignal<UiRequestState>, expected: UiRequestState): void {
+    setTimeout(() => {
+      if (state() === expected) {
+        state.set('idle');
+      }
+    }, 2400);
+  }
 }
