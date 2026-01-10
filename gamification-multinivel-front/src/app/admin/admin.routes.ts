@@ -7,4 +7,8 @@ export const adminRoutes: Routes = [
     path: '',
     component: AdminPage,
   },
+  {
+    path: 'landings',
+    loadChildren: () => import('./landings/landings.routes').then((m) => m.landingsRoutes),
+  },
 ];
