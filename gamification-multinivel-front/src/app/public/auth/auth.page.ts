@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../services/auth.service';
+import { getCoachCopy } from '../../shared/coach/coach-copy';
 import { AuthFormComponent } from './components/auth-form.component';
 import { CoachMessageInlineComponent } from './components/coach-message-inline.component';
 
@@ -28,7 +29,7 @@ import { CoachMessageInlineComponent } from './components/coach-message-inline.c
         </div>
 
         <aside class="auth-coach" aria-label="Mensajes del coach">
-          <h2 class="auth-coach__title">Guía del coach</h2>
+          <h2 class="auth-coach__title">{{ coachTitle }}</h2>
           <div class="auth-coach__list">
             @for (message of authContext()?.coachMessages ?? []; track message.id) {
               <app-coach-message-inline [message]="message" />
@@ -113,6 +114,8 @@ import { CoachMessageInlineComponent } from './components/coach-message-inline.c
 })
 export class AuthPage {
   private readonly authService = inject(AuthService);
+  private readonly coachCopy = getCoachCopy();
 
   readonly authContext = toSignal(this.authService.getAuthContext(), { initialValue: null });
+  protected readonly coachTitle = this.coachCopy.auth.default.title;
 }

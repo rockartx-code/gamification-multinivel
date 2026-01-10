@@ -1,4 +1,7 @@
 import { AuthContext } from '../domain/models';
+import { getCoachCopy } from '../shared/coach/coach-copy';
+
+const coachCopy = getCoachCopy();
 
 export const authFixture: AuthContext = {
   title: 'Bienvenido al panel multinivel',
@@ -6,21 +9,5 @@ export const authFixture: AuthContext = {
   helperText: 'Tus datos están protegidos y solo se usan para personalizar tu experiencia.',
   primaryActionLabel: 'Ingresar',
   secondaryActionLabel: 'Crear cuenta',
-  coachMessages: [
-    {
-      id: 'coach-1',
-      title: 'Coach: Enfócate en el primer paso',
-      body: 'Completa tu acceso para desbloquear la misión inicial y sumar tus primeros puntos.',
-    },
-    {
-      id: 'coach-2',
-      title: 'Coach: Mantén tu ritmo',
-      body: 'Una vez dentro, revisa tu objetivo semanal para avanzar sin distracciones.',
-    },
-    {
-      id: 'coach-3',
-      title: 'Coach: Aprovecha tu red',
-      body: 'Conecta con tu equipo para recibir apoyo y recomendaciones personalizadas.',
-    },
-  ],
+  coachMessages: coachCopy.auth.default.messages,
 };
