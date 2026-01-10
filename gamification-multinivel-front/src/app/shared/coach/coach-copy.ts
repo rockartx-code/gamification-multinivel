@@ -5,6 +5,7 @@ type StatusTone = 'success' | 'warning' | 'danger';
 export type CoachLocale = 'es';
 export type AuthCoachState = 'default';
 export type DashboardCoachState = 'overview';
+export type StoreCoachState = 'catalog' | 'cart' | 'quote' | 'checkout';
 
 export interface CoachCopy {
   auth: Record<AuthCoachState, { title: string; messages: AuthCoachMessage[] }>;
@@ -18,6 +19,13 @@ export interface CoachCopy {
       }
     >;
   };
+  store: Record<
+    StoreCoachState,
+    {
+      title: string;
+      message: string;
+    }
+  >;
 }
 
 const ES_COACH_COPY: CoachCopy = {
@@ -50,6 +58,28 @@ const ES_COACH_COPY: CoachCopy = {
         message: 'Completa la meta activa y ejecuta la siguiente acción prioritaria.',
         tone: 'success',
       },
+    },
+  },
+  store: {
+    catalog: {
+      title: 'Coach: Prioriza lo que rota rápido',
+      message:
+        'Elige productos con alta demanda para asegurar recompras y mantener tu volumen mensual.',
+    },
+    cart: {
+      title: 'Coach: Ajusta antes de enviar',
+      message:
+        'Verifica cantidades y bonos aplicados para proteger tu margen y entregar una oferta clara.',
+    },
+    quote: {
+      title: 'Coach: Cierra con valor',
+      message:
+        'Incluye beneficios y próximos pasos para que tu cliente tome acción hoy mismo.',
+    },
+    checkout: {
+      title: 'Coach: Confirma y celebra',
+      message:
+        'Asegura el envío y comunica el seguimiento para fortalecer la confianza del cliente.',
     },
   },
 };

@@ -14,6 +14,11 @@ export const routes: Routes = [
     loadChildren: () => import('./admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    path: 'store',
+    canMatch: [userGuard],
+    loadChildren: () => import('./store/store.routes').then((m) => m.storeRoutes),
+  },
+  {
     path: '',
     canMatch: [publicGuard],
     loadChildren: () => import('./public/public.routes').then((m) => m.publicRoutes),
