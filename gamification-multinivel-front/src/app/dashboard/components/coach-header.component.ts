@@ -1,16 +1,18 @@
 import { NgOptimizedImage } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { CoachMessageComponent } from '../../core/components/coach-message.component';
 import { UserProfileService } from '../../services/user-profile.service';
 import { getCoachCopy } from '../../shared/coach/coach-copy';
 
+type StatusTone = 'success' | 'warning' | 'danger';
+
 @Component({
   selector: 'app-coach-header',
   imports: [NgOptimizedImage, CoachMessageComponent],
   template: `
-    <section class="rounded-2xl bg-white p-6 shadow-sm">
+    <section class="sticky top-4 z-20 rounded-2xl bg-white p-6 shadow-sm">
       @if (profile(); as profile) {
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-4">
@@ -43,12 +45,18 @@ import { getCoachCopy } from '../../shared/coach/coach-copy';
               </p>
             </div>
           </div>
-          <div class="min-w-[220px]">
+          <div class="min-w-[220px] space-y-3">
             <app-coach-message
-              [title]="coachHeaderMessage.title"
-              [message]="coachHeaderMessage.message"
-              [tone]="coachHeaderMessage.tone"
+              [title]="messageTitle()"
+              [message]="messageBody()"
+              [tone]="messageTone()"
             />
+            <a
+              class="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [attr.href]="actionHref()"
+            >
+              {{ actionLabel() }}
+            </a>
           </div>
         </div>
       } @else {
@@ -62,11 +70,15 @@ export class CoachHeaderComponent {
   private readonly userProfileService = inject(UserProfileService);
   private readonly coachCopy = getCoachCopy();
 
+  readonly messageTitle = input(this.coachCopy.dashboard.header.overview.title);
+  readonly messageBody = input(this.coachCopy.dashboard.header.overview.message);
+  readonly messageTone = input<StatusTone>(this.coachCopy.dashboard.header.overview.tone);
+  readonly actionLabel = input('Ir a la siguiente acción');
+  readonly actionHref = input('#next-action');
+
   protected readonly profile = toSignal(this.userProfileService.getUserProfile(), {
     initialValue: null,
   });
-
-  protected readonly coachHeaderMessage = this.coachCopy.dashboard.header.overview;
 
   protected readonly initials = computed(() => {
     const name = this.profile()?.displayName ?? 'Usuario';
