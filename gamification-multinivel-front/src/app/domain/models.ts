@@ -126,6 +126,10 @@ export interface Landing {
   heroTitle: string;
   /** Supporting subtitle shown under the hero title. */
   heroSubtitle: string;
+  /** URL for the hero image asset. */
+  heroImageUrl: string;
+  /** Alternative text describing the hero image. */
+  heroImageAlt: string;
   /** Label for the primary call-to-action button. */
   ctaLabel: string;
   /** Target URL for the call-to-action. */
