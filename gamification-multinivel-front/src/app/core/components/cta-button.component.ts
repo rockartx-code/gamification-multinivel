@@ -17,6 +17,7 @@ const TONE_CLASSES: Record<StatusTone, string> = {
   template: `
     <button
       class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+      [class.w-full]="fullWidth()"
       [class]="toneClasses()"
       [attr.type]="type()"
       [disabled]="disabled()"
@@ -31,6 +32,7 @@ export class CTAButtonComponent {
   type = input<ButtonType>('button');
   disabled = input<boolean>(false);
   tone = input<StatusTone>('success');
+  fullWidth = input<boolean>(false);
 
   protected readonly toneClasses = computed(() => TONE_CLASSES[this.tone()]);
 }
