@@ -2,7 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
+import { CoachMessageComponent } from '../../core/components/coach-message.component';
+import { CurrentStatusComponent } from '../../core/components/current-status.component';
 import { MetricCardComponent } from '../../core/components/metric-card.component';
+import { ActiveGoalComponent } from '../components/active-goal.component';
+import { NextActionComponent } from '../components/next-action.component';
 import { LandingsService } from '../../services/landings.service';
 
 interface LandingViewModel {
@@ -14,7 +18,14 @@ interface LandingViewModel {
 
 @Component({
   selector: 'app-landings-page',
-  imports: [MetricCardComponent, RouterLink],
+  imports: [
+    ActiveGoalComponent,
+    CoachMessageComponent,
+    CurrentStatusComponent,
+    MetricCardComponent,
+    NextActionComponent,
+    RouterLink,
+  ],
   template: `
     <main class="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
       <header class="flex flex-wrap items-start justify-between gap-4">
@@ -34,6 +45,25 @@ interface LandingViewModel {
           Volver al tablero
         </a>
       </header>
+
+      <section class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div class="space-y-4">
+          <app-current-status
+            label="Contenido activo"
+            description="Alinea mensajes y CTA para mantener el impulso."
+            tone="success"
+          />
+          <app-active-goal />
+          <app-next-action />
+        </div>
+        <div class="space-y-4">
+          <app-coach-message
+            [title]="coachMessage.title"
+            [message]="coachMessage.message"
+            [tone]="coachMessage.tone"
+          />
+        </div>
+      </section>
 
       <section class="mt-6 grid gap-4 md:grid-cols-3">
         <app-metric-card title="Landings" [value]="totalLandings()" helper="Activas" />
@@ -57,6 +87,9 @@ interface LandingViewModel {
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
+            <caption class="sr-only">
+              Landings activas con CTA, highlights y URL.
+            </caption>
             <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th class="px-4 py-3" scope="col">Landing</th>
@@ -96,6 +129,12 @@ export class LandingsPage {
   private readonly landings = toSignal(this.landingsService.getLandings(), {
     initialValue: [],
   });
+
+  protected readonly coachMessage = {
+    title: 'Coach: Ajusta el mensaje',
+    message: 'Refuerza los highlights con más tracción y renueva el CTA clave.',
+    tone: 'success' as const,
+  };
 
   protected readonly totalLandings = computed(() => `${this.landings().length}`);
 

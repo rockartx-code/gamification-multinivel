@@ -2,8 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
+import { CoachMessageComponent } from '../../core/components/coach-message.component';
+import { CurrentStatusComponent } from '../../core/components/current-status.component';
 import { MetricCardComponent } from '../../core/components/metric-card.component';
 import { StatusBadgeComponent } from '../../core/components/status-badge.component';
+import { ActiveGoalComponent } from '../components/active-goal.component';
+import { NextActionComponent } from '../components/next-action.component';
 import { NetworkService } from '../../services/network.service';
 
 type StatusTone = 'success' | 'warning';
@@ -19,7 +23,15 @@ interface NetworkMemberViewModel {
 
 @Component({
   selector: 'app-network-page',
-  imports: [MetricCardComponent, RouterLink, StatusBadgeComponent],
+  imports: [
+    ActiveGoalComponent,
+    CoachMessageComponent,
+    CurrentStatusComponent,
+    MetricCardComponent,
+    NextActionComponent,
+    RouterLink,
+    StatusBadgeComponent,
+  ],
   template: `
     <main class="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
       <header class="flex flex-wrap items-start justify-between gap-4">
@@ -39,6 +51,25 @@ interface NetworkMemberViewModel {
           Volver al tablero
         </a>
       </header>
+
+      <section class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div class="space-y-4">
+          <app-current-status
+            label="Equipo activo"
+            description="Acompaña a los líderes con más potencial hoy."
+            tone="success"
+          />
+          <app-active-goal />
+          <app-next-action />
+        </div>
+        <div class="space-y-4">
+          <app-coach-message
+            [title]="coachMessage.title"
+            [message]="coachMessage.message"
+            [tone]="coachMessage.tone"
+          />
+        </div>
+      </section>
 
       <section class="mt-6 grid gap-4 md:grid-cols-3">
         <app-metric-card title="Integrantes" [value]="totalMembers()" helper="Total en red" />
@@ -62,6 +93,9 @@ interface NetworkMemberViewModel {
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
+            <caption class="sr-only">
+              Integrantes con nivel, fecha de alta y estado actual.
+            </caption>
             <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th class="px-4 py-3" scope="col">Integrante</th>
@@ -110,6 +144,12 @@ export class NetworkPage {
     month: 'short',
     year: 'numeric',
   });
+
+  protected readonly coachMessage = {
+    title: 'Coach: Lidera con claridad',
+    message: 'Revisa quién necesita apoyo y celebra los avances visibles.',
+    tone: 'success' as const,
+  };
 
   protected readonly totalMembers = computed(() => `${this.members().length}`);
 
