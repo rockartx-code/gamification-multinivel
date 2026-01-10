@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
+import { SessionService } from '../../core/session.service';
 import { AuthService } from '../../services/auth.service';
 import { getCoachCopy } from '../../shared/coach/coach-copy';
 import { AuthFormComponent } from './components/auth-form.component';
@@ -24,14 +25,15 @@ import { CoachMessageInlineComponent } from './components/coach-message-inline.c
               [primaryActionLabel]="context.primaryActionLabel"
               [secondaryActionLabel]="context.secondaryActionLabel"
               [helperText]="context.helperText"
+              (submittedAction)="handleAuthAction($event)"
             />
           }
         </div>
 
         <aside class="auth-coach" aria-label="Mensajes del coach">
-          <h2 class="auth-coach__title">{{ coachTitle }}</h2>
+          <h2 class="auth-coach__title">{{ coachTitle() }}</h2>
           <div class="auth-coach__list">
-            @for (message of authContext()?.coachMessages ?? []; track message.id) {
+            @for (message of coachMessages(); track message.id) {
               <app-coach-message-inline [message]="message" />
             }
           </div>
@@ -114,8 +116,41 @@ import { CoachMessageInlineComponent } from './components/coach-message-inline.c
 })
 export class AuthPage {
   private readonly authService = inject(AuthService);
+  private readonly sessionService = inject(SessionService);
   private readonly coachCopy = getCoachCopy();
+  private readonly authAction = signal<'login' | 'register' | null>(null);
 
-  readonly authContext = toSignal(this.authService.getAuthContext(), { initialValue: null });
-  protected readonly coachTitle = this.coachCopy.auth.default.title;
+  private readonly baseAuthContext = toSignal(this.authService.getAuthContext(), { initialValue: null });
+  readonly authContext = computed(() => {
+    const context = this.baseAuthContext();
+    if (!context) {
+      return null;
+    }
+
+    const referralContext = this.sessionService.landingContext();
+    if (!referralContext) {
+      return context;
+    }
+
+    return {
+      ...context,
+      subtitle: `${context.subtitle} Tu registro quedará asociado a la campaña ${referralContext.landingSlug}.`,
+    };
+  });
+  protected readonly coachTitle = computed(() => {
+    if (this.authAction() === 'register') {
+      return this.coachCopy.auth.registrationSuccess.title;
+    }
+    return this.coachCopy.auth.default.title;
+  });
+  protected readonly coachMessages = computed(() => {
+    if (this.authAction() === 'register') {
+      return this.coachCopy.auth.registrationSuccess.messages;
+    }
+    return this.authContext()?.coachMessages ?? [];
+  });
+
+  handleAuthAction(action: 'login' | 'register'): void {
+    this.authAction.set(action);
+  }
 }

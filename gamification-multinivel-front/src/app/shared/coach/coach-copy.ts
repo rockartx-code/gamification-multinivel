@@ -3,7 +3,7 @@ import { AuthCoachMessage } from '../../domain/models';
 type StatusTone = 'success' | 'warning' | 'danger';
 
 export type CoachLocale = 'es';
-export type AuthCoachState = 'default';
+export type AuthCoachState = 'default' | 'registrationSuccess';
 export type DashboardCoachState = 'overview';
 export type StoreCoachState = 'catalog' | 'cart' | 'quote' | 'checkout';
 
@@ -47,6 +47,26 @@ const ES_COACH_COPY: CoachCopy = {
           id: 'coach-3',
           title: 'Coach: Aprovecha tu red',
           body: 'Conecta con tu equipo para recibir apoyo y recomendaciones personalizadas.',
+        },
+      ],
+    },
+    registrationSuccess: {
+      title: 'Coach: Registro confirmado',
+      messages: [
+        {
+          id: 'coach-register-1',
+          title: 'Coach: Tu cuenta ya está en marcha',
+          body: 'Revisa tu correo para activar el acceso y confirmar tu información.',
+        },
+        {
+          id: 'coach-register-2',
+          title: 'Coach: Prepara tu siguiente paso',
+          body: 'Mientras validamos tu registro, reúne los datos de tu equipo para acelerar tu arranque.',
+        },
+        {
+          id: 'coach-register-3',
+          title: 'Coach: Mantén la conexión',
+          body: 'Comparte el enlace de onboarding con tu red para sumar más puntos desde el inicio.',
         },
       ],
     },

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
@@ -42,7 +42,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
       </div>
 
       @if (submitted()) {
-        <p class="status" role="status">Gracias, revisa tus datos para continuar.</p>
+        <p class="status" role="status">{{ statusMessage() }}</p>
       }
     </form>
   `,
@@ -133,6 +133,7 @@ export class AuthFormComponent {
   readonly primaryActionLabel = input.required<string>();
   readonly secondaryActionLabel = input.required<string>();
   readonly helperText = input.required<string>();
+  readonly submittedAction = output<'login' | 'register'>();
 
   private readonly formBuilder = inject(FormBuilder);
   readonly form = this.formBuilder.group({
@@ -140,8 +141,18 @@ export class AuthFormComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
-  private readonly submitState = signal<'idle' | 'submitted'>('idle');
-  readonly submitted = computed(() => this.submitState() === 'submitted');
+  private readonly submitState = signal<'idle' | 'login' | 'register'>('idle');
+  readonly submitted = computed(() => this.submitState() !== 'idle');
+  readonly statusMessage = computed(() => {
+    switch (this.submitState()) {
+      case 'register':
+        return 'Registro exitoso. Te enviaremos un correo con los siguientes pasos.';
+      case 'login':
+        return 'Acceso confirmado. Estamos preparando tu panel.';
+      default:
+        return '';
+    }
+  });
 
   handleSubmit(): void {
     if (this.form.invalid) {
@@ -149,10 +160,17 @@ export class AuthFormComponent {
       return;
     }
 
-    this.submitState.set('submitted');
+    this.submitState.set('login');
+    this.submittedAction.emit('login');
   }
 
   handleSecondary(): void {
-    this.submitState.set('submitted');
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.submitState.set('register');
+    this.submittedAction.emit('register');
   }
 }

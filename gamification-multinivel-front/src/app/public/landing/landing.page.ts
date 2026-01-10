@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
 import { CTAButtonComponent } from '../../core/components/cta-button.component';
+import { SessionService } from '../../core/session.service';
 import { LandingService } from '../../services/landing.service';
 
 @Component({
@@ -123,6 +124,7 @@ export class LandingPage {
   private readonly landingService = inject(LandingService);
   private readonly route = inject(ActivatedRoute);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly sessionService = inject(SessionService);
 
   protected readonly landing = toSignal(this.landingService.getLanding(), {
     initialValue: null,
@@ -148,7 +150,7 @@ export class LandingPage {
       const referrerUserId = this.referrerUserId();
       const landingSlug = this.landingSlug();
       if (referrerUserId && landingSlug) {
-        this.landingService.saveReferralContext(referrerUserId, landingSlug);
+        this.sessionService.saveLandingContext(referrerUserId, landingSlug);
       }
     });
   }
