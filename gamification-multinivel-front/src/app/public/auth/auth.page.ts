@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { SessionService } from '../../core/session.service';
 import { AuthService } from '../../services/auth.service';
 import { getCoachCopy } from '../../shared/coach/coach-copy';
-import { AuthFormComponent } from './components/auth-form.component';
+import { AuthFormComponent, AuthFormPayload } from './components/auth-form.component';
 import { CoachMessageInlineComponent } from './components/coach-message-inline.component';
 
 @Component({
@@ -150,7 +150,12 @@ export class AuthPage {
     return this.authContext()?.coachMessages ?? [];
   });
 
-  handleAuthAction(action: 'login' | 'register'): void {
-    this.authAction.set(action);
+  handleAuthAction(payload: AuthFormPayload): void {
+    this.authAction.set(payload.action);
+    if (payload.action === 'login') {
+      this.authService.login(payload.email, payload.password).subscribe({
+        error: () => null,
+      });
+    }
   }
 }

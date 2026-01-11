@@ -161,3 +161,16 @@ export interface AuthContext {
   /** Inline guidance from the coach. */
   coachMessages: AuthCoachMessage[];
 }
+
+export type UserRole = 'public' | 'user' | 'admin';
+
+export interface AuthSession {
+  /** Auth token assigned by the mock service. */
+  token: string;
+  /** Role assigned to the authenticated user. */
+  role: UserRole;
+  /** Email for the signed-in account. */
+  email: string;
+  /** Unix timestamp in milliseconds when the session expires. */
+  expiresAt: number;
+}
