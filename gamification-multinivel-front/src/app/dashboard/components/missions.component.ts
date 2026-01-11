@@ -10,25 +10,25 @@ import { MissionsService } from '../../services/missions.service';
   selector: 'app-missions',
   imports: [ProgressBarComponent, StatusBadgeComponent],
   template: `
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section class="app-card app-card--soft p-6">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p class="app-eyebrow">
           Misiones
         </p>
-        <h2 class="text-xl font-semibold text-slate-900">Objetivos en curso</h2>
+        <h2 class="text-xl font-semibold text-white">Objetivos en curso</h2>
       </div>
       <div class="mt-5 space-y-4">
         @for (mission of missions(); track mission.id) {
-          <article class="rounded-xl border border-slate-100 p-4">
+          <article class="app-card app-card--soft p-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 class="text-sm font-semibold text-slate-900">
+                <h3 class="text-sm font-semibold text-white">
                   {{ mission.title }}
                 </h3>
-                <p class="mt-1 text-sm text-slate-600">
+                <p class="mt-1 text-sm text-slate-300">
                   {{ mission.description }}
                 </p>
-                <p class="mt-2 text-xs font-medium text-slate-500">
+                <p class="mt-2 text-xs font-medium text-slate-400">
                   Recompensa: {{ mission.rewardPoints }} puntos
                 </p>
               </div>

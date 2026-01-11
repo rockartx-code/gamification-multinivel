@@ -19,44 +19,45 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
   selector: 'app-landings-editor-page',
   imports: [NgOptimizedImage, ReactiveFormsModule, RouterLink],
   template: `
-    <main class="space-y-6 bg-slate-50 px-4 py-6 md:px-8">
-      <header class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p class="text-sm font-semibold uppercase text-slate-500">Admin / Landings</p>
-          <h1 class="text-2xl font-semibold text-slate-900">Editor de landing</h1>
-          <p class="text-sm text-slate-600">
-            Completa los campos principales y revisa la vista previa en vivo (mock).
-          </p>
-        </div>
-        <a class="text-sm font-semibold text-slate-600" routerLink="/admin/landings">Volver</a>
-      </header>
+    <main class="app-page">
+      <div class="app-shell space-y-6">
+        <header class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p class="app-eyebrow">Admin / Landings</p>
+            <h1 class="text-2xl font-semibold text-white">Editor de landing</h1>
+            <p class="text-sm text-slate-300">
+              Completa los campos principales y revisa la vista previa en vivo (mock).
+            </p>
+          </div>
+          <a class="app-link text-sm" routerLink="/admin/landings">Volver</a>
+        </header>
 
-      <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <form class="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" [formGroup]="form">
+        <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <form class="app-card app-card--soft space-y-4 p-6" [formGroup]="form">
           @if (saveState() === 'success') {
-            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+            <div class="app-message app-message--success text-sm text-emerald-100" role="status">
               Landing guardada correctamente.
             </div>
           }
           @if (saveState() === 'error') {
-            <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+            <div class="app-message app-message--danger text-sm text-rose-100" role="alert">
               Revisa los campos obligatorios antes de guardar.
             </div>
           }
           @if (previewState() === 'success') {
-            <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800" role="status">
+            <div class="app-message app-message--success text-sm text-slate-100" role="status">
               Previsualización actualizada (mock).
             </div>
           }
           @if (previewState() === 'error') {
-            <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+            <div class="app-message app-message--danger text-sm text-rose-100" role="alert">
               Completa los campos obligatorios antes de previsualizar.
             </div>
           }
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="h1">H1</label>
+            <label class="app-label" for="h1">H1</label>
             <input
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              class="app-input"
               id="h1"
               name="h1"
               type="text"
@@ -66,9 +67,9 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="text">Texto</label>
+            <label class="app-label" for="text">Texto</label>
             <textarea
-              class="min-h-[120px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              class="app-input min-h-[120px]"
               id="text"
               name="text"
               formControlName="text"
@@ -77,9 +78,9 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="imageUrl">Imagen</label>
+            <label class="app-label" for="imageUrl">Imagen</label>
             <input
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              class="app-input"
               id="imageUrl"
               name="imageUrl"
               type="url"
@@ -89,9 +90,9 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="ctaLabel">CTA</label>
+            <label class="app-label" for="ctaLabel">CTA</label>
             <input
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              class="app-input"
               id="ctaLabel"
               name="ctaLabel"
               type="text"
@@ -101,24 +102,24 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="slug">Slug</label>
+            <label class="app-label" for="slug">Slug</label>
             <input
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              class="app-input"
               id="slug"
               name="slug"
               type="text"
               formControlName="slug"
               placeholder="landing-promocion"
             />
-            <p class="text-xs text-slate-500">
+            <p class="app-hint">
               URL final: /landing/{{ preview().slug }}
             </p>
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="status">Estado</label>
+            <label class="app-label" for="status">Estado</label>
             <select
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              class="app-input"
               id="status"
               name="status"
               formControlName="status"
@@ -131,7 +132,7 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
 
           <div class="flex flex-wrap gap-3 pt-2">
             <button
-              class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              class="app-button text-sm"
               [class.opacity-70]="isSaving()"
               [class.pointer-events-none]="isSaving()"
               type="button"
@@ -140,7 +141,7 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
               {{ isSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
             <button
-              class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              class="app-button app-button--ghost text-sm"
               [class.opacity-70]="isPreviewing()"
               [class.pointer-events-none]="isPreviewing()"
               type="button"
@@ -151,34 +152,34 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
           </div>
         </form>
 
-        <aside class="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <aside class="app-card app-card--soft space-y-4 p-6">
           <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Preview en vivo</h2>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Mock</span>
+            <h2 class="text-lg font-semibold text-white">Preview en vivo</h2>
+            <span class="app-badge app-badge--warning">Mock</span>
           </div>
 
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div class="app-card app-card--soft p-4">
             <div class="space-y-4">
               <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase text-slate-500">Hero</p>
-                <h3 class="text-xl font-semibold text-slate-900">{{ preview().h1 }}</h3>
-                <p class="text-sm text-slate-600">{{ preview().text }}</p>
+                <p class="app-eyebrow">Hero</p>
+                <h3 class="text-xl font-semibold text-white">{{ preview().h1 }}</h3>
+                <p class="text-sm text-slate-300">{{ preview().text }}</p>
               </div>
               @if (preview().imageUrl) {
                 <img
                   alt="Vista previa de la imagen principal"
-                  class="h-auto w-full rounded-lg object-cover"
+                  class="h-auto w-full rounded-lg object-cover shadow-lg"
                   height="360"
                   width="640"
                   [ngSrc]="preview().imageUrl"
                 />
               } @else {
-                <div class="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-slate-200">
-                  <p class="text-sm text-slate-500">Añade una imagen para verla aquí.</p>
+                <div class="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-slate-700/60">
+                  <p class="text-sm text-slate-400">Añade una imagen para verla aquí.</p>
                 </div>
               }
               <button
-                class="inline-flex items-center justify-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700"
+                class="app-button app-button--ghost text-sm"
                 type="button"
               >
                 {{ preview().ctaLabel }}
@@ -187,6 +188,7 @@ type UiRequestState = 'idle' | 'loading' | 'success' | 'error';
           </div>
         </aside>
       </section>
+      </div>
     </main>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -11,22 +11,16 @@ import { LandingService } from '../../services/landing.service';
 @Component({
   selector: 'app-landing-page',
   template: `
-    <section class="min-h-screen bg-slate-950 text-slate-100">
-      <div class="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-12 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-12">
+    <section class="app-page">
+      <div class="app-shell flex flex-col gap-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-12">
         @if (landing(); as landingContent) {
           <div class="space-y-6">
-            <span class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200">
-              Multinivel inteligente
-            </span>
+            <span class="app-chip">Multinivel inteligente</span>
             <div class="space-y-4">
-              <h1 class="text-3xl font-semibold leading-tight text-white sm:text-4xl">
-                {{ landingContent.heroTitle }}
-              </h1>
-              <p class="text-base text-slate-200 sm:text-lg">
-                {{ landingContent.heroSubtitle }}
-              </p>
+              <h1 class="app-title app-title--xl leading-tight">{{ landingContent.heroTitle }}</h1>
+              <p class="app-subtitle sm:text-lg">{{ landingContent.heroSubtitle }}</p>
             </div>
-            <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <div class="app-card app-card--soft p-4">
               <img
                 class="h-auto w-full rounded-xl"
                 [ngSrc]="landingContent.heroImageUrl"
@@ -36,28 +30,28 @@ import { LandingService } from '../../services/landing.service';
                 priority
               />
             </div>
-            <ul class="space-y-3 text-sm text-slate-200">
+            <ul class="app-list text-sm">
               @for (highlight of landingContent.highlights; track highlight) {
                 <li class="flex items-start gap-3">
-                  <span class="mt-1 inline-flex h-2 w-2 flex-shrink-0 rounded-full bg-indigo-400"></span>
+                  <span class="app-list__dot flex-shrink-0"></span>
                   <span>{{ highlight }}</span>
                 </li>
               }
             </ul>
           </div>
-          <div class="rounded-3xl border border-slate-800 bg-white p-6 text-slate-900 shadow-xl sm:p-8">
+          <div class="app-card app-card--bright p-6 text-slate-100 sm:p-8">
             <div class="space-y-2">
-              <h2 class="text-xl font-semibold text-slate-900">Registra tu acceso</h2>
-              <p class="text-sm text-slate-600">
+              <h2 class="text-xl font-semibold text-white">Registra tu acceso</h2>
+              <p class="text-sm text-slate-300">
                 Completa tu información y activa el seguimiento de tu red.
               </p>
             </div>
             <form class="mt-6 space-y-4" [formGroup]="registrationForm" (ngSubmit)="submitForm()">
               <div class="space-y-2">
-                <label class="text-sm font-medium text-slate-700" for="full-name">Nombre completo</label>
+                <label class="app-label" for="full-name">Nombre completo</label>
                 <input
                   id="full-name"
-                  class="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-900 outline-none transition focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-200"
+                  class="app-input"
                   type="text"
                   formControlName="fullName"
                   autocomplete="name"
@@ -66,16 +60,16 @@ import { LandingService } from '../../services/landing.service';
                   required
                 />
                 @if (showFullNameError()) {
-                  <p id="full-name-error" class="text-xs text-red-600" role="alert">
+                  <p id="full-name-error" class="app-error" role="alert">
                     Ingresa tu nombre completo.
                   </p>
                 }
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium text-slate-700" for="email">Correo electrónico</label>
+                <label class="app-label" for="email">Correo electrónico</label>
                 <input
                   id="email"
-                  class="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-900 outline-none transition focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-200"
+                  class="app-input"
                   type="email"
                   formControlName="email"
                   autocomplete="email"
@@ -84,22 +78,22 @@ import { LandingService } from '../../services/landing.service';
                   required
                 />
                 @if (showEmailError()) {
-                  <p id="email-error" class="text-xs text-red-600" role="alert">
+                  <p id="email-error" class="app-error" role="alert">
                     Comparte un correo válido para continuar.
                   </p>
                 }
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium text-slate-700" for="phone">Teléfono de contacto</label>
+                <label class="app-label" for="phone">Teléfono de contacto</label>
                 <input
                   id="phone"
-                  class="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-900 outline-none transition focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-200"
+                  class="app-input"
                   type="tel"
                   formControlName="phone"
                   autocomplete="tel"
                 />
               </div>
-              <div class="rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
+              <div class="rounded-2xl border border-slate-700/60 bg-slate-900/70 px-4 py-3 text-xs text-slate-300">
                 Al enviar aceptas que tu registro sea validado por el equipo comercial.
               </div>
               <app-cta-button
@@ -110,7 +104,7 @@ import { LandingService } from '../../services/landing.service';
             </form>
           </div>
         } @else {
-          <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 text-sm text-slate-300">
+          <div class="app-card app-card--soft p-8 text-sm text-slate-300">
             Cargando experiencia...
           </div>
         }

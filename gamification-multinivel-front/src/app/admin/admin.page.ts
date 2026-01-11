@@ -5,12 +5,12 @@ import { RouterLink } from '@angular/router';
   selector: 'app-admin-page',
   imports: [RouterLink],
   template: `
-    <section class="space-y-4 px-4 py-6">
-      <h1>Admin</h1>
-      <p>Panel reservado para administradores.</p>
-      <a class="inline-flex items-center gap-2 text-sm font-semibold text-sky-700" routerLink="/admin/landings">
-        Gestionar landings
-      </a>
+    <section class="app-page">
+      <div class="app-shell space-y-4">
+        <h1 class="app-title">Admin</h1>
+        <p class="app-subtitle">Panel reservado para administradores.</p>
+        <a class="app-link" routerLink="/admin/landings">Gestionar landings</a>
+      </div>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

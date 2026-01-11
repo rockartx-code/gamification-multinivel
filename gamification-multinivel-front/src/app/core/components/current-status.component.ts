@@ -14,13 +14,11 @@ const STATUS_LABELS: Record<StatusTone, string> = {
   selector: 'app-current-status',
   imports: [StatusBadgeComponent],
   template: `
-    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Estado actual
-      </p>
+    <section class="app-card app-card--soft p-5">
+      <p class="app-eyebrow">Estado actual</p>
       <div class="mt-3 flex flex-wrap items-start gap-3">
         <app-status-badge [label]="badgeLabel()" [tone]="tone()" />
-        <p class="text-sm text-slate-600">{{ description() }}</p>
+        <p class="text-sm text-slate-300">{{ description() }}</p>
       </div>
     </section>
   `,

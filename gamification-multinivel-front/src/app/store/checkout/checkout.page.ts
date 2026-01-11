@@ -7,18 +7,18 @@ import { getCoachCopy } from '../../shared/coach/coach-copy';
   selector: 'app-store-checkout-page',
   imports: [CTAButtonComponent],
   template: `
-    <section class="store-page">
+    <section class="app-page store-page">
       <header class="store-page__header">
-        <p class="store-page__eyebrow">Checkout seguro</p>
-        <h1 class="store-page__title">Finaliza tu pedido con confianza</h1>
-        <p class="store-page__subtitle">
+        <p class="app-eyebrow">Checkout seguro</p>
+        <h1 class="app-title">Finaliza tu pedido con confianza</h1>
+        <p class="app-subtitle">
           Revisa la información de entrega, confirma el pago y bloquea tus incentivos
           disponibles.
         </p>
       </header>
 
       <div class="store-page__content">
-        <div class="store-card">
+        <div class="app-card store-card">
           <h2 class="store-card__title">Checklist de cierre</h2>
           <ul class="store-card__list">
             <li>Dirección de envío validada</li>
@@ -28,7 +28,7 @@ import { getCoachCopy } from '../../shared/coach/coach-copy';
           <app-cta-button label="Confirmar compra" tone="success" [fullWidth]="true" />
         </div>
 
-        <aside class="store-coach" aria-label="Consejo del coach">
+        <aside class="app-card app-card--soft store-coach" aria-label="Consejo del coach">
           <h2 class="store-coach__title">{{ coachCopy.title }}</h2>
           <p class="store-coach__message">{{ coachCopy.message }}</p>
         </aside>
@@ -50,36 +50,13 @@ import { getCoachCopy } from '../../shared/coach/coach-copy';
         gap: 10px;
       }
 
-      .store-page__eyebrow {
-        margin: 0;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #6b7280;
-      }
-
-      .store-page__title {
-        margin: 0;
-        font-size: 32px;
-        color: #0f172a;
-      }
-
-      .store-page__subtitle {
-        margin: 0;
-        font-size: 16px;
-        color: #475569;
-      }
-
       .store-page__content {
         display: grid;
         gap: 20px;
       }
 
       .store-card {
-        border: 1px solid #e2e8f0;
-        border-radius: 18px;
         padding: 20px;
-        background: #ffffff;
         display: grid;
         gap: 16px;
       }
@@ -87,22 +64,19 @@ import { getCoachCopy } from '../../shared/coach/coach-copy';
       .store-card__title {
         margin: 0;
         font-size: 18px;
-        color: #0f172a;
+        color: var(--ritual-text-strong);
       }
 
       .store-card__list {
         margin: 0;
         padding-left: 18px;
-        color: #475569;
+        color: var(--ritual-text-soft);
         display: grid;
         gap: 8px;
       }
 
       .store-coach {
-        border-radius: 16px;
         padding: 18px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
         display: grid;
         gap: 8px;
       }
@@ -110,12 +84,12 @@ import { getCoachCopy } from '../../shared/coach/coach-copy';
       .store-coach__title {
         margin: 0;
         font-size: 16px;
-        color: #0f172a;
+        color: var(--ritual-text-strong);
       }
 
       .store-coach__message {
         margin: 0;
-        color: #475569;
+        color: var(--ritual-text-soft);
       }
 
       @media (min-width: 900px) {
