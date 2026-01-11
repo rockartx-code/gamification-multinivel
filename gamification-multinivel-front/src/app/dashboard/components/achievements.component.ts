@@ -8,19 +8,19 @@ import { AchievementsService } from '../../services/achievements.service';
   selector: 'app-achievements',
   imports: [NgOptimizedImage],
   template: `
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section class="app-card app-card--soft p-6">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p class="app-eyebrow">
           Logros recientes
         </p>
-        <h2 class="text-xl font-semibold text-slate-900">Tus insignias</h2>
+        <h2 class="text-xl font-semibold text-white">Tus insignias</h2>
       </div>
       <div class="mt-5 space-y-4">
         @for (achievement of achievements(); track achievement.id) {
-          <article class="flex items-start gap-4 rounded-xl border border-slate-100 p-4">
+          <article class="app-card app-card--soft flex items-start gap-4 p-4">
             @if (achievement.badgeUrl) {
               <img
-                class="h-12 w-12 rounded-full border border-slate-200 bg-white object-cover"
+                class="h-12 w-12 rounded-full border border-slate-700/60 bg-slate-900/80 object-cover"
                 [ngSrc]="achievement.badgeUrl"
                 [alt]="'Insignia ' + achievement.title"
                 width="48"
@@ -28,14 +28,14 @@ import { AchievementsService } from '../../services/achievements.service';
               />
             }
             <div>
-              <h3 class="text-sm font-semibold text-slate-900">
+              <h3 class="text-sm font-semibold text-white">
                 {{ achievement.title }}
               </h3>
-              <p class="mt-1 text-sm text-slate-600">
+              <p class="mt-1 text-sm text-slate-300">
                 {{ achievement.description }}
               </p>
               @if (achievement.unlockedAt) {
-                <p class="mt-2 text-xs text-slate-500">
+                <p class="mt-2 text-xs text-slate-400">
                   Desbloqueado: {{ achievement.unlockedAt }}
                 </p>
               }

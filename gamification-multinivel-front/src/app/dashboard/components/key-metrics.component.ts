@@ -10,10 +10,10 @@ import { MetricsService } from '../../services/metrics.service';
   template: `
     <section class="space-y-4">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p class="app-eyebrow">
           Métricas clave
         </p>
-        <h2 class="text-xl font-semibold text-slate-900">
+        <h2 class="text-xl font-semibold text-white">
           Tu impacto esta semana
         </h2>
       </div>

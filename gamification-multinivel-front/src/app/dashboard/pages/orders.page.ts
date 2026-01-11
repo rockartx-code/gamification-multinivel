@@ -33,105 +33,102 @@ interface OrderViewModel {
     StatusBadgeComponent,
   ],
   template: `
-    <main class="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
-      <app-coach-header
-        [messageTitle]="coachMessage.title"
-        [messageBody]="coachMessage.message"
-        [messageTone]="coachMessage.tone"
-        actionLabel="Revisar pedidos pendientes"
-        actionHref="#next-action"
-      />
-      <header class="flex flex-wrap items-start justify-between gap-4">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Operación diaria
-          </p>
-          <h1 class="text-2xl font-semibold text-slate-900">Pedidos</h1>
-          <p class="text-sm text-slate-600">
-            Estado claro de las activaciones y su impacto en tu progreso.
-          </p>
-        </div>
-        <a
-          class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          routerLink="/dashboard"
-        >
-          Volver al tablero
-        </a>
-      </header>
+    <main class="app-page">
+      <div class="app-shell space-y-6">
+        <app-coach-header
+          [messageTitle]="coachMessage.title"
+          [messageBody]="coachMessage.message"
+          [messageTone]="coachMessage.tone"
+          actionLabel="Revisar pedidos pendientes"
+          actionHref="#next-action"
+        />
+        <header class="flex flex-wrap items-start justify-between gap-4">
+          <div class="space-y-2">
+            <p class="app-eyebrow">Operación diaria</p>
+            <h1 class="text-2xl font-semibold text-white">Pedidos</h1>
+            <p class="text-sm text-slate-300">
+              Estado claro de las activaciones y su impacto en tu progreso.
+            </p>
+          </div>
+          <a class="app-button app-button--ghost text-sm" routerLink="/dashboard">
+            Volver al tablero
+          </a>
+        </header>
 
-      <section class="mt-6 space-y-4">
-        <app-current-status
-          label="En marcha"
-          description="Monitorea las activaciones clave y mantén el ritmo."
-          tone="success"
-        />
-        <app-active-goal />
-        <app-next-action />
-      </section>
+        <section class="space-y-4">
+          <app-current-status
+            label="En marcha"
+            description="Monitorea las activaciones clave y mantén el ritmo."
+            tone="success"
+          />
+          <app-active-goal />
+          <app-next-action />
+        </section>
 
-      <section class="mt-6 grid gap-4 md:grid-cols-3">
-        <app-metric-card
-          title="Órdenes"
-          [value]="totalOrders()"
-          helper="Activas"
-        />
-        <app-metric-card
-          title="Impacto"
-          [value]="totalPoints()"
-          helper="Puntos consolidados"
-          tone="success"
-        />
-        <app-metric-card
-          title="Completadas"
-          [value]="completedOrders()"
-          helper="Listas hoy"
-          tone="warning"
-        />
-      </section>
+        <section class="grid gap-4 md:grid-cols-3">
+          <app-metric-card
+            title="Órdenes"
+            [value]="totalOrders()"
+            helper="Activas"
+          />
+          <app-metric-card
+            title="Impacto"
+            [value]="totalPoints()"
+            helper="Puntos consolidados"
+            tone="success"
+          />
+          <app-metric-card
+            title="Completadas"
+            [value]="completedOrders()"
+            helper="Listas hoy"
+            tone="warning"
+          />
+        </section>
 
-      <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div class="border-b border-slate-200 px-4 py-3">
-          <h2 class="text-sm font-semibold text-slate-800">Detalle de órdenes</h2>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <caption class="sr-only">
-              Estado y puntos asociados a cada orden activa.
-            </caption>
-            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th class="px-4 py-3" scope="col">Orden</th>
-                <th class="px-4 py-3" scope="col">Cliente</th>
-                <th class="px-4 py-3" scope="col">Fecha</th>
-                <th class="px-4 py-3" scope="col">Puntos</th>
-                <th class="px-4 py-3" scope="col">Estado</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              @for (order of ordersView(); track order.id) {
-                <tr class="text-slate-700">
-                  <td class="px-4 py-3 font-semibold text-slate-900">{{ order.id }}</td>
-                  <td class="px-4 py-3">{{ order.customerId }}</td>
-                  <td class="px-4 py-3">{{ order.createdAtLabel }}</td>
-                  <td class="px-4 py-3">{{ order.pointsLabel }}</td>
-                  <td class="px-4 py-3">
-                    <app-status-badge
-                      [label]="order.statusLabel"
-                      [tone]="order.statusTone"
-                    />
-                  </td>
-                </tr>
-              } @empty {
+        <section class="app-card app-card--soft overflow-hidden">
+          <div class="border-b border-slate-700/60 px-4 py-3">
+            <h2 class="text-sm font-semibold text-slate-200">Detalle de órdenes</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-slate-200">
+              <caption class="sr-only">
+                Estado y puntos asociados a cada orden activa.
+              </caption>
+              <thead class="bg-slate-900/70 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
                 <tr>
-                  <td class="px-4 py-6 text-center text-sm text-slate-500" colspan="5">
-                    Sin órdenes registradas.
-                  </td>
+                  <th class="px-4 py-3" scope="col">Orden</th>
+                  <th class="px-4 py-3" scope="col">Cliente</th>
+                  <th class="px-4 py-3" scope="col">Fecha</th>
+                  <th class="px-4 py-3" scope="col">Puntos</th>
+                  <th class="px-4 py-3" scope="col">Estado</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                @for (order of ordersView(); track order.id) {
+                  <tr class="text-slate-200">
+                    <td class="px-4 py-3 font-semibold text-white">{{ order.id }}</td>
+                    <td class="px-4 py-3">{{ order.customerId }}</td>
+                    <td class="px-4 py-3">{{ order.createdAtLabel }}</td>
+                    <td class="px-4 py-3">{{ order.pointsLabel }}</td>
+                    <td class="px-4 py-3">
+                      <app-status-badge
+                        [label]="order.statusLabel"
+                        [tone]="order.statusTone"
+                      />
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td class="px-4 py-6 text-center text-sm text-slate-400" colspan="5">
+                      Sin órdenes registradas.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

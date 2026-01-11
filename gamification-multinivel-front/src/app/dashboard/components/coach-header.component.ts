@@ -12,13 +12,13 @@ type StatusTone = 'success' | 'warning' | 'danger';
   selector: 'app-coach-header',
   imports: [NgOptimizedImage, CoachMessageComponent],
   template: `
-    <section class="sticky top-4 z-20 rounded-2xl bg-white p-6 shadow-sm">
+    <section class="app-card app-card--bright sticky top-4 z-20 p-6">
       @if (profile(); as profile) {
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-4">
             @if (profile.avatarUrl) {
               <img
-                class="h-14 w-14 rounded-full border border-slate-200 object-cover"
+                class="h-14 w-14 rounded-full border border-slate-700/60 object-cover"
                 [ngSrc]="profile.avatarUrl"
                 [alt]="'Avatar de ' + profile.displayName"
                 width="56"
@@ -26,20 +26,20 @@ type StatusTone = 'success' | 'warning' | 'danger';
               />
             } @else {
               <div
-                class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600"
+                class="flex h-14 w-14 items-center justify-center rounded-full border border-slate-700/60 bg-slate-900/80 text-sm font-semibold text-slate-200"
                 aria-hidden="true"
               >
                 {{ initials() }}
               </div>
             }
             <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p class="app-eyebrow">
                 Coach personal
               </p>
-              <h1 class="text-2xl font-semibold text-slate-900">
+              <h1 class="text-2xl font-semibold text-white">
                 Hola, {{ profile.displayName }}
               </h1>
-              <p class="mt-1 text-sm text-slate-600">
+              <p class="mt-1 text-sm text-slate-300">
                 Nivel {{ profile.level }} · {{ profile.totalPoints }} puntos · Puesto
                 #{{ profile.rank }}
               </p>
@@ -52,7 +52,7 @@ type StatusTone = 'success' | 'warning' | 'danger';
               [tone]="messageTone()"
             />
             <a
-              class="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              class="app-button app-button--full text-sm"
               [attr.href]="actionHref()"
             >
               {{ actionLabel() }}
@@ -60,7 +60,7 @@ type StatusTone = 'success' | 'warning' | 'danger';
           </div>
         </div>
       } @else {
-        <p class="text-sm text-slate-500">Cargando tu resumen...</p>
+        <p class="text-sm text-slate-300">Cargando tu resumen...</p>
       }
     </section>
   `,

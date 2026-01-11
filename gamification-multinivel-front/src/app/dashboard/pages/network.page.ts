@@ -33,99 +33,96 @@ interface NetworkMemberViewModel {
     StatusBadgeComponent,
   ],
   template: `
-    <main class="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
-      <app-coach-header
-        [messageTitle]="coachMessage.title"
-        [messageBody]="coachMessage.message"
-        [messageTone]="coachMessage.tone"
-        actionLabel="Contactar líderes clave"
-        actionHref="#next-action"
-      />
-      <header class="flex flex-wrap items-start justify-between gap-4">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Red comercial
-          </p>
-          <h1 class="text-2xl font-semibold text-slate-900">Mi red</h1>
-          <p class="text-sm text-slate-600">
-            Seguimiento directo del desempeño y actividad de los líderes.
-          </p>
-        </div>
-        <a
-          class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          routerLink="/dashboard"
-        >
-          Volver al tablero
-        </a>
-      </header>
-
-      <section class="mt-6 space-y-4">
-        <app-current-status
-          label="Equipo activo"
-          description="Acompaña a los líderes con más potencial hoy."
-          tone="success"
+    <main class="app-page">
+      <div class="app-shell space-y-6">
+        <app-coach-header
+          [messageTitle]="coachMessage.title"
+          [messageBody]="coachMessage.message"
+          [messageTone]="coachMessage.tone"
+          actionLabel="Contactar líderes clave"
+          actionHref="#next-action"
         />
-        <app-active-goal />
-        <app-next-action />
-      </section>
+        <header class="flex flex-wrap items-start justify-between gap-4">
+          <div class="space-y-2">
+            <p class="app-eyebrow">Red comercial</p>
+            <h1 class="text-2xl font-semibold text-white">Mi red</h1>
+            <p class="text-sm text-slate-300">
+              Seguimiento directo del desempeño y actividad de los líderes.
+            </p>
+          </div>
+          <a class="app-button app-button--ghost text-sm" routerLink="/dashboard">
+            Volver al tablero
+          </a>
+        </header>
 
-      <section class="mt-6 grid gap-4 md:grid-cols-3">
-        <app-metric-card title="Integrantes" [value]="totalMembers()" helper="Total en red" />
-        <app-metric-card
-          title="Activos"
-          [value]="activeMembers()"
-          helper="En actividad"
-          tone="success"
-        />
-        <app-metric-card
-          title="Nivel promedio"
-          [value]="averageLevel()"
-          helper="Promedio actual"
-          tone="warning"
-        />
-      </section>
+        <section class="space-y-4">
+          <app-current-status
+            label="Equipo activo"
+            description="Acompaña a los líderes con más potencial hoy."
+            tone="success"
+          />
+          <app-active-goal />
+          <app-next-action />
+        </section>
 
-      <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div class="border-b border-slate-200 px-4 py-3">
-          <h2 class="text-sm font-semibold text-slate-800">Detalle de integrantes</h2>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <caption class="sr-only">
-              Integrantes con nivel, fecha de alta y estado actual.
-            </caption>
-            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th class="px-4 py-3" scope="col">Integrante</th>
-                <th class="px-4 py-3" scope="col">Nivel</th>
-                <th class="px-4 py-3" scope="col">Alta</th>
-                <th class="px-4 py-3" scope="col">Estado</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              @for (member of membersView(); track member.id) {
-                <tr class="text-slate-700">
-                  <td class="px-4 py-3 font-semibold text-slate-900">{{ member.name }}</td>
-                  <td class="px-4 py-3">{{ member.levelLabel }}</td>
-                  <td class="px-4 py-3">{{ member.joinedAtLabel }}</td>
-                  <td class="px-4 py-3">
-                    <app-status-badge
-                      [label]="member.statusLabel"
-                      [tone]="member.statusTone"
-                    />
-                  </td>
-                </tr>
-              } @empty {
+        <section class="grid gap-4 md:grid-cols-3">
+          <app-metric-card title="Integrantes" [value]="totalMembers()" helper="Total en red" />
+          <app-metric-card
+            title="Activos"
+            [value]="activeMembers()"
+            helper="En actividad"
+            tone="success"
+          />
+          <app-metric-card
+            title="Nivel promedio"
+            [value]="averageLevel()"
+            helper="Promedio actual"
+            tone="warning"
+          />
+        </section>
+
+        <section class="app-card app-card--soft overflow-hidden">
+          <div class="border-b border-slate-700/60 px-4 py-3">
+            <h2 class="text-sm font-semibold text-slate-200">Detalle de integrantes</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-slate-200">
+              <caption class="sr-only">
+                Integrantes con nivel, fecha de alta y estado actual.
+              </caption>
+              <thead class="bg-slate-900/70 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
                 <tr>
-                  <td class="px-4 py-6 text-center text-sm text-slate-500" colspan="4">
-                    Sin integrantes registrados.
-                  </td>
+                  <th class="px-4 py-3" scope="col">Integrante</th>
+                  <th class="px-4 py-3" scope="col">Nivel</th>
+                  <th class="px-4 py-3" scope="col">Alta</th>
+                  <th class="px-4 py-3" scope="col">Estado</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                @for (member of membersView(); track member.id) {
+                  <tr class="text-slate-200">
+                    <td class="px-4 py-3 font-semibold text-white">{{ member.name }}</td>
+                    <td class="px-4 py-3">{{ member.levelLabel }}</td>
+                    <td class="px-4 py-3">{{ member.joinedAtLabel }}</td>
+                    <td class="px-4 py-3">
+                      <app-status-badge
+                        [label]="member.statusLabel"
+                        [tone]="member.statusTone"
+                      />
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td class="px-4 py-6 text-center text-sm text-slate-400" colspan="4">
+                      Sin integrantes registrados.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

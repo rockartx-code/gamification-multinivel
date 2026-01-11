@@ -9,18 +9,16 @@ import { GoalsService } from '../../services/goals.service';
   selector: 'app-active-goal',
   imports: [CTAButtonComponent, ProgressBarComponent],
   template: `
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section class="app-card app-card--soft p-6">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p class="app-eyebrow">
             Meta activa
           </p>
-          <h2 class="text-2xl font-semibold text-slate-900">
-            {{ title() }}
-          </h2>
-          <p class="text-sm text-slate-600">{{ remainingMessage() }}</p>
+          <h2 class="text-2xl font-semibold text-white">{{ title() }}</h2>
+          <p class="text-sm text-slate-300">{{ remainingMessage() }}</p>
           @if (dueDate()) {
-            <p class="text-xs text-slate-500">Fecha límite: {{ dueDate() }}</p>
+            <p class="text-xs text-slate-400">Fecha límite: {{ dueDate() }}</p>
           }
         </div>
         <div class="min-w-[220px]">
@@ -34,7 +32,7 @@ import { GoalsService } from '../../services/goals.service';
           [max]="targetAmount()"
           tone="success"
         />
-        <p class="mt-3 text-sm font-medium text-slate-700">
+        <p class="mt-3 text-sm font-medium text-slate-200">
           {{ progressSummary() }}
         </p>
       </div>

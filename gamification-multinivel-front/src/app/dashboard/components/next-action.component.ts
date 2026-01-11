@@ -13,35 +13,35 @@ import { NextActionsService } from '../../services/next-actions.service';
     class: 'scroll-mt-24',
   },
   template: `
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section class="app-card app-card--soft p-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p class="app-eyebrow">
             Siguiente acción
           </p>
-          <h2 class="text-xl font-semibold text-slate-900">
+          <h2 class="text-xl font-semibold text-white">
             {{ headline() }}
           </h2>
         </div>
-        <span class="text-sm font-medium text-slate-600">
+        <span class="text-sm font-medium text-slate-300">
           {{ pendingCount() }} pendientes
         </span>
       </div>
       <ul class="mt-5 space-y-4">
         @for (action of nextActions(); track action.id) {
           <li
-            class="rounded-xl border border-slate-100 bg-slate-50 p-4"
+            class="app-card app-card--soft p-4"
             [class.opacity-70]="action.completed"
           >
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p class="text-sm font-semibold text-slate-900">
+                <p class="text-sm font-semibold text-white">
                   {{ action.label }}
                 </p>
-                <p class="mt-1 text-sm text-slate-600">
+                <p class="mt-1 text-sm text-slate-300">
                   {{ action.description }}
                 </p>
-                <p class="mt-2 text-xs font-medium text-slate-500">
+                <p class="mt-2 text-xs font-medium text-slate-400">
                   Recompensa: {{ action.rewardPoints }} puntos
                 </p>
               </div>
