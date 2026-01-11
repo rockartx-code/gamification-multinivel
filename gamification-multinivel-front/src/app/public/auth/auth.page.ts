@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { SessionService } from '../../core/session.service';
+import { Router } from '@angular/router';
+
 import { AuthService } from '../../services/auth.service';
+import { UserRole } from '../../domain/models';
 import { getCoachCopy } from '../../shared/coach/coach-copy';
 import { AuthFormComponent, AuthFormPayload } from './components/auth-form.component';
 import { CoachMessageInlineComponent } from './components/coach-message-inline.component';
@@ -116,6 +119,7 @@ import { CoachMessageInlineComponent } from './components/coach-message-inline.c
 })
 export class AuthPage {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly sessionService = inject(SessionService);
   private readonly coachCopy = getCoachCopy();
   private readonly authAction = signal<'login' | 'register' | null>(null);
@@ -154,8 +158,14 @@ export class AuthPage {
     this.authAction.set(payload.action);
     if (payload.action === 'login') {
       this.authService.login(payload.email, payload.password).subscribe({
+        next: (session) => this.redirectToPanel(session.role),
         error: () => null,
       });
     }
+  }
+
+  private redirectToPanel(role: UserRole): void {
+    const target = role === 'admin' ? '/admin' : '/dashboard';
+    this.router.navigate([target]);
   }
 }
