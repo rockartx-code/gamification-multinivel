@@ -133,10 +133,10 @@ export class AuthFormComponent {
   readonly primaryActionLabel = input.required<string>();
   readonly secondaryActionLabel = input.required<string>();
   readonly helperText = input.required<string>();
-  readonly submittedAction = output<'login' | 'register'>();
+  readonly submittedAction = output<AuthFormPayload>();
 
   private readonly formBuilder = inject(FormBuilder);
-  readonly form = this.formBuilder.group({
+  readonly form = this.formBuilder.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
@@ -161,7 +161,7 @@ export class AuthFormComponent {
     }
 
     this.submitState.set('login');
-    this.submittedAction.emit('login');
+    this.submittedAction.emit({ action: 'login', ...this.form.getRawValue() });
   }
 
   handleSecondary(): void {
@@ -171,6 +171,12 @@ export class AuthFormComponent {
     }
 
     this.submitState.set('register');
-    this.submittedAction.emit('register');
+    this.submittedAction.emit({ action: 'register', ...this.form.getRawValue() });
   }
+}
+
+export interface AuthFormPayload {
+  action: 'login' | 'register';
+  email: string;
+  password: string;
 }
