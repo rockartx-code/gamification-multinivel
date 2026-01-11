@@ -3,7 +3,7 @@ import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 
 import { ApiClient } from '../core/api-client';
-import { AuthContext, AuthSession, UserRole } from '../domain/models';
+import { AuthContext, AuthSession } from '../domain/models';
 import { authAccounts } from '../mocks/auth-session.fixture';
 import { authFixture } from '../mocks/auth.fixture';
 
@@ -85,7 +85,7 @@ export class AuthService {
     }
 
     const role = session.role;
-    const isRoleValid: role is UserRole = role === 'admin' || role === 'user' || role === 'public';
+    const isRoleValid = role === 'admin' || role === 'user' || role === 'public';
     if (!isRoleValid) {
       return false;
     }
