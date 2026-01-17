@@ -43,8 +43,8 @@ interface AssetSlot {
   styleUrl: './admin.component.css'
 })
 export class AdminComponent {
-  readonly currentView = 'orders';
-  readonly currentOrderStatus: Order['status'] = 'pending';
+  currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
+  currentOrderStatus: Order['status'] = 'pending';
 
   readonly orders: Order[] = [
     { id: '#1001', customer: 'Ana López', total: 120, status: 'pending' },
@@ -101,13 +101,32 @@ export class AdminComponent {
     { label: 'Imagen extra', hint: 'opcional' }
   ];
 
-  readonly selectedCustomer = this.customers[0];
+  selectedCustomer = this.customers[0];
+  assetPreviews = new Map<number, string>();
 
   get viewTitle(): string {
+    if (this.currentView === 'customers') {
+      return 'Clientes';
+    }
+    if (this.currentView === 'products') {
+      return 'Productos';
+    }
+    if (this.currentView === 'stats') {
+      return 'Estadísticas';
+    }
     return 'Pedidos';
   }
 
   get viewSubtitle(): string {
+    if (this.currentView === 'customers') {
+      return 'Niveles, estructura y comisiones.';
+    }
+    if (this.currentView === 'products') {
+      return 'Altas, imágenes y CTA.';
+    }
+    if (this.currentView === 'stats') {
+      return 'Ventas, funnel y alertas.';
+    }
     return 'Cambia estado: pendiente, pagado, entregado.';
   }
 
@@ -141,5 +160,46 @@ export class AdminComponent {
 
   formatMoney(value: number): string {
     return `$${value.toFixed(0)}`;
+  }
+
+  setView(view: 'orders' | 'customers' | 'products' | 'stats'): void {
+    this.currentView = view;
+  }
+
+  setOrderStatus(status: Order['status']): void {
+    this.currentOrderStatus = status;
+  }
+
+  advanceOrder(orderId: string): void {
+    const order = this.orders.find((item) => item.id === orderId);
+    if (!order) {
+      return;
+    }
+    if (order.status === 'pending') {
+      order.status = 'paid';
+    } else if (order.status === 'paid') {
+      order.status = 'delivered';
+    }
+  }
+
+  selectCustomer(customerId: number): void {
+    const found = this.customers.find((customer) => customer.id === customerId);
+    if (found) {
+      this.selectedCustomer = found;
+    }
+  }
+
+  previewAsset(event: Event, slotIndex: number): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    const currentUrl = this.assetPreviews.get(slotIndex);
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+    }
+    this.assetPreviews.set(slotIndex, previewUrl);
   }
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 
 interface CartItem {
   id: string;
@@ -17,8 +17,8 @@ interface CartItem {
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })
-export class CarritoComponent {
-  readonly countdownLabel = '3d 8h';
+export class CarritoComponent implements OnInit, OnDestroy {
+  countdownLabel = '3d 8h';
   readonly shipping = 0;
   readonly discountPct = 0.05;
   readonly user = {
@@ -26,7 +26,7 @@ export class CarritoComponent {
     activeSpendTarget: 60
   };
 
-  readonly cartItems: CartItem[] = [
+  cartItems: CartItem[] = [
     {
       id: 'colageno',
       name: 'COLÁGENO',
@@ -44,6 +44,26 @@ export class CarritoComponent {
       img: 'assets/images/product-omega3.svg'
     }
   ];
+
+  payMethod: 'card' | 'spei' | 'cash' = 'card';
+  isToastVisible = false;
+  toastMessage = 'Actualizado.';
+  private toastTimeout?: number;
+  private countdownInterval?: number;
+
+  ngOnInit(): void {
+    this.updateCountdown();
+    this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.countdownInterval) {
+      window.clearInterval(this.countdownInterval);
+    }
+    if (this.toastTimeout) {
+      window.clearTimeout(this.toastTimeout);
+    }
+  }
 
   get subtotal(): number {
     return this.cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
@@ -76,5 +96,79 @@ export class CarritoComponent {
 
   formatMoney(value: number): string {
     return `$${value.toFixed(0)}`;
+  }
+
+  setQty(itemId: string, qty: number): void {
+    const normalized = Math.max(0, Math.floor(qty));
+    const itemIndex = this.cartItems.findIndex((item) => item.id === itemId);
+    if (itemIndex < 0) {
+      return;
+    }
+    if (normalized === 0) {
+      this.cartItems.splice(itemIndex, 1);
+      this.showToast('Producto removido.');
+      return;
+    }
+    this.cartItems[itemIndex] = { ...this.cartItems[itemIndex], qty: normalized };
+    this.showToast('Cantidad actualizada.');
+  }
+
+  removeItem(itemId: string): void {
+    const itemIndex = this.cartItems.findIndex((item) => item.id === itemId);
+    if (itemIndex >= 0) {
+      this.cartItems.splice(itemIndex, 1);
+      this.showToast('Producto removido.');
+    }
+  }
+
+  addSuggested(): void {
+    const suggested: CartItem = {
+      id: 'complejoB',
+      name: 'COMPLEJO B',
+      price: 24,
+      qty: 1,
+      note: 'Energía',
+      img: 'assets/images/product-complejo-b.svg'
+    };
+    const existing = this.cartItems.find((item) => item.id === suggested.id);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      this.cartItems.push(suggested);
+    }
+    this.showToast('Agregado sugerido.');
+  }
+
+  selectPay(method: 'card' | 'spei' | 'cash'): void {
+    this.payMethod = method;
+  }
+
+  placeOrder(): void {
+    if (!this.cartItems.length) {
+      this.showToast('Agrega productos para continuar.');
+      return;
+    }
+    this.showToast('Pedido creado (mock).');
+  }
+
+  private updateCountdown(): void {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    lastDay.setHours(23, 59, 59, 999);
+    const diff = Math.max(0, lastDay.getTime() - Date.now());
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    this.countdownLabel = `${d}d ${h}h`;
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+    this.isToastVisible = true;
+    if (this.toastTimeout) {
+      window.clearTimeout(this.toastTimeout);
+    }
+    this.toastTimeout = window.setTimeout(() => {
+      this.isToastVisible = false;
+    }, 2200);
   }
 }

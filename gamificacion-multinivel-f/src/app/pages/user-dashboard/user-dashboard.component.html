@@ -64,8 +64,11 @@
       <div class="mt-4 flex items-center justify-between">
         <div class="text-sm text-zinc-400">Progreso mensual</div>
 
-        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
-          Colapsar metas
+        <button
+          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+          (click)="toggleGoals()"
+        >
+          {{ goalsCollapsed ? 'Expandir metas' : 'Colapsar metas' }}
         </button>
       </div>
 
@@ -73,9 +76,10 @@
         <div
           *ngFor="let goal of goals"
           class="grain relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4"
+          [id]="'goal-' + goal.key"
         >
           <div class="goal-card" [attr.data-goal]="goal.key">
-            <div class="goal-expanded">
+            <div class="goal-expanded" [class.hidden]="goalsCollapsed">
               <div class="flex items-start justify-between gap-3">
                 <div>
                   <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
@@ -90,7 +94,7 @@
               </div>
             </div>
 
-            <div class="goal-collapsed hidden">
+            <div class="goal-collapsed" [class.hidden]="!goalsCollapsed">
               <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
             </div>
 
@@ -132,6 +136,7 @@
           </div>
           <button
             class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+            (click)="showCartToast()"
           >
             Ver carrito
           </button>
@@ -171,7 +176,8 @@
                 <input
                   type="number"
                   min="0"
-                  value="0"
+                  [value]="heroQty"
+                  (input)="setHeroQty($any($event.target).value)"
                   class="w-20 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"
                 />
                 <span class="text-sm text-zinc-400">x $35</span>
@@ -179,12 +185,14 @@
 
               <button
                 class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                (click)="addHeroToCart()"
               >
                 Agregar al carrito
               </button>
 
               <button
                 class="rounded-full border border-white/10 bg-white/5 px-6 py-3 transition hover:bg-white/10"
+                (click)="scrollToGoal('goal-active')"
               >
                 Ver meta relacionada
               </button>
@@ -245,13 +253,15 @@
                     <input
                       type="number"
                       min="0"
-                      value="0"
+                      [value]="getCartQty(product.id)"
+                      (input)="updateCart(product.id, $any($event.target).value)"
                       class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white"
                     />
                   </div>
 
                   <button
                     class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                    (click)="addQuick(product.id, 1)"
                   >
                     Agregar
                   </button>
@@ -260,8 +270,10 @@
             </div>
 
             <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
-              <button class="transition hover:text-zinc-200">Ver detalle</button>
-              <button class="transition hover:text-zinc-200">Comparar</button>
+              <button class="transition hover:text-zinc-200" (click)="notifyAction('Detalle de producto (hook)')">
+                Ver detalle
+              </button>
+              <button class="transition hover:text-zinc-200" (click)="notifyAction('Comparar (hook)')">Comparar</button>
             </div>
           </article>
         </div>
@@ -358,6 +370,7 @@
             </div>
             <button
               class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.03]"
+              (click)="simulateInvite()"
             >
               Simular invitación
             </button>
@@ -554,6 +567,7 @@
               <button
                 *ngFor="let item of featured"
                 class="rounded-2xl border p-4 text-left transition hover:bg-white/10"
+                (click)="setFeatured(item.id)"
                 [ngClass]="
                   item.id === activeFeaturedId
                     ? 'border-blue-400/40 bg-blue-500/10'
@@ -576,6 +590,7 @@
                 />
                 <button
                   class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                  (click)="copyLink()"
                 >
                   Copiar
                 </button>
@@ -600,13 +615,25 @@
               </div>
 
               <div class="flex gap-2">
-                <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+                <button
+                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  [ngClass]="socialFormat === 'story' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  (click)="setSocialFormat('story')"
+                >
                   Story 9:16
                 </button>
-                <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+                <button
+                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  [ngClass]="socialFormat === 'feed' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  (click)="setSocialFormat('feed')"
+                >
                   Feed 1:1
                 </button>
-                <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+                <button
+                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  [ngClass]="socialFormat === 'banner' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  (click)="setSocialFormat('banner')"
+                >
                   Banner 16:9
                 </button>
               </div>
@@ -623,7 +650,7 @@
                     [style.aspect-ratio]="socialAspectRatio"
                   >
                     <img
-                      [src]="activeFeatured.story"
+                      [src]="activeSocialAsset"
                       alt="Social"
                       class="hero-image absolute inset-0 h-full w-full object-cover"
                     />
@@ -637,10 +664,11 @@
 
                   <div class="mt-4 flex items-center justify-between gap-3">
                     <div class="text-xs text-zinc-500">
-                      Imagen: <span class="text-zinc-300">{{ activeFeatured.story }}</span>
+                      Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
                     </div>
                     <button
                       class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                      (click)="copyAssetPath()"
                     >
                       Copiar ruta
                     </button>
@@ -654,15 +682,18 @@
                   rows="10"
                   class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
                   placeholder="Escribe tu copy aquí..."
+                  [(ngModel)]="captionText"
                 ></textarea>
                 <div class="mt-3 flex gap-3">
                   <button
                     class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    (click)="copyCaption()"
                   >
                     Copiar copy
                   </button>
                   <button
                     class="flex-1 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+                    (click)="generateTemplate()"
                   >
                     Generar template
                   </button>
@@ -678,11 +709,11 @@
     </section>
   </main>
 
-  <div class="fixed bottom-5 left-1/2 z-50 hidden -translate-x-1/2">
+  <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
       class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
     >
-      Actualizado.
+      {{ toastMessage }}
     </div>
   </div>
 </section>
