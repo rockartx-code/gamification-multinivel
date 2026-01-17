@@ -14,16 +14,20 @@
           </div>
 
           <div class="flex items-center gap-2 lg:hidden">
-            <a
-              href="#merchant"
+            <button
+              type="button"
               class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-              >Tienda</a
+              (click)="scrollToSection('merchant')"
             >
-            <a
-              href="#red"
+              Tienda
+            </button>
+            <button
+              type="button"
               class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-              >Red</a
+              (click)="scrollToSection('red')"
             >
+              Red
+            </button>
           </div>
         </div>
 
@@ -35,29 +39,36 @@
           </div>
 
           <nav class="hidden items-center gap-2 lg:flex">
-            <a
-              href="#merchant"
+            <button
+              type="button"
               class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-              >Tienda</a
+              (click)="scrollToSection('merchant')"
             >
-            <a
-              href="#red"
+              Tienda
+            </button>
+            <button
+              type="button"
               class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-              >Red</a
+              (click)="scrollToSection('red')"
             >
-            <a
-              href="#links"
+              Red
+            </button>
+            <button
+              type="button"
               class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-              >Links</a
+              (click)="scrollToSection('links')"
             >
+              Links
+            </button>
           </nav>
 
-          <a
-            href="#merchant"
+          <button
+            type="button"
             class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 text-sm font-semibold transition-transform hover:scale-[1.03]"
+            (click)="scrollToSection('merchant')"
           >
             Obtenerlo ahora
-          </a>
+          </button>
         </div>
       </div>
 
@@ -134,12 +145,12 @@
             <div class="text-xs text-zinc-400">Carrito</div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
           </div>
-          <button
+          <a
             class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
-            (click)="showCartToast()"
+            [routerLink]="['/carrito']"
           >
             Ver carrito
-          </button>
+          </a>
         </div>
       </div>
 
@@ -316,13 +327,15 @@
                     <input
                       type="number"
                       min="0"
-                      value="0"
+                      [value]="getCartQty(product.id)"
+                      (input)="updateCart(product.id, $any($event.target).value)"
                       class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white"
                     />
                   </div>
 
                   <button
                     class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                    (click)="addQuick(product.id, 1)"
                   >
                     Agregar
                   </button>
