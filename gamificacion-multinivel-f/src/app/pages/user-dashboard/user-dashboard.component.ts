@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 interface Goal {
   key: string;
@@ -40,20 +41,23 @@ interface FeaturedItem {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
-export class UserDashboardComponent {
-  readonly countdownLabel = '3d 12h 20m 10s';
+export class UserDashboardComponent implements OnInit, OnDestroy {
+  countdownLabel = '3d 12h 20m 10s';
   readonly userCode = 'ABC123';
   readonly networkGoal = 300;
-  readonly cartTotal = 0;
-  readonly activeFeaturedId = 'colageno';
-  readonly socialFormatLabel = 'Story (9:16)';
-  readonly socialAspectRatio = '9/16';
+  activeFeaturedId = 'colageno';
+  socialFormat: 'story' | 'feed' | 'banner' = 'story';
+  goalsCollapsed = false;
+  toastMessage = 'Actualizado.';
+  isToastVisible = false;
+  captionText = '';
+  heroQty = 0;
 
-  readonly goals: Goal[] = [
+  goals: Goal[] = [
     {
       key: 'active',
       title: 'Siguiente reto: Usuario activo',
@@ -97,7 +101,7 @@ export class UserDashboardComponent {
     }
   ];
 
-  readonly products: Product[] = [
+  products: Product[] = [
     {
       id: 'colageno',
       name: 'COLÁGENO',
@@ -181,6 +185,10 @@ export class UserDashboardComponent {
     }
   ];
 
+  private cart: Record<string, number> = {};
+  private countdownInterval?: number;
+  private toastTimeout?: number;
+
   get buyAgainProducts(): Product[] {
     return this.products.filter((product) => this.buyAgainIds.has(product.id));
   }
@@ -221,6 +229,57 @@ export class UserDashboardComponent {
     return this.networkMembers.filter((member) => member.status === 'Activa').length;
   }
 
+  get cartTotal(): number {
+    return this.products.reduce((total, product) => {
+      const qty = this.cart[product.id] ?? 0;
+      return total + product.price * qty;
+    }, 0);
+  }
+
+  get socialFormatLabel(): string {
+    if (this.socialFormat === 'feed') {
+      return 'Feed (1:1)';
+    }
+    if (this.socialFormat === 'banner') {
+      return 'Banner (16:9)';
+    }
+    return 'Story (9:16)';
+  }
+
+  get socialAspectRatio(): string {
+    if (this.socialFormat === 'feed') {
+      return '1/1';
+    }
+    if (this.socialFormat === 'banner') {
+      return '16/9';
+    }
+    return '9/16';
+  }
+
+  get activeSocialAsset(): string {
+    if (this.socialFormat === 'feed') {
+      return this.activeFeatured.feed;
+    }
+    if (this.socialFormat === 'banner') {
+      return this.activeFeatured.banner;
+    }
+    return this.activeFeatured.story;
+  }
+
+  ngOnInit(): void {
+    this.updateCountdown();
+    this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.countdownInterval) {
+      window.clearInterval(this.countdownInterval);
+    }
+    if (this.toastTimeout) {
+      window.clearTimeout(this.toastTimeout);
+    }
+  }
+
   formatMoney(value: number): string {
     return `$${value.toFixed(0)}`;
   }
@@ -251,5 +310,143 @@ export class UserDashboardComponent {
       return 'bg-yellow-400/15 border-yellow-400/20 text-yellow-200';
     }
     return 'bg-white/5 border-white/10 text-zinc-300';
+  }
+
+  toggleGoals(): void {
+    this.goalsCollapsed = !this.goalsCollapsed;
+  }
+
+  setFeatured(id: string): void {
+    this.activeFeaturedId = id;
+  }
+
+  setSocialFormat(format: 'story' | 'feed' | 'banner'): void {
+    this.socialFormat = format;
+  }
+
+  copyLink(): void {
+    this.copyToClipboard(this.referralLink, 'Link copiado.');
+  }
+
+  copyAssetPath(): void {
+    this.copyToClipboard(this.activeSocialAsset, 'Ruta copiada.');
+  }
+
+  generateTemplate(): void {
+    const template = `✨ ${this.activeFeatured.label}\n${this.activeFeatured.hook}\n\nConsíguelo aquí 👉 ${this.referralLink}`;
+    this.captionText = template;
+    this.showToast('Template generado.');
+  }
+
+  copyCaption(): void {
+    const text = this.captionText.trim();
+    if (!text) {
+      this.showToast('Escribe un copy primero.');
+      return;
+    }
+    this.copyToClipboard(text, 'Copy copiado.');
+  }
+
+  updateCart(productId: string, qty: number): void {
+    const normalized = Math.max(0, Math.floor(qty));
+    if (normalized === 0) {
+      delete this.cart[productId];
+    } else {
+      this.cart[productId] = normalized;
+    }
+    if (productId === 'colageno') {
+      this.heroQty = normalized;
+    }
+    this.syncGoalCartTotals();
+    if (this.cartTotal > 0) {
+      this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
+    }
+  }
+
+  addQuick(productId: string, addQty: number): void {
+    const current = this.cart[productId] ?? 0;
+    this.updateCart(productId, current + addQty);
+  }
+
+  setHeroQty(value: number): void {
+    this.heroQty = Math.max(0, Math.floor(value));
+    this.updateCart('colageno', this.heroQty);
+  }
+
+  addHeroToCart(): void {
+    if (this.heroQty <= 0) {
+      this.heroQty = 1;
+    }
+    this.addQuick('colageno', 1);
+    this.heroQty = this.cart['colageno'] ?? 0;
+  }
+
+  getCartQty(productId: string): number {
+    return this.cart[productId] ?? 0;
+  }
+
+  showCartToast(): void {
+    this.showToast(`Carrito: ${this.formatMoney(this.cartTotal)}`);
+  }
+
+  scrollToGoal(goalId: string): void {
+    const node = document.getElementById(goalId);
+    if (!node) {
+      return;
+    }
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    node.classList.add('ring-2', 'ring-yellow-400/60');
+    window.setTimeout(() => node.classList.remove('ring-2', 'ring-yellow-400/60'), 1200);
+  }
+
+  notifyAction(message: string): void {
+    this.showToast(message);
+  }
+
+  simulateInvite(): void {
+    this.showToast('Invitación enviada (mock).');
+  }
+
+  private syncGoalCartTotals(): void {
+    this.goals = this.goals.map((goal) => {
+      if (goal.key === 'active' || goal.key === 'discount') {
+        return { ...goal, cart: this.cartTotal };
+      }
+      return goal;
+    });
+  }
+
+  private updateCountdown(): void {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    lastDay.setHours(23, 59, 59, 999);
+    const diff = Math.max(0, lastDay.getTime() - Date.now());
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const m = Math.floor((diff / (1000 * 60)) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+    this.countdownLabel = `${d}d ${h}h ${m}m ${s}s`;
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+    this.isToastVisible = true;
+    if (this.toastTimeout) {
+      window.clearTimeout(this.toastTimeout);
+    }
+    this.toastTimeout = window.setTimeout(() => {
+      this.isToastVisible = false;
+    }, 2200);
+  }
+
+  private copyToClipboard(text: string, toastMessage: string): void {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => this.showToast(toastMessage))
+        .catch(() => this.showToast('No se pudo copiar.'));
+      return;
+    }
+    this.showToast('No se pudo copiar.');
   }
 }
