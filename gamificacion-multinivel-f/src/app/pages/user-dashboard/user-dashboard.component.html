@@ -1,0 +1,688 @@
+<section class="antialiased">
+  <header class="z-50 border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
+    <div class="mx-auto max-w-6xl px-6 py-4">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div
+              class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_30px_rgba(59,130,246,.45)]"
+            ></div>
+            <div>
+              <div class="font-extrabold tracking-tight">findingU</div>
+              <div class="-mt-0.5 text-xs text-zinc-400">Panel de usuario</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 lg:hidden">
+            <a
+              href="#merchant"
+              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              >Tienda</a
+            >
+            <a
+              href="#red"
+              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              >Red</a
+            >
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div class="text-xs text-zinc-400">Corte de mes en</div>
+            <div class="text-lg font-extrabold tracking-tight">{{ countdownLabel }}</div>
+            <div class="mt-0.5 text-xs text-zinc-500">Cierra tu progreso antes del corte</div>
+          </div>
+
+          <nav class="hidden items-center gap-2 lg:flex">
+            <a
+              href="#merchant"
+              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              >Tienda</a
+            >
+            <a
+              href="#red"
+              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              >Red</a
+            >
+            <a
+              href="#links"
+              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              >Links</a
+            >
+          </nav>
+
+          <a
+            href="#merchant"
+            class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 text-sm font-semibold transition-transform hover:scale-[1.03]"
+          >
+            Obtenerlo ahora
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-zinc-400">Progreso mensual</div>
+
+        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+          Colapsar metas
+        </button>
+      </div>
+
+      <div class="mt-3 grid gap-3 lg:grid-cols-4">
+        <div
+          *ngFor="let goal of goals"
+          class="grain relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4"
+        >
+          <div class="goal-card" [attr.data-goal]="goal.key">
+            <div class="goal-expanded">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
+                  <div class="mt-1 font-extrabold tracking-tight">{{ goal.title }}</div>
+                </div>
+                <a
+                  [href]="goal.ctaHref"
+                  class="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+                >
+                  {{ goal.ctaText }}
+                </a>
+              </div>
+            </div>
+
+            <div class="goal-collapsed hidden">
+              <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
+              <span>{{ goalProgressLabel(goal) }}</span>
+              <span *ngIf="goal.cart > 0" class="text-yellow-300"
+                >+{{ formatMoney(goal.cart) }} en carrito</span
+              >
+            </div>
+
+            <div class="relative mt-2 h-3 overflow-hidden rounded-full progress-rail">
+              <div class="progress-base absolute inset-y-0 left-0" [style.width.%]="goalBasePercent(goal)"></div>
+              <div
+                class="progress-cart absolute inset-y-0 left-0 opacity-90"
+                [style.width.%]="goalCartPercent(goal)"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl space-y-16 px-6 py-10">
+    <section id="merchant" class="scroll-mt-10">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">Tienda</h2>
+          <p class="mt-2 max-w-2xl text-zinc-400">
+            Completa tus metas de consumo. Al agregar al carrito, la barra se llena en un segundo color para indicar
+            “estás por cumplir”.
+          </p>
+        </div>
+
+        <div class="hidden items-center gap-3 md:flex">
+          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div class="text-xs text-zinc-400">Carrito</div>
+            <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
+          </div>
+          <button
+            class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+          >
+            Ver carrito
+          </button>
+        </div>
+      </div>
+
+      <div class="grain relative mt-8 overflow-hidden rounded-3xl border border-white/10 bg-ambient">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(245,185,66,0.18),transparent_55%)]"></div>
+
+        <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10">
+          <div>
+            <span
+              class="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-2 text-xs font-semibold text-yellow-200"
+            >
+              Producto del mes · Recomendado para metas
+            </span>
+            <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">COLÁGENO HIDROLIZADO</h3>
+            <p class="mt-3 max-w-xl text-zinc-300">
+              Regeneración + soporte esencial. Ideal para avanzar rápido a “Usuario Activo” y desbloquear descuentos.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-2">
+              <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200"
+                >10g por porción</span
+              >
+              <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200"
+                >Vitamina C + AH</span
+              >
+              <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200"
+                >Alta absorción</span
+              >
+            </div>
+
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#121826] p-3">
+                <span class="text-sm text-zinc-400">Cantidad</span>
+                <input
+                  type="number"
+                  min="0"
+                  value="0"
+                  class="w-20 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"
+                />
+                <span class="text-sm text-zinc-400">x $35</span>
+              </div>
+
+              <button
+                class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
+              >
+                Agregar al carrito
+              </button>
+
+              <button
+                class="rounded-full border border-white/10 bg-white/5 px-6 py-3 transition hover:bg-white/10"
+              >
+                Ver meta relacionada
+              </button>
+            </div>
+          </div>
+
+          <div class="relative h-[260px] overflow-hidden rounded-3xl border border-white/10 md:h-[360px]">
+            <img
+              src="assets/images/hero-colageno.svg"
+              alt="Producto del mes"
+              class="hero-image absolute inset-0 h-full w-full object-cover"
+            />
+            <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/70 via-transparent to-transparent"></div>
+            <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl"></div>
+
+            <div class="relative flex h-full flex-col justify-end p-6">
+              <div class="text-sm font-semibold text-zinc-200">Oferta estratégica</div>
+              <div class="mt-1 text-xs text-zinc-400">Optimiza tu corte de mes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold">Volver a comprar</h3>
+          <p class="text-sm text-zinc-400">Tus básicos para mantener metas constantes.</p>
+        </div>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <article
+            *ngFor="let product of buyAgainProducts"
+            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]"
+          >
+            <div
+              class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]"
+            ></div>
+
+            <div class="relative flex gap-4">
+              <div
+                class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+              >
+                <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="text-xs text-zinc-400">Producto</div>
+                    <h4 class="mt-1 truncate font-extrabold tracking-tight">{{ product.name }}</h4>
+                    <div class="mt-1 truncate text-xs text-zinc-500">{{ product.badge }}</div>
+                  </div>
+                  <div class="whitespace-nowrap text-sm font-extrabold">{{ formatMoney(product.price) }}</div>
+                </div>
+
+                <div class="mt-4 flex items-center gap-3">
+                  <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                    <span class="text-xs text-zinc-400">Qty</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value="0"
+                      class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white"
+                    />
+                  </div>
+
+                  <button
+                    class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
+              <button class="transition hover:text-zinc-200">Ver detalle</button>
+              <button class="transition hover:text-zinc-200">Comparar</button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="mt-12">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold">Todos los productos</h3>
+          <div class="text-sm text-zinc-400">{{ productsCount }}</div>
+        </div>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <article
+            *ngFor="let product of otherProducts"
+            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]"
+          >
+            <div
+              class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]"
+            ></div>
+
+            <div class="relative flex gap-4">
+              <div
+                class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+              >
+                <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="text-xs text-zinc-400">Producto</div>
+                    <h4 class="mt-1 truncate font-extrabold tracking-tight">{{ product.name }}</h4>
+                    <div class="mt-1 truncate text-xs text-zinc-500">{{ product.badge }}</div>
+                  </div>
+                  <div class="whitespace-nowrap text-sm font-extrabold">{{ formatMoney(product.price) }}</div>
+                </div>
+
+                <div class="mt-4 flex items-center gap-3">
+                  <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                    <span class="text-xs text-zinc-400">Qty</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value="0"
+                      class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white"
+                    />
+                  </div>
+
+                  <button
+                    class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
+              <button class="transition hover:text-zinc-200">Ver detalle</button>
+              <button class="transition hover:text-zinc-200">Comparar</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="red" class="scroll-mt-10">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">Red</h2>
+          <p class="mt-2 max-w-2xl text-zinc-400">
+            Visualiza niveles de referidos y el consumo mensual. Tu progreso también puede depender de que tu red
+            alcance sus metas.
+          </p>
+        </div>
+        <a
+          href="#links"
+          class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+        >
+          Compartir enlaces
+        </a>
+      </div>
+
+      <div class="mt-8 grid gap-6 lg:grid-cols-2">
+        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_40%_20%,rgba(59,130,246,0.12),transparent_55%)]"
+          ></div>
+          <div class="relative flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-bold">Grafo de niveles</h3>
+              <p class="mt-1 text-sm text-zinc-400">
+                Referencia visual (SVG). En producción, puedes mapearlo a datos reales.
+              </p>
+            </div>
+            <button
+              class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.03]"
+            >
+              Simular invitación
+            </button>
+          </div>
+
+          <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#121826] p-4">
+            <svg viewBox="0 0 560 260" class="h-[260px] w-full">
+              <g stroke="rgba(255,255,255,.18)" stroke-width="2">
+                <line x1="120" y1="130" x2="260" y2="70"></line>
+                <line x1="120" y1="130" x2="260" y2="130"></line>
+                <line x1="120" y1="130" x2="260" y2="190"></line>
+
+                <line x1="260" y1="70" x2="420" y2="50"></line>
+                <line x1="260" y1="70" x2="420" y2="90"></line>
+
+                <line x1="260" y1="130" x2="420" y2="120"></line>
+                <line x1="260" y1="130" x2="420" y2="160"></line>
+
+                <line x1="260" y1="190" x2="420" y2="170"></line>
+                <line x1="260" y1="190" x2="420" y2="210"></line>
+              </g>
+
+              <g>
+                <circle cx="120" cy="130" r="28" fill="rgba(59,130,246,.92)"></circle>
+                <text x="120" y="135" text-anchor="middle" font-size="12" fill="#0b0f14" font-weight="700"
+                  >Tú</text
+                >
+
+                <circle cx="260" cy="70" r="18" fill="rgba(245,185,66,.92)"></circle>
+                <text x="260" y="75" text-anchor="middle" font-size="11" fill="#0b0f14" font-weight="700"
+                  >L1</text
+                >
+
+                <circle cx="260" cy="130" r="18" fill="rgba(245,185,66,.92)"></circle>
+                <text x="260" y="135" text-anchor="middle" font-size="11" fill="#0b0f14" font-weight="700"
+                  >L1</text
+                >
+
+                <circle cx="260" cy="190" r="18" fill="rgba(245,185,66,.92)"></circle>
+                <text x="260" y="195" text-anchor="middle" font-size="11" fill="#0b0f14" font-weight="700"
+                  >L1</text
+                >
+
+                <circle cx="420" cy="50" r="14" fill="rgba(139,92,246,.92)"></circle>
+                <text x="420" y="54" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800"
+                  >L2</text
+                >
+
+                <circle cx="420" cy="90" r="14" fill="rgba(139,92,246,.92)"></circle>
+                <text x="420" y="94" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800"
+                  >L2</text
+                >
+
+                <circle cx="420" cy="120" r="14" fill="rgba(139,92,246,.92)"></circle>
+                <text x="420" y="124" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800"
+                  >L2</text
+                >
+
+                <circle cx="420" cy="160" r="14" fill="rgba(139,92,246,.92)"></circle>
+                <text x="420" y="164" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800"
+                  >L2</text
+                >
+
+                <circle cx="420" cy="170" r="14" fill="rgba(139,92,246,.92)"></circle>
+                <text x="420" y="174" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800"
+                  >L2</text
+                >
+
+                <circle cx="420" cy="210" r="14" fill="rgba(139,92,246,.92)"></circle>
+                <text x="420" y="214" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800"
+                  >L2</text
+                >
+              </g>
+            </svg>
+          </div>
+
+          <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div class="text-xs text-zinc-400">Nivel 1</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ levelOneCount }}</div>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div class="text-xs text-zinc-400">Nivel 2</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ levelTwoCount }}</div>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div class="text-xs text-zinc-400">Activos</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ activeCount }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]"
+          ></div>
+          <div class="relative">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xl font-bold">Consumo mensual de tu red</h3>
+                <p class="mt-1 text-sm text-zinc-400">Referencia para listados y estados de meta.</p>
+              </div>
+              <a
+                href="#merchant"
+                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              >
+                Impulsar consumo
+              </a>
+            </div>
+
+            <div class="mt-6 overflow-hidden rounded-2xl border border-white/10">
+              <table class="w-full text-sm">
+                <thead class="bg-white/5 text-zinc-300">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold">Usuario</th>
+                    <th class="px-4 py-3 text-left font-semibold">Nivel</th>
+                    <th class="px-4 py-3 text-left font-semibold">Consumo mes</th>
+                    <th class="px-4 py-3 text-left font-semibold">Estado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 text-zinc-200">
+                  <tr *ngFor="let member of networkMembers">
+                    <td class="px-4 py-3">{{ member.name }}</td>
+                    <td class="px-4 py-3 text-zinc-300">{{ member.level }}</td>
+                    <td class="px-4 py-3">{{ formatMoney(member.spend) }}</td>
+                    <td class="px-4 py-3">
+                      <span
+                        class="rounded-full border px-3 py-1 text-xs"
+                        [ngClass]="statusBadgeClass(member.status)"
+                        >{{ member.status }}</span
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs text-zinc-400">Meta de red (este mes)</div>
+                  <div class="mt-1 text-lg font-extrabold">
+                    {{ formatMoney(networkProgress) }} / {{ formatMoney(networkGoal) }}
+                  </div>
+                </div>
+                <a
+                  href="#links"
+                  class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                >
+                  Compartir ahora
+                </a>
+              </div>
+
+              <div class="progress-rail relative mt-4 h-3 overflow-hidden rounded-full">
+                <div class="progress-base absolute inset-y-0 left-0" [style.width.%]="networkPercent"></div>
+              </div>
+              <div class="mt-2 text-xs text-zinc-500">
+                Sube la probabilidad de completar tu reto de “Red logra sus metas” antes del corte.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="links" class="scroll-mt-10">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">Links de referencia</h2>
+          <p class="mt-2 max-w-2xl text-zinc-400">
+            Elige un producto destacado como gancho. Genera un link listo para pegar y una previsualización optimizada
+            por red social.
+          </p>
+        </div>
+        <a
+          href="#merchant"
+          class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+        >
+          Ver productos
+        </a>
+      </div>
+
+      <div class="mt-8 grid gap-6 lg:grid-cols-2">
+        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(59,130,246,0.12),transparent_55%)]"
+          ></div>
+
+          <div class="relative">
+            <h3 class="text-xl font-bold">Selecciona tu gancho</h3>
+            <p class="mt-1 text-sm text-zinc-400">Esto cambia el link y los assets sociales.</p>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                *ngFor="let item of featured"
+                class="rounded-2xl border p-4 text-left transition hover:bg-white/10"
+                [ngClass]="
+                  item.id === activeFeaturedId
+                    ? 'border-blue-400/40 bg-blue-500/10'
+                    : 'border-white/10 bg-white/5'
+                "
+              >
+                <div class="text-xs text-zinc-400">Gancho</div>
+                <div class="mt-1 font-extrabold tracking-tight">{{ item.label }}</div>
+                <div class="mt-2 text-xs text-zinc-400">{{ item.hook }}</div>
+              </button>
+            </div>
+
+            <div class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-4">
+              <div class="text-xs text-zinc-400">Tu link</div>
+              <div class="mt-2 flex flex-col gap-3 sm:flex-row">
+                <input
+                  readonly
+                  [value]="referralLink"
+                  class="flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200"
+                />
+                <button
+                  class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                >
+                  Copiar
+                </button>
+              </div>
+              <div class="mt-2 text-xs text-zinc-500">
+                Consejo: pega el link en historias/reels y fija un comentario con el mismo link en posts.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]"
+          ></div>
+
+          <div class="relative">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xl font-bold">Previsualizaciones sociales</h3>
+                <p class="mt-1 text-sm text-zinc-400">Mockups (reemplaza imágenes por tus creatividades).</p>
+              </div>
+
+              <div class="flex gap-2">
+                <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+                  Story 9:16
+                </button>
+                <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+                  Feed 1:1
+                </button>
+                <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+                  Banner 16:9
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-6 grid gap-4 md:grid-cols-2">
+              <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#121826]">
+                <div class="bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200">
+                  {{ socialFormatLabel }}
+                </div>
+                <div class="p-4">
+                  <div
+                    class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-white/10"
+                    [style.aspect-ratio]="socialAspectRatio"
+                  >
+                    <img
+                      [src]="activeFeatured.story"
+                      alt="Social"
+                      class="hero-image absolute inset-0 h-full w-full object-cover"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/70 via-transparent to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-4">
+                      <div class="text-xs font-semibold text-zinc-200/90">OBTENERLO AHORA</div>
+                      <div class="text-lg font-extrabold leading-tight">{{ activeFeatured.label }}</div>
+                      <div class="mt-1 text-xs text-zinc-300">Link en bio / swipe up</div>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 flex items-center justify-between gap-3">
+                    <div class="text-xs text-zinc-500">
+                      Imagen: <span class="text-zinc-300">{{ activeFeatured.story }}</span>
+                    </div>
+                    <button
+                      class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                    >
+                      Copiar ruta
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+                <div class="text-sm font-semibold text-zinc-200">Copy sugerido (editable)</div>
+                <textarea
+                  rows="10"
+                  class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+                  placeholder="Escribe tu copy aquí..."
+                ></textarea>
+                <div class="mt-3 flex gap-3">
+                  <button
+                    class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                  >
+                    Copiar copy
+                  </button>
+                  <button
+                    class="flex-1 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+                  >
+                    Generar template
+                  </button>
+                </div>
+                <div class="mt-2 text-xs text-zinc-500">
+                  Recomendación UX: 1 promesa + 1 prueba + 1 CTA. Evita promesas financieras.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="fixed bottom-5 left-1/2 z-50 hidden -translate-x-1/2">
+    <div
+      class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+    >
+      Actualizado.
+    </div>
+  </div>
+</section>
