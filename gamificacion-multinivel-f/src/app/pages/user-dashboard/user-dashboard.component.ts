@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 interface Goal {
   key: string;
@@ -41,12 +42,15 @@ interface FeaturedItem {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
 export class UserDashboardComponent implements OnInit, OnDestroy {
   countdownLabel = '3d 12h 20m 10s';
+  readonly cutoffDay = 25;
+  readonly cutoffHour = 23;
+  readonly cutoffMinute = 59;
   readonly userCode = 'ABC123';
   readonly networkGoal = 300;
   activeFeaturedId = 'colageno';
@@ -155,33 +159,33 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       id: 'colageno',
       label: 'COLÁGENO',
       hook: 'Regenera. Fortalece. Perdura.',
-      story: 'images/L-Programa.png',
-      feed: 'images/L-Programa2.png',
-      banner: 'images/L-Programa3.png'
+      story: 'images/L-Colageno.png',
+      feed: 'images/L-Colageno.png',
+      banner: 'images/L-Colageno.png'
     },
     {
       id: 'omega3',
       label: 'OMEGA-3',
       hook: 'Cuerpo y mente, todos los días.',
-      story: 'images/L-Programa.png',
-      feed: 'images/L-Programa2.png',
-      banner: 'images/L-Programa3.png'
+      story: 'images/L-Omega3.png',
+      feed: 'images/L-Omega3.png',
+      banner: 'images/L-Omega3.png'
     },
     {
       id: 'creatina',
       label: 'CREATINA',
       hook: 'Potencia y rendimiento.',
-      story: 'images/L-Programa.png',
-      feed: 'images/L-Programa2.png',
-      banner: 'images/L-Programa3.png'
+      story: 'images/L-Creatina.png',
+      feed: 'images/L-Creatina.png',
+      banner: 'images/L-Creatina.png'
     },
     {
       id: 'antioxidante',
       label: 'ANTIOXIDANTE',
       hook: 'Brilla hoy. Longevidad mañana.',
-      story: 'images/L-Programa.png',
-      feed: 'images/L-Programa2.png',
-      banner: 'images/L-Programa3.png'
+      story: 'images/L-Antioxidante.png',
+      feed: 'images/L-Antioxidante.png',
+      banner: 'images/L-Antioxidante.png'
     }
   ];
 
@@ -399,6 +403,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     window.setTimeout(() => node.classList.remove('ring-2', 'ring-yellow-400/60'), 1200);
   }
 
+  scrollToSection(sectionId: string): void {
+    const node = document.getElementById(sectionId);
+    if (!node) {
+      return;
+    }
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   notifyAction(message: string): void {
     this.showToast(message);
   }
@@ -417,15 +429,37 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   }
 
   private updateCountdown(): void {
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    lastDay.setHours(23, 59, 59, 999);
-    const diff = Math.max(0, lastDay.getTime() - Date.now());
+    const diff = Math.max(0, this.getNextCutoffDate().getTime() - Date.now());
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const m = Math.floor((diff / (1000 * 60)) % 60);
     const s = Math.floor((diff / 1000) % 60);
     this.countdownLabel = `${d}d ${h}h ${m}m ${s}s`;
+  }
+
+  private getNextCutoffDate(): Date {
+    const now = new Date();
+    let cutoff = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      this.cutoffDay,
+      this.cutoffHour,
+      this.cutoffMinute,
+      59,
+      999
+    );
+    if (cutoff.getTime() <= now.getTime()) {
+      cutoff = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        this.cutoffDay,
+        this.cutoffHour,
+        this.cutoffMinute,
+        59,
+        999
+      );
+    }
+    return cutoff;
   }
 
   private showToast(message: string): void {
