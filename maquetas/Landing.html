@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>findingU · Frontpage</title>
+
+  <!-- Tailwind CDN (referencia) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root{
+      --bg-primary:#0b0f14;
+      --bg-secondary:#121826;
+    }
+
+    /* Ambient scene background */
+    .bg-ambient {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(59,130,246,.18), transparent 45%),
+        radial-gradient(circle at 80% 30%, rgba(245,185,66,.15), transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(139,92,246,.12), transparent 55%),
+        linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary));
+    }
+
+    /* Glow helpers */
+    .glow-blue { box-shadow: 0 0 40px rgba(59,130,246,.45); }
+    .glow-gold { box-shadow: 0 0 40px rgba(245,185,66,.45); }
+
+    /* Fine grain overlay */
+    .grain:before{
+      content:"";
+      position:absolute; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+      mix-blend-mode:overlay;
+      opacity:.22;
+      pointer-events:none;
+      border-radius:inherit;
+    }
+
+    /* Hero image mask base */
+    .hero-image{
+      mask-repeat:no-repeat;
+      -webkit-mask-repeat:no-repeat;
+    }
+
+    /* Desktop (landscape-ish) => fade to the right */
+    @media (min-width: 768px){
+      .hero-image{
+        mask-image: linear-gradient(
+          to right,
+          rgba(0,0,0,1) 62%,
+          rgba(0,0,0,0.85) 72%,
+          rgba(0,0,0,0.35) 90%,
+          rgba(0,0,0,0) 100%
+        );
+        -webkit-mask-image: linear-gradient(
+          to right,
+          rgba(0,0,0,1) 62%,
+          rgba(0,0,0,0.85) 72%,
+          rgba(0,0,0,0.35) 90%,
+          rgba(0,0,0,0) 100%
+        );
+      }
+    }
+
+    /* Mobile (portrait) => fade top & bottom */
+    @media (max-width: 767px){
+      .hero-image{
+        mask-image: linear-gradient(
+          to bottom,
+          rgba(0,0,0,0) 0%,
+          rgba(0,0,0,0.6) 12%,
+          rgba(0,0,0,1) 25%,
+          rgba(0,0,0,1) 75%,
+          rgba(0,0,0,0.6) 88%,
+          rgba(0,0,0,0) 100%
+        );
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          rgba(0,0,0,0) 0%,
+          rgba(0,0,0,0.6) 12%,
+          rgba(0,0,0,1) 25%,
+          rgba(0,0,0,1) 75%,
+          rgba(0,0,0,0.6) 88%,
+          rgba(0,0,0,0) 100%
+        );
+      }
+    }
+
+    /* Focus ring consistent */
+    :focus-visible{
+      outline:2px solid rgba(59,130,246,.85);
+      outline-offset:3px;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-[#0b0f14] text-white antialiased">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 border-b border-white/5 bg-[#0b0f14]/75 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_30px_rgba(59,130,246,.45)]"></div>
+        <div>
+          <div class="font-extrabold tracking-tight">findingU</div>
+          <div class="text-xs text-zinc-400 -mt-0.5">Be Unstoppable</div>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-6 text-sm text-zinc-300">
+        <a class="hover:text-white transition" href="#registro">Registro</a>
+        <a class="hover:text-white transition" href="#recompensas">Recompensas</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="#recompensas" class="px-4 py-2 rounded-full border border-blue-500/70 text-blue-300 hover:bg-blue-500/10 transition">
+          Cómo funciona
+        </a>
+        <a href="#registro" class="px-5 py-2 rounded-full font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 glow-blue hover:scale-105 transition-transform">
+          Obtenerlo ahora
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative bg-ambient">
+    <div class="mx-auto max-w-6xl px-6 py-6 md:py-6">
+      <div class="grid items-center gap-12 md:grid-cols-2">
+
+        <!-- Left: Copy -->
+        <div>
+          <p class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300">
+            <span class="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_18px_rgba(59,130,246,.7)]"></span>
+            Bienestar avanzado · Uso diario · Resultados medibles
+          </p>
+
+          <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">
+            Cuida tu cuerpo.<br />
+            <span class="text-blue-400">Potencia tu energía.</span><br />
+            Compártelo.
+          </h1>
+
+          <p class="mt-5 text-lg text-zinc-400 max-w-xl">
+            Un sistema de bienestar con recompensas: mejoras tú y ayudas a otros a mejorar.
+          </p>
+
+          <div class="mt-8 flex flex-wrap items-center gap-4">
+            <a href="#registro"
+               class="px-8 py-4 rounded-full font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 glow-blue hover:scale-105 transition-transform">
+              Obtenerlo ahora
+            </a>
+
+            <a href="#recompensas"
+               class="px-6 py-4 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition">
+              Ver recompensas
+            </a>
+          </div>
+
+          <!-- Benefits bar -->
+          <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-zinc-200">
+            <div class="p-4 rounded-xl bg-white/5 border border-white/10">✔ Energía diaria</div>
+            <div class="p-4 rounded-xl bg-white/5 border border-white/10">✔ Recuperación</div>
+            <div class="p-4 rounded-xl bg-white/5 border border-white/10">✔ Salud integral</div>
+            <div class="p-4 rounded-xl bg-white/5 border border-white/10">✔ Recompensas</div>
+          </div>
+        </div>
+
+        <!-- Right: Interchangeable Landscape Image with orientation-specific fade -->
+        <div class="relative">
+          <div class="relative w-full h-[420px] md:h-[520px] overflow-hidden rounded-3xl border border-white/10 grain">
+            <!-- Replace src with your landscape hero image -->
+            <img
+              src="imagenes/Colageno-Clean.png"
+              alt="Producto destacado"
+              class="hero-image absolute inset-0 w-full h-full object-cover"
+            />
+
+            <!-- Overlay for readability + brand tone -->
+            <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/75 via-[#0b0f14]/25 to-transparent"></div>
+            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl"></div>
+            <div class="absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl"></div>
+
+            <!-- Content over image -->
+            <div class="relative z-10 h-full flex flex-col justify-end p-6 md:p-8">
+              <span class="text-xs text-zinc-300/90">PRODUCTO DESTACADO</span>
+              <h2 class="mt-2 text-3xl md:text-4xl font-extrabold">COLÁGENO</h2>
+              <p class="mt-2 text-sm text-zinc-200 max-w-md">
+                Regeneración, soporte articular y recuperación diaria.
+              </p>
+
+              <div class="mt-5 flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-full bg-blue-500/15 border border-blue-400/20 px-3 py-1 text-xs text-blue-200">
+                  10g por porción
+                </span>
+                <span class="inline-flex items-center rounded-full bg-yellow-400/15 border border-yellow-400/20 px-3 py-1 text-xs text-yellow-200">
+                  Alta biodisponibilidad
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- NEXT SECTION: Seamless transparency transition from hero -->
+  <section id="registro" class="relative mt-2 pt-8 md:pt-8 bg-[#0b0f14]">
+    <!-- Soft top gradient to “receive” the hero fade -->
+    <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent via-[#0b0f14] to-[#0b0f14]"></div>
+
+    <div class="relative max-w-3xl mx-auto px-6 py-16">
+      <div class="text-center">
+        <h2 class="text-3xl md:text-4xl font-extrabold">Empieza hoy</h2>
+        <p class="mt-3 text-zinc-400">
+          Regístrate en 30 segundos. Luego eliges el producto y desbloqueas recompensas.
+        </p>
+      </div>
+
+      <!-- Rewards benefits bar under form -->
+      <div class="mt-10 grid gap-4 md:grid-cols-3">
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-5">
+          <div class="text-sm font-semibold text-blue-200">Recompensas por compra</div>
+          <div class="mt-2 text-sm text-zinc-300">Acumula puntos y beneficios automáticamente.</div>
+        </div>
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-5">
+          <div class="text-sm font-semibold text-yellow-200">Bonos por referir</div>
+          <div class="mt-2 text-sm text-zinc-300">Recomienda lo que usas. Sin fricción.</div>
+        </div>
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-5">
+          <div class="text-sm font-semibold text-purple-200">Pagos claros</div>
+          <div class="mt-2 text-sm text-zinc-300">Transparencia en acumulación y cortes.</div>
+        </div>
+      </div>
+
+      <!-- Registration form -->
+      <form class="mt-10 grid gap-4 bg-white/5 border border-white/10 rounded-3xl p-8 grain relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)] pointer-events-none"></div>
+
+        <label class="relative block">
+          <span class="text-xs text-zinc-400">Nombre completo</span>
+          <input type="text" placeholder="Tu nombre"
+                 class="mt-2 w-full px-4 py-3 rounded-2xl bg-[#121826] border border-white/10 text-white placeholder:text-zinc-500 focus:border-blue-500/70">
+        </label>
+
+        <label class="relative block">
+          <span class="text-xs text-zinc-400">Correo electrónico</span>
+          <input type="email" placeholder="tucorreo@ejemplo.com"
+                 class="mt-2 w-full px-4 py-3 rounded-2xl bg-[#121826] border border-white/10 text-white placeholder:text-zinc-500 focus:border-blue-500/70">
+        </label>
+
+        <label class="relative block">
+          <span class="text-xs text-zinc-400">Teléfono</span>
+          <input type="tel" placeholder="+52 ..."
+                 class="mt-2 w-full px-4 py-3 rounded-2xl bg-[#121826] border border-white/10 text-white placeholder:text-zinc-500 focus:border-blue-500/70">
+        </label>
+
+        <div class="pt-2">
+          <button type="submit"
+                  class="w-full px-8 py-4 rounded-full font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 glow-blue hover:scale-[1.02] transition-transform">
+            Crear cuenta y continuar
+          </button>
+          <p class="text-xs text-zinc-500 mt-3 text-center">
+            Al registrarte aceptas los términos del programa de recompensas.
+          </p>
+        </div>
+      </form>
+     
+    </div>
+  </section>
+
+  <!-- REWARDS -->
+  <section id="recompensas" class="relative bg-ambient py-20">
+    <div class="mx-auto max-w-6xl px-6 grid md:grid-cols-2 gap-12 items-center">
+
+      <div>
+        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight">
+          Bienestar que se comparte,<br />
+          <span class="text-yellow-300">se recompensa</span>
+        </h2>
+
+        <p class="mt-4 text-zinc-400 max-w-xl">
+          Recomienda productos que usas y recibe beneficios reales.
+          Sin inversiones. Sin promesas irreales.
+        </p>
+
+        <div class="mt-8 space-y-4">
+          <div class="flex gap-4 items-start">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">1</div>
+            <p class="text-zinc-200">Te registras y obtienes tu enlace personal.</p>
+          </div>
+          <div class="flex gap-4 items-start">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">2</div>
+            <p class="text-zinc-200">Invitas a alguien a probar los productos.</p>
+          </div>
+          <div class="flex gap-4 items-start">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">3</div>
+            <p class="text-zinc-200">Ambos reciben recompensas acumulables.</p>
+          </div>
+        </div>
+
+        <a href="#registro"
+           class="inline-block mt-10 px-8 py-4 rounded-full font-semibold bg-gradient-to-r from-yellow-400 to-orange-500 text-black glow-gold hover:scale-105 transition-transform">
+          Obtenerlo ahora
+        </a>
+      </div>
+
+      <div class="rounded-3xl border border-white/10 bg-white/5 p-8 grain relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(245,185,66,0.18),transparent_55%)] pointer-events-none"></div>
+
+        <div class="relative">
+          <h3 class="text-xl font-bold">Beneficios del programa</h3>
+          <p class="mt-2 text-sm text-zinc-400">Diseñado para ser simple y transparente.</p>
+
+          <ul class="mt-6 space-y-3 text-zinc-300">
+            <li>✔ Descuentos por compra</li>
+            <li>✔ Bonos por recomendación</li>
+            <li>✔ Estructura de niveles</li>
+            <li>✔ Corte mensual y reportes</li>
+          </ul>
+
+          <div class="mt-6 px-4 py-3 rounded-full bg-yellow-400/15 text-yellow-200 text-center font-bold border border-yellow-400/20">
+            Bonos y puntos acumulables
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-3 text-sm">
+            <div class="rounded-2xl bg-[#121826] border border-white/10 p-4">
+              <div class="text-zinc-400 text-xs">Puntos</div>
+              <div class="text-2xl font-extrabold mt-1">1,250</div>
+            </div>
+            <div class="rounded-2xl bg-[#121826] border border-white/10 p-4">
+              <div class="text-zinc-400 text-xs">Nivel</div>
+              <div class="text-2xl font-extrabold mt-1">Oro</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER CTA -->
+  <footer class="border-t border-white/5 bg-[#0b0f14]">
+    <div class="mx-auto max-w-6xl px-6 py-10 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+      <div>
+        <div class="font-extrabold tracking-tight">findingU</div>
+        <div class="text-sm text-zinc-400 mt-1">Frontpage de referencia · Dark + Energía + Profundidad</div>
+      </div>
+
+      <div class="flex flex-col items-start md:items-end gap-3">
+        <a href="#registro" class="px-6 py-3 rounded-full font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 glow-blue hover:scale-105 transition-transform">
+          Obtenerlo ahora
+        </a>
+        <div class="text-xs text-zinc-500">© <span id="year"></span> findingU</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>
