@@ -33,7 +33,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       price: 35,
       qty: 1,
       note: 'Regeneración',
-      img: 'assets/images/product-colageno.svg'
+      img: 'images/L-Colageno.png'
     },
     {
       id: 'omega3',
@@ -41,7 +41,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       price: 29,
       qty: 2,
       note: 'Cuerpo & mente',
-      img: 'assets/images/product-omega3.svg'
+      img: 'images/L-Omega3.png'
     }
   ];
 
@@ -128,7 +128,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       price: 24,
       qty: 1,
       note: 'Energía',
-      img: 'assets/images/product-complejo-b.svg'
+      img: 'images/L-ComplejoB.png'
     };
     const existing = this.cartItems.find((item) => item.id === suggested.id);
     if (existing) {
