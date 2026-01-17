@@ -107,35 +107,35 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       name: 'COLÁGENO',
       price: 35,
       badge: 'Regeneración',
-      img: 'assets/images/product-colageno.svg'
+      img: 'images/L-Colageno.png'
     },
     {
       id: 'omega3',
       name: 'OMEGA-3',
       price: 29,
       badge: 'Cuerpo & mente',
-      img: 'assets/images/product-omega3.svg'
+      img: 'images/L-Omega3.png'
     },
     {
       id: 'creatina',
       name: 'CREATINA',
       price: 27,
       badge: 'Fuerza',
-      img: 'assets/images/product-creatina.svg'
+      img: 'images/L-Creatina.png'
     },
     {
       id: 'complejoB',
       name: 'COMPLEJO B',
       price: 24,
       badge: 'Energía',
-      img: 'assets/images/product-complejo-b.svg'
+      img: 'images/L-ComplejoB.png'
     },
     {
       id: 'antioxidante',
       name: 'ANTIOXIDANTE',
       price: 31,
       badge: 'Longevidad',
-      img: 'assets/images/product-antioxidante.svg'
+      img: 'images/L-Antioxidante.png'
     }
   ];
 
@@ -155,33 +155,33 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       id: 'colageno',
       label: 'COLÁGENO',
       hook: 'Regenera. Fortalece. Perdura.',
-      story: 'assets/images/social-story.svg',
-      feed: 'assets/images/social-feed.svg',
-      banner: 'assets/images/social-banner.svg'
+      story: 'images/L-Programa.png',
+      feed: 'images/L-Programa2.png',
+      banner: 'images/L-Programa3.png'
     },
     {
       id: 'omega3',
       label: 'OMEGA-3',
       hook: 'Cuerpo y mente, todos los días.',
-      story: 'assets/images/social-story.svg',
-      feed: 'assets/images/social-feed.svg',
-      banner: 'assets/images/social-banner.svg'
+      story: 'images/L-Programa.png',
+      feed: 'images/L-Programa2.png',
+      banner: 'images/L-Programa3.png'
     },
     {
       id: 'creatina',
       label: 'CREATINA',
       hook: 'Potencia y rendimiento.',
-      story: 'assets/images/social-story.svg',
-      feed: 'assets/images/social-feed.svg',
-      banner: 'assets/images/social-banner.svg'
+      story: 'images/L-Programa.png',
+      feed: 'images/L-Programa2.png',
+      banner: 'images/L-Programa3.png'
     },
     {
       id: 'antioxidante',
       label: 'ANTIOXIDANTE',
       hook: 'Brilla hoy. Longevidad mañana.',
-      story: 'assets/images/social-story.svg',
-      feed: 'assets/images/social-feed.svg',
-      banner: 'assets/images/social-banner.svg'
+      story: 'images/L-Programa.png',
+      feed: 'images/L-Programa2.png',
+      banner: 'images/L-Programa3.png'
     }
   ];
 
