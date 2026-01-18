@@ -12,12 +12,12 @@
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
-        <button
+        <a
           class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
-          (click)="showDetails()"
+          [routerLink]="['/dashboard']"
         >
-          Detalles
-        </button>
+          Regresar
+        </a>
       </div>
     </div>
   </header>
