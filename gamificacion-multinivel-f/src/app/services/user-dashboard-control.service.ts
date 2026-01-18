@@ -8,7 +8,7 @@ import {
   NetworkMember,
   UserDashboardData
 } from '../models/user-dashboard.model';
-import { MockApiService } from './mock-api.service';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -18,7 +18,7 @@ export class UserDashboardControlService {
   private cart: Record<string, number> = {};
   private heroQty = 0;
 
-  constructor(private readonly api: MockApiService) {}
+  constructor(private readonly api: ApiService) {}
 
   load(): Observable<UserDashboardData> {
     return this.api.getUserDashboardData().pipe(
