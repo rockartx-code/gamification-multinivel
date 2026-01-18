@@ -1,0 +1,90 @@
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
+
+import { AdminCustomer, AdminData, AdminOrder } from '../models/admin.model';
+import { MockApiService } from './mock-api.service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AdminControlService {
+  private readonly dataSubject = new BehaviorSubject<AdminData | null>(null);
+
+  constructor(private readonly api: MockApiService) {}
+
+  load(): Observable<AdminData> {
+    return this.api.getAdminData().pipe(
+      tap((data) => {
+        this.dataSubject.next(structuredClone(data));
+      })
+    );
+  }
+
+  get data(): AdminData | null {
+    return this.dataSubject.value;
+  }
+
+  get orders(): AdminOrder[] {
+    return this.data?.orders ?? [];
+  }
+
+  get customers(): AdminCustomer[] {
+    return this.data?.customers ?? [];
+  }
+
+  get productsCount(): number {
+    return this.data?.products.length ?? 0;
+  }
+
+  get customersCount(): number {
+    return this.customers.length;
+  }
+
+  get pendingCount(): number {
+    return this.orders.filter((order) => order.status === 'pending').length;
+  }
+
+  get paidCount(): number {
+    return this.orders.filter((order) => order.status === 'paid').length;
+  }
+
+  get shipCount(): number {
+    return this.orders.filter((order) => order.status === 'paid').length;
+  }
+
+  get commissionsTotal(): number {
+    return this.customers.reduce((acc, customer) => acc + customer.commissions, 0);
+  }
+
+  formatMoney(value: number): string {
+    return `$${value.toFixed(0)}`;
+  }
+
+  getFilteredOrders(status: AdminOrder['status']): AdminOrder[] {
+    return this.orders.filter((order) => order.status === status);
+  }
+
+  advanceOrder(orderId: string): void {
+    const current = this.dataSubject.value;
+    if (!current) {
+      return;
+    }
+    const updatedOrders = current.orders.map((order) => {
+      if (order.id !== orderId) {
+        return order;
+      }
+      if (order.status === 'pending') {
+        return { ...order, status: 'paid' };
+      }
+      if (order.status === 'paid') {
+        return { ...order, status: 'delivered' };
+      }
+      return order;
+    });
+    this.dataSubject.next({ ...current, orders: updatedOrders });
+  }
+
+  selectCustomer(customerId: number): AdminCustomer | null {
+    return this.customers.find((customer) => customer.id === customerId) ?? null;
+  }
+}
