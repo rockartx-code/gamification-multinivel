@@ -2,43 +2,29 @@
   <header class="border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
-        <div
-          class="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_26px_rgba(59,130,246,.45)]"
-        ></div>
-        <div class="min-w-0">
-          <div class="truncate font-extrabold tracking-tight">findingU</div>
-          <div class="-mt-0.5 text-xs text-zinc-400">Checkout rápido</div>
-        </div>
+        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
-        <a
-          class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
-          [routerLink]="['/login']"
-        >
+        <a class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
+          [routerLink]="['/login']">
           Login
         </a>
-        <a
-          class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
-          [routerLink]="['/dashboard']"
-        >
+        <a class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
+          [routerLink]="['/dashboard']">
           Regresar
         </a>
       </div>
     </div>
   </header>
 
-  <main
-    class="mx-auto h-[calc(100vh-56px-92px)] max-w-6xl px-4 py-4 sm:h-[calc(100vh-60px-92px)]"
-  >
+  <main class="mx-auto h-[calc(100vh-56px-92px)] max-w-6xl px-4 py-4 sm:h-[calc(100vh-60px-92px)]">
     <div class="grid h-full gap-4 lg:grid-cols-[1.15fr_.85fr]">
-      <section
-        id="detalle-carrito"
-        class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5"
-      >
+      <section id="detalle-carrito"
+        class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]"
-        ></div>
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
+        </div>
 
         <div class="relative px-5 pb-3 pt-5">
           <div class="flex items-start justify-between gap-3">
@@ -83,13 +69,10 @@
               </button>
             </div>
             <div class="mt-3 space-y-3">
-              <div
-                *ngFor="let item of cartItems"
-                class="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3"
-              >
+              <div *ngFor="let item of cartItems"
+                class="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
                 <div
-                  class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5"
-                >
+                  class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                   <img [src]="item.img" [alt]="item.name" class="h-full w-full object-cover" />
                 </div>
 
@@ -107,13 +90,9 @@
                   <div class="mt-2 flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#121826] px-2 py-2">
                       <span class="text-[11px] text-zinc-400">Qty</span>
-                      <input
-                        type="number"
-                        min="0"
-                        [value]="item.qty"
+                      <input type="number" min="0" [value]="item.qty"
                         (input)="setQty(item.id, $any($event.target).value)"
-                        class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white"
-                      />
+                        class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
                     </div>
 
                     <div class="text-xs text-zinc-300">
@@ -123,8 +102,7 @@
 
                     <button
                       class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
-                      (click)="removeItem(item.id)"
-                    >
+                      (click)="removeItem(item.id)">
                       Quitar
                     </button>
                   </div>
@@ -144,38 +122,33 @@
                 <span class="text-[11px] text-zinc-400">Nombre</span>
                 <input
                   class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                  placeholder="Tu nombre"
-                />
+                  placeholder="Tu nombre" />
               </label>
               <label class="col-span-1 block">
                 <span class="text-[11px] text-zinc-400">Teléfono</span>
                 <input
                   class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                  placeholder="+52..."
-                />
+                  placeholder="+52..." />
               </label>
 
               <label class="col-span-2 block">
                 <span class="text-[11px] text-zinc-400">Dirección</span>
                 <input
                   class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                  placeholder="Calle, número, colonia, ciudad"
-                />
+                  placeholder="Calle, número, colonia, ciudad" />
               </label>
 
               <label class="col-span-1 block">
                 <span class="text-[11px] text-zinc-400">CP</span>
                 <input
                   class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                  placeholder="00000"
-                />
+                  placeholder="00000" />
               </label>
               <label class="col-span-1 block">
                 <span class="text-[11px] text-zinc-400">Estado</span>
                 <input
                   class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                  placeholder="CDMX"
-                />
+                  placeholder="CDMX" />
               </label>
             </div>
           </div>
@@ -184,27 +157,21 @@
             <div class="text-sm font-semibold text-zinc-200">Pago</div>
 
             <div class="mt-3 grid grid-cols-3 gap-2">
-              <button
-                class="rounded-2xl border px-3 py-3 text-left transition hover:bg-blue-500/15"
+              <button class="rounded-2xl border px-3 py-3 text-left transition hover:bg-blue-500/15"
                 [ngClass]="payMethod === 'card' ? 'border-blue-400/30 bg-blue-500/10' : 'border-white/10 bg-white/5'"
-                (click)="selectPay('card')"
-              >
+                (click)="selectPay('card')">
                 <div class="text-xs font-semibold">Tarjeta</div>
                 <div class="mt-1 text-[10px] text-zinc-400">Rápido</div>
               </button>
-              <button
-                class="rounded-2xl border px-3 py-3 text-left transition hover:bg-white/10"
+              <button class="rounded-2xl border px-3 py-3 text-left transition hover:bg-white/10"
                 [ngClass]="payMethod === 'spei' ? 'border-blue-400/30 bg-blue-500/10' : 'border-white/10 bg-white/5'"
-                (click)="selectPay('spei')"
-              >
+                (click)="selectPay('spei')">
                 <div class="text-xs font-semibold">SPEI</div>
                 <div class="mt-1 text-[10px] text-zinc-400">CLABE</div>
               </button>
-              <button
-                class="rounded-2xl border px-3 py-3 text-left transition hover:bg-white/10"
+              <button class="rounded-2xl border px-3 py-3 text-left transition hover:bg-white/10"
                 [ngClass]="payMethod === 'cash' ? 'border-blue-400/30 bg-blue-500/10' : 'border-white/10 bg-white/5'"
-                (click)="selectPay('cash')"
-              >
+                (click)="selectPay('cash')">
                 <div class="text-xs font-semibold">Tienda</div>
                 <div class="mt-1 text-[10px] text-zinc-400">OXXO</div>
               </button>
@@ -215,8 +182,7 @@
                 <span class="text-[11px] text-zinc-400">Número</span>
                 <input
                   class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                  placeholder="1234 5678 9012 3456"
-                />
+                  placeholder="1234 5678 9012 3456" />
               </label>
 
               <div class="mt-2 grid grid-cols-2 gap-2">
@@ -224,27 +190,23 @@
                   <span class="text-[11px] text-zinc-400">Exp</span>
                   <input
                     class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                    placeholder="MM/AA"
-                  />
+                    placeholder="MM/AA" />
                 </label>
                 <label class="block">
                   <span class="text-[11px] text-zinc-400">CVV</span>
                   <input
                     class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                    placeholder="123"
-                  />
+                    placeholder="123" />
                 </label>
               </div>
             </div>
 
-            <div
-              class="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-zinc-300"
-              [class.hidden]="payMethod === 'card'"
-            >
+            <div class="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-zinc-300"
+              [class.hidden]="payMethod === 'card'">
               {{
-                payMethod === 'spei'
-                  ? 'Al finalizar te mostraremos CLABE y referencia. Tu pedido se confirma al recibir el pago.'
-                  : 'Al finalizar generamos un cupón de pago con referencia. Tu pedido se confirma al pagarlo.'
+              payMethod === 'spei'
+              ? 'Al finalizar te mostraremos CLABE y referencia. Tu pedido se confirma al recibir el pago.'
+              : 'Al finalizar generamos un cupón de pago con referencia. Tu pedido se confirma al pagarlo.'
               }}
             </div>
           </div>
@@ -252,10 +214,11 @@
       </section>
 
       <aside class="hidden h-full flex-col space-y-4 lg:flex">
-        <div id="resumen-carrito" class="grain relative flex-1 overflow-hidden rounded-3xl border border-white/10 bg-ambient">
+        <div id="resumen-carrito"
+          class="grain relative flex-1 overflow-hidden rounded-3xl border border-white/10 bg-ambient">
           <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(59,130,246,0.14),transparent_55%)]"
-          ></div>
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(59,130,246,0.14),transparent_55%)]">
+          </div>
           <div class="relative flex h-full flex-col p-6">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -291,10 +254,8 @@
             <div class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
               <div class="text-sm font-semibold text-zinc-200">Progreso a beneficio</div>
               <div class="relative mt-2 h-3 overflow-hidden rounded-full bg-white/10">
-                <div
-                  class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-indigo-500"
-                  [style.width.%]="benefitPercent"
-                ></div>
+                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-indigo-500"
+                  [style.width.%]="benefitPercent"></div>
               </div>
               <div class="mt-2 text-xs text-zinc-500">
                 Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para
@@ -304,8 +265,7 @@
 
             <button
               class="glow-gold mt-auto w-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 font-semibold text-black transition-transform hover:scale-[1.02]"
-              (click)="placeOrder()"
-            >
+              (click)="placeOrder()">
               Pagar y finalizar
             </button>
 
@@ -319,10 +279,8 @@
   <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0b0f14]/92 backdrop-blur">
     <div class="mx-auto max-w-6xl px-4 py-3">
       <div class="flex items-center justify-between gap-3">
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm transition hover:bg-white/10"
-          (click)="showSummary()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm transition hover:bg-white/10"
+          (click)="showSummary()">
           Ver resumen
         </button>
 
@@ -333,8 +291,7 @@
 
         <button
           class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.02]"
-          (click)="placeOrder()"
-        >
+          (click)="placeOrder()">
           Pagar
         </button>
       </div>
@@ -343,21 +300,16 @@
 
   <div class="fixed bottom-[104px] left-1/2 z-[60] -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
-    >
+      class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
     </div>
   </div>
 
-  <div
-    class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 px-4 pb-6 lg:hidden"
-    [class.hidden]="!isSummaryOpen"
-    (click)="closeSummary()"
-  >
+  <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 px-4 pb-6 lg:hidden"
+    [class.hidden]="!isSummaryOpen" (click)="closeSummary()">
     <div
       class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
-      (click)="$event.stopPropagation()"
-    >
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold">Resumen</h2>
@@ -365,8 +317,7 @@
         </div>
         <button
           class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200 transition hover:bg-white/10"
-          (click)="closeSummary()"
-        >
+          (click)="closeSummary()">
           Cerrar
         </button>
       </div>

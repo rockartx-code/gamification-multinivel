@@ -2,19 +2,11 @@
   <header class="border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
       <div class="flex items-center gap-3">
-        <div
-          class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_30px_rgba(59,130,246,.45)]"
-        ></div>
-        <div>
-          <div class="font-extrabold tracking-tight">findingU</div>
-          <div class="-mt-0.5 text-xs text-zinc-400">Acceso al panel</div>
-        </div>
+        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
-      <a
-        class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-        [routerLink]="['/']"
-      >
+      <a class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+        [routerLink]="['/']">
         Volver
       </a>
     </div>
@@ -22,81 +14,54 @@
 
   <main class="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
     <div class="grid gap-10 lg:grid-cols-[1.05fr_.95fr]">
-      <div class="space-y-6">
-        <h1 class="text-3xl font-extrabold tracking-tight md:text-4xl">Bienvenido de vuelta</h1>
-        <p class="text-zinc-400">
-          Ingresa tus credenciales para identificar tu rol y acceder al panel correspondiente.
-        </p>
-
-        <div class="grid gap-4">
-          <div class="role-card rounded-3xl border border-blue-400/30 bg-blue-500/10 px-5 py-4 text-left">
-            <div class="text-xs text-zinc-300">Administrador</div>
-            <div class="mt-1 text-lg font-semibold">Control y operaciones</div>
-            <div class="mt-2 text-sm text-zinc-300">Usuario: <span class="font-semibold">admin</span></div>
-            <div class="text-sm text-zinc-300">Password: <span class="font-semibold">admin123</span></div>
-          </div>
-
-          <div class="role-card rounded-3xl border border-indigo-400/30 bg-indigo-500/10 px-5 py-4 text-left">
-            <div class="text-xs text-zinc-300">Cliente</div>
-            <div class="mt-1 text-lg font-semibold">Metas y recompensas</div>
-            <div class="mt-2 text-sm text-zinc-300">Usuario: <span class="font-semibold">cliente</span></div>
-            <div class="text-sm text-zinc-300">Password: <span class="font-semibold">cliente123</span></div>
-          </div>
-        </div>
-      </div>
 
       <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.18),transparent_55%)]"
-        ></div>
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.18),transparent_55%)]">
+        </div>
 
         <div class="relative space-y-4">
           <div class="text-xs uppercase tracking-[0.3em] text-zinc-400">Login</div>
           <div class="text-2xl font-extrabold">Accede a tu panel</div>
-          <p class="text-sm text-zinc-400">
-            Este acceso valida tus credenciales y detecta el rol para redirigirte.
-          </p>
 
           <label class="block text-sm text-zinc-300">
             Usuario
-            <input
-              type="text"
-              name="username"
+            <input type="text" name="username"
               class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/30"
-              placeholder="Tu usuario"
-              [(ngModel)]="username"
-            />
+              placeholder="Tu usuario" [(ngModel)]="username" />
           </label>
 
           <label class="block text-sm text-zinc-300">
             Password
-            <input
-              type="password"
-              name="password"
+            <input type="password" name="password"
               class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/30"
-              placeholder="Tu contraseña"
-              [(ngModel)]="password"
-            />
+              placeholder="Tu contraseña" [(ngModel)]="password" />
           </label>
 
-          <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+          <p *ngIf="errorMessage"
+            class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
             {{ errorMessage }}
           </p>
 
-          <button
-            type="button"
+          <button type="button"
             class="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
-            (click)="login()"
-            [disabled]="isSubmitting"
-          >
+            (click)="login()" [disabled]="isSubmitting">
             {{ isSubmitting ? 'Validando acceso...' : 'Ingresar al panel' }}
           </button>
 
-          <div class="text-xs text-zinc-500">
-            Usa las credenciales de prueba para recorrer la experiencia.
-          </div>
         </div>
       </div>
     </div>
   </main>
+
+  <footer class="border-t border-white/5 bg-[#0b0f14]">
+    <div
+      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
+      <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
+
+      <div class="flex flex-col items-start gap-3 md:items-end">
+        <div class="text-xs text-zinc-500">© 2026 finding U</div>
+      </div>
+    </div>
+  </footer>
 </section>

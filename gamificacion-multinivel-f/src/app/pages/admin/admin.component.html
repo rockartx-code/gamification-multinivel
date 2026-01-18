@@ -2,13 +2,7 @@
   <header class="border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
-        <div
-          class="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_26px_rgba(59,130,246,.45)]"
-        ></div>
-        <div class="min-w-0">
-          <div class="truncate font-extrabold tracking-tight">findingU</div>
-          <div class="-mt-0.5 text-xs text-zinc-400">Panel de administración</div>
-        </div>
+        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
       <div class="flex shrink-0 flex-wrap items-center gap-2">
@@ -17,35 +11,29 @@
           <div class="text-sm font-extrabold">3</div>
         </div>
 
-        <div
-          class="hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#121826] px-4 py-2 lg:flex"
-          *ngIf="currentUser"
-        >
+        <div class="hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#121826] px-4 py-2 lg:flex"
+          *ngIf="currentUser">
           <div class="text-right">
             <div class="text-[11px] text-zinc-400">Usuario</div>
             <div class="text-sm font-semibold">{{ currentUser.name }}</div>
           </div>
-          <span class="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[11px] uppercase text-blue-200">
+          <span
+            class="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[11px] uppercase text-blue-200">
             {{ currentUser.role }}
           </span>
         </div>
 
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-          (click)="showActions()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+          (click)="showActions()">
           Acciones
         </button>
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-          (click)="logout()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+          (click)="logout()">
           Logout
         </button>
         <button
           class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-          (click)="openNewOrderModal()"
-        >
+          (click)="openNewOrderModal()">
           Nuevo
         </button>
       </div>
@@ -57,59 +45,43 @@
       <aside class="hidden h-full flex-col gap-3 lg:flex">
         <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4">
           <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(59,130,246,0.10),transparent_55%)]"
-          ></div>
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(59,130,246,0.10),transparent_55%)]">
+          </div>
           <div class="relative">
             <div class="text-xs text-zinc-400">Navegación</div>
             <div class="mt-3 flex flex-col gap-2">
-              <button
-                class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-blue-500/15"
-                [ngClass]="
+              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-blue-500/15" [ngClass]="
                   currentView === 'orders'
                     ? 'border-blue-400/30 bg-blue-500/10'
                     : 'border-white/10 bg-white/5 hover:bg-white/10'
-                "
-                (click)="setView('orders')"
-              >
+                " (click)="setView('orders')">
                 <div class="text-sm font-semibold">Pedidos</div>
                 <div class="mt-0.5 text-xs text-zinc-400">Pendiente · Pagado · Entregado</div>
               </button>
 
-              <button
-                class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-white/10"
-                [ngClass]="
+              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-white/10" [ngClass]="
                   currentView === 'customers'
                     ? 'border-blue-400/30 bg-blue-500/10'
                     : 'border-white/10 bg-white/5 hover:bg-white/10'
-                "
-                (click)="setView('customers')"
-              >
+                " (click)="setView('customers')">
                 <div class="text-sm font-semibold">Clientes</div>
                 <div class="mt-0.5 text-xs text-zinc-400">Niveles · Estructura · Comisiones</div>
               </button>
 
-              <button
-                class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-white/10"
-                [ngClass]="
+              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-white/10" [ngClass]="
                   currentView === 'products'
                     ? 'border-blue-400/30 bg-blue-500/10'
                     : 'border-white/10 bg-white/5 hover:bg-white/10'
-                "
-                (click)="setView('products')"
-              >
+                " (click)="setView('products')">
                 <div class="text-sm font-semibold">Productos</div>
                 <div class="mt-0.5 text-xs text-zinc-400">Altas · Imágenes · CTA</div>
               </button>
 
-              <button
-                class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-white/10"
-                [ngClass]="
+              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-white/10" [ngClass]="
                   currentView === 'stats'
                     ? 'border-blue-400/30 bg-blue-500/10'
                     : 'border-white/10 bg-white/5 hover:bg-white/10'
-                "
-                (click)="setView('stats')"
-              >
+                " (click)="setView('stats')">
                 <div class="text-sm font-semibold">Estadísticas</div>
                 <div class="mt-0.5 text-xs text-zinc-400">Ventas · Funnel · Alertas</div>
               </button>
@@ -119,8 +91,8 @@
 
         <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-ambient p-4">
           <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(245,185,66,0.12),transparent_55%)]"
-          ></div>
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(245,185,66,0.12),transparent_55%)]">
+          </div>
           <div class="relative">
             <div class="text-xs text-zinc-300/80">Estado del día</div>
             <div class="mt-2 text-lg font-extrabold">$1,240</div>
@@ -130,10 +102,11 @@
         </div>
       </aside>
 
-      <section class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+      <section
+        class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.10),transparent_55%)]"
-        ></div>
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.10),transparent_55%)]">
+        </div>
 
         <div class="relative border-b border-white/5 px-5 pb-3 pt-5">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -145,58 +118,45 @@
             <div class="flex items-center gap-2">
               <div class="hidden items-center gap-2 rounded-2xl border border-white/10 bg-[#121826] px-3 py-2 md:flex">
                 <span class="text-xs text-zinc-400">Buscar</span>
-                <input
-                  class="w-56 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-600 outline-none"
-                  placeholder="ID, cliente, email..."
-                />
+                <input class="w-56 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-600 outline-none"
+                  placeholder="ID, cliente, email..." />
               </div>
 
               <button
-                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10 md:hidden"
-              >
+                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10 md:hidden">
                 Buscar
               </button>
 
               <button
-                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-              >
+                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
                 Exportar
               </button>
             </div>
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders'">
-            <button
-              class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-blue-500/15"
+            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-blue-500/15"
               [ngClass]="
                 currentOrderStatus === 'pending'
                   ? 'border-blue-400/30 bg-blue-500/10'
                   : 'border-white/10 bg-white/5 hover:bg-white/10'
-              "
-              (click)="setOrderStatus('pending')"
-            >
+              " (click)="setOrderStatus('pending')">
               Pendiente
             </button>
-            <button
-              class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
               [ngClass]="
                 currentOrderStatus === 'paid'
                   ? 'border-blue-400/30 bg-blue-500/10'
                   : 'border-white/10 bg-white/5 hover:bg-white/10'
-              "
-              (click)="setOrderStatus('paid')"
-            >
+              " (click)="setOrderStatus('paid')">
               Pagado
             </button>
-            <button
-              class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
               [ngClass]="
                 currentOrderStatus === 'delivered'
                   ? 'border-blue-400/30 bg-blue-500/10'
                   : 'border-white/10 bg-white/5 hover:bg-white/10'
-              "
-              (click)="setOrderStatus('delivered')"
-            >
+              " (click)="setOrderStatus('delivered')">
               Entregado
             </button>
           </div>
@@ -228,8 +188,7 @@
 
                 <button
                   class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-xs font-semibold text-black transition-transform hover:scale-[1.02]"
-                  (click)="openNewOrderModal()"
-                >
+                  (click)="openNewOrderModal()">
                   + Nuevo pedido
                 </button>
               </div>
@@ -254,8 +213,7 @@
                       <td class="px-4 py-3">
                         <button
                           class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
-                          (click)="advanceOrder(order.id)"
-                        >
+                          (click)="advanceOrder(order.id)">
                           Cambiar estado
                         </button>
                       </td>
@@ -305,12 +263,11 @@
                         <td class="px-4 py-3">{{ customer.level }}</td>
                         <td class="px-4 py-3 text-yellow-300">{{ customer.discount }}</td>
                         <td class="px-4 py-3">
-                        <button
-                          class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
-                          (click)="selectCustomer(customer.id)"
-                        >
-                          Ver
-                        </button>
+                          <button
+                            class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
+                            (click)="selectCustomer(customer.id)">
+                            Ver
+                          </button>
                         </td>
                       </tr>
                     </tbody>
@@ -325,8 +282,7 @@
                     <div class="mt-1 text-xs text-zinc-400">Estructura simulada.</div>
                   </div>
                   <button
-                    class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  >
+                    class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
                     Perfil
                   </button>
                 </div>
@@ -351,8 +307,7 @@
                     <div class="text-xs text-zinc-400">Comisiones por depositar</div>
                     <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(customer?.commissions ?? 0) }}</div>
                     <button
-                      class="glow-gold mt-3 w-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-                    >
+                      class="glow-gold mt-3 w-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]">
                       Pagar comisiones
                     </button>
                   </div>
@@ -360,14 +315,13 @@
                     <div class="text-xs text-zinc-400">Acción sugerida</div>
                     <div class="mt-1 text-sm text-zinc-300">
                       {{
-                        (customer?.commissions ?? 0) > 0
-                          ? 'Pagar comisiones pendientes.'
-                          : 'Invitar a subir de nivel.'
+                      (customer?.commissions ?? 0) > 0
+                      ? 'Pagar comisiones pendientes.'
+                      : 'Invitar a subir de nivel.'
                       }}
                     </div>
                     <button
-                      class="mt-3 w-full rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                    >
+                      class="mt-3 w-full rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
                       Enviar recordatorio
                     </button>
                   </div>
@@ -376,15 +330,13 @@
                 <div class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 overflow-hidden">
                   <div class="mt-3 flex gap-2">
                     <button
-                      class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                    >
+                      class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
                       Cómo agregar
                     </button>
 
                     <button
                       class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-                      (click)="openAddStructureModal()"
-                    >
+                      (click)="openAddStructureModal()">
                       Agregar a estructura
                     </button>
                   </div>
@@ -493,8 +445,7 @@
                         <td class="px-4 py-3">{{ product.active ? 'Activo' : 'Inactivo' }}</td>
                         <td class="px-4 py-3">
                           <button
-                            class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
-                          >
+                            class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10">
                             Editar
                           </button>
                         </td>
@@ -513,8 +464,7 @@
                     </div>
                   </div>
                   <button
-                    class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-                  >
+                    class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]">
                     Guardar
                   </button>
                 </div>
@@ -524,31 +474,26 @@
                     <span class="text-[11px] text-zinc-400">Nombre</span>
                     <input
                       class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                      placeholder="COLÁGENO..."
-                    />
+                      placeholder="COLÁGENO..." />
                   </label>
                   <label class="block">
                     <span class="text-[11px] text-zinc-400">Precio</span>
-                    <input
-                      type="number"
+                    <input type="number"
                       class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                      placeholder="0"
-                    />
+                      placeholder="0" />
                   </label>
                   <label class="block">
                     <span class="text-[11px] text-zinc-400">SKU</span>
                     <input
                       class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                      placeholder="SKU-0001"
-                    />
+                      placeholder="SKU-0001" />
                   </label>
 
                   <label class="block md:col-span-2">
                     <span class="text-[11px] text-zinc-400">Descripción corta (hook)</span>
                     <input
                       class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
-                      placeholder="Beneficio principal en 1 línea..."
-                    />
+                      placeholder="Beneficio principal en 1 línea..." />
                   </label>
                 </div>
 
@@ -559,10 +504,8 @@
                   </div>
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label
-                      *ngFor="let slot of assetSlots; let i = index"
-                      class="block rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
-                    >
+                    <label *ngFor="let slot of assetSlots; let i = index"
+                      class="block rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10">
                       <div class="flex items-start justify-between gap-2">
                         <div>
                           <div class="text-xs font-semibold text-zinc-200">{{ slot.label }}</div>
@@ -570,21 +513,13 @@
                         </div>
                         <span class="text-[11px] text-zinc-500">.png/.jpg/.webp</span>
                       </div>
-                      <input
-                        type="file"
-                        accept="image/*"
+                      <input type="file" accept="image/*"
                         class="mt-3 block w-full text-xs text-zinc-300 file:mr-3 file:rounded-full file:border-0 file:bg-blue-500/10 file:px-4 file:py-2 file:font-semibold file:text-zinc-100 hover:file:bg-blue-500/15"
-                        (change)="previewAsset($event, i)"
-                      />
+                        (change)="previewAsset($event, i)" />
                       <div
-                        class="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/20"
-                      >
-                        <img
-                          *ngIf="assetPreviews.get(i)"
-                          [src]="assetPreviews.get(i)"
-                          alt="Preview"
-                          class="h-full w-full object-cover"
-                        />
+                        class="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                        <img *ngIf="assetPreviews.get(i)" [src]="assetPreviews.get(i)" alt="Preview"
+                          class="h-full w-full object-cover" />
                         <div *ngIf="!assetPreviews.get(i)" class="text-[11px] text-zinc-500">Preview</div>
                       </div>
                     </label>
@@ -624,10 +559,7 @@
                 <div class="mt-1 text-xs text-zinc-400">Priorizadas por impacto operativo.</div>
 
                 <div class="mt-4 space-y-3">
-                  <div
-                    *ngFor="let warning of warnings"
-                    class="rounded-2xl border border-white/10 bg-black/20 p-4"
-                  >
+                  <div *ngFor="let warning of warnings" class="rounded-2xl border border-white/10 bg-black/20 p-4">
                     <div class="text-sm font-semibold">{{ warning.text }}</div>
                     <div class="mt-1 text-xs text-zinc-500">Severidad: {{ warning.severity }}</div>
                   </div>
@@ -640,12 +572,8 @@
 
                 <div class="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4">
                   <svg viewBox="0 0 560 180" class="h-[180px] w-full">
-                    <path
-                      d="M20 140 C 90 90, 140 120, 190 80 C 240 40, 300 70, 350 60 C 410 45, 460 70, 540 30"
-                      fill="none"
-                      stroke="rgba(59,130,246,.85)"
-                      stroke-width="4"
-                    />
+                    <path d="M20 140 C 90 90, 140 120, 190 80 C 240 40, 300 70, 350 60 C 410 45, 460 70, 540 30"
+                      fill="none" stroke="rgba(59,130,246,.85)" stroke-width="4" />
                     <path d="M20 160 L540 160" stroke="rgba(255,255,255,.12)" stroke-width="2" />
                     <circle cx="540" cy="30" r="6" fill="rgba(245,185,66,.92)" />
                   </svg>
@@ -661,38 +589,27 @@
     </div>
   </main>
 
-  <div
-    *ngIf="isActionsModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-    (click)="closeModals()"
-  >
-    <div
-      class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-    >
+  <div *ngIf="isActionsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+    (click)="closeModals()">
+    <div class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-2xl"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-zinc-100">Acciones urgentes</div>
           <div class="mt-1 text-sm text-zinc-400">Resolvé pendientes críticos desde aquí.</div>
         </div>
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
-          (click)="closeModals()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
+          (click)="closeModals()">
           Cerrar
         </button>
       </div>
 
       <div class="mt-4 space-y-3">
-        <div
-          *ngFor="let warning of warnings"
-          class="rounded-2xl border border-white/10 bg-black/20 p-4"
-        >
+        <div *ngFor="let warning of warnings" class="rounded-2xl border border-white/10 bg-black/20 p-4">
           <div class="text-sm font-semibold text-zinc-100">{{ warning.text }}</div>
           <div class="mt-1 text-xs text-zinc-400">Severidad: {{ warning.severity }}</div>
           <button
-            class="mt-3 w-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-xs font-semibold text-black"
-          >
+            class="mt-3 w-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-xs font-semibold text-black">
             Resolver ahora
           </button>
         </div>
@@ -700,24 +617,17 @@
     </div>
   </div>
 
-  <div
-    *ngIf="isNewOrderModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-    (click)="closeModals()"
-  >
-    <div
-      class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-    >
+  <div *ngIf="isNewOrderModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+    (click)="closeModals()">
+    <div class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-2xl"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-zinc-100">Nuevo pedido</div>
           <div class="mt-1 text-sm text-zinc-400">Registrá un pedido manual.</div>
         </div>
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
-          (click)="closeModals()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
+          (click)="closeModals()">
           Cerrar
         </button>
       </div>
@@ -727,22 +637,17 @@
           <span class="text-[11px] text-zinc-400">Cliente</span>
           <input
             class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-            placeholder="Nombre o email"
-          />
+            placeholder="Nombre o email" />
         </label>
         <label class="block">
           <span class="text-[11px] text-zinc-400">Total</span>
-          <input
-            type="number"
+          <input type="number"
             class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-            placeholder="0"
-          />
+            placeholder="0" />
         </label>
         <label class="block">
           <span class="text-[11px] text-zinc-400">Estado inicial</span>
-          <select
-            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"
-          >
+          <select class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">
             <option>Pendiente</option>
             <option>Pagado</option>
             <option>Entregado</option>
@@ -751,39 +656,29 @@
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10"
-          (click)="closeModals()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10"
+          (click)="closeModals()">
           Cancelar
         </button>
         <button
-          class="rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black"
-        >
+          class="rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black">
           Guardar pedido
         </button>
       </div>
     </div>
   </div>
 
-  <div
-    *ngIf="isAddStructureModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-    (click)="closeModals()"
-  >
-    <div
-      class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-    >
+  <div *ngIf="isAddStructureModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+    (click)="closeModals()">
+    <div class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-2xl"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-zinc-100">Agregar a estructura</div>
           <div class="mt-1 text-sm text-zinc-400">Asigná el cliente a un líder y nivel.</div>
         </div>
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
-          (click)="closeModals()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
+          (click)="closeModals()">
           Cerrar
         </button>
       </div>
@@ -793,21 +688,17 @@
           <span class="text-[11px] text-zinc-400">Cliente</span>
           <input
             class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-            placeholder="Buscar cliente"
-          />
+            placeholder="Buscar cliente" />
         </label>
         <label class="block">
           <span class="text-[11px] text-zinc-400">Líder</span>
           <input
             class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-            placeholder="Seleccionar líder"
-          />
+            placeholder="Seleccionar líder" />
         </label>
         <label class="block">
           <span class="text-[11px] text-zinc-400">Nivel</span>
-          <select
-            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"
-          >
+          <select class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">
             <option>Nivel 1</option>
             <option>Nivel 2</option>
             <option>Nivel 3</option>
@@ -816,15 +707,12 @@
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button
-          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10"
-          (click)="closeModals()"
-        >
+        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10"
+          (click)="closeModals()">
           Cancelar
         </button>
         <button
-          class="rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black"
-        >
+          class="rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black">
           Agregar
         </button>
       </div>
@@ -849,4 +737,15 @@
       </div>
     </div>
   </div>
+
+  <footer class="border-t border-white/5 bg-[#0b0f14]">
+    <div
+      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
+      <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
+
+      <div class="flex flex-col items-start gap-3 md:items-end">
+        <div class="text-xs text-zinc-500">© 2026 finding U</div>
+      </div>
+    </div>
+  </footer>
 </section>

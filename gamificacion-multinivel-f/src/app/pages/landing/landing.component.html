@@ -3,37 +3,20 @@
   <header class="sticky top-0 z-40 border-b border-white/5 bg-[#0b0f14]/75 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
       <div class="flex items-center gap-3">
-        <div
-          class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_30px_rgba(59,130,246,.45)]"
-        ></div>
-        <div>
-          <div class="font-extrabold tracking-tight">findingU</div>
-          <div class="-mt-0.5 text-xs text-zinc-400">Be Unstoppable</div>
-        </div>
+        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
-      <nav class="hidden items-center gap-6 text-sm text-zinc-300 md:flex">
-        <a class="transition hover:text-white" href="#registro">Registro</a>
-        <a class="transition hover:text-white" href="#recompensas">Recompensas</a>
-      </nav>
-
       <div class="flex items-center gap-3">
-        <a
-          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-          [routerLink]="['/login']"
-        >
-          Login
+        <a class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+          [routerLink]="['/login']">
+          Entrar
         </a>
-        <a
-          href="#recompensas"
-          class="rounded-full border border-blue-500/70 px-4 py-2 text-blue-300 transition hover:bg-blue-500/10"
-        >
+        <a href="#recompensas"
+          class="rounded-full border border-blue-500/70 px-4 py-2 text-blue-300 transition hover:bg-blue-500/10">
           Cómo funciona
         </a>
-        <a
-          href="#registro"
-          class="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 font-semibold transition-transform hover:scale-105"
-        >
+        <a href="#registro"
+          class="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 font-semibold transition-transform hover:scale-105">
           Obtenerlo ahora
         </a>
       </div>
@@ -47,11 +30,8 @@
         <!-- Left: Copy -->
         <div>
           <p
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300"
-          >
-            <span
-              class="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_18px_rgba(59,130,246,.7)]"
-            ></span>
+            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300">
+            <span class="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_18px_rgba(59,130,246,.7)]"></span>
             Bienestar avanzado · Uso diario · Resultados medibles
           </p>
 
@@ -66,17 +46,13 @@
           </p>
 
           <div class="mt-8 flex flex-wrap items-center gap-4">
-            <a
-              href="#registro"
-              class="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-105"
-            >
+            <a href="#registro"
+              class="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-105">
               Obtenerlo ahora
             </a>
 
-            <a
-              href="#recompensas"
-              class="rounded-full border border-white/10 bg-white/5 px-6 py-4 transition hover:bg-white/10"
-            >
+            <a href="#recompensas"
+              class="rounded-full border border-white/10 bg-white/5 px-6 py-4 transition hover:bg-white/10">
               Ver recompensas
             </a>
           </div>
@@ -92,14 +68,9 @@
 
         <!-- Right: Interchangeable Landscape Image with orientation-specific fade -->
         <div class="relative">
-          <div
-            class="grain relative h-[420px] w-full overflow-hidden rounded-3xl border border-white/10 md:h-[520px]"
-          >
-            <img
-              src="images/Colageno-Clean.png"
-              alt="Producto destacado"
-              class="hero-image absolute inset-0 h-full w-full object-cover"
-            />
+          <div class="grain relative h-[420px] w-full overflow-hidden rounded-3xl border border-white/10 md:h-[520px]">
+            <img src="images/Colageno-Clean.png" alt="Producto destacado"
+              class="hero-image absolute inset-0 h-full w-full object-cover" />
 
             <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/75 via-[#0b0f14]/25 to-transparent"></div>
             <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl"></div>
@@ -114,13 +85,11 @@
 
               <div class="mt-5 flex flex-wrap gap-2">
                 <span
-                  class="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-blue-200"
-                >
+                  class="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-blue-200">
                   10g por porción
                 </span>
                 <span
-                  class="inline-flex items-center rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-yellow-200"
-                >
+                  class="inline-flex items-center rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-yellow-200">
                   Alta biodisponibilidad
                 </span>
               </div>
@@ -132,9 +101,7 @@
   </section>
 
   <section id="registro" class="relative mt-2 bg-[#0b0f14] pt-8 md:pt-8">
-    <div
-      class="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent via-[#0b0f14] to-[#0b0f14]"
-    ></div>
+    <div class="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent via-[#0b0f14] to-[#0b0f14]"></div>
 
     <div class="relative mx-auto max-w-3xl px-6 py-16">
       <div class="text-center">
@@ -159,45 +126,32 @@
         </div>
       </div>
 
-      <form
-        class="grain relative mt-10 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8"
-      >
+      <form class="grain relative mt-10 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]"
-        ></div>
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
+        </div>
 
         <label class="relative block">
           <span class="text-xs text-zinc-400">Nombre completo</span>
-          <input
-            type="text"
-            placeholder="Tu nombre"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70"
-          />
+          <input type="text" placeholder="Tu nombre"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <label class="relative block">
           <span class="text-xs text-zinc-400">Correo electrónico</span>
-          <input
-            type="email"
-            placeholder="tucorreo@ejemplo.com"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70"
-          />
+          <input type="email" placeholder="tucorreo@ejemplo.com"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <label class="relative block">
           <span class="text-xs text-zinc-400">Teléfono</span>
-          <input
-            type="tel"
-            placeholder="+52 ..."
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70"
-          />
+          <input type="tel" placeholder="+52 ..."
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <div class="pt-2">
-          <button
-            type="submit"
-            class="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-[1.02]"
-          >
+          <button type="submit"
+            class="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-[1.02]">
             Crear cuenta y continuar
           </button>
           <p class="mt-3 text-center text-xs text-zinc-500">
@@ -223,42 +177,37 @@
         <div class="mt-8 space-y-4">
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]"
-            >
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
               1
             </div>
             <p class="text-zinc-200">Te registras y obtienes tu enlace personal.</p>
           </div>
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]"
-            >
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
               2
             </div>
             <p class="text-zinc-200">Invitas a alguien a probar los productos.</p>
           </div>
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]"
-            >
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
               3
             </div>
             <p class="text-zinc-200">Ambos reciben recompensas acumulables.</p>
           </div>
         </div>
 
-        <a
-          href="#registro"
-          class="glow-gold mt-10 inline-block rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform hover:scale-105"
-        >
+        <a href="#registro"
+          class="glow-gold mt-10 inline-block rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform hover:scale-105">
           Obtenerlo ahora
         </a>
       </div>
 
       <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(245,185,66,0.18),transparent_55%)]"
-        ></div>
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(245,185,66,0.18),transparent_55%)]">
+        </div>
 
         <div class="relative">
           <h3 class="text-xl font-bold">Beneficios del programa</h3>
@@ -272,8 +221,7 @@
           </ul>
 
           <div
-            class="mt-6 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-3 text-center font-bold text-yellow-200"
-          >
+            class="mt-6 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-3 text-center font-bold text-yellow-200">
             Bonos y puntos acumulables
           </div>
 
@@ -293,20 +241,12 @@
   </section>
 
   <footer class="border-t border-white/5 bg-[#0b0f14]">
-    <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
-      <div>
-        <div class="font-extrabold tracking-tight">findingU</div>
-        <div class="mt-1 text-sm text-zinc-400">Frontpage de referencia · Dark + Energía + Profundidad</div>
-      </div>
+    <div
+      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
+      <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
 
       <div class="flex flex-col items-start gap-3 md:items-end">
-        <a
-          href="#registro"
-          class="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-semibold transition-transform hover:scale-105"
-        >
-          Obtenerlo ahora
-        </a>
-        <div class="text-xs text-zinc-500">© {{ currentYear }} findingU</div>
+        <div class="text-xs text-zinc-500">© 2026 finding U</div>
       </div>
     </div>
   </footer>
