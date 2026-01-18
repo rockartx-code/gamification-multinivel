@@ -5,8 +5,9 @@
         <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
-      <a class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+      <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
         [routerLink]="['/']">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
         Volver
       </a>
     </div>
@@ -21,18 +22,30 @@
         </div>
 
         <div class="relative space-y-4">
-          <div class="text-xs uppercase tracking-[0.3em] text-zinc-400">Login</div>
-          <div class="text-2xl font-extrabold">Accede a tu panel</div>
+          <div class="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-zinc-400">
+            <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
+            Login
+          </div>
+          <div class="flex items-center gap-2 text-2xl font-extrabold">
+            <i class="fa-solid fa-gauge-high text-blue-200" aria-hidden="true"></i>
+            Accede a tu panel
+          </div>
 
           <label class="block text-sm text-zinc-300">
-            Usuario
+            <span class="inline-flex items-center gap-2">
+              <i class="fa-solid fa-user" aria-hidden="true"></i>
+              Usuario
+            </span>
             <input type="text" name="username"
               class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/30"
               placeholder="Tu usuario" [(ngModel)]="username" />
           </label>
 
           <label class="block text-sm text-zinc-300">
-            Password
+            <span class="inline-flex items-center gap-2">
+              <i class="fa-solid fa-key" aria-hidden="true"></i>
+              Password
+            </span>
             <input type="password" name="password"
               class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/30"
               placeholder="Tu contraseña" [(ngModel)]="password" />
@@ -44,8 +57,9 @@
           </p>
 
           <button type="button"
-            class="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
             (click)="login()" [disabled]="isSubmitting">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
             {{ isSubmitting ? 'Validando acceso...' : 'Ingresar al panel' }}
           </button>
 
