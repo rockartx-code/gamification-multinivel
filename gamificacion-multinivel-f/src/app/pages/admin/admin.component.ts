@@ -45,6 +45,9 @@ interface AssetSlot {
 export class AdminComponent {
   currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
   currentOrderStatus: Order['status'] = 'pending';
+  isActionsModalOpen = false;
+  isNewOrderModalOpen = false;
+  isAddStructureModalOpen = false;
 
   readonly orders: Order[] = [
     { id: '#1001', customer: 'Ana López', total: 120, status: 'pending' },
@@ -172,10 +175,25 @@ export class AdminComponent {
 
   showActions(): void {
     this.currentView = 'stats';
+    this.isActionsModalOpen = true;
     setTimeout(() => {
       const actionsPanel = document.getElementById('admin-actions');
       actionsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
+  }
+
+  openNewOrderModal(): void {
+    this.isNewOrderModalOpen = true;
+  }
+
+  openAddStructureModal(): void {
+    this.isAddStructureModalOpen = true;
+  }
+
+  closeModals(): void {
+    this.isActionsModalOpen = false;
+    this.isNewOrderModalOpen = false;
+    this.isAddStructureModalOpen = false;
   }
 
   advanceOrder(orderId: string): void {
