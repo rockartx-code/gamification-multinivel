@@ -294,9 +294,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
 
   goalCartPercent(goal: Goal): number {
     if (goal.isCountGoal) {
-      return this.goalBasePercent(goal);
+      return 0;
     }
-    return Math.min(100, ((goal.base + goal.cart) / goal.target) * 100);
+    const basePercent = this.goalBasePercent(goal);
+    const cartPercent = (goal.cart / goal.target) * 100;
+    return Math.min(100 - basePercent, Math.max(0, cartPercent));
   }
 
   goalProgressLabel(goal: Goal): string {
