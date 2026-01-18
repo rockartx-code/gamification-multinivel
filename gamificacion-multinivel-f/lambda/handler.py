@@ -15,6 +15,30 @@ _dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 _table = _dynamodb.Table(TABLE_NAME)
 _s3 = boto3.client("s3", region_name=AWS_REGION)
 
+_LOGIN_USERS = [
+    {
+        "username": "admin",
+        "password": "admin123",
+        "user": {
+            "userId": "admin-001",
+            "name": "Admin Rivera",
+            "role": "admin",
+        },
+    },
+    {
+        "username": "cliente",
+        "password": "cliente123",
+        "user": {
+            "userId": "client-001",
+            "name": "Valeria Torres",
+            "role": "cliente",
+            "discountPercent": 15,
+            "discountActive": True,
+            "level": "Oro",
+        },
+    },
+]
+
 
 def _now_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -91,6 +115,19 @@ def _put_user_profile(payload: dict) -> dict:
     }
     _table.put_item(Item=item)
     return _json_response(201, {"profile": item})
+
+
+def _login(payload: dict) -> dict:
+    username = payload.get("username") or payload.get("user")
+    password = payload.get("password")
+    if not username or not password:
+        return _json_response(400, {"message": "username y password son obligatorios"})
+
+    for record in _LOGIN_USERS:
+        if record["username"] == username and record["password"] == password:
+            return _json_response(200, {"user": record["user"]})
+
+    return _json_response(401, {"message": "Credenciales inválidas"})
 
 
 def _get_user_profile(user_id: str) -> dict:
@@ -293,6 +330,9 @@ def handler(event, context):
             return _put_user_profile(_parse_body(event))
         if method == "GET" and len(segments) == 2:
             return _get_user_profile(segments[1])
+
+    if segments[0] == "login" and method == "POST":
+        return _login(_parse_body(event))
 
     if segments[0] == "dashboards" and len(segments) == 2:
         if method == "PUT":

@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
+
+import { MockApiService } from './mock-api.service';
 
 export type UserRole = 'admin' | 'cliente';
 
@@ -20,12 +22,18 @@ export class AuthService {
 
   readonly user$ = this.userSubject.asObservable();
 
+  constructor(private readonly mockApi: MockApiService) {}
+
   get currentUser(): AuthUser | null {
     return this.userSubject.value;
   }
 
   get isLoggedIn(): boolean {
     return this.userSubject.value !== null;
+  }
+
+  login(username: string, password: string): Observable<AuthUser> {
+    return this.mockApi.login(username, password).pipe(tap((user) => this.setUser(user)));
   }
 
   loginAs(role: UserRole): AuthUser {
