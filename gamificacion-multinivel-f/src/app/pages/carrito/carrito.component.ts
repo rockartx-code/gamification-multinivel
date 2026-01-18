@@ -48,6 +48,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   payMethod: 'card' | 'spei' | 'cash' = 'card';
   isToastVisible = false;
   toastMessage = 'Actualizado.';
+  isSummaryOpen = false;
   private toastTimeout?: number;
   private countdownInterval?: number;
 
@@ -151,6 +152,23 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.showToast('Pedido creado (mock).');
   }
 
+  showSummary(): void {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      this.scrollToSection('resumen-carrito');
+      return;
+    }
+    this.isSummaryOpen = true;
+  }
+
+  closeSummary(): void {
+    this.isSummaryOpen = false;
+  }
+
+  showDetails(): void {
+    this.isSummaryOpen = false;
+    this.scrollToSection('detalle-carrito');
+  }
+
   private updateCountdown(): void {
     const now = new Date();
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -170,5 +188,13 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.toastTimeout = window.setTimeout(() => {
       this.isToastVisible = false;
     }, 2200);
+  }
+
+  private scrollToSection(id: string): void {
+    const section = document.getElementById(id);
+    if (!section) {
+      return;
+    }
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
