@@ -96,13 +96,13 @@
                   <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
                   <div class="mt-1 font-extrabold tracking-tight">{{ goal.title }}</div>
                 </div>
-                <a
-                  [routerLink]="['/dashboard']"
-                  [fragment]="goal.ctaFragment"
+                <button
+                  type="button"
                   class="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+                  (click)="scrollToSection(goal.ctaFragment)"
                 >
                   {{ goal.ctaText }}
-                </a>
+                </button>
               </div>
             </div>
 
@@ -363,13 +363,13 @@
             alcance sus metas.
           </p>
         </div>
-        <a
-          [routerLink]="['/dashboard']"
-          fragment="links"
+        <button
+          type="button"
           class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+          (click)="scrollToSection('links')"
         >
           Compartir enlaces
-        </a>
+        </button>
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
@@ -489,13 +489,13 @@
                 <h3 class="text-xl font-bold">Consumo mensual de tu red</h3>
                 <p class="mt-1 text-sm text-zinc-400">Referencia para listados y estados de meta.</p>
               </div>
-              <a
-                [routerLink]="['/dashboard']"
-                fragment="merchant"
+              <button
+                type="button"
                 class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                (click)="scrollToSection('merchant')"
               >
                 Impulsar consumo
-              </a>
+              </button>
             </div>
 
             <div class="mt-6 overflow-hidden rounded-2xl border border-white/10">
@@ -533,13 +533,13 @@
                     {{ formatMoney(networkProgress) }} / {{ formatMoney(networkGoal) }}
                   </div>
                 </div>
-                <a
-                  [routerLink]="['/dashboard']"
-                  fragment="links"
+                <button
+                  type="button"
                   class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  (click)="scrollToSection('links')"
                 >
                   Compartir ahora
-                </a>
+                </button>
               </div>
 
               <div class="progress-rail relative mt-4 h-3 overflow-hidden rounded-full">
@@ -563,13 +563,13 @@
             por red social.
           </p>
         </div>
-        <a
-          [routerLink]="['/dashboard']"
-          fragment="merchant"
+        <button
+          type="button"
           class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+          (click)="scrollToSection('merchant')"
         >
           Ver productos
-        </a>
+        </button>
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
