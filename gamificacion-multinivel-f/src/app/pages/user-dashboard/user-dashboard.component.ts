@@ -11,7 +11,7 @@ interface Goal {
   base: number;
   cart: number;
   ctaText: string;
-  ctaHref: string;
+  ctaFragment: string;
   isCountGoal?: boolean;
 }
 
@@ -70,7 +70,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       base: 45,
       cart: 0,
       ctaText: 'Ir a tienda',
-      ctaHref: '#merchant'
+      ctaFragment: 'merchant'
     },
     {
       key: 'discount',
@@ -80,7 +80,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       base: 45,
       cart: 0,
       ctaText: 'Completar consumo',
-      ctaHref: '#merchant'
+      ctaFragment: 'merchant'
     },
     {
       key: 'invite',
@@ -90,7 +90,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       base: 0,
       cart: 0,
       ctaText: 'Invitar ahora',
-      ctaHref: '#links',
+      ctaFragment: 'links',
       isCountGoal: true
     },
     {
@@ -101,7 +101,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       base: 160,
       cart: 0,
       ctaText: 'Compartir enlace',
-      ctaHref: '#links'
+      ctaFragment: 'links'
     }
   ];
 

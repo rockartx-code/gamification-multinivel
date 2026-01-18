@@ -97,7 +97,8 @@
                   <div class="mt-1 font-extrabold tracking-tight">{{ goal.title }}</div>
                 </div>
                 <a
-                  [href]="goal.ctaHref"
+                  [routerLink]="['/dashboard']"
+                  [fragment]="goal.ctaFragment"
                   class="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
                 >
                   {{ goal.ctaText }}
@@ -363,7 +364,8 @@
           </p>
         </div>
         <a
-          href="#links"
+          [routerLink]="['/dashboard']"
+          fragment="links"
           class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
         >
           Compartir enlaces
@@ -488,7 +490,8 @@
                 <p class="mt-1 text-sm text-zinc-400">Referencia para listados y estados de meta.</p>
               </div>
               <a
-                href="#merchant"
+                [routerLink]="['/dashboard']"
+                fragment="merchant"
                 class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               >
                 Impulsar consumo
@@ -531,7 +534,8 @@
                   </div>
                 </div>
                 <a
-                  href="#links"
+                  [routerLink]="['/dashboard']"
+                  fragment="links"
                   class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                 >
                   Compartir ahora
@@ -560,7 +564,8 @@
           </p>
         </div>
         <a
-          href="#merchant"
+          [routerLink]="['/dashboard']"
+          fragment="merchant"
           class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
         >
           Ver productos
