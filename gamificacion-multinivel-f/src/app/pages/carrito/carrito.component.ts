@@ -2,14 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  qty: number;
-  note: string;
-  img: string;
-}
+import { CartItem } from '../../models/cart.model';
+import { CartControlService } from '../../services/cart-control.service';
 
 @Component({
   selector: 'app-carrito',
@@ -19,34 +13,8 @@ interface CartItem {
   styleUrl: './carrito.component.css'
 })
 export class CarritoComponent implements OnInit, OnDestroy {
-  countdownLabel = '3d 8h';
-  readonly shipping = 0;
-  readonly discountPct = 0.05;
-  readonly user = {
-    monthSpendActual: 45,
-    activeSpendTarget: 60
-  };
+  constructor(private readonly cartControl: CartControlService) {}
 
-  cartItems: CartItem[] = [
-    {
-      id: 'colageno',
-      name: 'COLÁGENO',
-      price: 35,
-      qty: 1,
-      note: 'Regeneración',
-      img: 'images/L-Colageno.png'
-    },
-    {
-      id: 'omega3',
-      name: 'OMEGA-3',
-      price: 29,
-      qty: 2,
-      note: 'Cuerpo & mente',
-      img: 'images/L-Omega3.png'
-    }
-  ];
-
-  payMethod: 'card' | 'spei' | 'cash' = 'card';
   isToastVisible = false;
   toastMessage = 'Actualizado.';
   isSummaryOpen = false;
@@ -54,6 +22,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private countdownInterval?: number;
 
   ngOnInit(): void {
+    this.cartControl.load().subscribe();
     this.updateCountdown();
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
   }
@@ -67,82 +36,76 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
   }
 
+  get countdownLabel(): string {
+    return this.cartControl.countdownLabel;
+  }
+
+  get cartItems(): CartItem[] {
+    return this.cartControl.cartItems;
+  }
+
+  get payMethod(): 'card' | 'spei' | 'cash' {
+    return this.cartControl.currentPayMethod;
+  }
+
+  get shipping(): number {
+    return this.cartControl.shipping;
+  }
+
+  get discountPct(): number {
+    return this.cartControl.discountPct;
+  }
+
   get subtotal(): number {
-    return this.cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+    return this.cartControl.subtotal;
   }
 
   get discount(): number {
-    return Math.round(this.subtotal * this.discountPct);
+    return this.cartControl.discount;
   }
 
   get total(): number {
-    return Math.max(0, this.subtotal + this.shipping - this.discount);
+    return this.cartControl.total;
   }
 
   get itemsCount(): number {
-    return this.cartItems.reduce((acc, item) => acc + item.qty, 0);
+    return this.cartControl.itemsCount;
   }
 
   get gapToGoal(): number {
-    const needed = Math.max(0, this.user.activeSpendTarget - this.user.monthSpendActual);
-    return Math.max(0, needed - this.subtotal);
+    return this.cartControl.gapToGoal;
   }
 
   get benefitPercent(): number {
-    const needed = Math.max(0, this.user.activeSpendTarget - this.user.monthSpendActual);
-    if (needed === 0) {
-      return 100;
-    }
-    return Math.min(100, (this.subtotal / needed) * 100);
+    return this.cartControl.benefitPercent;
   }
 
   formatMoney(value: number): string {
-    return `$${value.toFixed(0)}`;
+    return this.cartControl.formatMoney(value);
   }
 
   setQty(itemId: string, qty: number): void {
     const normalized = Math.max(0, Math.floor(qty));
-    const itemIndex = this.cartItems.findIndex((item) => item.id === itemId);
-    if (itemIndex < 0) {
-      return;
-    }
+    this.cartControl.setQty(itemId, normalized);
     if (normalized === 0) {
-      this.cartItems.splice(itemIndex, 1);
       this.showToast('Producto removido.');
       return;
     }
-    this.cartItems[itemIndex] = { ...this.cartItems[itemIndex], qty: normalized };
     this.showToast('Cantidad actualizada.');
   }
 
   removeItem(itemId: string): void {
-    const itemIndex = this.cartItems.findIndex((item) => item.id === itemId);
-    if (itemIndex >= 0) {
-      this.cartItems.splice(itemIndex, 1);
-      this.showToast('Producto removido.');
-    }
+    this.cartControl.removeItem(itemId);
+    this.showToast('Producto removido.');
   }
 
   addSuggested(): void {
-    const suggested: CartItem = {
-      id: 'complejoB',
-      name: 'COMPLEJO B',
-      price: 24,
-      qty: 1,
-      note: 'Energía',
-      img: 'images/L-ComplejoB.png'
-    };
-    const existing = this.cartItems.find((item) => item.id === suggested.id);
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      this.cartItems.push(suggested);
-    }
+    this.cartControl.addSuggested();
     this.showToast('Agregado sugerido.');
   }
 
   selectPay(method: 'card' | 'spei' | 'cash'): void {
-    this.payMethod = method;
+    this.cartControl.selectPay(method);
   }
 
   placeOrder(): void {
@@ -177,7 +140,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const diff = Math.max(0, lastDay.getTime() - Date.now());
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    this.countdownLabel = `${d}d ${h}h`;
+    this.cartControl.updateCountdown(`${d}d ${h}h`);
   }
 
   private showToast(message: string): void {

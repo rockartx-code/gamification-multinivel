@@ -1,42 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { AuthService, AuthUser } from '../../services/auth.service';
-
-interface Order {
-  id: string;
-  customer: string;
-  total: number;
-  status: 'pending' | 'paid' | 'delivered';
-}
-
-interface Customer {
-  id: number;
-  name: string;
-  email: string;
-  level: string;
-  discount: string;
-  commissions: number;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  active: boolean;
-}
-
-interface Warning {
-  type: string;
-  text: string;
-  severity: 'high' | 'medium' | 'low';
-}
-
-interface AssetSlot {
-  label: string;
-  hint: string;
-}
+import {
+  AdminAssetSlot,
+  AdminCustomer,
+  AdminOrder,
+  AdminProduct,
+  AdminWarning
+} from '../../models/admin.model';
+import { AdminControlService } from '../../services/admin-control.service';
 
 @Component({
   selector: 'app-admin',
@@ -45,75 +19,49 @@ interface AssetSlot {
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
-export class AdminComponent {
+export class AdminComponent implements OnInit {
   constructor(
+    private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
     private readonly router: Router
   ) {}
 
   currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
-  currentOrderStatus: Order['status'] = 'pending';
+  currentOrderStatus: AdminOrder['status'] = 'pending';
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
   isAddStructureModalOpen = false;
 
-  readonly orders: Order[] = [
-    { id: '#1001', customer: 'Ana López', total: 120, status: 'pending' },
-    { id: '#1002', customer: 'Carlos Ruiz', total: 89, status: 'paid' },
-    { id: '#1003', customer: 'María Pérez', total: 210, status: 'paid' },
-    { id: '#1004', customer: 'Luis Gómez', total: 60, status: 'delivered' }
-  ];
-
-  readonly customers: Customer[] = [
-    {
-      id: 1,
-      name: 'Ana López',
-      email: 'ana@mail.com',
-      level: 'Oro',
-      discount: '15%',
-      commissions: 320
-    },
-    {
-      id: 2,
-      name: 'Carlos Ruiz',
-      email: 'carlos@mail.com',
-      level: 'Plata',
-      discount: '10%',
-      commissions: 120
-    },
-    {
-      id: 3,
-      name: 'María Pérez',
-      email: 'maria@mail.com',
-      level: 'Bronce',
-      discount: '5%',
-      commissions: 0
-    }
-  ];
-
-  readonly products: Product[] = [
-    { id: 1, name: 'COLÁGENO', price: 35, active: true },
-    { id: 2, name: 'OMEGA-3', price: 29, active: true },
-    { id: 3, name: 'COMPLEJO B', price: 24, active: false }
-  ];
-
-  readonly warnings: Warning[] = [
-    { type: 'commissions', text: '3 comisiones pendientes por depositar', severity: 'high' },
-    { type: 'shipping', text: '2 pedidos pagados sin envío', severity: 'high' },
-    { type: 'assets', text: 'Producto sin imagen para redes', severity: 'medium' }
-  ];
-
-  readonly assetSlots: AssetSlot[] = [
-    { label: 'Miniatura (carrito)', hint: 'square 1:1' },
-    { label: 'CTA / Banner', hint: 'landscape 16:9' },
-    { label: 'Redes · Story', hint: '9:16' },
-    { label: 'Redes · Feed', hint: '1:1' },
-    { label: 'Producto del Mes', hint: 'landscape 16:9' },
-    { label: 'Imagen extra', hint: 'opcional' }
-  ];
-
-  selectedCustomer = this.customers[0];
+  selectedCustomer: AdminCustomer | null = null;
   assetPreviews = new Map<number, string>();
+
+  ngOnInit(): void {
+    this.adminControl.load().subscribe(() => {
+      if (!this.selectedCustomer) {
+        this.selectedCustomer = this.adminControl.customers[0] ?? null;
+      }
+    });
+  }
+
+  get orders(): AdminOrder[] {
+    return this.adminControl.orders;
+  }
+
+  get customers(): AdminCustomer[] {
+    return this.adminControl.customers;
+  }
+
+  get products(): AdminProduct[] {
+    return this.adminControl.data?.products ?? [];
+  }
+
+  get warnings(): AdminWarning[] {
+    return this.adminControl.data?.warnings ?? [];
+  }
+
+  get assetSlots(): AdminAssetSlot[] {
+    return this.adminControl.data?.assetSlots ?? [];
+  }
 
   get viewTitle(): string {
     if (this.currentView === 'customers') {
@@ -141,32 +89,32 @@ export class AdminComponent {
     return 'Cambia estado: pendiente, pagado, entregado.';
   }
 
-  get filteredOrders(): Order[] {
-    return this.orders.filter((order) => order.status === this.currentOrderStatus);
+  get filteredOrders(): AdminOrder[] {
+    return this.adminControl.getFilteredOrders(this.currentOrderStatus);
   }
 
   get pendingCount(): number {
-    return this.orders.filter((order) => order.status === 'pending').length;
+    return this.adminControl.pendingCount;
   }
 
   get paidCount(): number {
-    return this.orders.filter((order) => order.status === 'paid').length;
+    return this.adminControl.paidCount;
   }
 
   get shipCount(): number {
-    return this.orders.filter((order) => order.status === 'paid').length;
+    return this.adminControl.shipCount;
   }
 
   get commissionsTotal(): number {
-    return this.customers.reduce((acc, customer) => acc + customer.commissions, 0);
+    return this.adminControl.commissionsTotal;
   }
 
   get customersCount(): number {
-    return this.customers.length;
+    return this.adminControl.customersCount;
   }
 
   get productsCount(): number {
-    return this.products.length;
+    return this.adminControl.productsCount;
   }
 
   get currentUser(): AuthUser | null {
@@ -174,14 +122,14 @@ export class AdminComponent {
   }
 
   formatMoney(value: number): string {
-    return `$${value.toFixed(0)}`;
+    return this.adminControl.formatMoney(value);
   }
 
   setView(view: 'orders' | 'customers' | 'products' | 'stats'): void {
     this.currentView = view;
   }
 
-  setOrderStatus(status: Order['status']): void {
+  setOrderStatus(status: AdminOrder['status']): void {
     this.currentOrderStatus = status;
   }
 
@@ -214,21 +162,13 @@ export class AdminComponent {
   }
 
   advanceOrder(orderId: string): void {
-    const order = this.orders.find((item) => item.id === orderId);
-    if (!order) {
-      return;
-    }
-    if (order.status === 'pending') {
-      order.status = 'paid';
-    } else if (order.status === 'paid') {
-      order.status = 'delivered';
-    }
+    this.adminControl.advanceOrder(orderId);
   }
 
   selectCustomer(customerId: number): void {
-    const found = this.customers.find((customer) => customer.id === customerId);
-    if (found) {
-      this.selectedCustomer = found;
+    const selected = this.adminControl.selectCustomer(customerId);
+    if (selected) {
+      this.selectedCustomer = selected;
     }
   }
 
