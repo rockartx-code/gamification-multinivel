@@ -1,7 +1,10 @@
 import { Routes } from '@angular/router';
+
+import { adminGuard, dashboardGuard, loginGuard } from './guards/auth.guard';
 import { AdminComponent } from './pages/admin/admin.component';
 import { CarritoComponent } from './pages/carrito/carrito.component';
 import { LandingComponent } from './pages/landing/landing.component';
+import { LoginComponent } from './pages/login/login.component';
 import { UserDashboardComponent } from './pages/user-dashboard/user-dashboard.component';
 
 export const routes: Routes = [
@@ -10,8 +13,14 @@ export const routes: Routes = [
     component: LandingComponent
   },
   {
+    path: 'login',
+    component: LoginComponent,
+    canActivate: [loginGuard]
+  },
+  {
     path: 'admin',
-    component: AdminComponent
+    component: AdminComponent,
+    canActivate: [adminGuard]
   },
   {
     path: 'carrito',
@@ -19,6 +28,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    component: UserDashboardComponent
+    component: UserDashboardComponent,
+    canActivate: [dashboardGuard]
   }
 ];

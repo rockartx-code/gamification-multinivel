@@ -1,5 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
+import { AuthService, AuthUser } from '../../services/auth.service';
 
 interface Order {
   id: string;
@@ -43,6 +46,11 @@ interface AssetSlot {
   styleUrl: './admin.component.css'
 })
 export class AdminComponent {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly router: Router
+  ) {}
+
   currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
   currentOrderStatus: Order['status'] = 'pending';
   isActionsModalOpen = false;
@@ -161,6 +169,10 @@ export class AdminComponent {
     return this.products.length;
   }
 
+  get currentUser(): AuthUser | null {
+    return this.authService.currentUser;
+  }
+
   formatMoney(value: number): string {
     return `$${value.toFixed(0)}`;
   }
@@ -194,6 +206,11 @@ export class AdminComponent {
     this.isActionsModalOpen = false;
     this.isNewOrderModalOpen = false;
     this.isAddStructureModalOpen = false;
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 
   advanceOrder(orderId: string): void {

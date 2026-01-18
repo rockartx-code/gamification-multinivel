@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+
+import { AuthService, AuthUser } from '../../services/auth.service';
 
 interface Goal {
   key: string;
@@ -47,6 +49,11 @@ interface FeaturedItem {
   styleUrl: './user-dashboard.component.css'
 })
 export class UserDashboardComponent implements OnInit, OnDestroy {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly router: Router
+  ) {}
+
   readonly countdownLabel = signal('3d 12h 20m 10s');
   readonly cutoffDay = 25;
   readonly cutoffHour = 23;
@@ -193,6 +200,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   private countdownInterval?: number;
   private toastTimeout?: number;
 
+  get currentUser(): AuthUser | null {
+    return this.authService.currentUser;
+  }
+
+  get isClient(): boolean {
+    return this.currentUser?.role === 'cliente';
+  }
+
   get buyAgainProducts(): Product[] {
     return this.products.filter((product) => this.buyAgainIds.has(product.id));
   }
@@ -282,6 +297,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
     }
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 
   formatMoney(value: number): string {
