@@ -9,13 +9,15 @@
 
           <div class="flex items-center gap-2 lg:hidden">
             <button type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('merchant')">
+              <i class="fa-solid fa-store" aria-hidden="true"></i>
               Tienda
             </button>
             <button type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('red')">
+              <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
               Red
             </button>
           </div>
@@ -24,7 +26,10 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div class="flex flex-wrap items-center gap-2" *ngIf="currentUser">
             <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <div class="text-xs text-zinc-400">Usuario</div>
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+              <i class="fa-solid fa-user" aria-hidden="true"></i>
+              Usuario
+            </div>
               <div class="text-sm font-semibold">{{ currentUser.name }}</div>
               <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide">
                 <span class="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-blue-200">
@@ -47,31 +52,38 @@
           </div>
 
           <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <div class="text-xs text-zinc-400">Corte de mes en</div>
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+              <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+              Corte de mes en
+            </div>
             <div class="text-lg font-extrabold tracking-tight">{{ countdownLabel() }}</div>
             <div class="mt-0.5 text-xs text-zinc-500">Cierra tu progreso antes del corte</div>
           </div>
 
           <nav class="hidden items-center gap-2 lg:flex">
             <button type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('merchant')">
+              <i class="fa-solid fa-store" aria-hidden="true"></i>
               Tienda
             </button>
             <button type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('red')">
+              <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
               Red
             </button>
             <button type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('links')">
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
               Links
             </button>
 
             <button type="button"
-              class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="logout()">
+              <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
               Salir
             </button>
           </nav>
@@ -80,10 +92,14 @@
       </div>
 
       <div class="mt-4 flex items-center justify-between">
-        <div class="text-sm text-zinc-400">Progreso mensual</div>
+        <div class="flex items-center gap-2 text-sm text-zinc-400">
+          <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+          Progreso mensual
+        </div>
 
-        <button class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+        <button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
           (click)="toggleGoals()">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
           {{ goalsCollapsed ? 'Expandir metas' : 'Colapsar metas' }}
         </button>
       </div>
@@ -100,8 +116,9 @@
                   <div class="mt-1 font-extrabold tracking-tight">{{ goal.title }}</div>
                 </div>
                 <button type="button"
-                  class="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+                  class="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
                   (click)="scrollToSection(goal.ctaFragment)">
+                  <i class="fa-solid fa-location-arrow" aria-hidden="true"></i>
                   {{ goal.ctaText }}
                 </button>
               </div>
@@ -131,16 +148,23 @@
     <section id="merchant" class="scroll-mt-10">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">Tienda</h2>
+          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-store text-yellow-200" aria-hidden="true"></i>
+            Tienda
+          </h2>
         </div>
 
         <div class="hidden items-center gap-3 md:flex">
           <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <div class="text-xs text-zinc-400">Carrito</div>
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+              <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+              Carrito
+            </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
           </div>
-          <a class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+          <a class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
             [routerLink]="['/carrito']">
+            <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Ver carrito
           </a>
         </div>
@@ -154,6 +178,7 @@
           <div>
             <span
               class="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-2 text-xs font-semibold text-yellow-200">
+              <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes · Recomendado para metas
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">COLÁGENO HIDROLIZADO</h3>
@@ -179,8 +204,9 @@
               </div>
 
               <button
-                class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
                 (click)="addHeroToCart()">
+                <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                 Agregar al carrito
               </button>
             </div>
@@ -202,7 +228,10 @@
 
       <div class="mt-10">
         <div class="flex items-center justify-between">
-          <h3 class="text-xl font-bold">Volver a comprar</h3>
+          <h3 class="flex items-center gap-2 text-xl font-bold">
+            <i class="fa-solid fa-rotate text-blue-200" aria-hidden="true"></i>
+            Volver a comprar
+          </h3>
           <p class="text-sm text-zinc-400">Tus básicos para mantener metas constantes.</p>
         </div>
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -237,8 +266,9 @@
                   </div>
 
                   <button
-                    class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
                     (click)="addQuick(product.id, 1)">
+                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                     Agregar
                   </button>
                 </div>
@@ -246,10 +276,16 @@
             </div>
 
             <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
-              <button class="transition hover:text-zinc-200" (click)="notifyAction('Detalle de producto (hook)')">
+              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200"
+                (click)="notifyAction('Detalle de producto (hook)')">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                 Ver detalle
               </button>
-              <button class="transition hover:text-zinc-200" (click)="notifyAction('Comparar (hook)')">Comparar</button>
+              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200"
+                (click)="notifyAction('Comparar (hook)')">
+                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                Comparar
+              </button>
             </div>
           </article>
         </div>
@@ -257,7 +293,10 @@
 
       <div class="mt-12">
         <div class="flex items-center justify-between">
-          <h3 class="text-xl font-bold">Todos los productos</h3>
+          <h3 class="flex items-center gap-2 text-xl font-bold">
+            <i class="fa-solid fa-layer-group text-blue-200" aria-hidden="true"></i>
+            Todos los productos
+          </h3>
           <div class="text-sm text-zinc-400">{{ productsCount }}</div>
         </div>
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -292,8 +331,9 @@
                   </div>
 
                   <button
-                    class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
                     (click)="addQuick(product.id, 1)">
+                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                     Agregar
                   </button>
                 </div>
@@ -301,8 +341,14 @@
             </div>
 
             <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
-              <button class="transition hover:text-zinc-200">Ver detalle</button>
-              <button class="transition hover:text-zinc-200">Comparar</button>
+              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                Ver detalle
+              </button>
+              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200">
+                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                Comparar
+              </button>
             </div>
           </article>
         </div>
@@ -312,11 +358,15 @@
     <section id="red" class="scroll-mt-10">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">Red</h2>
+          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-network-wired text-blue-200" aria-hidden="true"></i>
+            Red
+          </h2>
         </div>
         <button type="button"
-          class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
           (click)="scrollToSection('links')">
+          <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
           Compartir enlaces
         </button>
       </div>
@@ -328,11 +378,15 @@
           </div>
           <div class="relative flex items-center justify-between">
             <div>
-              <h3 class="text-xl font-bold">Tu Red</h3>
+              <h3 class="flex items-center gap-2 text-xl font-bold">
+                <i class="fa-solid fa-users" aria-hidden="true"></i>
+                Tu Red
+              </h3>
             </div>
             <button
-              class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.03]"
+              class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.03]"
               (click)="simulateInvite()">
+              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
               Simular invitación
             </button>
           </div>
@@ -411,11 +465,15 @@
           <div class="relative">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-xl font-bold">Consumo mensual de tu red</h3>
+                <h3 class="flex items-center gap-2 text-xl font-bold">
+                  <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+                  Consumo mensual de tu red
+                </h3>
               </div>
               <button type="button"
-                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
                 (click)="scrollToSection('merchant')">
+                <i class="fa-solid fa-rocket" aria-hidden="true"></i>
                 Impulsar consumo
               </button>
             </div>
@@ -453,8 +511,9 @@
                   </div>
                 </div>
                 <button type="button"
-                  class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                   (click)="scrollToSection('links')">
+                  <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                   Compartir ahora
                 </button>
               </div>
@@ -472,11 +531,15 @@
     <section id="links" class="scroll-mt-10">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">Links de referencia</h2>
+          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-link text-yellow-200" aria-hidden="true"></i>
+            Links de referencia
+          </h2>
         </div>
         <button type="button"
-          class="rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
           (click)="scrollToSection('merchant')">
+          <i class="fa-solid fa-store" aria-hidden="true"></i>
           Ver productos
         </button>
       </div>
@@ -488,7 +551,10 @@
           </div>
 
           <div class="relative">
-            <h3 class="text-xl font-bold">Selecciona tu gancho</h3>
+            <h3 class="flex items-center gap-2 text-xl font-bold">
+              <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
+              Selecciona tu gancho
+            </h3>
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
               <button *ngFor="let item of featured"
@@ -505,13 +571,17 @@
             </div>
 
             <div class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Tu link</div>
+              <div class="flex items-center gap-2 text-xs text-zinc-400">
+                <i class="fa-solid fa-link" aria-hidden="true"></i>
+                Tu link
+              </div>
               <div class="mt-2 flex flex-col gap-3 sm:flex-row">
                 <input readonly [value]="referralLink"
                   class="flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200" />
                 <button
-                  class="glow-blue rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                  class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
                   (click)="copyLink()">
+                  <i class="fa-solid fa-copy" aria-hidden="true"></i>
                   Copiar
                 </button>
               </div>
@@ -530,7 +600,10 @@
           <div class="relative">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-xl font-bold">Previsualizaciones sociales</h3>
+                <h3 class="flex items-center gap-2 text-xl font-bold">
+                  <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+                  Previsualizaciones sociales
+                </h3>
                 <p class="mt-1 text-sm text-zinc-400">Mockups (reemplaza imágenes por tus creatividades).</p>
               </div>
 
@@ -579,32 +652,38 @@
                     <div class="text-xs text-zinc-500">
                       Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
                     </div>
-                    <button
-                      class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-                      (click)="copyAssetPath()">
-                      Copiar ruta
-                    </button>
-                  </div>
-                </div>
+                <button
+                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  (click)="copyAssetPath()">
+                  <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                  Copiar ruta
+                </button>
               </div>
+            </div>
+          </div>
 
-              <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-                <div class="text-sm font-semibold text-zinc-200">Copy sugerido (editable)</div>
-                <textarea rows="10"
-                  class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
-                  placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"></textarea>
-                <div class="mt-3 flex gap-3">
-                  <button
-                    class="glow-blue flex-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
-                    (click)="copyCaption()">
-                    Copiar copy
-                  </button>
-                  <button
-                    class="flex-1 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
-                    (click)="generateTemplate()">
-                    Generar template
-                  </button>
-                </div>
+          <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+            <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+              <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
+              Copy sugerido (editable)
+            </div>
+            <textarea rows="10"
+              class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+              placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"></textarea>
+            <div class="mt-3 flex gap-3">
+              <button
+                class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                (click)="copyCaption()">
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                Copiar copy
+              </button>
+              <button
+                class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+                (click)="generateTemplate()">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                Generar template
+              </button>
+            </div>
                 <div class="mt-2 text-xs text-zinc-500">
                   Recomendación UX: 1 promesa + 1 prueba + 1 CTA. Evita promesas financieras.
                 </div>
