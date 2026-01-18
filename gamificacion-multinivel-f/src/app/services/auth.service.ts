@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
-import { MockApiService } from './mock-api.service';
+import { ApiService } from './api.service';
 
 export type UserRole = 'admin' | 'cliente';
 
@@ -17,12 +17,12 @@ export interface AuthUser {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly storageKey = 'mock-auth-user';
+  private readonly storageKey = 'auth-user';
   private readonly userSubject = new BehaviorSubject<AuthUser | null>(this.loadUser());
 
   readonly user$ = this.userSubject.asObservable();
 
-  constructor(private readonly mockApi: MockApiService) {}
+  constructor(private readonly api: ApiService) {}
 
   get currentUser(): AuthUser | null {
     return this.userSubject.value;
@@ -33,7 +33,7 @@ export class AuthService {
   }
 
   login(username: string, password: string): Observable<AuthUser> {
-    return this.mockApi.login(username, password).pipe(tap((user) => this.setUser(user)));
+    return this.api.login(username, password).pipe(tap((user) => this.setUser(user)));
   }
 
   loginAs(role: UserRole): AuthUser {

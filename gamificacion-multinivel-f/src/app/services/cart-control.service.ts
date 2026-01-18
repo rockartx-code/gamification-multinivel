@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 import { CartData, CartItem } from '../models/cart.model';
-import { MockApiService } from './mock-api.service';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +11,7 @@ export class CartControlService {
   private readonly dataSubject = new BehaviorSubject<CartData | null>(null);
   private payMethod: 'card' | 'spei' | 'cash' = 'card';
 
-  constructor(private readonly api: MockApiService) {}
+  constructor(private readonly api: ApiService) {}
 
   load(): Observable<CartData> {
     return this.api.getCartData().pipe(

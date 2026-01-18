@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 import { AdminCustomer, AdminData, AdminOrder } from '../models/admin.model';
-import { MockApiService } from './mock-api.service';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +10,7 @@ import { MockApiService } from './mock-api.service';
 export class AdminControlService {
   private readonly dataSubject = new BehaviorSubject<AdminData | null>(null);
 
-  constructor(private readonly api: MockApiService) {}
+  constructor(private readonly api: ApiService) {}
 
   load(): Observable<AdminData> {
     return this.api.getAdminData().pipe(
