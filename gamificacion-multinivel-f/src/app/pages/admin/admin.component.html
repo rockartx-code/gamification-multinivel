@@ -11,16 +11,36 @@
         </div>
       </div>
 
-      <div class="flex shrink-0 items-center gap-2">
+      <div class="flex shrink-0 flex-wrap items-center gap-2">
         <div class="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-2 sm:block">
           <div class="text-[11px] text-zinc-400">Acciones urgentes</div>
           <div class="text-sm font-extrabold">3</div>
         </div>
+
+        <div
+          class="hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#121826] px-4 py-2 lg:flex"
+          *ngIf="currentUser"
+        >
+          <div class="text-right">
+            <div class="text-[11px] text-zinc-400">Usuario</div>
+            <div class="text-sm font-semibold">{{ currentUser.name }}</div>
+          </div>
+          <span class="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[11px] uppercase text-blue-200">
+            {{ currentUser.role }}
+          </span>
+        </div>
+
         <button
           class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
           (click)="showActions()"
         >
           Acciones
+        </button>
+        <button
+          class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+          (click)="logout()"
+        >
+          Logout
         </button>
         <button
           class="glow-gold rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"

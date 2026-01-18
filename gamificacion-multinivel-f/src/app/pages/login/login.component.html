@@ -1,0 +1,98 @@
+<section class="min-h-screen bg-[#0b0f14] text-white antialiased">
+  <header class="border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div
+          class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-[0_0_30px_rgba(59,130,246,.45)]"
+        ></div>
+        <div>
+          <div class="font-extrabold tracking-tight">findingU</div>
+          <div class="-mt-0.5 text-xs text-zinc-400">Acceso al panel</div>
+        </div>
+      </div>
+
+      <a
+        class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+        [routerLink]="['/']"
+      >
+        Volver
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_.9fr]">
+      <div class="space-y-6">
+        <h1 class="text-3xl font-extrabold tracking-tight md:text-4xl">Bienvenido de vuelta</h1>
+        <p class="text-zinc-400">
+          Selecciona un tipo de usuario para simular el acceso. El guard enviará automáticamente al panel
+          correspondiente.
+        </p>
+
+        <div class="grid gap-4">
+          <button
+            type="button"
+            class="role-card rounded-3xl border px-5 py-4 text-left transition"
+            [ngClass]="
+              selectedRole === 'cliente'
+                ? 'border-blue-400/40 bg-blue-500/10'
+                : 'border-white/10 bg-white/5 hover:bg-white/10'
+            "
+            (click)="setRole('cliente')"
+          >
+            <div class="text-xs text-zinc-400">Cliente</div>
+            <div class="mt-1 text-lg font-semibold">Panel de recompensas y compras</div>
+            <div class="mt-2 text-sm text-zinc-400">Acceso a metas, descuentos y red.</div>
+          </button>
+
+          <button
+            type="button"
+            class="role-card rounded-3xl border px-5 py-4 text-left transition"
+            [ngClass]="
+              selectedRole === 'admin'
+                ? 'border-yellow-400/40 bg-yellow-500/10'
+                : 'border-white/10 bg-white/5 hover:bg-white/10'
+            "
+            (click)="setRole('admin')"
+          >
+            <div class="text-xs text-zinc-400">Administrador</div>
+            <div class="mt-1 text-lg font-semibold">Panel de control y operaciones</div>
+            <div class="mt-2 text-sm text-zinc-400">Acceso a pedidos, clientes y estadísticas.</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.18),transparent_55%)]"
+        ></div>
+
+        <div class="relative space-y-4">
+          <div class="text-xs uppercase tracking-[0.3em] text-zinc-400">Mock Login</div>
+          <div class="text-2xl font-extrabold">Accede al panel</div>
+          <p class="text-sm text-zinc-400">
+            Este login es demostrativo. El guard recuerda tu rol y te redirige automáticamente a tu
+            experiencia.
+          </p>
+
+          <div class="rounded-2xl border border-white/10 bg-[#121826] px-4 py-3">
+            <div class="text-[11px] text-zinc-400">Rol seleccionado</div>
+            <div class="mt-1 text-lg font-semibold capitalize">{{ selectedRole }}</div>
+          </div>
+
+          <button
+            type="button"
+            class="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold transition-transform hover:scale-[1.02]"
+            (click)="login()"
+          >
+            Ingresar al panel
+          </button>
+
+          <div class="text-xs text-zinc-500">
+            ¿No tienes cuenta? Elige el rol y continúa para probar la experiencia.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
