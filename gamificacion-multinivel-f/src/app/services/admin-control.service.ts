@@ -69,7 +69,7 @@ export class AdminControlService {
     if (!current) {
       return;
     }
-    const updatedOrders: AdminOrder[] = current.orders.map((order) => {
+    const updatedOrders = current.orders.map((order): AdminOrder => {
       if (order.id !== orderId) {
         return order;
       }
