@@ -69,17 +69,13 @@ export class AdminControlService {
     if (!current) {
       return;
     }
-    const updatedOrders = current.orders.map((order) => {
+    const updatedOrders: AdminOrder[] = current.orders.map((order) => {
       if (order.id !== orderId) {
         return order;
       }
-      if (order.status === 'pending') {
-        return { ...order, status: 'paid' };
-      }
-      if (order.status === 'paid') {
-        return { ...order, status: 'delivered' };
-      }
-      return order;
+      const nextStatus: AdminOrder['status'] =
+        order.status === 'pending' ? 'paid' : order.status === 'paid' ? 'delivered' : order.status;
+      return { ...order, status: nextStatus };
     });
     this.dataSubject.next({ ...current, orders: updatedOrders });
   }

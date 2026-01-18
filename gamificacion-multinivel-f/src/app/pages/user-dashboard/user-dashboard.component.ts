@@ -90,12 +90,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     return this.networkMembers.reduce((acc, member) => acc + member.spend, 0);
   }
 
+  get networkGoal(): number {
+    return this.dashboardControl.data?.settings.networkGoal ?? 0;
+  }
+
   get networkPercent(): number {
-    const goal = this.dashboardControl.data?.settings.networkGoal ?? 0;
-    if (goal === 0) {
+    if (this.networkGoal === 0) {
       return 0;
     }
-    return Math.min(100, (this.networkProgress / goal) * 100);
+    return Math.min(100, (this.networkProgress / this.networkGoal) * 100);
   }
 
   get levelOneCount(): number {
