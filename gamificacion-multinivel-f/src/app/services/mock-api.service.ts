@@ -1,14 +1,45 @@
 import { Injectable } from '@angular/core';
-import { delay, Observable, of } from 'rxjs';
+import { delay, Observable, of, throwError } from 'rxjs';
 
 import { AdminData } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
+import type { AuthUser } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MockApiService {
+  private readonly loginUsers = [
+    {
+      username: 'admin',
+      password: 'admin123',
+      profile: {
+        name: 'Admin Rivera',
+        role: 'admin' as const
+      }
+    },
+    {
+      username: 'cliente',
+      password: 'cliente123',
+      profile: {
+        name: 'Valeria Torres',
+        role: 'cliente' as const,
+        discountPercent: 15,
+        discountActive: true,
+        level: 'Oro'
+      }
+    }
+  ];
+
+  login(username: string, password: string): Observable<AuthUser> {
+    const match = this.loginUsers.find((user) => user.username === username && user.password === password);
+    if (!match) {
+      return throwError(() => new Error('Credenciales inválidas'));
+    }
+    return of(match.profile).pipe(delay(120));
+  }
+
   getAdminData(): Observable<AdminData> {
     const payload: AdminData = {
       orders: [
