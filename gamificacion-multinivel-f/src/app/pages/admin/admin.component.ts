@@ -170,6 +170,14 @@ export class AdminComponent {
     this.currentOrderStatus = status;
   }
 
+  showActions(): void {
+    this.currentView = 'stats';
+    setTimeout(() => {
+      const actionsPanel = document.getElementById('admin-actions');
+      actionsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }
+
   advanceOrder(orderId: string): void {
     const order = this.orders.find((item) => item.id === orderId);
     if (!order) {
