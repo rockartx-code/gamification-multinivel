@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -47,7 +47,7 @@ interface FeaturedItem {
   styleUrl: './user-dashboard.component.css'
 })
 export class UserDashboardComponent implements OnInit, OnDestroy {
-  countdownLabel = '3d 12h 20m 10s';
+  readonly countdownLabel = signal('3d 12h 20m 10s');
   readonly cutoffDay = 25;
   readonly cutoffHour = 23;
   readonly cutoffMinute = 59;
@@ -434,7 +434,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const m = Math.floor((diff / (1000 * 60)) % 60);
     const s = Math.floor((diff / 1000) % 60);
-    this.countdownLabel = `${d}d ${h}h ${m}m ${s}s`;
+    this.countdownLabel.set(`${d}d ${h}h ${m}m ${s}s`);
   }
 
   private getNextCutoffDate(): Date {
