@@ -29,6 +29,28 @@ export interface CreateStructureCustomerPayload {
   level: 'Oro' | 'Plata' | 'Bronce';
 }
 
+export interface CreateProductAssetPayload {
+  productId: string;
+  section: 'redes' | 'landing' | 'miniatura';
+  filename: string;
+  contentType?: string;
+}
+
+export interface ProductAssetUpload {
+  asset: {
+    assetId: string;
+    bucket: string;
+    key: string;
+    ownerType: string;
+    ownerId: string;
+    section: string;
+    contentType: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  uploadUrl?: string;
+}
+
 export interface AdminCustomer {
   id: number;
   name: string;

@@ -6,7 +6,9 @@ import {
   AdminData,
   AdminOrder,
   CreateAdminOrderPayload,
-  CreateStructureCustomerPayload
+  CreateProductAssetPayload,
+  CreateStructureCustomerPayload,
+  ProductAssetUpload
 } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
@@ -306,5 +308,24 @@ export class MockApiService {
       commissions: 0
     };
     return of(customer).pipe(delay(120));
+  }
+
+  createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
+    const now = new Date().toISOString();
+    const assetId = `mock-${Math.random().toString(16).slice(2)}`;
+    const response: ProductAssetUpload = {
+      asset: {
+        assetId,
+        bucket: 'mock-bucket',
+        key: `products/${payload.productId}/${payload.section}/${assetId}/${payload.filename}`,
+        ownerType: 'product',
+        ownerId: payload.productId,
+        section: payload.section,
+        contentType: payload.contentType ?? 'application/octet-stream',
+        createdAt: now,
+        updatedAt: now
+      }
+    };
+    return of(response).pipe(delay(120));
   }
 }
