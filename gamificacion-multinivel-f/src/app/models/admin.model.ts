@@ -1,5 +1,6 @@
 export interface AdminOrder {
   id: string;
+  createdAt?: string;
   customer: string;
   total: number;
   status: 'pending' | 'paid' | 'delivered';

@@ -442,9 +442,10 @@ def _create_order(payload: dict) -> dict:
         )
         total += price * quantity
 
+    order_sk = f"{now}#{order_id}"
     order_item = {
-        "PK": f"ORDER#{order_id}",
-        "SK": "METADATA",
+        "PK": "ORDER",
+        "SK": order_sk,
         "entityType": "order",
         "orderId": order_id,
         "customerId": customer_id,
@@ -469,8 +470,18 @@ def _update_order_status(order_id: str, payload: dict) -> dict:
         )
 
     now = _now_iso()
+    lookup = _table.query(
+        KeyConditionExpression=Key("PK").eq("ORDER"),
+        FilterExpression=Attr("orderId").eq(order_id),
+        Limit=1,
+    )
+    items = lookup.get("Items", [])
+    if not items:
+        return _json_response(200, {"message": "Pedido no encontrado", "Error": "NoEncontrado"})
+
+    order_item = items[0]
     response = _table.update_item(
-        Key={"PK": f"ORDER#{order_id}", "SK": "METADATA"},
+        Key={"PK": "ORDER", "SK": order_item["SK"]},
         UpdateExpression="SET #status = :status, updatedAt = :updatedAt",
         ExpressionAttributeNames={"#status": "status"},
         ExpressionAttributeValues={":status": status, ":updatedAt": now},
@@ -482,6 +493,7 @@ def _update_order_status(order_id: str, payload: dict) -> dict:
 
     order_response = {
         "id": item.get("orderId"),
+        "createdAt": item.get("createdAt"),
         "customer": item.get("customerName"),
         "total": float(item.get("total") or 0),
         "status": item.get("status"),
@@ -592,7 +604,12 @@ def _build_admin_warnings(paid_count: int, pending_count: int, commissions_count
 
 def _get_admin_dashboard() -> dict:
     customers_raw = _scan_entities("CUSTOMER#", "PROFILE", limit=100)
-    orders_raw = _scan_entities("ORDER#", "METADATA", limit=100)
+    orders_response = _table.query(
+        KeyConditionExpression=Key("PK").eq("ORDER"),
+        ScanIndexForward=False,
+        Limit=100,
+    )
+    orders_raw = orders_response.get("Items", [])
     products_raw = _scan_entities("PRODUCT#", "METADATA", limit=100)
 
     customers = [
@@ -611,6 +628,7 @@ def _get_admin_dashboard() -> dict:
     orders = [
         {
             "id": item.get("orderId"),
+            "createdAt": item.get("createdAt"),
             "customer": item.get("customerName"),
             "total": float(item.get("total") or 0),
             "status": item.get("status"),

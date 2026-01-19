@@ -58,10 +58,34 @@ export class MockApiService {
   getAdminData(): Observable<AdminData> {
     const payload: AdminData = {
       orders: [
-        { id: '#1001', customer: 'Ana López', total: 120, status: 'pending' },
-        { id: '#1002', customer: 'Carlos Ruiz', total: 89, status: 'paid' },
-        { id: '#1003', customer: 'María Pérez', total: 210, status: 'paid' },
-        { id: '#1004', customer: 'Luis Gómez', total: 60, status: 'delivered' }
+        {
+          id: '#1001',
+          createdAt: '2026-01-16T09:35:00.000Z',
+          customer: 'Ana Lopez',
+          total: 120,
+          status: 'pending'
+        },
+        {
+          id: '#1002',
+          createdAt: '2026-01-16T11:20:00.000Z',
+          customer: 'Carlos Ruiz',
+          total: 89,
+          status: 'paid'
+        },
+        {
+          id: '#1003',
+          createdAt: '2026-01-15T17:05:00.000Z',
+          customer: 'Maria Perez',
+          total: 210,
+          status: 'paid'
+        },
+        {
+          id: '#1004',
+          createdAt: '2026-01-14T14:50:00.000Z',
+          customer: 'Luis Gomez',
+          total: 60,
+          status: 'delivered'
+        }
       ],
       customers: [
         {
@@ -319,6 +343,7 @@ export class MockApiService {
     const total = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const order: AdminOrder = {
       id: `#${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
       customer: payload.customerName,
       total,
       status: payload.status

@@ -27,10 +27,19 @@ export class RealApiService {
   constructor(private readonly http: HttpClient) {}
 
   login(username: string, password: string): Observable<AuthUser> {
-    return this.http.post<AuthUser>(`${this.baseUrl}/auth/login`, {
-      username,
-      password
-    });
+    return this.http
+      .post<{ user?: AuthUser; message?: string; Error?: string }>(`${this.baseUrl}/login`, {
+        username,
+        password
+      })
+      .pipe(
+        map((response) => {
+          if (response.user) {
+            return response.user;
+          }
+          throw new Error(response.message ?? 'No se pudo iniciar sesion.');
+        })
+      );
   }
 
   getAdminData(): Observable<AdminData> {

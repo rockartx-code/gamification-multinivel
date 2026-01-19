@@ -15,7 +15,7 @@ export const routes: Routes = [
   {
     path: 'login',
     component: LoginComponent,
-    canActivate: [loginGuard]
+    //canActivate: [loginGuard]
   },
   {
     path: 'admin',

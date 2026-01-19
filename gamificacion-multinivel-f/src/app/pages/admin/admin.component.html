@@ -222,7 +222,7 @@
                 <table class="w-full text-sm">
                   <thead class="bg-white/5 text-zinc-300">
                     <tr>
-                      <th class="px-4 py-3 text-left font-semibold">ID</th>
+                      <th class="px-4 py-3 text-left font-semibold">Fecha de creacion</th>
                       <th class="px-4 py-3 text-left font-semibold">Cliente</th>
                       <th class="px-4 py-3 text-left font-semibold">Total</th>
                       <th class="px-4 py-3 text-left font-semibold">Estado</th>
@@ -231,7 +231,9 @@
                   </thead>
                   <tbody class="divide-y divide-white/5 text-zinc-200">
                     <tr *ngFor="let order of filteredOrders">
-                      <td class="px-4 py-3">{{ order.id }}</td>
+                      <td class="px-4 py-3">
+                        {{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}
+                      </td>
                       <td class="px-4 py-3">{{ order.customer }}</td>
                       <td class="px-4 py-3 font-semibold">{{ formatMoney(order.total) }}</td>
                       <td class="px-4 py-3 capitalize">{{ order.status }}</td>

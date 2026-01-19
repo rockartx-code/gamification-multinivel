@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -21,7 +21,8 @@ export class LoginComponent {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   login(): void {
@@ -42,6 +43,7 @@ export class LoginComponent {
         },
         error: () => {
           this.errorMessage = 'Credenciales inválidas. Verifica tu usuario y contraseña.';
+          this.cdr.detectChanges();
         }
       });
   }
