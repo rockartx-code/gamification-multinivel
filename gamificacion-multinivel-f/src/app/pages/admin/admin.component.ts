@@ -35,6 +35,15 @@ export class AdminComponent implements OnInit {
   isAddStructureModalOpen = false;
 
   selectedCustomer: AdminCustomer | null = null;
+  structureForm = {
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: ''
+  };
+  structureLeader: AdminCustomer | null = null;
+  structureLevel: 'Oro' | 'Plata' | 'Bronce' = 'Oro';
   assetPreviews = new Map<number, string>();
   newOrderCustomerId: number | null = null;
   newOrderStatus: AdminOrder['status'] = 'pending';
@@ -130,6 +139,21 @@ export class AdminComponent implements OnInit {
     return this.authService.currentUser;
   }
 
+  get isSelectedCustomerBronze(): boolean {
+    return this.normalizeLevel(this.selectedCustomer?.level) === 'bronce';
+  }
+
+  get isStructureLevelBronze(): boolean {
+    return this.normalizeLevel(this.structureLevel) === 'bronce';
+  }
+
+  get structureLeaderLabel(): string {
+    if (!this.structureLeader) {
+      return 'Sin líder asignado';
+    }
+    return `${this.structureLeader.name} · ${this.structureLeader.level}`;
+  }
+
   formatMoney(value: number): string {
     return this.adminControl.formatMoney(value);
   }
@@ -157,6 +181,7 @@ export class AdminComponent implements OnInit {
   }
 
   openAddStructureModal(): void {
+    this.resetStructureForm();
     this.isAddStructureModalOpen = true;
   }
 
@@ -246,6 +271,33 @@ export class AdminComponent implements OnInit {
     this.isSavingOrder = false;
   }
 
+  resetStructureForm(): void {
+    this.structureForm = {
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+      city: ''
+    };
+    if (this.selectedCustomer) {
+      this.structureLeader = this.selectedCustomer;
+      this.structureLevel = this.getLowerStructureLevel(this.selectedCustomer.level);
+      return;
+    }
+    this.structureLeader = null;
+    this.structureLevel = 'Oro';
+  }
+
+  updateStructureField(
+    field: 'name' | 'phone' | 'email' | 'address' | 'city',
+    value: string
+  ): void {
+    this.structureForm = {
+      ...this.structureForm,
+      [field]: value
+    };
+  }
+
   selectCustomer(customerId: number): void {
     const selected = this.adminControl.selectCustomer(customerId);
     if (selected) {
@@ -265,5 +317,20 @@ export class AdminComponent implements OnInit {
       URL.revokeObjectURL(currentUrl);
     }
     this.assetPreviews.set(slotIndex, previewUrl);
+  }
+
+  private normalizeLevel(level?: string): string {
+    return (level ?? '').trim().toLowerCase();
+  }
+
+  private getLowerStructureLevel(level: string): 'Oro' | 'Plata' | 'Bronce' {
+    const normalized = this.normalizeLevel(level);
+    if (normalized === 'oro') {
+      return 'Plata';
+    }
+    if (normalized === 'plata') {
+      return 'Bronce';
+    }
+    return 'Bronce';
   }
 }

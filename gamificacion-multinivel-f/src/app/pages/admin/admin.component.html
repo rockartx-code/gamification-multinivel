@@ -366,11 +366,15 @@
                     </button>
 
                     <button
-                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
+                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+                      [disabled]="isSelectedCustomerBronze"
                       (click)="openAddStructureModal()">
                       <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                       Agregar a estructura
                     </button>
+                  </div>
+                  <div *ngIf="isSelectedCustomerBronze" class="mt-2 text-xs text-orange-200">
+                    El nivel Bronce no puede agregar nuevos miembros a la estructura.
                   </div>
 
                   <div class="mt-1 text-xs text-zinc-400">Mock. En producción: pintar con datos reales.</div>
@@ -749,7 +753,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-zinc-100">Agregar a estructura</div>
-          <div class="mt-1 text-sm text-zinc-400">Asigná el cliente a un líder y nivel.</div>
+          <div class="mt-1 text-sm text-zinc-400">Completá los datos para crear el alta en la red.</div>
         </div>
         <button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10"
           (click)="closeModals()">
@@ -758,27 +762,71 @@
         </button>
       </div>
 
-      <div class="mt-4 grid gap-3">
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-[11px] text-zinc-400">Cliente</span>
+          <span class="text-[11px] text-zinc-400">Nombre</span>
           <input
             class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-            placeholder="Buscar cliente" />
+            placeholder="Nombre del cliente"
+            [value]="structureForm.name"
+            (input)="updateStructureField('name', $any($event.target).value)" />
         </label>
         <label class="block">
-          <span class="text-[11px] text-zinc-400">Líder</span>
+          <span class="text-[11px] text-zinc-400">Teléfono</span>
           <input
             class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-            placeholder="Seleccionar líder" />
+            placeholder="+54 9 11 0000 0000"
+            [value]="structureForm.phone"
+            (input)="updateStructureField('phone', $any($event.target).value)" />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-[11px] text-zinc-400">Email</span>
+          <input
+            type="email"
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
+            placeholder="correo@dominio.com"
+            [value]="structureForm.email"
+            (input)="updateStructureField('email', $any($event.target).value)" />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-[11px] text-zinc-400">Dirección (opcional)</span>
+          <input
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
+            placeholder="Calle y número"
+            [value]="structureForm.address"
+            (input)="updateStructureField('address', $any($event.target).value)" />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-[11px] text-zinc-400">Ciudad / Provincia (opcional)</span>
+          <input
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
+            placeholder="Localidad, provincia"
+            [value]="structureForm.city"
+            (input)="updateStructureField('city', $any($event.target).value)" />
+        </label>
+      </div>
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <label class="block">
+          <span class="text-[11px] text-zinc-400">Líder asignado</span>
+          <input
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-300"
+            [value]="structureLeaderLabel"
+            disabled />
         </label>
         <label class="block">
-          <span class="text-[11px] text-zinc-400">Nivel</span>
-          <select class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">
-            <option>Nivel 1</option>
-            <option>Nivel 2</option>
-            <option>Nivel 3</option>
-          </select>
+          <span class="text-[11px] text-zinc-400">Nivel asignado</span>
+          <input
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-300"
+            [value]="structureLevel"
+            disabled />
         </label>
+      </div>
+      <div *ngIf="!structureLeader" class="mt-2 text-xs text-zinc-500">
+        Sin cliente seleccionado: se asigna al nivel 1 (Oro) sin líder.
+      </div>
+      <div *ngIf="structureLeader && isStructureLevelBronze" class="mt-2 text-xs text-orange-200">
+        Este líder ya está en el último nivel. No es posible agregar un miembro adicional.
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -788,7 +836,8 @@
           Cancelar
         </button>
         <button
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black">
+          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="isStructureLevelBronze">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           Agregar
         </button>
