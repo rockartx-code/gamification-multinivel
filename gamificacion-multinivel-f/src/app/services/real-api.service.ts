@@ -66,4 +66,10 @@ export class RealApiService {
       .post<{ product: AdminProduct }>(`${this.baseUrl}/products`, payload)
       .pipe(map((response) => response.product));
   }
+
+  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
+    return this.http
+      .patch<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`, { status })
+      .pipe(map((response) => response.order));
+  }
 }

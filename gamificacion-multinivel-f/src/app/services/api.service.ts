@@ -60,6 +60,10 @@ export class ApiService {
     return this.resolveApi().saveProduct(payload);
   }
 
+  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
+    return this.resolveApi().updateOrderStatus(orderId, status);
+  }
+
   private resolveApi(): MockApiService | RealApiService {
     return environment.useMockApi ? this.mockApi : this.realApi;
   }

@@ -125,6 +125,16 @@ export class MockApiService {
     return of(product).pipe(delay(120));
   }
 
+  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
+    const order: AdminOrder = {
+      id: orderId,
+      customer: 'Actualizado',
+      total: 0,
+      status
+    };
+    return of(order).pipe(delay(120));
+  }
+
   getCartData(): Observable<CartData> {
     const payload: CartData = {
       countdownLabel: '3d 8h',
