@@ -367,6 +367,59 @@ def _create_order(payload: dict) -> dict:
     return _json_response(201, {"order": order_item})
 
 
+def _discount_for_level(level: str) -> str:
+    normalized = (level or "").strip().lower()
+    if normalized == "oro":
+        return "15%"
+    if normalized == "plata":
+        return "10%"
+    return "5%"
+
+
+def _create_customer(payload: dict) -> dict:
+    name = payload.get("name")
+    email = payload.get("email")
+    level = payload.get("level") or "Oro"
+    if not name or not email:
+        return _json_response(
+            200,
+            {"message": "name y email son obligatorios", "Error": "BadRequest"},
+        )
+
+    customer_id = payload.get("customerId")
+    if not customer_id:
+        customer_id = int(datetime.utcnow().timestamp() * 1000)
+    now = _now_iso()
+    item = {
+        "PK": f"CUSTOMER#{customer_id}",
+        "SK": "PROFILE",
+        "entityType": "customer",
+        "customerId": customer_id,
+        "name": name,
+        "email": email,
+        "phone": payload.get("phone"),
+        "address": payload.get("address"),
+        "city": payload.get("city"),
+        "leaderId": payload.get("leaderId"),
+        "level": level,
+        "discount": _discount_for_level(level),
+        "commissions": 0,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+    _table.put_item(Item=item)
+    customer_response = {
+        "id": customer_id,
+        "name": name,
+        "email": email,
+        "level": level,
+        "discount": item["discount"],
+        "commissions": 0,
+    }
+    return _json_response(201, {"customer": customer_response})
+
+
 def lambda_handler(event, context):
     method = _get_http_method(event)
     path = _get_path(event)
@@ -407,5 +460,8 @@ def lambda_handler(event, context):
 
     if segments[0] == "orders" and method == "POST":
         return _create_order(_parse_body(event))
+
+    if segments[0] == "customers" and method == "POST":
+        return _create_customer(_parse_body(event))
 
     return _json_response(200, {"message": "Ruta no encontrada"+segments[0], "Error":"BadRequest"})

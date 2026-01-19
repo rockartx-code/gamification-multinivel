@@ -19,6 +19,16 @@ export interface CreateAdminOrderPayload {
   items: AdminOrderItem[];
 }
 
+export interface CreateStructureCustomerPayload {
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  leaderId?: number | null;
+  level: 'Oro' | 'Plata' | 'Bronce';
+}
+
 export interface AdminCustomer {
   id: number;
   name: string;

@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { delay, Observable, of, throwError } from 'rxjs';
 
-import { AdminData, AdminOrder, CreateAdminOrderPayload } from '../models/admin.model';
+import {
+  AdminCustomer,
+  AdminData,
+  AdminOrder,
+  CreateAdminOrderPayload,
+  CreateStructureCustomerPayload
+} from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -283,5 +289,22 @@ export class MockApiService {
       status: payload.status
     };
     return of(order).pipe(delay(120));
+  }
+
+  createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
+    const discountByLevel: Record<CreateStructureCustomerPayload['level'], string> = {
+      Oro: '15%',
+      Plata: '10%',
+      Bronce: '5%'
+    };
+    const customer: AdminCustomer = {
+      id: Math.floor(100000 + Math.random() * 900000),
+      name: payload.name,
+      email: payload.email,
+      level: payload.level,
+      discount: discountByLevel[payload.level],
+      commissions: 0
+    };
+    return of(customer).pipe(delay(120));
   }
 }

@@ -10,7 +10,8 @@ import {
   AdminOrderItem,
   AdminProduct,
   AdminWarning,
-  CreateAdminOrderPayload
+  CreateAdminOrderPayload,
+  CreateStructureCustomerPayload
 } from '../../models/admin.model';
 import { AdminControlService } from '../../services/admin-control.service';
 
@@ -49,6 +50,7 @@ export class AdminComponent implements OnInit {
   newOrderStatus: AdminOrder['status'] = 'pending';
   newOrderItems = new Map<number, number>();
   isSavingOrder = false;
+  isSavingStructure = false;
 
   ngOnInit(): void {
     this.adminControl.load().subscribe(() => {
@@ -152,6 +154,10 @@ export class AdminComponent implements OnInit {
       return 'Sin líder asignado';
     }
     return `${this.structureLeader.name} · ${this.structureLeader.level}`;
+  }
+
+  get isStructureFormValid(): boolean {
+    return Boolean(this.structureForm.name.trim() && this.structureForm.email.trim());
   }
 
   formatMoney(value: number): string {
@@ -279,6 +285,7 @@ export class AdminComponent implements OnInit {
       address: '',
       city: ''
     };
+    this.isSavingStructure = false;
     if (this.selectedCustomer) {
       this.structureLeader = this.selectedCustomer;
       this.structureLevel = this.getLowerStructureLevel(this.selectedCustomer.level);
@@ -296,6 +303,31 @@ export class AdminComponent implements OnInit {
       ...this.structureForm,
       [field]: value
     };
+  }
+
+  saveStructureCustomer(): void {
+    if (this.isStructureLevelBronze || this.isSavingStructure || !this.isStructureFormValid) {
+      return;
+    }
+    const payload: CreateStructureCustomerPayload = {
+      name: this.structureForm.name.trim(),
+      email: this.structureForm.email.trim(),
+      phone: this.structureForm.phone?.trim() || undefined,
+      address: this.structureForm.address?.trim() || undefined,
+      city: this.structureForm.city?.trim() || undefined,
+      leaderId: this.structureLeader?.id ?? null,
+      level: this.structureLevel
+    };
+    this.isSavingStructure = true;
+    this.adminControl.createStructureCustomer(payload).subscribe({
+      next: () => {
+        this.isSavingStructure = false;
+        this.closeModals();
+      },
+      error: () => {
+        this.isSavingStructure = false;
+      }
+    });
   }
 
   selectCustomer(customerId: number): void {
