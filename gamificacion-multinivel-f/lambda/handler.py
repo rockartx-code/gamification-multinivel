@@ -7,9 +7,9 @@ from datetime import datetime
 import boto3
 from boto3.dynamodb.conditions import Key
 
-TABLE_NAME = os.environ.get("TABLE_NAME", "Gamificacion")
-BUCKET_NAME = os.environ.get("BUCKET_NAME", "")
-AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+TABLE_NAME = "Gamificacion"
+BUCKET_NAME = "findingu-ventas"
+AWS_REGION = "us-east-1"
 
 _dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 _table = _dynamodb.Table(TABLE_NAME)
@@ -63,7 +63,10 @@ def _parse_body(event: dict) -> dict:
         return {}
     if event.get("isBase64Encoded"):
         body = base64.b64decode(body).decode("utf-8")
-    return json.loads(body)
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return {}
 
 
 def _get_http_method(event: dict) -> str:
@@ -71,11 +74,13 @@ def _get_http_method(event: dict) -> str:
 
 
 def _get_path(event: dict) -> str:
-    proxy = event.get("pathParameters", {}).get("proxy")
+    path_params = event.get("pathParameters") or {}
+    proxy = path_params.get("proxy")
     if proxy:
         return f"/{proxy}"
-    path = event.get("path", "/")
-    stage = event.get("requestContext", {}).get("stage")
+
+    path = event.get("path", "/") or "/"
+    stage = (event.get("requestContext") or {}).get("stage")
     if stage and path.startswith(f"/{stage}/"):
         return path[len(stage) + 1 :]
     return path
@@ -97,7 +102,7 @@ def _put_user_profile(payload: dict) -> dict:
     user_id = payload.get("userId") or str(uuid.uuid4())
     user_code = payload.get("userCode")
     if not user_code:
-        return _json_response(400, {"message": "userCode es obligatorio"})
+        return _json_response(200, {"message": "userCode es obligatorio", "Error":"BadRequest"})
 
     item = {
         "PK": _user_pk(user_id),
@@ -121,20 +126,20 @@ def _login(payload: dict) -> dict:
     username = payload.get("username") or payload.get("user")
     password = payload.get("password")
     if not username or not password:
-        return _json_response(400, {"message": "username y password son obligatorios"})
+        return _json_response(200, {"message": "username y password son obligatorios", "Error":"BadRequest"})
 
     for record in _LOGIN_USERS:
         if record["username"] == username and record["password"] == password:
             return _json_response(200, {"user": record["user"]})
 
-    return _json_response(401, {"message": "Credenciales inválidas"})
+    return _json_response(200, {"message": "Credenciales inválidas", "Error":"BadRequest"})
 
 
 def _get_user_profile(user_id: str) -> dict:
     response = _table.get_item(Key={"PK": _user_pk(user_id), "SK": "PROFILE"})
     item = response.get("Item")
     if not item:
-        return _json_response(404, {"message": "Usuario no encontrado"})
+        return _json_response(200, {"message": "Usuario no encontrado", "Error":"NoEncontrado"})
     return _json_response(200, {"profile": item})
 
 
@@ -234,7 +239,7 @@ def _get_dashboard(user_id: str) -> dict:
     response = _table.query(KeyConditionExpression=Key("PK").eq(pk))
     items = response.get("Items", [])
     if not items:
-        return _json_response(404, {"message": "Dashboard no encontrado"})
+        return _json_response(200, {"message": "Dashboard no encontrado", "Error":"NoEncontrado"})
     return _json_response(200, {"items": items})
 
 
@@ -260,13 +265,13 @@ def _get_network(user_id: str, query: dict) -> dict:
 
 def _create_asset(payload: dict) -> dict:
     if not BUCKET_NAME:
-        return _json_response(500, {"message": "BUCKET_NAME no configurado"})
+        return _json_response(200, {"message": "BUCKET_NAME no configurado", "Error":"BucketErrr"})
     filename = payload.get("filename")
     content_type = payload.get("contentType") or "application/octet-stream"
     owner_type = payload.get("ownerType", "misc")
     owner_id = payload.get("ownerId", "unknown")
     if not filename:
-        return _json_response(400, {"message": "filename es obligatorio"})
+        return _json_response(200, {"message": "filename es obligatorio", "Error":"BadRequest"})
 
     asset_id = str(uuid.uuid4())
     key = f"{owner_type}/{owner_id}/{asset_id}/{filename}"
@@ -298,11 +303,11 @@ def _create_asset(payload: dict) -> dict:
 
 def _get_asset(asset_id: str) -> dict:
     if not BUCKET_NAME:
-        return _json_response(500, {"message": "BUCKET_NAME no configurado"})
+        return _json_response(200, {"message": "BUCKET_NAME no configurado", "Error":"BucketError"})
     response = _table.get_item(Key={"PK": _asset_pk(asset_id), "SK": "METADATA"})
     item = response.get("Item")
     if not item:
-        return _json_response(404, {"message": "Asset no encontrado"})
+        return _json_response(200, {"message": "Asset no encontrado", "Error":"NoEncontrado"})
     download_url = _s3.generate_presigned_url(
         ClientMethod="get_object",
         Params={"Bucket": BUCKET_NAME, "Key": item["key"]},
@@ -311,7 +316,7 @@ def _get_asset(asset_id: str) -> dict:
     return _json_response(200, {"asset": item, "downloadUrl": download_url})
 
 
-def handler(event, context):
+def lambda_handler(event, context):
     method = _get_http_method(event)
     path = _get_path(event)
     segments = [segment for segment in path.strip("/").split("/") if segment]
@@ -323,7 +328,7 @@ def handler(event, context):
         return _json_response(200, {"status": "ok"})
 
     if not segments:
-        return _json_response(404, {"message": "Ruta no encontrada"})
+        return _json_response(200, {"message": "Ruta no encontrada "+path, "Error":"NoEncontrado"})
 
     if segments[0] == "users":
         if method == "POST":
@@ -349,4 +354,4 @@ def handler(event, context):
         if method == "GET" and len(segments) == 2:
             return _get_asset(segments[1])
 
-    return _json_response(404, {"message": "Ruta no encontrada"})
+    return _json_response(200, {"message": "Ruta no encontrada"+segments[0], "Error":"BadRequest"})
