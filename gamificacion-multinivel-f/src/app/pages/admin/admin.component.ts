@@ -7,8 +7,10 @@ import {
   AdminAssetSlot,
   AdminCustomer,
   AdminOrder,
+  AdminOrderItem,
   AdminProduct,
-  AdminWarning
+  AdminWarning,
+  CreateAdminOrderPayload
 } from '../../models/admin.model';
 import { AdminControlService } from '../../services/admin-control.service';
 
@@ -34,11 +36,18 @@ export class AdminComponent implements OnInit {
 
   selectedCustomer: AdminCustomer | null = null;
   assetPreviews = new Map<number, string>();
+  newOrderCustomerId: number | null = null;
+  newOrderStatus: AdminOrder['status'] = 'pending';
+  newOrderItems = new Map<number, number>();
+  isSavingOrder = false;
 
   ngOnInit(): void {
     this.adminControl.load().subscribe(() => {
       if (!this.selectedCustomer) {
         this.selectedCustomer = this.adminControl.customers[0] ?? null;
+      }
+      if (!this.newOrderCustomerId) {
+        this.newOrderCustomerId = this.adminControl.customers[0]?.id ?? null;
       }
     });
   }
@@ -143,6 +152,7 @@ export class AdminComponent implements OnInit {
   }
 
   openNewOrderModal(): void {
+    this.resetNewOrderForm();
     this.isNewOrderModalOpen = true;
   }
 
@@ -163,6 +173,77 @@ export class AdminComponent implements OnInit {
 
   advanceOrder(orderId: string): void {
     this.adminControl.advanceOrder(orderId);
+  }
+
+  updateNewOrderCustomer(customerId: number): void {
+    this.newOrderCustomerId = customerId;
+  }
+
+  updateNewOrderStatus(status: AdminOrder['status']): void {
+    this.newOrderStatus = status;
+  }
+
+  toggleProductSelection(productId: number, selected: boolean): void {
+    if (selected) {
+      this.newOrderItems.set(productId, this.newOrderItems.get(productId) ?? 1);
+      return;
+    }
+    this.newOrderItems.delete(productId);
+  }
+
+  updateProductQty(productId: number, quantityValue: string): void {
+    const quantity = Math.max(1, Number(quantityValue) || 1);
+    if (this.newOrderItems.has(productId)) {
+      this.newOrderItems.set(productId, quantity);
+    }
+  }
+
+  getNewOrderItems(): AdminOrderItem[] {
+    return this.products
+      .filter((product) => this.newOrderItems.has(product.id))
+      .map((product) => ({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: this.newOrderItems.get(product.id) ?? 1
+      }));
+  }
+
+  getNewOrderTotal(): number {
+    return this.getNewOrderItems().reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }
+
+  saveNewOrder(): void {
+    if (!this.newOrderCustomerId || this.newOrderItems.size === 0 || this.isSavingOrder) {
+      return;
+    }
+    const customer = this.customers.find((entry) => entry.id === this.newOrderCustomerId);
+    if (!customer) {
+      return;
+    }
+    const payload: CreateAdminOrderPayload = {
+      customerId: customer.id,
+      customerName: customer.name,
+      status: this.newOrderStatus,
+      items: this.getNewOrderItems()
+    };
+    this.isSavingOrder = true;
+    this.adminControl.createOrder(payload).subscribe({
+      next: () => {
+        this.isSavingOrder = false;
+        this.closeModals();
+      },
+      error: () => {
+        this.isSavingOrder = false;
+      }
+    });
+  }
+
+  resetNewOrderForm(): void {
+    this.newOrderCustomerId = this.customers[0]?.id ?? null;
+    this.newOrderStatus = 'pending';
+    this.newOrderItems.clear();
+    this.isSavingOrder = false;
   }
 
   selectCustomer(customerId: number): void {

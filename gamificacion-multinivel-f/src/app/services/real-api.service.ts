@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { AdminData } from '../models/admin.model';
+import { AdminData, AdminOrder, CreateAdminOrderPayload } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -33,5 +33,11 @@ export class RealApiService {
 
   getUserDashboardData(): Observable<UserDashboardData> {
     return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard`);
+  }
+
+  createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
+    return this.http
+      .post<{ order: AdminOrder }>(`${this.baseUrl}/orders`, payload)
+      .pipe(map((response) => response.order));
   }
 }
