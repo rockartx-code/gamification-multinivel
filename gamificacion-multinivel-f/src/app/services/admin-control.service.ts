@@ -24,7 +24,15 @@ export class AdminControlService {
   load(): Observable<AdminData> {
     return this.api.getAdminData().pipe(
       tap((data) => {
-        this.dataSubject.next(structuredClone(data));
+        const normalized: AdminData = {
+          ...data,
+          orders: data.orders ?? [],
+          customers: data.customers ?? [],
+          products: data.products ?? [],
+          warnings: data.warnings ?? [],
+          assetSlots: data.assetSlots ?? []
+        };
+        this.dataSubject.next(structuredClone(normalized));
       })
     );
   }
@@ -42,7 +50,7 @@ export class AdminControlService {
   }
 
   get productsCount(): number {
-    return this.data?.products.length ?? 0;
+    return this.data?.products?.length ?? 0;
   }
 
   get customersCount(): number {
