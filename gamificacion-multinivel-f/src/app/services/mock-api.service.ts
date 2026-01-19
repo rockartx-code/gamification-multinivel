@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { delay, Observable, of, throwError } from 'rxjs';
 
-import { AdminData } from '../models/admin.model';
+import { AdminData, AdminOrder, CreateAdminOrderPayload } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -272,5 +272,16 @@ export class MockApiService {
     };
 
     return of(payload).pipe(delay(120));
+  }
+
+  createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
+    const total = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const order: AdminOrder = {
+      id: `#${Math.floor(1000 + Math.random() * 9000)}`,
+      customer: payload.customerName,
+      total,
+      status: payload.status
+    };
+    return of(order).pipe(delay(120));
   }
 }

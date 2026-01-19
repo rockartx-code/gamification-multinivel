@@ -5,6 +5,20 @@ export interface AdminOrder {
   status: 'pending' | 'paid' | 'delivered';
 }
 
+export interface AdminOrderItem {
+  productId: number;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface CreateAdminOrderPayload {
+  customerId: number;
+  customerName: string;
+  status: AdminOrder['status'];
+  items: AdminOrderItem[];
+}
+
 export interface AdminCustomer {
   id: number;
   name: string;

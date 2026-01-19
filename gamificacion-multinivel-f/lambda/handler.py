@@ -316,6 +316,57 @@ def _get_asset(asset_id: str) -> dict:
     return _json_response(200, {"asset": item, "downloadUrl": download_url})
 
 
+def _create_order(payload: dict) -> dict:
+    customer_id = payload.get("customerId")
+    customer_name = payload.get("customerName")
+    status = payload.get("status", "pending")
+    items = payload.get("items", [])
+
+    if not customer_id or not customer_name or not items:
+        return _json_response(
+            200,
+            {
+                "message": "customerId, customerName e items son obligatorios",
+                "Error": "BadRequest",
+            },
+        )
+
+    order_id = payload.get("orderId") or str(uuid.uuid4())
+    now = _now_iso()
+    normalized_items = []
+    total = 0
+
+    for item in items:
+        quantity = max(1, int(item.get("quantity") or 1))
+        price = float(item.get("price", 0))
+        normalized_items.append(
+            {
+                "productId": item.get("productId"),
+                "name": item.get("name"),
+                "price": price,
+                "quantity": quantity,
+            }
+        )
+        total += price * quantity
+
+    order_item = {
+        "PK": f"ORDER#{order_id}",
+        "SK": "METADATA",
+        "entityType": "order",
+        "orderId": order_id,
+        "customerId": customer_id,
+        "customerName": customer_name,
+        "status": status,
+        "items": normalized_items,
+        "total": total,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+    _table.put_item(Item=order_item)
+    return _json_response(201, {"order": order_item})
+
+
 def lambda_handler(event, context):
     method = _get_http_method(event)
     path = _get_path(event)
@@ -353,5 +404,8 @@ def lambda_handler(event, context):
             return _create_asset(_parse_body(event))
         if method == "GET" and len(segments) == 2:
             return _get_asset(segments[1])
+
+    if segments[0] == "orders" and method == "POST":
+        return _create_order(_parse_body(event))
 
     return _json_response(200, {"message": "Ruta no encontrada"+segments[0], "Error":"BadRequest"})

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { AdminData } from '../models/admin.model';
+import { AdminData, AdminOrder, CreateAdminOrderPayload } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -32,6 +32,10 @@ export class ApiService {
 
   getUserDashboardData(): Observable<UserDashboardData> {
     return this.resolveApi().getUserDashboardData();
+  }
+
+  createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
+    return this.resolveApi().createOrder(payload);
   }
 
   private resolveApi(): MockApiService | RealApiService {
