@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, of, tap } from 'rxjs';
 
 import {
   AdminCustomer,
   AdminData,
   AdminOrder,
+  AdminProduct,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
@@ -114,6 +115,27 @@ export class AdminControlService {
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     return this.api.createProductAsset(payload);
+  }
+
+  saveProduct(payload: { id: number | null; name: string; price: number; active: boolean }): Observable<AdminProduct> {
+    const current = this.dataSubject.value;
+    const nextId =
+      current?.products.reduce((max, product) => Math.max(max, product.id), 0) ?? 0;
+    const product: AdminProduct = {
+      id: payload.id ?? nextId + 1,
+      name: payload.name,
+      price: payload.price,
+      active: payload.active
+    };
+    if (current) {
+      const existingIndex = current.products.findIndex((entry) => entry.id === payload.id);
+      const updatedProducts =
+        existingIndex >= 0
+          ? current.products.map((entry, index) => (index === existingIndex ? product : entry))
+          : [product, ...current.products];
+      this.dataSubject.next({ ...current, products: updatedProducts });
+    }
+    return of(product);
   }
 
   selectCustomer(customerId: number): AdminCustomer | null {

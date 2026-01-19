@@ -49,17 +49,35 @@ export class AdminComponent implements OnInit {
   assetPreviews = new Map<number, string>();
   productImagePreviews = new Map<string, string>();
   productImageUploads = new Map<string, boolean>();
+  productMessage = '';
+  private productMessageTimeout?: number;
+  productForm = {
+    id: null as number | null,
+    name: '',
+    price: '',
+    sku: '',
+    hook: ''
+  };
   productImageSlots = [
     { key: 'redes', label: 'Redes', hint: 'Story / Feed' },
     { key: 'landing', label: 'Landing', hint: 'Hero 16:9' },
     { key: 'miniatura', label: 'Miniatura', hint: '1:1' }
   ] as const;
+  defaultAssetSlots: AdminAssetSlot[] = [
+    { label: 'Miniatura (carrito)', hint: 'square 1:1' },
+    { label: 'CTA / Banner', hint: 'landscape 16:9' },
+    { label: 'Redes · Story', hint: '9:16' },
+    { label: 'Redes · Feed', hint: '1:1' },
+    { label: 'Producto del Mes', hint: 'landscape 16:9' },
+    { label: 'Imagen extra', hint: 'opcional' }
+  ];
   draftProductId = this.createDraftProductId();
   newOrderCustomerId: number | null = null;
   newOrderStatus: AdminOrder['status'] = 'pending';
   newOrderItems = new Map<number, number>();
   isSavingOrder = false;
   isSavingStructure = false;
+  isSavingProduct = false;
 
   ngOnInit(): void {
     this.adminControl.load().subscribe(() => {
@@ -89,7 +107,8 @@ export class AdminComponent implements OnInit {
   }
 
   get assetSlots(): AdminAssetSlot[] {
-    return this.adminControl.data?.assetSlots ?? [];
+    const slots = this.adminControl.data?.assetSlots ?? [];
+    return slots.length ? slots : this.defaultAssetSlots;
   }
 
   get viewTitle(): string {
@@ -167,6 +186,10 @@ export class AdminComponent implements OnInit {
 
   get isStructureFormValid(): boolean {
     return Boolean(this.structureForm.name.trim() && this.structureForm.email.trim());
+  }
+
+  get isProductFormValid(): boolean {
+    return Boolean(this.productForm.name.trim() && Number(this.productForm.price));
   }
 
   formatMoney(value: number): string {
@@ -344,6 +367,70 @@ export class AdminComponent implements OnInit {
     if (selected) {
       this.selectedCustomer = selected;
     }
+  }
+
+  editProduct(product: AdminProduct): void {
+    this.productForm = {
+      id: product.id,
+      name: product.name,
+      price: String(product.price),
+      sku: '',
+      hook: ''
+    };
+    this.announceProductMessage(`Editando ${product.name}.`);
+  }
+
+  updateProductField(field: 'name' | 'price' | 'sku' | 'hook', value: string): void {
+    this.productForm = {
+      ...this.productForm,
+      [field]: value
+    };
+  }
+
+  saveProduct(): void {
+    if (this.isSavingProduct || !this.isProductFormValid) {
+      return;
+    }
+    this.isSavingProduct = true;
+    const payload = {
+      id: this.productForm.id,
+      name: this.productForm.name.trim(),
+      price: Number(this.productForm.price),
+      active: true
+    };
+    this.adminControl.saveProduct(payload).subscribe({
+      next: (product) => {
+        this.isSavingProduct = false;
+        this.announceProductMessage(
+          this.productForm.id ? `Producto actualizado: ${product.name}.` : `Producto creado: ${product.name}.`
+        );
+        this.resetProductForm();
+      },
+      error: () => {
+        this.isSavingProduct = false;
+        this.announceProductMessage('No se pudo guardar el producto.');
+      }
+    });
+  }
+
+  private resetProductForm(): void {
+    this.productForm = {
+      id: null,
+      name: '',
+      price: '',
+      sku: '',
+      hook: ''
+    };
+  }
+
+  private announceProductMessage(message: string): void {
+    this.productMessage = message;
+    if (this.productMessageTimeout) {
+      window.clearTimeout(this.productMessageTimeout);
+    }
+    this.productMessageTimeout = window.setTimeout(() => {
+      this.productMessage = '';
+    }, 2800);
   }
 
   previewAsset(event: Event, slotIndex: number): void {
