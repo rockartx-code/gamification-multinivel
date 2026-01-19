@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable, catchError, finalize, forkJoin, from, map, of, switchMap } from 'rxjs';
 
 import { AuthService, AuthUser } from '../../services/auth.service';
 import {
@@ -47,8 +48,9 @@ export class AdminComponent implements OnInit {
   structureLeader: AdminCustomer | null = null;
   structureLevel: 'Oro' | 'Plata' | 'Bronce' = 'Oro';
   assetPreviews = new Map<number, string>();
-  productImagePreviews = new Map<string, string>();
-  productImageUploads = new Map<string, boolean>();
+  productImagePreviews = new Map<CreateProductAssetPayload['section'], string>();
+  productImageUploads = new Map<CreateProductAssetPayload['section'], boolean>();
+  productImageFiles = new Map<CreateProductAssetPayload['section'], File>();
   productMessage = '';
   private productMessageTimeout?: number;
   productForm = {
@@ -71,7 +73,6 @@ export class AdminComponent implements OnInit {
     { label: 'Producto del Mes', hint: 'landscape 16:9' },
     { label: 'Imagen extra', hint: 'opcional' }
   ];
-  draftProductId = this.createDraftProductId();
   newOrderCustomerId: number | null = null;
   newOrderStatus: AdminOrder['status'] = 'pending';
   newOrderItems = new Map<number, number>();
@@ -377,6 +378,7 @@ export class AdminComponent implements OnInit {
       sku: '',
       hook: ''
     };
+    this.resetProductAssets();
     this.announceProductMessage(`Editando ${product.name}.`);
   }
 
@@ -396,21 +398,43 @@ export class AdminComponent implements OnInit {
       id: this.productForm.id,
       name: this.productForm.name.trim(),
       price: Number(this.productForm.price),
-      active: true
+      active: true,
+      sku: this.productForm.sku.trim() || undefined,
+      hook: this.productForm.hook.trim() || undefined
     };
-    this.adminControl.saveProduct(payload).subscribe({
-      next: (product) => {
-        this.isSavingProduct = false;
-        this.announceProductMessage(
-          this.productForm.id ? `Producto actualizado: ${product.name}.` : `Producto creado: ${product.name}.`
-        );
-        this.resetProductForm();
-      },
-      error: () => {
-        this.isSavingProduct = false;
-        this.announceProductMessage('No se pudo guardar el producto.');
-      }
-    });
+    this.adminControl
+      .saveProduct(payload)
+      .pipe(
+        switchMap((product) =>
+          this.uploadProductImages(product.id).pipe(
+            map((uploads) => ({
+              product,
+              uploads
+            }))
+          )
+        ),
+        finalize(() => {
+          this.isSavingProduct = false;
+        })
+      )
+      .subscribe({
+        next: ({ product, uploads }) => {
+          const hasFailures = uploads.some((upload) => !upload.success);
+          if (hasFailures) {
+            this.announceProductMessage(
+              `Producto guardado: ${product.name}. Algunas imágenes no se pudieron subir.`
+            );
+          } else {
+            this.announceProductMessage(
+              this.productForm.id ? `Producto actualizado: ${product.name}.` : `Producto creado: ${product.name}.`
+            );
+          }
+          this.resetProductForm();
+        },
+        error: () => {
+          this.announceProductMessage('No se pudo guardar el producto.');
+        }
+      });
   }
 
   private resetProductForm(): void {
@@ -421,6 +445,7 @@ export class AdminComponent implements OnInit {
       sku: '',
       hook: ''
     };
+    this.resetProductAssets();
   }
 
   private announceProductMessage(message: string): void {
@@ -454,40 +479,11 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.setProductImagePreview(section, file);
-    this.productImageUploads.set(section, true);
-    const payload: CreateProductAssetPayload = {
-      productId: this.draftProductId,
-      section,
-      filename: file.name,
-      contentType: file.type || 'application/octet-stream'
-    };
-    this.adminControl.createProductAsset(payload).subscribe({
-      next: (response) => {
-        if (response.uploadUrl) {
-          void fetch(response.uploadUrl, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': payload.contentType ?? 'application/octet-stream'
-            },
-            body: file
-          })
-            .then(() => {
-              this.productImageUploads.set(section, false);
-            })
-            .catch(() => {
-              this.productImageUploads.set(section, false);
-            });
-          return;
-        }
-        this.productImageUploads.set(section, false);
-      },
-      error: () => {
-        this.productImageUploads.set(section, false);
-      }
-    });
+    this.productImageFiles.set(section, file);
+    this.productImageUploads.set(section, false);
   }
 
-  private setProductImagePreview(section: string, file: File): void {
+  private setProductImagePreview(section: CreateProductAssetPayload['section'], file: File): void {
     const previewUrl = URL.createObjectURL(file);
     const currentUrl = this.productImagePreviews.get(section);
     if (currentUrl) {
@@ -496,12 +492,59 @@ export class AdminComponent implements OnInit {
     this.productImagePreviews.set(section, previewUrl);
   }
 
-  private createDraftProductId(): string {
-    const cryptoObj = globalThis.crypto;
-    if (cryptoObj?.randomUUID) {
-      return cryptoObj.randomUUID();
+  private resetProductAssets(): void {
+    this.productImageFiles.clear();
+    this.productImageUploads.clear();
+    this.productImagePreviews.forEach((value) => {
+      URL.revokeObjectURL(value);
+    });
+    this.productImagePreviews.clear();
+  }
+
+  private uploadProductImages(
+    productId: number
+  ): Observable<Array<{ section: CreateProductAssetPayload['section']; success: boolean }>> {
+    const entries = Array.from(this.productImageFiles.entries());
+    if (entries.length === 0) {
+      return of([]);
     }
-    return `draft-${Date.now()}`;
+    entries.forEach(([section]) => {
+      this.productImageUploads.set(section, true);
+    });
+    const uploads = entries.map(([section, file]) => {
+      const payload: CreateProductAssetPayload = {
+        productId: String(productId),
+        section,
+        filename: file.name,
+        contentType: file.type || 'application/octet-stream'
+      };
+      return this.adminControl.createProductAsset(payload).pipe(
+        switchMap((response) => {
+          if (!response.uploadUrl) {
+            return of({ section, success: true });
+          }
+          return from(
+            fetch(response.uploadUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': payload.contentType ?? 'application/octet-stream'
+              },
+              body: file
+            })
+          ).pipe(
+            map((uploadResponse) => ({
+              section,
+              success: uploadResponse.ok
+            }))
+          );
+        }),
+        catchError(() => of({ section, success: false })),
+        finalize(() => {
+          this.productImageUploads.set(section, false);
+        })
+      );
+    });
+    return forkJoin(uploads);
   }
 
   private normalizeLevel(level?: string): string {

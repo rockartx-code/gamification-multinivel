@@ -7,10 +7,12 @@ import {
   AdminCustomer,
   AdminData,
   AdminOrder,
+  AdminProduct,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
-  ProductAssetUpload
+  ProductAssetUpload,
+  SaveAdminProductPayload
 } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
@@ -57,5 +59,11 @@ export class RealApiService {
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     return this.http.post<ProductAssetUpload>(`${this.baseUrl}/products/assets`, payload);
+  }
+
+  saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
+    return this.http
+      .post<{ product: AdminProduct }>(`${this.baseUrl}/products`, payload)
+      .pipe(map((response) => response.product));
   }
 }

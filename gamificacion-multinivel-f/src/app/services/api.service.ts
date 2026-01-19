@@ -6,10 +6,12 @@ import {
   AdminCustomer,
   AdminData,
   AdminOrder,
+  AdminProduct,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
-  ProductAssetUpload
+  ProductAssetUpload,
+  SaveAdminProductPayload
 } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
@@ -52,6 +54,10 @@ export class ApiService {
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     return this.resolveApi().createProductAsset(payload);
+  }
+
+  saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
+    return this.resolveApi().saveProduct(payload);
   }
 
   private resolveApi(): MockApiService | RealApiService {

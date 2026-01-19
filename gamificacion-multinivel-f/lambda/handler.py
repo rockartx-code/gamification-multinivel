@@ -98,6 +98,10 @@ def _asset_pk(asset_id: str) -> str:
     return f"ASSET#{asset_id}"
 
 
+def _product_pk(product_id: int) -> str:
+    return f"PRODUCT#{product_id}"
+
+
 def _put_user_profile(payload: dict) -> dict:
     user_id = payload.get("userId") or str(uuid.uuid4())
     user_code = payload.get("userCode")
@@ -358,6 +362,45 @@ def _get_asset(asset_id: str) -> dict:
     return _json_response(200, {"asset": item, "downloadUrl": download_url})
 
 
+def _save_product(payload: dict) -> dict:
+    name = payload.get("name")
+    price = payload.get("price")
+    active = payload.get("active", True)
+    if name is None or price is None:
+        return _json_response(
+            200,
+            {"message": "name y price son obligatorios", "Error": "BadRequest"},
+        )
+
+    product_id = payload.get("id")
+    if product_id is None:
+        product_id = int(uuid.uuid4().int % 1000000)
+
+    now = _now_iso()
+    item = {
+        "PK": _product_pk(int(product_id)),
+        "SK": "METADATA",
+        "entityType": "product",
+        "productId": int(product_id),
+        "name": name,
+        "price": price,
+        "active": active,
+        "sku": payload.get("sku"),
+        "hook": payload.get("hook"),
+        "updatedAt": now,
+        "createdAt": now,
+    }
+
+    _table.put_item(Item=item)
+    product_response = {
+        "id": int(product_id),
+        "name": name,
+        "price": price,
+        "active": active,
+    }
+    return _json_response(201, {"product": product_response})
+
+
 def _create_order(payload: dict) -> dict:
     customer_id = payload.get("customerId")
     customer_name = payload.get("customerName")
@@ -503,6 +546,8 @@ def lambda_handler(event, context):
     if segments[0] == "products" and len(segments) == 2:
         if segments[1] == "assets" and method == "POST":
             return _create_product_asset(_parse_body(event))
+    if segments[0] == "products" and len(segments) == 1 and method == "POST":
+        return _save_product(_parse_body(event))
 
     if segments[0] == "orders" and method == "POST":
         return _create_order(_parse_body(event))

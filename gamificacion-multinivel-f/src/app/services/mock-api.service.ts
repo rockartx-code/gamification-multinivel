@@ -5,10 +5,12 @@ import {
   AdminCustomer,
   AdminData,
   AdminOrder,
+  AdminProduct,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
-  ProductAssetUpload
+  ProductAssetUpload,
+  SaveAdminProductPayload
 } from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
@@ -38,6 +40,11 @@ export class MockApiService {
         level: 'Oro'
       }
     }
+  ];
+  private products: AdminProduct[] = [
+    { id: 1, name: 'COLÁGENO', price: 35, active: true },
+    { id: 2, name: 'OMEGA-3', price: 29, active: true },
+    { id: 3, name: 'COMPLEJO B', price: 24, active: false }
   ];
 
   login(username: string, password: string): Observable<AuthUser> {
@@ -82,11 +89,7 @@ export class MockApiService {
           commissions: 0
         }
       ],
-      products: [
-        { id: 1, name: 'COLÁGENO', price: 35, active: true },
-        { id: 2, name: 'OMEGA-3', price: 29, active: true },
-        { id: 3, name: 'COMPLEJO B', price: 24, active: false }
-      ],
+      products: [...this.products],
       warnings: [
         { type: 'commissions', text: '3 comisiones pendientes por depositar', severity: 'high' },
         { type: 'shipping', text: '2 pedidos pagados sin envío', severity: 'high' },
@@ -103,6 +106,23 @@ export class MockApiService {
     };
 
     return of(payload).pipe(delay(120));
+  }
+
+  saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
+    const nextId = this.products.reduce((max, product) => Math.max(max, product.id), 0) + 1;
+    const product: AdminProduct = {
+      id: payload.id ?? nextId,
+      name: payload.name,
+      price: payload.price,
+      active: payload.active
+    };
+    const existingIndex = this.products.findIndex((entry) => entry.id === payload.id);
+    if (existingIndex >= 0) {
+      this.products[existingIndex] = product;
+    } else {
+      this.products = [product, ...this.products];
+    }
+    return of(product).pipe(delay(120));
   }
 
   getCartData(): Observable<CartData> {
