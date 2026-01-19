@@ -7,7 +7,7 @@ from datetime import datetime
 import boto3
 from boto3.dynamodb.conditions import Attr, Key
 
-TABLE_NAME = "Gamificacion"
+TABLE_NAME = "multinivel"
 BUCKET_NAME = "findingu-ventas"
 AWS_REGION = "us-east-1"
 
