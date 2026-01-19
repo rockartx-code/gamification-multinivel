@@ -36,6 +36,15 @@ export interface CreateProductAssetPayload {
   contentType?: string;
 }
 
+export interface SaveAdminProductPayload {
+  id: number | null;
+  name: string;
+  price: number;
+  active: boolean;
+  sku?: string;
+  hook?: string;
+}
+
 export interface ProductAssetUpload {
   asset: {
     assetId: string;
