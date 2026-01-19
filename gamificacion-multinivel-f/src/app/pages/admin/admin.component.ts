@@ -19,7 +19,8 @@ import { AdminControlService } from '../../services/admin-control.service';
 
 type StructureNode = {
   id: string;
-  level: 'root' | 'L1' | 'L2';
+  role: 'root' | 'L1' | 'L2';
+  level: string;
   label: string;
   x: number;
   y: number;
@@ -45,19 +46,6 @@ export class AdminComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router
   ) {}
-
-  private readonly l1Positions = [
-    { x: 260, y: 70 },
-    { x: 260, y: 110 },
-    { x: 260, y: 150 }
-  ];
-  private readonly l2Positions = [
-    { x: 420, y: 60 },
-    { x: 420, y: 90 },
-    { x: 420, y: 110 },
-    { x: 420, y: 140 },
-    { x: 420, y: 170 }
-  ];
 
   currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
   currentOrderStatus: AdminOrder['status'] = 'pending';
@@ -214,37 +202,62 @@ export class AdminComponent implements OnInit {
   }
 
   get structureRootLabel(): string {
-    const name = this.selectedCustomer?.name ?? 'Cliente';
-    return name.split(' ')[0]?.slice(0, 6) ?? 'Cliente';
+    return this.structureNodeLabel(this.selectedCustomer?.name);
   }
 
   get structureGraph(): { nodes: StructureNode[]; links: StructureLink[] } {
-    const seed = this.selectedCustomer?.id ?? 0;
-    const l1Count = Math.min(this.l1Positions.length, 2 + (seed % 2));
-    const l2Count = Math.min(this.l2Positions.length, 3 + (seed % 3));
+    if (!this.selectedCustomer) {
+      return { nodes: [], links: [] };
+    }
+
+    const referrals = this.buildReferralMap(this.customers);
+    const directReferrals = referrals.get(this.selectedCustomer.id) ?? [];
+    const indirectReferrals: Array<{ customer: AdminCustomer; parentId: number }> = [];
+
+    directReferrals.forEach((member) => {
+      const children = referrals.get(member.id) ?? [];
+      children.forEach((child) => {
+        indirectReferrals.push({ customer: child, parentId: member.id });
+      });
+    });
+
+    const l1Positions = this.buildColumnPositions(directReferrals.length, 260);
+    const l2Positions = this.buildColumnPositions(indirectReferrals.length, 420, 40, 180);
+    const rootY =
+      l1Positions.length > 0
+        ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
+        : 110;
 
     const root: StructureNode = {
-      id: 'root',
-      level: 'root',
+      id: `customer-${this.selectedCustomer.id}`,
+      role: 'root',
+      level: this.selectedCustomer.level,
       label: this.structureRootLabel,
       x: 120,
-      y: 110
+      y: rootY
     };
 
-    const l1Nodes: StructureNode[] = this.l1Positions.slice(0, l1Count).map((pos, index) => ({
-      id: `l1-${index}`,
-      level: 'L1',
-      label: 'L1',
-      x: pos.x,
-      y: pos.y
+    const l1Customers = directReferrals.slice(0, l1Positions.length);
+    const l1Nodes: StructureNode[] = l1Customers.map((customer, index) => ({
+      id: `customer-${customer.id}`,
+      role: 'L1',
+      level: customer.level,
+      label: this.structureNodeLabel(customer.name),
+      x: l1Positions[index].x,
+      y: l1Positions[index].y
     }));
 
-    const l2Nodes: StructureNode[] = this.l2Positions.slice(0, l2Count).map((pos, index) => ({
-      id: `l2-${index}`,
-      level: 'L2',
-      label: 'L2',
-      x: pos.x,
-      y: pos.y
+    const l1NodeById = new Map(l1Customers.map((customer, index) => [customer.id, l1Nodes[index]]));
+    const l2Entries = indirectReferrals
+      .filter((entry) => l1NodeById.has(entry.parentId))
+      .slice(0, l2Positions.length);
+    const l2Nodes: StructureNode[] = l2Entries.map((entry, index) => ({
+      id: `customer-${entry.customer.id}`,
+      role: 'L2',
+      level: entry.customer.level,
+      label: this.structureNodeLabel(entry.customer.name),
+      x: l2Positions[index].x,
+      y: l2Positions[index].y
     }));
 
     const links: StructureLink[] = l1Nodes.map((node) => ({
@@ -255,7 +268,8 @@ export class AdminComponent implements OnInit {
     }));
 
     l2Nodes.forEach((node, index) => {
-      const parent = l1Nodes[index % l1Nodes.length];
+      const entry = l2Entries[index];
+      const parent = entry ? l1NodeById.get(entry.parentId) : undefined;
       if (!parent) {
         return;
       }
@@ -278,31 +292,35 @@ export class AdminComponent implements OnInit {
     return Boolean(this.productForm.name.trim() && Number(this.productForm.price));
   }
 
-  structureNodeFill(level: StructureNode['level']): string {
-    if (level === 'root') {
-      return 'rgba(59,130,246,.92)';
-    }
-    if (level === 'L1') {
+  structureNodeFill(level: string): string {
+    const normalized = this.normalizeLevel(level);
+    if (normalized === 'oro') {
       return 'rgba(245,185,66,.92)';
     }
-    return 'rgba(139,92,246,.92)';
+    if (normalized === 'plata') {
+      return 'rgba(59,130,246,.92)';
+    }
+    if (normalized === 'bronce') {
+      return 'rgba(139,92,246,.92)';
+    }
+    return 'rgba(148,163,184,.85)';
   }
 
-  structureNodeRadius(level: StructureNode['level']): number {
-    if (level === 'root') {
+  structureNodeRadius(role: StructureNode['role']): number {
+    if (role === 'root') {
       return 26;
     }
-    if (level === 'L1') {
+    if (role === 'L1') {
       return 16;
     }
     return 12;
   }
 
-  structureNodeFont(level: StructureNode['level']): number {
-    if (level === 'root') {
+  structureNodeFont(role: StructureNode['role']): number {
+    if (role === 'root') {
       return 12;
     }
-    if (level === 'L1') {
+    if (role === 'L1') {
       return 10;
     }
     return 9;
@@ -460,9 +478,9 @@ export class AdminComponent implements OnInit {
   }
 
   saveStructureCustomer(): void {
-    if (this.isStructureLevelBronze || this.isSavingStructure || !this.isStructureFormValid) {
-      return;
-    }
+    //if (this.isStructureLevelBronze || this.isSavingStructure || !this.isStructureFormValid) {
+    //  return;
+    //}
     const payload: CreateStructureCustomerPayload = {
       name: this.structureForm.name.trim(),
       email: this.structureForm.email.trim(),
@@ -672,6 +690,42 @@ export class AdminComponent implements OnInit {
 
   private normalizeLevel(level?: string): string {
     return (level ?? '').trim().toLowerCase();
+  }
+
+  private structureNodeLabel(name?: string): string {
+    const value = (name ?? '').trim();
+    if (!value) {
+      return 'Cliente';
+    }
+    const first = value.split(' ')[0] ?? value;
+    return first.slice(0, 6);
+  }
+
+  private buildReferralMap(customers: AdminCustomer[]): Map<number, AdminCustomer[]> {
+    const map = new Map<number, AdminCustomer[]>();
+    customers.forEach((customer) => {
+      if (customer.leaderId == null) {
+        return;
+      }
+      const entries = map.get(customer.leaderId) ?? [];
+      entries.push(customer);
+      map.set(customer.leaderId, entries);
+    });
+    return map;
+  }
+
+  private buildColumnPositions(count: number, x: number, top = 50, bottom = 170): { x: number; y: number }[] {
+    if (count <= 0) {
+      return [];
+    }
+    if (count === 1) {
+      return [{ x, y: (top + bottom) / 2 }];
+    }
+    const spacing = (bottom - top) / (count - 1);
+    return Array.from({ length: count }, (_, index) => ({
+      x,
+      y: top + spacing * index
+    }));
   }
 
   private getLowerStructureLevel(level: string): 'Oro' | 'Plata' | 'Bronce' {

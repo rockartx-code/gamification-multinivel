@@ -68,6 +68,7 @@ export class MockApiService {
           id: 1,
           name: 'Ana López',
           email: 'ana@mail.com',
+          leaderId: null,
           level: 'Oro',
           discount: '15%',
           commissions: 320
@@ -76,6 +77,7 @@ export class MockApiService {
           id: 2,
           name: 'Carlos Ruiz',
           email: 'carlos@mail.com',
+          leaderId: 1,
           level: 'Plata',
           discount: '10%',
           commissions: 120
@@ -84,6 +86,7 @@ export class MockApiService {
           id: 3,
           name: 'María Pérez',
           email: 'maria@mail.com',
+          leaderId: 2,
           level: 'Bronce',
           discount: '5%',
           commissions: 0
@@ -333,6 +336,7 @@ export class MockApiService {
       id: Math.floor(100000 + Math.random() * 900000),
       name: payload.name,
       email: payload.email,
+      leaderId: payload.leaderId ?? null,
       level: payload.level,
       discount: discountByLevel[payload.level],
       commissions: 0

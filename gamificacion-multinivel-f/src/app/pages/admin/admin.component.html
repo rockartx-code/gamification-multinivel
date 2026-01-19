@@ -133,7 +133,7 @@
               <p class="mt-1 text-xs text-zinc-400 sm:text-sm">{{ viewSubtitle }}</p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <!--div class="flex items-center gap-2">
               <div class="hidden items-center gap-2 rounded-2xl border border-white/10 bg-[#121826] px-3 py-2 md:flex">
                 <i class="fa-solid fa-magnifying-glass text-zinc-500" aria-hidden="true"></i>
                 <span class="text-xs text-zinc-400">Buscar</span>
@@ -152,7 +152,7 @@
                 <i class="fa-solid fa-file-export" aria-hidden="true"></i>
                 Exportar
               </button>
-            </div>
+            </div-->
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders'">
@@ -385,10 +385,10 @@
                     </g>
                     <g>
                       <ng-container *ngFor="let node of structureGraph.nodes">
-                        <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="structureNodeRadius(node.level)"
+                        <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="structureNodeRadius(node.role)"
                           [attr.fill]="structureNodeFill(node.level)"></circle>
                         <text [attr.x]="node.x" [attr.y]="node.y + 4" text-anchor="middle"
-                          [attr.font-size]="structureNodeFont(node.level)" fill="#0b0f14" font-weight="800">
+                          [attr.font-size]="structureNodeFont(node.role)" fill="#0b0f14" font-weight="800">
                           {{ node.label }}
                         </text>
                       </ng-container>
@@ -821,9 +821,9 @@
       <div *ngIf="!structureLeader" class="mt-2 text-xs text-zinc-500">
         Sin cliente seleccionado: se asigna al nivel 1 (Oro) sin líder.
       </div>
-      <div *ngIf="structureLeader && isStructureLevelBronze" class="mt-2 text-xs text-orange-200">
+      <!--div *ngIf="structureLeader && isStructureLevelBronze" class="mt-2 text-xs text-orange-200">
         Este líder ya está en el último nivel. No es posible agregar un miembro adicional.
-      </div>
+      </div -->
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10"
@@ -833,7 +833,7 @@
         </button>
         <button
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
-          [disabled]="isStructureLevelBronze || !isStructureFormValid || isSavingStructure"
+  
           (click)="saveStructureCustomer()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           Agregar

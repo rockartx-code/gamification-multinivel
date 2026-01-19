@@ -64,6 +64,7 @@ export interface AdminCustomer {
   id: number;
   name: string;
   email: string;
+  leaderId?: number | null;
   level: string;
   discount: string;
   commissions: number;
