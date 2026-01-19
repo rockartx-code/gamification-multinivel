@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 import boto3
 from boto3.dynamodb.conditions import Attr, Key
@@ -44,6 +45,12 @@ def _now_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 
+def _json_default(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
+
+
 def _json_response(status_code: int, payload: dict) -> dict:
     return {
         "statusCode": status_code,
@@ -53,7 +60,7 @@ def _json_response(status_code: int, payload: dict) -> dict:
             "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type,Authorization",
         },
-        "body": json.dumps(payload),
+        "body": json.dumps(payload, default=_json_default),
     }
 
 
@@ -376,6 +383,7 @@ def _save_product(payload: dict) -> dict:
     if product_id is None:
         product_id = int(uuid.uuid4().int % 1000000)
 
+    price_value = Decimal(str(price))
     now = _now_iso()
     item = {
         "PK": _product_pk(int(product_id)),
@@ -383,7 +391,7 @@ def _save_product(payload: dict) -> dict:
         "entityType": "product",
         "productId": int(product_id),
         "name": name,
-        "price": price,
+        "price": price_value,
         "active": active,
         "sku": payload.get("sku"),
         "hook": payload.get("hook"),
@@ -395,7 +403,7 @@ def _save_product(payload: dict) -> dict:
     product_response = {
         "id": int(product_id),
         "name": name,
-        "price": price,
+        "price": float(price_value),
         "active": active,
     }
     return _json_response(201, {"product": product_response})
@@ -419,11 +427,11 @@ def _create_order(payload: dict) -> dict:
     order_id = payload.get("orderId") or str(uuid.uuid4())
     now = _now_iso()
     normalized_items = []
-    total = 0
+    total = Decimal("0")
 
     for item in items:
         quantity = max(1, int(item.get("quantity") or 1))
-        price = float(item.get("price", 0))
+        price = Decimal(str(item.get("price", 0)))
         normalized_items.append(
             {
                 "productId": item.get("productId"),
