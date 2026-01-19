@@ -380,60 +380,18 @@
                   <div class="mt-1 text-xs text-zinc-400">Mock. En producción: pintar con datos reales.</div>
                   <svg viewBox="0 0 560 220" class="mt-3 h-[220px] w-full">
                     <g stroke="rgba(255,255,255,.18)" stroke-width="2">
-                      <line x1="120" y1="110" x2="260" y2="70"></line>
-                      <line x1="120" y1="110" x2="260" y2="110"></line>
-                      <line x1="120" y1="110" x2="260" y2="150"></line>
-                      <line x1="260" y1="70" x2="420" y2="60"></line>
-                      <line x1="260" y1="70" x2="420" y2="90"></line>
-                      <line x1="260" y1="110" x2="420" y2="110"></line>
-                      <line x1="260" y1="150" x2="420" y2="140"></line>
-                      <line x1="260" y1="150" x2="420" y2="170"></line>
+                      <line *ngFor="let link of structureGraph.links" [attr.x1]="link.x1" [attr.y1]="link.y1"
+                        [attr.x2]="link.x2" [attr.y2]="link.y2"></line>
                     </g>
                     <g>
-                      <circle cx="120" cy="110" r="26" fill="rgba(59,130,246,.92)"></circle>
-                      <text x="120" y="115" text-anchor="middle" font-size="12" fill="#0b0f14" font-weight="800">
-                        Yo
-                      </text>
-
-                      <circle cx="260" cy="70" r="16" fill="rgba(245,185,66,.92)"></circle>
-                      <text x="260" y="74" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">
-                        L1
-                      </text>
-
-                      <circle cx="260" cy="110" r="16" fill="rgba(245,185,66,.92)"></circle>
-                      <text x="260" y="114" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">
-                        L1
-                      </text>
-
-                      <circle cx="260" cy="150" r="16" fill="rgba(245,185,66,.92)"></circle>
-                      <text x="260" y="154" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">
-                        L1
-                      </text>
-
-                      <circle cx="420" cy="60" r="12" fill="rgba(139,92,246,.92)"></circle>
-                      <text x="420" y="64" text-anchor="middle" font-size="9" fill="#0b0f14" font-weight="900">
-                        L2
-                      </text>
-
-                      <circle cx="420" cy="90" r="12" fill="rgba(139,92,246,.92)"></circle>
-                      <text x="420" y="94" text-anchor="middle" font-size="9" fill="#0b0f14" font-weight="900">
-                        L2
-                      </text>
-
-                      <circle cx="420" cy="110" r="12" fill="rgba(139,92,246,.92)"></circle>
-                      <text x="420" y="114" text-anchor="middle" font-size="9" fill="#0b0f14" font-weight="900">
-                        L2
-                      </text>
-
-                      <circle cx="420" cy="140" r="12" fill="rgba(139,92,246,.92)"></circle>
-                      <text x="420" y="144" text-anchor="middle" font-size="9" fill="#0b0f14" font-weight="900">
-                        L2
-                      </text>
-
-                      <circle cx="420" cy="170" r="12" fill="rgba(139,92,246,.92)"></circle>
-                      <text x="420" y="174" text-anchor="middle" font-size="9" fill="#0b0f14" font-weight="900">
-                        L2
-                      </text>
+                      <ng-container *ngFor="let node of structureGraph.nodes">
+                        <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="structureNodeRadius(node.level)"
+                          [attr.fill]="structureNodeFill(node.level)"></circle>
+                        <text [attr.x]="node.x" [attr.y]="node.y + 4" text-anchor="middle"
+                          [attr.font-size]="structureNodeFont(node.level)" fill="#0b0f14" font-weight="800">
+                          {{ node.label }}
+                        </text>
+                      </ng-container>
                     </g>
                   </svg>
                 </div>

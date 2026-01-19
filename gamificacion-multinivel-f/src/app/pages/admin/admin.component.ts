@@ -17,6 +17,21 @@ import {
 } from '../../models/admin.model';
 import { AdminControlService } from '../../services/admin-control.service';
 
+type StructureNode = {
+  id: string;
+  level: 'root' | 'L1' | 'L2';
+  label: string;
+  x: number;
+  y: number;
+};
+
+type StructureLink = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -30,6 +45,19 @@ export class AdminComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router
   ) {}
+
+  private readonly l1Positions = [
+    { x: 260, y: 70 },
+    { x: 260, y: 110 },
+    { x: 260, y: 150 }
+  ];
+  private readonly l2Positions = [
+    { x: 420, y: 60 },
+    { x: 420, y: 90 },
+    { x: 420, y: 110 },
+    { x: 420, y: 140 },
+    { x: 420, y: 170 }
+  ];
 
   currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
   currentOrderStatus: AdminOrder['status'] = 'pending';
@@ -185,12 +213,99 @@ export class AdminComponent implements OnInit {
     return `${this.structureLeader.name} · ${this.structureLeader.level}`;
   }
 
+  get structureRootLabel(): string {
+    const name = this.selectedCustomer?.name ?? 'Cliente';
+    return name.split(' ')[0]?.slice(0, 6) ?? 'Cliente';
+  }
+
+  get structureGraph(): { nodes: StructureNode[]; links: StructureLink[] } {
+    const seed = this.selectedCustomer?.id ?? 0;
+    const l1Count = Math.min(this.l1Positions.length, 2 + (seed % 2));
+    const l2Count = Math.min(this.l2Positions.length, 3 + (seed % 3));
+
+    const root: StructureNode = {
+      id: 'root',
+      level: 'root',
+      label: this.structureRootLabel,
+      x: 120,
+      y: 110
+    };
+
+    const l1Nodes: StructureNode[] = this.l1Positions.slice(0, l1Count).map((pos, index) => ({
+      id: `l1-${index}`,
+      level: 'L1',
+      label: 'L1',
+      x: pos.x,
+      y: pos.y
+    }));
+
+    const l2Nodes: StructureNode[] = this.l2Positions.slice(0, l2Count).map((pos, index) => ({
+      id: `l2-${index}`,
+      level: 'L2',
+      label: 'L2',
+      x: pos.x,
+      y: pos.y
+    }));
+
+    const links: StructureLink[] = l1Nodes.map((node) => ({
+      x1: root.x,
+      y1: root.y,
+      x2: node.x,
+      y2: node.y
+    }));
+
+    l2Nodes.forEach((node, index) => {
+      const parent = l1Nodes[index % l1Nodes.length];
+      if (!parent) {
+        return;
+      }
+      links.push({
+        x1: parent.x,
+        y1: parent.y,
+        x2: node.x,
+        y2: node.y
+      });
+    });
+
+    return { nodes: [root, ...l1Nodes, ...l2Nodes], links };
+  }
+
   get isStructureFormValid(): boolean {
     return Boolean(this.structureForm.name.trim() && this.structureForm.email.trim());
   }
 
   get isProductFormValid(): boolean {
     return Boolean(this.productForm.name.trim() && Number(this.productForm.price));
+  }
+
+  structureNodeFill(level: StructureNode['level']): string {
+    if (level === 'root') {
+      return 'rgba(59,130,246,.92)';
+    }
+    if (level === 'L1') {
+      return 'rgba(245,185,66,.92)';
+    }
+    return 'rgba(139,92,246,.92)';
+  }
+
+  structureNodeRadius(level: StructureNode['level']): number {
+    if (level === 'root') {
+      return 26;
+    }
+    if (level === 'L1') {
+      return 16;
+    }
+    return 12;
+  }
+
+  structureNodeFont(level: StructureNode['level']): number {
+    if (level === 'root') {
+      return 12;
+    }
+    if (level === 'L1') {
+      return 10;
+    }
+    return 9;
   }
 
   formatMoney(value: number): string {
