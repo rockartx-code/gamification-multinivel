@@ -6,7 +6,9 @@ import {
   AdminData,
   AdminOrder,
   CreateAdminOrderPayload,
-  CreateStructureCustomerPayload
+  CreateProductAssetPayload,
+  CreateStructureCustomerPayload,
+  ProductAssetUpload
 } from '../models/admin.model';
 import { ApiService } from './api.service';
 
@@ -108,6 +110,10 @@ export class AdminControlService {
         this.dataSubject.next({ ...current, customers: [customer, ...current.customers] });
       })
     );
+  }
+
+  createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
+    return this.api.createProductAsset(payload);
   }
 
   selectCustomer(customerId: number): AdminCustomer | null {

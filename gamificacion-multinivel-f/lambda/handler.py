@@ -301,6 +301,48 @@ def _create_asset(payload: dict) -> dict:
     return _json_response(201, {"asset": item, "uploadUrl": upload_url})
 
 
+def _create_product_asset(payload: dict) -> dict:
+    if not BUCKET_NAME:
+        return _json_response(200, {"message": "BUCKET_NAME no configurado", "Error":"BucketErrr"})
+    filename = payload.get("filename")
+    content_type = payload.get("contentType") or "application/octet-stream"
+    product_id = payload.get("productId") or "draft"
+    section = payload.get("section")
+    if not filename or not section:
+        return _json_response(
+            200,
+            {"message": "filename y section son obligatorios", "Error":"BadRequest"},
+        )
+
+    asset_id = str(uuid.uuid4())
+    key = f"products/{product_id}/{section}/{asset_id}/{filename}"
+    now = _now_iso()
+
+    item = {
+        "PK": _asset_pk(asset_id),
+        "SK": "METADATA",
+        "entityType": "asset",
+        "assetId": asset_id,
+        "bucket": BUCKET_NAME,
+        "key": key,
+        "ownerType": "product",
+        "ownerId": product_id,
+        "section": section,
+        "contentType": content_type,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+    _table.put_item(Item=item)
+    upload_url = _s3.generate_presigned_url(
+        ClientMethod="put_object",
+        Params={"Bucket": BUCKET_NAME, "Key": key, "ContentType": content_type},
+        ExpiresIn=900,
+    )
+
+    return _json_response(201, {"asset": item, "uploadUrl": upload_url})
+
+
 def _get_asset(asset_id: str) -> dict:
     if not BUCKET_NAME:
         return _json_response(200, {"message": "BUCKET_NAME no configurado", "Error":"BucketError"})
@@ -457,6 +499,10 @@ def lambda_handler(event, context):
             return _create_asset(_parse_body(event))
         if method == "GET" and len(segments) == 2:
             return _get_asset(segments[1])
+
+    if segments[0] == "products" and len(segments) == 2:
+        if segments[1] == "assets" and method == "POST":
+            return _create_product_asset(_parse_body(event))
 
     if segments[0] == "orders" and method == "POST":
         return _create_order(_parse_body(event))

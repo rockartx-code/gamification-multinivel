@@ -11,6 +11,7 @@ import {
   AdminProduct,
   AdminWarning,
   CreateAdminOrderPayload,
+  CreateProductAssetPayload,
   CreateStructureCustomerPayload
 } from '../../models/admin.model';
 import { AdminControlService } from '../../services/admin-control.service';
@@ -46,6 +47,14 @@ export class AdminComponent implements OnInit {
   structureLeader: AdminCustomer | null = null;
   structureLevel: 'Oro' | 'Plata' | 'Bronce' = 'Oro';
   assetPreviews = new Map<number, string>();
+  productImagePreviews = new Map<string, string>();
+  productImageUploads = new Map<string, boolean>();
+  productImageSlots = [
+    { key: 'redes', label: 'Redes', hint: 'Story / Feed' },
+    { key: 'landing', label: 'Landing', hint: 'Hero 16:9' },
+    { key: 'miniatura', label: 'Miniatura', hint: '1:1' }
+  ] as const;
+  draftProductId = this.createDraftProductId();
   newOrderCustomerId: number | null = null;
   newOrderStatus: AdminOrder['status'] = 'pending';
   newOrderItems = new Map<number, number>();
@@ -349,6 +358,63 @@ export class AdminComponent implements OnInit {
       URL.revokeObjectURL(currentUrl);
     }
     this.assetPreviews.set(slotIndex, previewUrl);
+  }
+
+  uploadProductImage(event: Event, section: CreateProductAssetPayload['section']): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+    this.setProductImagePreview(section, file);
+    this.productImageUploads.set(section, true);
+    const payload: CreateProductAssetPayload = {
+      productId: this.draftProductId,
+      section,
+      filename: file.name,
+      contentType: file.type || 'application/octet-stream'
+    };
+    this.adminControl.createProductAsset(payload).subscribe({
+      next: (response) => {
+        if (response.uploadUrl) {
+          void fetch(response.uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': payload.contentType ?? 'application/octet-stream'
+            },
+            body: file
+          })
+            .then(() => {
+              this.productImageUploads.set(section, false);
+            })
+            .catch(() => {
+              this.productImageUploads.set(section, false);
+            });
+          return;
+        }
+        this.productImageUploads.set(section, false);
+      },
+      error: () => {
+        this.productImageUploads.set(section, false);
+      }
+    });
+  }
+
+  private setProductImagePreview(section: string, file: File): void {
+    const previewUrl = URL.createObjectURL(file);
+    const currentUrl = this.productImagePreviews.get(section);
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+    }
+    this.productImagePreviews.set(section, previewUrl);
+  }
+
+  private createDraftProductId(): string {
+    const cryptoObj = globalThis.crypto;
+    if (cryptoObj?.randomUUID) {
+      return cryptoObj.randomUUID();
+    }
+    return `draft-${Date.now()}`;
   }
 
   private normalizeLevel(level?: string): string {
