@@ -837,7 +837,8 @@
         </button>
         <button
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
-          [disabled]="isStructureLevelBronze">
+          [disabled]="isStructureLevelBronze || !isStructureFormValid || isSavingStructure"
+          (click)="saveStructureCustomer()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           Agregar
         </button>

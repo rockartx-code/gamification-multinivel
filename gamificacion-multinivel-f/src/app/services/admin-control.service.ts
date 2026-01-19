@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
-import { AdminCustomer, AdminData, AdminOrder, CreateAdminOrderPayload } from '../models/admin.model';
+import {
+  AdminCustomer,
+  AdminData,
+  AdminOrder,
+  CreateAdminOrderPayload,
+  CreateStructureCustomerPayload
+} from '../models/admin.model';
 import { ApiService } from './api.service';
 
 @Injectable({
@@ -88,6 +94,18 @@ export class AdminControlService {
           return;
         }
         this.dataSubject.next({ ...current, orders: [order, ...current.orders] });
+      })
+    );
+  }
+
+  createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
+    return this.api.createStructureCustomer(payload).pipe(
+      tap((customer) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        this.dataSubject.next({ ...current, customers: [customer, ...current.customers] });
       })
     );
   }

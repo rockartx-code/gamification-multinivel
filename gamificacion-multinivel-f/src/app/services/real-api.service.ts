@@ -3,7 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { AdminData, AdminOrder, CreateAdminOrderPayload } from '../models/admin.model';
+import {
+  AdminCustomer,
+  AdminData,
+  AdminOrder,
+  CreateAdminOrderPayload,
+  CreateStructureCustomerPayload
+} from '../models/admin.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -39,5 +45,11 @@ export class RealApiService {
     return this.http
       .post<{ order: AdminOrder }>(`${this.baseUrl}/orders`, payload)
       .pipe(map((response) => response.order));
+  }
+
+  createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
+    return this.http
+      .post<{ customer: AdminCustomer }>(`${this.baseUrl}/customers`, payload)
+      .pipe(map((response) => response.customer));
   }
 }
