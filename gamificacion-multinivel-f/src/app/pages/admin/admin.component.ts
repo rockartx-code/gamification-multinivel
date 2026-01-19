@@ -235,8 +235,13 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  advanceOrder(orderId: string): void {
-    this.adminControl.advanceOrder(orderId);
+  advanceOrder(order: AdminOrder): void {
+    const nextStatus =
+      order.status === 'pending' ? 'paid' : order.status === 'paid' ? 'delivered' : order.status;
+    if (nextStatus === order.status) {
+      return;
+    }
+    this.adminControl.updateOrderStatus(order.id, nextStatus).subscribe();
   }
 
   updateNewOrderCustomer(customerId: number): void {

@@ -57,7 +57,7 @@ def _json_response(status_code: int, payload: dict) -> dict:
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+            "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type,Authorization",
         },
         "body": json.dumps(payload, default=_json_default),
@@ -460,6 +460,35 @@ def _create_order(payload: dict) -> dict:
     return _json_response(201, {"order": order_item})
 
 
+def _update_order_status(order_id: str, payload: dict) -> dict:
+    status = payload.get("status")
+    if status not in {"pending", "paid", "delivered"}:
+        return _json_response(
+            200,
+            {"message": "status inválido", "Error": "BadRequest"},
+        )
+
+    now = _now_iso()
+    response = _table.update_item(
+        Key={"PK": f"ORDER#{order_id}", "SK": "METADATA"},
+        UpdateExpression="SET #status = :status, updatedAt = :updatedAt",
+        ExpressionAttributeNames={"#status": "status"},
+        ExpressionAttributeValues={":status": status, ":updatedAt": now},
+        ReturnValues="ALL_NEW",
+    )
+    item = response.get("Attributes")
+    if not item:
+        return _json_response(200, {"message": "Pedido no encontrado", "Error": "NoEncontrado"})
+
+    order_response = {
+        "id": item.get("orderId"),
+        "customer": item.get("customerName"),
+        "total": float(item.get("total") or 0),
+        "status": item.get("status"),
+    }
+    return _json_response(200, {"order": order_response})
+
+
 def _discount_for_level(level: str) -> str:
     normalized = (level or "").strip().lower()
     if normalized == "oro":
@@ -697,6 +726,8 @@ def lambda_handler(event, context):
 
     if segments[0] == "orders" and method == "POST":
         return _create_order(_parse_body(event))
+    if segments[0] == "orders" and method == "PATCH" and len(segments) == 2:
+        return _update_order_status(segments[1], _parse_body(event))
 
     if segments[0] == "customers" and method == "POST":
         return _create_customer(_parse_body(event))

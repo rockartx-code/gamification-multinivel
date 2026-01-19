@@ -82,20 +82,20 @@ export class AdminControlService {
     return this.orders.filter((order) => order.status === status);
   }
 
-  advanceOrder(orderId: string): void {
-    const current = this.dataSubject.value;
-    if (!current) {
-      return;
-    }
-    const updatedOrders = current.orders.map((order): AdminOrder => {
-      if (order.id !== orderId) {
-        return order;
-      }
-      const nextStatus: AdminOrder['status'] =
-        order.status === 'pending' ? 'paid' : order.status === 'paid' ? 'delivered' : order.status;
-      return { ...order, status: nextStatus };
-    });
-    this.dataSubject.next({ ...current, orders: updatedOrders });
+  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
+    return this.api.updateOrderStatus(orderId, status).pipe(
+      tap((order) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const nextStatus = order.status ?? status;
+        const updatedOrders = current.orders.map((entry) =>
+          entry.id === orderId ? { ...entry, status: nextStatus } : entry
+        );
+        this.dataSubject.next({ ...current, orders: updatedOrders });
+      })
+    );
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
