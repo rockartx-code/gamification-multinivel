@@ -295,6 +295,7 @@ export class AdminComponent implements OnInit {
     this.adminControl.createOrder(payload).subscribe({
       next: () => {
         this.isSavingOrder = false;
+        this.adminControl.load().subscribe();
         this.closeModals();
       },
       error: () => {
@@ -355,6 +356,7 @@ export class AdminComponent implements OnInit {
     this.adminControl.createStructureCustomer(payload).subscribe({
       next: () => {
         this.isSavingStructure = false;
+        this.adminControl.load().subscribe();
         this.closeModals();
       },
       error: () => {
@@ -429,6 +431,7 @@ export class AdminComponent implements OnInit {
               this.productForm.id ? `Producto actualizado: ${product.name}.` : `Producto creado: ${product.name}.`
             );
           }
+          this.adminControl.load().subscribe();
           this.resetProductForm();
         },
         error: () => {

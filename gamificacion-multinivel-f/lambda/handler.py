@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 import boto3
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 
 TABLE_NAME = "Gamificacion"
 BUCKET_NAME = "findingu-ventas"
@@ -505,6 +505,144 @@ def _create_customer(payload: dict) -> dict:
     return _json_response(201, {"customer": customer_response})
 
 
+def _scan_entities(pk_prefix: str, sk_value: str, limit: int = 100) -> list:
+    items = []
+    last_evaluated_key = None
+    filter_expression = Attr("PK").begins_with(pk_prefix) & Attr("SK").eq(sk_value)
+
+    while len(items) < limit:
+        scan_kwargs = {"FilterExpression": filter_expression}
+        if last_evaluated_key:
+            scan_kwargs["ExclusiveStartKey"] = last_evaluated_key
+        response = _table.scan(**scan_kwargs)
+        items.extend(response.get("Items", []))
+        last_evaluated_key = response.get("LastEvaluatedKey")
+        if not last_evaluated_key:
+            break
+
+    return items[:limit]
+
+
+def _build_admin_warnings(paid_count: int, pending_count: int, commissions_count: int) -> list:
+    warnings = []
+    if commissions_count:
+        warnings.append(
+            {
+                "type": "commissions",
+                "text": f"{commissions_count} comisiones pendientes por depositar",
+                "severity": "high",
+            }
+        )
+    if paid_count:
+        warnings.append(
+            {
+                "type": "shipping",
+                "text": f"{paid_count} pedidos pagados sin envío",
+                "severity": "high",
+            }
+        )
+    if pending_count:
+        warnings.append(
+            {
+                "type": "pending",
+                "text": f"{pending_count} pedidos en estado pendiente",
+                "severity": "medium",
+            }
+        )
+    return warnings
+
+
+def _get_admin_dashboard() -> dict:
+    customers_raw = _scan_entities("CUSTOMER#", "PROFILE", limit=100)
+    orders_raw = _scan_entities("ORDER#", "METADATA", limit=100)
+    products_raw = _scan_entities("PRODUCT#", "METADATA", limit=100)
+
+    customers = [
+        {
+            "id": item.get("customerId"),
+            "name": item.get("name"),
+            "email": item.get("email"),
+            "level": item.get("level"),
+            "discount": item.get("discount"),
+            "commissions": float(item.get("commissions") or 0),
+        }
+        for item in customers_raw
+    ]
+
+    orders = [
+        {
+            "id": item.get("orderId"),
+            "customer": item.get("customerName"),
+            "total": float(item.get("total") or 0),
+            "status": item.get("status"),
+        }
+        for item in orders_raw
+    ]
+
+    products = [
+        {
+            "id": int(item.get("productId")),
+            "name": item.get("name"),
+            "price": float(item.get("price") or 0),
+            "active": bool(item.get("active")),
+        }
+        for item in products_raw
+    ]
+
+    status_counts = {"pending": 0, "paid": 0, "delivered": 0}
+    for order in orders:
+        status = order.get("status")
+        if status in status_counts:
+            status_counts[status] += 1
+
+    customers_by_level = {}
+    commissions_count = 0
+    commissions_total = 0
+    for customer in customers:
+        level = customer.get("level") or "Sin nivel"
+        customers_by_level[level] = customers_by_level.get(level, 0) + 1
+        commission_value = float(customer.get("commissions") or 0)
+        if commission_value > 0:
+            commissions_count += 1
+            commissions_total += commission_value
+
+    sales_total = sum(order.get("total", 0) for order in orders)
+    average_ticket = sales_total / len(orders) if orders else 0
+    active_products = sum(1 for product in products if product.get("active"))
+
+    warnings = _build_admin_warnings(status_counts["paid"], status_counts["pending"], commissions_count)
+    asset_slots = [
+        {"label": "Miniatura (carrito)", "hint": "square 1:1"},
+        {"label": "CTA / Banner", "hint": "landscape 16:9"},
+        {"label": "Redes · Story", "hint": "9:16"},
+        {"label": "Redes · Feed", "hint": "1:1"},
+        {"label": "Producto del Mes", "hint": "landscape 16:9"},
+        {"label": "Imagen extra", "hint": "opcional"},
+    ]
+
+    stats = {
+        "ordersByStatus": status_counts,
+        "customersByLevel": customers_by_level,
+        "salesTotal": sales_total,
+        "averageTicket": average_ticket,
+        "activeProducts": active_products,
+        "inactiveProducts": max(len(products) - active_products, 0),
+        "commissionsTotal": commissions_total,
+    }
+
+    return _json_response(
+        200,
+        {
+            "orders": orders,
+            "customers": customers,
+            "products": products,
+            "warnings": warnings,
+            "assetSlots": asset_slots,
+            "stats": stats,
+        },
+    )
+
+
 def lambda_handler(event, context):
     method = _get_http_method(event)
     path = _get_path(event)
@@ -554,5 +692,8 @@ def lambda_handler(event, context):
 
     if segments[0] == "customers" and method == "POST":
         return _create_customer(_parse_body(event))
+
+    if segments == ["admin", "dashboard"] and method == "GET":
+        return _get_admin_dashboard()
 
     return _json_response(200, {"message": "Ruta no encontrada"+segments[0], "Error":"BadRequest"})
