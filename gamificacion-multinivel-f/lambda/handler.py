@@ -81,16 +81,25 @@ def _get_http_method(event: dict) -> str:
 
 
 def _get_path(event: dict) -> str:
+    # 1. Proxy path (API Gateway REST con {proxy+})
     path_params = event.get("pathParameters") or {}
     proxy = path_params.get("proxy")
     if proxy:
-        return f"/{proxy}"
+        path = f"/{proxy}"
+    else:
+        path = event.get("path", "/") or "/"
 
-    path = event.get("path", "/") or "/"
+    # 2. Eliminar stage (default, prod, etc.)
     stage = (event.get("requestContext") or {}).get("stage")
     if stage and path.startswith(f"/{stage}/"):
-        return path[len(stage) + 1 :]
-    return path
+        path = path[len(stage) + 1:]
+
+    # 3. Eliminar prefijo del servicio (/Multinivel)
+    if path.startswith("/Multinivel/"):
+        path = path[len("/Multinivel"):]
+
+    # 4. Normalizar root
+    return path if path.startswith("/") else f"/{path}"
 
 
 def _get_query_params(event: dict) -> dict:
