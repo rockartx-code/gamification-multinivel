@@ -10,4 +10,9 @@ import { RouterLink } from '@angular/router';
 })
 export class LandingComponent {
   readonly currentYear = new Date().getFullYear();
+
+  scrollTo(sectionId: string, event?: Event): void {
+    event?.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }

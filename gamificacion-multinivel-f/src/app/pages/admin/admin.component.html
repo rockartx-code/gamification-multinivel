@@ -239,10 +239,11 @@
                       <td class="px-4 py-3 capitalize">{{ order.status }}</td>
                       <td class="px-4 py-3">
                         <button
-                          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
+                          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                          [disabled]="isUpdatingOrder(order.id)"
                           (click)="advanceOrder(order)">
                           <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-                          Cambiar estado
+                          {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
                         </button>
                       </td>
                     </tr>
@@ -737,7 +738,7 @@
           [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder"
           (click)="saveNewOrder()">
           <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-          Guardar pedido
+          {{ isSavingOrder ? 'Guardando...' : 'Guardar pedido' }}
         </button>
         </div>
       </div>
@@ -844,22 +845,46 @@
     </div>
   </div>
 
-  <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0b0f14]/92 backdrop-blur lg:hidden">
+  <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0b0f14]/92 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">
       <div class="grid grid-cols-4 gap-2">
-        <button class="mobbtn rounded-2xl border border-blue-400/30 bg-blue-500/10 px-3 py-3 text-xs font-semibold">
+        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+          [ngClass]="
+            currentView === 'orders'
+              ? 'border-blue-400/30 bg-blue-500/10'
+              : 'border-white/10 bg-white/5 hover:bg-white/10'
+          "
+          (click)="setView('orders')">
           <i class="fa-solid fa-receipt" aria-hidden="true"></i>
           Pedidos
         </button>
-        <button class="mobbtn rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-xs font-semibold">
+        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+          [ngClass]="
+            currentView === 'customers'
+              ? 'border-blue-400/30 bg-blue-500/10'
+              : 'border-white/10 bg-white/5 hover:bg-white/10'
+          "
+          (click)="setView('customers')">
           <i class="fa-solid fa-users" aria-hidden="true"></i>
           Clientes
         </button>
-        <button class="mobbtn rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-xs font-semibold">
+        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+          [ngClass]="
+            currentView === 'products'
+              ? 'border-blue-400/30 bg-blue-500/10'
+              : 'border-white/10 bg-white/5 hover:bg-white/10'
+          "
+          (click)="setView('products')">
           <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
           Productos
         </button>
-        <button class="mobbtn rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-xs font-semibold">
+        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+          [ngClass]="
+            currentView === 'stats'
+              ? 'border-blue-400/30 bg-blue-500/10'
+              : 'border-white/10 bg-white/5 hover:bg-white/10'
+          "
+          (click)="setView('stats')">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Stats
         </button>

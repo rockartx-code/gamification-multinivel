@@ -12,12 +12,14 @@
           <i class="fa-solid fa-right-to-bracket text-blue-200" aria-hidden="true"></i>
           Entrar
         </a>
-        <a href="#recompensas"
+        <a href="#"
+          (click)="scrollTo('recompensas', $event)"
           class="inline-flex items-center gap-2 rounded-full border border-blue-500/70 px-4 py-2 text-blue-300 transition hover:bg-blue-500/10">
           <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
           Cómo funciona
         </a>
-        <a href="#registro"
+        <a href="#"
+          (click)="scrollTo('registro', $event)"
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 font-semibold transition-transform hover:scale-105">
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Obtenerlo ahora
@@ -49,13 +51,15 @@
           </p>
 
           <div class="mt-8 flex flex-wrap items-center gap-4">
-            <a href="#registro"
+            <a href="#"
+              (click)="scrollTo('registro', $event)"
               class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-105">
               <i class="fa-solid fa-bolt" aria-hidden="true"></i>
               Obtenerlo ahora
             </a>
 
-            <a href="#recompensas"
+            <a href="#"
+              (click)="scrollTo('recompensas', $event)"
               class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-4 transition hover:bg-white/10">
               <i class="fa-solid fa-gift" aria-hidden="true"></i>
               Ver recompensas
@@ -245,7 +249,8 @@
           </div>
         </div>
 
-        <a href="#registro"
+        <a href="#"
+          (click)="scrollTo('registro', $event)"
           class="glow-gold mt-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform hover:scale-105">
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Obtenerlo ahora

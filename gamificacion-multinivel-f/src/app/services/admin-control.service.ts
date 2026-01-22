@@ -19,6 +19,7 @@ import { ApiService } from './api.service';
 })
 export class AdminControlService {
   private readonly dataSubject = new BehaviorSubject<AdminData | null>(null);
+  readonly data$ = this.dataSubject.asObservable();
 
   constructor(private readonly api: ApiService) {}
 

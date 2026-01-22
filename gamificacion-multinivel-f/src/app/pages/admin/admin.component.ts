@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, type Signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Observable, catchError, finalize, forkJoin, from, map, of, switchMap } from 'rxjs';
 
@@ -7,6 +8,7 @@ import { AuthService, AuthUser } from '../../services/auth.service';
 import {
   AdminAssetSlot,
   AdminCustomer,
+  AdminData,
   AdminOrder,
   AdminOrderItem,
   AdminProduct,
@@ -41,11 +43,15 @@ type StructureLink = {
   styleUrl: './admin.component.css'
 })
 export class AdminComponent implements OnInit {
+  private readonly adminData: Signal<AdminData | null>;
+
   constructor(
     private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
     private readonly router: Router
-  ) {}
+  ) {
+    this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
+  }
 
   currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
   currentOrderStatus: AdminOrder['status'] = 'pending';
@@ -95,36 +101,37 @@ export class AdminComponent implements OnInit {
   isSavingOrder = false;
   isSavingStructure = false;
   isSavingProduct = false;
+  private readonly updatingOrderIds = new Set<string>();
 
   ngOnInit(): void {
     this.adminControl.load().subscribe(() => {
       if (!this.selectedCustomer) {
-        this.selectedCustomer = this.adminControl.customers[0] ?? null;
+        this.selectedCustomer = this.customers[0] ?? null;
       }
       if (!this.newOrderCustomerId) {
-        this.newOrderCustomerId = this.adminControl.customers[0]?.id ?? null;
+        this.newOrderCustomerId = this.customers[0]?.id ?? null;
       }
     });
   }
 
   get orders(): AdminOrder[] {
-    return this.adminControl.orders;
+    return this.adminData()?.orders ?? [];
   }
 
   get customers(): AdminCustomer[] {
-    return this.adminControl.customers;
+    return this.adminData()?.customers ?? [];
   }
 
   get products(): AdminProduct[] {
-    return this.adminControl.data?.products ?? [];
+    return this.adminData()?.products ?? [];
   }
 
   get warnings(): AdminWarning[] {
-    return this.adminControl.data?.warnings ?? [];
+    return this.adminData()?.warnings ?? [];
   }
 
   get assetSlots(): AdminAssetSlot[] {
-    const slots = this.adminControl.data?.assetSlots ?? [];
+    const slots = this.adminData()?.assetSlots ?? [];
     return slots.length ? slots : this.defaultAssetSlots;
   }
 
@@ -155,31 +162,31 @@ export class AdminComponent implements OnInit {
   }
 
   get filteredOrders(): AdminOrder[] {
-    return this.adminControl.getFilteredOrders(this.currentOrderStatus);
+    return this.orders.filter((order) => order.status === this.currentOrderStatus);
   }
 
   get pendingCount(): number {
-    return this.adminControl.pendingCount;
+    return this.orders.filter((order) => order.status === 'pending').length;
   }
 
   get paidCount(): number {
-    return this.adminControl.paidCount;
+    return this.orders.filter((order) => order.status === 'paid').length;
   }
 
   get shipCount(): number {
-    return this.adminControl.shipCount;
+    return this.orders.filter((order) => order.status === 'paid').length;
   }
 
   get commissionsTotal(): number {
-    return this.adminControl.commissionsTotal;
+    return this.customers.reduce((acc, customer) => acc + customer.commissions, 0);
   }
 
   get customersCount(): number {
-    return this.adminControl.customersCount;
+    return this.customers.length;
   }
 
   get productsCount(): number {
-    return this.adminControl.productsCount;
+    return this.products.length;
   }
 
   get currentUser(): AuthUser | null {
@@ -358,6 +365,11 @@ export class AdminComponent implements OnInit {
   }
 
   closeModals(): void {
+    console.log('[Admin] closeModals()', {
+      isActionsModalOpen: this.isActionsModalOpen,
+      isNewOrderModalOpen: this.isNewOrderModalOpen,
+      isAddStructureModalOpen: this.isAddStructureModalOpen
+    });
     this.isActionsModalOpen = false;
     this.isNewOrderModalOpen = false;
     this.isAddStructureModalOpen = false;
@@ -369,12 +381,27 @@ export class AdminComponent implements OnInit {
   }
 
   advanceOrder(order: AdminOrder): void {
+    if (this.updatingOrderIds.has(order.id)) {
+      return;
+    }
     const nextStatus =
       order.status === 'pending' ? 'paid' : order.status === 'paid' ? 'delivered' : order.status;
     if (nextStatus === order.status) {
       return;
     }
-    this.adminControl.updateOrderStatus(order.id, nextStatus).subscribe();
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .updateOrderStatus(order.id, nextStatus)
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(order.id);
+        })
+      )
+      .subscribe();
+  }
+
+  isUpdatingOrder(orderId: string): boolean {
+    return this.updatingOrderIds.has(orderId);
   }
 
   updateNewOrderCustomer(customerId: number): void {
@@ -416,11 +443,18 @@ export class AdminComponent implements OnInit {
   }
 
   saveNewOrder(): void {
+    console.log('[Admin] saveNewOrder() start', {
+      newOrderCustomerId: this.newOrderCustomerId,
+      items: this.newOrderItems.size,
+      isSavingOrder: this.isSavingOrder
+    });
     if (!this.newOrderCustomerId || this.newOrderItems.size === 0 || this.isSavingOrder) {
+      console.log('[Admin] saveNewOrder() aborted');
       return;
     }
     const customer = this.customers.find((entry) => entry.id === this.newOrderCustomerId);
     if (!customer) {
+      console.log('[Admin] saveNewOrder() aborted: customer not found');
       return;
     }
     const payload: CreateAdminOrderPayload = {
@@ -430,16 +464,29 @@ export class AdminComponent implements OnInit {
       items: this.getNewOrderItems()
     };
     this.isSavingOrder = true;
-    this.adminControl.createOrder(payload).subscribe({
-      next: () => {
-        this.isSavingOrder = false;
-        this.adminControl.load().subscribe();
-        this.closeModals();
-      },
-      error: () => {
-        this.isSavingOrder = false;
-      }
-    });
+    console.log('[Admin] saveNewOrder() call createOrder', payload);
+    this.adminControl
+      .createOrder(payload)
+      .pipe(
+        switchMap(() => {
+          console.log('[Admin] saveNewOrder() createOrder next -> load()');
+          return this.adminControl.load();
+        }),
+        finalize(() => {
+          console.log('[Admin] saveNewOrder() finalize');
+          this.isSavingOrder = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          console.log('[Admin] saveNewOrder() load next -> closeModals()');
+          this.closeModals();
+        },
+        error: () => {
+          console.log('[Admin] saveNewOrder() error -> closeModals()');
+          this.closeModals();
+        }
+      });
   }
 
   resetNewOrderForm(): void {
@@ -504,10 +551,8 @@ export class AdminComponent implements OnInit {
   }
 
   selectCustomer(customerId: number): void {
-    const selected = this.adminControl.selectCustomer(customerId);
-    if (selected) {
-      this.selectedCustomer = selected;
-    }
+    const selected = this.customers.find((customer) => customer.id === customerId) ?? null;
+    this.selectedCustomer = selected;
   }
 
   editProduct(product: AdminProduct): void {
