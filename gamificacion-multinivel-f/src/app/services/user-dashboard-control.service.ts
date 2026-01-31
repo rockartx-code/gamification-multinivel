@@ -9,6 +9,7 @@ import {
   UserDashboardData
 } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -19,10 +20,14 @@ export class UserDashboardControlService {
   private heroQty = 0;
   private heroProductId = '';
 
-  constructor(private readonly api: ApiService) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly authService: AuthService
+  ) {}
 
   load(): Observable<UserDashboardData> {
-    return this.api.getUserDashboardData().pipe(
+    const userId = this.authService.currentUser?.userId;
+    return this.api.getUserDashboardData(userId).pipe(
       tap((data) => {
         this.dataSubject.next(structuredClone(data));
         this.heroProductId =

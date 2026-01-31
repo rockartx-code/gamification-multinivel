@@ -14,7 +14,7 @@
               <i class="fa-solid fa-store" aria-hidden="true"></i>
               Tienda
             </button>
-            <button type="button"
+            <button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('red')">
               <i class="fa-solid fa-users" aria-hidden="true"></i>
@@ -51,7 +51,7 @@
             </div>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3" *ngIf="!isGuest">
             <div class="flex items-center gap-2 text-xs text-zinc-400">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
               Corte de mes en
@@ -67,20 +67,20 @@
               <i class="fa-solid fa-store" aria-hidden="true"></i>
               Tienda
             </button>
-            <button type="button"
+            <button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('red')">
               <i class="fa-solid fa-users" aria-hidden="true"></i>
               Red
             </button>
-            <button type="button"
+            <button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="scrollToSection('links')">
               <i class="fa-solid fa-link" aria-hidden="true"></i>
               Links
             </button>
 
-            <button type="button"
+            <button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
               (click)="logout()">
               <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
@@ -91,42 +91,48 @@
         </div>
       </div>
 
-      <div class="mt-4 flex items-center justify-between">
+      <div class="mt-4 flex items-center justify-between" *ngIf="!isGuest">
         <div class="flex items-center gap-2 text-sm text-zinc-400">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Progreso mensual
         </div>
 
         <button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-          (click)="toggleGoals()">
+          (click)="toggleSecondaryGoals()">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-          {{ goalsCollapsed ? 'Expandir metas' : 'Colapsar metas' }}
+          {{ secondaryGoalsVisible ? 'Ocultar metas secundarias' : 'Mostrar metas secundarias' }}
         </button>
       </div>
 
-      <div class="mt-3 grid gap-3 lg:grid-cols-4">
-        <div *ngFor="let goal of goals"
-          class="grain relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4"
-          [id]="'goal-' + goal.key">
-          <div class="goal-card" [attr.data-goal]="goal.key">
-            <div class="goal-expanded" [class.hidden]="goalsCollapsed">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
-                  <div class="mt-1 font-extrabold tracking-tight">{{ goal.title }}</div>
-                </div>
-                <button type="button"
-                  class="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
-                  (click)="scrollToSection(goal.ctaFragment)">
-                  <i class="fa-solid fa-location-arrow" aria-hidden="true"></i>
-                  {{ goal.ctaText }}
-                </button>
+      <div class="mt-4" *ngIf="!isGuest && activeGoal">
+        <div class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-6 md:p-8" [id]="'goal-' + activeGoal.key">
+          <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]"></div>
+          <div class="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Objetivo principal del mes</div>
+              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">{{ activeGoal.title }}</h3>
+              <p class="mt-2 text-sm text-zinc-200">{{ activeGoal.subtitle }}</p>
+              <div class="mt-3 text-sm text-yellow-100">Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo</div>
+              <div class="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+                <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400" [style.width.%]="goalBasePercent(activeGoal)"></div>
               </div>
             </div>
+            <button type="button"
+              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+              (click)="scrollToSection(activeGoal.ctaFragment)">
+              <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
+              {{ activeGoal.ctaText }}
+            </button>
+          </div>
+        </div>
+      </div>
 
-            <div class="goal-collapsed" [class.hidden]="!goalsCollapsed">
-              <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
-            </div>
+      <div class="mt-3 grid gap-3 lg:grid-cols-4" *ngIf="!isGuest && secondaryGoalsVisible">
+        <div *ngFor="let goal of secondaryGoals"
+          class="grain relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 opacity-70"
+          [id]="'goal-' + goal.key">
+          <div class="goal-card" [attr.data-goal]="goal.key">
+            <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
 
             <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
               <span>{{ goalProgressLabel(goal) }}</span>
@@ -181,6 +187,7 @@
               Producto del mes ?? Recomendado para metas
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">{{ pom.name }}</h3>
+            <p *ngIf="heroGoalHint" class="mt-2 text-sm text-yellow-200">{{ heroGoalHint }}</p>
             <p class="mt-3 max-w-xl text-zinc-300">
               {{ pom.hook || 'Producto recomendado para avanzar en tus metas.' }}
             </p>
@@ -365,7 +372,7 @@
       </div>
     </section>
 
-    <section id="red" class="scroll-mt-10">
+    <section id="red" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
@@ -402,55 +409,27 @@
           </div>
 
           <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <svg viewBox="0 0 560 260" class="h-[260px] w-full">
+                        <svg viewBox="0 0 560 260" class="h-[260px] w-full">
               <g stroke="rgba(255,255,255,.18)" stroke-width="2">
-                <line x1="120" y1="130" x2="260" y2="70"></line>
-                <line x1="120" y1="130" x2="260" y2="130"></line>
-                <line x1="120" y1="130" x2="260" y2="190"></line>
-
-                <line x1="260" y1="70" x2="420" y2="50"></line>
-                <line x1="260" y1="70" x2="420" y2="90"></line>
-
-                <line x1="260" y1="130" x2="420" y2="120"></line>
-                <line x1="260" y1="130" x2="420" y2="160"></line>
-
-                <line x1="260" y1="190" x2="420" y2="170"></line>
-                <line x1="260" y1="190" x2="420" y2="210"></line>
+                <line *ngFor="let link of graphLayout.links" [attr.x1]="link.x1" [attr.y1]="link.y1" [attr.x2]="link.x2" [attr.y2]="link.y2"></line>
               </g>
 
               <g>
-                <circle cx="120" cy="130" r="28" fill="rgba(59,130,246,.92)"></circle>
-                <text x="120" y="135" text-anchor="middle" font-size="12" fill="#0b0f14" font-weight="700">Tú</text>
-
-                <circle cx="260" cy="70" r="18" fill="rgba(245,185,66,.92)"></circle>
-                <text x="260" y="75" text-anchor="middle" font-size="11" fill="#0b0f14" font-weight="700">L1</text>
-
-                <circle cx="260" cy="130" r="18" fill="rgba(245,185,66,.92)"></circle>
-                <text x="260" y="135" text-anchor="middle" font-size="11" fill="#0b0f14" font-weight="700">L1</text>
-
-                <circle cx="260" cy="190" r="18" fill="rgba(245,185,66,.92)"></circle>
-                <text x="260" y="195" text-anchor="middle" font-size="11" fill="#0b0f14" font-weight="700">L1</text>
-
-                <circle cx="420" cy="50" r="14" fill="rgba(139,92,246,.92)"></circle>
-                <text x="420" y="54" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">L2</text>
-
-                <circle cx="420" cy="90" r="14" fill="rgba(139,92,246,.92)"></circle>
-                <text x="420" y="94" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">L2</text>
-
-                <circle cx="420" cy="120" r="14" fill="rgba(139,92,246,.92)"></circle>
-                <text x="420" y="124" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">L2</text>
-
-                <circle cx="420" cy="160" r="14" fill="rgba(139,92,246,.92)"></circle>
-                <text x="420" y="164" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">L2</text>
-
-                <circle cx="420" cy="170" r="14" fill="rgba(139,92,246,.92)"></circle>
-                <text x="420" y="174" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">L2</text>
-
-                <circle cx="420" cy="210" r="14" fill="rgba(139,92,246,.92)"></circle>
-                <text x="420" y="214" text-anchor="middle" font-size="10" fill="#0b0f14" font-weight="800">L2</text>
+                <ng-container *ngFor="let node of graphLayout.nodes">
+                  <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="nodeRadius(node.level)" [attr.fill]="nodeFill(node.level)"></circle>
+                  <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle" [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#0b0f14" [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
+                </ng-container>
               </g>
             </svg>
+
           </div>
+
+          <button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
+            class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+            (click)="scrollToSection('links')">
+            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+            Compartir mi enlace
+          </button>
 
           <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
             <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -473,6 +452,25 @@
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]">
           </div>
           <div class="relative">
+            <div *ngIf="networkMembers.length === 0" class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
+              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
+              <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
+              <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button type="button"
+                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  (click)="scrollToSection('links')">
+                  <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                  Compartir mi enlace
+                </button>
+                <button type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  (click)="scrollToSection('links')">
+                  <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
+                  Ver mensajes sugeridos
+                </button>
+              </div>
+            </div>
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="flex items-center gap-2 text-xl font-bold">
@@ -481,15 +479,27 @@
                 </h3>
               </div>
               <button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                (click)="scrollToSection('merchant')">
-                <i class="fa-solid fa-rocket" aria-hidden="true"></i>
-                Impulsar consumo
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/10"
+                (click)="scrollToSection('links')">
+                <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                Compartir enlaces
               </button>
             </div>
 
-            <div class="mt-6 overflow-hidden rounded-2xl border border-white/10">
+            <div *ngIf="networkMembers.length === 0" class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-6 text-center">
+              <div class="text-sm font-semibold text-zinc-200">A?n no tienes miembros en tu red</div>
+              <div class="mt-1 text-xs text-zinc-400">Comparte tu enlace para empezar</div>
+              <button type="button"
+                class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                (click)="scrollToSection('links')">
+                <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                Compartir mi enlace
+              </button>
+            </div>
+
+            <div *ngIf="networkMembers.length > 0" class="mt-6 overflow-hidden rounded-2xl border border-white/10">
               <table class="w-full text-sm">
+
                 <thead class="bg-white/5 text-zinc-300">
                   <tr>
                     <th class="px-4 py-3 text-left font-semibold">Usuario</th>
@@ -519,12 +529,13 @@
                   <div class="mt-1 text-lg font-extrabold">
                     {{ formatMoney(networkProgress) }} / {{ formatMoney(networkGoal) }}
                   </div>
+                  <div class="mt-1 text-xs text-zinc-400">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir la meta de red</div>
                 </div>
                 <button type="button"
                   class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                   (click)="scrollToSection('links')">
                   <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-                  Compartir ahora
+                  Compartir mi enlace
                 </button>
               </div>
 
@@ -538,7 +549,7 @@
       </div>
     </section>
 
-    <section id="links" class="scroll-mt-10">
+    <section id="links" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
@@ -608,6 +619,25 @@
           </div>
 
           <div class="relative">
+            <div *ngIf="networkMembers.length === 0" class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
+              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
+              <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
+              <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button type="button"
+                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  (click)="scrollToSection('links')">
+                  <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                  Compartir mi enlace
+                </button>
+                <button type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  (click)="scrollToSection('links')">
+                  <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
+                  Ver mensajes sugeridos
+                </button>
+              </div>
+            </div>
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="flex items-center gap-2 text-xl font-bold">
@@ -659,9 +689,9 @@
                   </div>
 
                   <div class="mt-4 flex items-center justify-between gap-3">
-                    <div class="text-xs text-zinc-500">
+                    <!--div class="text-xs text-zinc-500">
                       Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
-                    </div>
+                    </div-->
                 <button
                   class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                   (click)="copyAssetPath()">

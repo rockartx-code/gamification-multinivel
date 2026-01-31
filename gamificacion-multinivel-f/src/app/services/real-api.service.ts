@@ -70,8 +70,9 @@ export class RealApiService {
     return this.http.get<CartData>(`${this.baseUrl}/cart`);
   }
 
-  getUserDashboardData(): Observable<UserDashboardData> {
-    return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard`);
+  getUserDashboardData(userId?: string): Observable<UserDashboardData> {
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard${query}`);
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {

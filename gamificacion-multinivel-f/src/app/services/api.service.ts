@@ -48,8 +48,8 @@ export class ApiService {
     return this.resolveApi().getCartData();
   }
 
-  getUserDashboardData(): Observable<UserDashboardData> {
-    return this.resolveApi().getUserDashboardData();
+  getUserDashboardData(userId?: string): Observable<UserDashboardData> {
+    return this.resolveApi().getUserDashboardData(userId);
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {

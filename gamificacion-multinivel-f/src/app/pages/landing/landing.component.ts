@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../services/api.service';
+import { UserDashboardData, FeaturedItem } from '../../models/user-dashboard.model';
 
 @Component({
   selector: 'app-landing',
@@ -15,6 +16,13 @@ import { ApiService } from '../../services/api.service';
 })
 export class LandingComponent implements OnInit {
   readonly currentYear = new Date().getFullYear();
+  readonly defaultHero = {
+    id: '',
+    name: 'COLAGENO',
+    hook: 'Regeneracion, soporte articular y recuperacion diaria.',
+    img: 'images/Colageno-Clean.png',
+    tags: ['10g por porcion', 'Alta biodisponibilidad']
+  };
 
   form = {
     name: '',
@@ -29,17 +37,54 @@ export class LandingComponent implements OnInit {
   isSubmitting = false;
   feedbackMessage = '';
   feedbackType: 'error' | 'success' | '' = '';
+  featuredProduct: {
+    id: string;
+    name: string;
+    hook: string;
+    img: string;
+    tags: string[];
+  } | null = null;
 
   constructor(
     private readonly route: ActivatedRoute,
-    private readonly api: ApiService
+    private readonly api: ApiService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('refToken') ?? '';
-    const product = this.route.snapshot.queryParamMap.get('p') ?? '';
+    const product = this.route.snapshot.queryParamMap.get('p') ?? this.getHashQueryParam('p');
     this.referralToken = token.trim();
     this.productId = product.trim();
+    this.loadFeaturedProduct(this.productId);
+  }
+
+  get heroTitle(): string {
+    return this.featuredProduct?.name || this.defaultHero.name;
+  }
+
+  get heroHook(): string {
+    return this.featuredProduct?.hook || this.defaultHero.hook;
+  }
+
+  get heroImage(): string {
+    return this.featuredProduct?.img || this.defaultHero.img;
+  }
+
+  get heroTags(): string[] {
+    const tags = this.featuredProduct?.tags ?? [];
+    return tags.length ? tags : this.defaultHero.tags;
+  }
+
+  getTagClass(index: number): string {
+    if (index % 2 === 0) {
+      return 'inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-blue-200';
+    }
+    return 'inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-yellow-200';
+  }
+
+  getTagIcon(index: number): string {
+    return index % 2 === 0 ? 'fa-weight-hanging' : 'fa-seedling';
   }
 
   scrollTo(sectionId: string, event?: Event): void {
@@ -92,5 +137,98 @@ export class LandingComponent implements OnInit {
   private setFeedback(message: string, type: 'error' | 'success'): void {
     this.feedbackMessage = message;
     this.feedbackType = type;
+  }
+
+  private loadFeaturedProduct(queryProductId: string): void {
+    this.api.getUserDashboardData().subscribe({
+      next: (data) => {
+        const queryId = (queryProductId ?? '').trim();
+        const fromQuery = queryId ? this.pickFromQuery(data, queryId) : null;
+        const defaultProduct = this.pickDefaultProduct(data);
+        this.featuredProduct = fromQuery ?? defaultProduct;
+        if (fromQuery?.id) {
+          this.productId = fromQuery.id;
+        } else if (defaultProduct?.id) {
+          this.productId = defaultProduct.id;
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.featuredProduct = null;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private getHashQueryParam(param: string): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    try {
+      const hash = window.location.hash ?? '';
+      const queryIndex = hash.indexOf('?');
+      if (queryIndex === -1) {
+        return '';
+      }
+      const query = hash.slice(queryIndex + 1);
+      return new URLSearchParams(query).get(param) ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  private pickFromQuery(data: UserDashboardData, queryId: string): LandingComponent['featuredProduct'] | null {
+    const featuredMatch = data.featured?.find((item) => item.id === queryId);
+    if (featuredMatch) {
+      return this.mapFeaturedItem(featuredMatch);
+    }
+    const productMatch = data.products?.find((item) => item.id === queryId);
+    if (productMatch) {
+      return {
+        id: productMatch.id,
+        name: productMatch.name,
+        hook: productMatch.badge || '',
+        img: productMatch.img,
+        tags: productMatch.badge ? [productMatch.badge] : []
+      };
+    }
+    return null;
+  }
+
+  private pickDefaultProduct(data: UserDashboardData): LandingComponent['featuredProduct'] | null {
+    const pom = data.productOfMonth;
+    if (pom) {
+      return {
+        id: pom.id,
+        name: pom.name,
+        hook: pom.hook || pom.badge || '',
+        img: pom.img || '',
+        tags: pom.tags?.length ? pom.tags : pom.badge ? [pom.badge] : []
+      };
+    }
+    if (data.featured?.length) {
+      return this.mapFeaturedItem(data.featured[0]);
+    }
+    if (data.products?.length) {
+      const first = data.products[0];
+      return {
+        id: first.id,
+        name: first.name,
+        hook: first.badge || '',
+        img: first.img,
+        tags: first.badge ? [first.badge] : []
+      };
+    }
+    return null;
+  }
+
+  private mapFeaturedItem(item: FeaturedItem): LandingComponent['featuredProduct'] {
+    return {
+      id: item.id,
+      name: item.label,
+      hook: item.hook,
+      img: item.banner || item.feed || item.story,
+      tags: []
+    };
   }
 }

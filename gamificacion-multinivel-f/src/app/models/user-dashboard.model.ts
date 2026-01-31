@@ -47,6 +47,7 @@ export interface UserDashboardData {
   goals: DashboardGoal[];
   products: DashboardProduct[];
   featured: FeaturedItem[];
+  isGuest?: boolean;
   productOfMonth?: {
     id: string;
     name: string;

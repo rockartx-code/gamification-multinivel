@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -21,7 +21,7 @@ import { UserDashboardControlService } from '../../services/user-dashboard-contr
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
-export class UserDashboardComponent implements OnInit, OnDestroy {
+export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private readonly authService: AuthService,
     private readonly dashboardControl: UserDashboardControlService,
@@ -31,11 +31,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   readonly countdownLabel = signal('');
   activeFeaturedId = '';
   socialFormat: 'story' | 'feed' | 'banner' = 'story';
-  goalsCollapsed = false;
+  secondaryGoalsVisible = false;
   toastMessage = 'Actualizado.';
   isToastVisible = false;
   captionText = '';
   isLoading = false;
+  activeGoal: any | null = null;
+  secondaryGoals: any[] = [];
+  isDevMode = false;
+  private goalToastState: 'near' | 'done' | '' = '';
 
   private countdownInterval?: number;
   private toastTimeout?: number;
@@ -46,6 +50,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
 
   get isClient(): boolean {
     return this.currentUser?.role === 'cliente';
+  }
+
+  get isGuest(): boolean {
+    if (this.dashboardControl.data?.isGuest != null) {
+      return this.dashboardControl.data.isGuest;
+    }
+    return !this.currentUser;
   }
 
   get goals(): DashboardGoal[] {
@@ -95,19 +106,38 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   get heroTags(): string[] {
     return this.productOfMonth?.tags?.length
       ? this.productOfMonth.tags
-      : ['10g por porción', 'Vitamina C + AH', 'Alta absorción'];
+      : ['10g por porci?n', 'Vitamina C + AH', 'Alta absorci?n'];
   }
 
+  get heroGoalHint(): string {
+    if (!this.activeGoal?.title) {
+      return '';
+    }
+    return `Este producto te acerca a: ${this.activeGoal.title}`;
+  }
+
+  private readonly emptyFeatured: FeaturedItem = {
+    id: '',
+    label: '',
+    hook: '',
+    story: '',
+    feed: '',
+    banner: ''
+  };
+
   get activeFeatured(): FeaturedItem {
-    return this.featured.find((item) => item.id === this.activeFeaturedId) ?? this.featured[0];
+    return this.featured.find((item) => item.id === this.activeFeaturedId) ?? this.featured[0] ?? this.emptyFeatured;
   }
 
   get referralLink(): string {
+    if (this.isGuest) {
+      return '';
+    }
     const userCode = this.dashboardControl.data?.settings.userCode ?? '';
     if (!userCode) {
       return '';
     }
-    const productId = this.activeFeatured?.id ?? '';
+    const productId = this.activeFeatured.id ?? '';
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const query = productId ? `?p=${productId}` : '';
     return `${baseUrl}/#/${userCode}${query}`;
@@ -126,6 +156,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       return 0;
     }
     return Math.min(100, (this.networkProgress / this.networkGoal) * 100);
+  }
+
+  get remainingNetworkGoal(): number {
+    return Math.max(0, this.networkGoal - this.networkProgress);
   }
 
   get levelOneCount(): number {
@@ -166,19 +200,80 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
 
   get activeSocialAsset(): string {
     if (this.socialFormat === 'feed') {
-      return this.activeFeatured.feed;
+      return this.activeFeatured.feed || '';
     }
     if (this.socialFormat === 'banner') {
-      return this.activeFeatured.banner;
+      return this.activeFeatured.banner || '';
     }
-    return this.activeFeatured.story;
+    return this.activeFeatured.story || '';
   }
 
-  ngOnInit(): void {
-    if (!this.currentUser) {
-      this.router.navigate(['/login']);
-      return;
+
+  get graphLayout(): { nodes: Array<{ id: string; level: string; x: number; y: number; label: string }>; links: Array<{ x1: number; y1: number; x2: number; y2: number }> } {
+    const root = { id: 'root', level: 'root', x: 120, y: 130, label: 'Tu' };
+    const l1Members = this.networkMembers.filter((member) => member.level === 'L1').slice(0, 3);
+    const l2Members = this.networkMembers.filter((member) => member.level === 'L2').slice(0, 6);
+
+    const l1Positions = this.spreadPositions(l1Members.length, 70, 190);
+    const l2Positions = this.spreadPositions(l2Members.length, 50, 210);
+
+    const l1Nodes = l1Members.map((member, idx) => ({
+      id: `l1-${idx}`,
+      level: 'L1',
+      x: 260,
+      y: l1Positions[idx],
+      label: 'L1'
+    }));
+
+    const l2Nodes = l2Members.map((member, idx) => ({
+      id: `l2-${idx}`,
+      level: 'L2',
+      x: 420,
+      y: l2Positions[idx],
+      label: 'L2'
+    }));
+
+    const links = [] as Array<{ x1: number; y1: number; x2: number; y2: number }>;
+    for (const node of l1Nodes) {
+      links.push({ x1: root.x, y1: root.y, x2: node.x, y2: node.y });
     }
+
+    for (let i = 0; i < l2Nodes.length; i += 1) {
+      const parent = l1Nodes.length ? l1Nodes[i % l1Nodes.length] : root;
+      links.push({ x1: parent.x, y1: parent.y, x2: l2Nodes[i].x, y2: l2Nodes[i].y });
+    }
+
+    return { nodes: [root, ...l1Nodes, ...l2Nodes], links };
+  }
+
+  nodeFill(level: string): string {
+    if (level === 'root') {
+      return 'rgba(59,130,246,.92)';
+    }
+    if (level === 'L1') {
+      return 'rgba(245,185,66,.92)';
+    }
+    return 'rgba(139,92,246,.92)';
+  }
+
+  nodeRadius(level: string): number {
+    if (level === 'root') {
+      return 28;
+    }
+    if (level === 'L1') {
+      return 18;
+    }
+    return 14;
+  }
+
+  private spreadPositions(count: number, minY: number, maxY: number): number[] {
+    if (count <= 1) {
+      return [Math.round((minY + maxY) / 2)];
+    }
+    const step = (maxY - minY) / (count - 1);
+    return Array.from({ length: count }, (_, idx) => Math.round(minY + step * idx));
+  }
+  ngOnInit(): void {
     this.isLoading = true;
     this.dashboardControl
       .load()
@@ -190,6 +285,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (data) => {
+          this.processGoals(data?.goals ?? []);
           if (!this.activeFeaturedId) {
             this.activeFeaturedId = data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
           }
@@ -199,6 +295,16 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
         }
       });
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.activeGoal?.key) {
+      return;
+    }
+    setTimeout(() => {
+      const node = document.getElementById(`goal-${this.activeGoal.key}`);
+      node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
   }
 
   ngOnDestroy(): void {
@@ -235,8 +341,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     return this.dashboardControl.statusBadgeClass(status);
   }
 
-  toggleGoals(): void {
-    this.goalsCollapsed = !this.goalsCollapsed;
+  toggleSecondaryGoals(): void {
+    this.secondaryGoalsVisible = !this.secondaryGoalsVisible;
   }
 
   setFeatured(id: string): void {
@@ -256,7 +362,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   }
 
   generateTemplate(): void {
-    const template = `✨ ${this.activeFeatured.label}\n${this.activeFeatured.hook}\n\nConsíguelo aquí 👉 ${this.referralLink}`;
+    const template = `? ${this.activeFeatured.label}
+${this.activeFeatured.hook}
+
+Cons?guelo aqu? ?? ${this.referralLink}`;
     this.captionText = template;
     this.showToast('Template generado.');
   }
@@ -275,10 +384,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     if (this.cartTotal > 0) {
       this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
     }
+    this.maybeShowGoalProgressToast();
   }
 
   addQuick(productId: string, addQty: number): void {
     this.dashboardControl.addQuick(productId, addQty);
+    this.maybeShowGoalProgressToast();
   }
 
   setHeroQty(value: number): void {
@@ -287,6 +398,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
 
   addHeroToCart(): void {
     this.dashboardControl.addHeroToCart();
+    this.maybeShowGoalProgressToast();
   }
 
   getCartQty(productId: string): number {
@@ -321,6 +433,42 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
 
   simulateInvite(): void {
     this.showToast('Invitación enviada (mock).');
+  }
+
+  processGoals(goals: any[]): void {
+    const available = (goals ?? []).filter((goal) => !goal?.achieved && !goal?.locked);
+    this.activeGoal = available[0] ?? null;
+    this.secondaryGoals = available.slice(1);
+    this.goalToastState = '';
+  }
+
+  remainingForGoal(goal: any): string {
+    if (!goal) {
+      return '';
+    }
+    const target = Number(goal.target ?? 0);
+    const base = Number(goal.base ?? 0);
+    const remaining = Math.max(0, target - base);
+    if (goal.isCountGoal) {
+      return `${remaining}`;
+    }
+    return this.formatMoney(remaining);
+  }
+
+  private maybeShowGoalProgressToast(): void {
+    if (!this.activeGoal) {
+      return;
+    }
+    const progress = this.goalBasePercent(this.activeGoal);
+    if (progress >= 100 && this.goalToastState !== 'done') {
+      this.goalToastState = 'done';
+      this.showToast('?? Meta alcanzada');
+      return;
+    }
+    if (progress > 90 && this.goalToastState !== 'near') {
+      this.goalToastState = 'near';
+      this.showToast('?? Estás a punto de lograr tu meta');
+    }
   }
 
   private updateCountdown(): void {

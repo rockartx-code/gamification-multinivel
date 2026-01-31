@@ -90,7 +90,7 @@
         <!-- Right: Interchangeable Landscape Image with orientation-specific fade -->
         <div class="relative">
           <div class="grain relative h-[420px] w-full overflow-hidden rounded-3xl border border-white/10 md:h-[520px]">
-            <img src="images/Colageno-Clean.png" alt="Producto destacado"
+            <img [src]="heroImage" [alt]="heroTitle"
               class="hero-image absolute inset-0 h-full w-full object-cover" />
 
             <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/75 via-[#0b0f14]/25 to-transparent"></div>
@@ -99,25 +99,20 @@
 
             <div class="relative z-10 flex h-full flex-col justify-end p-6 md:p-8">
               <span class="text-xs text-zinc-300/90">PRODUCTO DESTACADO</span>
-              <h2 class="mt-2 text-3xl font-extrabold md:text-4xl">COLÁGENO</h2>
+              <h2 class="mt-2 text-3xl font-extrabold md:text-4xl">{{ heroTitle }}</h2>
               <p class="mt-2 max-w-md text-sm text-zinc-200">
-                Regeneración, soporte articular y recuperación diaria.
+                {{ heroHook }}
               </p>
 
-          <div class="mt-5 flex flex-wrap gap-2">
-            <span
-              class="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-blue-200">
-              <i class="fa-solid fa-weight-hanging" aria-hidden="true"></i>
-              10g por porción
-            </span>
-            <span
-              class="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-yellow-200">
-              <i class="fa-solid fa-seedling" aria-hidden="true"></i>
-              Alta biodisponibilidad
-            </span>
+              <div class="mt-5 flex flex-wrap gap-2">
+                <span *ngFor="let tag of heroTags; let i = index"
+                  [ngClass]="getTagClass(i)">
+                  <i class="fa-solid" [ngClass]="getTagIcon(i)" aria-hidden="true"></i>
+                  {{ tag }}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
         </div>
       </div>
     </div>
@@ -369,3 +364,5 @@
     </div>
   </footer>
 </section>
+
+

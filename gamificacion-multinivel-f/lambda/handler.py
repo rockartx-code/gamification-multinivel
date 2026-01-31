@@ -135,6 +135,375 @@ def _path_segments(event: dict) -> List[str]:
     path = _get_path(event).strip("/")
     return [seg for seg in path.split("/") if seg]
 
+def _month_start_end(dt: Optional[datetime] = None) -> Tuple[datetime, datetime]:
+    d = dt or _utc_now()
+    start = datetime(d.year, d.month, 1, tzinfo=timezone.utc)
+    if d.month == 12:
+        end = datetime(d.year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        end = datetime(d.year, d.month + 1, 1, tzinfo=timezone.utc)
+    return start, end
+
+def _iso_to_dt(iso: Optional[str]) -> Optional[datetime]:
+    if not iso:
+        return None
+    try:
+        # "2026-01-31T12:34:56Z"
+        if iso.endswith("Z"):
+            iso = iso[:-1] + "+00:00"
+        return datetime.fromisoformat(iso)
+    except Exception:
+        return None
+
+def _build_network_tree_with_month(
+    root_id: Any,
+    month_key: str,
+    customers_raw: List[dict],
+    cfg: dict,
+) -> dict:
+    """
+    Returns:
+      {
+        "id": str(root_id),
+        "name": ...,
+        "level": ...,
+        "monthSpend": float,
+        "children": [...]
+      }
+    """
+    # index nodes
+    nodes: Dict[str, dict] = {}
+    children_by_leader: Dict[str, List[str]] = {}
+
+    for c in customers_raw:
+        cid = str(c.get("customerId"))
+        if not cid:
+            continue
+        nodes[cid] = {
+            "id": cid,
+            "name": c.get("name") or "",
+            "level": (c.get("level") or "").strip(),
+            "leaderId": str(c.get("leaderId")) if c.get("leaderId") else None,
+            "createdAt": c.get("createdAt"),
+            "monthSpend": 0.0,   # filled later
+            "isActive": False,   # filled later
+            "children": [],
+        }
+        lid = nodes[cid]["leaderId"]
+        if lid:
+            children_by_leader.setdefault(lid, []).append(cid)
+
+    # fill month metrics (ASSOCIATE_MONTH is Pattern 1 id lookup)
+    activation_min = _to_decimal(cfg.get("activationNetMin", 2500))
+    for cid, n in nodes.items():
+        st = _get_month_state(cid, month_key)
+        netv = _to_decimal(st.get("netVolume"))
+        n["monthSpend"] = float(netv)
+        n["isActive"] = bool(netv >= activation_min)
+
+    # attach children
+    for lid, kids in children_by_leader.items():
+        if lid in nodes:
+            nodes[lid]["children"] = [nodes[k] for k in kids if k in nodes]
+
+    root = nodes.get(str(root_id))
+    if not root:
+        return {"id": str(root_id), "name": "", "level": "", "monthSpend": 0.0, "children": []}
+
+    # Optional: sort children by spend desc
+    def sort_rec(n: dict):
+        n["children"] = sorted(n.get("children", []), key=lambda x: float(x.get("monthSpend") or 0), reverse=True)
+        for ch in n["children"]:
+            sort_rec(ch)
+
+    sort_rec(root)
+    return root
+
+def _flatten_tree(root: dict) -> List[dict]:
+    out = []
+    stack = [(root, 0)]
+    while stack:
+        node, depth = stack.pop()
+        out.append({**node, "depth": depth})
+        for ch in reversed(node.get("children", []) or []):
+            stack.append((ch, depth + 1))
+    return out
+
+def _network_members_from_tree(root: dict, max_rows: int = 30) -> List[dict]:
+    rows = []
+    for n in _flatten_tree(root):
+        if n.get("depth", 0) == 0:
+            continue
+        rows.append({
+            "name": n.get("name") or "",
+            "level": f"L{n.get('depth')}",
+            "spend": float(n.get("monthSpend") or 0),
+            "status": ("Activa" if n.get("isActive") else ("En progreso" if (n.get("monthSpend") or 0) > 0 else "Inactiva")),
+            "id": n.get("id"),
+        })
+        if len(rows) >= max_rows:
+            break
+    return rows
+
+def _capabilities(level: str) -> dict:
+    lv = (level or "").strip().lower()
+    if lv == "oro":
+        return {"canRefer": True, "allowedDownlineLevels": {"plata", "bronce"}}
+    if lv == "plata":
+        return {"canRefer": True, "allowedDownlineLevels": {"bronce"}}
+    return {"canRefer": False, "allowedDownlineLevels": set()}
+
+def _discount_tier_targets(cfg: dict) -> List[dict]:
+    # normalize tiers sorted by rate asc
+    tiers = cfg.get("discountTiers") or []
+    normalized = []
+    for t in tiers:
+        normalized.append({
+            "min": float(_to_decimal(t.get("min"))),
+            "max": (None if t.get("max") is None else float(_to_decimal(t.get("max")))),
+            "rate": float(_to_decimal(t.get("rate"))),
+        })
+    normalized.sort(key=lambda x: x["rate"])
+    return normalized
+
+def _best_discount_rate_for_volume(net_volume: Decimal, cfg: dict) -> Decimal:
+    tiers = cfg.get("discountTiers") or []
+    return _calc_discount_rate(net_volume, tiers)
+
+def _count_new_direct_members_this_month(root_id: str, customers_raw: List[dict], now_dt: Optional[datetime]=None) -> int:
+    start, end = _month_start_end(now_dt)
+    cnt = 0
+    for c in customers_raw:
+        if str(c.get("leaderId") or "") != str(root_id):
+            continue
+        created = _iso_to_dt(c.get("createdAt"))
+        if created and (created >= start) and (created < end):
+            cnt += 1
+    return cnt
+
+def _any_member_added_member_this_month(root_tree: dict, customers_raw: List[dict], now_dt: Optional[datetime]=None) -> bool:
+    # For any node in tree, check if it has a direct child created this month.
+    start, end = _month_start_end(now_dt)
+    ids = [n["id"] for n in _flatten_tree(root_tree)]
+    leaders = set(ids)
+    for c in customers_raw:
+        lid = str(c.get("leaderId") or "")
+        if lid not in leaders:
+            continue
+        created = _iso_to_dt(c.get("createdAt"))
+        if created and (created >= start) and (created < end):
+            return True
+    return False
+
+def _any_member_reached_activation(root_tree: dict, activation_min: Decimal) -> bool:
+    for n in _flatten_tree(root_tree):
+        if n.get("depth", 0) == 0:
+            continue
+        if _to_decimal(n.get("monthSpend")) >= activation_min:
+            return True
+    return False
+
+def _all_direct_reached_activation(root_tree: dict, activation_min: Decimal) -> Tuple[bool, int]:
+    direct = root_tree.get("children") or []
+    if not direct:
+        return (False, 0)  # notApplicable scenario handled outside
+    ok = True
+    for ch in direct:
+        if _to_decimal(ch.get("monthSpend")) < activation_min:
+            ok = False
+            break
+    return (ok, len(direct))
+
+def _build_goals(
+    customer: dict,
+    root_tree: dict,
+    customers_raw: List[dict],
+    cfg: dict,
+) -> List[dict]:
+    activation_min = _to_decimal(cfg.get("activationNetMin", 2500))
+    tiers = _discount_tier_targets(cfg)
+
+    # discount "levels" by rate thresholds (match your 3 steps)
+    # pick the 3 highest canonical rates in tiers, but keep stable thresholds
+    level_rates = [0.30, 0.35, 0.40]
+
+    lv = (customer.get("level") or "").strip().lower()
+    cap = _capabilities(lv)
+
+    month_key = _month_key()
+    st = _get_month_state(str(customer.get("customerId")), month_key)
+    my_net = _to_decimal(st.get("netVolume"))
+    my_active = bool(my_net >= activation_min)
+
+    my_discount_rate = _to_decimal(customer.get("discountRate"))
+    # what would be achieved based on this month volume:
+    computed_rate = _best_discount_rate_for_volume(my_net, cfg)
+    effective_rate = max(my_discount_rate, computed_rate)
+
+    # new member counts (direct)
+    new_direct = _count_new_direct_members_this_month(str(customer.get("customerId")), customers_raw, _utc_now())
+
+    # network performance checks
+    any_member_active = _any_member_reached_activation(root_tree, activation_min)
+    all_direct_ok, direct_count = _all_direct_reached_activation(root_tree, activation_min)
+    any_member_added = _any_member_added_member_this_month(root_tree, customers_raw, _utc_now())
+
+    # helper to find tier min target for rate
+    def tier_min_for_rate(rate_threshold: float) -> float:
+        # choose the first tier with rate >= threshold, else fallback activation_min
+        for t in tiers:
+            if (t.get("rate") or 0) >= rate_threshold:
+                return float(t.get("min") or 0)
+        return float(activation_min)
+
+    goals = []
+
+    # 1) active buyer
+    goals.append({
+        "key": "active",
+        "title": "Alcanzar consumo mensual para ser usuario activo",
+        "subtitle": f"Meta mensual: ${int(activation_min):,} neto",
+        "target": float(activation_min),
+        "base": float(my_net),
+        "achieved": bool(my_active),
+        "locked": False,
+        "isCountGoal": False,
+        "ctaText": "Ir a tienda",
+        "ctaFragment": "merchant",
+    })
+
+    # 2/4/6) discount levels
+    for idx, r in enumerate(level_rates, start=1):
+        target = tier_min_for_rate(r)
+        achieved = float(effective_rate) >= r
+        goals.append({
+            "key": f"discount_{idx}",
+            "title": f"Alcanzar el nivel {idx} de descuento",
+            "subtitle": f"Objetivo: {int(r*100)}% (consumo aprox. desde ${int(target):,})",
+            "target": float(target),
+            "base": float(my_net),
+            "achieved": bool(achieved),
+            "locked": False,
+            "isCountGoal": False,
+            "ctaText": "Completar consumo",
+            "ctaFragment": "merchant",
+        })
+
+    # 3) add new member this month (direct)
+    locked_invite = (not cap.get("canRefer"))
+    goals.insert(2, {  # position 3 in your sequence
+        "key": "invite",
+        "title": "Agregar un nuevo miembro a la red este mes",
+        "subtitle": ("Tu nivel actual no permite referir" if locked_invite else "Invita a 1 persona y actívala"),
+        "target": 1,
+        "base": int(new_direct),
+        "achieved": bool(new_direct >= 1) if not locked_invite else False,
+        "locked": bool(locked_invite),
+        "isCountGoal": True,
+        "ctaText": "Invitar ahora",
+        "ctaFragment": "links",
+    })
+
+    # 5) one network member reaches their monthly goal
+    goals.insert(4, {
+        "key": "network_one_active",
+        "title": "Lograr que un miembro de la red alcance su meta mensual",
+        "subtitle": f"Meta por miembro: ${int(activation_min):,} neto",
+        "target": 1,
+        "base": (1 if any_member_active else 0),
+        "achieved": bool(any_member_active),
+        "locked": False,
+        "isCountGoal": True,
+        "ctaText": "Compartir enlace",
+        "ctaFragment": "links",
+    })
+
+    # 7) all direct members reach their monthly goal
+    not_applicable = (direct_count == 0)
+    goals.insert(6, {
+        "key": "direct_all_active",
+        "title": "Lograr que todos los miembros del nivel inmediato inferior logren su meta mensual",
+        "subtitle": ("Aún no tienes miembros directos" if not_applicable else f"Directos: {direct_count}"),
+        "target": direct_count if direct_count else 1,
+        "base": (direct_count if all_direct_ok and direct_count else 0),
+        "achieved": bool(all_direct_ok and direct_count > 0),
+        "locked": bool(not_applicable),
+        "isCountGoal": True,
+        "ctaText": "Impulsar a mi red",
+        "ctaFragment": "links",
+    })
+
+    # 8) a network member adds a new member
+    goals.append({
+        "key": "network_member_invited",
+        "title": "Lograr que un miembro de la red agregue un nuevo miembro",
+        "subtitle": ("Tu nivel actual no permite referir" if locked_invite else "Haz que tu red replique"),
+        "target": 1,
+        "base": (1 if any_member_added else 0),
+        "achieved": bool(any_member_added) if not locked_invite else False,
+        "locked": bool(locked_invite),
+        "isCountGoal": True,
+        "ctaText": "Compartir enlace",
+        "ctaFragment": "links",
+    })
+
+    # Now mark primary/secondary
+    primary_idx = None
+    for i,g in enumerate(goals):
+        if g.get("locked"):
+            continue
+        if not g.get("achieved"):
+            primary_idx = i
+            break
+
+    for i,g in enumerate(goals):
+        g["primary"] = (primary_idx == i)
+        g["secondary"] = (primary_idx is not None and primary_idx != i)
+
+    return goals
+
+def _persist_customer_dashboard_fields(customer_id: Any, goals: List[dict], network_members: List[dict], buy_again_ids: List[str]) -> None:
+    if customer_id is None:
+        return
+    try:
+        _update_by_id(
+            "CUSTOMER",
+            customer_id,
+            "SET goals = :g, networkMembers = :n, buyAgainIds = :b, updatedAt = :u",
+            {":g": goals, ":n": network_members, ":b": buy_again_ids, ":u": _now_iso()},
+        )
+    except Exception:
+        pass
+
+def _compute_buy_again_ids_and_maybe_update(customer: Optional[dict], products: List[dict]) -> Tuple[List[str], bool]:
+    """
+    buyAgainIds estrictos:
+    - SOLO basado en historial (productCounts).
+    - Si no hay compras => [].
+    - Devuelve (buy_again_ids, should_persist).
+    """
+    if not customer or not isinstance(customer, dict):
+        return ([], False)
+
+    counts = customer.get("productCounts")
+    existing = customer.get("buyAgainIds")
+
+    # No historial => buyAgainIds vacío.
+    if not isinstance(counts, dict) or not counts:
+        # Si antes guardaste seeds, aquí los limpiamos persistiendo [].
+        should_persist = (isinstance(existing, list) and len(existing) > 0)
+        return ([], should_persist)
+
+    ordered = sorted(counts.items(), key=lambda kv: int(kv[1] or 0), reverse=True)
+    top = [str(pid) for pid, _ in ordered[:3]]
+
+    # Persistir solo si cambió
+    existing_norm = [str(x) for x in existing] if isinstance(existing, list) else []
+    should_persist = (existing_norm[:3] != top)
+    return (top, should_persist)
+
+
+
 
 # ---------------------------------------------------------------------------
 # Pattern 1: BUCKET PK + REF mapping (point lookup/update without GSI)
@@ -246,6 +615,7 @@ _LOGIN_USERS = [
     {
         "username": "admin",
         "password": "admin123",
+        "email": "admin@demo.local",
         "user": {
             "userId": "admin-001",
             "name": "Admin Rivera",
@@ -255,6 +625,7 @@ _LOGIN_USERS = [
     {
         "username": "cliente",
         "password": "cliente123",
+        "email": "cliente@demo.local",
         "user": {
             "userId": "client-001",
             "name": "Valeria Torres",
@@ -265,6 +636,72 @@ _LOGIN_USERS = [
         },
     },
 ]
+
+def _normalize_email(email: Optional[str]) -> str:
+    return (email or "").strip().lower()
+
+
+def _get_auth_by_email(email: str) -> Optional[dict]:
+    auth_id = _normalize_email(email)
+    if not auth_id:
+        return None
+    return _get_by_id("AUTH", auth_id)
+
+
+def _create_auth_record(email: str, password_hash: str, customer_id: Any, role: str = "cliente") -> dict:
+    now = _now_iso()
+    auth_id = _normalize_email(email)
+    item = {
+        "entityType": "auth",
+        "authId": auth_id,
+        "email": auth_id,
+        "customerId": customer_id,
+        "role": role,
+        "passwordHash": password_hash,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    return _put_entity("AUTH", auth_id, item, created_at_iso=now)
+
+
+def _find_customer_by_email(email: str) -> Optional[dict]:
+    email_norm = _normalize_email(email)
+    if not email_norm:
+        return None
+    customers = _query_bucket("CUSTOMER", limit=500, scan_forward=False)
+    for customer in customers:
+        if _normalize_email(customer.get("email")) == email_norm:
+            return customer
+    return None
+
+
+def _normalize_user_id(value: Any) -> Optional[Any]:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except Exception:
+        return str(value).strip()
+
+
+def _resolve_user_context(query: dict, headers: dict) -> Tuple[Optional[Any], bool]:
+    user_id_raw = (query or {}).get("userId") or (headers or {}).get("x-user-id")
+    email_raw = (query or {}).get("email") or (headers or {}).get("x-user-email")
+
+    user_id = _normalize_user_id(user_id_raw)
+    if user_id is not None:
+        return user_id, False
+
+    if email_raw:
+        email_norm = _normalize_email(email_raw)
+        auth = _get_auth_by_email(email_norm)
+        if auth and auth.get("customerId") is not None:
+            return auth.get("customerId"), False
+        customer = _find_customer_by_email(email_norm)
+        if customer and customer.get("customerId") is not None:
+            return customer.get("customerId"), False
+
+    return None, True
 
 def _rate_to_percent_str(rate: Decimal) -> str:
     # 0.30 -> "30%"
@@ -722,6 +1159,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
     if buyer_id is not None and buyer_type in {"associate", "registered"}:
         _upsert_month_volume(buyer_id, month_key, net, activation_min)
         buyer_profile_updated = _sync_buyer_benefits(buyer_id, month_key, cfg)
+        _update_customer_product_stats(buyer_id, order_item)
 
     chain = _upline_chain(buyer_id, max_levels=None)
     trail: List[dict] = []
@@ -731,7 +1169,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
     for idx, beneficiary in enumerate(chain):
         level = idx + 1
 
-        # Regla de corte: si un leader NO está activo este mes, se corta y NO se continúa hacia arriba
+        # Regla de corte: si un leader NO esta activo este mes, se corta y NO se continúa hacia arriba
         if not _is_active(beneficiary, month_key):
             cut = True
             break
@@ -783,7 +1221,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
 def _update_order_status(order_id: str, payload: dict) -> dict:
     status = (payload.get("status") or "").lower()
     if status not in {"pending", "paid", "delivered", "canceled", "refunded"}:
-        return _json_response(200, {"message": "status inválido", "Error": "BadRequest"})
+        return _json_response(200, {"message": "status invalido", "Error": "BadRequest"})
 
     order_item = _find_order(order_id)
     if not order_item:
@@ -947,7 +1385,7 @@ def _create_asset(payload: dict) -> dict:
     try:
         raw = base64.b64decode(content_base64)
     except Exception:
-        return _json_response(200, {"message": "contentBase64 inválido", "Error": "BadRequest"})
+        return _json_response(200, {"message": "contentBase64 invalido", "Error": "BadRequest"})
 
     asset_id = f"assets/{uuid.uuid4()}-{name}"
     _s3.put_object(
@@ -1068,6 +1506,12 @@ def _create_account(payload: dict) -> dict:
     if password != confirm:
         return _json_response(200, {"message": "Las contraseÃ±as no coinciden", "Error": "BadRequest"})
 
+    email_norm = _normalize_email(email)
+    if not email_norm:
+        return _json_response(200, {"message": "email invalido", "Error": "BadRequest"})
+    if _get_auth_by_email(email_norm):
+        return _json_response(200, {"message": "El correo ya esta registrado", "Error": "Conflict"})
+
     level = payload.get("level") or "Oro"
     customer_id = payload.get("customerId")
     if not customer_id:
@@ -1079,11 +1523,12 @@ def _create_account(payload: dict) -> dict:
     product_id = _parse_int_or_str(payload.get("productId") or payload.get("refProductId"))
 
     now = _now_iso()
+    password_hash = _hash_password(str(password))
     item = {
         "entityType": "customer",
         "customerId": customer_id,
         "name": name,
-        "email": email,
+        "email": email_norm,
         "phone": payload.get("phone"),
         "address": payload.get("address"),
         "city": payload.get("city"),
@@ -1094,13 +1539,14 @@ def _create_account(payload: dict) -> dict:
         "discountRate": Decimal("0"),
         "discount": "0%",
         "commissions": Decimal("0"),
-        "passwordHash": _hash_password(str(password)),
+        "passwordHash": password_hash,
         "refProductId": product_id,
         "createdAt": now,
         "updatedAt": now,
     }
 
     main = _put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
+    _create_auth_record(email_norm, password_hash, customer_id, role="cliente")
     return _json_response(
         201,
         {
@@ -1168,7 +1614,7 @@ def _get_rewards_config() -> dict:
 
 def _put_rewards_config(payload: dict) -> dict:
     if not isinstance(payload, dict) or not payload:
-        return _json_response(200, {"message": "config inválida", "Error": "BadRequest"})
+        return _json_response(200, {"message": "config invalida", "Error": "BadRequest"})
 
     cfg = _default_rewards_config()
     cfg.update(payload)
@@ -1414,7 +1860,10 @@ def _get_product_of_month() -> dict:
         return _json_response(200, {"productOfMonth": None})
     return _json_response(200, {"productOfMonth": item})
 
-def _get_user_dashboard() -> dict:
+def _get_user_dashboard(query: dict, headers: dict) -> dict:
+    user_id, is_guest = _resolve_user_context(query or {}, headers or {})
+    customer = _get_by_id("CUSTOMER", int(user_id)) if user_id is not None else None
+
     products_raw = _query_bucket("PRODUCT", limit=500, scan_forward=False)
     products = []
     featured = []
@@ -1422,31 +1871,13 @@ def _get_user_dashboard() -> dict:
 
     for item in products_raw:
         summary = _get_product_summary(item)
-        products.append(
-            {
-                "id": summary["id"],
-                "name": summary["name"],
-                "price": summary["price"],
-                "badge": summary["badge"],
-                "img": summary["img"],
-            }
-        )
-
+        products.append({"id": summary["id"], "name": summary["name"], "price": summary["price"], "badge": summary["badge"], "img": summary["img"]})
         if len(featured) < 4:
             images = item.get("images") or []
             story = _pick_product_image(images, ["redes"]) or summary["img"]
             feed = _pick_product_image(images, ["miniatura", "redes"]) or summary["img"]
             banner = _pick_product_image(images, ["landing"]) or summary["img"]
-            featured.append(
-                {
-                    "id": summary["id"],
-                    "label": summary["name"],
-                    "hook": summary["hook"],
-                    "story": story,
-                    "feed": feed,
-                    "banner": banner,
-                }
-            )
+            featured.append({"id": summary["id"], "label": summary["name"], "hook": summary["hook"], "story": story, "feed": feed, "banner": banner})
 
     pom_item = _get_product_of_month_item()
     if pom_item:
@@ -1454,71 +1885,94 @@ def _get_user_dashboard() -> dict:
         if product:
             product_of_month = _get_product_summary(product)
 
+    # Defaults become computed + persisted (only for logged-in customers)
+    cfg = _load_rewards_config()
+    month_key = _month_key()
+
+    customers_raw = _query_bucket("CUSTOMER", limit=500, scan_forward=False)
+
+    computed_network_members = None
+    computed_goals = None
+
+    if customer and isinstance(customer, dict):
+        # Build tree with month consumption
+        tree = _build_network_tree_with_month(str(customer.get("customerId")), month_key, customers_raw, cfg)
+        computed_network_members = _network_members_from_tree(tree, max_rows=30)
+
+        # Goals from customer + network
+        computed_goals = _build_goals(customer, tree, customers_raw, cfg)
+
+        # buyAgainIds seed/update logic
+        buy_again_ids = _compute_buy_again_ids_and_maybe_update(customer, products)
+
+        # persist the computed fields
+        _persist_customer_dashboard_fields(customer.get("customerId"), computed_goals, computed_network_members, buy_again_ids)
+    else:
+        buy_again_ids = [p["id"] for p in products[:3]]
+
     payload = {
+        "isGuest": bool(is_guest),
         "settings": {
             "cutoffDay": 25,
             "cutoffHour": 23,
             "cutoffMinute": 59,
-            "userCode": "ABC123",
+            "userCode": "" if is_guest else str(user_id),
             "networkGoal": 300,
         },
-        "goals": [
-            {
-                "key": "active",
-                "title": "Siguiente reto: Usuario activo",
-                "subtitle": "Completa tu consumo mínimo del mes",
-                "target": 60,
-                "base": 45,
-                "cart": 0,
-                "ctaText": "Ir a tienda",
-                "ctaFragment": "merchant",
-            },
-            {
-                "key": "discount",
-                "title": "Siguiente nivel de descuento",
-                "subtitle": "Alcanza el umbral para mejorar tu beneficio",
-                "target": 120,
-                "base": 45,
-                "cart": 0,
-                "ctaText": "Completar consumo",
-                "ctaFragment": "merchant",
-            },
-            {
-                "key": "invite",
-                "title": "Crecer tu red",
-                "subtitle": "Agrega 1 usuario nuevo este mes",
-                "target": 1,
-                "base": 0,
-                "cart": 0,
-                "ctaText": "Invitar ahora",
-                "ctaFragment": "links",
-                "isCountGoal": True,
-            },
-            {
-                "key": "network",
-                "title": "Red logra sus metas",
-                "subtitle": "Impulsa el consumo de tu red este mes",
-                "target": 300,
-                "base": 160,
-                "cart": 0,
-                "ctaText": "Compartir enlace",
-                "ctaFragment": "links",
-            },
-        ],
+        "goals": (computed_goals if computed_goals is not None else []),
         "products": products,
         "featured": featured,
         "productOfMonth": product_of_month,
-        "networkMembers": [
-            {"name": "María G.", "level": "L1", "spend": 80, "status": "Activa"},
-            {"name": "Luis R.", "level": "L1", "spend": 25, "status": "En progreso"},
-            {"name": "Ana P.", "level": "L1", "spend": 0, "status": "Inactiva"},
-            {"name": "Carlos V.", "level": "L2", "spend": 40, "status": "Activa"},
-            {"name": "Sofía M.", "level": "L2", "spend": 15, "status": "En progreso"},
-            {"name": "Diego S.", "level": "L2", "spend": 0, "status": "Inactiva"},
-        ],
-        "buyAgainIds": [p["id"] for p in products[:3]],
+        "networkMembers": (computed_network_members if computed_network_members is not None else []),
+        "buyAgainIds": buy_again_ids,
     }
     return _json_response(200, payload)
+
+
+
+def _compute_buy_again_ids(customer: Optional[dict], products: List[dict]) -> List[str]:
+    if not customer or not isinstance(customer, dict):
+        return []
+    counts = customer.get("productCounts")
+    if not isinstance(counts, dict) or not counts:
+        return []
+    ordered = sorted(counts.items(), key=lambda kv: int(kv[1] or 0), reverse=True)
+    top = [str(pid) for pid, _ in ordered[:3]]
+    return top
+
+
+def _update_customer_product_stats(customer_id: Any, order_item: dict) -> None:
+    if customer_id is None:
+        return
+    items = order_item.get("items") or []
+    if not items:
+        return
+    try:
+        customer = _get_by_id("CUSTOMER", customer_id)
+    except Exception:
+        customer = None
+    counts = customer.get("productCounts") if isinstance(customer, dict) else None
+    if not isinstance(counts, dict):
+        counts = {}
+
+    for it in items:
+        pid = it.get("productId")
+        if pid is None:
+            continue
+        key = str(pid)
+        qty = int(it.get("quantity") or 1)
+        prev = counts.get(key) or 0
+        counts[key] = int(prev) + qty
+
+    try:
+        _update_by_id(
+            "CUSTOMER",
+            customer_id,
+            "SET productCounts = :pc, updatedAt = :u",
+            {":pc": counts, ":u": _now_iso()},
+        )
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -1526,11 +1980,44 @@ def _get_user_dashboard() -> dict:
 # ---------------------------------------------------------------------------
 def _login(payload: dict) -> dict:
     username = payload.get("username")
+    email = payload.get("email") or username
     password = payload.get("password")
+    if not email or not password:
+        return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
+
+    identifier = (email or "").strip()
     for user in _LOGIN_USERS:
-        if user["username"] == username and user["password"] == password:
+        if identifier in {user.get("username"), user.get("email")} and user["password"] == password:
             return _json_response(200, {"token": "demo-token", "user": user["user"]})
-    return _json_response(401, {"message": "Credenciales inválidas", "Error": "Unauthorized"})
+
+    auth = _get_auth_by_email(identifier)
+    if not auth:
+        customer = _find_customer_by_email(identifier)
+        if customer and customer.get("passwordHash") == _hash_password(str(password)):
+            auth = _create_auth_record(identifier, customer.get("passwordHash"), customer.get("customerId"))
+        else:
+            return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
+
+    if auth.get("passwordHash") != _hash_password(str(password)):
+        return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
+
+    customer_id = auth.get("customerId")
+    customer = _get_by_id("CUSTOMER", int(customer_id)) if customer_id is not None else None
+    if not customer:
+        return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
+
+    discount_rate = _to_decimal(customer.get("discountRate"))
+    discount_percent = int((discount_rate * Decimal("100")).quantize(Decimal("1"))) if discount_rate else 0
+
+    user = {
+        "userId": str(customer_id),
+        "name": customer.get("name"),
+        "role": auth.get("role") or "cliente",
+        "discountPercent": discount_percent,
+        "discountActive": bool(customer.get("activeBuyer") or discount_rate > 0),
+        "level": customer.get("level"),
+    }
+    return _json_response(200, {"token": "demo-token", "user": user})
 
 
 # ---------------------------------------------------------------------------
@@ -1616,6 +2103,7 @@ def lambda_handler(event, context):
 
     # User dashboard
     if segments == ["user-dashboard"] and method == "GET":
-        return _get_user_dashboard()
+        return _get_user_dashboard(query, event.get("headers") or {})
 
     return _json_response(404, {"message": "Ruta no encontrada", "path": "/" + "/".join(segments), "Error": "NotFound"})
+

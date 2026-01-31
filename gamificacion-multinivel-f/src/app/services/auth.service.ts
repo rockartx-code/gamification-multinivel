@@ -6,6 +6,7 @@ import { ApiService } from './api.service';
 export type UserRole = 'admin' | 'cliente';
 
 export interface AuthUser {
+  userId?: string;
   name: string;
   role: UserRole;
   discountPercent?: number;
@@ -40,10 +41,12 @@ export class AuthService {
     const user: AuthUser =
       role === 'admin'
         ? {
+            userId: 'admin-001',
             name: 'Admin Rivera',
             role: 'admin'
           }
         : {
+            userId: 'client-001',
             name: 'Valeria Torres',
             role: 'cliente',
             discountPercent: 15,

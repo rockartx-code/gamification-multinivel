@@ -29,6 +29,7 @@ export class MockApiService {
       username: 'admin',
       password: 'admin123',
       profile: {
+        userId: 'admin-001',
         name: 'Admin Rivera',
         role: 'admin' as const
       }
@@ -37,6 +38,7 @@ export class MockApiService {
       username: 'cliente',
       password: 'cliente123',
       profile: {
+        userId: 'client-001',
         name: 'Valeria Torres',
         role: 'cliente' as const,
         discountPercent: 15,
@@ -233,7 +235,7 @@ export class MockApiService {
     return of(payload).pipe(delay(120));
   }
 
-  getUserDashboardData(): Observable<UserDashboardData> {
+  getUserDashboardData(userId?: string): Observable<UserDashboardData> {
     const payload: UserDashboardData = {
       settings: {
         cutoffDay: 25,
