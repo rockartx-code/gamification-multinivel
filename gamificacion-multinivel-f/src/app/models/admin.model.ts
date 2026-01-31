@@ -32,18 +32,27 @@ export interface CreateStructureCustomerPayload {
 
 export interface CreateProductAssetPayload {
   productId: string;
+  assetId?: string;
+  assetKey?: string;
   section: 'redes' | 'landing' | 'miniatura';
-  filename: string;
+  filename?: string;
   contentType?: string;
 }
 
 export interface SaveAdminProductPayload {
   id: number | null;
+  productId?: number;
   name: string;
   price: number;
   active: boolean;
   sku?: string;
   hook?: string;
+  tags?: string[];
+  images?: Array<{
+    section: CreateProductAssetPayload['section'];
+    url: string;
+    assetId?: string;
+  }>;
 }
 
 export interface ProductAssetUpload {
@@ -61,6 +70,35 @@ export interface ProductAssetUpload {
   uploadUrl?: string;
 }
 
+export interface ProductOfMonthPayload {
+  productId: number;
+}
+
+export interface ProductOfMonthResponse {
+  productOfMonth: {
+    productId: number;
+    createdAt?: string;
+    updatedAt?: string;
+  } | null;
+}
+
+export interface CreateAssetPayload {
+  name: string;
+  contentBase64: string;
+  contentType?: string;
+}
+
+export interface AssetResponse {
+  asset: {
+    assetId: string;
+    name?: string;
+    contentType?: string;
+    url?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+}
+
 export interface AdminCustomer {
   id: number;
   name: string;
@@ -76,6 +114,14 @@ export interface AdminProduct {
   name: string;
   price: number;
   active: boolean;
+  sku?: string;
+  hook?: string;
+  tags?: string[];
+  images?: Array<{
+    section: CreateProductAssetPayload['section'];
+    url: string;
+    assetId?: string;
+  }>;
 }
 
 export interface AdminWarning {

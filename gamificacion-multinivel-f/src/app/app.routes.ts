@@ -30,5 +30,9 @@ export const routes: Routes = [
     path: 'dashboard',
     component: UserDashboardComponent,
     canActivate: [dashboardGuard]
+  },
+  {
+    path: ':refToken',
+    component: LandingComponent
   }
 ];

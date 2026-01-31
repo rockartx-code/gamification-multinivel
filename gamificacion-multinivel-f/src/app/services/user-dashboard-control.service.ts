@@ -17,6 +17,7 @@ export class UserDashboardControlService {
   private readonly dataSubject = new BehaviorSubject<UserDashboardData | null>(null);
   private cart: Record<string, number> = {};
   private heroQty = 0;
+  private heroProductId = '';
 
   constructor(private readonly api: ApiService) {}
 
@@ -24,6 +25,11 @@ export class UserDashboardControlService {
     return this.api.getUserDashboardData().pipe(
       tap((data) => {
         this.dataSubject.next(structuredClone(data));
+        this.heroProductId =
+          data.productOfMonth?.id ?? data.products?.[0]?.id ?? this.heroProductId;
+        if (this.heroProductId) {
+          this.heroQty = this.cart[this.heroProductId] ?? 0;
+        }
       })
     );
   }
@@ -54,6 +60,10 @@ export class UserDashboardControlService {
 
   get heroQuantity(): number {
     return this.heroQty;
+  }
+
+  get heroProduct(): string {
+    return this.heroProductId;
   }
 
   get cartTotal(): number {
@@ -108,7 +118,7 @@ export class UserDashboardControlService {
     } else {
       this.cart[productId] = normalized;
     }
-    if (productId === 'colageno') {
+    if (productId === this.heroProductId) {
       this.heroQty = normalized;
     }
     this.syncGoalCartTotals();
@@ -120,16 +130,22 @@ export class UserDashboardControlService {
   }
 
   setHeroQty(value: number): void {
+    if (!this.heroProductId) {
+      return;
+    }
     this.heroQty = Math.max(0, Math.floor(value));
-    this.updateCart('colageno', this.heroQty);
+    this.updateCart(this.heroProductId, this.heroQty);
   }
 
   addHeroToCart(): void {
+    if (!this.heroProductId) {
+      return;
+    }
     if (this.heroQty <= 0) {
       this.heroQty = 1;
     }
-    this.addQuick('colageno', 1);
-    this.heroQty = this.cart['colageno'] ?? 0;
+    this.addQuick(this.heroProductId, 1);
+    this.heroQty = this.cart[this.heroProductId] ?? 0;
   }
 
   getCountdownLabel(): string {

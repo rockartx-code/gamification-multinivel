@@ -2,17 +2,18 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, type Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Observable, catchError, finalize, forkJoin, from, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 
 import { AuthService, AuthUser } from '../../services/auth.service';
 import {
-  AdminAssetSlot,
   AdminCustomer,
   AdminData,
   AdminOrder,
   AdminOrderItem,
   AdminProduct,
   AdminWarning,
+  AssetResponse,
+  CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload
@@ -69,7 +70,6 @@ export class AdminComponent implements OnInit {
   };
   structureLeader: AdminCustomer | null = null;
   structureLevel: 'Oro' | 'Plata' | 'Bronce' = 'Oro';
-  assetPreviews = new Map<number, string>();
   productImagePreviews = new Map<CreateProductAssetPayload['section'], string>();
   productImageUploads = new Map<CreateProductAssetPayload['section'], boolean>();
   productImageFiles = new Map<CreateProductAssetPayload['section'], File>();
@@ -80,27 +80,22 @@ export class AdminComponent implements OnInit {
     name: '',
     price: '',
     sku: '',
-    hook: ''
+    hook: '',
+    tags: ''
   };
+  productExistingImages: AdminProduct['images'] = [];
   productImageSlots = [
     { key: 'redes', label: 'Redes', hint: 'Story / Feed' },
     { key: 'landing', label: 'Landing', hint: 'Hero 16:9' },
     { key: 'miniatura', label: 'Miniatura', hint: '1:1' }
   ] as const;
-  defaultAssetSlots: AdminAssetSlot[] = [
-    { label: 'Miniatura (carrito)', hint: 'square 1:1' },
-    { label: 'CTA / Banner', hint: 'landscape 16:9' },
-    { label: 'Redes · Story', hint: '9:16' },
-    { label: 'Redes · Feed', hint: '1:1' },
-    { label: 'Producto del Mes', hint: 'landscape 16:9' },
-    { label: 'Imagen extra', hint: 'opcional' }
-  ];
   newOrderCustomerId: number | null = null;
   newOrderStatus: AdminOrder['status'] = 'pending';
   newOrderItems = new Map<number, number>();
   isSavingOrder = false;
   isSavingStructure = false;
   isSavingProduct = false;
+  isSettingProductOfMonth = false;
   private readonly updatingOrderIds = new Set<string>();
 
   ngOnInit(): void {
@@ -130,10 +125,6 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.warnings ?? [];
   }
 
-  get assetSlots(): AdminAssetSlot[] {
-    const slots = this.adminData()?.assetSlots ?? [];
-    return slots.length ? slots : this.defaultAssetSlots;
-  }
 
   get viewTitle(): string {
     if (this.currentView === 'customers') {
@@ -560,44 +551,72 @@ export class AdminComponent implements OnInit {
       id: product.id,
       name: product.name,
       price: String(product.price),
-      sku: '',
-      hook: ''
+      sku: product.sku ?? '',
+      hook: product.hook ?? '',
+      tags: (product.tags ?? []).join(', ')
     };
     this.resetProductAssets();
+    this.productExistingImages = product.images ?? [];
+    this.applyProductImagePreviews(product.images);
     this.announceProductMessage(`Editando ${product.name}.`);
   }
 
-  updateProductField(field: 'name' | 'price' | 'sku' | 'hook', value: string): void {
+  updateProductField(field: 'name' | 'price' | 'sku' | 'hook' | 'tags', value: string): void {
     this.productForm = {
       ...this.productForm,
       [field]: value
     };
   }
 
+  setProductOfMonth(product: AdminProduct): void {
+    if (this.isSettingProductOfMonth) {
+      return;
+    }
+    this.isSettingProductOfMonth = true;
+    this.adminControl
+      .setProductOfMonth(product.id)
+      .pipe(
+        finalize(() => {
+          this.isSettingProductOfMonth = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.announceProductMessage(`Producto del mes actualizado: ${product.name}.`);
+        },
+        error: () => {
+          this.announceProductMessage('No se pudo actualizar el producto del mes.');
+        }
+      });
+  }
+
+
   saveProduct(): void {
     if (this.isSavingProduct || !this.isProductFormValid) {
       return;
     }
     this.isSavingProduct = true;
-    const payload = {
-      id: this.productForm.id,
-      name: this.productForm.name.trim(),
-      price: Number(this.productForm.price),
-      active: true,
-      sku: this.productForm.sku.trim() || undefined,
-      hook: this.productForm.hook.trim() || undefined
-    };
-    this.adminControl
-      .saveProduct(payload)
+    this.uploadProductImages()
       .pipe(
-        switchMap((product) =>
-          this.uploadProductImages(product.id).pipe(
-            map((uploads) => ({
+        switchMap((uploads) => {
+          const payload = {
+            id: this.productForm.id,
+            productId: this.productForm.id ?? undefined,
+            name: this.productForm.name.trim(),
+            price: Number(this.productForm.price),
+            active: true,
+            sku: this.productForm.sku.trim() || undefined,
+            hook: this.productForm.hook.trim() || undefined,
+            tags: this.normalizeTags(this.productForm.tags),
+            images: this.mergeProductImages(uploads)
+          };
+          return this.adminControl.saveProduct(payload).pipe(
+            map((product) => ({
               product,
               uploads
             }))
-          )
-        ),
+          );
+        }),
         finalize(() => {
           this.isSavingProduct = false;
         })
@@ -607,7 +626,7 @@ export class AdminComponent implements OnInit {
           const hasFailures = uploads.some((upload) => !upload.success);
           if (hasFailures) {
             this.announceProductMessage(
-              `Producto guardado: ${product.name}. Algunas imágenes no se pudieron subir.`
+              `Producto guardado: ${product.name}. Algunas imagenes no se pudieron subir.`
             );
           } else {
             this.announceProductMessage(
@@ -629,9 +648,11 @@ export class AdminComponent implements OnInit {
       name: '',
       price: '',
       sku: '',
-      hook: ''
+      hook: '',
+      tags: ''
     };
     this.resetProductAssets();
+    this.productExistingImages = [];
   }
 
   private announceProductMessage(message: string): void {
@@ -642,20 +663,6 @@ export class AdminComponent implements OnInit {
     this.productMessageTimeout = window.setTimeout(() => {
       this.productMessage = '';
     }, 2800);
-  }
-
-  previewAsset(event: Event, slotIndex: number): void {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (!file) {
-      return;
-    }
-    const previewUrl = URL.createObjectURL(file);
-    const currentUrl = this.assetPreviews.get(slotIndex);
-    if (currentUrl) {
-      URL.revokeObjectURL(currentUrl);
-    }
-    this.assetPreviews.set(slotIndex, previewUrl);
   }
 
   uploadProductImage(event: Event, section: CreateProductAssetPayload['section']): void {
@@ -682,14 +689,50 @@ export class AdminComponent implements OnInit {
     this.productImageFiles.clear();
     this.productImageUploads.clear();
     this.productImagePreviews.forEach((value) => {
-      URL.revokeObjectURL(value);
+      if (value.startsWith('blob:')) {
+        URL.revokeObjectURL(value);
+      }
     });
     this.productImagePreviews.clear();
   }
 
-  private uploadProductImages(
-    productId: number
-  ): Observable<Array<{ section: CreateProductAssetPayload['section']; success: boolean }>> {
+  private applyProductImagePreviews(images?: AdminProduct['images']): void {
+    if (!images || !Array.isArray(images)) {
+      return;
+    }
+    images.forEach((image) => {
+      if (!image?.section || !image?.url) {
+        return;
+      }
+      this.productImagePreviews.set(image.section, image.url);
+      this.productImageUploads.set(image.section, false);
+    });
+  }
+
+  private mergeProductImages(
+    uploads: Array<{ section: CreateProductAssetPayload['section']; success: boolean; assetId?: string; url?: string }>
+  ): AdminProduct['images'] | undefined {
+    const existing = Array.isArray(this.productExistingImages) ? this.productExistingImages : [];
+    const uploaded = uploads
+      .filter((upload) => upload.success && upload.url)
+      .map((upload) => ({
+        section: upload.section,
+        url: upload.url ?? '',
+        assetId: upload.assetId
+      }));
+    if (!uploaded.length) {
+      return existing.length ? existing : undefined;
+    }
+    const uploadedSections = new Set(uploaded.map((img) => img.section));
+    const preserved = existing.filter((img) => img?.section && !uploadedSections.has(img.section));
+    const merged = [...preserved, ...uploaded];
+    return merged.length ? merged : undefined;
+  }
+
+
+  private uploadProductImages(): Observable<
+    Array<{ section: CreateProductAssetPayload['section']; success: boolean; assetId?: string; url?: string }>
+  > {
     const entries = Array.from(this.productImageFiles.entries());
     if (entries.length === 0) {
       return of([]);
@@ -698,31 +741,14 @@ export class AdminComponent implements OnInit {
       this.productImageUploads.set(section, true);
     });
     const uploads = entries.map(([section, file]) => {
-      const payload: CreateProductAssetPayload = {
-        productId: String(productId),
-        section,
-        filename: file.name,
-        contentType: file.type || 'application/octet-stream'
-      };
-      return this.adminControl.createProductAsset(payload).pipe(
-        switchMap((response) => {
-          if (!response.uploadUrl) {
-            return of({ section, success: true });
+      return this.createAssetFromFile(file).pipe(
+        switchMap((asset) => {
+          const assetId = asset.asset?.assetId;
+          const url = asset.asset?.url;
+          if (!assetId || !url) {
+            return of({ section, success: false });
           }
-          return from(
-            fetch(response.uploadUrl, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': payload.contentType ?? 'application/octet-stream'
-              },
-              body: file
-            })
-          ).pipe(
-            map((uploadResponse) => ({
-              section,
-              success: uploadResponse.ok
-            }))
-          );
+          return of({ section, success: true, assetId, url });
         }),
         catchError(() => of({ section, success: false })),
         finalize(() => {
@@ -731,6 +757,53 @@ export class AdminComponent implements OnInit {
       );
     });
     return forkJoin(uploads);
+  }
+
+  private createAssetFromFile(file: File): Observable<AssetResponse> {
+    return this.readFileAsDataUrl(file).pipe(
+      switchMap((dataUrl) => {
+        const contentBase64 = this.extractBase64(dataUrl);
+        if (!contentBase64) {
+          return of({ asset: { assetId: '' } });
+        }
+        const payload: CreateAssetPayload = {
+          name: file.name,
+          contentBase64,
+          contentType: file.type || 'application/octet-stream'
+        };
+        return this.adminControl.createAsset(payload);
+      })
+    );
+  }
+
+  private readFileAsDataUrl(file: File): Observable<string> {
+    return new Observable<string>((observer) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        observer.next(String(reader.result ?? ''));
+        observer.complete();
+      };
+      reader.onerror = () => {
+        observer.error(new Error('No se pudo leer la imagen.'));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private extractBase64(dataUrl: string): string {
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) {
+      return '';
+    }
+    return parts[1] ?? '';
+  }
+
+  private normalizeTags(value: string): string[] | undefined {
+    const tags = (value ?? '')
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    return tags.length ? tags : undefined;
   }
 
   private normalizeLevel(level?: string): string {

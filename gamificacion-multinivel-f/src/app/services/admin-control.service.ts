@@ -6,10 +6,13 @@ import {
   AdminData,
   AdminOrder,
   AdminProduct,
+  AssetResponse,
+  CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   ProductAssetUpload,
+  ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
 import { ApiService } from './api.service';
@@ -123,8 +126,16 @@ export class AdminControlService {
     );
   }
 
+  createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.api.createAsset(payload);
+  }
+
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     return this.api.createProductAsset(payload);
+  }
+
+  setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
+    return this.api.setProductOfMonth(productId);
   }
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {

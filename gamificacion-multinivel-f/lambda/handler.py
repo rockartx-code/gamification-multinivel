@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import uuid
@@ -40,6 +41,23 @@ def _json_response(status_code: int, payload: dict) -> dict:
     }
 
 
+def _public_s3_url(bucket: str, key: str, region: str) -> str:
+    if not bucket or not key:
+        return ""
+    # us-east-1 uses the same hostname format, keep consistent.
+    return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
+
+
+def _normalize_asset_url(url: Optional[str]) -> str:
+    if not url:
+        return ""
+    if url.startswith("s3://"):
+        parts = url.replace("s3://", "").split("/", 1)
+        if len(parts) == 2:
+            return _public_s3_url(parts[0], parts[1], AWS_REGION)
+    return url
+
+
 def _now_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
@@ -59,6 +77,19 @@ def _to_decimal(n: Any) -> Decimal:
     if n is None:
         return Decimal("0")
     return Decimal(str(n))
+
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def _parse_int_or_str(value: Any) -> Any:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except Exception:
+        return value
 
 
 def _parse_body(event: dict) -> dict:
@@ -826,23 +857,72 @@ def _cancel_order(order_id: str, payload: dict) -> dict:
 # PRODUCT (Pattern 1)
 # ---------------------------------------------------------------------------
 def _save_product(payload: dict) -> dict:
-    product_id = payload.get("productId") or int(datetime.utcnow().timestamp() * 1000)
+    product_id = payload.get("productId") or payload.get("id")
     name = payload.get("name")
     price = payload.get("price")
     active = payload.get("active", True)
+    sku = payload.get("sku")
+    hook = payload.get("hook")
+    tags = payload.get("tags")
+    images = payload.get("images")
+
     if not name or price is None:
         return _json_response(200, {"message": "name y price son obligatorios", "Error": "BadRequest"})
 
     now = _now_iso()
+
+    if product_id is not None:
+        existing = _get_by_id("PRODUCT", int(product_id))
+        if existing:
+            updates = []
+            eav = {":u": now}
+            ean = {}
+
+            if "name" in payload:
+                updates.append("#n = :n")
+                eav[":n"] = name
+                ean["#n"] = "name"
+            if "price" in payload:
+                updates.append("price = :p")
+                eav[":p"] = _to_decimal(price)
+            if "active" in payload:
+                updates.append("active = :a")
+                eav[":a"] = bool(active)
+            if "sku" in payload:
+                updates.append("sku = :sku")
+                eav[":sku"] = sku
+            if "hook" in payload:
+                updates.append("hook = :h")
+                eav[":h"] = hook
+            if isinstance(tags, list):
+                updates.append("tags = :t")
+                eav[":t"] = tags
+            if isinstance(images, list):
+                updates.append("images = :im")
+                eav[":im"] = images
+
+            updates.append("updatedAt = :u")
+            update_expression = "SET " + ", ".join(updates)
+            updated = _update_by_id("PRODUCT", int(product_id), update_expression, eav, ean or None)
+            return _json_response(200, {"product": updated})
+
+    # Create new
+    product_id = int(product_id) if product_id is not None else int(datetime.utcnow().timestamp() * 1000)
     item = {
         "entityType": "product",
         "productId": int(product_id),
         "name": name,
         "price": _to_decimal(price),
         "active": bool(active),
+        "sku": sku,
+        "hook": hook,
         "createdAt": now,
         "updatedAt": now,
     }
+    if isinstance(tags, list):
+        item["tags"] = tags
+    if isinstance(images, list):
+        item["images"] = images
     main = _put_entity("PRODUCT", int(product_id), item, created_at_iso=now)
     return _json_response(201, {"product": main})
 
@@ -870,8 +950,14 @@ def _create_asset(payload: dict) -> dict:
         return _json_response(200, {"message": "contentBase64 inválido", "Error": "BadRequest"})
 
     asset_id = f"assets/{uuid.uuid4()}-{name}"
-    _s3.put_object(Bucket=BUCKET_NAME, Key=asset_id, Body=raw, ContentType=content_type)
-    url = f"s3://{BUCKET_NAME}/{asset_id}"
+    _s3.put_object(
+        Bucket=BUCKET_NAME,
+        Key=asset_id,
+        Body=raw,
+        ContentType=content_type,
+        ACL="public-read",
+    )
+    url = _public_s3_url(BUCKET_NAME, asset_id, AWS_REGION)
     now = _now_iso()
 
     item = {
@@ -948,6 +1034,68 @@ def _create_customer(payload: dict) -> dict:
         "discountRate": Decimal("0"),
         "discount": "0%",
         "commissions": Decimal("0"),
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+    main = _put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
+    return _json_response(
+        201,
+        {
+            "customer": {
+                "id": customer_id,
+                "name": main.get("name"),
+                "email": main.get("email"),
+                "leaderId": main.get("leaderId"),
+                "level": main.get("level"),
+                "isAssociate": main.get("isAssociate"),
+                "discount": main.get("discount"),
+                "activeBuyer": bool(main.get("activeBuyer")),
+                "discountRate": float(main.get("discountRate") or 0),
+                "commissions": float(main.get("commissions") or 0),
+            }
+        },
+    )
+
+
+def _create_account(payload: dict) -> dict:
+    name = payload.get("name")
+    email = payload.get("email")
+    password = payload.get("password")
+    confirm = payload.get("confirmPassword")
+    if not name or not email or not password:
+        return _json_response(200, {"message": "name, email y password son obligatorios", "Error": "BadRequest"})
+    if password != confirm:
+        return _json_response(200, {"message": "Las contraseÃ±as no coinciden", "Error": "BadRequest"})
+
+    level = payload.get("level") or "Oro"
+    customer_id = payload.get("customerId")
+    if not customer_id:
+        customer_id = int(datetime.utcnow().timestamp() * 1000)
+
+    leader_token = payload.get("referralToken") or payload.get("leaderId")
+    leader_id = _parse_int_or_str(leader_token)
+
+    product_id = _parse_int_or_str(payload.get("productId") or payload.get("refProductId"))
+
+    now = _now_iso()
+    item = {
+        "entityType": "customer",
+        "customerId": customer_id,
+        "name": name,
+        "email": email,
+        "phone": payload.get("phone"),
+        "address": payload.get("address"),
+        "city": payload.get("city"),
+        "leaderId": leader_id,
+        "level": level,
+        "isAssociate": bool(payload.get("isAssociate", True)),
+        "activeBuyer": False,
+        "discountRate": Decimal("0"),
+        "discount": "0%",
+        "commissions": Decimal("0"),
+        "passwordHash": _hash_password(str(password)),
+        "refProductId": product_id,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -1146,6 +1294,10 @@ def _get_admin_dashboard() -> dict:
             "name": item.get("name"),
             "price": float(item.get("price") or 0),
             "active": bool(item.get("active")),
+            "sku": item.get("sku"),
+            "hook": item.get("hook"),
+            "tags": item.get("tags"),
+            "images": item.get("images"),
         }
         for item in products_raw
     ]
@@ -1193,6 +1345,182 @@ def _get_admin_dashboard() -> dict:
     )
 
 
+def _pick_product_image(images: Optional[list], preferred_sections: List[str]) -> str:
+    if not images or not isinstance(images, list):
+        return ""
+    for section in preferred_sections:
+        for img in images:
+            if img.get("section") == section and img.get("url"):
+                return _normalize_asset_url(img.get("url"))
+    for img in images:
+        if img.get("url"):
+            return _normalize_asset_url(img.get("url"))
+    return ""
+
+def _get_product_of_month_item() -> Optional[dict]:
+    return _get_by_id("PRODUCT_OF_MONTH", "current")
+
+
+def _get_product_summary(item: dict) -> dict:
+    images = item.get("images") or []
+    tags = item.get("tags") or []
+    badge = str(tags[0]) if isinstance(tags, list) and tags else ""
+    img = _pick_product_image(images, ["miniatura", "landing", "redes"])
+    return {
+        "id": str(item.get("productId")),
+        "name": item.get("name"),
+        "price": float(item.get("price") or 0),
+        "badge": badge,
+        "img": img,
+        "hook": item.get("hook") or "",
+        "images": images,
+        "tags": tags,
+    }
+
+
+def _set_product_of_month(payload: dict) -> dict:
+    product_id = payload.get("productId") or payload.get("id")
+    if not product_id:
+        return _json_response(200, {"message": "productId es obligatorio", "Error": "BadRequest"})
+
+    product = _get_by_id("PRODUCT", int(product_id))
+    if not product:
+        return _json_response(200, {"message": "Producto no encontrado", "Error": "NoEncontrado"})
+
+    now = _now_iso()
+    existing = _get_product_of_month_item()
+    if existing:
+        updated = _update_by_id(
+            "PRODUCT_OF_MONTH",
+            "current",
+            "SET productId = :p, updatedAt = :u",
+            {":p": int(product_id), ":u": now},
+        )
+        return _json_response(200, {"productOfMonth": updated})
+
+    item = {
+        "entityType": "productOfMonth",
+        "productId": int(product_id),
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    main = _put_entity("PRODUCT_OF_MONTH", "current", item, created_at_iso=now)
+    return _json_response(201, {"productOfMonth": main})
+
+
+def _get_product_of_month() -> dict:
+    item = _get_product_of_month_item()
+    if not item:
+        return _json_response(200, {"productOfMonth": None})
+    return _json_response(200, {"productOfMonth": item})
+
+def _get_user_dashboard() -> dict:
+    products_raw = _query_bucket("PRODUCT", limit=500, scan_forward=False)
+    products = []
+    featured = []
+    product_of_month = None
+
+    for item in products_raw:
+        summary = _get_product_summary(item)
+        products.append(
+            {
+                "id": summary["id"],
+                "name": summary["name"],
+                "price": summary["price"],
+                "badge": summary["badge"],
+                "img": summary["img"],
+            }
+        )
+
+        if len(featured) < 4:
+            images = item.get("images") or []
+            story = _pick_product_image(images, ["redes"]) or summary["img"]
+            feed = _pick_product_image(images, ["miniatura", "redes"]) or summary["img"]
+            banner = _pick_product_image(images, ["landing"]) or summary["img"]
+            featured.append(
+                {
+                    "id": summary["id"],
+                    "label": summary["name"],
+                    "hook": summary["hook"],
+                    "story": story,
+                    "feed": feed,
+                    "banner": banner,
+                }
+            )
+
+    pom_item = _get_product_of_month_item()
+    if pom_item:
+        product = _get_by_id("PRODUCT", int(pom_item.get("productId")))
+        if product:
+            product_of_month = _get_product_summary(product)
+
+    payload = {
+        "settings": {
+            "cutoffDay": 25,
+            "cutoffHour": 23,
+            "cutoffMinute": 59,
+            "userCode": "ABC123",
+            "networkGoal": 300,
+        },
+        "goals": [
+            {
+                "key": "active",
+                "title": "Siguiente reto: Usuario activo",
+                "subtitle": "Completa tu consumo mínimo del mes",
+                "target": 60,
+                "base": 45,
+                "cart": 0,
+                "ctaText": "Ir a tienda",
+                "ctaFragment": "merchant",
+            },
+            {
+                "key": "discount",
+                "title": "Siguiente nivel de descuento",
+                "subtitle": "Alcanza el umbral para mejorar tu beneficio",
+                "target": 120,
+                "base": 45,
+                "cart": 0,
+                "ctaText": "Completar consumo",
+                "ctaFragment": "merchant",
+            },
+            {
+                "key": "invite",
+                "title": "Crecer tu red",
+                "subtitle": "Agrega 1 usuario nuevo este mes",
+                "target": 1,
+                "base": 0,
+                "cart": 0,
+                "ctaText": "Invitar ahora",
+                "ctaFragment": "links",
+                "isCountGoal": True,
+            },
+            {
+                "key": "network",
+                "title": "Red logra sus metas",
+                "subtitle": "Impulsa el consumo de tu red este mes",
+                "target": 300,
+                "base": 160,
+                "cart": 0,
+                "ctaText": "Compartir enlace",
+                "ctaFragment": "links",
+            },
+        ],
+        "products": products,
+        "featured": featured,
+        "productOfMonth": product_of_month,
+        "networkMembers": [
+            {"name": "María G.", "level": "L1", "spend": 80, "status": "Activa"},
+            {"name": "Luis R.", "level": "L1", "spend": 25, "status": "En progreso"},
+            {"name": "Ana P.", "level": "L1", "spend": 0, "status": "Inactiva"},
+            {"name": "Carlos V.", "level": "L2", "spend": 40, "status": "Activa"},
+            {"name": "Sofía M.", "level": "L2", "spend": 15, "status": "En progreso"},
+            {"name": "Diego S.", "level": "L2", "spend": 0, "status": "Inactiva"},
+        ],
+        "buyAgainIds": [p["id"] for p in products[:3]],
+    }
+    return _json_response(200, payload)
+
+
 # ---------------------------------------------------------------------------
 # Auth (demo)
 # ---------------------------------------------------------------------------
@@ -1222,6 +1550,8 @@ def lambda_handler(event, context):
     # Auth
     if segments[0] == "login" and method == "POST":
         return _login(_parse_body(event))
+    if segments[0] == "crearcuenta" and method == "POST":
+        return _create_account(_parse_body(event))
 
     # Rewards config
     if segments == ["config", "rewards"]:
@@ -1250,6 +1580,11 @@ def lambda_handler(event, context):
 
     # Products
     if segments[0] == "products":
+        if len(segments) == 2 and segments[1] == "product-of-month":
+            if method == "GET":
+                return _get_product_of_month()
+            if method == "POST":
+                return _set_product_of_month(_parse_body(event))
         if len(segments) == 1 and method == "POST":
             return _save_product(_parse_body(event))
         if len(segments) == 2 and method == "GET":
@@ -1278,5 +1613,9 @@ def lambda_handler(event, context):
     # Admin
     if segments == ["admin", "dashboard"] and method == "GET":
         return _get_admin_dashboard()
+
+    # User dashboard
+    if segments == ["user-dashboard"] and method == "GET":
+        return _get_user_dashboard()
 
     return _json_response(404, {"message": "Ruta no encontrada", "path": "/" + "/".join(segments), "Error": "NotFound"})

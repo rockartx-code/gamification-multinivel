@@ -7,12 +7,16 @@ import {
   AdminData,
   AdminOrder,
   AdminProduct,
+  AssetResponse,
+  CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   ProductAssetUpload,
+  ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
+import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -30,6 +34,10 @@ export class ApiService {
 
   login(username: string, password: string): Observable<AuthUser> {
     return this.resolveApi().login(username, password);
+  }
+
+  createAccount(payload: CreateAccountPayload): Observable<CreateAccountResponse> {
+    return this.resolveApi().createAccount(payload);
   }
 
   getAdminData(): Observable<AdminData> {
@@ -52,8 +60,16 @@ export class ApiService {
     return this.resolveApi().createStructureCustomer(payload);
   }
 
+  createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.resolveApi().createAsset(payload);
+  }
+
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     return this.resolveApi().createProductAsset(payload);
+  }
+
+  setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
+    return this.resolveApi().setProductOfMonth(productId);
   }
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {

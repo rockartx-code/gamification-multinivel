@@ -47,6 +47,16 @@ export interface UserDashboardData {
   goals: DashboardGoal[];
   products: DashboardProduct[];
   featured: FeaturedItem[];
+  productOfMonth?: {
+    id: string;
+    name: string;
+    price: number;
+    badge: string;
+    img: string;
+    hook: string;
+    images?: Array<{ section: string; url: string; assetId?: string }>;
+    tags?: string[];
+  } | null;
   networkMembers: NetworkMember[];
   buyAgainIds: string[];
 }

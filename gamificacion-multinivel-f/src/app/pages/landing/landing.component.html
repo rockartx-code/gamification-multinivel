@@ -158,7 +158,9 @@
         </div>
       </div>
 
-      <form class="grain relative mt-10 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8">
+      <form
+        class="grain relative mt-10 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8"
+        (ngSubmit)="createAccount()">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
         </div>
@@ -168,36 +170,83 @@
             <i class="fa-solid fa-id-card" aria-hidden="true"></i>
             Nombre completo
           </span>
-          <input type="text" placeholder="Tu nombre"
+          <input
+            type="text"
+            name="name"
+            [(ngModel)]="form.name"
+            placeholder="Tu nombre"
             class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <label class="relative block">
           <span class="flex items-center gap-2 text-xs text-zinc-400">
             <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-            Correo electrónico
+            Correo electr??nico
           </span>
-          <input type="email" placeholder="tucorreo@ejemplo.com"
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="form.email"
+            placeholder="tucorreo@ejemplo.com"
             class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <label class="relative block">
           <span class="flex items-center gap-2 text-xs text-zinc-400">
             <i class="fa-solid fa-phone" aria-hidden="true"></i>
-            Teléfono
+            Tel??fono
           </span>
-          <input type="tel" placeholder="+52 ..."
+          <input
+            type="tel"
+            name="phone"
+            [(ngModel)]="form.phone"
+            placeholder="+52 ..."
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+        </label>
+
+        <label class="relative block">
+          <span class="flex items-center gap-2 text-xs text-zinc-400">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            Contrase??a
+          </span>
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="form.password"
+            placeholder="M??nimo 8 caracteres"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+        </label>
+
+        <label class="relative block">
+          <span class="flex items-center gap-2 text-xs text-zinc-400">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            Confirmar contrase??a
+          </span>
+          <input
+            type="password"
+            name="confirmPassword"
+            [(ngModel)]="form.confirmPassword"
+            placeholder="Repite tu contrase??a"
             class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <div class="pt-2">
-          <button type="submit"
+          <button
+            type="submit"
+            [disabled]="isSubmitting"
             class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-[1.02]">
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
-            Crear cuenta y continuar
+            {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
           </button>
+          <p
+            *ngIf="feedbackMessage"
+            class="mt-3 text-center text-xs"
+            [class.text-rose-300]="feedbackType === 'error'"
+            [class.text-emerald-300]="feedbackType === 'success'">
+            {{ feedbackMessage }}
+          </p>
           <p class="mt-3 text-center text-xs text-zinc-500">
-            Al registrarte aceptas los términos del programa de recompensas.
+            Al registrarte aceptas los t??rminos del programa de recompensas.
           </p>
         </div>
       </form>

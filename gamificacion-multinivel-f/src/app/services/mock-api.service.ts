@@ -6,12 +6,16 @@ import {
   AdminData,
   AdminOrder,
   AdminProduct,
+  AssetResponse,
+  CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   ProductAssetUpload,
+  ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
+import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -42,10 +46,11 @@ export class MockApiService {
     }
   ];
   private products: AdminProduct[] = [
-    { id: 1, name: 'COLÁGENO', price: 35, active: true },
-    { id: 2, name: 'OMEGA-3', price: 29, active: true },
-    { id: 3, name: 'COMPLEJO B', price: 24, active: false }
+    { id: 1, name: 'COL?GENO', price: 35, active: true, sku: 'COL-001', hook: 'Regeneraci?n diaria', tags: ['bienestar'] },
+    { id: 2, name: 'OMEGA-3', price: 29, active: true, sku: 'OMG-003', hook: 'Cuerpo & mente', tags: ['salud', 'mente'] },
+    { id: 3, name: 'COMPLEJO B', price: 24, active: false, sku: 'CMP-010', hook: 'Energ?a', tags: ['energia'] }
   ];
+  private productOfMonthId = 1;
 
   login(username: string, password: string): Observable<AuthUser> {
     const match = this.loginUsers.find((user) => user.username === username && user.password === password);
@@ -53,6 +58,28 @@ export class MockApiService {
       return throwError(() => new Error('Credenciales inválidas'));
     }
     return of(match.profile).pipe(delay(120));
+  }
+
+  createAccount(payload: CreateAccountPayload): Observable<CreateAccountResponse> {
+    if (!payload.name || !payload.email || !payload.password) {
+      return throwError(() => new Error('Datos incompletos'));
+    }
+    if (payload.password !== payload.confirmPassword) {
+      return throwError(() => new Error('Las contrase?as no coinciden'));
+    }
+    const customer = {
+      id: Math.floor(100000 + Math.random() * 900000),
+      name: payload.name,
+      email: payload.email,
+      leaderId: payload.referralToken ? payload.referralToken : null,
+      level: 'Oro',
+      isAssociate: true,
+      discount: '0%',
+      activeBuyer: false,
+      discountRate: 0,
+      commissions: 0
+    };
+    return of({ customer }).pipe(delay(160));
   }
 
   getAdminData(): Observable<AdminData> {
@@ -141,7 +168,11 @@ export class MockApiService {
       id: payload.id ?? nextId,
       name: payload.name,
       price: payload.price,
-      active: payload.active
+      active: payload.active,
+      sku: payload.sku,
+      hook: payload.hook,
+      tags: payload.tags,
+      images: payload.images
     };
     const existingIndex = this.products.findIndex((entry) => entry.id === payload.id);
     if (existingIndex >= 0) {
@@ -369,6 +400,22 @@ export class MockApiService {
     return of(customer).pipe(delay(120));
   }
 
+  createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    const now = new Date().toISOString();
+    const assetId = `mock-asset-${Math.random().toString(16).slice(2)}`;
+    const response: AssetResponse = {
+      asset: {
+        assetId,
+        name: payload.name,
+        contentType: payload.contentType ?? 'application/octet-stream',
+        url: `s3://mock-bucket/${assetId}`,
+        createdAt: now,
+        updatedAt: now
+      }
+    };
+    return of(response).pipe(delay(120));
+  }
+
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     const now = new Date().toISOString();
     const assetId = `mock-${Math.random().toString(16).slice(2)}`;
@@ -386,5 +433,14 @@ export class MockApiService {
       }
     };
     return of(response).pipe(delay(120));
+  }
+ 
+  setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
+    this.productOfMonthId = productId;
+    return of({
+      productOfMonth: {
+        productId
+      }
+    }).pipe(delay(120));
   }
 }

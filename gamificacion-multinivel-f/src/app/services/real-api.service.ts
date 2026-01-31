@@ -8,12 +8,16 @@ import {
   AdminData,
   AdminOrder,
   AdminProduct,
+  AssetResponse,
+  CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   ProductAssetUpload,
+  ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
+import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import { UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -42,6 +46,22 @@ export class RealApiService {
       );
   }
 
+  createAccount(payload: CreateAccountPayload): Observable<CreateAccountResponse> {
+    return this.http
+      .post<{ customer?: CreateAccountResponse['customer']; message?: string; Error?: string }>(
+        `${this.baseUrl}/crearcuenta`,
+        payload
+      )
+      .pipe(
+        map((response) => {
+          if (response.customer) {
+            return { customer: response.customer };
+          }
+          throw new Error(response.message ?? 'No se pudo crear la cuenta.');
+        })
+      );
+  }
+
   getAdminData(): Observable<AdminData> {
     return this.http.get<AdminData>(`${this.baseUrl}/admin/dashboard`);
   }
@@ -66,8 +86,16 @@ export class RealApiService {
       .pipe(map((response) => response.customer));
   }
 
+  createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.http.post<AssetResponse>(`${this.baseUrl}/assets`, payload);
+  }
+
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
     return this.http.post<ProductAssetUpload>(`${this.baseUrl}/products/assets`, payload);
+  }
+
+  setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
+    return this.http.post<ProductOfMonthResponse>(`${this.baseUrl}/products/product-of-month`, { productId });
   }
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {

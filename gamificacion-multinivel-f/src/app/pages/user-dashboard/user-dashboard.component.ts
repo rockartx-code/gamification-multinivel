@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import {
   DashboardGoal,
   DashboardProduct,
   FeaturedItem,
-  NetworkMember
+  NetworkMember,
+  UserDashboardData
 } from '../../models/user-dashboard.model';
 import { AuthService, AuthUser } from '../../services/auth.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
@@ -27,12 +29,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   readonly countdownLabel = signal('');
-  activeFeaturedId = 'colageno';
+  activeFeaturedId = '';
   socialFormat: 'story' | 'feed' | 'banner' = 'story';
   goalsCollapsed = false;
   toastMessage = 'Actualizado.';
   isToastVisible = false;
   captionText = '';
+  isLoading = false;
 
   private countdownInterval?: number;
   private toastTimeout?: number;
@@ -77,13 +80,37 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
     return `${this.products.length} productos`;
   }
 
+  get productOfMonth(): UserDashboardData['productOfMonth'] {
+    return this.dashboardControl.data?.productOfMonth ?? null;
+  }
+
+  get heroProductPrice(): number {
+    return this.productOfMonth?.price ?? 0;
+  }
+
+  get heroImage(): string {
+    return this.productOfMonth?.img || 'images/Colageno-Clean.png';
+  }
+
+  get heroTags(): string[] {
+    return this.productOfMonth?.tags?.length
+      ? this.productOfMonth.tags
+      : ['10g por porción', 'Vitamina C + AH', 'Alta absorción'];
+  }
+
   get activeFeatured(): FeaturedItem {
     return this.featured.find((item) => item.id === this.activeFeaturedId) ?? this.featured[0];
   }
 
   get referralLink(): string {
     const userCode = this.dashboardControl.data?.settings.userCode ?? '';
-    return `https://tu-dominio.com/r/${userCode}?p=${this.activeFeatured.id}`;
+    if (!userCode) {
+      return '';
+    }
+    const productId = this.activeFeatured?.id ?? '';
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const query = productId ? `?p=${productId}` : '';
+    return `${baseUrl}/#/${userCode}${query}`;
   }
 
   get networkProgress(): number {
@@ -148,12 +175,29 @@ export class UserDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.dashboardControl.load().subscribe(() => {
-      if (!this.activeFeaturedId) {
-        this.activeFeaturedId = this.featured[0]?.id ?? '';
-      }
-      this.updateCountdown();
-    });
+    if (!this.currentUser) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.isLoading = true;
+    this.dashboardControl
+      .load()
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+          this.updateCountdown();
+        })
+      )
+      .subscribe({
+        next: (data) => {
+          if (!this.activeFeaturedId) {
+            this.activeFeaturedId = data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
+          }
+        },
+        error: () => {
+          this.showToast('No se pudo cargar el dashboard.');
+        }
+      });
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
   }
 
