@@ -33,6 +33,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   activeFeaturedId = '';
   socialFormat: 'story' | 'feed' | 'banner' = 'story';
   socialChannel: 'whatsapp' | 'instagram' | 'facebook' = 'whatsapp';
+  featuredPage = 0;
+  readonly featuredPageSize = 4;
   secondaryGoalsVisible = false;
   toastMessage = 'Actualizado.';
   isToastVisible = false;
@@ -59,6 +61,16 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.currentUser?.role === 'cliente';
   }
 
+  private get discountPercentValue(): number {
+    const raw = this.currentUser?.discountPercent;
+    const value = typeof raw === 'string' ? Number(raw) : Number(raw ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private get discountActiveValue(): boolean {
+    return Boolean(this.currentUser?.discountActive);
+  }
+
   get isGuest(): boolean {
     if (this.dashboardControl.data?.isGuest != null) {
       return this.dashboardControl.data.isGuest;
@@ -76,6 +88,54 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   get featured(): FeaturedItem[] {
     return this.dashboardControl.featured;
+  }
+
+  get featuredCarousel(): FeaturedItem[] {
+    const fixed: FeaturedItem[] = [
+      {
+        id: 'fixed-familia',
+        label: 'Familia',
+        hook: 'Programa familiar',
+        story: 'images/L-Programa3.png',
+        feed: 'images/L-Programa3.png',
+        banner: 'images/L-Programa3.png'
+      },
+      {
+        id: 'fixed-entrenador',
+        label: 'Entrenador',
+        hook: 'Programa entrenador',
+        story: 'images/L-Programa2.png',
+        feed: 'images/L-Programa2.png',
+        banner: 'images/L-Programa2.png'
+      }
+    ];
+
+    const featuredIds = new Set(this.featured.map((item) => item.id));
+    const productItems: FeaturedItem[] = this.products
+      .filter((product) => !featuredIds.has(product.id))
+      .map((product) => ({
+        id: product.id,
+        label: product.name,
+        hook: product.badge || 'Producto destacado',
+        story: product.img || '',
+        feed: product.img || '',
+        banner: product.img || ''
+      }));
+
+    return [...fixed, ...this.featured, ...productItems];
+  }
+
+  get pagedFeatured(): FeaturedItem[] {
+    const start = this.featuredPage * this.featuredPageSize;
+    return this.featuredCarousel.slice(start, start + this.featuredPageSize);
+  }
+
+  get canPrevFeatured(): boolean {
+    return this.featuredPage > 0;
+  }
+
+  get canNextFeatured(): boolean {
+    return (this.featuredPage + 1) * this.featuredPageSize < this.featuredCarousel.length;
   }
 
   get networkMembers(): NetworkMember[] {
@@ -154,7 +214,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   };
 
   get activeFeatured(): FeaturedItem {
-    return this.featured.find((item) => item.id === this.activeFeaturedId) ?? this.featured[0] ?? this.emptyFeatured;
+    return (
+      this.featuredCarousel.find((item) => item.id === this.activeFeaturedId) ??
+      this.featuredCarousel[0] ??
+      this.emptyFeatured
+    );
   }
 
   get referralLink(): string {
@@ -236,6 +300,70 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.activeFeatured.story || '';
   }
 
+  discountBadgeText(): string {
+    if (!this.discountActiveValue) {
+      return 'Inactivo';
+    }
+    const pct = this.discountPercentValue;
+    if (!pct) {
+      return 'Sin descuento';
+    }
+    if (pct >= 40) {
+      return `Dto ${pct}% • Nivel 3`;
+    }
+    if (pct >= 35) {
+      return `Dto ${pct}% • Nivel 2`;
+    }
+    if (pct >= 30) {
+      return `Dto ${pct}% • Nivel 1`;
+    }
+    return `Dto ${pct}%`;
+  }
+
+  discountBadgeIcon(): string {
+    if (!this.discountActiveValue) {
+      return 'fa-lock';
+    }
+    if (!this.discountPercentValue) {
+      return 'fa-bolt';
+    }
+    return 'fa-tags';
+  }
+
+  discountBadgeClass(): string {
+    if (!this.discountActiveValue) {
+      return 'border-white/10 bg-white/5 text-zinc-300';
+    }
+    const pct = this.discountPercentValue;
+    if (!pct) {
+      return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
+    }
+    if (pct >= 40) {
+      return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
+    }
+    if (pct >= 35) {
+      return 'border-purple-400/30 bg-purple-400/10 text-purple-200';
+    }
+    if (pct >= 30) {
+      return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+    }
+    return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+  }
+
+  medalBadgeClass(): string {
+    const level = (this.currentUser?.level || '').toLowerCase();
+    if (level.includes('oro') || level.includes('gold')) {
+      return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
+    }
+    if (level.includes('plata') || level.includes('silver')) {
+      return 'border-zinc-300/30 bg-zinc-400/10 text-zinc-200';
+    }
+    if (level.includes('bronce') || level.includes('bronze')) {
+      return 'border-amber-400/30 bg-amber-400/10 text-amber-200';
+    }
+    return 'border-purple-400/30 bg-purple-400/10 text-purple-200';
+  }
+
   getCountdownState(): 'calm' | 'focus' | 'urgent' | 'critical' {
     const total = this.cutoffTotalSeconds;
     const remaining = this.cutoffRemainingSeconds;
@@ -283,8 +411,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
 
-  get graphLayout(): { nodes: Array<{ id: string; level: string; x: number; y: number; label: string }>; links: Array<{ x1: number; y1: number; x2: number; y2: number }> } {
-    const root = { id: 'root', level: 'root', x: 120, y: 130, label: 'Tu' };
+  get graphLayout(): { nodes: Array<{ id: string; level: string; x: number; y: number; label: string; name: string; status?: NetworkMember['status'] }>; links: Array<{ x1: number; y1: number; x2: number; y2: number }> } {
+    const root = { id: 'root', level: 'root', x: 120, y: 130, label: 'Tu', name: 'Tu' };
     const l1Members = this.networkMembers.filter((member) => member.level === 'L1').slice(0, 3);
     const l2Members = this.networkMembers.filter((member) => member.level === 'L2').slice(0, 6);
 
@@ -296,7 +424,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       level: 'L1',
       x: 260,
       y: l1Positions[idx],
-      label: 'L1'
+      label: 'L1',
+      name: member.name || 'Miembro',
+      status: member.status
     }));
 
     const l2Nodes = l2Members.map((member, idx) => ({
@@ -304,7 +434,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       level: 'L2',
       x: 420,
       y: l2Positions[idx],
-      label: 'L2'
+      label: 'L2',
+      name: member.name || 'Miembro',
+      status: member.status
     }));
 
     const links = [] as Array<{ x1: number; y1: number; x2: number; y2: number }>;
@@ -320,7 +452,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return { nodes: [root, ...l1Nodes, ...l2Nodes], links };
   }
 
-  nodeFill(level: string): string {
+  nodeFill(level: string, status?: NetworkMember['status']): string {
+    if (status === 'Inactiva') {
+      return 'rgba(148,163,184,.75)';
+    }
     if (level === 'root') {
       return 'rgba(59,130,246,.92)';
     }
@@ -361,11 +496,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: (data) => {
           this.processGoals(data?.goals ?? []);
           if (!this.activeFeaturedId) {
-            const nextFeaturedId = data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
+            const nextFeaturedId = this.featuredCarousel[0]?.id ?? data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
             if (nextFeaturedId) {
               this.setFeatured(nextFeaturedId);
             }
           }
+          this.featuredPage = 0;
           this.cdr.markForCheck();
         },
         error: () => {
@@ -433,6 +569,22 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   setSocialFormat(format: 'story' | 'feed' | 'banner'): void {
     this.socialFormat = format;
+  }
+
+  get hasInactiveIntermediate(): boolean {
+    return this.networkMembers.some((member) => member.level === 'L1' && member.status === 'Inactiva');
+  }
+
+  nextFeaturedPage(): void {
+    if (this.canNextFeatured) {
+      this.featuredPage += 1;
+    }
+  }
+
+  prevFeaturedPage(): void {
+    if (this.canPrevFeatured) {
+      this.featuredPage -= 1;
+    }
   }
 
   private getNextCutoffDate(settings: UserDashboardData['settings']): Date {

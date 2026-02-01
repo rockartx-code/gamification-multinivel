@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
+import { CreateAccountCustomer } from '../models/auth.model';
 import { ApiService } from './api.service';
 
 export type UserRole = 'admin' | 'cliente';
@@ -61,6 +62,18 @@ export class AuthService {
   logout(): void {
     this.userSubject.next(null);
     localStorage.removeItem(this.storageKey);
+  }
+
+  setUserFromCreateAccount(customer: CreateAccountCustomer): void {
+    const user: AuthUser = {
+      userId: customer?.id != null ? String(customer.id) : undefined,
+      name: customer?.name || '',
+      role: 'cliente',
+      discountPercent: customer?.discountRate ? Math.round(customer.discountRate * 100) : 0,
+      discountActive: Boolean(customer?.activeBuyer || (customer?.discountRate ?? 0) > 0),
+      level: customer?.level
+    };
+    this.setUser(user);
   }
 
   private setUser(user: AuthUser): void {

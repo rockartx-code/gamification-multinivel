@@ -24,30 +24,50 @@
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div class="flex flex-wrap items-center gap-2" *ngIf="currentUser">
-            <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <div class="flex items-center gap-2 text-xs text-zinc-400">
-                <i class="fa-solid fa-user" aria-hidden="true"></i>
-                Usuario
+
+          <div *ngIf="currentUser" class="w-full rounded-3xl border border-white/10 bg-white/[0.03] px-5 py-4
+            flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+            <!-- Bloque izquierdo: Usuario -->
+            <div class="flex items-start gap-3">
+              <div
+                class="mt-[2px] flex h-7 w-7 items-center justify-center rounded-full bg-white/5 border border-white/10">
+                <i class="fa-solid fa-user text-zinc-300 text-sm" aria-hidden="true"></i>
               </div>
-              <div class="text-sm font-semibold">{{ currentUser.name }}</div>
-              <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide">
-                <span class="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-blue-200">
+
+              <div>
+                <div class="text-xs text-zinc-400">Usuario</div>
+                <div class="text-lg font-semibold text-white leading-tight">{{ currentUser.name }}</div>
+              </div>
+            </div>
+
+            <!-- Bloque derecho: pills (como en la imagen: lock arriba centrado, nivel oro abajo a la derecha) -->
+            <div class="flex flex-col gap-2">
+
+              <!-- Fila superior: pill lock centrado -->
+              <div class="flex justify-end sm:justify-end">
+                <span *ngIf="isClient" class="inline-flex items-end gap-2 rounded-full border border-white/10 bg-white/5
+                   px-4 py-2 text-[11px] uppercase tracking-wide text-zinc-200">
+                  <i class="fa-solid fa-lock text-zinc-300" aria-hidden="true"></i>
+                  {{ discountBadgeText() }}
+                </span>
+
+                <!-- Si quieres que también soporte otros roles arriba, aquí -->
+                <span *ngIf="currentUser.role !== 'cliente'" class="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10
+                   px-4 py-2 text-[11px] uppercase tracking-wide text-blue-200">
                   {{ currentUser.role }}
                 </span>
-                <span *ngIf="isClient"
-                  class="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-yellow-200">
-                  {{ currentUser.discountPercent }}% dto
-                </span>
-                <span *ngIf="isClient"
-                  class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-200">
-                  {{ currentUser.discountActive ? 'Activo' : 'Inactivo' }}
-                </span>
-                <span *ngIf="isClient"
-                  class="rounded-full border border-purple-400/30 bg-purple-400/10 px-3 py-1 text-purple-200">
-                  Nivel {{ currentUser.level }}
+              </div>
+
+              <!-- Fila inferior: nivel a la derecha -->
+              <div class="flex justify-end">
+                <span *ngIf="isClient" class="inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10
+                   px-4 py-2 text-[11px] uppercase tracking-wide text-yellow-200">
+                  <i class="fa-solid fa-medal" aria-hidden="true"></i>
+                   {{ currentUser.level }}
                 </span>
               </div>
+
             </div>
           </div>
 
@@ -103,8 +123,7 @@
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
           </div>
-          <div
-            class="absolute right-6 top-6 hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:block"
+          <div class="absolute right-6 top-6 hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:block"
             title="Cada dia sin accion reduce tu margen.">
             <div class="flex items-center gap-2 text-xs text-zinc-400">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
@@ -113,7 +132,7 @@
             <div class="text-lg font-extrabold tracking-tight" [ngClass]="getCountdownColor()">
               {{ countdownLabel() }}
             </div>
-          
+
           </div>
           <div class="relative flex flex-col gap-5">
             <div class="md:pr-48">
@@ -347,7 +366,12 @@
                   <div class="whitespace-nowrap text-sm font-extrabold">{{ formatMoney(product.price) }}</div>
                 </div>
 
-                <div class="mt-4 flex items-center gap-3">
+                
+              </div>
+            </div>
+
+            <div class="relative mt-3 flex items-center justify-between text-xs ">
+              <div class="mt-4 flex items-center gap-3">
                   <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
                     <span class="text-xs text-zinc-400">Qty</span>
                     <input type="number" min="0" [value]="getCartQty(product.id)"
@@ -362,18 +386,6 @@
                     Agregar
                   </button>
                 </div>
-              </div>
-            </div>
-
-            <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
-              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200">
-                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                Ver detalle
-              </button>
-              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200">
-                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-                Comparar
-              </button>
             </div>
           </article>
         </div>
@@ -408,12 +420,6 @@
                 Tu Red
               </h3>
             </div>
-            <button
-              class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.03]"
-              (click)="simulateInvite()">
-              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-              Simular invitación
-            </button>
           </div>
 
           <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#121826] p-4">
@@ -426,7 +432,9 @@
               <g>
                 <ng-container *ngFor="let node of graphLayout.nodes">
                   <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="nodeRadius(node.level)"
-                    [attr.fill]="nodeFill(node.level)"></circle>
+                    [attr.fill]="nodeFill(node.level, node.status)">
+                    <title>{{ node.name }}</title>
+                  </circle>
                   <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle"
                     [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#0b0f14"
                     [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
@@ -434,6 +442,12 @@
               </g>
             </svg>
 
+          </div>
+
+          <div *ngIf="hasInactiveIntermediate"
+            class="mt-4 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3 text-xs text-yellow-100">
+            <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i>
+            Apoya a tu red: cuando hay inactivos en niveles plata, los beneficios de sus bronce no llegan hasta ti.
           </div>
 
           <button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
@@ -670,7 +684,7 @@
             </h3>
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
-              <button *ngFor="let item of featured"
+              <button *ngFor="let item of pagedFeatured"
                 class="rounded-2xl border p-4 text-left transition hover:bg-white/10" (click)="setFeatured(item.id)"
                 [ngClass]="
                   item.id === activeFeaturedId
@@ -680,6 +694,23 @@
                 <div class="text-xs text-zinc-400">Gancho</div>
                 <div class="mt-1 font-extrabold tracking-tight">{{ item.label }}</div>
                 <div class="mt-2 text-xs text-zinc-400">{{ item.hook }}</div>
+              </button>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <button type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                [disabled]="!canPrevFeatured" [ngClass]="!canPrevFeatured ? 'opacity-50 cursor-not-allowed' : ''"
+                (click)="prevFeaturedPage()">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                Atras
+              </button>
+              <button type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                [disabled]="!canNextFeatured" [ngClass]="!canNextFeatured ? 'opacity-50 cursor-not-allowed' : ''"
+                (click)="nextFeaturedPage()">
+                Siguiente
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
               </button>
             </div>
 
@@ -698,20 +729,14 @@
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     Copiar
                   </button>
-                  <button type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm transition hover:bg-white/10"
-                    (click)="openReferralLink()">
-                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                    Abrir
-                  </button>
                 </div>
               </div>
               <div class="mt-2 text-xs text-zinc-500">
                 Tip: fija el link en tu bio y rep&#237;telo en 3 historias.
               </div>
-            </div>            
+            </div>
           </div>
-          <div  class="relative mt-6">
+          <div class="relative mt-6">
 
             <div class="flex items-center justify-between">
               <div>
@@ -750,7 +775,8 @@
             <div class="mt-6 grid gap-4 md:grid-cols-2">
               <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#121826]">
                 <div class="bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200">
-                  Optimizado para {{ socialChannel === 'whatsapp' ? 'WhatsApp' : (socialChannel === 'instagram' ? 'Instagram' : 'Facebook') }}
+                  Optimizado para {{ socialChannel === 'whatsapp' ? 'WhatsApp' : (socialChannel === 'instagram' ?
+                  'Instagram' : 'Facebook') }}
                 </div>
                 <div class="p-4">
                   <div class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-white/10"
@@ -783,21 +809,23 @@
 
 
               <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-              <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
-              {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ? 'Comentario sugerido (editable)' : 'Mensaje sugerido (editable)') }}
-            </div>
+                <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                  <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
+                  {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ?
+                  'Comentario sugerido (editable)' : 'Mensaje sugerido (editable)') }}
+                </div>
                 <textarea rows="10"
                   class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
                   placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"
                   (ngModelChange)="lastAutoCaption = false"></textarea>
                 <div class="mt-3 flex gap-3">
-              <button
-                class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
-                (click)="copyCaption()">
-                <i class="fa-solid fa-copy" aria-hidden="true"></i>
-                {{ socialChannel === 'instagram' ? 'Copiar descripción' : (socialChannel === 'facebook' ? 'Copiar comentario' : 'Copiar mensaje') }}
-              </button>
+                  <button
+                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    (click)="copyCaption()">
+                    <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                    {{ socialChannel === 'instagram' ? 'Copiar descripción' : (socialChannel === 'facebook' ? 'Copiar
+                    comentario' : 'Copiar mensaje') }}
+                  </button>
                   <!--button
                     class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
                     (click)="generateTemplate()">

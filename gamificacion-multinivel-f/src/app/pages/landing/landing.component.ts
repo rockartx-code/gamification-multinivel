@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { UserDashboardData, FeaturedItem } from '../../models/user-dashboard.model';
 
 @Component({
@@ -48,7 +49,9 @@ export class LandingComponent implements OnInit {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly api: ApiService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly router: Router,
+    private readonly authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -124,12 +127,18 @@ export class LandingComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (response) => {
+          if (response?.customer) {
+            this.authService.setUserFromCreateAccount(response.customer);
+          }
           this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
-          this.setFeedback('Cuenta creada. Revisa tu correo para continuar.', 'success');
+          this.setFeedback('', 'success');
+          this.router.navigate(['/dashboard']);
         },
-        error: (error: Error) => {
-          this.setFeedback(error.message || 'No se pudo crear la cuenta.', 'error');
+        error: (error: any) => {
+          const apiMessage =
+            error?.error?.message || error?.error?.Error || error?.message || 'No se pudo crear la cuenta.';
+          this.setFeedback(apiMessage, 'error');
         }
       });
   }

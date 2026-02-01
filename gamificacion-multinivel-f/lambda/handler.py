@@ -253,6 +253,40 @@ def _capabilities(level: str) -> dict:
         return {"canRefer": True, "allowedDownlineLevels": {"bronce"}}
     return {"canRefer": False, "allowedDownlineLevels": set()}
 
+def _resolve_leader_and_level(leader_id: Any) -> Tuple[Optional[Any], str]:
+    """
+    Reglas:
+    - Sin leader => nivel Oro.
+    - Leader Oro => nuevo Plata.
+    - Leader Plata => nuevo Bronce.
+    - Leader Bronce => reasignar al Plata mas cercano en upline y nuevo Bronce.
+    """
+    if not leader_id:
+        return (None, "Oro")
+
+    leader = _get_by_id("CUSTOMER", int(leader_id)) if leader_id is not None else None
+    if not leader:
+        return (None, "Oro")
+
+    leader_level = (leader.get("level") or "").strip().lower()
+    if leader_level == "oro":
+        return (leader_id, "Plata")
+    if leader_level == "plata":
+        return (leader_id, "Bronce")
+
+    # Bronce no puede tener referidos: buscar el Plata mas cercano en la cadena
+    nearest_plata = None
+    for lid in _upline_chain(leader_id, max_levels=None):
+        candidate = _get_by_id("CUSTOMER", int(lid)) if lid is not None else None
+        if not candidate:
+            continue
+        if (candidate.get("level") or "").strip().lower() == "plata":
+            nearest_plata = lid
+            break
+    if nearest_plata is not None:
+        return (nearest_plata, "Bronce")
+    return (None, "Oro")
+
 def _discount_tier_targets(cfg: dict) -> List[dict]:
     # normalize tiers sorted by rate asc
     tiers = cfg.get("discountTiers") or []
@@ -1448,13 +1482,15 @@ def _create_product_asset(payload: dict) -> dict:
 def _create_customer(payload: dict) -> dict:
     name = payload.get("name")
     email = payload.get("email")
-    level = payload.get("level") or "Oro"
     if not name or not email:
         return _json_response(200, {"message": "name y email son obligatorios", "Error": "BadRequest"})
 
     customer_id = payload.get("customerId")
     if not customer_id:
         customer_id = int(datetime.utcnow().timestamp() * 1000)
+
+    raw_leader_id = payload.get("leaderId")
+    leader_id, level = _resolve_leader_and_level(raw_leader_id)
 
     now = _now_iso()
     item = {
@@ -1465,7 +1501,7 @@ def _create_customer(payload: dict) -> dict:
         "phone": payload.get("phone"),
         "address": payload.get("address"),
         "city": payload.get("city"),
-        "leaderId": payload.get("leaderId"),
+        "leaderId": leader_id,
         "level": level,
         "isAssociate": bool(payload.get("isAssociate", True)),
         "activeBuyer": False,
@@ -1512,13 +1548,13 @@ def _create_account(payload: dict) -> dict:
     if _get_auth_by_email(email_norm):
         return _json_response(200, {"message": "El correo ya esta registrado", "Error": "Conflict"})
 
-    level = payload.get("level") or "Oro"
     customer_id = payload.get("customerId")
     if not customer_id:
         customer_id = int(datetime.utcnow().timestamp() * 1000)
 
     leader_token = payload.get("referralToken") or payload.get("leaderId")
-    leader_id = _parse_int_or_str(leader_token)
+    raw_leader_id = _parse_int_or_str(leader_token)
+    leader_id, level = _resolve_leader_and_level(raw_leader_id)
 
     product_id = _parse_int_or_str(payload.get("productId") or payload.get("refProductId"))
 
