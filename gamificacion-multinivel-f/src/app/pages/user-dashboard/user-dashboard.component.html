@@ -26,10 +26,10 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div class="flex flex-wrap items-center gap-2" *ngIf="currentUser">
             <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <div class="flex items-center gap-2 text-xs text-zinc-400">
-              <i class="fa-solid fa-user" aria-hidden="true"></i>
-              Usuario
-            </div>
+              <div class="flex items-center gap-2 text-xs text-zinc-400">
+                <i class="fa-solid fa-user" aria-hidden="true"></i>
+                Usuario
+              </div>
               <div class="text-sm font-semibold">{{ currentUser.name }}</div>
               <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide">
                 <span class="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-blue-200">
@@ -49,15 +49,6 @@
                 </span>
               </div>
             </div>
-          </div>
-
-          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3" *ngIf="!isGuest">
-            <div class="flex items-center gap-2 text-xs text-zinc-400">
-              <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
-              Corte de mes en
-            </div>
-            <div class="text-lg font-extrabold tracking-tight">{{ countdownLabel() }}</div>
-            <div class="mt-0.5 text-xs text-zinc-500">Cierra tu progreso antes del corte</div>
           </div>
 
           <nav class="hidden items-center gap-2 lg:flex">
@@ -97,7 +88,8 @@
           Progreso mensual
         </div>
 
-        <button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+        <button
+          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
           (click)="toggleSecondaryGoals()">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
           {{ secondaryGoalsVisible ? 'Ocultar metas secundarias' : 'Mostrar metas secundarias' }}
@@ -105,20 +97,37 @@
       </div>
 
       <div class="mt-4" *ngIf="!isGuest && activeGoal">
-        <div class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-6 md:p-8" [id]="'goal-' + activeGoal.key">
-          <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]"></div>
-          <div class="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
+        <div
+          class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-6 md:p-8"
+          [id]="'goal-' + activeGoal.key">
+          <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
+          </div>
+          <div
+            class="absolute right-6 top-6 hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:block"
+            title="Cada dia sin accion reduce tu margen.">
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+              <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+              Corte de mes
+            </div>
+            <div class="text-lg font-extrabold tracking-tight" [ngClass]="getCountdownColor()">
+              {{ countdownLabel() }}
+            </div>
+          
+          </div>
+          <div class="relative flex flex-col gap-5">
+            <div class="md:pr-48">
               <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Objetivo principal del mes</div>
               <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">{{ activeGoal.title }}</h3>
               <p class="mt-2 text-sm text-zinc-200">{{ activeGoal.subtitle }}</p>
               <div class="mt-3 text-sm text-yellow-100">Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo</div>
               <div class="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
-                <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400" [style.width.%]="goalBasePercent(activeGoal)"></div>
+                <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400"
+                  [style.width.%]="goalBasePercent(activeGoal)"></div>
               </div>
             </div>
             <button type="button"
-              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+              class="glow-gold absolute bottom-6 right-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
               (click)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
               {{ activeGoal.ctaText }}
@@ -217,8 +226,7 @@
           </div>
 
           <div class="relative h-[260px] overflow-hidden rounded-3xl border border-white/10 md:h-[360px]">
-            <img [src]="heroImage" [alt]="pom.name"
-              class="hero-image absolute inset-0 h-full w-full object-cover" />
+            <img [src]="heroImage" [alt]="pom.name" class="hero-image absolute inset-0 h-full w-full object-cover" />
             <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/70 via-transparent to-transparent"></div>
             <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl"></div>
 
@@ -409,15 +417,19 @@
           </div>
 
           <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#121826] p-4">
-                        <svg viewBox="0 0 560 260" class="h-[260px] w-full">
+            <svg viewBox="0 0 560 260" class="h-[260px] w-full">
               <g stroke="rgba(255,255,255,.18)" stroke-width="2">
-                <line *ngFor="let link of graphLayout.links" [attr.x1]="link.x1" [attr.y1]="link.y1" [attr.x2]="link.x2" [attr.y2]="link.y2"></line>
+                <line *ngFor="let link of graphLayout.links" [attr.x1]="link.x1" [attr.y1]="link.y1" [attr.x2]="link.x2"
+                  [attr.y2]="link.y2"></line>
               </g>
 
               <g>
                 <ng-container *ngFor="let node of graphLayout.nodes">
-                  <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="nodeRadius(node.level)" [attr.fill]="nodeFill(node.level)"></circle>
-                  <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle" [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#0b0f14" [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
+                  <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="nodeRadius(node.level)"
+                    [attr.fill]="nodeFill(node.level)"></circle>
+                  <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle"
+                    [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#0b0f14"
+                    [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
                 </ng-container>
               </g>
             </svg>
@@ -452,13 +464,20 @@
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]">
           </div>
           <div class="relative">
-            <div *ngIf="networkMembers.length === 0" class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
+            <div *ngIf="networkMembers.length === 0"
+              class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
               <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
               <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
               <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
               <div class="mt-4 flex flex-wrap gap-2">
                 <button type="button"
                   class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  (click)="copyLinkAndCopy()">
+                  <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                  Copiar link + copy
+                </button>
+                <button type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
                   (click)="scrollToSection('links')">
                   <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                   Compartir mi enlace
@@ -486,7 +505,8 @@
               </button>
             </div>
 
-            <div *ngIf="networkMembers.length === 0" class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-6 text-center">
+            <div *ngIf="networkMembers.length === 0"
+              class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-6 text-center">
               <div class="text-sm font-semibold text-zinc-200">A?n no tienes miembros en tu red</div>
               <div class="mt-1 text-xs text-zinc-400">Comparte tu enlace para empezar</div>
               <button type="button"
@@ -529,7 +549,8 @@
                   <div class="mt-1 text-lg font-extrabold">
                     {{ formatMoney(networkProgress) }} / {{ formatMoney(networkGoal) }}
                   </div>
-                  <div class="mt-1 text-xs text-zinc-400">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir la meta de red</div>
+                  <div class="mt-1 text-xs text-zinc-400">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir
+                    la meta de red</div>
                 </div>
                 <button type="button"
                   class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
@@ -565,10 +586,81 @@
         </button>
       </div>
 
-      <div class="mt-8 grid gap-6 lg:grid-cols-2">
+      <div class="mt-8 grid gap-6 lg:grid-cols-1">
         <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(59,130,246,0.12),transparent_55%)]">
+          </div>
+
+
+
+          <div *ngIf="networkMembers.length === 0"
+            class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
+            <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
+            <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
+            <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button type="button"
+                class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                (click)="copyLinkAndCopy()">
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                Copiar link + copy
+              </button>
+              <button type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                (click)="scrollToSection('links')">
+                <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                Compartir mi enlace
+              </button>
+              <button type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                (click)="scrollToSection('links')">
+                <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
+                Ver mensajes sugeridos
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-6 rounded-2xl border border-white/10 bg-[#121826] p-4">
+            <div class="flex items-center gap-2 text-xs font-semibold text-zinc-400">
+              <i class="fa-solid fa-route" aria-hidden="true"></i>
+              Tu flujo de 3 pasos
+            </div>
+            <div class="mt-3 space-y-3 text-sm">
+              <div class="flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
+                  [ngClass]="activeFeaturedId ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-300'">
+                  <i *ngIf="activeFeaturedId" class="fa-solid fa-check" aria-hidden="true"></i>
+                  <span *ngIf="!activeFeaturedId">1</span>
+                </div>
+                <div>
+                  <div class="font-semibold text-zinc-200">Elige gancho</div>
+                  <div class="text-xs text-zinc-500">Selecciona tu producto destacado.</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
+                  [ngClass]="hasCopiedLink ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-300'">
+                  <i *ngIf="hasCopiedLink" class="fa-solid fa-check" aria-hidden="true"></i>
+                  <span *ngIf="!hasCopiedLink">2</span>
+                </div>
+                <div>
+                  <div class="font-semibold text-zinc-200">Copia tu link</div>
+                  <div class="text-xs text-zinc-500">Pegalo en tu bio o chat.</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
+                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-300'">
+                  <i *ngIf="hasCopiedCopy || hasCopiedAsset" class="fa-solid fa-check" aria-hidden="true"></i>
+                  <span *ngIf="!(hasCopiedCopy || hasCopiedAsset)">3</span>
+                </div>
+                <div>
+                  <div class="font-semibold text-zinc-200">Publica</div>
+                  <div class="text-xs text-zinc-500">Copy + creatividades listas.</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="relative">
@@ -599,45 +691,28 @@
               <div class="mt-2 flex flex-col gap-3 sm:flex-row">
                 <input readonly [value]="referralLink"
                   class="flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200" />
-                <button
-                  class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
-                  (click)="copyLink()">
-                  <i class="fa-solid fa-copy" aria-hidden="true"></i>
-                  Copiar
-                </button>
+                <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    (click)="copyLink()">
+                    <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                    Copiar
+                  </button>
+                  <button type="button"
+                    class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm transition hover:bg-white/10"
+                    (click)="openReferralLink()">
+                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                    Abrir
+                  </button>
+                </div>
               </div>
               <div class="mt-2 text-xs text-zinc-500">
-                Consejo: pega el link en historias/reels y fija un comentario con el mismo link en posts.
+                Tip: fija el link en tu bio y rep&#237;telo en 3 historias.
               </div>
-            </div>
+            </div>            
           </div>
-        </div>
+          <div  class="relative mt-6">
 
-        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
-          <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]">
-          </div>
-
-          <div class="relative">
-            <div *ngIf="networkMembers.length === 0" class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
-              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
-              <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
-              <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
-              <div class="mt-4 flex flex-wrap gap-2">
-                <button type="button"
-                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-                  (click)="scrollToSection('links')">
-                  <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-                  Compartir mi enlace
-                </button>
-                <button type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  (click)="scrollToSection('links')">
-                  <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
-                  Ver mensajes sugeridos
-                </button>
-              </div>
-            </div>
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="flex items-center gap-2 text-xl font-bold">
@@ -647,24 +722,27 @@
                 <p class="mt-1 text-sm text-zinc-400">Mockups (reemplaza imágenes por tus creatividades).</p>
               </div>
 
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <button
                   class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  [ngClass]="socialFormat === 'story' ? 'border-blue-400/30 bg-blue-500/10' : ''"
-                  (click)="setSocialFormat('story')">
-                  Story 9:16
+                  [ngClass]="socialChannel === 'whatsapp' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  (click)="setChannel('whatsapp')">
+                  <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                  WhatsApp
                 </button>
                 <button
                   class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  [ngClass]="socialFormat === 'feed' ? 'border-blue-400/30 bg-blue-500/10' : ''"
-                  (click)="setSocialFormat('feed')">
-                  Feed 1:1
+                  [ngClass]="socialChannel === 'instagram' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  (click)="setChannel('instagram')">
+                  <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+                  Instagram
                 </button>
                 <button
                   class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  [ngClass]="socialFormat === 'banner' ? 'border-blue-400/30 bg-blue-500/10' : ''"
-                  (click)="setSocialFormat('banner')">
-                  Banner 16:9
+                  [ngClass]="socialChannel === 'facebook' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  (click)="setChannel('facebook')">
+                  <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+                  Facebook
                 </button>
               </div>
             </div>
@@ -672,7 +750,7 @@
             <div class="mt-6 grid gap-4 md:grid-cols-2">
               <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#121826]">
                 <div class="bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200">
-                  {{ socialFormatLabel }}
+                  Optimizado para {{ socialChannel === 'whatsapp' ? 'WhatsApp' : (socialChannel === 'instagram' ? 'Instagram' : 'Facebook') }}
                 </div>
                 <div class="p-4">
                   <div class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-white/10"
@@ -692,45 +770,51 @@
                     <!--div class="text-xs text-zinc-500">
                       Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
                     </div-->
-                <button
-                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-                  (click)="copyAssetPath()">
-                  <i class="fa-solid fa-copy" aria-hidden="true"></i>
-                  Copiar ruta
-                </button>
+                    <button
+                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                      (click)="copyAssetPath()">
+                      <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                      Copiar ruta
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+
+
+              <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
             <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
               <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
-              Copy sugerido (editable)
+              {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ? 'Comentario sugerido (editable)' : 'Mensaje sugerido (editable)') }}
             </div>
-            <textarea rows="10"
-              class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
-              placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"></textarea>
-            <div class="mt-3 flex gap-3">
+                <textarea rows="10"
+                  class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+                  placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"
+                  (ngModelChange)="lastAutoCaption = false"></textarea>
+                <div class="mt-3 flex gap-3">
               <button
                 class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
                 (click)="copyCaption()">
                 <i class="fa-solid fa-copy" aria-hidden="true"></i>
-                Copiar copy
+                {{ socialChannel === 'instagram' ? 'Copiar descripción' : (socialChannel === 'facebook' ? 'Copiar comentario' : 'Copiar mensaje') }}
               </button>
-              <button
-                class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
-                (click)="generateTemplate()">
-                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
-                Generar template
-              </button>
-            </div>
+                  <!--button
+                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+                    (click)="generateTemplate()">
+                    <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                    Generar template
+                  </button-->
+                </div>
                 <div class="mt-2 text-xs text-zinc-500">
                   Recomendación UX: 1 promesa + 1 prueba + 1 CTA. Evita promesas financieras.
                 </div>
               </div>
             </div>
+
           </div>
         </div>
+
+
       </div>
     </section>
   </main>

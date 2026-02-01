@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -25,16 +25,23 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   constructor(
     private readonly authService: AuthService,
     private readonly dashboardControl: UserDashboardControlService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   readonly countdownLabel = signal('');
   activeFeaturedId = '';
   socialFormat: 'story' | 'feed' | 'banner' = 'story';
+  socialChannel: 'whatsapp' | 'instagram' | 'facebook' = 'whatsapp';
   secondaryGoalsVisible = false;
   toastMessage = 'Actualizado.';
   isToastVisible = false;
   captionText = '';
+  hasCopiedLink = false;
+  hasCopiedCopy = false;
+  hasCopiedAsset = false;
+  lastAutoCaption = true;
+  lastClipboardError = '';
   isLoading = false;
   activeGoal: any | null = null;
   secondaryGoals: any[] = [];
@@ -114,6 +121,27 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return '';
     }
     return `Este producto te acerca a: ${this.activeGoal.title}`;
+  }
+
+  get cutoffRemainingSeconds(): number {
+    const settings = this.dashboardControl.data?.settings;
+    if (!settings) {
+      return 0;
+    }
+    const next = this.getNextCutoffDate(settings);
+    return Math.max(0, Math.floor((next.getTime() - Date.now()) / 1000));
+  }
+
+  get cutoffTotalSeconds(): number {
+    const settings = this.dashboardControl.data?.settings;
+    if (!settings) {
+      return 1;
+    }
+    const next = this.getNextCutoffDate(settings);
+    const prev = new Date(next);
+    prev.setMonth(prev.getMonth() - 1);
+    const total = Math.max(1, Math.floor((next.getTime() - prev.getTime()) / 1000));
+    return total;
   }
 
   private readonly emptyFeatured: FeaturedItem = {
@@ -208,6 +236,52 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.activeFeatured.story || '';
   }
 
+  getCountdownState(): 'calm' | 'focus' | 'urgent' | 'critical' {
+    const total = this.cutoffTotalSeconds;
+    const remaining = this.cutoffRemainingSeconds;
+    const pct = total > 0 ? remaining / total : 0;
+    if (pct > 0.6) {
+      return 'calm';
+    }
+    if (pct > 0.3) {
+      return 'focus';
+    }
+    if (pct > 0.1) {
+      return 'urgent';
+    }
+    return 'critical';
+  }
+
+  getCountdownLabel(): string {
+    const state = this.getCountdownState();
+    switch (state) {
+      case 'calm':
+        return 'Tienes buen margen';
+      case 'focus':
+        return 'Momento de acelerar';
+      case 'urgent':
+        return 'Ultimo empujon';
+      case 'critical':
+      default:
+        return 'Ahora o pierdes el mes';
+    }
+  }
+
+  getCountdownColor(): string {
+    const state = this.getCountdownState();
+    switch (state) {
+      case 'calm':
+        return 'text-emerald-300';
+      case 'focus':
+        return 'text-blue-300';
+      case 'urgent':
+        return 'text-yellow-300';
+      case 'critical':
+      default:
+        return 'text-red-400 animate-pulse';
+    }
+  }
+
 
   get graphLayout(): { nodes: Array<{ id: string; level: string; x: number; y: number; label: string }>; links: Array<{ x1: number; y1: number; x2: number; y2: number }> } {
     const root = { id: 'root', level: 'root', x: 120, y: 130, label: 'Tu' };
@@ -287,8 +361,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: (data) => {
           this.processGoals(data?.goals ?? []);
           if (!this.activeFeaturedId) {
-            this.activeFeaturedId = data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
+            const nextFeaturedId = data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
+            if (nextFeaturedId) {
+              this.setFeatured(nextFeaturedId);
+            }
           }
+          this.cdr.markForCheck();
         },
         error: () => {
           this.showToast('No se pudo cargar el dashboard.');
@@ -347,27 +425,105 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   setFeatured(id: string): void {
     this.activeFeaturedId = id;
+    if (!this.captionText.trim() || this.lastAutoCaption) {
+      this.captionText = this.buildAutoCaption();
+      this.lastAutoCaption = true;
+    }
   }
 
   setSocialFormat(format: 'story' | 'feed' | 'banner'): void {
     this.socialFormat = format;
   }
 
+  private getNextCutoffDate(settings: UserDashboardData['settings']): Date {
+    const now = new Date();
+    let cutoff = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      settings.cutoffDay,
+      settings.cutoffHour,
+      settings.cutoffMinute,
+      59,
+      999
+    );
+    if (cutoff.getTime() <= now.getTime()) {
+      cutoff = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        settings.cutoffDay,
+        settings.cutoffHour,
+        settings.cutoffMinute,
+        59,
+        999
+      );
+    }
+    return cutoff;
+  }
+
+  setChannel(channel: 'whatsapp' | 'instagram' | 'facebook'): void {
+    this.socialChannel = channel;
+    switch (channel) {
+      case 'facebook':
+        this.socialFormat = 'feed';
+        break;
+      case 'whatsapp':
+      case 'instagram':
+      default:
+        this.socialFormat = 'story';
+        break;
+    }
+  }
+
   copyLink(): void {
+    this.hasCopiedLink = true;
     this.copyToClipboard(this.referralLink, 'Link copiado.');
   }
 
   copyAssetPath(): void {
-    this.copyToClipboard(this.activeSocialAsset, 'Ruta copiada.');
+    this.hasCopiedAsset = true;
+    this.copyImageToClipboard(this.activeSocialAsset, 'Imagen copiada.');
   }
 
-  generateTemplate(): void {
-    const template = `? ${this.activeFeatured.label}
-${this.activeFeatured.hook}
+  copyAssetPathByUrl(url: string): void {
+    if (!url) {
+      this.showToast('No hay ruta disponible.');
+      return;
+    }
+    this.hasCopiedAsset = true;
+    this.copyImageToClipboard(url, 'Imagen copiada.');
+  }
 
-Cons?guelo aqu? ?? ${this.referralLink}`;
+  generateTemplate(channel: 'whatsapp' | 'instagram' | 'facebook' = this.socialChannel): void {
+    const label = this.activeFeatured.label;
+    const hook = this.activeFeatured.hook;
+    let cta = `Pidelo aqui: ${this.referralLink}`;
+    let opener = 'Te comparto esto:';
+    let howTo = 'Como lo uso: ...';
+
+    switch (channel) {
+      case 'whatsapp':
+        opener = 'Te lo paso por WhatsApp:';
+        howTo = 'Resumen rapido: ...';
+        cta = `Si te interesa, responde y te paso el link: ${this.referralLink}`;
+        break;
+      case 'instagram':
+        opener = 'Tip rapido para Instagram:';
+        howTo = 'Como lo uso: ...';
+        cta = `Pide el link por DM o en bio: ${this.referralLink}`;
+        break;
+      case 'facebook':
+        opener = 'Comparte esto en Facebook:';
+        howTo = 'Mi experiencia: ...';
+        cta = `Escribeme por inbox y te paso el link: ${this.referralLink}`;
+        break;
+      default:
+        break;
+    }
+
+    const template = `${opener}\n\n${label}: ${hook}\n\n${howTo}\n\n${cta}`;
     this.captionText = template;
     this.showToast('Template generado.');
+    this.lastAutoCaption = true;
   }
 
   copyCaption(): void {
@@ -376,7 +532,23 @@ Cons?guelo aqu? ?? ${this.referralLink}`;
       this.showToast('Escribe un copy primero.');
       return;
     }
+    this.hasCopiedCopy = true;
     this.copyToClipboard(text, 'Copy copiado.');
+  }
+
+  copyLinkAndCopy(): void {
+    const combined = `${this.referralLink}\n\n${this.captionText.trim()}`;
+    this.hasCopiedLink = true;
+    this.hasCopiedCopy = true;
+    this.copyToClipboard(combined.trim(), 'Link y copy copiados. Pega en WhatsApp/Instagram.');
+  }
+
+  openReferralLink(): void {
+    if (!this.referralLink) {
+      this.showToast('No hay link disponible.');
+      return;
+    }
+    window.open(this.referralLink, '_blank', 'noopener');
   }
 
   updateCart(productId: string, qty: number): void {
@@ -475,6 +647,35 @@ Cons?guelo aqu? ?? ${this.referralLink}`;
     this.countdownLabel.set(this.dashboardControl.getCountdownLabel());
   }
 
+  private buildAutoCaption(): string {
+    const label = this.activeFeatured.label || 'Producto destacado';
+    const hook = this.activeFeatured.hook || 'Descubre por qué a todos les funciona.';
+    return `${label}: ${hook}\n\nCómo lo uso: ...\n\nPídelo aquí: ${this.referralLink}`;
+  }
+
+  private copyImageToClipboard(url: string, toastMessage: string): void {
+    if (!url) {
+      this.showToast('No hay imagen disponible.');
+      return;
+    }
+    if (!('ClipboardItem' in window) || !navigator.clipboard?.write) {
+      this.copyToClipboard(url, 'No se pudo copiar la imagen. Copie la ruta.');
+      return;
+    }
+    fetch(url)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const item = new ClipboardItem({ [blob.type || 'image/png']: blob });
+        return navigator.clipboard.write([item]);
+      })
+      .then(() => this.showToast(toastMessage))
+      .catch((error) => {
+        this.lastClipboardError = this.formatClipboardError(error);
+        console.log('Clipboard image error:', this.lastClipboardError);
+        this.showToast('No se pudo copiar la imagen.');
+      });
+  }
+
   private showToast(message: string): void {
     this.toastMessage = message;
     this.isToastVisible = true;
@@ -491,9 +692,24 @@ Cons?guelo aqu? ?? ${this.referralLink}`;
       navigator.clipboard
         .writeText(text)
         .then(() => this.showToast(toastMessage))
-        .catch(() => this.showToast('No se pudo copiar.'));
+        .catch((error) => {
+          this.lastClipboardError = this.formatClipboardError(error);
+          console.log('Clipboard text error:', this.lastClipboardError);
+          this.showToast('No se pudo copiar.');
+        });
       return;
     }
     this.showToast('No se pudo copiar.');
+  }
+
+  private formatClipboardError(error: unknown): string {
+    if (error instanceof Error) {
+      return `${error.name}: ${error.message}`;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
   }
 }

@@ -19,6 +19,8 @@ export class UserDashboardControlService {
   private cart: Record<string, number> = {};
   private heroQty = 0;
   private heroProductId = '';
+  private networkMembersCache: NetworkMember[] = [];
+  private buyAgainIdsCache = new Set<string>();
 
   constructor(
     private readonly api: ApiService,
@@ -29,9 +31,27 @@ export class UserDashboardControlService {
     const userId = this.authService.currentUser?.userId;
     return this.api.getUserDashboardData(userId).pipe(
       tap((data) => {
-        this.dataSubject.next(structuredClone(data));
+        const safeNetworkMembers = Array.isArray(data.networkMembers) ? data.networkMembers : [];
+        const rawBuyAgainIds = data.buyAgainIds;
+        const safeBuyAgainIds = Array.isArray(rawBuyAgainIds)
+          ? rawBuyAgainIds.filter((item): item is string => typeof item === 'string')
+          : [];
+        const mappedData = {
+          ...data,
+          networkMembers: safeNetworkMembers,
+          buyAgainIds: safeBuyAgainIds
+        };
+        this.networkMembersCache = safeNetworkMembers;
+        this.buyAgainIdsCache = new Set(safeBuyAgainIds);
+        console.log('dashboard payload networkMembers:', data.networkMembers);
+        console.log('dashboard mapped networkMembers:', mappedData.networkMembers);
+        const clonedData =
+          typeof structuredClone === 'function'
+            ? structuredClone(mappedData)
+            : (JSON.parse(JSON.stringify(mappedData)) as UserDashboardData);
+        this.dataSubject.next(clonedData);
         this.heroProductId =
-          data.productOfMonth?.id ?? data.products?.[0]?.id ?? this.heroProductId;
+          mappedData.productOfMonth?.id ?? mappedData.products?.[0]?.id ?? this.heroProductId;
         if (this.heroProductId) {
           this.heroQty = this.cart[this.heroProductId] ?? 0;
         }
@@ -56,11 +76,11 @@ export class UserDashboardControlService {
   }
 
   get networkMembers(): NetworkMember[] {
-    return this.data?.networkMembers ?? [];
+    return this.networkMembersCache.length ? this.networkMembersCache : this.data?.networkMembers ?? [];
   }
 
   get buyAgainIds(): Set<string> {
-    return new Set(this.data?.buyAgainIds ?? []);
+    return this.buyAgainIdsCache.size ? new Set(this.buyAgainIdsCache) : new Set(this.data?.buyAgainIds ?? []);
   }
 
   get heroQuantity(): number {
