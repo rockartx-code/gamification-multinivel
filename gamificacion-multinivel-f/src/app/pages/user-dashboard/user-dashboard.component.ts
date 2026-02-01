@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -11,7 +12,12 @@ import {
   NetworkMember,
   UserDashboardData
 } from '../../models/user-dashboard.model';
+import { CartItem } from '../../models/cart.model';
+import { AdminOrder } from '../../models/admin.model';
 import { AuthService, AuthUser } from '../../services/auth.service';
+import { ApiService } from '../../services/api.service';
+import { CartControlService } from '../../services/cart-control.service';
+import { GoalControlService } from '../../services/goal-control.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
 
 @Component({
@@ -25,8 +31,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   constructor(
     private readonly authService: AuthService,
     private readonly dashboardControl: UserDashboardControlService,
+    private readonly cartControl: CartControlService,
+    private readonly goalControl: GoalControlService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly api: ApiService
   ) {}
 
   readonly countdownLabel = signal('');
@@ -44,14 +53,35 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   hasCopiedAsset = false;
   lastAutoCaption = true;
   lastClipboardError = '';
+  guestRegisterForm = {
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: ''
+  };
+  isGuestRegisterSubmitting = false;
+  guestRegisterFeedback = '';
+  guestRegisterFeedbackType: 'error' | 'success' | '' = '';
   isLoading = false;
   activeGoal: any | null = null;
   secondaryGoals: any[] = [];
   isDevMode = false;
+  showGuestRegisterModal = false;
+  orders: AdminOrder[] = [];
+  isOrdersLoading = false;
+  isCommissionModalOpen = false;
+  isCommissionSubmitting = false;
+  isCommissionUploading = false;
+  commissionClabe = '';
+  commissionUploadName = '';
+  isGoalsModalOpen = false;
+  achievedGoals: DashboardGoal[] = [];
   private goalToastState: 'near' | 'done' | '' = '';
 
   private countdownInterval?: number;
   private toastTimeout?: number;
+  private goalsSub?: Subscription;
 
   get currentUser(): AuthUser | null {
     return this.authService.currentUser;
@@ -79,7 +109,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get goals(): DashboardGoal[] {
-    return this.dashboardControl.goals;
+    return this.goalControl.goals;
   }
 
   get products(): DashboardProduct[] {
@@ -142,8 +172,20 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.networkMembers;
   }
 
+  get commissionSummary(): UserDashboardData['commissions'] {
+    return this.dashboardControl.data?.commissions ?? null;
+  }
+
+  get hasCommissionPending(): boolean {
+    return Boolean(this.commissionSummary?.hasPending);
+  }
+
   get heroQty(): number {
-    return this.dashboardControl.heroQuantity;
+    const heroId = this.productOfMonth?.id;
+    if (!heroId) {
+      return 0;
+    }
+    return this.cartControl.getQty(heroId);
   }
 
   get buyAgainProducts(): DashboardProduct[] {
@@ -267,7 +309,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get cartTotal(): number {
-    return this.dashboardControl.cartTotal;
+    return this.cartControl.subtotal;
   }
 
   get socialFormatLabel(): string {
@@ -484,7 +526,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
   ngOnInit(): void {
     this.isLoading = true;
-    this.dashboardControl
+    this.cartControl.load().subscribe();
+    this.goalsSub = this.goalControl.goals$.subscribe((goals) => {
+      if (goals) {
+        this.processGoals(goals);
+      }
+    });
+    this.goalControl
       .load()
       .pipe(
         finalize(() => {
@@ -495,6 +543,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       .subscribe({
         next: (data) => {
           this.processGoals(data?.goals ?? []);
+          this.loadAchievedGoals(data?.goals ?? []);
           if (!this.activeFeaturedId) {
             const nextFeaturedId = this.featuredCarousel[0]?.id ?? data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
             if (nextFeaturedId) {
@@ -503,6 +552,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           }
           this.featuredPage = 0;
           this.cdr.markForCheck();
+          this.loadOrders();
         },
         error: () => {
           this.showToast('No se pudo cargar el dashboard.');
@@ -528,11 +578,99 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
     }
+    this.goalsSub?.unsubscribe();
   }
 
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  goToCart(): void {
+    const items = this.products.reduce<CartItem[]>((acc, product) => {
+      const qty = this.getCartQty(product.id);
+      if (!qty) {
+        return acc;
+      }
+      acc.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        qty,
+        note: product.badge || '',
+        img: product.img || ''
+      });
+      return acc;
+    }, []);
+    localStorage.setItem('cart-items', JSON.stringify(items));
+    this.router.navigate(['/carrito']);
+  }
+
+  openGuestRegisterModal(): void {
+    this.showGuestRegisterModal = true;
+  }
+
+  closeGuestRegisterModal(): void {
+    this.showGuestRegisterModal = false;
+  }
+
+  submitGuestRegister(): void {
+    if (this.isGuestRegisterSubmitting) {
+      return;
+    }
+    if (!this.guestRegisterForm.name || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+      this.guestRegisterFeedback = 'Completa los campos obligatorios.';
+      this.guestRegisterFeedbackType = 'error';
+      return;
+    }
+    if (this.guestRegisterForm.password !== this.guestRegisterForm.confirmPassword) {
+      this.guestRegisterFeedback = 'Las contraseñas no coinciden.';
+      this.guestRegisterFeedbackType = 'error';
+      return;
+    }
+
+    const payload = {
+      name: this.guestRegisterForm.name.trim(),
+      email: this.guestRegisterForm.email.trim(),
+      phone: this.guestRegisterForm.phone.trim() || undefined,
+      password: this.guestRegisterForm.password,
+      confirmPassword: this.guestRegisterForm.confirmPassword,
+      referralToken: localStorage.getItem('leaderId') || undefined
+    };
+
+    this.isGuestRegisterSubmitting = true;
+    this.api
+      .createAccount(payload)
+      .pipe(
+        finalize(() => {
+          this.isGuestRegisterSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response?.customer) {
+            this.authService.setUserFromCreateAccount(response.customer);
+          }
+          this.guestRegisterForm = {
+            name: '',
+            email: '',
+            phone: '',
+            password: '',
+            confirmPassword: ''
+          };
+          this.guestRegisterFeedback = '';
+          this.guestRegisterFeedbackType = '';
+          this.showGuestRegisterModal = false;
+          this.showToast('Cuenta creada. Bienvenido.');
+          window.location.reload();
+        },
+        error: (error: any) => {
+          const apiMessage =
+            error?.error?.message || error?.error?.Error || error?.message || 'No se pudo crear la cuenta.';
+          this.guestRegisterFeedback = apiMessage;
+          this.guestRegisterFeedbackType = 'error';
+        }
+      });
   }
 
   formatMoney(value: number): string {
@@ -704,7 +842,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   updateCart(productId: string, qty: number): void {
-    this.dashboardControl.updateCart(productId, qty);
+    const product = this.resolveProduct(productId);
+    if (product) {
+      this.cartControl.upsertItem(this.buildCartItem(product), qty);
+    }
+    this.logGoalProgress();
     if (this.cartTotal > 0) {
       this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
     }
@@ -712,25 +854,136 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   addQuick(productId: string, addQty: number): void {
-    this.dashboardControl.addQuick(productId, addQty);
+    const product = this.resolveProduct(productId);
+    if (product) {
+      this.cartControl.addItem(this.buildCartItem(product), addQty);
+    }
+    this.logGoalProgress();
     this.maybeShowGoalProgressToast();
   }
 
   setHeroQty(value: number): void {
-    this.dashboardControl.setHeroQty(value);
+    const productId = this.productOfMonth?.id;
+    if (!productId) {
+      return;
+    }
+    const product = this.resolveProduct(productId);
+    if (product) {
+      this.cartControl.upsertItem(this.buildCartItem(product), value);
+    }
   }
 
   addHeroToCart(): void {
-    this.dashboardControl.addHeroToCart();
+    const productId = this.productOfMonth?.id;
+    if (!productId) {
+      return;
+    }
+    const product = this.resolveProduct(productId);
+    if (product) {
+      this.cartControl.addItem(this.buildCartItem(product), 1);
+    }
+    this.logGoalProgress();
     this.maybeShowGoalProgressToast();
   }
 
   getCartQty(productId: string): number {
-    return this.dashboardControl.getCartQty(productId);
+    return this.cartControl.getQty(productId);
   }
 
   showCartToast(): void {
     this.showToast(`Carrito: ${this.formatMoney(this.cartTotal)}`);
+  }
+
+  openCommissionModal(): void {
+    this.commissionClabe = '';
+    this.isCommissionModalOpen = true;
+  }
+
+  closeCommissionModal(): void {
+    this.isCommissionModalOpen = false;
+  }
+
+  closeGoalsModal(): void {
+    this.isGoalsModalOpen = false;
+  }
+
+  submitCommissionRequest(): void {
+    if (this.isCommissionSubmitting || !this.currentUser?.userId) {
+      return;
+    }
+    const clabe = this.commissionClabe.trim();
+    if (!clabe && !this.commissionSummary?.clabeOnFile) {
+      this.showToast('Ingresa tu CLABE interbancaria.');
+      return;
+    }
+    this.isCommissionSubmitting = true;
+    this.api
+      .requestCommissionPayout({
+        customerId: Number(this.currentUser.userId),
+        clabe
+      })
+      .pipe(
+        finalize(() => {
+          this.isCommissionSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.showToast('Solicitud enviada. Te contactaremos por el deposito.');
+          this.closeCommissionModal();
+          this.dashboardControl.load().subscribe(() => this.cdr.markForCheck());
+        },
+        error: () => {
+          this.showToast('No se pudo solicitar el pago.');
+        }
+      });
+  }
+
+  onCommissionReceiptSelected(event: Event): void {
+    if (!this.currentUser?.userId) {
+      return;
+    }
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file || this.isCommissionUploading) {
+      return;
+    }
+    this.isCommissionUploading = true;
+    this.commissionUploadName = file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+      this.api
+        .uploadCommissionReceipt({
+          customerId: Number(this.currentUser?.userId),
+          name: file.name,
+          contentBase64: base64,
+          contentType: file.type || 'application/octet-stream',
+          monthKey: this.commissionSummary?.monthKey
+        })
+        .pipe(
+          finalize(() => {
+            this.isCommissionUploading = false;
+            if (target) {
+              target.value = '';
+            }
+          })
+        )
+        .subscribe({
+          next: () => {
+            this.showToast('Comprobante cargado.');
+          },
+          error: () => {
+            this.showToast('No se pudo subir el comprobante.');
+          }
+        });
+    };
+    reader.onerror = () => {
+      this.isCommissionUploading = false;
+      this.showToast('No se pudo leer el archivo.');
+    };
+    reader.readAsDataURL(file);
   }
 
   scrollToGoal(goalId: string): void {
@@ -764,6 +1017,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.activeGoal = available[0] ?? null;
     this.secondaryGoals = available.slice(1);
     this.goalToastState = '';
+  }
+
+  private loadAchievedGoals(goals: DashboardGoal[]): void {
+    if (this.isGuest) {
+      this.achievedGoals = [];
+      this.isGoalsModalOpen = false;
+      return;
+    }
+    const completed = (goals ?? []).filter((goal) => Boolean(goal?.achieved) && !goal?.locked);
+    this.achievedGoals = completed;
+    this.isGoalsModalOpen = completed.length > 0;
   }
 
   remainingForGoal(goal: any): string {
@@ -839,6 +1103,24 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }, 2200);
   }
 
+  private loadOrders(): void {
+    if (!this.currentUser?.userId) {
+      return;
+    }
+    this.isOrdersLoading = true;
+    this.api.getOrders(String(this.currentUser.userId)).subscribe({
+      next: (orders) => {
+        this.orders = orders ?? [];
+        this.isOrdersLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isOrdersLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   private copyToClipboard(text: string, toastMessage: string): void {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard
@@ -863,5 +1145,46 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     } catch {
       return String(error);
     }
+  }
+
+  private logGoalProgress(): void {
+    console.log(
+      'Goal progress (%):',
+      (this.goals || []).map((goal) => ({
+        key: goal.key,
+        base: this.goalBasePercent(goal),
+        cart: this.goalCartPercent(goal)
+      }))
+    );
+    this.processGoals(this.goals);
+    this.cdr.markForCheck();
+  }
+
+  private resolveProduct(productId: string): DashboardProduct | null {
+    const fromList = this.products.find((product) => product.id === productId);
+    if (fromList) {
+      return fromList;
+    }
+    if (this.productOfMonth?.id === productId) {
+      return {
+        id: this.productOfMonth.id,
+        name: this.productOfMonth.name,
+        price: this.productOfMonth.price,
+        badge: this.productOfMonth.badge || '',
+        img: this.productOfMonth.img || ''
+      };
+    }
+    return null;
+  }
+
+  private buildCartItem(product: DashboardProduct): CartItem {
+    return {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      qty: 0,
+      note: product.badge || '',
+      img: product.img || ''
+    };
   }
 }

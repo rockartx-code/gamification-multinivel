@@ -1,0 +1,34 @@
+*Probar
+
+Envios
+*en el handler Agregar el estatus "Shipped" 
+*en el admin para pasar de paid a "Shipped" solicitar el numero de Guía o lugar y fecha de entrega personal.
+*En order status Cuando este en "Shipped" mostrar el numero de guía de la paquetería o lugar y fecha de entrega personal.
+
+Direccion
+*en el carrito Validar que este llena la información de dirección antes de registrar la orden 
+*ajustar handler para guardar la dirección en la orden, si es cliente registrado guardarla en la información de cliente y precargarlo.
+
+Comisiones
+*ajustar el handler para guardar comisiones y recuperarlas por cliente
+*en el dashboard del cliente si se tienen comisiones por cobrar en el mes mostrar el botón solicitar pago de comisiones y pedir la CLABE interbancaria para el *deposito, guardarlo en la información del cliente.
+*agregar resumen de comisiones pagadas en el admin-dashboard (un pop up en la seccion de clientes) y en el dashboard del cliente permitir subir comprobante.
+
+
+
+
+al cargar el dashboard mostrar un pop up con las metas cumplidas durante el mes.
+
+
+
+en el admin en el resumen de productos no se muestra el producto de mes
+marca que hay assets faltantes cuando ya se cargaron todos
+
+conectar la pagina de estadísticas.
+programar el corte.
+conectar la url
+generar certificado SSL
+acomodar correo y teléfono en una fila
+acomodar contraseña y verificar contraseña en una fila
+
+OPTIMIZAR HANLDER

@@ -8,6 +8,8 @@ export interface DashboardGoal {
   ctaText: string;
   ctaFragment: string;
   isCountGoal?: boolean;
+  achieved?: boolean;
+  locked?: boolean;
 }
 
 export interface DashboardProduct {
@@ -60,4 +62,27 @@ export interface UserDashboardData {
   } | null;
   networkMembers: NetworkMember[];
   buyAgainIds: string[];
+  commissions?: {
+    monthKey: string;
+    pendingTotal: number;
+    paidTotal: number;
+    hasPending: boolean;
+    clabeOnFile?: boolean;
+    clabeLast4?: string;
+    payoutDay?: number;
+  } | null;
+}
+
+export interface CommissionRequestPayload {
+  customerId: number;
+  clabe: string;
+  monthKey?: string;
+}
+
+export interface CommissionReceiptPayload {
+  customerId: number;
+  name: string;
+  contentBase64: string;
+  contentType?: string;
+  monthKey?: string;
 }

@@ -16,6 +16,7 @@ import { AuthService } from './auth.service';
 })
 export class UserDashboardControlService {
   private readonly dataSubject = new BehaviorSubject<UserDashboardData | null>(null);
+  readonly data$ = this.dataSubject.asObservable();
   private cart: Record<string, number> = {};
   private heroQty = 0;
   private heroProductId = '';
@@ -192,7 +193,11 @@ export class UserDashboardControlService {
       return;
     }
     const updatedGoals = current.goals.map((goal) => {
-      if (goal.key === 'active' || goal.key === 'discount') {
+      const isConsumptionGoal =
+        goal.key === 'active' ||
+        goal.key === 'discount' ||
+        goal.key.startsWith('discount_');
+      if (isConsumptionGoal && !goal.isCountGoal) {
         return { ...goal, cart: this.cartTotal };
       }
       return goal;

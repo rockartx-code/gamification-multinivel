@@ -293,12 +293,19 @@
           </div>
         </div>
 
-        <a href="#"
-          (click)="scrollTo('registro', $event)"
-          class="glow-gold mt-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform hover:scale-105">
-          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-          Obtenerlo ahora
-        </a>
+        <div class="mt-10 flex flex-wrap gap-3">
+          <a href="#"
+            (click)="scrollTo('registro', $event)"
+            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform hover:scale-105">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+            Obtenerlo ahora
+          </a>
+          <a [routerLink]="['/dashboard']"
+            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-4 font-semibold text-white transition hover:bg-white/10">
+            <i class="fa-solid fa-store" aria-hidden="true"></i>
+            Ir a tienda
+          </a>
+        </div>
       </div>
 
       <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8">

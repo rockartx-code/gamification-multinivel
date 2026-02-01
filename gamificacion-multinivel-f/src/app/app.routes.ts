@@ -5,6 +5,7 @@ import { AdminComponent } from './pages/admin/admin.component';
 import { CarritoComponent } from './pages/carrito/carrito.component';
 import { LandingComponent } from './pages/landing/landing.component';
 import { LoginComponent } from './pages/login/login.component';
+import { OrderStatusComponent } from './pages/order-status/order-status.component';
 import { UserDashboardComponent } from './pages/user-dashboard/user-dashboard.component';
 
 export const routes: Routes = [
@@ -30,6 +31,10 @@ export const routes: Routes = [
     path: 'dashboard',
     component: UserDashboardComponent,
     canActivate: [dashboardGuard]
+  },
+  {
+    path: 'orden/:idOrden',
+    component: OrderStatusComponent
   },
   {
     path: ':refToken',

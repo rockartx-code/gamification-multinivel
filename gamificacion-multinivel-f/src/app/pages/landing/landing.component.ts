@@ -59,6 +59,9 @@ export class LandingComponent implements OnInit {
     const product = this.route.snapshot.queryParamMap.get('p') ?? this.getHashQueryParam('p');
     this.referralToken = token.trim();
     this.productId = product.trim();
+    if (this.referralToken) {
+      localStorage.setItem('leaderId', this.referralToken);
+    }
     this.loadFeaturedProduct(this.productId);
   }
 
@@ -187,6 +190,24 @@ export class LandingComponent implements OnInit {
   }
 
   private pickFromQuery(data: UserDashboardData, queryId: string): LandingComponent['featuredProduct'] | null {
+    if (queryId === 'fixed-familia' ) {
+      return {
+        id: queryId,
+        name: '',
+        hook: '',
+        img: 'images/L-Programa3.png',
+        tags: []
+      };
+    }
+    if ( queryId === 'fixed-entrenador') {
+      return {
+        id: queryId,
+        name: '',
+        hook: '',
+        img: 'images/L-Programa2.png',
+        tags: []
+      };
+    }
     const featuredMatch = data.featured?.find((item) => item.id === queryId);
     if (featuredMatch) {
       return this.mapFeaturedItem(featuredMatch);

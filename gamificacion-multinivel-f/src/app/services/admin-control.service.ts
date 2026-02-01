@@ -11,6 +11,7 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
   SaveAdminProductPayload
@@ -35,7 +36,8 @@ export class AdminControlService {
           customers: data.customers ?? [],
           products: data.products ?? [],
           warnings: data.warnings ?? [],
-          assetSlots: data.assetSlots ?? []
+          assetSlots: data.assetSlots ?? [],
+          commissionsPaidSummary: data.commissionsPaidSummary
         };
         this.dataSubject.next(structuredClone(normalized));
       })
@@ -71,7 +73,7 @@ export class AdminControlService {
   }
 
   get shipCount(): number {
-    return this.orders.filter((order) => order.status === 'paid').length;
+    return this.orders.filter((order) => order.status === 'shipped').length;
   }
 
   get commissionsTotal(): number {
@@ -86,16 +88,25 @@ export class AdminControlService {
     return this.orders.filter((order) => order.status === status);
   }
 
-  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
-    return this.api.updateOrderStatus(orderId, status).pipe(
+  updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
+    return this.api.updateOrderStatus(orderId, payload).pipe(
       tap((order) => {
         const current = this.dataSubject.value;
         if (!current) {
           return;
         }
-        const nextStatus = order.status ?? status;
+        const nextStatus = order.status ?? payload.status;
         const updatedOrders = current.orders.map((entry) =>
-          entry.id === orderId ? { ...entry, status: nextStatus } : entry
+          entry.id === orderId
+            ? {
+                ...entry,
+                status: nextStatus,
+                shippingType: order.shippingType ?? payload.shippingType ?? entry.shippingType,
+                trackingNumber: order.trackingNumber ?? payload.trackingNumber ?? entry.trackingNumber,
+                deliveryPlace: order.deliveryPlace ?? payload.deliveryPlace ?? entry.deliveryPlace,
+                deliveryDate: order.deliveryDate ?? payload.deliveryDate ?? entry.deliveryDate
+              }
+            : entry
         );
         this.dataSubject.next({ ...current, orders: updatedOrders });
       })

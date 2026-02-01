@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import random
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -64,6 +65,20 @@ def _now_iso() -> str:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _generate_order_id(now: Optional[datetime] = None, max_attempts: int = 6) -> str:
+    base_dt = now or datetime.utcnow()
+    prefix = base_dt.strftime("%y%m%d")
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    for _ in range(max_attempts):
+        suffix = "".join(random.choice(alphabet) for _ in range(6))
+        order_id = f"{prefix}{suffix}"
+        if not _get_by_id("ORDER", order_id):
+            return order_id
+    # Fallback with more entropy
+    suffix = "".join(random.choice(alphabet) for _ in range(8))
+    return f"{prefix}{suffix}"
 
 
 def _month_key(dt: Optional[datetime] = None) -> str:
@@ -786,6 +801,11 @@ def _default_rewards_config() -> dict:
             {"min": Decimal("12001"), "max": None,           "rate": Decimal("0.40")},
         ],
         "commissionLevels": [Decimal("0.10"), Decimal("0.05"), Decimal("0.03")],
+        "commissionByLevel": {
+            "oro": Decimal("0.10"),
+            "plata": Decimal("0.05"),
+            "bronce": Decimal("0.03"),
+        },
         "payoutDay": Decimal("10"),
         "cutRule": "hard_cut_no_pass",
     }
@@ -995,6 +1015,99 @@ def _commission_sk(month_key: str, order_id: str, level: int) -> str:
     return f"{month_key}#{order_id}#L{level}"
 
 
+def _commission_rate_for_level(level: str, cfg: dict) -> Decimal:
+    normalized = (level or "").strip().lower()
+    raw = (cfg.get("commissionByLevel") or {}) if isinstance(cfg, dict) else {}
+    default_map = {
+        "oro": Decimal("0.10"),
+        "plata": Decimal("0.05"),
+        "bronce": Decimal("0.03"),
+    }
+    if normalized in default_map:
+        return _to_decimal(raw.get(normalized, default_map[normalized]))
+    return Decimal("0")
+
+
+def _commission_month_id(leader_id: Any, month_key: str) -> str:
+    return f"{leader_id}#{month_key}"
+
+
+def _get_commission_month_direct(leader_id: Any, month_key: str) -> Optional[dict]:
+    if leader_id is None or not month_key:
+        return None
+    resp = _table.get_item(Key={"PK": "COMMISSION_MONTH", "SK": _commission_month_id(leader_id, month_key)})
+    return resp.get("Item")
+
+
+def _upsert_commission_month(
+    leader_id: Any,
+    month_key: str,
+    amount: Decimal,
+    level: str,
+    order_id: Optional[str] = None,
+    buyer_id: Optional[Any] = None,
+) -> dict:
+    if leader_id is None or not month_key or amount <= 0:
+        return {}
+    commission_id = _commission_month_id(leader_id, month_key)
+    existing = _get_commission_month_direct(leader_id, month_key) or _get_by_id("COMMISSION_MONTH", commission_id)
+    now = _now_iso()
+
+    if existing:
+        total = _to_decimal(existing.get("amount")) + amount
+        count = int(existing.get("ordersCount") or 0) + 1
+        try:
+            updated = _update_by_id(
+                "COMMISSION_MONTH",
+                commission_id,
+                "SET amount = :a, ordersCount = :c, lastOrderId = :o, lastBuyerId = :b, updatedAt = :u",
+                {":a": total, ":c": count, ":o": order_id, ":b": buyer_id, ":u": now},
+            )
+        except Exception:
+            updated = {}
+        _table.put_item(
+            Item={
+                "PK": "COMMISSION_MONTH",
+                "SK": commission_id,
+                "entityType": "commissionMonth",
+                "commissionMonthId": commission_id,
+                "leaderId": leader_id,
+                "monthKey": month_key,
+                "level": level,
+                "amount": total,
+                "ordersCount": count,
+                "lastOrderId": order_id,
+                "lastBuyerId": buyer_id,
+                "createdAt": existing.get("createdAt") or now,
+                "updatedAt": now,
+            }
+        )
+        return updated or existing
+
+    item = {
+        "entityType": "commissionMonth",
+        "commissionMonthId": commission_id,
+        "leaderId": leader_id,
+        "monthKey": month_key,
+        "level": level,
+        "amount": amount,
+        "ordersCount": 1,
+        "lastOrderId": order_id,
+        "lastBuyerId": buyer_id,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    main = _put_entity("COMMISSION_MONTH", commission_id, item, created_at_iso=now)
+    _table.put_item(
+        Item={
+            "PK": "COMMISSION_MONTH",
+            "SK": commission_id,
+            **item,
+        }
+    )
+    return main
+
+
 def _create_commission_entry(
     beneficiary_id: Any,
     month_key: str,
@@ -1080,14 +1193,28 @@ def _create_order(payload: dict) -> dict:
     customer_name = payload.get("customerName")
     status = payload.get("status", "pending")
     items = payload.get("items", [])
+    shipping_type = payload.get("shippingType")
+    tracking_number = payload.get("trackingNumber")
+    delivery_place = payload.get("deliveryPlace")
+    delivery_date = payload.get("deliveryDate")
+    recipient_name = (payload.get("recipientName") or "").strip()
+    phone = (payload.get("phone") or "").strip()
+    address = (payload.get("address") or "").strip()
+    postal_code = (payload.get("postalCode") or "").strip()
+    state = (payload.get("state") or "").strip()
 
     if not customer_name or not items:
         return _json_response(200, {"message": "customerName e items son obligatorios", "Error": "BadRequest"})
+    if not address or not postal_code or not state:
+        return _json_response(
+            200,
+            {"message": "Direccion, CP y estado son obligatorios", "Error": "BadRequest"},
+        )
 
     buyer_type = (payload.get("buyerType") or ("guest" if not customer_id else "registered")).lower()
     referrer_id = payload.get("referrerAssociateId")
 
-    order_id = payload.get("orderId") or str(uuid.uuid4())
+    order_id = _generate_order_id()
     now = _now_iso()
     month_key = _month_key()
 
@@ -1117,8 +1244,48 @@ def _create_order(payload: dict) -> dict:
         "createdAt": now,
         "updatedAt": now,
     }
+    if shipping_type not in (None, ""):
+        order_item["shippingType"] = shipping_type
+    if tracking_number not in (None, ""):
+        order_item["trackingNumber"] = tracking_number
+    if delivery_place not in (None, ""):
+        order_item["deliveryPlace"] = delivery_place
+    if delivery_date not in (None, ""):
+        order_item["deliveryDate"] = delivery_date
+    if recipient_name:
+        order_item["recipientName"] = recipient_name
+    if phone:
+        order_item["phone"] = phone
+    if address:
+        order_item["address"] = address
+    if postal_code:
+        order_item["postalCode"] = postal_code
+    if state:
+        order_item["state"] = state
 
     main = _put_entity("ORDER", order_id, order_item, created_at_iso=now)
+    customer_id_value = _parse_int_or_str(customer_id)
+    if isinstance(customer_id_value, int) and customer_id_value > 0:
+        updates = []
+        eav = {":u": now}
+        if address:
+            updates.append("address = :a")
+            eav[":a"] = address
+        if state:
+            updates.append("state = :st")
+            eav[":st"] = state
+        if postal_code:
+            updates.append("postalCode = :pc")
+            eav[":pc"] = postal_code
+        if phone:
+            updates.append("phone = :ph")
+            eav[":ph"] = phone
+        if updates:
+            updates.append("updatedAt = :u")
+            try:
+                _update_by_id("CUSTOMER", customer_id_value, "SET " + ", ".join(updates), eav)
+            except Exception:
+                pass
     return _json_response(201, {"order": main})
 
 
@@ -1252,9 +1419,56 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
     }
 
 
+def _apply_commissions_on_delivered(order_item: dict) -> List[dict]:
+    cfg = _load_rewards_config()
+    order_id = order_item.get("orderId")
+    buyer_id = order_item.get("customerId")
+    if buyer_id is None:
+        return []
+
+    net_total = _to_decimal(order_item.get("netTotal") or order_item.get("total"))
+    if net_total <= 0:
+        return []
+
+    month_key = order_item.get("monthKey") or _month_key()
+    chain = _upline_chain(buyer_id, max_levels=None)
+    actions: List[dict] = []
+
+    for leader_id in chain:
+        leader = _get_by_id("CUSTOMER", int(leader_id)) if leader_id is not None else None
+        if not leader:
+            continue
+        leader_level = leader.get("level") or ""
+        rate = _commission_rate_for_level(leader_level, cfg)
+        if rate <= 0:
+            continue
+        amount = (net_total * rate).quantize(Decimal("0.01"))
+        if amount <= 0:
+            continue
+        updated = _upsert_commission_month(
+            leader_id=leader_id,
+            month_key=month_key,
+            amount=amount,
+            level=leader_level,
+            order_id=order_id,
+            buyer_id=buyer_id,
+        )
+        actions.append(
+            {
+                "leaderId": leader_id,
+                "level": leader_level,
+                "rate": float(rate),
+                "amount": float(amount),
+                "commissionMonthId": updated.get("commissionMonthId"),
+            }
+        )
+
+    return actions
+
+
 def _update_order_status(order_id: str, payload: dict) -> dict:
     status = (payload.get("status") or "").lower()
-    if status not in {"pending", "paid", "delivered", "canceled", "refunded"}:
+    if status not in {"pending", "paid", "delivered", "canceled", "refunded", "shipped"}:
         return _json_response(200, {"message": "status invalido", "Error": "BadRequest"})
 
     order_item = _find_order(order_id)
@@ -1264,17 +1478,39 @@ def _update_order_status(order_id: str, payload: dict) -> dict:
     prev_status = (order_item.get("status") or "").lower()
     now = _now_iso()
 
+    updates = ["#s = :s", "updatedAt = :u"]
+    eav = {":s": status, ":u": now}
+    ean = {"#s": "status"}
+
+    if payload.get("shippingType") not in (None, ""):
+        updates.append("shippingType = :st")
+        eav[":st"] = payload.get("shippingType")
+    if payload.get("trackingNumber") not in (None, ""):
+        updates.append("trackingNumber = :tn")
+        eav[":tn"] = payload.get("trackingNumber")
+    if payload.get("deliveryPlace") not in (None, ""):
+        updates.append("deliveryPlace = :dp")
+        eav[":dp"] = payload.get("deliveryPlace")
+    if payload.get("deliveryDate") not in (None, ""):
+        updates.append("deliveryDate = :dd")
+        eav[":dd"] = payload.get("deliveryDate")
+
     updated = _update_by_id(
         "ORDER",
         order_id,
-        "SET #s = :s, updatedAt = :u",
-        {":s": status, ":u": now},
-        ean={"#s": "status"},
+        "SET " + ", ".join(updates),
+        eav,
+        ean=ean,
     )
 
     rewards_result = None
     if status == "paid" and prev_status != "paid":
         rewards_result = _apply_rewards_on_paid_order(updated)
+    if status == "delivered" and prev_status != "delivered":
+        try:
+            _apply_commissions_on_delivered(updated)
+        except Exception:
+            pass
 
     order_response = {
         "id": updated.get("orderId"),
@@ -1285,6 +1521,15 @@ def _update_order_status(order_id: str, payload: dict) -> dict:
         "discountAmount": float(updated.get("discountAmount") or 0),
         "netTotal": float(updated.get("netTotal") or updated.get("total") or 0),
         "status": updated.get("status"),
+        "shippingType": updated.get("shippingType"),
+        "trackingNumber": updated.get("trackingNumber"),
+        "deliveryPlace": updated.get("deliveryPlace"),
+        "deliveryDate": updated.get("deliveryDate"),
+        "recipientName": updated.get("recipientName"),
+        "phone": updated.get("phone"),
+        "address": updated.get("address"),
+        "postalCode": updated.get("postalCode"),
+        "state": updated.get("state"),
     }
     if rewards_result is not None:
         return _json_response(200, {"order": order_response, "rewards": rewards_result})
@@ -1409,17 +1654,11 @@ def _get_product(product_id: Any) -> dict:
 # ---------------------------------------------------------------------------
 # ASSET (Pattern 1)
 # ---------------------------------------------------------------------------
-def _create_asset(payload: dict) -> dict:
-    name = payload.get("name")
-    content_base64 = payload.get("contentBase64")
-    content_type = payload.get("contentType") or "image/png"
-    if not name or not content_base64:
-        return _json_response(200, {"message": "name y contentBase64 son obligatorios", "Error": "BadRequest"})
-
+def _save_asset_from_base64(name: str, content_base64: str, content_type: str) -> dict:
     try:
         raw = base64.b64decode(content_base64)
     except Exception:
-        return _json_response(200, {"message": "contentBase64 invalido", "Error": "BadRequest"})
+        raise ValueError("invalid_base64")
 
     asset_id = f"assets/{uuid.uuid4()}-{name}"
     _s3.put_object(
@@ -1442,6 +1681,20 @@ def _create_asset(payload: dict) -> dict:
         "updatedAt": now,
     }
     main = _put_entity("ASSET", asset_id, item, created_at_iso=now)
+    return main
+
+
+def _create_asset(payload: dict) -> dict:
+    name = payload.get("name")
+    content_base64 = payload.get("contentBase64")
+    content_type = payload.get("contentType") or "image/png"
+    if not name or not content_base64:
+        return _json_response(200, {"message": "name y contentBase64 son obligatorios", "Error": "BadRequest"})
+
+    try:
+        main = _save_asset_from_base64(name, content_base64, content_type)
+    except ValueError:
+        return _json_response(200, {"message": "contentBase64 invalido", "Error": "BadRequest"})
     return _json_response(201, {"asset": main})
 
 
@@ -1640,6 +1893,51 @@ def _get_network(customer_id: str, query: dict) -> dict:
     return _json_response(200, {"network": trim(root, depth)})
 
 
+def _get_order(order_id: str) -> dict:
+    item = _get_by_id("ORDER", order_id)
+    if not item:
+        return _json_response(200, {"message": "Pedido no encontrado", "Error": "NoEncontrado"})
+    return _json_response(
+        200,
+        {
+            "order": {
+                "id": item.get("orderId"),
+                "createdAt": item.get("createdAt"),
+                "customer": item.get("customerName"),
+                "total": float(item.get("netTotal") or item.get("total") or 0),
+                "status": item.get("status"),
+                "shippingType": item.get("shippingType"),
+                "trackingNumber": item.get("trackingNumber"),
+                "deliveryPlace": item.get("deliveryPlace"),
+                "deliveryDate": item.get("deliveryDate"),
+                "recipientName": item.get("recipientName"),
+                "phone": item.get("phone"),
+                "address": item.get("address"),
+                "postalCode": item.get("postalCode"),
+                "state": item.get("state"),
+            }
+        },
+    )
+
+
+def _list_orders_for_customer(customer_id: str) -> dict:
+    items = _query_bucket("ORDER", limit=500, scan_forward=False)
+    rows = []
+    for item in items:
+        if str(item.get("customerId") or "") != str(customer_id):
+            continue
+        rows.append(
+            {
+                "id": item.get("orderId"),
+                "createdAt": item.get("createdAt"),
+                "customer": item.get("customerName"),
+                "total": float(item.get("netTotal") or item.get("total") or 0),
+                "status": item.get("status"),
+            }
+        )
+    return _json_response(200, {"orders": rows})
+
+
 # ---------------------------------------------------------------------------
 # Rewards API
 # ---------------------------------------------------------------------------
@@ -1658,6 +1956,12 @@ def _put_rewards_config(payload: dict) -> dict:
     cfg["activationNetMin"] = float(cfg.get("activationNetMin", 2500))
     cfg["payoutDay"] = int(cfg.get("payoutDay", 10))
     cfg["commissionLevels"] = [float(x) for x in (cfg.get("commissionLevels") or [0.10, 0.05, 0.03])]
+    commission_by_level = cfg.get("commissionByLevel") or {}
+    cfg["commissionByLevel"] = {
+        "oro": float(commission_by_level.get("oro", 0.10)),
+        "plata": float(commission_by_level.get("plata", 0.05)),
+        "bronce": float(commission_by_level.get("bronce", 0.03)),
+    }
 
     tiers = []
     for t in (cfg.get("discountTiers") or []):
@@ -1727,6 +2031,90 @@ def _get_associate_commissions(associate_id: str, query: dict) -> dict:
     return _json_response(200, {"associateId": associate_id, "count": len(rows), "total": float(total), "commissions": rows})
 
 
+def _request_commission_payout(payload: dict) -> dict:
+    customer_id = payload.get("customerId") or payload.get("associateId")
+    clabe = (payload.get("clabe") or payload.get("clabeInterbancaria") or "").strip()
+    month_key = payload.get("monthKey") or payload.get("month") or _month_key()
+
+    if not customer_id:
+        return _json_response(200, {"message": "customerId es obligatorio", "Error": "BadRequest"})
+
+    customer = _get_by_id("CUSTOMER", int(customer_id))
+    if not customer:
+        return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
+
+    existing_clabe = (customer.get("clabe") or "").strip()
+    if not clabe and not existing_clabe:
+        return _json_response(200, {"message": "CLABE es obligatoria", "Error": "BadRequest"})
+
+    if clabe and len(clabe) < 10:
+        return _json_response(200, {"message": "CLABE invalida", "Error": "BadRequest"})
+
+    summary = _commission_summary_for_beneficiary(int(customer_id), month_key)
+    pending_total = _to_decimal(summary.get("pendingTotal"))
+    if pending_total <= 0:
+        return _json_response(200, {"message": "No hay comisiones por cobrar", "Error": "BadRequest"})
+
+    now = _now_iso()
+    if clabe:
+        try:
+            _update_by_id(
+                "CUSTOMER",
+                int(customer_id),
+                "SET clabe = :c, updatedAt = :u",
+                {":c": clabe, ":u": now},
+            )
+        except Exception:
+            pass
+
+    request_id = str(uuid.uuid4())
+    clabe_final = clabe or existing_clabe
+    request_item = {
+        "entityType": "commissionRequest",
+        "requestId": request_id,
+        "customerId": int(customer_id),
+        "monthKey": month_key,
+        "amount": pending_total.quantize(Decimal("0.01")),
+        "status": "requested",
+        "clabeLast4": (clabe_final[-4:] if clabe_final else ""),
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    main = _put_entity("COMMISSION_REQUEST", request_id, request_item, created_at_iso=now)
+    return _json_response(201, {"request": main, "summary": summary})
+
+
+def _upload_commission_receipt(payload: dict) -> dict:
+    customer_id = payload.get("customerId")
+    month_key = payload.get("monthKey") or payload.get("month") or _month_key()
+    name = payload.get("name")
+    content_base64 = payload.get("contentBase64")
+    content_type = payload.get("contentType") or "image/png"
+
+    if not customer_id or not name or not content_base64:
+        return _json_response(200, {"message": "customerId, name y contentBase64 son obligatorios", "Error": "BadRequest"})
+
+    try:
+        asset = _save_asset_from_base64(name, content_base64, content_type)
+    except ValueError:
+        return _json_response(200, {"message": "contentBase64 invalido", "Error": "BadRequest"})
+
+    now = _now_iso()
+    receipt_id = f"{customer_id}#{month_key}#{uuid.uuid4()}"
+    receipt_item = {
+        "entityType": "commissionReceipt",
+        "receiptId": receipt_id,
+        "customerId": int(customer_id),
+        "monthKey": month_key,
+        "assetId": asset.get("assetId"),
+        "assetUrl": asset.get("url"),
+        "status": "uploaded",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    main = _put_entity("COMMISSION_RECEIPT", receipt_id, receipt_item, created_at_iso=now)
+    return _json_response(201, {"receipt": main, "asset": asset})
+
 # ---------------------------------------------------------------------------
 # Admin dashboard (lists via BUCKET Query)
 # ---------------------------------------------------------------------------
@@ -1739,6 +2127,63 @@ def _build_admin_warnings(paid_count: int, pending_count: int, commissions_count
     if pending_count:
         warnings.append({"type": "payments", "text": f"{pending_count} pedidos pendientes de pago", "severity": "low"})
     return warnings
+
+
+def _commission_summary_for_beneficiary(beneficiary_id: Any, month_key: str) -> dict:
+    if beneficiary_id is None:
+        return {"monthKey": month_key, "pendingTotal": 0.0, "paidTotal": 0.0, "hasPending": False}
+    pk = _commission_pk(beneficiary_id)
+    resp = _table.query(KeyConditionExpression=Key("PK").eq(pk), Limit=500, ScanIndexForward=False)
+    items = resp.get("Items", []) or []
+
+    totals: Dict[str, Decimal] = {}
+    for it in items:
+        if month_key and it.get("monthKey") != month_key:
+            continue
+        status = (it.get("status") or "").lower() or "unknown"
+        amt = _to_decimal(it.get("amount"))
+        totals[status] = totals.get(status, Decimal("0")) + amt
+
+    pending_total = totals.get("pending", Decimal("0")) + totals.get("confirmed", Decimal("0"))
+    paid_total = totals.get("paid", Decimal("0"))
+    return {
+        "monthKey": month_key,
+        "pendingTotal": float(pending_total),
+        "paidTotal": float(paid_total),
+        "hasPending": bool(pending_total > 0),
+    }
+
+
+def _commissions_paid_summary(month_key: str, customers_raw: List[dict]) -> dict:
+    if not month_key:
+        return {"monthKey": "", "count": 0, "total": 0.0, "rows": []}
+    resp = _table.scan(
+        FilterExpression=Attr("entityType").eq("commission")
+        & Attr("status").eq("paid")
+        & Attr("monthKey").eq(month_key),
+        Limit=1000,
+    )
+    items = resp.get("Items", []) or []
+
+    customers_by_id = {str(c.get("customerId")): c for c in customers_raw}
+    total = Decimal("0")
+    rows = []
+    for it in items:
+        amt = _to_decimal(it.get("amount"))
+        total += amt
+        beneficiary_id = it.get("beneficiaryId")
+        customer = customers_by_id.get(str(beneficiary_id)) or {}
+        rows.append(
+            {
+                "beneficiaryId": beneficiary_id,
+                "beneficiaryName": customer.get("name") or "",
+                "orderId": it.get("orderId"),
+                "amount": float(amt),
+                "createdAt": it.get("createdAt"),
+            }
+        )
+
+    return {"monthKey": month_key, "count": len(rows), "total": float(total), "rows": rows}
 
 
 def _get_admin_dashboard() -> dict:
@@ -1784,7 +2229,7 @@ def _get_admin_dashboard() -> dict:
         for item in products_raw
     ]
 
-    status_counts = {"pending": 0, "paid": 0, "delivered": 0, "canceled": 0, "refunded": 0}
+    status_counts = {"pending": 0, "paid": 0, "delivered": 0, "shipped": 0, "canceled": 0, "refunded": 0}
     for order in orders:
         st = (order.get("status") or "").lower()
         if st in status_counts:
@@ -1806,6 +2251,7 @@ def _get_admin_dashboard() -> dict:
     active_products = sum(1 for product in products if product.get("active"))
 
     warnings = _build_admin_warnings(status_counts["paid"], status_counts["pending"], commissions_count)
+    paid_commissions_summary = _commissions_paid_summary(_month_key(), customers_raw)
 
     return _json_response(
         200,
@@ -1820,6 +2266,7 @@ def _get_admin_dashboard() -> dict:
             "statusCounts": status_counts,
             "customersByLevel": customers_by_level,
             "warnings": warnings,
+            "commissionsPaidSummary": paid_commissions_summary,
             "customers": customers,
             "orders": orders,
             "products": products,
@@ -1930,6 +2377,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
     computed_network_members = None
     computed_goals = None
 
+    commission_summary = None
     if customer and isinstance(customer, dict):
         # Build tree with month consumption
         tree = _build_network_tree_with_month(str(customer.get("customerId")), month_key, customers_raw, cfg)
@@ -1943,6 +2391,21 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
 
         # persist the computed fields
         _persist_customer_dashboard_fields(customer.get("customerId"), computed_goals, computed_network_members, buy_again_ids)
+        commission_item = _get_commission_month_direct(int(customer.get("customerId")), month_key)
+        pending_total = float(_to_decimal(commission_item.get("amount"))) if commission_item else 0.0
+        commission_summary = {
+            "monthKey": month_key,
+            "pendingTotal": pending_total,
+            "paidTotal": 0.0,
+            "hasPending": bool(pending_total > 0),
+        }
+        clabe = (customer.get("clabe") or "").strip()
+        commission_summary = {
+            **commission_summary,
+            "clabeOnFile": bool(clabe),
+            "clabeLast4": (clabe[-4:] if clabe else ""),
+            "payoutDay": int(cfg.get("payoutDay", 10)),
+        }
     else:
         buy_again_ids = [p["id"] for p in products[:3]]
 
@@ -1961,6 +2424,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
         "productOfMonth": product_of_month,
         "networkMembers": (computed_network_members if computed_network_members is not None else []),
         "buyAgainIds": buy_again_ids,
+        "commissions": commission_summary,
     }
     return _json_response(200, payload)
 
@@ -2119,12 +2583,22 @@ def lambda_handler(event, context):
     if segments[0] == "orders":
         if method == "POST" and len(segments) == 1:
             return _create_order(_parse_body(event))
+        if method == "GET" and len(segments) == 1 and query.get("customerId"):
+            return _list_orders_for_customer(query.get("customerId"))
+        if method == "GET" and len(segments) == 2:
+            return _get_order(segments[1])
         if method == "PATCH" and len(segments) == 2:
             return _update_order_status(segments[1], _parse_body(event))
         if method == "POST" and len(segments) == 3 and segments[2] == "refund":
             return _refund_order(segments[1], _parse_body(event))
         if method == "POST" and len(segments) == 3 and segments[2] == "cancel":
             return _cancel_order(segments[1], _parse_body(event))
+
+    # Commissions
+    if segments == ["commissions", "request"] and method == "POST":
+        return _request_commission_payout(_parse_body(event))
+    if segments == ["commissions", "receipt"] and method == "POST":
+        return _upload_commission_receipt(_parse_body(event))
 
     # Customers
     if segments[0] == "customers":

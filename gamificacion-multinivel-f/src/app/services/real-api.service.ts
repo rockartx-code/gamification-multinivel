@@ -13,13 +13,15 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerProfile,
+  UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
-import { UserDashboardData } from '../models/user-dashboard.model';
+import { CommissionReceiptPayload, CommissionRequestPayload, UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 
 @Injectable({
@@ -75,10 +77,50 @@ export class RealApiService {
     return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard${query}`);
   }
 
+  requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
+    return this.http.post<{ request: unknown; summary?: unknown }>(`${this.baseUrl}/commissions/request`, payload);
+  }
+
+  uploadCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/commissions/receipt`, payload);
+  }
+
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
     return this.http
       .post<{ order: AdminOrder }>(`${this.baseUrl}/orders`, payload)
       .pipe(map((response) => response.order));
+  }
+
+  getOrder(orderId: string): Observable<AdminOrder> {
+    return this.http
+      .get<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`)
+      .pipe(map((response) => response.order));
+  }
+
+  getOrders(customerId: string): Observable<AdminOrder[]> {
+    return this.http
+      .get<{ orders: AdminOrder[] }>(`${this.baseUrl}/orders?customerId=${encodeURIComponent(customerId)}`)
+      .pipe(map((response) => response.orders));
+  }
+
+  getCustomer(customerId: string): Observable<CustomerProfile> {
+    return this.http
+      .get<{ customer: Record<string, unknown> }>(`${this.baseUrl}/customers/${encodeURIComponent(customerId)}`)
+      .pipe(
+        map((response) => {
+          const customer = response.customer ?? {};
+          return {
+            id: Number(customer['customerId'] ?? customer['id'] ?? 0),
+            name: String(customer['name'] ?? ''),
+            email: String(customer['email'] ?? ''),
+            phone: customer['phone'] ? String(customer['phone']) : undefined,
+            address: customer['address'] ? String(customer['address']) : undefined,
+            city: customer['city'] ? String(customer['city']) : undefined,
+            state: customer['state'] ? String(customer['state']) : undefined,
+            postalCode: customer['postalCode'] ? String(customer['postalCode']) : undefined
+          };
+        })
+      );
   }
 
   createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
@@ -105,9 +147,9 @@ export class RealApiService {
       .pipe(map((response) => response.product));
   }
 
-  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
+  updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
     return this.http
-      .patch<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`, { status })
+      .patch<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`, payload)
       .pipe(map((response) => response.order));
   }
 }

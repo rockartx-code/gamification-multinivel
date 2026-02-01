@@ -12,13 +12,15 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerProfile,
+  UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
-import { UserDashboardData } from '../models/user-dashboard.model';
+import { CommissionReceiptPayload, CommissionRequestPayload, UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 import { MockApiService } from './mock-api.service';
 import { RealApiService } from './real-api.service';
@@ -52,8 +54,28 @@ export class ApiService {
     return this.resolveApi().getUserDashboardData(userId);
   }
 
+  requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
+    return this.resolveApi().requestCommissionPayout(payload);
+  }
+
+  uploadCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    return this.resolveApi().uploadCommissionReceipt(payload);
+  }
+
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
     return this.resolveApi().createOrder(payload);
+  }
+
+  getOrder(orderId: string): Observable<AdminOrder> {
+    return this.resolveApi().getOrder(orderId);
+  }
+
+  getOrders(customerId: string): Observable<AdminOrder[]> {
+    return this.resolveApi().getOrders(customerId);
+  }
+
+  getCustomer(customerId: string): Observable<CustomerProfile> {
+    return this.resolveApi().getCustomer(customerId);
   }
 
   createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
@@ -76,8 +98,8 @@ export class ApiService {
     return this.resolveApi().saveProduct(payload);
   }
 
-  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
-    return this.resolveApi().updateOrderStatus(orderId, status);
+  updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
+    return this.resolveApi().updateOrderStatus(orderId, payload);
   }
 
   private resolveApi(): MockApiService | RealApiService {

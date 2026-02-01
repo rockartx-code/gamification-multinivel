@@ -59,6 +59,8 @@ export class AdminComponent implements OnInit {
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
   isAddStructureModalOpen = false;
+  isShippingModalOpen = false;
+  isPaidSummaryModalOpen = false;
 
   selectedCustomer: AdminCustomer | null = null;
   structureForm = {
@@ -96,6 +98,12 @@ export class AdminComponent implements OnInit {
   isSavingStructure = false;
   isSavingProduct = false;
   isSettingProductOfMonth = false;
+  shippingTargetOrder: AdminOrder | null = null;
+  shippingType: 'carrier' | 'personal' = 'carrier';
+  shippingTrackingNumber = '';
+  shippingDeliveryPlace = '';
+  shippingDeliveryDate = '';
+  shippingError = '';
   private readonly updatingOrderIds = new Set<string>();
 
   ngOnInit(): void {
@@ -125,6 +133,10 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.warnings ?? [];
   }
 
+  get commissionsPaidSummary(): AdminData['commissionsPaidSummary'] | null {
+    return this.adminData()?.commissionsPaidSummary ?? null;
+  }
+
 
   get viewTitle(): string {
     if (this.currentView === 'customers') {
@@ -149,7 +161,7 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'stats') {
       return 'Ventas, funnel y alertas.';
     }
-    return 'Cambia estado: pendiente, pagado, entregado.';
+    return 'Cambia estado: pendiente, pagado, enviado, entregado.';
   }
 
   get filteredOrders(): AdminOrder[] {
@@ -165,7 +177,11 @@ export class AdminComponent implements OnInit {
   }
 
   get shipCount(): number {
-    return this.orders.filter((order) => order.status === 'paid').length;
+    return this.orders.filter((order) => order.status === 'shipped').length;
+  }
+
+  get deliveredCount(): number {
+    return this.orders.filter((order) => order.status === 'delivered').length;
   }
 
   get commissionsTotal(): number {
@@ -355,6 +371,14 @@ export class AdminComponent implements OnInit {
     this.isAddStructureModalOpen = true;
   }
 
+  openPaidSummaryModal(): void {
+    this.isPaidSummaryModalOpen = true;
+  }
+
+  closePaidSummaryModal(): void {
+    this.isPaidSummaryModalOpen = false;
+  }
+
   closeModals(): void {
     console.log('[Admin] closeModals()', {
       isActionsModalOpen: this.isActionsModalOpen,
@@ -364,6 +388,7 @@ export class AdminComponent implements OnInit {
     this.isActionsModalOpen = false;
     this.isNewOrderModalOpen = false;
     this.isAddStructureModalOpen = false;
+    this.isShippingModalOpen = false;
   }
 
   logout(): void {
@@ -375,17 +400,73 @@ export class AdminComponent implements OnInit {
     if (this.updatingOrderIds.has(order.id)) {
       return;
     }
+    if (order.status === 'paid') {
+      this.openShippingModal(order);
+      return;
+    }
     const nextStatus =
-      order.status === 'pending' ? 'paid' : order.status === 'paid' ? 'delivered' : order.status;
+      order.status === 'pending' ? 'paid' : order.status === 'shipped' ? 'delivered' : order.status;
     if (nextStatus === order.status) {
       return;
     }
     this.updatingOrderIds.add(order.id);
     this.adminControl
-      .updateOrderStatus(order.id, nextStatus)
+      .updateOrderStatus(order.id, { status: nextStatus })
       .pipe(
         finalize(() => {
           this.updatingOrderIds.delete(order.id);
+        })
+      )
+      .subscribe();
+  }
+
+  openShippingModal(order: AdminOrder): void {
+    this.shippingTargetOrder = order;
+    this.shippingType = 'carrier';
+    this.shippingTrackingNumber = '';
+    this.shippingDeliveryPlace = '';
+    this.shippingDeliveryDate = '';
+    this.shippingError = '';
+    this.isShippingModalOpen = true;
+  }
+
+  closeShippingModal(): void {
+    this.isShippingModalOpen = false;
+    this.shippingTargetOrder = null;
+    this.shippingError = '';
+  }
+
+  confirmShipping(): void {
+    if (!this.shippingTargetOrder) {
+      return;
+    }
+    if (this.shippingType === 'carrier' && !this.shippingTrackingNumber.trim()) {
+      this.shippingError = 'Ingresa el nÃºmero de guÃ­a.';
+      return;
+    }
+    if (
+      this.shippingType === 'personal' &&
+      (!this.shippingDeliveryPlace.trim() || !this.shippingDeliveryDate.trim())
+    ) {
+      this.shippingError = 'Ingresa lugar y fecha de entrega personal.';
+      return;
+    }
+    this.shippingError = '';
+    const payload = {
+      status: 'shipped' as const,
+      shippingType: this.shippingType,
+      trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
+      deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
+      deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined
+    };
+    const orderId = this.shippingTargetOrder.id;
+    this.updatingOrderIds.add(orderId);
+    this.adminControl
+      .updateOrderStatus(orderId, payload)
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(orderId);
+          this.closeShippingModal();
         })
       )
       .subscribe();
@@ -431,6 +512,18 @@ export class AdminComponent implements OnInit {
 
   getNewOrderTotal(): number {
     return this.getNewOrderItems().reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }
+
+  getShippingLabel(order: AdminOrder): string {
+    if (order.shippingType === 'carrier' && order.trackingNumber) {
+      return `GuÃ­a: ${order.trackingNumber}`;
+    }
+    if (order.shippingType === 'personal' && (order.deliveryPlace || order.deliveryDate)) {
+      const place = order.deliveryPlace ? order.deliveryPlace : 'Entrega personal';
+      const date = order.deliveryDate ? `Â· ${order.deliveryDate}` : '';
+      return `${place}${date}`;
+    }
+    return '-';
   }
 
   saveNewOrder(): void {

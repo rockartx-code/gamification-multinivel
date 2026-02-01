@@ -3,7 +3,16 @@ export interface AdminOrder {
   createdAt?: string;
   customer: string;
   total: number;
-  status: 'pending' | 'paid' | 'delivered';
+  status: 'pending' | 'paid' | 'shipped' | 'delivered';
+  shippingType?: 'carrier' | 'personal';
+  trackingNumber?: string;
+  deliveryPlace?: string;
+  deliveryDate?: string;
+  recipientName?: string;
+  phone?: string;
+  address?: string;
+  postalCode?: string;
+  state?: string;
 }
 
 export interface AdminOrderItem {
@@ -18,6 +27,30 @@ export interface CreateAdminOrderPayload {
   customerName: string;
   status: AdminOrder['status'];
   items: AdminOrderItem[];
+  recipientName?: string;
+  phone?: string;
+  address?: string;
+  postalCode?: string;
+  state?: string;
+}
+
+export interface UpdateOrderStatusPayload {
+  status: AdminOrder['status'];
+  shippingType?: AdminOrder['shippingType'];
+  trackingNumber?: string;
+  deliveryPlace?: string;
+  deliveryDate?: string;
+}
+
+export interface CustomerProfile {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
 }
 
 export interface CreateStructureCustomerPayload {
@@ -130,6 +163,19 @@ export interface AdminWarning {
   severity: 'high' | 'medium' | 'low';
 }
 
+export interface CommissionsPaidSummary {
+  monthKey: string;
+  count: number;
+  total: number;
+  rows: Array<{
+    beneficiaryId: number | string;
+    beneficiaryName: string;
+    orderId?: string;
+    amount: number;
+    createdAt?: string;
+  }>;
+}
+
 export interface AdminAssetSlot {
   label: string;
   hint: string;
@@ -141,4 +187,5 @@ export interface AdminData {
   products: AdminProduct[];
   warnings: AdminWarning[];
   assetSlots: AdminAssetSlot[];
+  commissionsPaidSummary?: CommissionsPaidSummary;
 }

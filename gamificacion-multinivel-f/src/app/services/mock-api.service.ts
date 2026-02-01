@@ -11,13 +11,15 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerProfile,
+  UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
-import { UserDashboardData } from '../models/user-dashboard.model';
+import { CommissionReceiptPayload, CommissionRequestPayload, UserDashboardData } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 
 @Injectable({
@@ -151,6 +153,15 @@ export class MockApiService {
         { type: 'shipping', text: '2 pedidos pagados sin envío', severity: 'high' },
         { type: 'assets', text: 'Producto sin imagen para redes', severity: 'medium' }
       ],
+      commissionsPaidSummary: {
+        monthKey: '2026-02',
+        count: 2,
+        total: 180,
+        rows: [
+          { beneficiaryId: 1, beneficiaryName: 'Ana L??pez', orderId: '#1000', amount: 120, createdAt: '2026-02-01T08:10:00Z' },
+          { beneficiaryId: 2, beneficiaryName: 'Carlos Ruiz', orderId: '#1005', amount: 60, createdAt: '2026-02-01T09:20:00Z' }
+        ]
+      },
       assetSlots: [
         { label: 'Miniatura (carrito)', hint: 'square 1:1' },
         { label: 'CTA / Banner', hint: 'landscape 16:9' },
@@ -185,12 +196,16 @@ export class MockApiService {
     return of(product).pipe(delay(120));
   }
 
-  updateOrderStatus(orderId: string, status: AdminOrder['status']): Observable<AdminOrder> {
+  updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
     const order: AdminOrder = {
       id: orderId,
       customer: 'Actualizado',
       total: 0,
-      status
+      status: payload.status,
+      shippingType: payload.shippingType,
+      trackingNumber: payload.trackingNumber,
+      deliveryPlace: payload.deliveryPlace,
+      deliveryDate: payload.deliveryDate
     };
     return of(order).pipe(delay(120));
   }
@@ -366,10 +381,45 @@ export class MockApiService {
         { name: 'Sofía M.', level: 'L2', spend: 15, status: 'En progreso' },
         { name: 'Diego S.', level: 'L2', spend: 0, status: 'Inactiva' }
       ],
-      buyAgainIds: ['omega3', 'complejoB', 'antioxidante']
+      buyAgainIds: ['omega3', 'complejoB', 'antioxidante'],
+      commissions: {
+        monthKey: '2026-02',
+        pendingTotal: 150,
+        paidTotal: 80,
+        hasPending: true,
+        clabeOnFile: true,
+        clabeLast4: '1234',
+        payoutDay: 10
+      }
     };
 
     return of(payload).pipe(delay(120));
+  }
+
+  requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
+    const request = {
+      requestId: `req-${Math.random().toString(16).slice(2)}`,
+      customerId: payload.customerId,
+      monthKey: payload.monthKey ?? '2026-02',
+      amount: 150,
+      status: 'requested',
+      clabeLast4: payload.clabe.slice(-4),
+      createdAt: new Date().toISOString()
+    };
+    const summary = { monthKey: request.monthKey, pendingTotal: 150, paidTotal: 0, hasPending: true };
+    return of({ request, summary }).pipe(delay(120));
+  }
+
+  uploadCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    const receipt = {
+      receiptId: `rcpt-${Math.random().toString(16).slice(2)}`,
+      customerId: payload.customerId,
+      monthKey: payload.monthKey ?? '2026-02',
+      assetUrl: 'images/receipt-mock.png',
+      status: 'uploaded',
+      createdAt: new Date().toISOString()
+    };
+    return of({ receipt }).pipe(delay(120));
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
@@ -379,9 +429,52 @@ export class MockApiService {
       createdAt: new Date().toISOString(),
       customer: payload.customerName,
       total,
-      status: payload.status
+      status: payload.status,
+      recipientName: payload.recipientName,
+      phone: payload.phone,
+      address: payload.address,
+      postalCode: payload.postalCode,
+      state: payload.state
     };
     return of(order).pipe(delay(120));
+  }
+
+  getOrder(orderId: string): Observable<AdminOrder> {
+    const order: AdminOrder = {
+      id: orderId,
+      createdAt: new Date().toISOString(),
+      customer: 'Cliente',
+      total: 0,
+      status: 'pending'
+    };
+    return of(order).pipe(delay(120));
+  }
+
+  getOrders(customerId: string): Observable<AdminOrder[]> {
+    const orders: AdminOrder[] = [
+      {
+        id: `#${Math.floor(1000 + Math.random() * 9000)}`,
+        createdAt: new Date().toISOString(),
+        customer: `Cliente ${customerId}`,
+        total: 0,
+        status: 'pending'
+      }
+    ];
+    return of(orders).pipe(delay(120));
+  }
+
+  getCustomer(customerId: string): Observable<CustomerProfile> {
+    const customer: CustomerProfile = {
+      id: Number(customerId) || 1001,
+      name: 'Valeria Torres',
+      email: 'valeria@mail.com',
+      phone: '+52 555-0101',
+      address: 'Av. Insurgentes 123',
+      city: 'CDMX',
+      state: 'CDMX',
+      postalCode: '03100'
+    };
+    return of(customer).pipe(delay(120));
   }
 
   createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {

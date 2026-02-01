@@ -36,7 +36,7 @@ export const dashboardGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   if (!auth.currentUser) {
-    return router.parseUrl('/login');
+    return true;
   }
 
   if (auth.currentUser.role !== 'cliente') {

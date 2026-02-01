@@ -140,9 +140,14 @@
               <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">{{ activeGoal.title }}</h3>
               <p class="mt-2 text-sm text-zinc-200">{{ activeGoal.subtitle }}</p>
               <div class="mt-3 text-sm text-yellow-100">Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo</div>
-              <div class="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+              <div class="relative mt-4 h-3 overflow-hidden rounded-full bg-white/10">
                 <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400"
                   [style.width.%]="goalBasePercent(activeGoal)"></div>
+                <div
+                  class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-90"
+                  [style.left.%]="goalBasePercent(activeGoal)"
+                  [style.width.%]="goalCartPercent(activeGoal)">
+                </div>
               </div>
             </div>
             <button type="button"
@@ -150,6 +155,28 @@
               (click)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
               {{ activeGoal.ctaText }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4" *ngIf="isGuest">
+        <div
+          class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-6 md:p-8">
+          <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
+          </div>
+          <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Meta para invitados</div>
+              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Regístrate para obtener beneficios</h3>
+              <p class="mt-2 text-sm text-zinc-200">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.</p>
+            </div>
+            <button type="button"
+              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+              (click)="openGuestRegisterModal()">
+              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+              Registrate
             </button>
           </div>
         </div>
@@ -168,9 +195,11 @@
             </div>
 
             <div class="relative mt-2 h-3 overflow-hidden rounded-full progress-rail">
-              <div class="progress-base absolute inset-y-0 left-0" [style.width.%]="goalBasePercent(goal)"></div>
-              <div class="progress-cart absolute inset-y-0 left-0 opacity-90" [style.left.%]="goalBasePercent(goal)"
-                [style.width.%]="goalCartPercent(goal)"></div>
+              <div class="progress-base absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-300 to-orange-400"
+                [style.width.%]="goalBasePercent(goal)"></div>
+              <div
+                class="progress-cart absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-90"
+                [style.left.%]="goalBasePercent(goal)" [style.width.%]="goalCartPercent(goal)"></div>
             </div>
           </div>
         </div>
@@ -196,11 +225,12 @@
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
           </div>
-          <a class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
-            [routerLink]="['/carrito']">
+          <button type="button"
+            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+            (click)="goToCart()">
             <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Ver carrito
-          </a>
+          </button>
         </div>
       </div>
 
@@ -584,6 +614,120 @@
       </div>
     </section>
 
+    <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && commissionSummary as commissions">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-coins text-yellow-200" aria-hidden="true"></i>
+            Comisiones
+          </h2>
+          <p class="mt-2 text-sm text-zinc-400">Resumen del mes {{ commissions.monthKey }}.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
+        <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+              <div class="text-xs text-zinc-400">Por cobrar</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.pendingTotal || 0) }}</div>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+              <div class="text-xs text-zinc-400">Pagadas en el mes</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+            <div class="flex items-center justify-between">
+              <span>CLABE registrada</span>
+              <span class="text-zinc-200">
+                {{ commissions.clabeOnFile ? ('**** ' + (commissions.clabeLast4 || '')) : 'No registrada' }}
+              </span>
+            </div>
+            <div class="mt-2 text-xs text-zinc-500">
+              Depositos programados para el dia {{ commissions.payoutDay || 10 }} de cada mes.
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div class="text-sm font-semibold text-zinc-200">Acciones</div>
+          <div class="mt-3 space-y-3">
+            <button
+              class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+              [disabled]="!hasCommissionPending"
+              (click)="openCommissionModal()">
+              <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+              Solicitar pago de comisiones
+            </button>
+
+            <label
+              class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm transition hover:bg-white/10"
+              [class.opacity-60]="isCommissionUploading">
+              <i class="fa-solid fa-upload" aria-hidden="true"></i>
+              {{ isCommissionUploading ? 'Subiendo comprobante...' : 'Subir comprobante' }}
+              <input type="file" class="hidden" accept="image/*,application/pdf" (change)="onCommissionReceiptSelected($event)" />
+            </label>
+
+            <div *ngIf="commissionUploadName" class="text-xs text-zinc-500">
+              Ultimo archivo: {{ commissionUploadName }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ordenes" class="scroll-mt-10" *ngIf="!isGuest">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-receipt text-blue-200" aria-hidden="true"></i>
+            Ordenes
+          </h2>
+          <p class="mt-2 text-sm text-zinc-400">Seguimiento de tus pedidos recientes.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div *ngIf="isOrdersLoading" class="text-sm text-zinc-400">Cargando ordenes...</div>
+        <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-zinc-400">
+          Aun no tienes ordenes registradas.
+        </div>
+        <div *ngIf="!isOrdersLoading && orders.length > 0" class="overflow-hidden rounded-2xl border border-white/10">
+          <table class="w-full text-sm">
+            <thead class="bg-white/5 text-zinc-300">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold">Orden</th>
+                <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+                <th class="px-4 py-3 text-left font-semibold">Total</th>
+                <th class="px-4 py-3 text-left font-semibold">Estado</th>
+                <th class="px-4 py-3 text-right font-semibold">Ver</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-zinc-200">
+              <tr *ngFor="let order of orders">
+                <td class="px-4 py-3">{{ order.id }}</td>
+                <td class="px-4 py-3 text-zinc-400">{{ order.createdAt || '-' }}</td>
+                <td class="px-4 py-3">{{ formatMoney(order.total) }}</td>
+                <td class="px-4 py-3">
+                  <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs">
+                    {{ order.status }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs transition hover:bg-white/10"
+                    [routerLink]="['/orden', order.id]">
+                    Ver orden
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="links" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
@@ -851,6 +995,159 @@
     <div
       class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="isCommissionModalOpen" class="fixed inset-0 z-50 flex items-center justify-center px-6">
+    <div class="absolute inset-0 bg-black/70" (click)="closeCommissionModal()"></div>
+    <div class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Solicitud de pago</div>
+          <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
+          <p class="mt-2 text-sm text-zinc-300">Usaremos esta CLABE para depositar tus comisiones.</p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeCommissionModal()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <form class="mt-6 grid gap-3" (ngSubmit)="submitCommissionRequest()">
+        <label class="block text-xs text-zinc-400">
+          CLABE (18 dÃ­gitos)
+          <input type="text" name="commissionClabe" [(ngModel)]="commissionClabe"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="000000000000000000" />
+        </label>
+
+        <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+            (click)="closeCommissionModal()">
+            Cancelar
+          </button>
+          <button type="submit"
+            [disabled]="isCommissionSubmitting"
+            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            {{ isCommissionSubmitting ? 'Enviando...' : 'Solicitar pago' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div *ngIf="showGuestRegisterModal" class="fixed inset-0 z-50 flex items-center justify-center px-6">
+    <div class="absolute inset-0 bg-black/70" (click)="closeGuestRegisterModal()"></div>
+    <div class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Registro rapido</div>
+          <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
+          <p class="mt-2 text-sm text-zinc-300">Completa tus datos para activar descuentos y red.</p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeGuestRegisterModal()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <form class="mt-6 grid gap-3" (ngSubmit)="submitGuestRegister()">
+        <label class="block text-xs text-zinc-400">
+          Nombre completo
+          <input type="text" name="guestName" [(ngModel)]="guestRegisterForm.name"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="Tu nombre" />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Correo
+          <input type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="tucorreo@ejemplo.com" />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Telefono
+          <input type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="+52 ..." />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Contrase?a
+          <input type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="Minimo 8 caracteres" />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Confirmar contrase?a
+          <input type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="Repite tu contrase?a" />
+        </label>
+
+        <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+            (click)="closeGuestRegisterModal()">
+            Ahora no
+          </button>
+          <button type="submit"
+            [disabled]="isGuestRegisterSubmitting"
+            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+            {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Registrate' }}
+          </button>
+        </div>
+        <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
+          [class.text-rose-300]="guestRegisterFeedbackType === 'error'"
+          [class.text-emerald-300]="guestRegisterFeedbackType === 'success'">
+          {{ guestRegisterFeedback }}
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div *ngIf="isGoalsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center px-6">
+    <div class="absolute inset-0 bg-black/70" (click)="closeGoalsModal()"></div>
+    <div class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Metas cumplidas del mes</div>
+          <h3 class="mt-2 text-xl font-extrabold">¡Buen trabajo!</h3>
+          <p class="mt-2 text-sm text-zinc-300">Estas son tus metas alcanzadas en el mes.</p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeGoalsModal()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-3">
+        <div *ngFor="let goal of achievedGoals"
+          class="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
+              <div class="mt-1 truncate text-sm font-semibold text-zinc-100">{{ goal.title }}</div>
+            </div>
+            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+              Completada
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end">
+        <button type="button"
+          class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+          (click)="closeGoalsModal()">
+          Listo
+        </button>
+      </div>
     </div>
   </div>
 
