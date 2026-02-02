@@ -82,20 +82,84 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return this.cartControl.discountPct;
   }
 
+  private get discountPercentValue(): number {
+    const raw = this.authService.currentUser?.discountPercent;
+    const value = typeof raw === 'string' ? Number(raw) : Number(raw ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private get discountActiveValue(): boolean {
+    return Boolean(this.authService.currentUser?.discountActive);
+  }
+
+  get discountLevelLabel(): string {
+    if (!this.discountActiveValue) {
+      return 'Inactivo';
+    }
+    const pct = this.discountPercentValue;
+    if (!pct) {
+      return 'Sin descuento';
+    }
+    if (pct >= 40) {
+      return 'Nivel 3';
+    }
+    if (pct >= 35) {
+      return 'Nivel 2';
+    }
+    if (pct >= 30) {
+      return 'Nivel 1';
+    }
+    return 'Nivel base';
+  }
+
+  get hasDiscount(): boolean {
+    return this.discountActiveValue && this.discountPercentValue > 0;
+  }
+
+  get discountPercent(): number {
+    return this.hasDiscount ? this.discountPercentValue : 0;
+  }
+
+  get discountLabel(): string {
+    if (!this.discountActiveValue) {
+      return 'Sin descuento';
+    }
+    const pct = this.discountPercentValue;
+    if (!pct) {
+      return 'Sin descuento';
+    }
+    return `Dto ${pct}%`;
+  }
+
+  discountedPrice(value: number): number {
+    if (!this.hasDiscount) {
+      return value;
+    }
+    const pct = this.discountPercentValue / 100;
+    return Math.max(0, Math.round(value * (1 - pct)));
+  }
+
   get subtotal(): number {
     return this.cartControl.subtotal;
   }
 
   get discount(): number {
-    return this.cartControl.discount;
+    if (!this.hasDiscount) {
+      return 0;
+    }
+    return Math.round(this.subtotal * (this.discountPercentValue / 100));
   }
 
   get total(): number {
-    return this.cartControl.total;
+    return Math.max(0, this.subtotal + this.shipping - this.discount);
   }
 
   get itemsCount(): number {
     return this.cartControl.itemsCount;
+  }
+
+  get totalDiscount(): number {
+    return this.discount;
   }
 
   get gapToGoal(): number {

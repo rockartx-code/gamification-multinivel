@@ -312,6 +312,24 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.cartControl.subtotal;
   }
 
+  get cartDiscount(): number {
+    if (!this.hasDiscount) {
+      return 0;
+    }
+    return Math.round(this.cartTotal * (this.discountPercentValue / 100));
+  }
+
+  get cartDiscountPercent(): number {
+    return this.hasDiscount ? Math.round(this.discountPercentValue) : 0;
+  }
+
+  get cartDiscountLabel(): string {
+    if (this.cartDiscount <= 0 || this.cartDiscountPercent <= 0) {
+      return 'Sin descuento';
+    }
+    return `Dto ${this.cartDiscountPercent}%`;
+  }
+
   get socialFormatLabel(): string {
     if (this.socialFormat === 'feed') {
       return 'Feed (1:1)';
@@ -360,6 +378,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return `Dto ${pct}% • Nivel 1`;
     }
     return `Dto ${pct}%`;
+  }
+
+  get hasDiscount(): boolean {
+    return this.discountActiveValue && this.discountPercentValue > 0;
+  }
+
+  get discountPercent(): number {
+    return this.hasDiscount ? this.discountPercentValue : 0;
+  }
+
+  discountAppliedLabel(): string {
+    return this.hasDiscount ? `Dto ${this.discountPercentValue}%` : 'Sin descuento';
+  }
+
+  discountedPrice(value: number): number {
+    if (!this.hasDiscount) {
+      return value;
+    }
+    const pct = this.discountPercentValue / 100;
+    return Math.max(0, Math.round(value * (1 - pct)));
   }
 
   discountBadgeIcon(): string {
@@ -453,20 +491,36 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
 
-  get graphLayout(): { nodes: Array<{ id: string; level: string; x: number; y: number; label: string; name: string; status?: NetworkMember['status'] }>; links: Array<{ x1: number; y1: number; x2: number; y2: number }> } {
-    const root = { id: 'root', level: 'root', x: 120, y: 130, label: 'Tu', name: 'Tu' };
-    const l1Members = this.networkMembers.filter((member) => member.level === 'L1').slice(0, 3);
-    const l2Members = this.networkMembers.filter((member) => member.level === 'L2').slice(0, 6);
+  get graphLayout(): {
+    nodes: Array<{ id: string; level: string; x: number; y: number; label: string; name: string; status?: NetworkMember['status'] }>;
+    links: Array<{ x1: number; y1: number; x2: number; y2: number }>;
+  } {
+    const l1Members = this.networkMembers.filter((member) => member.level === 'L1');
+    const l2Members = this.networkMembers.filter((member) => member.level === 'L2');
 
-    const l1Positions = this.spreadPositions(l1Members.length, 70, 190);
-    const l2Positions = this.spreadPositions(l2Members.length, 50, 210);
+    const l1Positions = this.buildColumnPositions(l1Members.length, 260, 50, 170);
+    const l2Positions = this.buildColumnPositions(l2Members.length, 420, 40, 180);
+    const rootY =
+      l1Positions.length > 0
+        ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
+        : 110;
+
+    const rootName = this.currentUser?.name || 'Tu';
+    const root = {
+      id: 'root',
+      level: 'root',
+      x: 120,
+      y: rootY,
+      label: this.nodeLabel(rootName),
+      name: rootName
+    };
 
     const l1Nodes = l1Members.map((member, idx) => ({
       id: `l1-${idx}`,
       level: 'L1',
-      x: 260,
-      y: l1Positions[idx],
-      label: 'L1',
+      x: l1Positions[idx]?.x ?? 260,
+      y: l1Positions[idx]?.y ?? rootY,
+      label: this.nodeLabel(member.name),
       name: member.name || 'Miembro',
       status: member.status
     }));
@@ -474,9 +528,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const l2Nodes = l2Members.map((member, idx) => ({
       id: `l2-${idx}`,
       level: 'L2',
-      x: 420,
-      y: l2Positions[idx],
-      label: 'L2',
+      x: l2Positions[idx]?.x ?? 420,
+      y: l2Positions[idx]?.y ?? rootY,
+      label: this.nodeLabel(member.name),
       name: member.name || 'Miembro',
       status: member.status
     }));
@@ -517,12 +571,27 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return 14;
   }
 
-  private spreadPositions(count: number, minY: number, maxY: number): number[] {
-    if (count <= 1) {
-      return [Math.round((minY + maxY) / 2)];
+  private buildColumnPositions(count: number, x: number, top = 50, bottom = 170): { x: number; y: number }[] {
+    if (count <= 0) {
+      return [];
     }
-    const step = (maxY - minY) / (count - 1);
-    return Array.from({ length: count }, (_, idx) => Math.round(minY + step * idx));
+    if (count === 1) {
+      return [{ x, y: (top + bottom) / 2 }];
+    }
+    const spacing = (bottom - top) / (count - 1);
+    return Array.from({ length: count }, (_, index) => ({
+      x,
+      y: top + spacing * index
+    }));
+  }
+
+  private nodeLabel(name?: string): string {
+    const value = (name ?? '').trim();
+    if (!value) {
+      return 'Cliente';
+    }
+    const first = value.split(' ')[0] ?? value;
+    return first.slice(0, 6);
   }
   ngOnInit(): void {
     this.isLoading = true;

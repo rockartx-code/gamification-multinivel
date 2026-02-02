@@ -17,7 +17,6 @@
   <main class="mx-auto max-w-3xl px-4 py-10">
     <div
       class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-
       <!-- Ambient glow -->
       <div
         class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(250,204,21,0.10),transparent_55%)]">
@@ -27,7 +26,6 @@
       </div>
 
       <div class="relative">
-
         <!-- Header -->
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -52,21 +50,46 @@
 
         <!-- Order summary -->
         <div class="mt-5 grid gap-4 sm:grid-cols-2">
-
           <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Detalle</div>
+            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
+              Detalle
+            </div>
+
             <div class="mt-2 space-y-2 text-sm text-zinc-300">
               <div class="flex justify-between gap-4">
                 <span class="text-zinc-400">ID</span>
                 <span class="font-medium text-white">{{ orderId }}</span>
               </div>
+
               <div class="flex justify-between gap-4">
                 <span class="text-zinc-400">Estatus</span>
                 <span class="font-medium text-white">{{ statusLabel }}</span>
               </div>
-              <div class="flex justify-between gap-4" *ngIf="order?.total">
+
+              <div class="flex justify-between gap-4" *ngIf="orderSubtotal">
+                <span class="text-zinc-400">Subtotal</span>
+                <span class="font-medium text-white">
+                  {{ orderSubtotal | currency:'MXN' }}
+                </span>
+              </div>
+
+              <div class="flex justify-between gap-4">
+                <span class="text-zinc-400">Descuento</span>
+                <span [ngClass]="orderDiscount > 0 ? 'font-semibold text-emerald-300' : 'text-zinc-500'">
+                  {{
+                  orderDiscount > 0
+                  ? ('-' + (orderDiscount | currency:'MXN') +
+                  (orderDiscountPercent ? ' • ' + orderDiscountPercent + '%' : ''))
+                  : 'Sin descuento'
+                  }}
+                </span>
+              </div>
+
+              <div class="flex justify-between gap-4">
                 <span class="text-zinc-400">Total</span>
-                <span class="font-semibold text-yellow-300">{{ order?.total | currency:'MXN' }}</span>
+                <span class="font-semibold text-yellow-300">
+                  {{ orderTotal | currency:'MXN' }}
+                </span>
               </div>
             </div>
           </div>
@@ -76,81 +99,216 @@
             <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Progreso</div>
 
             <div class="mt-3 space-y-3 text-sm">
+
+              <!-- Orden creada (siempre completado) -->
               <div class="flex items-start gap-3">
-                <div class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-400/20 text-emerald-200">
-                  <i class="fa-solid fa-check text-[10px]" aria-hidden="true"></i>
+                <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border
+               border-emerald-400/40 bg-emerald-400/20 text-emerald-200 shadow">
+                  <i class="fa-solid fa-check text-[10px]"></i>
                 </div>
+
                 <div class="flex-1">
                   <div class="font-medium text-white">Orden creada</div>
-                  <div class="text-xs text-zinc-500">Tu pedido fue registrado en el sistema.</div>
+                  <div class="text-xs text-zinc-500">Tu pedido fue registrado.</div>
                 </div>
               </div>
 
+              <!-- Pago -->
               <div class="flex items-start gap-3">
-                <div
-                  class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border"
-                  [ngClass]="(statusValue === 'paid' || statusValue === 'shipped' || statusValue === 'delivered') ? 'border-emerald-400/40 bg-emerald-400/20 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-500'">
-                  <i class="fa-solid fa-check text-[10px]" *ngIf="statusValue === 'paid' || statusValue === 'shipped' || statusValue === 'delivered'" aria-hidden="true"></i>
+                <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow"
+                  [ngClass]="getStepClass('paid')">
+                  <i class="fa-solid" [ngClass]="getStepIcon('paid')"></i>
                 </div>
+
                 <div class="flex-1">
                   <div class="font-medium text-white">Pago</div>
-                  <div class="text-xs text-zinc-500">En espera de conciliaci?n o confirmado.</div>
+                  <div class="text-xs text-zinc-500">Conciliación y confirmación.</div>
                 </div>
               </div>
 
+              <!-- Preparación -->
               <div class="flex items-start gap-3">
-                <div
-                  class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border"
-                  [ngClass]="(statusValue === 'paid' || statusValue === 'shipped' || statusValue === 'delivered') ? 'border-emerald-400/40 bg-emerald-400/20 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-500'">
-                  <i class="fa-solid fa-check text-[10px]" *ngIf="statusValue === 'paid' || statusValue === 'shipped' || statusValue === 'delivered'" aria-hidden="true"></i>
+                <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow"
+                  [ngClass]="getStepClass('packing')">
+                  <i class="fa-solid" [ngClass]="getStepIcon('packing')"></i>
                 </div>
+
                 <div class="flex-1">
-                  <div class="font-medium text-white">Preparaci?n</div>
-                  <div class="text-xs text-zinc-500">Estamos armando tu paquete.</div>
+                  <div class="font-medium text-white">Preparación</div>
+                  <div class="text-xs text-zinc-500">Armando paquete.</div>
                 </div>
               </div>
 
+              <!-- Envío -->
               <div class="flex items-start gap-3">
-                <div
-                  class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border"
-                  [ngClass]="(statusValue === 'paid' || statusValue === 'shipped' || statusValue === 'delivered') ? 'border-emerald-400/40 bg-emerald-400/20 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-500'">
-                  <i class="fa-solid fa-check text-[10px]" *ngIf="statusValue === 'paid' || statusValue === 'shipped' || statusValue === 'delivered'" aria-hidden="true"></i>
+                <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow"
+                  [ngClass]="getStepClass('shipped')">
+                  <i class="fa-solid" [ngClass]="getStepIcon('shipped')"></i>
                 </div>
+
                 <div class="flex-1">
-                  <div class="font-medium text-white">Env?o</div>
-                  <div class="text-xs text-zinc-500">Tu orden va en camino.</div>
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium text-white">Envío</div>
+
+                    <span *ngIf="statusValue === 'shipped'"
+                      class="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[11px] font-semibold text-sky-200">
+                      <span class="h-1 w-1 rounded-full bg-sky-200/80"></span>
+                      En camino
+                    </span>
+                  </div>
+
+                  <div class="text-xs text-zinc-500">Ruta de entrega.</div>
                 </div>
               </div>
 
+              <!-- Entregada -->
               <div class="flex items-start gap-3">
-                <div
-                  class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border"
-                  [ngClass]="statusValue === 'delivered' ? 'border-emerald-400/40 bg-emerald-400/20 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-500'">
-                  <i class="fa-solid fa-check text-[10px]" *ngIf="statusValue === 'delivered'" aria-hidden="true"></i>
+                <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow"
+                  [ngClass]="getStepClass('delivered')">
+                  <i class="fa-solid" [ngClass]="getStepIcon('delivered')"></i>
                 </div>
+
                 <div class="flex-1">
                   <div class="font-medium text-white">Entregada</div>
-                  <div class="text-xs text-zinc-500">Confirmaci?n de entrega completada.</div>
+                  <div class="text-xs text-zinc-500">Confirmación final.</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+
+
+        </div>
+
+        <!-- Envío card -->
+        <!-- Envío card (pro, consistente) -->
+        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3">
+              <!-- Icono -->
+              <div
+                class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-200">
+                <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+              </div>
+
+              <!-- Header -->
+              <div>
+                <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Envío</div>
+
+                <div class="mt-1 flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-semibold text-sky-200">
+                    <span class="h-1.5 w-1.5 rounded-full bg-sky-200/80"></span>
+                    En camino
+                  </span>
+
+                  <!-- Subtexto corto -->
+                  <span class="text-xs text-zinc-500">
+                    {{ order?.shippingType === 'carrier' ? 'Paquetería' : 'Entrega / recolección' }}
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
 
-        </div>
-
-
-        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-5">
-          <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Env??o</div>
-          <div class="mt-2 text-sm text-zinc-300">
-            <div *ngIf="order?.shippingType === 'carrier'">
-              N??mero de gu??a: <span class="font-semibold text-yellow-300">{{ order?.trackingNumber || '-' }}</span>
-            </div>
-            <div *ngIf="order?.shippingType === 'personal'">
-              Lugar: <span class="font-semibold text-yellow-300">{{ order?.deliveryPlace || '-' }}</span>
-              <span *ngIf="order?.deliveryDate">?? Fecha: <span class="font-semibold text-yellow-300">{{ order?.deliveryDate }}</span></span>
+            <!-- Total mini, opcional (si quieres reforzar confianza visual) -->
+            <div class="text-right">
+              <div class="text-[11px] text-zinc-500">Total</div>
+              <div class="text-sm font-semibold text-yellow-300">{{ orderTotal | currency:'MXN' }}</div>
             </div>
           </div>
+
+          <!-- Contenido -->
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <!-- Carrier -->
+            <ng-container *ngIf="order?.shippingType === 'carrier'">
+              <!-- Guía -->
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">
+                  Número de guía
+                </div>
+
+                <div class="mt-1 flex items-center justify-between gap-3">
+                  <span class="font-mono text-sm font-semibold text-yellow-300">
+                    {{ order?.trackingNumber || '-' }}
+                  </span>
+
+                  <button type="button"
+                    class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-white/10"
+                    (click)="copyToClipboard(order?.trackingNumber)" [disabled]="!order?.trackingNumber">
+                    <i class="fa-regular fa-copy"></i>
+                    Copiar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dirección -->
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">
+                  Dirección de entrega
+                </div>
+
+                <div class="mt-1 space-y-0.5 text-sm text-zinc-200">
+
+                  <!-- Nombre -->
+                  <div class="font-semibold text-white">
+                    {{ order?.recipientName || order?.customer || '-' }}
+                  </div>
+
+                  <!-- Calle -->
+                  <div>
+                    {{ order?.address || '-' }}
+                  </div>
+
+                  <!-- CP + Estado -->
+                  <div class="text-xs text-zinc-400">
+                    {{ order?.postalCode || '-' }} • {{ order?.state || '-' }}
+                  </div>
+
+                  <!-- Tel -->
+                  <div class="mt-1 text-xs text-zinc-500">
+                    📞 {{ order?.phone || '-' }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Estado -->
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3 sm:col-span-2">
+                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">
+                  Estado del envío
+                </div>
+
+                <div class="mt-1 text-sm text-zinc-200">
+                  En tránsito — rumbo a la dirección registrada.
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Personal -->
+            <ng-container *ngIf="order?.shippingType === 'personal'">
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Lugar</div>
+                <div class="mt-1 text-sm font-semibold text-yellow-300">
+                  {{ order?.deliveryPlace || '-' }}
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Fecha</div>
+                <div class="mt-1 text-sm font-semibold text-yellow-300">
+                  {{ order?.deliveryDate || '-' }}
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- Pie opcional: nota -->
+          <div class="mt-3 text-xs text-zinc-500">
+            Tip: guarda tu referencia <span class="font-semibold text-zinc-300">{{ orderId }}</span> por si necesitas
+            soporte.
+          </div>
         </div>
+
 
         <!-- SPEI card (pro) -->
         <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-5">
@@ -159,7 +317,7 @@
               <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Pago</div>
               <div class="mt-1 text-lg font-extrabold text-white">Transferencia SPEI</div>
               <div class="mt-1 text-xs text-zinc-500">
-                Usa estos datos tal cual para validar el pago sin fricci?n.
+                Usa estos datos tal cual para validar el pago sin fricción.
               </div>
             </div>
 
@@ -193,12 +351,8 @@
           </div>
 
           <div class="mt-4 space-y-2 text-sm text-zinc-300">
-            <p>
-              Una vez realizada la transferencia, env?a tu comprobante para acelerar la confirmaci?n.
-            </p>
-            <p class="text-zinc-400">
-              Soporte: WhatsApp 477 574 2501
-            </p>
+            <p>Una vez realizada la transferencia, envía tu comprobante para acelerar la confirmación.</p>
+            <p class="text-zinc-400">Soporte: WhatsApp 477 574 2501</p>
           </div>
         </div>
 
@@ -209,15 +363,13 @@
 
         <div *ngIf="!isLoading && !order"
           class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-          <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Sin resultados</div>
-          <div class="mt-2 font-medium text-white">No se encontr? la orden.</div>
-          <div class="mt-1 text-xs text-zinc-500">
-            Verifica el ID o intenta nuevamente.
+          <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            Sin resultados
           </div>
+          <div class="mt-2 font-medium text-white">No se encontró la orden.</div>
+          <div class="mt-1 text-xs text-zinc-500">Verifica el ID o intenta nuevamente.</div>
         </div>
-
       </div>
     </div>
   </main>
-
 </section>

@@ -38,6 +38,9 @@
                 Total
               </div>
               <div class="text-lg font-extrabold sm:text-xl">{{ formatMoney(total) }}</div>
+              <div class="text-[11px]" [ngClass]="totalDiscount > 0 ? 'text-emerald-300' : 'text-zinc-500'">
+                {{ totalDiscount > 0 ? ('Descuento: -' + formatMoney(totalDiscount) + ' • ' + discountLabel) : 'Sin descuento' }}
+              </div>
               <div class="text-[11px] text-zinc-500">
                 {{ itemsCount }} artículo{{ itemsCount === 1 ? '' : 's' }}
               </div>
@@ -97,8 +100,16 @@
                       <div class="mt-1 truncate text-[11px] text-zinc-500">{{ item.note }}</div>
                     </div>
                     <div class="whitespace-nowrap text-sm font-extrabold">
-                      {{ formatMoney(item.price) }}
+                      {{ formatMoney(discountedPrice(item.price)) }}
                     </div>
+                  </div>
+                  <div class="mt-1 flex items-center gap-2 text-[11px]">
+                    <span *ngIf="hasDiscount" class="text-zinc-500 line-through">
+                      {{ formatMoney(item.price) }}
+                    </span>
+                    <span [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+                      {{ hasDiscount ? discountLabel : 'Sin descuento' }}
+                    </span>
                   </div>
 
                   <div class="mt-2 flex items-center justify-between gap-2">
@@ -111,7 +122,7 @@
 
                     <div class="text-xs text-zinc-300">
                       <span class="text-zinc-500">Parcial:</span>
-                      <span class="font-semibold">{{ formatMoney(item.price * item.qty) }}</span>
+                      <span class="font-semibold">{{ formatMoney(discountedPrice(item.price) * item.qty) }}</span>
                     </div>
 
                     <button
@@ -219,6 +230,14 @@
                 <span>Descuento</span>
                 <span class="text-yellow-300">-{{ formatMoney(discount) }}</span>
               </div>
+              <div class="flex items-center justify-between text-zinc-300">
+                <span>Nivel de descuento</span>
+                <span class="text-zinc-100">{{ discountLevelLabel }}</span>
+              </div>
+              <div class="flex items-center justify-between text-zinc-300">
+                <span>Descuento aplicado</span>
+                <span class="text-yellow-300">{{ discountLabel }}</span>
+              </div>
               <div class="h-px bg-white/10"></div>
               <div class="flex items-center justify-between">
                 <span class="font-semibold text-zinc-200">Total</span>
@@ -321,6 +340,14 @@
         <div class="flex items-center justify-between text-zinc-300">
           <span>Descuento</span>
           <span class="text-yellow-300">-{{ formatMoney(discount) }}</span>
+        </div>
+        <div class="flex items-center justify-between text-zinc-300">
+          <span>Nivel de descuento</span>
+          <span class="text-zinc-100">{{ discountLevelLabel }}</span>
+        </div>
+        <div class="flex items-center justify-between text-zinc-300">
+          <span>Descuento aplicado</span>
+          <span class="text-yellow-300">{{ discountLabel }}</span>
         </div>
         <div class="h-px bg-white/10"></div>
         <div class="flex items-center justify-between">

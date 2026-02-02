@@ -428,6 +428,10 @@ export class MockApiService {
       id: `#${Math.floor(1000 + Math.random() * 9000)}`,
       createdAt: new Date().toISOString(),
       customer: payload.customerName,
+      grossSubtotal: total,
+      discountRate: 0,
+      discountAmount: 0,
+      netTotal: total,
       total,
       status: payload.status,
       recipientName: payload.recipientName,
@@ -444,6 +448,10 @@ export class MockApiService {
       id: orderId,
       createdAt: new Date().toISOString(),
       customer: 'Cliente',
+      grossSubtotal: 0,
+      discountRate: 0,
+      discountAmount: 0,
+      netTotal: 0,
       total: 0,
       status: 'pending'
     };
@@ -456,6 +464,10 @@ export class MockApiService {
         id: `#${Math.floor(1000 + Math.random() * 9000)}`,
         createdAt: new Date().toISOString(),
         customer: `Cliente ${customerId}`,
+        grossSubtotal: 0,
+        discountRate: 0,
+        discountAmount: 0,
+        netTotal: 0,
         total: 0,
         status: 'pending'
       }

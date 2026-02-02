@@ -224,6 +224,9 @@
               Carrito
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
+            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-emerald-300' : 'text-zinc-500'">
+              {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
+            </div>
           </div>
           <button type="button"
             class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
@@ -262,7 +265,15 @@
                 <span class="text-sm text-zinc-400">Cantidad</span>
                 <input type="number" min="0" [value]="heroQty" (input)="setHeroQty($any($event.target).value)"
                   class="w-20 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-                <span class="text-sm text-zinc-400">x {{ formatMoney(heroProductPrice) }}</span>
+                <span class="flex items-center gap-2 text-sm text-zinc-400">
+                  x
+                  <span class="font-semibold text-zinc-100">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
+                  <span *ngIf="hasDiscount" class="text-xs text-zinc-500 line-through">
+                    {{ formatMoney(heroProductPrice) }}
+                  </span>
+                  <span *ngIf="hasDiscount" class="text-[11px] text-emerald-300">{{ discountAppliedLabel() }}</span>
+                  <span *ngIf="!hasDiscount" class="text-[11px] text-zinc-500">Sin descuento</span>
+                </span>
               </div>
 
               <button
@@ -328,7 +339,17 @@
                     <h4 class="mt-1 truncate font-extrabold tracking-tight">{{ product.name }}</h4>
                     <div class="mt-1 truncate text-xs text-zinc-500">{{ product.badge }}</div>
                   </div>
-                  <div class="whitespace-nowrap text-sm font-extrabold">{{ formatMoney(product.price) }}</div>
+                  <div class="text-right">
+                    <div *ngIf="hasDiscount" class="text-[11px] text-zinc-500 line-through">
+                      {{ formatMoney(product.price) }}
+                    </div>
+                    <div class="whitespace-nowrap text-sm font-extrabold">
+                      {{ formatMoney(discountedPrice(product.price)) }}
+                    </div>
+                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+                      {{ discountAppliedLabel() }}
+                    </div>
+                  </div>
                 </div>
 
                 <div class="mt-4 flex items-center gap-3">
@@ -393,7 +414,17 @@
                     <h4 class="mt-1 truncate font-extrabold tracking-tight">{{ product.name }}</h4>
                     <div class="mt-1 truncate text-xs text-zinc-500">{{ product.badge }}</div>
                   </div>
-                  <div class="whitespace-nowrap text-sm font-extrabold">{{ formatMoney(product.price) }}</div>
+                  <div class="text-right">
+                    <div *ngIf="hasDiscount" class="text-[11px] text-zinc-500 line-through">
+                      {{ formatMoney(product.price) }}
+                    </div>
+                    <div class="whitespace-nowrap text-sm font-extrabold">
+                      {{ formatMoney(discountedPrice(product.price)) }}
+                    </div>
+                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+                      {{ discountAppliedLabel() }}
+                    </div>
+                  </div>
                 </div>
 
                 

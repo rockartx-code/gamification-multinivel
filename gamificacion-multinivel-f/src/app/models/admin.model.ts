@@ -2,6 +2,10 @@ export interface AdminOrder {
   id: string;
   createdAt?: string;
   customer: string;
+  grossSubtotal?: number;
+  discountRate?: number;
+  discountAmount?: number;
+  netTotal?: number;
   total: number;
   status: 'pending' | 'paid' | 'shipped' | 'delivered';
   shippingType?: 'carrier' | 'personal';
