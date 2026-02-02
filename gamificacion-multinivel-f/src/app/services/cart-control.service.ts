@@ -172,6 +172,16 @@ export class CartControlService {
     this.persistLocalCartItems(updatedItems);
   }
 
+  clearCart(): void {
+    const current = this.ensureData();
+    this.dataSubject.next({ ...current, items: [] });
+    try {
+      localStorage.removeItem(this.localCartKey);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   selectPay(method: 'card' | 'spei' | 'cash'): void {
     this.payMethod = method;
   }

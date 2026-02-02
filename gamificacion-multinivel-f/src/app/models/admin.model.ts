@@ -84,6 +84,10 @@ export interface SaveAdminProductPayload {
   active: boolean;
   sku?: string;
   hook?: string;
+  description?: string;
+  copyFacebook?: string;
+  copyInstagram?: string;
+  copyWhatsapp?: string;
   tags?: string[];
   images?: Array<{
     section: CreateProductAssetPayload['section'];
@@ -144,6 +148,13 @@ export interface AdminCustomer {
   level: string;
   discount: string;
   commissions: number;
+  commissionsPrevMonth?: number;
+  commissionsPrevMonthKey?: string;
+  commissionsCurrentPending?: number;
+  commissionsCurrentConfirmed?: number;
+  commissionsPrevStatus?: 'no_moves' | 'pending' | 'paid';
+  commissionsPrevReceiptUrl?: string;
+  clabeInterbancaria?: string;
 }
 
 export interface AdminProduct {
@@ -153,6 +164,10 @@ export interface AdminProduct {
   active: boolean;
   sku?: string;
   hook?: string;
+  description?: string;
+  copyFacebook?: string;
+  copyInstagram?: string;
+  copyWhatsapp?: string;
   tags?: string[];
   images?: Array<{
     section: CreateProductAssetPayload['section'];
@@ -167,19 +182,6 @@ export interface AdminWarning {
   severity: 'high' | 'medium' | 'low';
 }
 
-export interface CommissionsPaidSummary {
-  monthKey: string;
-  count: number;
-  total: number;
-  rows: Array<{
-    beneficiaryId: number | string;
-    beneficiaryName: string;
-    orderId?: string;
-    amount: number;
-    createdAt?: string;
-  }>;
-}
-
 export interface AdminAssetSlot {
   label: string;
   hint: string;
@@ -191,5 +193,5 @@ export interface AdminData {
   products: AdminProduct[];
   warnings: AdminWarning[];
   assetSlots: AdminAssetSlot[];
-  commissionsPaidSummary?: CommissionsPaidSummary;
+  productOfMonthId?: number | null;
 }

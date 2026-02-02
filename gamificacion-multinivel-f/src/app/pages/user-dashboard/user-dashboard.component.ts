@@ -75,7 +75,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   isCommissionUploading = false;
   commissionClabe = '';
   commissionUploadName = '';
+  showCommissionLedger = false;
+  clabeDraft = '';
+  clabePending = '';
+  isClabeConfirmOpen = false;
+  isClabeSaving = false;
   isGoalsModalOpen = false;
+  isProductDetailsOpen = false;
+  selectedProduct: DashboardProduct | null = null;
   achievedGoals: DashboardGoal[] = [];
   private goalToastState: 'near' | 'done' | '' = '';
 
@@ -492,57 +499,80 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
 
   get graphLayout(): {
-    nodes: Array<{ id: string; level: string; x: number; y: number; label: string; name: string; status?: NetworkMember['status'] }>;
+    nodes: Array<{
+      id: string;
+      level: string;
+      x: number;
+      y: number;
+      label: string;
+      name: string;
+      status?: NetworkMember['status'];
+      leaderId?: string;
+    }>;
     links: Array<{ x1: number; y1: number; x2: number; y2: number }>;
   } {
     const l1Members = this.networkMembers.filter((member) => member.level === 'L1');
     const l2Members = this.networkMembers.filter((member) => member.level === 'L2');
+    const metrics = this.getGraphMetrics(l1Members.length, l2Members.length);
+    const rootX = 120;
+    const l1X = 320;
+    const l2X = 540;
 
-    const l1Positions = this.buildColumnPositions(l1Members.length, 260, 50, 170);
-    const l2Positions = this.buildColumnPositions(l2Members.length, 420, 40, 180);
+    const l1Positions = this.buildColumnPositions(l1Members.length, l1X, metrics.top, metrics.spacing);
+    const l2Positions = this.buildColumnPositions(l2Members.length, l2X, metrics.top, metrics.spacing);
     const rootY =
       l1Positions.length > 0
         ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
-        : 110;
+        : metrics.height / 2;
 
     const rootName = this.currentUser?.name || 'Tu';
     const root = {
       id: 'root',
       level: 'root',
-      x: 120,
+      x: rootX,
       y: rootY,
       label: this.nodeLabel(rootName),
       name: rootName
     };
 
     const l1Nodes = l1Members.map((member, idx) => ({
-      id: `l1-${idx}`,
+      id: member.id ? `l1-${member.id}` : `l1-${idx}`,
       level: 'L1',
-      x: l1Positions[idx]?.x ?? 260,
+      x: l1Positions[idx]?.x ?? l1X,
       y: l1Positions[idx]?.y ?? rootY,
       label: this.nodeLabel(member.name),
       name: member.name || 'Miembro',
       status: member.status
     }));
 
-    const l2Nodes = l2Members.map((member, idx) => ({
-      id: `l2-${idx}`,
-      level: 'L2',
-      x: l2Positions[idx]?.x ?? 420,
-      y: l2Positions[idx]?.y ?? rootY,
-      label: this.nodeLabel(member.name),
-      name: member.name || 'Miembro',
-      status: member.status
-    }));
+    const l1ByMemberId = new Map<string, (typeof l1Nodes)[number]>();
+    l1Members.forEach((member, idx) => {
+      const memberId = member.id ? String(member.id) : `idx-${idx}`;
+      l1ByMemberId.set(memberId, l1Nodes[idx]);
+    });
 
-    const links = [] as Array<{ x1: number; y1: number; x2: number; y2: number }>;
+    const l2Nodes = l2Members.map((member, idx) => {
+      const memberId = member.id ? `l2-${member.id}` : `l2-${idx}`;
+      return {
+        id: memberId,
+        level: 'L2',
+        x: l2Positions[idx]?.x ?? l2X,
+        y: l2Positions[idx]?.y ?? rootY,
+        label: this.nodeLabel(member.name),
+        name: member.name || 'Miembro',
+        status: member.status,
+        leaderId: member.leaderId ? String(member.leaderId) : undefined
+      };
+    });
+
+    const links: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
     for (const node of l1Nodes) {
       links.push({ x1: root.x, y1: root.y, x2: node.x, y2: node.y });
     }
-
-    for (let i = 0; i < l2Nodes.length; i += 1) {
-      const parent = l1Nodes.length ? l1Nodes[i % l1Nodes.length] : root;
-      links.push({ x1: parent.x, y1: parent.y, x2: l2Nodes[i].x, y2: l2Nodes[i].y });
+    for (const node of l2Nodes) {
+      const parentId = node.leaderId ?? '';
+      const parent = l1ByMemberId.get(parentId) ?? (l1Nodes.length ? l1Nodes[0] : root);
+      links.push({ x1: parent.x, y1: parent.y, x2: node.x, y2: node.y });
     }
 
     return { nodes: [root, ...l1Nodes, ...l2Nodes], links };
@@ -571,14 +601,33 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return 14;
   }
 
-  private buildColumnPositions(count: number, x: number, top = 50, bottom = 170): { x: number; y: number }[] {
+  get graphSize(): { width: number; height: number } {
+    const l1Count = this.networkMembers.filter((member) => member.level === 'L1').length;
+    const l2Count = this.networkMembers.filter((member) => member.level === 'L2').length;
+    const metrics = this.getGraphMetrics(l1Count, l2Count);
+    return { width: metrics.width, height: metrics.height };
+  }
+
+  private getGraphMetrics(l1Count: number, l2Count: number): { width: number; height: number; top: number; spacing: number } {
+    const maxCount = Math.max(l1Count, l2Count, 1);
+    const top = 40;
+    const spacing = 64;
+    const height = Math.max(260, top * 2 + spacing * (maxCount - 1));
+    return { width: 640, height, top, spacing };
+  }
+
+  private buildColumnPositions(
+    count: number,
+    x: number,
+    top: number,
+    spacing: number
+  ): { x: number; y: number }[] {
     if (count <= 0) {
       return [];
     }
     if (count === 1) {
-      return [{ x, y: (top + bottom) / 2 }];
+      return [{ x, y: top }];
     }
-    const spacing = (bottom - top) / (count - 1);
     return Array.from({ length: count }, (_, index) => ({
       x,
       y: top + spacing * index
@@ -592,6 +641,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     const first = value.split(' ')[0] ?? value;
     return first.slice(0, 6);
+  }
+
+  curvePath(link: { x1: number; y1: number; x2: number; y2: number }, offset: number): string {
+    const midX = (link.x1 + link.x2) / 2;
+    const midY = (link.y1 + link.y2) / 2 + offset;
+    return `M ${link.x1} ${link.y1} Q ${midX} ${midY}, ${link.x2} ${link.y2}`;
   }
   ngOnInit(): void {
     this.isLoading = true;
@@ -831,6 +886,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         this.socialFormat = 'story';
         break;
     }
+    if (!this.captionText.trim() || this.lastAutoCaption) {
+      this.captionText = this.buildAutoCaption();
+      this.lastAutoCaption = true;
+    }
   }
 
   copyLink(): void {
@@ -855,24 +914,25 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   generateTemplate(channel: 'whatsapp' | 'instagram' | 'facebook' = this.socialChannel): void {
     const label = this.activeFeatured.label;
     const hook = this.activeFeatured.hook;
+    const productCopy = this.getActiveProductCopy(channel);
     let cta = `Pidelo aqui: ${this.referralLink}`;
     let opener = 'Te comparto esto:';
-    let howTo = 'Como lo uso: ...';
+    let howTo = productCopy || 'Como lo uso: ...';
 
     switch (channel) {
       case 'whatsapp':
         opener = 'Te lo paso por WhatsApp:';
-        howTo = 'Resumen rapido: ...';
+        howTo = productCopy || 'Resumen rapido: ...';
         cta = `Si te interesa, responde y te paso el link: ${this.referralLink}`;
         break;
       case 'instagram':
         opener = 'Tip rapido para Instagram:';
-        howTo = 'Como lo uso: ...';
+        howTo = productCopy || 'Como lo uso: ...';
         cta = `Pide el link por DM o en bio: ${this.referralLink}`;
         break;
       case 'facebook':
         opener = 'Comparte esto en Facebook:';
-        howTo = 'Mi experiencia: ...';
+        howTo = productCopy || 'Mi experiencia: ...';
         cta = `Escribeme por inbox y te paso el link: ${this.referralLink}`;
         break;
       default:
@@ -883,6 +943,21 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.captionText = template;
     this.showToast('Template generado.');
     this.lastAutoCaption = true;
+  }
+
+  private getActiveProductCopy(channel: 'whatsapp' | 'instagram' | 'facebook'): string {
+    const featuredId = this.activeFeatured?.id;
+    const product = featuredId ? this.products.find((item) => item.id === featuredId) : null;
+    if (!product) {
+      return '';
+    }
+    if (channel === 'facebook') {
+      return (product.copyFacebook || '').trim();
+    }
+    if (channel === 'instagram') {
+      return (product.copyInstagram || '').trim();
+    }
+    return (product.copyWhatsapp || '').trim();
   }
 
   copyCaption(): void {
@@ -972,8 +1047,60 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isCommissionModalOpen = false;
   }
 
+  openClabeConfirm(): void {
+    const clabe = this.clabeDraft.trim();
+    if (!clabe) {
+      this.showToast('Ingresa tu CLABE interbancaria.');
+      return;
+    }
+    if (!/^\d{18}$/.test(clabe)) {
+      this.showToast('La CLABE debe tener 18 digitos.');
+      return;
+    }
+    this.clabePending = clabe;
+    this.isClabeConfirmOpen = true;
+  }
+
+  closeClabeConfirm(): void {
+    this.isClabeConfirmOpen = false;
+    this.clabePending = '';
+  }
+
+  toggleCommissionLedger(): void {
+    this.showCommissionLedger = !this.showCommissionLedger;
+  }
+
+  openCommissionReceipt(url?: string): void {
+    if (!url) {
+      this.showToast('No hay comprobante disponible.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+  }
+
+  formatLedgerDate(value?: string): string {
+    if (!value) {
+      return '-';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
   closeGoalsModal(): void {
     this.isGoalsModalOpen = false;
+  }
+
+  openProductDetails(product: DashboardProduct): void {
+    this.selectedProduct = product;
+    this.isProductDetailsOpen = true;
+  }
+
+  closeProductDetails(): void {
+    this.isProductDetailsOpen = false;
+    this.selectedProduct = null;
   }
 
   submitCommissionRequest(): void {
@@ -1004,6 +1131,33 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         },
         error: () => {
           this.showToast('No se pudo solicitar el pago.');
+        }
+      });
+  }
+
+  saveCustomerClabe(): void {
+    if (this.isClabeSaving || !this.currentUser?.userId || !this.clabePending) {
+      return;
+    }
+    this.isClabeSaving = true;
+    this.api
+      .saveCustomerClabe({
+        customerId: Number(this.currentUser.userId),
+        clabe: this.clabePending
+      })
+      .pipe(
+        finalize(() => {
+          this.isClabeSaving = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.showToast('CLABE actualizada.');
+          this.closeClabeConfirm();
+          this.dashboardControl.load().subscribe(() => this.cdr.markForCheck());
+        },
+        error: () => {
+          this.showToast('No se pudo actualizar la CLABE.');
         }
       });
   }
@@ -1135,7 +1289,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private buildAutoCaption(): string {
     const label = this.activeFeatured.label || 'Producto destacado';
     const hook = this.activeFeatured.hook || 'Descubre por qué a todos les funciona.';
-    return `${label}: ${hook}\n\nCómo lo uso: ...\n\nPídelo aquí: ${this.referralLink}`;
+    const productCopy = this.getActiveProductCopy(this.socialChannel);
+    const cta = `Pídelo aquí: ${this.referralLink}`;
+    if (productCopy) {
+      return `${productCopy}\n\n${cta}`;
+    }
+    return `${label}: ${hook}\n\nCómo lo uso: ...\n\n${cta}`;
   }
 
   private copyImageToClipboard(url: string, toastMessage: string): void {

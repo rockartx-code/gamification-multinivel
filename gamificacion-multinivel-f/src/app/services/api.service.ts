@@ -20,7 +20,12 @@ import {
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
-import { CommissionReceiptPayload, CommissionRequestPayload, UserDashboardData } from '../models/user-dashboard.model';
+import {
+  CommissionReceiptPayload,
+  CommissionRequestPayload,
+  CustomerClabePayload,
+  UserDashboardData
+} from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 import { MockApiService } from './mock-api.service';
 import { RealApiService } from './real-api.service';
@@ -60,6 +65,14 @@ export class ApiService {
 
   uploadCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
     return this.resolveApi().uploadCommissionReceipt(payload);
+  }
+
+  uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    return this.resolveApi().uploadAdminCommissionReceipt(payload);
+  }
+
+  saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
+    return this.resolveApi().saveCustomerClabe(payload);
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {

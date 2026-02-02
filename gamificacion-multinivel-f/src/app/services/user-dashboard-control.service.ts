@@ -37,10 +37,35 @@ export class UserDashboardControlService {
         const safeBuyAgainIds = Array.isArray(rawBuyAgainIds)
           ? rawBuyAgainIds.filter((item): item is string => typeof item === 'string')
           : [];
+        const rawCommissions = data.commissions;
+        const normalizedCommissions = rawCommissions
+          ? {
+              ...rawCommissions,
+              pendingTotal:
+                (rawCommissions as any).pendingTotal ?? (rawCommissions as any).totalPending ?? 0,
+              monthTotal:
+                (rawCommissions as any).monthTotal ?? (rawCommissions as any).totalConfirmed ?? 0,
+              paidTotal: (rawCommissions as any).paidTotal ?? 0,
+              ledger: Array.isArray((rawCommissions as any).ledger) ? (rawCommissions as any).ledger : [],
+              hasPending:
+                typeof (rawCommissions as any).hasPending === 'boolean'
+                  ? (rawCommissions as any).hasPending
+                  : Boolean(
+                      ((rawCommissions as any).pendingTotal ?? (rawCommissions as any).totalPending ?? 0) > 0
+                    ),
+              hasConfirmed:
+                typeof (rawCommissions as any).hasConfirmed === 'boolean'
+                  ? (rawCommissions as any).hasConfirmed
+                  : Boolean(
+                      ((rawCommissions as any).monthTotal ?? (rawCommissions as any).totalConfirmed ?? 0) > 0
+                    )
+            }
+          : null;
         const mappedData = {
           ...data,
           networkMembers: safeNetworkMembers,
-          buyAgainIds: safeBuyAgainIds
+          buyAgainIds: safeBuyAgainIds,
+          commissions: normalizedCommissions
         };
         this.networkMembersCache = safeNetworkMembers;
         this.buyAgainIdsCache = new Set(safeBuyAgainIds);

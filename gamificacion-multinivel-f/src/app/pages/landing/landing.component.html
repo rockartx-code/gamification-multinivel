@@ -1,127 +1,171 @@
-<section class="min-h-screen bg-[#0b0f14] text-white antialiased">
+<section class="min-h-screen overflow-x-hidden bg-[#0b0f14] text-white antialiased">
   <!-- HEADER -->
-  <header class="sticky top-0 z-40 border-b border-white/5 bg-[#0b0f14]/75 backdrop-blur">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-      <div class="flex items-center gap-3">
-        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
-      </div>
 
-      <div class="flex items-center gap-3">
-        <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-          [routerLink]="['/login']">
-          <i class="fa-solid fa-right-to-bracket text-blue-200" aria-hidden="true"></i>
-          Entrar
-        </a>
-        <a href="#"
-          (click)="scrollTo('recompensas', $event)"
-          class="inline-flex items-center gap-2 rounded-full border border-blue-500/70 px-4 py-2 text-blue-300 transition hover:bg-blue-500/10">
-          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-          Cómo funciona
-        </a>
-        <a href="#"
-          (click)="scrollTo('registro', $event)"
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 font-semibold transition-transform hover:scale-105">
-          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-          Obtenerlo ahora
-        </a>
-      </div>
+<header class="sticky top-0 z-40 border-b border-white/5 bg-[#0b0f14]/75 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+    <!-- Logo -->
+    <div class="flex items-center gap-3">
+      <img src="logo.png" alt="Logo findingU" class="h-10 w-auto sm:h-12 md:h-14" />
     </div>
-  </header>
 
-  <!-- HERO -->
-  <section class="relative bg-ambient">
-    <div class="mx-auto max-w-6xl px-6 py-6 md:py-6">
-      <div class="grid items-center gap-12 md:grid-cols-2">
-        <!-- Left: Copy -->
-        <div>
-          <p
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300">
-            <span class="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_18px_rgba(59,130,246,.7)]"></span>
-            Bienestar avanzado · Uso diario · Resultados medibles
-          </p>
+    <!-- Actions: MOBILE (icons only) -->
+    <div class="flex items-center gap-2 md:hidden">
+      <a
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10"
+        [routerLink]="['/login']"
+        aria-label="Entrar">
+        <i class="fa-solid fa-right-to-bracket text-blue-200" aria-hidden="true"></i>
+      </a>
 
-          <h1 class="mt-6 text-4xl font-extrabold leading-tight tracking-tight md:text-6xl">
-            Cuida tu cuerpo.<br />
-            <span class="text-blue-400">Potencia tu energía.</span><br />
-            Compártelo.
-          </h1>
+      <a
+        href="#"
+        (click)="scrollTo('recompensas', $event)"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-blue-500/70 bg-blue-500/5 text-blue-300 transition hover:bg-blue-500/10"
+        aria-label="Cómo funciona">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      </a>
 
-          <p class="mt-5 max-w-xl text-lg text-zinc-400">
-            Un sistema de bienestar con recompensas: mejoras tú y ayudas a otros a mejorar.
-          </p>
+      <a
+        href="#"
+        (click)="scrollTo('registro', $event)"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 font-semibold transition-transform active:scale-[0.98]"
+        aria-label="Obtenerlo ahora">
+        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+      </a>
+    </div>
 
-          <div class="mt-8 flex flex-wrap items-center gap-4">
-            <a href="#"
-              (click)="scrollTo('registro', $event)"
-              class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-105">
-              <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-              Obtenerlo ahora
-            </a>
+    <!-- Actions: DESKTOP (text + icons) -->
+    <div class="hidden items-center gap-3 md:flex">
+      <a
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+        [routerLink]="['/login']">
+        <i class="fa-solid fa-right-to-bracket text-blue-200" aria-hidden="true"></i>
+        Entrar
+      </a>
 
-            <a href="#"
-              (click)="scrollTo('recompensas', $event)"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-4 transition hover:bg-white/10">
-              <i class="fa-solid fa-gift" aria-hidden="true"></i>
-              Ver recompensas
-            </a>
-          </div>
+      <a
+        href="#"
+        (click)="scrollTo('recompensas', $event)"
+        class="inline-flex items-center gap-2 rounded-full border border-blue-500/70 px-4 py-2 text-sm text-blue-300 transition hover:bg-blue-500/10">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        Cómo funciona
+      </a>
 
-          <!-- Benefits bar -->
-          <div class="mt-10 grid grid-cols-2 gap-4 text-sm text-zinc-200 md:grid-cols-4">
-            <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-              <i class="fa-solid fa-bolt text-blue-200" aria-hidden="true"></i>
-              Energía diaria
-            </div>
-            <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-              <i class="fa-solid fa-heart-pulse text-rose-200" aria-hidden="true"></i>
-              Recuperación
-            </div>
-            <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-              <i class="fa-solid fa-leaf text-emerald-200" aria-hidden="true"></i>
-              Salud integral
-            </div>
-            <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-              <i class="fa-solid fa-trophy text-yellow-200" aria-hidden="true"></i>
-              Recompensas
-            </div>
-          </div>
-        </div>
+      <a
+        href="#"
+        (click)="scrollTo('registro', $event)"
+        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 text-sm font-semibold transition-transform hover:scale-105">
+        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+        Obtenerlo ahora
+      </a>
+    </div>
+  </div>
+</header>
 
-        <!-- Right: Interchangeable Landscape Image with orientation-specific fade -->
-        <div class="relative">
-          <div class="grain relative h-[420px] w-full overflow-hidden rounded-3xl border border-white/10 md:h-[520px]">
-            <img [src]="heroImage" [alt]="heroTitle"
-              class="hero-image absolute inset-0 h-full w-full object-cover" />
 
-            <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/75 via-[#0b0f14]/25 to-transparent"></div>
-            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl"></div>
-            <div class="absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl"></div>
+<!-- HERO -->
+<section class="relative bg-ambient">
+  <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-8">
+    <!-- Mobile: stack | Desktop: 2 cols -->
+    <div class="grid gap-8 md:grid-cols-2 md:items-center md:gap-12">
+      <!-- TOP (mobile): Image first -->
+      <div class="order-1 md:order-2">
+        <div
+          class="grain relative h-[260px] w-full overflow-hidden rounded-3xl border border-white/10 sm:h-[340px] md:h-[520px]">
+          <img
+            [src]="heroImage"
+            [alt]="heroTitle"
+            class="absolute inset-0 block h-full w-full object-cover" />
 
-            <div class="relative z-10 flex h-full flex-col justify-end p-6 md:p-8">
-              <span class="text-xs text-zinc-300/90">PRODUCTO DESTACADO</span>
-              <h2 class="mt-2 text-3xl font-extrabold md:text-4xl">{{ heroTitle }}</h2>
-              <p class="mt-2 max-w-md text-sm text-zinc-200">
-                {{ heroHook }}
-              </p>
+          <!-- Stronger overlay in mobile for readability -->
+          <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/90 via-[#0b0f14]/45 to-transparent md:from-[#0b0f14]/85 md:via-[#0b0f14]/35"></div>
 
-              <div class="mt-5 flex flex-wrap gap-2">
-                <span *ngFor="let tag of heroTags; let i = index"
-                  [ngClass]="getTagClass(i)">
-                  <i class="fa-solid" [ngClass]="getTagIcon(i)" aria-hidden="true"></i>
-                  {{ tag }}
-                </span>
-              </div>
+          <!-- Glow blobs (reduced on mobile to avoid weird overflow feeling) -->
+          <div class="absolute -right-24 -top-24 hidden h-72 w-72 rounded-full bg-blue-500/15 blur-3xl md:block"></div>
+          <div class="absolute -left-24 -bottom-24 hidden h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl md:block"></div>
+
+          <div class="relative z-10 flex h-full flex-col justify-end p-5 sm:p-6 md:p-8">
+            <span class="text-xs text-zinc-300/90">PRODUCTO DESTACADO</span>
+            <h2 class="mt-2 text-2xl font-extrabold sm:text-3xl md:text-4xl">{{ heroTitle }}</h2>
+            <p class="mt-2 max-w-md text-sm text-zinc-200">
+              {{ heroHook }}
+            </p>
+
+            <div class="mt-4 flex flex-wrap gap-2 md:mt-5">
+              <span *ngFor="let tag of heroTags; let i = index" [ngClass]="getTagClass(i)">
+                <i class="fa-solid" [ngClass]="getTagIcon(i)" aria-hidden="true"></i>
+                {{ tag }}
+              </span>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
 
+      <!-- BOTTOM (mobile): Copy second -->
+      <div class="order-2 md:order-1">
+        <p class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300">
+          <span class="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_18px_rgba(59,130,246,.7)]"></span>
+          Bienestar avanzado · Uso diario · Resultados medibles
+        </p>
+
+        <h1 class="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:mt-6 md:text-6xl">
+          Cuida tu cuerpo.<br />
+          <span class="text-blue-400">Potencia tu energía.</span><br />
+          Compártelo.
+        </h1>
+
+        <p class="mt-4 max-w-xl text-base text-zinc-400 sm:text-lg">
+          Un sistema de bienestar con recompensas: mejoras tú y ayudas a otros a mejorar.
+        </p>
+
+        <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+          <a
+            href="#"
+            (click)="scrollTo('registro', $event)"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+            Obtenerlo ahora
+          </a>
+
+          <a
+            href="#"
+            (click)="scrollTo('recompensas', $event)"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-4 transition hover:bg-white/10 sm:w-auto">
+            <i class="fa-solid fa-gift" aria-hidden="true"></i>
+            Ver recompensas
+          </a>
+        </div>
+
+        <!-- Benefits: in mobile, 2x2 grid (no horizontal scroll). Desktop: 4 columns -->
+        <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-zinc-200 md:mt-10 md:grid-cols-4 md:gap-4">
+          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+            <i class="fa-solid fa-bolt text-blue-200" aria-hidden="true"></i>
+            Energía diaria
+          </div>
+          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+            <i class="fa-solid fa-heart-pulse text-rose-200" aria-hidden="true"></i>
+            Recuperación
+          </div>
+          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+            <i class="fa-solid fa-leaf text-emerald-200" aria-hidden="true"></i>
+            Salud integral
+          </div>
+          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+            <i class="fa-solid fa-trophy text-yellow-200" aria-hidden="true"></i>
+            Recompensas
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <!-- REGISTRO -->
   <section id="registro" class="relative mt-2 bg-[#0b0f14] pt-8 md:pt-8">
     <div class="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent via-[#0b0f14] to-[#0b0f14]"></div>
 
-    <div class="relative mx-auto max-w-3xl px-6 py-16">
+    <div class="relative mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-16">
       <div class="text-center">
         <h2 class="text-3xl font-extrabold md:text-4xl">Empieza hoy</h2>
         <p class="mt-3 text-zinc-400">
@@ -129,7 +173,7 @@
         </p>
       </div>
 
-      <div class="mt-10 grid gap-4 md:grid-cols-3">
+      <div class="mt-8 grid gap-4 sm:mt-10 md:grid-cols-3">
         <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div class="flex items-center gap-2 text-sm font-semibold text-blue-200">
             <i class="fa-solid fa-coins" aria-hidden="true"></i>
@@ -137,6 +181,7 @@
           </div>
           <div class="mt-2 text-sm text-zinc-300">Acumula puntos y beneficios automáticamente.</div>
         </div>
+
         <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div class="flex items-center gap-2 text-sm font-semibold text-yellow-200">
             <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
@@ -144,6 +189,7 @@
           </div>
           <div class="mt-2 text-sm text-zinc-300">Recomienda lo que usas. Sin fricción.</div>
         </div>
+
         <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div class="flex items-center gap-2 text-sm font-semibold text-purple-200">
             <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
@@ -154,7 +200,7 @@
       </div>
 
       <form
-        class="grain relative mt-10 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8"
+        class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-8"
         (ngSubmit)="createAccount()">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
@@ -176,7 +222,7 @@
         <label class="relative block">
           <span class="flex items-center gap-2 text-xs text-zinc-400">
             <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-            Correo electr??nico
+            Correo electrónico
           </span>
           <input
             type="email"
@@ -189,7 +235,7 @@
         <label class="relative block">
           <span class="flex items-center gap-2 text-xs text-zinc-400">
             <i class="fa-solid fa-phone" aria-hidden="true"></i>
-            Tel??fono
+            Teléfono
           </span>
           <input
             type="tel"
@@ -202,26 +248,26 @@
         <label class="relative block">
           <span class="flex items-center gap-2 text-xs text-zinc-400">
             <i class="fa-solid fa-lock" aria-hidden="true"></i>
-            Contrase??a
+            Contraseña
           </span>
           <input
             type="password"
             name="password"
             [(ngModel)]="form.password"
-            placeholder="M??nimo 8 caracteres"
+            placeholder="Mínimo 8 caracteres"
             class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
         <label class="relative block">
           <span class="flex items-center gap-2 text-xs text-zinc-400">
             <i class="fa-solid fa-lock" aria-hidden="true"></i>
-            Confirmar contrase??a
+            Confirmar contraseña
           </span>
           <input
             type="password"
             name="confirmPassword"
             [(ngModel)]="form.confirmPassword"
-            placeholder="Repite tu contrase??a"
+            placeholder="Repite tu contraseña"
             class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
         </label>
 
@@ -229,10 +275,11 @@
           <button
             type="submit"
             [disabled]="isSubmitting"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-[1.02]">
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-[1.02] active:scale-[0.99]">
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
             {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
           </button>
+
           <p
             *ngIf="feedbackMessage"
             class="mt-3 text-center text-xs"
@@ -240,16 +287,18 @@
             [class.text-emerald-300]="feedbackType === 'success'">
             {{ feedbackMessage }}
           </p>
+
           <p class="mt-3 text-center text-xs text-zinc-500">
-            Al registrarte aceptas los t??rminos del programa de recompensas.
+            Al registrarte aceptas los términos del programa de recompensas.
           </p>
         </div>
       </form>
     </div>
   </section>
 
-  <section id="recompensas" class="relative bg-ambient py-20">
-    <div class="mx-auto grid max-w-6xl items-center gap-12 px-6 md:grid-cols-2">
+  <!-- RECOMPENSAS -->
+  <section id="recompensas" class="relative bg-ambient py-14 sm:py-20">
+    <div class="mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-2 md:gap-12">
       <div>
         <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">
           Bienestar que se comparte,<br />
@@ -271,6 +320,7 @@
               Te registras y obtienes tu enlace personal.
             </p>
           </div>
+
           <div class="flex items-start gap-4">
             <div
               class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
@@ -281,6 +331,7 @@
               Invitas a alguien a probar los productos.
             </p>
           </div>
+
           <div class="flex items-start gap-4">
             <div
               class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
@@ -293,22 +344,25 @@
           </div>
         </div>
 
-        <div class="mt-10 flex flex-wrap gap-3">
-          <a href="#"
+        <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
+          <a
+            href="#"
             (click)="scrollTo('registro', $event)"
-            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform hover:scale-105">
+            class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
           </a>
-          <a [routerLink]="['/dashboard']"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-4 font-semibold text-white transition hover:bg-white/10">
+
+          <a
+            [routerLink]="['/dashboard']"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-4 font-semibold text-white transition hover:bg-white/10 sm:w-auto">
             <i class="fa-solid fa-store" aria-hidden="true"></i>
             Ir a tienda
           </a>
         </div>
       </div>
 
-      <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8">
+      <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(245,185,66,0.18),transparent_55%)]">
         </div>
@@ -360,10 +414,11 @@
     </div>
   </section>
 
+  <!-- FOOTER -->
   <footer class="border-t border-white/5 bg-[#0b0f14]">
     <div
-      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
-      <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
+      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center">
+      <img src="logo.png" alt="Logo findingU" class="h-10 w-auto sm:h-12 md:h-14" />
 
       <div class="flex flex-col items-start gap-3 md:items-end">
         <div class="text-xs text-zinc-500">© 2026 finding U</div>
@@ -371,5 +426,3 @@
     </div>
   </footer>
 </section>
-
-

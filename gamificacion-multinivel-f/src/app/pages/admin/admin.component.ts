@@ -60,7 +60,8 @@ export class AdminComponent implements OnInit {
   isNewOrderModalOpen = false;
   isAddStructureModalOpen = false;
   isShippingModalOpen = false;
-  isPaidSummaryModalOpen = false;
+  isReceiptModalOpen = false;
+  isUploadingReceipt = false;
 
   selectedCustomer: AdminCustomer | null = null;
   structureForm = {
@@ -83,6 +84,10 @@ export class AdminComponent implements OnInit {
     price: '',
     sku: '',
     hook: '',
+    description: '',
+    copyFacebook: '',
+    copyInstagram: '',
+    copyWhatsapp: '',
     tags: ''
   };
   productExistingImages: AdminProduct['images'] = [];
@@ -104,6 +109,9 @@ export class AdminComponent implements OnInit {
   shippingDeliveryPlace = '';
   shippingDeliveryDate = '';
   shippingError = '';
+  receiptFile: File | null = null;
+  receiptError = '';
+  receiptTargetCustomer: AdminCustomer | null = null;
   private readonly updatingOrderIds = new Set<string>();
 
   ngOnInit(): void {
@@ -129,12 +137,20 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.products ?? [];
   }
 
-  get warnings(): AdminWarning[] {
-    return this.adminData()?.warnings ?? [];
+  get productOfMonthId(): number | null {
+    return this.adminData()?.productOfMonthId ?? null;
   }
 
-  get commissionsPaidSummary(): AdminData['commissionsPaidSummary'] | null {
-    return this.adminData()?.commissionsPaidSummary ?? null;
+  get productOfMonthName(): string {
+    const pid = this.productOfMonthId;
+    if (pid == null) {
+      return '-';
+    }
+    return this.products.find((product) => product.id === pid)?.name ?? '-';
+  }
+
+  get warnings(): AdminWarning[] {
+    return this.adminData()?.warnings ?? [];
   }
 
 
@@ -182,6 +198,43 @@ export class AdminComponent implements OnInit {
 
   get deliveredCount(): number {
     return this.orders.filter((order) => order.status === 'delivered').length;
+  }
+
+  get ordersCount(): number {
+    return this.orders.length;
+  }
+
+  get ordersTotal(): number {
+    return this.orders.reduce((acc, order) => acc + (order.total || 0), 0);
+  }
+
+  get pendingShippingCount(): number {
+    return this.orders.filter((order) => order.status === 'paid').length;
+  }
+
+  get avgTicket(): number {
+    return this.ordersCount ? this.ordersTotal / this.ordersCount : 0;
+  }
+
+  get conversionRate(): number {
+    if (!this.ordersCount) {
+      return 0;
+    }
+    return (this.deliveredCount / this.ordersCount) * 100;
+  }
+
+  get repurchaseRate(): number {
+    const counts = this.orders.reduce<Record<string, number>>((acc, order) => {
+      const key = (order.customer || '').trim() || 'Sin cliente';
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    const unique = Object.keys(counts).length;
+    if (!unique) {
+      return 0;
+    }
+    const repeaters = Object.values(counts).filter((count) => count >= 2).length;
+    return (repeaters / unique) * 100;
   }
 
   get commissionsTotal(): number {
@@ -344,6 +397,13 @@ export class AdminComponent implements OnInit {
     return this.adminControl.formatMoney(value);
   }
 
+  openReceipt(url?: string): void {
+    if (!url) {
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+  }
+
   setView(view: 'orders' | 'customers' | 'products' | 'stats'): void {
     this.currentView = view;
   }
@@ -371,14 +431,6 @@ export class AdminComponent implements OnInit {
     this.isAddStructureModalOpen = true;
   }
 
-  openPaidSummaryModal(): void {
-    this.isPaidSummaryModalOpen = true;
-  }
-
-  closePaidSummaryModal(): void {
-    this.isPaidSummaryModalOpen = false;
-  }
-
   closeModals(): void {
     console.log('[Admin] closeModals()', {
       isActionsModalOpen: this.isActionsModalOpen,
@@ -389,6 +441,75 @@ export class AdminComponent implements OnInit {
     this.isNewOrderModalOpen = false;
     this.isAddStructureModalOpen = false;
     this.isShippingModalOpen = false;
+    this.isReceiptModalOpen = false;
+  }
+
+  openReceiptModal(customer: AdminCustomer): void {
+    this.receiptTargetCustomer = customer;
+    this.receiptFile = null;
+    this.receiptError = '';
+    this.isReceiptModalOpen = true;
+  }
+
+  closeReceiptModal(): void {
+    this.isReceiptModalOpen = false;
+    this.receiptTargetCustomer = null;
+    this.receiptFile = null;
+    this.receiptError = '';
+  }
+
+  updateReceiptFile(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0] ?? null;
+    this.receiptFile = file;
+  }
+
+  private getPrevMonthKey(date = new Date()): string {
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    if (month === 0) {
+      return `${year - 1}-12`;
+    }
+    const prevMonth = String(month).padStart(2, '0');
+    return `${year}-${prevMonth}`;
+  }
+
+  uploadReceipt(): void {
+    if (!this.receiptTargetCustomer || !this.receiptFile || this.isUploadingReceipt) {
+      this.receiptError = 'Selecciona un comprobante.';
+      return;
+    }
+    this.receiptError = '';
+    this.isUploadingReceipt = true;
+    const file = this.receiptFile;
+    const customerId = this.receiptTargetCustomer.id;
+    const monthKey = this.receiptTargetCustomer.commissionsPrevMonthKey || this.getPrevMonthKey();
+    this.readFileAsDataUrl(file)
+      .pipe(
+        switchMap((dataUrl) => {
+          const contentBase64 = this.extractBase64(dataUrl);
+          if (!contentBase64) {
+            throw new Error('No se pudo leer el comprobante.');
+          }
+          return this.adminControl.uploadAdminCommissionReceipt({
+            customerId,
+            monthKey,
+            name: file.name,
+            contentBase64,
+            contentType: file.type || 'application/octet-stream'
+          });
+        }),
+        switchMap(() => this.adminControl.load()),
+        finalize(() => {
+          this.isUploadingReceipt = false;
+          this.closeReceiptModal();
+        })
+      )
+      .subscribe({
+        error: () => {
+          this.receiptError = 'No se pudo cargar el comprobante.';
+        }
+      });
   }
 
   logout(): void {
@@ -646,6 +767,10 @@ export class AdminComponent implements OnInit {
       price: String(product.price),
       sku: product.sku ?? '',
       hook: product.hook ?? '',
+      description: product.description ?? '',
+      copyFacebook: product.copyFacebook ?? '',
+      copyInstagram: product.copyInstagram ?? '',
+      copyWhatsapp: product.copyWhatsapp ?? '',
       tags: (product.tags ?? []).join(', ')
     };
     this.resetProductAssets();
@@ -654,7 +779,10 @@ export class AdminComponent implements OnInit {
     this.announceProductMessage(`Editando ${product.name}.`);
   }
 
-  updateProductField(field: 'name' | 'price' | 'sku' | 'hook' | 'tags', value: string): void {
+  updateProductField(
+    field: 'name' | 'price' | 'sku' | 'hook' | 'description' | 'copyFacebook' | 'copyInstagram' | 'copyWhatsapp' | 'tags',
+    value: string
+  ): void {
     this.productForm = {
       ...this.productForm,
       [field]: value
@@ -700,6 +828,10 @@ export class AdminComponent implements OnInit {
             active: true,
             sku: this.productForm.sku.trim() || undefined,
             hook: this.productForm.hook.trim() || undefined,
+            description: this.productForm.description || undefined,
+            copyFacebook: this.productForm.copyFacebook || undefined,
+            copyInstagram: this.productForm.copyInstagram || undefined,
+            copyWhatsapp: this.productForm.copyWhatsapp || undefined,
             tags: this.normalizeTags(this.productForm.tags),
             images: this.mergeProductImages(uploads)
           };
@@ -742,6 +874,10 @@ export class AdminComponent implements OnInit {
       price: '',
       sku: '',
       hook: '',
+      description: '',
+      copyFacebook: '',
+      copyInstagram: '',
+      copyWhatsapp: '',
       tags: ''
     };
     this.resetProductAssets();

@@ -18,6 +18,10 @@ export interface DashboardProduct {
   price: number;
   badge: string;
   img: string;
+  description?: string;
+  copyFacebook?: string;
+  copyInstagram?: string;
+  copyWhatsapp?: string;
 }
 
 export interface NetworkMember {
@@ -25,6 +29,8 @@ export interface NetworkMember {
   level: string;
   spend: number;
   status: 'Activa' | 'En progreso' | 'Inactiva';
+  id?: string;
+  leaderId?: string;
 }
 
 export interface FeaturedItem {
@@ -57,6 +63,10 @@ export interface UserDashboardData {
     badge: string;
     img: string;
     hook: string;
+    description?: string;
+    copyFacebook?: string;
+    copyInstagram?: string;
+    copyWhatsapp?: string;
     images?: Array<{ section: string; url: string; assetId?: string }>;
     tags?: string[];
   } | null;
@@ -66,9 +76,25 @@ export interface UserDashboardData {
     monthKey: string;
     pendingTotal: number;
     paidTotal: number;
+    monthTotal?: number;
+    ledger?: Array<{
+      createdAt?: string;
+      amount?: number;
+      orderId?: string;
+      level?: number;
+      rate?: number;
+      sourceBuyerId?: number;
+      buyerType?: string;
+      rowId?: string;
+      status?: string;
+    }>;
     hasPending: boolean;
+    hasConfirmed?: boolean;
     clabeOnFile?: boolean;
     clabeLast4?: string;
+    receiptUrl?: string;
+    prevReceiptUrl?: string;
+    prevStatus?: 'no_moves' | 'pending' | 'paid';
     payoutDay?: number;
   } | null;
 }
@@ -85,4 +111,9 @@ export interface CommissionReceiptPayload {
   contentBase64: string;
   contentType?: string;
   monthKey?: string;
+}
+
+export interface CustomerClabePayload {
+  customerId: number;
+  clabe: string;
 }

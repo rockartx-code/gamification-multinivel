@@ -21,7 +21,12 @@ import {
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
-import { CommissionReceiptPayload, CommissionRequestPayload, UserDashboardData } from '../models/user-dashboard.model';
+import {
+  CommissionReceiptPayload,
+  CommissionRequestPayload,
+  CustomerClabePayload,
+  UserDashboardData
+} from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 
 @Injectable({
@@ -83,6 +88,14 @@ export class RealApiService {
 
   uploadCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
     return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/commissions/receipt`, payload);
+  }
+
+  uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/admin/commissions/receipt`, payload);
+  }
+
+  saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
+    return this.http.post<{ ok: boolean; clabeLast4?: string }>(`${this.baseUrl}/customers/clabe`, payload);
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {

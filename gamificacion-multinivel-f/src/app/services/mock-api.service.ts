@@ -19,7 +19,12 @@ import {
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
-import { CommissionReceiptPayload, CommissionRequestPayload, UserDashboardData } from '../models/user-dashboard.model';
+import {
+  CommissionReceiptPayload,
+  CommissionRequestPayload,
+  CustomerClabePayload,
+  UserDashboardData
+} from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 
 @Injectable({
@@ -50,9 +55,45 @@ export class MockApiService {
     }
   ];
   private products: AdminProduct[] = [
-    { id: 1, name: 'COL?GENO', price: 35, active: true, sku: 'COL-001', hook: 'Regeneraci?n diaria', tags: ['bienestar'] },
-    { id: 2, name: 'OMEGA-3', price: 29, active: true, sku: 'OMG-003', hook: 'Cuerpo & mente', tags: ['salud', 'mente'] },
-    { id: 3, name: 'COMPLEJO B', price: 24, active: false, sku: 'CMP-010', hook: 'Energ?a', tags: ['energia'] }
+    {
+      id: 1,
+      name: 'COL?GENO',
+      price: 35,
+      active: true,
+      sku: 'COL-001',
+      hook: 'Regeneraci?n diaria',
+      description: 'Apoya piel, articulaciones y recuperaci?n diaria.',
+      copyWhatsapp: 'Col?geno diario para piel y articulaciones. ?Te comparto el link?',
+      copyInstagram: 'Col?geno diario ? Piel y articulaciones fuertes. #bienestar',
+      copyFacebook: 'Col?geno diario para piel y articulaciones. Escr?beme y te paso el link.',
+      tags: ['bienestar']
+    },
+    {
+      id: 2,
+      name: 'OMEGA-3',
+      price: 29,
+      active: true,
+      sku: 'OMG-003',
+      hook: 'Cuerpo & mente',
+      description: 'Ayuda a coraz?n y concentraci?n con Omega-3 puro.',
+      copyWhatsapp: 'Omega-3 para mente y coraz?n. ?Quieres el link?',
+      copyInstagram: 'Omega-3 para mente y coraz?n. #salud',
+      copyFacebook: 'Omega-3 para mente y coraz?n. Escr?beme y te paso el link.',
+      tags: ['salud', 'mente']
+    },
+    {
+      id: 3,
+      name: 'COMPLEJO B',
+      price: 24,
+      active: false,
+      sku: 'CMP-010',
+      hook: 'Energ?a',
+      description: 'Refuerza energ?a y metabolismo diario.',
+      copyWhatsapp: 'Complejo B para energ?a diaria. ?Te paso el link?',
+      copyInstagram: 'Complejo B para energ?a diaria. #energia',
+      copyFacebook: 'Complejo B para energ?a diaria. Escr?beme y te paso el link.',
+      tags: ['energia']
+    }
   ];
   private productOfMonthId = 1;
 
@@ -88,6 +129,7 @@ export class MockApiService {
 
   getAdminData(): Observable<AdminData> {
     const payload: AdminData = {
+      productOfMonthId: this.productOfMonthId,
       orders: [
         {
           id: '#1001',
@@ -126,7 +168,14 @@ export class MockApiService {
           leaderId: null,
           level: 'Oro',
           discount: '15%',
-          commissions: 320
+          commissions: 320,
+          commissionsPrevMonth: 180,
+          commissionsPrevMonthKey: '2026-01',
+          commissionsCurrentPending: 60,
+          commissionsCurrentConfirmed: 120,
+          commissionsPrevStatus: 'pending',
+          commissionsPrevReceiptUrl: '',
+          clabeInterbancaria: '012345678901234567'
         },
         {
           id: 2,
@@ -135,7 +184,14 @@ export class MockApiService {
           leaderId: 1,
           level: 'Plata',
           discount: '10%',
-          commissions: 120
+          commissions: 120,
+          commissionsPrevMonth: 0,
+          commissionsPrevMonthKey: '2026-01',
+          commissionsCurrentPending: 0,
+          commissionsCurrentConfirmed: 40,
+          commissionsPrevStatus: 'no_moves',
+          commissionsPrevReceiptUrl: '',
+          clabeInterbancaria: ''
         },
         {
           id: 3,
@@ -144,7 +200,14 @@ export class MockApiService {
           leaderId: 2,
           level: 'Bronce',
           discount: '5%',
-          commissions: 0
+          commissions: 0,
+          commissionsPrevMonth: 90,
+          commissionsPrevMonthKey: '2026-01',
+          commissionsCurrentPending: 0,
+          commissionsCurrentConfirmed: 0,
+          commissionsPrevStatus: 'paid',
+          commissionsPrevReceiptUrl: 'https://example.com/recibo.pdf',
+          clabeInterbancaria: '987654321098765432'
         }
       ],
       products: [...this.products],
@@ -153,15 +216,6 @@ export class MockApiService {
         { type: 'shipping', text: '2 pedidos pagados sin envío', severity: 'high' },
         { type: 'assets', text: 'Producto sin imagen para redes', severity: 'medium' }
       ],
-      commissionsPaidSummary: {
-        monthKey: '2026-02',
-        count: 2,
-        total: 180,
-        rows: [
-          { beneficiaryId: 1, beneficiaryName: 'Ana L??pez', orderId: '#1000', amount: 120, createdAt: '2026-02-01T08:10:00Z' },
-          { beneficiaryId: 2, beneficiaryName: 'Carlos Ruiz', orderId: '#1005', amount: 60, createdAt: '2026-02-01T09:20:00Z' }
-        ]
-      },
       assetSlots: [
         { label: 'Miniatura (carrito)', hint: 'square 1:1' },
         { label: 'CTA / Banner', hint: 'landscape 16:9' },
@@ -184,6 +238,10 @@ export class MockApiService {
       active: payload.active,
       sku: payload.sku,
       hook: payload.hook,
+      description: payload.description,
+      copyFacebook: payload.copyFacebook,
+      copyInstagram: payload.copyInstagram,
+      copyWhatsapp: payload.copyWhatsapp,
       tags: payload.tags,
       images: payload.images
     };
@@ -226,7 +284,7 @@ export class MockApiService {
           price: 35,
           qty: 1,
           note: 'Regeneración',
-          img: 'images/L-Colageno.png'
+          img: 'images/L-Colageno.png',
         },
         {
           id: 'omega3',
@@ -234,7 +292,7 @@ export class MockApiService {
           price: 29,
           qty: 2,
           note: 'Cuerpo & mente',
-          img: 'images/L-Omega3.png'
+          img: 'images/L-Omega3.png',
         }
       ],
       suggestedItem: {
@@ -243,7 +301,7 @@ export class MockApiService {
         price: 24,
         qty: 1,
         note: 'Energía',
-        img: 'images/L-ComplejoB.png'
+        img: 'images/L-ComplejoB.png',
       }
     };
 
@@ -322,7 +380,11 @@ export class MockApiService {
           name: 'CREATINA',
           price: 27,
           badge: 'Fuerza',
-          img: 'images/L-Creatina.png'
+          img: 'images/L-Creatina.png',
+          description: 'Potencia rendimiento y fuerza en entrenamientos diarios.',
+          copyWhatsapp: 'Creatina para rendimiento diario. ??Te paso el link?',
+          copyInstagram: 'Creatina para rendimiento diario. #fuerza',
+          copyFacebook: 'Creatina para rendimiento diario. Escr??beme y te paso el link.'
         },
         {
           id: 'complejoB',
@@ -336,7 +398,11 @@ export class MockApiService {
           name: 'ANTIOXIDANTE',
           price: 31,
           badge: 'Longevidad',
-          img: 'images/L-Antioxidante.png'
+          img: 'images/L-Antioxidante.png',
+          description: 'Protecci??n antioxidante para bienestar continuo.',
+          copyWhatsapp: 'Antioxidante para bienestar continuo. ??Te paso el link?',
+          copyInstagram: 'Antioxidante para bienestar continuo. #longevidad',
+          copyFacebook: 'Antioxidante para bienestar continuo. Escr??beme y te paso el link.'
         }
       ],
       featured: [
@@ -374,12 +440,12 @@ export class MockApiService {
         }
       ],
       networkMembers: [
-        { name: 'María G.', level: 'L1', spend: 80, status: 'Activa' },
-        { name: 'Luis R.', level: 'L1', spend: 25, status: 'En progreso' },
-        { name: 'Ana P.', level: 'L1', spend: 0, status: 'Inactiva' },
-        { name: 'Carlos V.', level: 'L2', spend: 40, status: 'Activa' },
-        { name: 'Sofía M.', level: 'L2', spend: 15, status: 'En progreso' },
-        { name: 'Diego S.', level: 'L2', spend: 0, status: 'Inactiva' }
+        { id: 'c-1', name: 'Mar?a G.', level: 'L1', spend: 80, status: 'Activa', leaderId: 'client-001' },
+        { id: 'c-2', name: 'Luis R.', level: 'L1', spend: 25, status: 'En progreso', leaderId: 'client-001' },
+        { id: 'c-3', name: 'Ana P.', level: 'L1', spend: 0, status: 'Inactiva', leaderId: 'client-001' },
+        { id: 'c-4', name: 'Carlos V.', level: 'L2', spend: 40, status: 'Activa', leaderId: 'c-1' },
+        { id: 'c-5', name: 'Sof?a M.', level: 'L2', spend: 15, status: 'En progreso', leaderId: 'c-2' },
+        { id: 'c-6', name: 'Diego S.', level: 'L2', spend: 0, status: 'Inactiva', leaderId: 'c-2' }
       ],
       buyAgainIds: ['omega3', 'complejoB', 'antioxidante'],
       commissions: {
@@ -389,6 +455,8 @@ export class MockApiService {
         hasPending: true,
         clabeOnFile: true,
         clabeLast4: '1234',
+        prevStatus: 'paid',
+        prevReceiptUrl: 'https://example.com/recibo.pdf',
         payoutDay: 10
       }
     };
@@ -420,6 +488,22 @@ export class MockApiService {
       createdAt: new Date().toISOString()
     };
     return of({ receipt }).pipe(delay(120));
+  }
+
+  uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    const receipt = {
+      receiptId: `rcpt-${Math.random().toString(16).slice(2)}`,
+      customerId: payload.customerId,
+      monthKey: payload.monthKey ?? '2026-01',
+      assetUrl: 'images/receipt-mock.png',
+      status: 'paid',
+      createdAt: new Date().toISOString()
+    };
+    return of({ receipt }).pipe(delay(120));
+  }
+
+  saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
+    return of({ ok: true, clabeLast4: payload.clabe.slice(-4) }).pipe(delay(120));
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {

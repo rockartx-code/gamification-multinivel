@@ -271,6 +271,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
             return;
           }
           const orderId = String(resolvedId);
+          this.cartControl.clearCart();
           this.showToast('Orden creada. Redirigiendo...');
           this.router.navigate(['/orden', orderId]);
         },

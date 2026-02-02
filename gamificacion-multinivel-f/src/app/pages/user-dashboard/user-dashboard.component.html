@@ -4,7 +4,8 @@
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
+            <img src="logo.png" alt="Logo findingU" class="hidden h-15 w-40 md:block" />
+            <img src="minlogo.png" alt="Logo" class="h-7 w-7 md:hidden" />
           </div>
 
           <div class="flex items-center gap-2 lg:hidden">
@@ -64,7 +65,7 @@
                 <span *ngIf="isClient" class="inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10
                    px-4 py-2 text-[11px] uppercase tracking-wide text-yellow-200">
                   <i class="fa-solid fa-medal" aria-hidden="true"></i>
-                   {{ currentUser.level }}
+                  {{ currentUser.level }}
                 </span>
               </div>
 
@@ -118,12 +119,15 @@
 
       <div class="mt-4" *ngIf="!isGuest && activeGoal">
         <div
-          class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-6 md:p-8"
+          class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-5 sm:p-6 md:p-8"
           [id]="'goal-' + activeGoal.key">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
           </div>
-          <div class="absolute right-6 top-6 hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:block"
+
+          <!-- Corte de mes: en móvil va en flujo; en md+ se fija arriba derecha -->
+          <div
+            class="relative mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
             title="Cada dia sin accion reduce tu margen.">
             <div class="flex items-center gap-2 text-xs text-zinc-400">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
@@ -132,33 +136,43 @@
             <div class="text-lg font-extrabold tracking-tight" [ngClass]="getCountdownColor()">
               {{ countdownLabel() }}
             </div>
-
           </div>
+
           <div class="relative flex flex-col gap-5">
-            <div class="md:pr-48">
-              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Objetivo principal del mes</div>
-              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">{{ activeGoal.title }}</h3>
+            <!-- Reservar espacio SOLO en md+ para el badge -->
+            <div class="md:pr-56">
+              <div class="text-sm font-semibold text-yellow-200">🎯 Objetivo principal del mes</div>
+              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">
+                {{ activeGoal.title }}
+              </h3>
               <p class="mt-2 text-sm text-zinc-200">{{ activeGoal.subtitle }}</p>
-              <div class="mt-3 text-sm text-yellow-100">Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo</div>
+
+              <!-- ojo: en móvil, evita “líneas eternas” -->
+              <div class="mt-3 text-sm text-yellow-100 break-words">
+                Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo
+              </div>
+
               <div class="relative mt-4 h-3 overflow-hidden rounded-full bg-white/10">
                 <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400"
                   [style.width.%]="goalBasePercent(activeGoal)"></div>
-                <div
-                  class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-90"
-                  [style.left.%]="goalBasePercent(activeGoal)"
-                  [style.width.%]="goalCartPercent(activeGoal)">
-                </div>
+                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-90"
+                  [style.left.%]="goalBasePercent(activeGoal)" [style.width.%]="goalCartPercent(activeGoal)"></div>
               </div>
             </div>
-            <button type="button"
-              class="glow-gold absolute bottom-6 right-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
-              (click)="scrollToSection(activeGoal.ctaFragment)">
+
+            <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
+            <button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
+               md:absolute md:bottom-6 md:right-6 md:w-auto" (click)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
               {{ activeGoal.ctaText }}
             </button>
+
+            <!-- Espaciador SOLO en md+ para que el contenido no quede debajo del botón absoluto -->
+            <div class="hidden md:block md:h-14"></div>
           </div>
         </div>
       </div>
+
 
       <div class="mt-4" *ngIf="isGuest">
         <div
@@ -169,8 +183,10 @@
           <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Meta para invitados</div>
-              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Regístrate para obtener beneficios</h3>
-              <p class="mt-2 text-sm text-zinc-200">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.</p>
+              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Regístrate para obtener beneficios
+              </h3>
+              <p class="mt-2 text-sm text-zinc-200">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.
+              </p>
             </div>
             <button type="button"
               class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
@@ -212,7 +228,7 @@
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-store text-yellow-200" aria-hidden="true"></i>
+            <i class="fa-solid fa-store hidden text-yellow-200 md:inline" aria-hidden="true"></i>
             Tienda
           </h2>
         </div>
@@ -245,7 +261,7 @@
             <span
               class="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-2 text-xs font-semibold text-yellow-200">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
-              Producto del mes ?? Recomendado para metas
+              Producto del mes | Recomendado para metas
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">{{ pom.name }}</h3>
             <p *ngIf="heroGoalHint" class="mt-2 text-sm text-yellow-200">{{ heroGoalHint }}</p>
@@ -291,7 +307,7 @@
             <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl"></div>
 
             <div class="relative flex h-full flex-col justify-end p-6">
-              <div class="text-sm font-semibold text-zinc-200">Oferta estrat?gica</div>
+              <div class="text-sm font-semibold text-zinc-200">Oferta estratígica</div>
               <div class="mt-1 text-xs text-zinc-400">Optimiza tu corte de mes</div>
             </div>
           </div>
@@ -305,30 +321,34 @@
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">Producto destacado</h3>
             <p class="mt-3 max-w-xl text-zinc-300">
-              A?n no hay un producto del mes configurado.
+              Aún no hay un producto del mes configurado.
             </p>
           </div>
         </div>
       </div>
 
       <div class="mt-10">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
             <i class="fa-solid fa-rotate text-blue-200" aria-hidden="true"></i>
             Volver a comprar
           </h3>
-          <p class="text-sm text-zinc-400">Tus básicos para mantener metas constantes.</p>
+          <p class="text-sm text-zinc-400 sm:text-right">
+            Tus básicos para mantener metas constantes.
+          </p>
         </div>
-        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+        <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <article *ngFor="let product of buyAgainProducts"
-            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
+            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
             <div
               class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
             </div>
 
-            <div class="relative flex gap-4">
+            <!-- Top row -->
+            <div class="relative flex gap-3 sm:gap-4">
               <div
-                class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                 <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
               </div>
 
@@ -336,10 +356,16 @@
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-xs text-zinc-400">Producto</div>
-                    <h4 class="mt-1 truncate font-extrabold tracking-tight">{{ product.name }}</h4>
-                    <div class="mt-1 truncate text-xs text-zinc-500">{{ product.badge }}</div>
+                    <!-- en móvil mejor permitir 2 líneas en vez de truncar agresivo -->
+                    <h4 class="mt-1 font-extrabold tracking-tight leading-snug line-clamp-2 sm:truncate">
+                      {{ product.name }}
+                    </h4>
+                    <div class="mt-1 text-xs text-zinc-500 line-clamp-1 sm:truncate">
+                      {{ product.badge }}
+                    </div>
                   </div>
-                  <div class="text-right">
+
+                  <div class="text-right shrink-0">
                     <div *ngIf="hasDiscount" class="text-[11px] text-zinc-500 line-through">
                       {{ formatMoney(product.price) }}
                     </div>
@@ -351,59 +377,59 @@
                     </div>
                   </div>
                 </div>
-
-                <div class="mt-4 flex items-center gap-3">
-                  <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
-                    <span class="text-xs text-zinc-400">Qty</span>
-                    <input type="number" min="0" [value]="getCartQty(product.id)"
-                      (input)="updateCart(product.id, $any($event.target).value)"
-                      class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
-                  </div>
-
-                  <button
-                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
-                    (click)="addQuick(product.id, 1)">
-                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                    Agregar
-                  </button>
-                </div>
               </div>
             </div>
 
-            <div class="relative mt-3 flex items-center justify-between text-xs text-zinc-500">
-              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200"
-                (click)="notifyAction('Detalle de producto (hook)')">
-                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                Ver detalle
-              </button>
-              <button class="inline-flex items-center gap-2 transition hover:text-zinc-200"
-                (click)="notifyAction('Comparar (hook)')">
-                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-                Comparar
-              </button>
+            <!-- Bottom controls: stack on mobile -->
+            <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                class="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 sm:justify-start">
+                <span class="text-xs text-zinc-400">Qty</span>
+                <input type="number" min="0" [value]="getCartQty(product.id)"
+                  (input)="updateCart(product.id, $any($event.target).value)"
+                  class="w-20 sm:w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
+              </div>
+
+              <div class="flex w-full flex-col gap-2 sm:flex-1">
+  <button
+    class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
+    (click)="openProductDetails(product)">
+    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    Ver detalles
+  </button>
+
+  <button
+    class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+    (click)="addQuick(product.id, 1)">
+    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+    Agregar al carrito
+  </button>
+</div>
             </div>
           </article>
         </div>
       </div>
 
+
       <div class="mt-12">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
             <i class="fa-solid fa-layer-group text-blue-200" aria-hidden="true"></i>
             Todos los productos
           </h3>
-          <div class="text-sm text-zinc-400">{{ productsCount }}</div>
+          <div class="text-sm text-zinc-400 sm:text-right">{{ productsCount }}</div>
         </div>
-        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+        <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <article *ngFor="let product of otherProducts"
-            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
+            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
             <div
               class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
             </div>
 
-            <div class="relative flex gap-4">
+            <div class="relative flex gap-3 sm:gap-4">
               <div
-                class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                 <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
               </div>
 
@@ -411,10 +437,15 @@
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-xs text-zinc-400">Producto</div>
-                    <h4 class="mt-1 truncate font-extrabold tracking-tight">{{ product.name }}</h4>
-                    <div class="mt-1 truncate text-xs text-zinc-500">{{ product.badge }}</div>
+                    <h4 class="mt-1 font-extrabold tracking-tight leading-snug line-clamp-2 sm:truncate">
+                      {{ product.name }}
+                    </h4>
+                    <div class="mt-1 text-xs text-zinc-500 line-clamp-1 sm:truncate">
+                      {{ product.badge }}
+                    </div>
                   </div>
-                  <div class="text-right">
+
+                  <div class="text-right shrink-0">
                     <div *ngIf="hasDiscount" class="text-[11px] text-zinc-500 line-through">
                       {{ formatMoney(product.price) }}
                     </div>
@@ -426,38 +457,46 @@
                     </div>
                   </div>
                 </div>
-
-                
               </div>
             </div>
 
-            <div class="relative mt-3 flex items-center justify-between text-xs ">
-              <div class="mt-4 flex items-center gap-3">
-                  <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
-                    <span class="text-xs text-zinc-400">Qty</span>
-                    <input type="number" min="0" [value]="getCartQty(product.id)"
-                      (input)="updateCart(product.id, $any($event.target).value)"
-                      class="w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
-                  </div>
+            <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                class="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 sm:justify-start">
+                <span class="text-xs text-zinc-400">Qty</span>
+                <input type="number" min="0" [value]="getCartQty(product.id)"
+                  (input)="updateCart(product.id, $any($event.target).value)"
+                  class="w-20 sm:w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
+              </div>
 
-                  <button
-                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
-                    (click)="addQuick(product.id, 1)">
-                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                    Agregar
-                  </button>
-                </div>
+             <div class="flex w-full flex-col gap-2 sm:flex-1">
+  <button
+    class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
+    (click)="openProductDetails(product)">
+    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    Ver detalles
+  </button>
+
+  <button
+    class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+    (click)="addQuick(product.id, 1)">
+    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+    Agregar al carrito
+  </button>
+</div>
             </div>
           </article>
         </div>
       </div>
+
     </section>
 
     <section id="red" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-users text-blue-200" aria-hidden="true"></i>
+
+            <i class="fa-solid fa-users hidden text-blue-200 md:inline" aria-hidden="true"></i>
             Red
           </h2>
         </div>
@@ -484,10 +523,10 @@
           </div>
 
           <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <svg viewBox="0 0 560 260" class="h-[260px] w-full">
-              <g stroke="rgba(255,255,255,.18)" stroke-width="2">
-                <line *ngFor="let link of graphLayout.links" [attr.x1]="link.x1" [attr.y1]="link.y1" [attr.x2]="link.x2"
-                  [attr.y2]="link.y2"></line>
+            <svg [attr.viewBox]="'0 0 ' + graphSize.width + ' ' + graphSize.height" class="w-full"
+              [style.height.px]="graphSize.height">
+              <g fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2">
+                <path *ngFor="let link of graphLayout.links" [attr.d]="curvePath(link, 0)"></path>
               </g>
 
               <g>
@@ -593,28 +632,44 @@
             </div>
 
             <div *ngIf="networkMembers.length > 0" class="mt-6 overflow-hidden rounded-2xl border border-white/10">
-              <table class="w-full text-sm">
+              <div class="md:hidden divide-y divide-white/10">
+                <div *ngFor="let member of networkMembers" class="p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm font-semibold text-zinc-200">{{ member.name }}</div>
+                    <span class="rounded-full border px-3 py-1 text-xs" [ngClass]="statusBadgeClass(member.status)">{{
+                      member.status }}</span>
+                  </div>
+                  <div class="mt-2 grid gap-1 text-xs text-zinc-400">
+                    <div>Nivel: <span class="text-zinc-200">{{ member.level }}</span></div>
+                    <div>Consumo mes: <span class="text-zinc-200">{{ formatMoney(member.spend) }}</span></div>
+                  </div>
+                </div>
+              </div>
 
-                <thead class="bg-white/5 text-zinc-300">
-                  <tr>
-                    <th class="px-4 py-3 text-left font-semibold">Usuario</th>
-                    <th class="px-4 py-3 text-left font-semibold">Nivel</th>
-                    <th class="px-4 py-3 text-left font-semibold">Consumo mes</th>
-                    <th class="px-4 py-3 text-left font-semibold">Estado</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-white/5 text-zinc-200">
-                  <tr *ngFor="let member of networkMembers">
-                    <td class="px-4 py-3">{{ member.name }}</td>
-                    <td class="px-4 py-3 text-zinc-300">{{ member.level }}</td>
-                    <td class="px-4 py-3">{{ formatMoney(member.spend) }}</td>
-                    <td class="px-4 py-3">
-                      <span class="rounded-full border px-3 py-1 text-xs" [ngClass]="statusBadgeClass(member.status)">{{
-                        member.status }}</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="hidden md:block">
+                <table class="w-full text-sm">
+                  <thead class="bg-white/5 text-zinc-300">
+                    <tr>
+                      <th class="px-4 py-3 text-left font-semibold">Usuario</th>
+                      <th class="px-4 py-3 text-left font-semibold">Nivel</th>
+                      <th class="px-4 py-3 text-left font-semibold">Consumo mes</th>
+                      <th class="px-4 py-3 text-left font-semibold">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/5 text-zinc-200">
+                    <tr *ngFor="let member of networkMembers">
+                      <td class="px-4 py-3">{{ member.name }}</td>
+                      <td class="px-4 py-3 text-zinc-300">{{ member.level }}</td>
+                      <td class="px-4 py-3">{{ formatMoney(member.spend) }}</td>
+                      <td class="px-4 py-3">
+                        <span class="rounded-full border px-3 py-1 text-xs"
+                          [ngClass]="statusBadgeClass(member.status)">{{
+                          member.status }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-5">
@@ -649,24 +704,83 @@
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-coins text-yellow-200" aria-hidden="true"></i>
+
+            <i class="fa-solid fa-coins hidden text-yellow-200 md:inline" aria-hidden="true"></i>
             Comisiones
           </h2>
           <p class="mt-2 text-sm text-zinc-400">Resumen del mes {{ commissions.monthKey }}.</p>
         </div>
       </div>
 
-      <div class="mt-6 grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
+      <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
         <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
           <div class="grid gap-3 sm:grid-cols-2">
             <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Por cobrar</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.pendingTotal || 0) }}</div>
+              <div class="text-xs text-zinc-400">Comisiones del mes</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.monthTotal || 0) }}</div>
             </div>
             <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Pagadas en el mes</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
+              <div class="text-xs text-zinc-400">Por confirmar</div>
+              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.pendingTotal || 0) }}</div>
             </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300 transition hover:bg-white/10"
+              (click)="toggleCommissionLedger()">
+              <i class="fa-solid" [ngClass]="showCommissionLedger ? 'fa-eye-slash' : 'fa-table'" aria-hidden="true"></i>
+              {{ showCommissionLedger ? 'Ocultar detalles' : 'Ver detalles' }}
+            </button>
+          </div>
+
+          <div *ngIf="showCommissionLedger" class="mt-4 overflow-hidden rounded-2xl border border-white/10">
+            <div class="md:hidden divide-y divide-white/10">
+              <div *ngFor="let row of (commissions.ledger || [])" class="p-4">
+                <div class="flex items-center justify-between">
+                  <div class="text-sm font-semibold text-zinc-200">{{ row.orderId || '-' }}</div>
+                  <span class="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-300">
+                    {{ row.status || '-' }}
+                  </span>
+                </div>
+                <div class="mt-2 grid gap-1 text-xs text-zinc-400">
+                  <div>Nivel: <span class="text-zinc-200">L{{ row.level || '-' }}</span></div>
+                  <div>Monto: <span class="text-zinc-200">{{ formatMoney(row.amount || 0) }}</span></div>
+                  <div>Fecha: <span class="text-zinc-200">{{ formatLedgerDate(row.createdAt) }}</span></div>
+                </div>
+              </div>
+              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="p-4 text-center text-xs text-zinc-500">
+                Sin movimientos este mes.
+              </div>
+            </div>
+
+            <table class="hidden md:table w-full text-sm">
+              <thead class="bg-white/5 text-zinc-300">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Orden</th>
+                  <th class="px-4 py-3 text-left font-semibold">Nivel</th>
+                  <th class="px-4 py-3 text-left font-semibold">Monto</th>
+                  <th class="px-4 py-3 text-left font-semibold">Estado</th>
+                  <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 text-zinc-200">
+                <tr *ngFor="let row of (commissions.ledger || [])">
+                  <td class="px-4 py-3">{{ row.orderId || '-' }}</td>
+                  <td class="px-4 py-3 text-zinc-300">L{{ row.level || '-' }}</td>
+                  <td class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</td>
+                  <td class="px-4 py-3">
+                    <span class="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-300">
+                      {{ row.status || '-' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-zinc-400">{{ formatLedgerDate(row.createdAt) }}</td>
+                </tr>
+                <tr *ngIf="(commissions.ledger?.length || 0) === 0">
+                  <td colspan="5" class="px-4 py-4 text-center text-xs text-zinc-500">Sin movimientos este mes.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
@@ -676,6 +790,20 @@
                 {{ commissions.clabeOnFile ? ('**** ' + (commissions.clabeLast4 || '')) : 'No registrada' }}
               </span>
             </div>
+            <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <label class="block text-xs text-zinc-400">
+                CLABE interbancaria
+                <input type="text" name="clabeDraft" [(ngModel)]="clabeDraft"
+                  class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-zinc-200 placeholder:text-zinc-500"
+                  placeholder="000000000000000000" />
+              </label>
+              <button type="button"
+                class="glow-gold h-10 self-end inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                (click)="openClabeConfirm()">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                Guardar
+              </button>
+            </div>
             <div class="mt-2 text-xs text-zinc-500">
               Depositos programados para el dia {{ commissions.payoutDay || 10 }} de cada mes.
             </div>
@@ -683,27 +811,29 @@
         </div>
 
         <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <div class="text-sm font-semibold text-zinc-200">Acciones</div>
-          <div class="mt-3 space-y-3">
-            <button
-              class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
-              [disabled]="!hasCommissionPending"
-              (click)="openCommissionModal()">
-              <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
-              Solicitar pago de comisiones
-            </button>
-
-            <label
-              class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm transition hover:bg-white/10"
-              [class.opacity-60]="isCommissionUploading">
-              <i class="fa-solid fa-upload" aria-hidden="true"></i>
-              {{ isCommissionUploading ? 'Subiendo comprobante...' : 'Subir comprobante' }}
-              <input type="file" class="hidden" accept="image/*,application/pdf" (change)="onCommissionReceiptSelected($event)" />
-            </label>
-
-            <div *ngIf="commissionUploadName" class="text-xs text-zinc-500">
-              Ultimo archivo: {{ commissionUploadName }}
+          <div class="text-sm font-semibold text-zinc-200">Mes anterior</div>
+          <div class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-4">
+            <div class="text-xs text-zinc-400">Total</div>
+            <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
+            <div class="mt-2 text-xs text-zinc-500">
+              Estatus:
+              <span class="text-zinc-200">
+                {{
+                commissions.prevStatus === 'paid'
+                ? 'Pagada'
+                : commissions.prevStatus === 'pending'
+                ? 'Pendiente de pago'
+                : 'Sin movimientos'
+                }}
+              </span>
             </div>
+            <button
+              class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300 transition hover:bg-white/10"
+              *ngIf="commissions.prevStatus === 'paid' && commissions.prevReceiptUrl"
+              (click)="openCommissionReceipt(commissions.prevReceiptUrl)">
+              <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+              Ver comprobante
+            </button>
           </div>
         </div>
       </div>
@@ -713,7 +843,8 @@
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-receipt text-blue-200" aria-hidden="true"></i>
+
+            <i class="fa-solid fa-receipt hidden text-blue-200 md:inline" aria-hidden="true"></i>
             Ordenes
           </h2>
           <p class="mt-2 text-sm text-zinc-400">Seguimiento de tus pedidos recientes.</p>
@@ -726,7 +857,26 @@
           Aun no tienes ordenes registradas.
         </div>
         <div *ngIf="!isOrdersLoading && orders.length > 0" class="overflow-hidden rounded-2xl border border-white/10">
-          <table class="w-full text-sm">
+          <div class="md:hidden divide-y divide-white/10">
+            <div *ngFor="let order of orders" class="p-4">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold text-zinc-200">{{ order.id }}</div>
+                <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs">
+                  {{ order.status }}
+                </span>
+              </div>
+              <div class="mt-2 grid gap-1 text-xs text-zinc-400">
+                <div>Fecha: <span class="text-zinc-200">{{ order.createdAt || '-' }}</span></div>
+                <div>Total: <span class="text-zinc-200">{{ formatMoney(order.total) }}</span></div>
+              </div>
+              <a class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
+                [routerLink]="['/orden', order.id]">
+                Ver orden
+              </a>
+            </div>
+          </div>
+
+          <table class="hidden md:table w-full text-sm">
             <thead class="bg-white/5 text-zinc-300">
               <tr>
                 <th class="px-4 py-3 text-left font-semibold">Orden</th>
@@ -763,7 +913,8 @@
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-link text-yellow-200" aria-hidden="true"></i>
+
+            <i class="fa-solid fa-link hidden text-yellow-200 md:inline" aria-hidden="true"></i>
             Links de referencia
           </h2>
         </div>
@@ -919,7 +1070,6 @@
                   <i class="fa-brands fa-instagram" aria-hidden="true"></i>
                   Previsualizaciones sociales
                 </h3>
-                <p class="mt-1 text-sm text-zinc-400">Mockups (reemplaza imágenes por tus creatividades).</p>
               </div>
 
               <div class="flex flex-wrap gap-2">
@@ -1031,7 +1181,8 @@
 
   <div *ngIf="isCommissionModalOpen" class="fixed inset-0 z-50 flex items-center justify-center px-6">
     <div class="absolute inset-0 bg-black/70" (click)="closeCommissionModal()"></div>
-    <div class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div
+      class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
           <div class="text-xs font-semibold text-zinc-400">Solicitud de pago</div>
@@ -1059,8 +1210,7 @@
             (click)="closeCommissionModal()">
             Cancelar
           </button>
-          <button type="submit"
-            [disabled]="isCommissionSubmitting"
+          <button type="submit" [disabled]="isCommissionSubmitting"
             class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
             {{ isCommissionSubmitting ? 'Enviando...' : 'Solicitar pago' }}
@@ -1070,9 +1220,45 @@
     </div>
   </div>
 
+  <div *ngIf="isClabeConfirmOpen" class="fixed inset-0 z-50 flex items-center justify-center px-6">
+    <div class="absolute inset-0 bg-black/70" (click)="closeClabeConfirm()"></div>
+    <div
+      class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Confirmacion</div>
+          <h3 class="mt-2 text-xl font-extrabold">Actualizar CLABE interbancaria</h3>
+          <p class="mt-2 text-sm text-zinc-300">
+            Estas a punto de guardar la CLABE:
+            <span class="text-zinc-100">{{ clabePending }}</span>
+          </p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeClabeConfirm()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <button type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+          (click)="closeClabeConfirm()">
+          Cancelar
+        </button>
+        <button type="button" [disabled]="isClabeSaving" (click)="saveCustomerClabe()"
+          class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          {{ isClabeSaving ? 'Guardando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div *ngIf="showGuestRegisterModal" class="fixed inset-0 z-50 flex items-center justify-center px-6">
     <div class="absolute inset-0 bg-black/70" (click)="closeGuestRegisterModal()"></div>
-    <div class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div
+      class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
           <div class="text-xs font-semibold text-zinc-400">Registro rapido</div>
@@ -1124,8 +1310,7 @@
             (click)="closeGuestRegisterModal()">
             Ahora no
           </button>
-          <button type="submit"
-            [disabled]="isGuestRegisterSubmitting"
+          <button type="submit" [disabled]="isGuestRegisterSubmitting"
             class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
             {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Registrate' }}
@@ -1140,9 +1325,70 @@
     </div>
   </div>
 
+  <div *ngIf="isProductDetailsOpen && selectedProduct as product"
+    class="fixed inset-0 z-50 flex items-center justify-center px-6">
+    <div class="absolute inset-0 bg-black/70" (click)="closeProductDetails()"></div>
+    <div
+      class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Detalle del producto</div>
+          <h3 class="mt-2 text-xl font-extrabold text-zinc-100">{{ product.name }}</h3>
+          <p class="mt-1 text-sm text-zinc-400">{{ product.badge }}</p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeProductDetails()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
+        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+        </div>
+        <div>
+          <div class="text-xs text-zinc-400">Precio</div>
+          <div class="mt-1 flex items-end gap-2">
+            <div *ngIf="hasDiscount" class="text-sm text-zinc-500 line-through">
+              {{ formatMoney(product.price) }}
+            </div>
+            <div class="text-lg font-extrabold text-zinc-100">
+              {{ formatMoney(discountedPrice(product.price)) }}
+            </div>
+            <div class="text-xs" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+              {{ discountAppliedLabel() }}
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-zinc-400">Cantidad actual: {{ getCartQty(product.id) }}</div>
+        </div>
+      </div>
+
+      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div class="text-xs font-semibold text-zinc-400">DescripciÃ³n</div>
+        <p class="mt-2 whitespace-pre-line text-sm text-zinc-200">{{ product.description }}</p>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-zinc-200 hover:bg-white/10"
+          (click)="closeProductDetails()">
+          Cerrar
+        </button>
+        <button type="button"
+          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold"
+          (click)="addQuick(product.id, 1)">
+          <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+          Agregar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div *ngIf="isGoalsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center px-6">
     <div class="absolute inset-0 bg-black/70" (click)="closeGoalsModal()"></div>
-    <div class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div
+      class="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
           <div class="text-xs font-semibold text-zinc-400">Metas cumplidas del mes</div>
@@ -1157,14 +1403,14 @@
       </div>
 
       <div class="mt-5 space-y-3">
-        <div *ngFor="let goal of achievedGoals"
-          class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div *ngFor="let goal of achievedGoals" class="rounded-2xl border border-white/10 bg-black/20 p-4">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
               <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
               <div class="mt-1 truncate text-sm font-semibold text-zinc-100">{{ goal.title }}</div>
             </div>
-            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
+            <span
+              class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
               <i class="fa-solid fa-check" aria-hidden="true"></i>
               Completada
             </span>
@@ -1182,6 +1428,15 @@
     </div>
   </div>
 
+
+  <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
+    <button type="button"
+      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.03]"
+      (click)="goToCart()">
+      <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
+      Ir a carrito
+    </button>
+  </div>
 
   <footer class="border-t border-white/5 bg-[#0b0f14]">
     <div

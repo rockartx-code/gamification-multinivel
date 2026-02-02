@@ -16,6 +16,7 @@ import {
   ProductOfMonthResponse,
   SaveAdminProductPayload
 } from '../models/admin.model';
+import { CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
 
 @Injectable({
@@ -36,8 +37,7 @@ export class AdminControlService {
           customers: data.customers ?? [],
           products: data.products ?? [],
           warnings: data.warnings ?? [],
-          assetSlots: data.assetSlots ?? [],
-          commissionsPaidSummary: data.commissionsPaidSummary
+          assetSlots: data.assetSlots ?? []
         };
         this.dataSubject.next(structuredClone(normalized));
       })
@@ -139,6 +139,10 @@ export class AdminControlService {
 
   createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
     return this.api.createAsset(payload);
+  }
+
+  uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
+    return this.api.uploadAdminCommissionReceipt(payload);
   }
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
