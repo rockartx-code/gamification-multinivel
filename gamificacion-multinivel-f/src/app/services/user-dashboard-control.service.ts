@@ -46,6 +46,8 @@ export class UserDashboardControlService {
               monthTotal:
                 (rawCommissions as any).monthTotal ?? (rawCommissions as any).totalConfirmed ?? 0,
               paidTotal: (rawCommissions as any).paidTotal ?? 0,
+              blockedTotal:
+                (rawCommissions as any).blockedTotal ?? (rawCommissions as any).totalBlocked ?? 0,
               ledger: Array.isArray((rawCommissions as any).ledger) ? (rawCommissions as any).ledger : [],
               hasPending:
                 typeof (rawCommissions as any).hasPending === 'boolean'

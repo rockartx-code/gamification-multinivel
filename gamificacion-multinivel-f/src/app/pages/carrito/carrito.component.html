@@ -1,12 +1,21 @@
 <section class="antialiased">
-  <header class="border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+  <header class="sticky top-0 z-40 border-b border-white/10 bg-gradient-to-r from-[#0b0f14]/95 via-[#0f1722]/92 to-[#0b0f14]/95 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
-        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+          <img src="minlogo.png" alt="Logo" class="h-6 w-6" />
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 text-xs text-zinc-400">
+            <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
+            Carrito
+          </div>
+          <div class="text-sm font-semibold text-white sm:text-base">Confirmar pedido</div>
+        </div>
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
-        <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
+        <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-zinc-100 transition hover:bg-white/10 sm:text-sm"
           [routerLink]="['/dashboard']">
           <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
           Regresar
@@ -81,19 +90,13 @@
         Carrito
       </div>
 
-      <button
-        class="inline-flex items-center gap-2 text-xs text-zinc-400 transition hover:text-zinc-200"
-        (click)="addSuggested()"
-      >
-        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-        Agregar sugerido
-      </button>
     </div>
 
     <div class="mt-3 space-y-3">
       <div
         *ngFor="let item of cartItems"
         class="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-start"
+        [ngClass]="item.id === lastAddedItemId ? 'fade-in-item' : ''"
       >
         <!-- IMG -->
         <div
@@ -167,6 +170,81 @@
         </div>
       </div>
     </div>
+
+    <div *ngIf="suggestedProducts.length" class="mt-4">
+  <div class="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+    <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
+    Sugeridos
+  </div>
+
+  <!-- GRID -->
+  <div class="mt-2 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      *ngFor="let product of suggestedProducts"
+      class="flex min-w-0 flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 overflow-hidden"
+    >
+
+      <!-- HEADER -->
+      <div class="flex min-w-0 items-center gap-3">
+        <div
+          class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/20"
+        >
+          <img
+            [src]="product.img"
+            [alt]="product.name"
+            class="h-full w-full object-cover"
+          />
+        </div>
+
+        <!-- TEXT -->
+        <div class="min-w-0 flex-1">
+          <div
+            class="truncate text-sm font-semibold text-zinc-100"
+            title="{{ product.name }}"
+          >
+            {{ product.name }}
+          </div>
+
+          <div
+            class="truncate text-[11px] text-zinc-500"
+          >
+            {{ product.badge }}
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+
+        <div class="text-sm font-extrabold whitespace-nowrap">
+          {{ formatMoney(discountedPrice(product.price)) }}
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="flex flex-wrap items-center gap-2">
+
+          <button
+            class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] transition hover:bg-white/10 whitespace-nowrap"
+            (click)="openProductDetails(product)"
+          >
+            <i class="fa-solid fa-circle-info"></i>
+            Ver detalle
+          </button>
+
+          <button
+            class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] transition hover:bg-white/10 whitespace-nowrap"
+            (click)="addSuggestedProduct(product)"
+          >
+            <i class="fa-solid fa-plus"></i>
+            Agregar
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
   </div>
 
   <!-- ENTREGA -->
@@ -287,19 +365,38 @@
               </div>
             </div>
 
-            <div class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-              <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
-              Progreso a beneficio
-            </div>
-              <div class="relative mt-2 h-3 overflow-hidden rounded-full bg-white/10">
-                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-indigo-500"
-                  [style.width.%]="benefitPercent"></div>
-              </div>
-              <div class="mt-2 text-xs text-zinc-500">
-                Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para
-                activar estatus.
-              </div>
+            <div class="mt-5 mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <ng-container *ngIf="isGuest; else goalProgress">
+                <div class="flex items-center gap-2 text-xs font-semibold text-yellow-200">
+                  <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
+                  Meta para invitados
+                </div>
+                <div class="mt-2 text-lg font-extrabold tracking-tight">
+                  Registrate para obtener descuentos y beneficios
+                </div>
+                <div class="mt-1 text-xs text-zinc-300">Crea tu cuenta para desbloquear promociones y seguimiento.</div>
+                <button type="button"
+                  class="glow-gold mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-xs font-semibold text-black transition-transform hover:scale-[1.03]"
+                  (click)="openGuestRegisterModal()">
+                  <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                  Registrate
+                </button>
+              </ng-container>
+              <ng-template #goalProgress>
+                <div class="text-[11px] text-zinc-400">Meta principal de consumo</div>
+                <div class="mt-1 text-lg font-extrabold tracking-tight text-zinc-100">{{ goalTitle }}</div>
+                <div class="mt-1 text-xs text-zinc-400">{{ goalSubtitle }}</div>
+                <div class="relative mt-3 h-3 overflow-hidden rounded-full bg-white/10">
+                  <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400"
+                    [style.width.%]="basePercent"></div>
+                  <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-90"
+                    [style.left.%]="basePercent" [style.width.%]="cartPercent"></div>
+                </div>
+                <div class="mt-2 text-xs text-zinc-500">
+                  Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para
+                  {{ goalTitle }}
+                </div>
+              </ng-template>
             </div>
 
             <button
@@ -349,10 +446,10 @@
     </div>
   </div>
 
-  <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 px-4 pb-6 lg:hidden"
+  <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 px-4 pb-6 overflow-y-auto lg:hidden"
     [class.hidden]="!isSummaryOpen" (click)="closeSummary()">
     <div
-      class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+      class="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
       (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -399,8 +496,138 @@
       </div>
 
       <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-400">
-        Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para activar
-        estatus.
+        Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para {{ goalTitle }}.
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showGuestRegisterModal"
+    class="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
+    <div class="absolute inset-0 bg-black/70" (click)="closeGuestRegisterModal()"></div>
+    <div
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Registro rapido</div>
+          <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
+          <p class="mt-2 text-sm text-zinc-300">Completa tus datos para activar descuentos y red.</p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeGuestRegisterModal()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <form class="mt-6 grid gap-3" (ngSubmit)="submitGuestRegister()">
+        <label class="block text-xs text-zinc-400">
+          Nombre completo
+          <input type="text" name="guestName" [(ngModel)]="guestRegisterForm.name"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="Tu nombre" />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Correo
+          <input type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="tucorreo@ejemplo.com" />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Telefono
+          <input type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="+52 ..." />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Contrase?a
+          <input type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="Minimo 8 caracteres" />
+        </label>
+        <label class="block text-xs text-zinc-400">
+          Confirmar contrase?a
+          <input type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            placeholder="Repite tu contrase?a" />
+        </label>
+
+        <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+            (click)="closeGuestRegisterModal()">
+            Ahora no
+          </button>
+          <button type="submit" [disabled]="isGuestRegisterSubmitting"
+            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+            {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Registrate' }}
+          </button>
+        </div>
+        <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
+          [class.text-rose-300]="guestRegisterFeedbackType === 'error'"
+          [class.text-emerald-300]="guestRegisterFeedbackType === 'success'">
+          {{ guestRegisterFeedback }}
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div *ngIf="isProductDetailsOpen && selectedProduct as product"
+    class="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
+    <div class="absolute inset-0 bg-black/70" (click)="closeProductDetails()"></div>
+    <div
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-xs font-semibold text-zinc-400">Detalle del producto</div>
+          <h3 class="mt-2 text-xl font-extrabold text-zinc-100">{{ product.name }}</h3>
+          <p class="mt-1 text-sm text-zinc-400">{{ product.badge }}</p>
+        </div>
+        <button type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          (click)="closeProductDetails()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
+        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+        </div>
+        <div>
+          <div class="text-xs text-zinc-400">Precio</div>
+          <div class="mt-1 flex items-end gap-2">
+            <div *ngIf="hasDiscount" class="text-sm text-zinc-500 line-through">
+              {{ formatMoney(product.price) }}
+            </div>
+            <div class="text-lg font-extrabold text-zinc-100">
+              {{ formatMoney(discountedPrice(product.price)) }}
+            </div>
+            <div class="text-xs" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+              {{ hasDiscount ? discountLabel : 'Sin descuento' }}
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-zinc-400">Cantidad actual: {{ getCartQty(product.id) }}</div>
+        </div>
+      </div>
+
+      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div class="text-xs font-semibold text-zinc-400">Descripcion</div>
+        <p class="mt-2 whitespace-pre-line text-sm text-zinc-200">{{ product.description }}</p>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-zinc-200 hover:bg-white/10"
+          (click)="closeProductDetails()">
+          Cerrar
+        </button>
+        <button type="button"
+          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold"
+          (click)="addSuggestedProduct(product)">
+          <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+          Agregar
+        </button>
       </div>
     </div>
   </div>

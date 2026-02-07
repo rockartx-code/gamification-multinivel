@@ -27,6 +27,13 @@ _s3 = boto3.client("s3", region_name=AWS_REGION)
 D_ZERO = Decimal("0")
 D_ONE = Decimal("1")
 D_CENT = Decimal("0.01")
+MAX_NETWORK_DEPTH = 3
+MAX_COMMISSION_LEVELS = 3
+DEFAULT_COMMISSION_BY_DEPTH = {
+    1: Decimal("0.10"),
+    2: Decimal("0.05"),
+    3: Decimal("0.03"),
+}
 
 # ---------------------------------------------------------------------------
 # JSON / HTTP helpers
@@ -185,6 +192,7 @@ def _build_network_tree_with_month(
     month_key: str,
     customers_raw: List[dict],
     cfg: dict,
+    max_depth: Optional[int] = None,
 ) -> dict:
     nodes: Dict[str, dict] = {}
     children_by_leader: Dict[str, List[str]] = {}
@@ -238,10 +246,27 @@ def _build_network_tree_with_month(
     root = nodes.get(root_id_str)
     if not root:
         return {"id": root_id_str, "name": "", "level": "", "monthSpend": 0.0, "children": []}
-    
-    # Recursive sort is handled by bottom-up build or post-traversal. 
+
+    if max_depth is not None:
+        root = _trim_tree_by_depth(root, max_depth)
+
+    # Recursive sort is handled by bottom-up build or post-traversal.
     # Since we sorted when attaching, we just need to ensure the structure is returned.
     return root
+
+def _trim_tree_by_depth(root: dict, max_depth: int) -> dict:
+    if max_depth is None:
+        return root
+
+    def _trim(node: dict, depth: int) -> dict:
+        if depth >= max_depth:
+            node["children"] = []
+            return node
+        children = node.get("children") or []
+        node["children"] = [_trim(ch, depth + 1) for ch in children]
+        return node
+
+    return _trim(root, 0)
 
 def _flatten_tree(root: dict) -> List[dict]:
     out = []
@@ -278,38 +303,12 @@ def _network_members_from_tree(root: dict, max_rows: int = 30) -> List[dict]:
             break
     return rows
 
-def _capabilities(level: str) -> dict:
-    lv = (level or "").strip().lower()
-    if lv == "oro":
-        return {"canRefer": True, "allowedDownlineLevels": {"plata", "bronce"}}
-    if lv == "plata":
-        return {"canRefer": True, "allowedDownlineLevels": {"bronce"}}
-    return {"canRefer": False, "allowedDownlineLevels": set()}
-
-def _resolve_leader_and_level(leader_id: Any) -> Tuple[Optional[Any], str]:
-    if not leader_id:
-        return (None, "Oro")
-
-    leader = _get_by_id("CUSTOMER", int(leader_id)) if leader_id is not None else None
-    if not leader:
-        return (None, "Oro")
-
-    leader_level = (leader.get("level") or "").strip().lower()
-    if leader_level == "oro":
-        return (leader_id, "Plata")
-    if leader_level == "plata":
-        return (leader_id, "Bronce")
-
-    # Find nearest Plata in upline
-    # Using existing _upline_chain which is robust enough
-    for lid in _upline_chain(leader_id, max_levels=None):
-        candidate = _get_by_id("CUSTOMER", int(lid)) if lid is not None else None
-        if not candidate:
-            continue
-        if (candidate.get("level") or "").strip().lower() == "plata":
-            return (lid, "Bronce")
-            
-    return (None, "Oro")
+def _resolve_leader_id(leader_id: Any) -> Optional[Any]:
+    if leader_id is None or leader_id == "":
+        return None
+    lid = _parse_int_or_str(leader_id)
+    leader = _get_by_id("CUSTOMER", int(lid)) if isinstance(lid, int) else _get_by_id("CUSTOMER", lid)
+    return lid if leader else None
 
 def _discount_tier_targets(cfg: dict) -> List[dict]:
     tiers = cfg.get("discountTiers") or []
@@ -371,10 +370,8 @@ def _all_direct_reached_activation(root_tree: dict, activation_min: Decimal) -> 
 def _build_goals(customer: dict, root_tree: dict, customers_raw: List[dict], cfg: dict) -> List[dict]:
     activation_min = _to_decimal(cfg.get("activationNetMin", 2500))
     tiers = _discount_tier_targets(cfg)
-    level_rates = [0.30, 0.35, 0.40]
+    level_rates = [0.30, 0.40, 0.50]
 
-    lv = (customer.get("level") or "").strip().lower()
-    cap = _capabilities(lv)
     cid = str(customer.get("customerId"))
 
     st = _get_month_state(cid, _month_key())
@@ -432,15 +429,15 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: List[dict], cfg
         })
 
     # Invite goal
-    locked_invite = not cap.get("canRefer")
+    locked_invite = False
     goals.insert(2, {
         "key": "invite",
         "title": "Agregar un nuevo miembro a la red este mes",
-        "subtitle": ("Tu nivel actual no permite referir" if locked_invite else "Invita a 1 persona y actívala"),
+        "subtitle": "Invita a 1 persona y actívala",
         "target": 1,
         "base": int(new_direct),
-        "achieved": bool(new_direct >= 1) if not locked_invite else False,
-        "locked": locked_invite,
+        "achieved": bool(new_direct >= 1),
+        "locked": False,
         "isCountGoal": True,
         "ctaText": "Invitar ahora",
         "ctaFragment": "links",
@@ -479,11 +476,11 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: List[dict], cfg
     goals.append({
         "key": "network_member_invited",
         "title": "Lograr que un miembro de la red agregue un nuevo miembro",
-        "subtitle": ("Tu nivel actual no permite referir" if locked_invite else "Haz que tu red replique"),
+        "subtitle": "Haz que tu red replique",
         "target": 1,
         "base": 1 if any_member_added else 0,
-        "achieved": bool(any_member_added) if not locked_invite else False,
-        "locked": locked_invite,
+        "achieved": bool(any_member_added),
+        "locked": False,
         "isCountGoal": True,
         "ctaText": "Compartir enlace",
         "ctaFragment": "links",
@@ -664,7 +661,6 @@ _LOGIN_USERS = [
             "role": "cliente",
             "discountPercent": 15,
             "discountActive": True,
-            "level": "Oro",
         },
     },
 ]
@@ -762,19 +758,40 @@ def _sync_buyer_benefits(buyer_id: Any, month_key: str, cfg: dict) -> Optional[d
 # ---------------------------------------------------------------------------
 # Rewards Config (Cached)
 # ---------------------------------------------------------------------------
+def _ensure_commission_by_depth(cfg: dict) -> dict:
+    if not isinstance(cfg, dict):
+        return cfg
+
+    cbd = cfg.get("commissionByDepth")
+    if isinstance(cbd, list):
+        mapping = {str(i + 1): cbd[i] for i in range(min(3, len(cbd)))}
+    elif isinstance(cbd, dict):
+        mapping = cbd
+    else:
+        mapping = {}
+
+    return {
+        **cfg,
+        "commissionByDepth": {
+            "1": _to_decimal(mapping.get("1", mapping.get(1, DEFAULT_COMMISSION_BY_DEPTH[1]))),
+            "2": _to_decimal(mapping.get("2", mapping.get(2, DEFAULT_COMMISSION_BY_DEPTH[2]))),
+            "3": _to_decimal(mapping.get("3", mapping.get(3, DEFAULT_COMMISSION_BY_DEPTH[3]))),
+        },
+    }
+
 def _default_rewards_config() -> dict:
     return {
         "version": "v1",
         "activationNetMin": Decimal("2500"),
         "discountTiers": [
             {"min": Decimal("3600"), "max": Decimal("8000"), "rate": Decimal("0.30")},
-            {"min": Decimal("8001"), "max": Decimal("12000"), "rate": Decimal("0.35")},
-            {"min": Decimal("12001"), "max": None,           "rate": Decimal("0.40")},
+            {"min": Decimal("8001"), "max": Decimal("12000"), "rate": Decimal("0.40")},
+            {"min": Decimal("12001"), "max": None,           "rate": Decimal("0.50")},
         ],
-        "commissionByLevel": {
-            "oro": Decimal("0.10"),
-            "plata": Decimal("0.05"),
-            "bronce": Decimal("0.03"),
+        "commissionByDepth": {
+            "1": Decimal("0.10"),
+            "2": Decimal("0.05"),
+            "3": Decimal("0.03"),
         },
         "payoutDay": Decimal("10"),
         "cutRule": "hard_cut_no_pass",
@@ -790,7 +807,7 @@ def _load_rewards_config_cached() -> dict:
     if not cfg:
         # If not found, create default and return it (don't cache creation side effect inside getter generally, but ok here)
         return _default_rewards_config() 
-    return cfg.get("config") or _default_rewards_config()
+    return _ensure_commission_by_depth(cfg.get("config") or _default_rewards_config())
 
 def _load_rewards_config() -> dict:
     # Wrapper to handle the creation logic if missing
@@ -866,7 +883,7 @@ def _get_month_state(associate_id: Any, month_key: str) -> dict:
         "updatedAt": now,
     }
 
-def _upsert_month_volume(associate_id: Any, month_key: str, net_delta: Decimal, activation_min: Decimal) -> dict:
+def _upsert_month_volume(associate_id: Any, month_key: str, net_delta: Decimal, activation_min: Decimal) -> Tuple[dict, bool]:
     mid = _associate_month_id(associate_id, month_key)
     existing = _get_by_id("ASSOCIATE_MONTH", mid)
     now = _now_iso()
@@ -882,8 +899,10 @@ def _upsert_month_volume(associate_id: Any, month_key: str, net_delta: Decimal, 
             "createdAt": now,
             "updatedAt": now,
         }
-        return _put_entity("ASSOCIATE_MONTH", mid, item, created_at_iso=now)
+        created = _put_entity("ASSOCIATE_MONTH", mid, item, created_at_iso=now)
+        return created, bool(created.get("isActive"))
 
+    prev_active = bool(existing.get("isActive"))
     updated = _update_by_id(
         "ASSOCIATE_MONTH",
         mid,
@@ -897,11 +916,19 @@ def _upsert_month_volume(associate_id: Any, month_key: str, net_delta: Decimal, 
         "SET isActive = :ia, updatedAt = :u",
         {":ia": bool(net_volume >= activation_min), ":u": now},
     )
-    return updated2
+    became_active = (not prev_active) and bool(updated2.get("isActive"))
+    return updated2, became_active
 
 def _is_active(associate_id: Any, month_key: str) -> bool:
     item = _get_month_state(associate_id, month_key)
     return bool(item.get("isActive"))
+
+def _is_active_cached(associate_id: Any, month_key: str, cache: dict) -> bool:
+    if associate_id in cache:
+        return cache[associate_id]
+    active = _is_active(associate_id, month_key)
+    cache[associate_id] = active
+    return active
 
 # ---------------------------------------------------------------------------
 # Customer Helpers
@@ -958,12 +985,122 @@ def _get_commission_month_item(beneficiary_id: Any, month_key: str) -> Optional[
     resp = _table.get_item(Key={"PK": "COMMISSION_MONTH", "SK": _commission_month_sk(beneficiary_id, month_key)})
     return resp.get("Item")
 
-def _commission_rate_for_level(level: str, cfg: dict) -> Decimal:
-    normalized = (level or "").strip().lower()
-    raw = (cfg.get("commissionByLevel") or {}) if isinstance(cfg, dict) else {}
-    default_map = {"oro": Decimal("0.10"), "plata": Decimal("0.05"), "bronce": Decimal("0.03")}
-    val = raw.get(normalized, default_map.get(normalized))
-    return _to_decimal(val)
+def _commission_rate_for_depth(depth: int, cfg: dict) -> Decimal:
+    depth_int = int(depth) if depth is not None else 0
+    if depth_int <= 0:
+        return D_ZERO
+
+    raw = cfg.get("commissionByDepth") if isinstance(cfg, dict) else None
+    if isinstance(raw, list):
+        idx = depth_int - 1
+        if 0 <= idx < len(raw):
+            return _to_decimal(raw[idx])
+    if isinstance(raw, dict):
+        if depth_int in raw:
+            return _to_decimal(raw.get(depth_int))
+        key = str(depth_int)
+        if key in raw:
+            return _to_decimal(raw.get(key))
+
+    return _to_decimal(DEFAULT_COMMISSION_BY_DEPTH.get(depth_int, D_ZERO))
+
+def _recalc_commission_totals(ledger: List[dict]) -> Tuple[Decimal, Decimal, Decimal]:
+    pending = D_ZERO
+    confirmed = D_ZERO
+    blocked = D_ZERO
+    for r in ledger or []:
+        amt = _to_decimal(r.get("amount"))
+        status = (r.get("status") or "").strip().lower()
+        if status == "confirmed":
+            confirmed += amt
+        elif status == "blocked" or r.get("blocked") is True:
+            blocked += amt
+        else:
+            pending += amt
+    return pending, confirmed, blocked
+
+def _compute_block_status(
+    source_buyer_id: Any,
+    level: Any,
+    month_key: str,
+    active_cache: dict,
+) -> Tuple[bool, Optional[Any]]:
+    if source_buyer_id is None:
+        return (False, None)
+    try:
+        lvl = int(level)
+    except Exception:
+        return (True, None)
+    if lvl <= 0:
+        return (False, None)
+
+    chain = _upline_chain(source_buyer_id, max_levels=lvl)
+    if len(chain) < lvl:
+        return (True, None)
+
+    for leader_id in chain[:lvl]:
+        if not _is_active_cached(leader_id, month_key, active_cache):
+            return (True, leader_id)
+    return (False, None)
+
+def _unlock_blocked_commissions_for_customer(customer_id: Any, month_key: str) -> None:
+    if customer_id is None:
+        return
+
+    active_cache: Dict[Any, bool] = {}
+    beneficiaries = [customer_id] + _upline_chain(customer_id, max_levels=None)
+    for beneficiary_id in beneficiaries:
+        item = _get_commission_month_item(beneficiary_id, month_key)
+        if not item:
+            continue
+        ledger = item.get("ledger") or []
+        if not isinstance(ledger, list) or not ledger:
+            continue
+
+        changed = False
+        for row in ledger:
+            status = (row.get("status") or "").strip().lower()
+            if status != "blocked" and row.get("blocked") is not True:
+                continue
+            blocked_by = row.get("blockedBy")
+            if blocked_by is not None and str(blocked_by) != str(customer_id):
+                continue
+
+            should_block, new_blocked_by = _compute_block_status(
+                row.get("sourceBuyerId"),
+                row.get("level"),
+                month_key,
+                active_cache,
+            )
+            if not should_block:
+                next_status = row.get("blockedStatus") if row.get("blockedStatus") in {"confirmed", "pending"} else "pending"
+                row["status"] = next_status
+                row.pop("blockedBy", None)
+                row.pop("blockedStatus", None)
+                row["blocked"] = False
+                changed = True
+            else:
+                if new_blocked_by is not None and str(new_blocked_by) != str(blocked_by):
+                    row["blockedBy"] = new_blocked_by
+                    row["blocked"] = True
+                    row["status"] = "blocked"
+                    changed = True
+
+        if not changed:
+            continue
+
+        tp, tc, tb = _recalc_commission_totals(ledger)
+        _table.update_item(
+            Key={"PK": "COMMISSION_MONTH", "SK": _commission_month_sk(beneficiary_id, month_key)},
+            UpdateExpression="SET ledger = :l, totalPending = :tp, totalConfirmed = :tc, totalBlocked = :tb, updatedAt = :u",
+            ExpressionAttributeValues={
+                ":l": ledger,
+                ":tp": tp,
+                ":tc": tc,
+                ":tb": tb,
+                ":u": _now_iso(),
+            },
+        )
 
 def _add_commission_to_ledger(
     beneficiary_id: Any, month_key: str, order_id: str, source_buyer_id: Any,
@@ -1025,18 +1162,6 @@ def _confirm_order_commissions(order_item: dict) -> List[dict]:
     """
 
     print("_confirm_order_commissions called")
-    def _recalc_totals(ledger: List[dict]) -> Tuple[Decimal, Decimal]:
-        tp = D_ZERO
-        tc = D_ZERO
-        for r in ledger:
-            amt = _to_decimal(r.get("amount"))
-            st = (r.get("status") or "").strip().lower()
-            if st == "confirmed":
-                tc += amt
-            else:
-                tp += amt
-        return tp, tc
-
     order_id = order_item.get("orderId")
     if not order_id:
         return []
@@ -1047,7 +1172,7 @@ def _confirm_order_commissions(order_item: dict) -> List[dict]:
 
     beneficiaries: List[Any] = []
     if buyer_id is not None:
-        beneficiaries = _upline_chain(buyer_id, max_levels=None)
+        beneficiaries = _upline_chain(buyer_id, max_levels=MAX_COMMISSION_LEVELS)
 
     # Si es guest, también incluye referrer (si existe)
     
@@ -1076,27 +1201,31 @@ def _confirm_order_commissions(order_item: dict) -> List[dict]:
         for r in ledger:
             if r.get("orderId") != order_id:
                 continue
-            if (r.get("status") or "").strip().lower() != "pending":
-                continue
-
-            r["status"] = "confirmed"
-            changed = True
-            confirmed_count += 1
-            confirmed_amount += _to_decimal(r.get("amount"))
+            st = (r.get("status") or "").strip().lower()
+            if st == "pending":
+                r["status"] = "confirmed"
+                changed = True
+                confirmed_count += 1
+                confirmed_amount += _to_decimal(r.get("amount"))
+            elif st == "blocked" or r.get("blocked") is True:
+                if r.get("blockedStatus") != "confirmed":
+                    r["blockedStatus"] = "confirmed"
+                    changed = True
 
         if not changed:
             continue
 
-        tp, tc = _recalc_totals(ledger)
+        tp, tc, tb = _recalc_commission_totals(ledger)
 
         # Persistir SOLO ledger+totales (no agrega nada)
         _table.update_item(
             Key={"PK": "COMMISSION_MONTH", "SK": _commission_month_sk(beneficiary_id, month_key)},
-            UpdateExpression="SET ledger = :l, totalPending = :tp, totalConfirmed = :tc, updatedAt = :u",
+            UpdateExpression="SET ledger = :l, totalPending = :tp, totalConfirmed = :tc, totalBlocked = :tb, updatedAt = :u",
             ExpressionAttributeValues={
                 ":l": ledger,
                 ":tp": tp,
                 ":tc": tc,
+                ":tb": tb,
                 ":u": _now_iso(),
             },
         )
@@ -1121,7 +1250,7 @@ def _void_commissions_for_order(order_id: str, reason: str) -> List[dict]:
     
     beneficiaries = []
     if buyer_id is not None:
-        beneficiaries = _upline_chain(buyer_id, max_levels=None)
+        beneficiaries = _upline_chain(buyer_id, max_levels=MAX_COMMISSION_LEVELS)
     if (order_item.get("buyerType") or "").lower() == "guest":
         referrer_id = order_item.get("referrerAssociateId")
         if referrer_id:
@@ -1136,6 +1265,7 @@ def _void_commissions_for_order(order_id: str, reason: str) -> List[dict]:
         
         pending_delta = D_ZERO
         confirmed_delta = D_ZERO
+        blocked_delta = D_ZERO
         new_ledger = []
         removed_count = 0
 
@@ -1147,6 +1277,8 @@ def _void_commissions_for_order(order_id: str, reason: str) -> List[dict]:
                     pending_delta += amt
                 elif status == "confirmed":
                     confirmed_delta += amt
+                elif status == "blocked" or row.get("blocked") is True:
+                    blocked_delta += amt
                 removed_count += 1
                 continue
             new_ledger.append(row)
@@ -1157,15 +1289,15 @@ def _void_commissions_for_order(order_id: str, reason: str) -> List[dict]:
         try:
             _table.update_item(
                 Key={"PK": "COMMISSION_MONTH", "SK": _commission_month_sk(beneficiary_id, month_key)},
-                UpdateExpression="SET ledger = :ledger, totalPending = if_not_exists(totalPending, :zero) - :pd, totalConfirmed = if_not_exists(totalConfirmed, :zero) - :cd, updatedAt = :u",
+                UpdateExpression="SET ledger = :ledger, totalPending = if_not_exists(totalPending, :zero) - :pd, totalConfirmed = if_not_exists(totalConfirmed, :zero) - :cd, totalBlocked = if_not_exists(totalBlocked, :zero) - :bd, updatedAt = :u",
                 ExpressionAttributeValues={
-                    ":ledger": new_ledger, ":pd": pending_delta, ":cd": confirmed_delta, ":zero": D_ZERO, ":u": _now_iso(),
+                    ":ledger": new_ledger, ":pd": pending_delta, ":cd": confirmed_delta, ":bd": blocked_delta, ":zero": D_ZERO, ":u": _now_iso(),
                 },
             )
         except Exception:
             pass
 
-        total_delta = pending_delta + confirmed_delta
+        total_delta = pending_delta + confirmed_delta + blocked_delta
         if total_delta > 0:
             _update_customer_commissions_cache(beneficiary_id, -total_delta)
 
@@ -1279,17 +1411,8 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
     def _row_id(order_id: str, level: int) -> str:
         return f"ORDER#{order_id}#L{int(level)}"
 
-    def _recalc_totals(ledger: List[dict]) -> Tuple[Decimal, Decimal]:
-        tp = D_ZERO
-        tc = D_ZERO
-        for r in ledger:
-            amt = _to_decimal(r.get("amount"))
-            st = (r.get("status") or "").strip().lower()
-            if st == "confirmed":
-                tc += amt
-            else:
-                tp += amt
-        return tp, tc
+    def _recalc_totals(ledger: List[dict]) -> Tuple[Decimal, Decimal, Decimal]:
+        return _recalc_commission_totals(ledger)
 
     def _upsert_ledger_row(existing_ledger: List[dict], new_row: dict) -> Tuple[List[dict], Decimal]:
         """
@@ -1381,6 +1504,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
                 "ledger": [],
                 "totalPending": D_ZERO,
                 "totalConfirmed": D_ZERO,
+                "totalBlocked": D_ZERO,
                 "createdAt": now,
                 "updatedAt": now,
             }
@@ -1399,7 +1523,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
             "referrerOneShot": True,
         }
         ledger, delta_for_cache = _upsert_ledger_row(item.get("ledger") or [], row)
-        tp, tc = _recalc_totals(ledger)
+        tp, tc, tb = _recalc_totals(ledger)
 
         # 3) Guardar el item mensual (reemplaza ledger + totales)
         _table.put_item(Item={
@@ -1412,6 +1536,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
             "ledger": ledger,
             "totalPending": tp,
             "totalConfirmed": tc,
+            "totalBlocked": tb,
             "createdAt": item.get("createdAt") or now,
             "updatedAt": _now_iso(),
         })
@@ -1432,27 +1557,24 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
 
     # Compras de usuario registrado/asociado: actualiza estado mensual + beneficios + stats (igual que antes)
     if buyer_id is not None and buyer_type in {"associate", "registered"}:
-        _upsert_month_volume(buyer_id, month_key, net, activation_min)
+        _, became_active = _upsert_month_volume(buyer_id, month_key, net, activation_min)
         _sync_buyer_benefits(buyer_id, month_key, cfg)
         _update_customer_product_stats(buyer_id, order_item)
+        if became_active:
+            _unlock_blocked_commissions_for_customer(buyer_id, month_key)
 
     # Multinivel: beneficiarios = upline
-    chain = _upline_chain(buyer_id, max_levels=None)
+    chain = _upline_chain(buyer_id, max_levels=MAX_COMMISSION_LEVELS)
     trail = []
-    cut = False
+    blocked_by = None
+    active_cache: Dict[Any, bool] = {}
 
     for idx, beneficiary_id in enumerate(chain):
         level = idx + 1
         print(f"Processing commission for beneficiary_id: {beneficiary_id} at level {level}")
-        # Regla de corte: si el beneficiario no está activo, se corta toda la cadena
-        if not _is_active(beneficiary_id, month_key):
-            print(f"Cutting commission chain at beneficiary_id: {beneficiary_id} (level {level}) due to inactivity")
-            cut = True
-            break
-        print(f"Beneficiary_id: {beneficiary_id} is active, proceeding to calculate commission")
-        prof = _get_customer_profile(beneficiary_id)
-        blevel = prof.get("level", "Bronce") if prof else "Bronce"
-        rate = _commission_rate_for_level(blevel, cfg)
+        if blocked_by is None and not _is_active_cached(beneficiary_id, month_key, active_cache):
+            blocked_by = beneficiary_id
+        rate = _commission_rate_for_depth(level, cfg)
         amount = (net * rate).quantize(D_CENT) if rate > 0 else D_ZERO
         if amount <= 0:
             continue
@@ -1473,11 +1595,14 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
                 "ledger": [],
                 "totalPending": D_ZERO,
                 "totalConfirmed": D_ZERO,
+                "totalBlocked": D_ZERO,
                 "createdAt": now,
                 "updatedAt": now,
             }
             print(f"Created new commission month item for beneficiary_id: {beneficiary_id}, month_key: {month_key}")
 
+        is_blocked = blocked_by is not None
+        row_status = "blocked" if is_blocked else "pending"
         # 2) Upsert fila idempotente para esta orden+level
         row = {
             "rowId": _row_id(order_id, level),
@@ -1486,14 +1611,18 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
             "level": int(level),
             "rate": _to_decimal(rate),
             "amount": _to_decimal(amount),
-            "status": "pending",
+            "status": row_status,
             "createdAt": now,
             "buyerType": buyer_type,
         }
+        if is_blocked:
+            row["blocked"] = True
+            row["blockedBy"] = blocked_by
+            row["blockedStatus"] = "pending"
         print(f"Upserting ledger row for beneficiary_id: {beneficiary_id}, order_id: {order_id}, level: {level}")
         ledger, delta_for_cache = _upsert_ledger_row(item.get("ledger") or [], row)
         print(f"Updated ledger for beneficiary_id: {beneficiary_id}, new ledger length: {len(ledger)}")
-        tp, tc = _recalc_totals(ledger)
+        tp, tc, tb = _recalc_totals(ledger)
 
         # 3) Persistir (ledger + totales recalculados)
         _table.put_item(Item={
@@ -1506,6 +1635,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
             "ledger": ledger,
             "totalPending": tp,
             "totalConfirmed": tc,
+            "totalBlocked": tb,
             "createdAt": item.get("createdAt") or now,
             "updatedAt": _now_iso(),
         })
@@ -1521,7 +1651,9 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
             "level": int(level),
             "rate": rate,
             "amount": amount,
-            "status": "pending",
+            "status": row_status,
+            "blocked": is_blocked,
+            "blockedBy": blocked_by,
         })
 
     return {
@@ -1531,7 +1663,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
         "netTotal": net,
         "monthKey": month_key,
         "uplineChain": chain,
-        "cut": cut,
+        "cut": bool(blocked_by),
         "commissionsCreated": trail,
         "commissionsPaid": [],  # ya no "pagas" aquí, solo generas ledger en pending
         "mode": "multilevel",
@@ -1735,21 +1867,23 @@ def _create_customer(payload: dict) -> dict:
         return _json_response(200, {"message": "name y email son obligatorios", "Error": "BadRequest"})
 
     customer_id = payload.get("customerId") or int(datetime.now(timezone.utc).timestamp() * 1000)
-    leader_id, level = _resolve_leader_and_level(payload.get("leaderId"))
+    leader_id = _resolve_leader_id(payload.get("leaderId"))
     now = _now_iso()
 
     item = {
         "entityType": "customer", "customerId": customer_id, "name": name, "email": email,
         "phone": payload.get("phone"), "address": payload.get("address"), "city": payload.get("city"),
-        "leaderId": leader_id, "level": level, "isAssociate": bool(payload.get("isAssociate", True)),
+        "leaderId": leader_id, "isAssociate": bool(payload.get("isAssociate", True)),
         "activeBuyer": False, "discountRate": D_ZERO, "discount": "0%", "commissions": D_ZERO,
         "createdAt": now, "updatedAt": now
     }
+    if payload.get("level") is not None:
+        item["level"] = payload.get("level")
     main = _put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
     
     return _json_response(201, {"customer": {
         "id": customer_id, "name": main["name"], "email": main["email"],
-        "leaderId": main["leaderId"], "level": main["level"], "isAssociate": main["isAssociate"],
+        "leaderId": main["leaderId"], "level": main.get("level"), "isAssociate": main["isAssociate"],
         "discount": main["discount"], "activeBuyer": bool(main["activeBuyer"]),
         "discountRate": float(main.get("discountRate") or 0),
         "commissions": float(main.get("commissions") or 0),
@@ -1772,7 +1906,7 @@ def _create_account(payload: dict) -> dict:
 
     customer_id = payload.get("customerId") or int(datetime.now(timezone.utc).timestamp() * 1000)
     leader_token = payload.get("referralToken") or payload.get("leaderId")
-    leader_id, level = _resolve_leader_and_level(_parse_int_or_str(leader_token))
+    leader_id = _resolve_leader_id(_parse_int_or_str(leader_token))
     product_id = _parse_int_or_str(payload.get("productId") or payload.get("refProductId"))
 
     now = _now_iso()
@@ -1780,18 +1914,20 @@ def _create_account(payload: dict) -> dict:
     item = {
         "entityType": "customer", "customerId": customer_id, "name": name, "email": email_norm,
         "phone": payload.get("phone"), "address": payload.get("address"), "city": payload.get("city"),
-        "leaderId": leader_id, "level": level, "isAssociate": bool(payload.get("isAssociate", True)),
+        "leaderId": leader_id, "isAssociate": bool(payload.get("isAssociate", True)),
         "activeBuyer": False, "discountRate": D_ZERO, "discount": "0%", "commissions": D_ZERO,
         "passwordHash": password_hash, "refProductId": product_id,
         "createdAt": now, "updatedAt": now
     }
+    if payload.get("level") is not None:
+        item["level"] = payload.get("level")
     
     main = _put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
     _create_auth_record(email_norm, password_hash, customer_id, role="cliente")
     
     return _json_response(201, {"customer": {
         "id": customer_id, "name": main["name"], "email": main["email"],
-        "leaderId": main["leaderId"], "level": main["level"], "isAssociate": main["isAssociate"],
+        "leaderId": main["leaderId"], "level": main.get("level"), "isAssociate": main["isAssociate"],
         "discount": main["discount"], "activeBuyer": bool(main["activeBuyer"]),
         "discountRate": float(main.get("discountRate") or 0),
         "commissions": float(main.get("commissions") or 0),
@@ -1802,7 +1938,8 @@ def _get_customer(customer_id: str) -> dict:
     return _json_response(200, {"customer": item}) if item else _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
 
 def _get_network(customer_id: str, query: dict) -> dict:
-    depth = int(query.get("depth") or 3)
+    depth = int(query.get("depth") or MAX_NETWORK_DEPTH)
+    depth = min(depth, MAX_NETWORK_DEPTH)
     customers_raw = _query_bucket("CUSTOMER") # Optimized fetch-all
 
     nodes = {}
@@ -1879,11 +2016,18 @@ def _put_rewards_config(payload: dict) -> dict:
     cfg["activationNetMin"] = float(cfg.get("activationNetMin", 2500))
     cfg["payoutDay"] = int(cfg.get("payoutDay", 10))
     
-    cbyl = cfg.get("commissionByLevel") or {}
-    cfg["commissionByLevel"] = {
-        "oro": float(cbyl.get("oro", 0.10)),
-        "plata": float(cbyl.get("plata", 0.05)),
-        "bronce": float(cbyl.get("bronce", 0.03)),
+    cfg = _ensure_commission_by_depth(cfg)
+    cbd = cfg.get("commissionByDepth")
+    if isinstance(cbd, list):
+        cbd_map = {str(i + 1): cbd[i] for i in range(min(3, len(cbd)))}
+    elif isinstance(cbd, dict):
+        cbd_map = cbd
+    else:
+        cbd_map = {}
+    cfg["commissionByDepth"] = {
+        "1": float(_to_decimal(cbd_map.get("1", cbd_map.get(1, DEFAULT_COMMISSION_BY_DEPTH[1])))),
+        "2": float(_to_decimal(cbd_map.get("2", cbd_map.get(2, DEFAULT_COMMISSION_BY_DEPTH[2])))),
+        "3": float(_to_decimal(cbd_map.get("3", cbd_map.get(3, DEFAULT_COMMISSION_BY_DEPTH[3])))),
     }
     
     cfg["discountTiers"] = [
@@ -2312,7 +2456,13 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
     buy_again_ids = []
 
     if customer and isinstance(customer, dict):
-        tree = _build_network_tree_with_month(str(customer.get("customerId")), month_key, customers_raw, cfg)
+        tree = _build_network_tree_with_month(
+            str(customer.get("customerId")),
+            month_key,
+            customers_raw,
+            cfg,
+            max_depth=MAX_NETWORK_DEPTH,
+        )
         print(tree)
         computed_network = _network_members_from_tree(tree, max_rows=30)
         computed_goals = _build_goals(customer, tree, customers_raw, cfg)
@@ -2324,6 +2474,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
         comm_item = _get_commission_month_item(cid, month_key)
         pend = _to_decimal(comm_item.get("totalPending")) if comm_item else D_ZERO
         conf = _to_decimal(comm_item.get("totalConfirmed")) if comm_item else D_ZERO
+        blocked = _to_decimal(comm_item.get("totalBlocked")) if comm_item else D_ZERO
 
         prev_comm_item = _get_commission_month_item(cid, prev_month_key)
         prev_confirmed = _to_decimal(prev_comm_item.get("totalConfirmed")) if prev_comm_item else D_ZERO
@@ -2348,6 +2499,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
             prev_status = "pending"
         commission_summary = {
             "monthKey": month_key, "totalPending": pend, "totalConfirmed": conf,
+            "totalBlocked": blocked,
             "ledger": comm_item.get("ledger") if comm_item and isinstance(comm_item.get("ledger"), list) else [],
             "hasPending": pend > 0, "hasConfirmed": conf > 0,
             "clabeOnFile": bool(clabe), "clabeLast4": clabe[-4:] if clabe else "",
@@ -2361,12 +2513,21 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
         # Defaults for guests
         buy_again_ids = [str(p["id"]) for p in products[:3]]
 
+    user_payload = None
+    if customer and isinstance(customer, dict):
+        dr = _to_decimal(customer.get("discountRate"))
+        user_payload = {
+            "discountPercent": int((dr * 100).quantize(D_ONE)) if dr else 0,
+            "discountActive": bool(customer.get("activeBuyer") or dr > 0),
+        }
+
     payload = {
         "isGuest": bool(is_guest),
         "settings": {
             "cutoffDay": 25, "cutoffHour": 23, "cutoffMinute": 59,
             "userCode": "" if is_guest else str(user_id), "networkGoal": 300,
         },
+        "user": user_payload,
         "goals": computed_goals,
         "products": products, "featured": featured, "productOfMonth": product_of_month,
         "networkMembers": computed_network, "buyAgainIds": buy_again_ids,

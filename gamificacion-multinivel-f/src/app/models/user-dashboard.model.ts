@@ -22,6 +22,7 @@ export interface DashboardProduct {
   copyFacebook?: string;
   copyInstagram?: string;
   copyWhatsapp?: string;
+  tags?: string[];
 }
 
 export interface NetworkMember {
@@ -55,6 +56,11 @@ export interface UserDashboardData {
   goals: DashboardGoal[];
   products: DashboardProduct[];
   featured: FeaturedItem[];
+  user?: {
+    level?: string;
+    discountPercent?: number;
+    discountActive?: boolean;
+  };
   isGuest?: boolean;
   productOfMonth?: {
     id: string;
@@ -76,6 +82,7 @@ export interface UserDashboardData {
     monthKey: string;
     pendingTotal: number;
     paidTotal: number;
+    blockedTotal?: number;
     monthTotal?: number;
     ledger?: Array<{
       createdAt?: string;

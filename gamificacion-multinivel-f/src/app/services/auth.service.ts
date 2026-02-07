@@ -51,8 +51,7 @@ export class AuthService {
             name: 'Valeria Torres',
             role: 'cliente',
             discountPercent: 15,
-            discountActive: true,
-            level: 'Oro'
+            discountActive: true
           };
 
     this.setUser(user);

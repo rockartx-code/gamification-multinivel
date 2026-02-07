@@ -64,7 +64,6 @@ export interface CreateStructureCustomerPayload {
   address?: string;
   city?: string;
   leaderId?: number | null;
-  level: 'Oro' | 'Plata' | 'Bronce';
 }
 
 export interface CreateProductAssetPayload {

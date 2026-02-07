@@ -49,8 +49,7 @@ export class MockApiService {
         name: 'Valeria Torres',
         role: 'cliente' as const,
         discountPercent: 15,
-        discountActive: true,
-        level: 'Oro'
+        discountActive: true
       }
     }
   ];
@@ -117,7 +116,6 @@ export class MockApiService {
       name: payload.name,
       email: payload.email,
       leaderId: payload.referralToken ? payload.referralToken : null,
-      level: 'Oro',
       isAssociate: true,
       discount: '0%',
       activeBuyer: false,
@@ -166,7 +164,7 @@ export class MockApiService {
           name: 'Ana López',
           email: 'ana@mail.com',
           leaderId: null,
-          level: 'Oro',
+          level: 'L1',
           discount: '15%',
           commissions: 320,
           commissionsPrevMonth: 180,
@@ -182,7 +180,7 @@ export class MockApiService {
           name: 'Carlos Ruiz',
           email: 'carlos@mail.com',
           leaderId: 1,
-          level: 'Plata',
+          level: 'L2',
           discount: '10%',
           commissions: 120,
           commissionsPrevMonth: 0,
@@ -198,7 +196,7 @@ export class MockApiService {
           name: 'María Pérez',
           email: 'maria@mail.com',
           leaderId: 2,
-          level: 'Bronce',
+          level: 'L3',
           discount: '5%',
           commissions: 0,
           commissionsPrevMonth: 90,
@@ -317,6 +315,10 @@ export class MockApiService {
         userCode: 'ABC123',
         networkGoal: 300
       },
+      user: {
+        discountPercent: 15,
+        discountActive: true
+      },
       goals: [
         {
           key: 'active',
@@ -366,14 +368,16 @@ export class MockApiService {
           name: 'COLÁGENO',
           price: 35,
           badge: 'Regeneración',
-          img: 'images/L-Colageno.png'
+          img: 'images/L-Colageno.png',
+          tags: ['bienestar']
         },
         {
           id: 'omega3',
           name: 'OMEGA-3',
           price: 29,
           badge: 'Cuerpo & mente',
-          img: 'images/L-Omega3.png'
+          img: 'images/L-Omega3.png',
+          tags: ['salud', 'mente']
         },
         {
           id: 'creatina',
@@ -381,17 +385,19 @@ export class MockApiService {
           price: 27,
           badge: 'Fuerza',
           img: 'images/L-Creatina.png',
+          tags: ['fuerza'],
           description: 'Potencia rendimiento y fuerza en entrenamientos diarios.',
-          copyWhatsapp: 'Creatina para rendimiento diario. ??Te paso el link?',
+          copyWhatsapp: 'Creatina para rendimiento diario. ¿Te paso el link?',
           copyInstagram: 'Creatina para rendimiento diario. #fuerza',
-          copyFacebook: 'Creatina para rendimiento diario. Escr??beme y te paso el link.'
+          copyFacebook: 'Creatina para rendimiento diario. Escríbeme y te paso el link.'
         },
         {
           id: 'complejoB',
           name: 'COMPLEJO B',
           price: 24,
           badge: 'Energía',
-          img: 'images/L-ComplejoB.png'
+          img: 'images/L-ComplejoB.png',
+          tags: ['energia']
         },
         {
           id: 'antioxidante',
@@ -399,10 +405,11 @@ export class MockApiService {
           price: 31,
           badge: 'Longevidad',
           img: 'images/L-Antioxidante.png',
-          description: 'Protecci??n antioxidante para bienestar continuo.',
-          copyWhatsapp: 'Antioxidante para bienestar continuo. ??Te paso el link?',
+          tags: ['longevidad'],
+          description: 'Protección antioxidante para bienestar continuo.',
+          copyWhatsapp: 'Antioxidante para bienestar continuo.¿Te paso el link?',
           copyInstagram: 'Antioxidante para bienestar continuo. #longevidad',
-          copyFacebook: 'Antioxidante para bienestar continuo. Escr??beme y te paso el link.'
+          copyFacebook: 'Antioxidante para bienestar continuo. Escríbeme y te paso el link.'
         }
       ],
       featured: [
@@ -574,18 +581,13 @@ export class MockApiService {
   }
 
   createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
-    const discountByLevel: Record<CreateStructureCustomerPayload['level'], string> = {
-      Oro: '15%',
-      Plata: '10%',
-      Bronce: '5%'
-    };
     const customer: AdminCustomer = {
       id: Math.floor(100000 + Math.random() * 900000),
       name: payload.name,
       email: payload.email,
       leaderId: payload.leaderId ?? null,
-      level: payload.level,
-      discount: discountByLevel[payload.level],
+      level: 'L1',
+      discount: '0%',
       commissions: 0
     };
     return of(customer).pipe(delay(120));

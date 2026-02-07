@@ -5,12 +5,13 @@ import { finalize, Subscription } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 
 import { CartItem } from '../../models/cart.model';
-import { DashboardGoal } from '../../models/user-dashboard.model';
+import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
 import { AdminOrderItem } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
 import { GoalControlService } from '../../services/goal-control.service';
+import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
 
 @Component({
   selector: 'app-carrito',
@@ -24,6 +25,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     private readonly cartControl: CartControlService,
     private readonly cdr: ChangeDetectorRef,
     private readonly goalControl: GoalControlService,
+    private readonly dashboardControl: UserDashboardControlService,
     private readonly api: ApiService,
     private readonly authService: AuthService,
     private readonly router: Router
@@ -38,11 +40,27 @@ export class CarritoComponent implements OnInit, OnDestroy {
   deliveryAddress = '';
   deliveryPostalCode = '';
   deliveryState = '';
+  isProductDetailsOpen = false;
+  selectedProduct: DashboardProduct | null = null;
+  lastAddedItemId = '';
+  showGuestRegisterModal = false;
+  guestRegisterForm = {
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: ''
+  };
+  isGuestRegisterSubmitting = false;
+  guestRegisterFeedback = '';
+  guestRegisterFeedbackType: 'error' | 'success' | '' = '';
   private toastTimeout?: number;
   private countdownInterval?: number;
   private dataSub?: Subscription;
   private goalsSub?: Subscription;
   private customerSub?: Subscription;
+  private addFadeTimeout?: number;
+  private addFadeRestartTimeout?: number;
 
   ngOnInit(): void {
     this.cartControl.load().subscribe();
@@ -63,6 +81,12 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
     }
+    if (this.addFadeTimeout) {
+      window.clearTimeout(this.addFadeTimeout);
+    }
+    if (this.addFadeRestartTimeout) {
+      window.clearTimeout(this.addFadeRestartTimeout);
+    }
     this.customerSub?.unsubscribe();
   }
 
@@ -74,12 +98,85 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return this.cartControl.cartItems;
   }
 
+  get suggestedProducts(): DashboardProduct[] {
+    const products = this.dashboardControl.products ?? [];
+    if (!products.length) {
+      return [];
+    }
+
+    const cartIds = new Set(this.cartItems.map((item) => item.id));
+    const cartTags = this.collectCartTags(products);
+
+    const scored = products.map((product, index) => {
+      const tags = this.normalizeTags(product.tags?.length ? product.tags : product.badge ? [product.badge] : []);
+      const score = tags.reduce((acc, tag) => acc + (cartTags.has(tag) ? 1 : 0), 0);
+      return { product, score, index };
+    });
+
+    const notInCart = scored.filter((item) => !cartIds.has(item.product.id));
+    const primary = notInCart
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.index - b.index);
+    const fallback = notInCart.filter((item) => item.score === 0).sort((a, b) => a.index - b.index);
+    const ordered = [...primary, ...fallback].map((item) => item.product);
+
+    if (ordered.length >= 3) {
+      return ordered.slice(0, 3);
+    }
+
+    const fill = scored
+      .filter((item) => !ordered.some((entry) => entry.id === item.product.id))
+      .sort((a, b) => a.index - b.index)
+      .map((item) => item.product);
+
+    return [...ordered, ...fill].slice(0, 3);
+  }
+
   get shipping(): number {
     return this.cartControl.shipping;
   }
 
   get discountPct(): number {
     return this.cartControl.discountPct;
+  }
+
+  get isGuest(): boolean {
+    return !this.authService.currentUser;
+  }
+
+  get goalTitle(): string {
+    return this.activeGoal?.title || 'Meta de beneficios';
+  }
+
+  get goalSubtitle(): string {
+    return this.activeGoal?.subtitle || 'Acumula consumo para activar beneficios.';
+  }
+
+  get basePercent(): number {
+    const goal = this.activeGoal;
+    if (!goal) {
+      return 0;
+    }
+    const target = Number(goal.target ?? 0);
+    const base = Number(goal.base ?? 0);
+    if (!target) {
+      return 0;
+    }
+    return Math.min(100, (base / target) * 100);
+  }
+
+  get cartPercent(): number {
+    const goal = this.activeGoal;
+    if (!goal || goal.isCountGoal) {
+      return 0;
+    }
+    const target = Number(goal.target ?? 0);
+    if (!target) {
+      return 0;
+    }
+    const cart = Number(goal.cart ?? 0);
+    const cartPercent = (cart / target) * 100;
+    return Math.min(100 - this.basePercent, Math.max(0, cartPercent));
   }
 
   private get discountPercentValue(): number {
@@ -100,10 +197,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (!pct) {
       return 'Sin descuento';
     }
-    if (pct >= 40) {
+    if (pct >= 50) {
       return 'Nivel 3';
     }
-    if (pct >= 35) {
+    if (pct >= 40) {
       return 'Nivel 2';
     }
     if (pct >= 30) {
@@ -188,7 +285,13 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private get activeGoal(): DashboardGoal | null {
-    return this.goalControl.goals.find((goal) => goal.key === 'active') ?? null;
+    return (
+      this.goalControl.goals.find(
+        (goal) => goal?.ctaFragment === 'merchant' && !goal?.achieved && !goal?.locked
+      ) ??
+      this.goalControl.goals.find((goal) => goal?.ctaFragment === 'merchant') ??
+      null
+    );
   }
 
   formatMoney(value: number): string {
@@ -213,9 +316,38 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   addSuggested(): void {
+    const suggestedId = this.cartControl.suggestedItem?.id;
     this.cartControl.addSuggested();
     this.cdr.markForCheck();
     this.showToast('Agregado sugerido.');
+    if (suggestedId) {
+      this.triggerAddedFade(suggestedId);
+    }
+  }
+
+  addSuggestedProduct(product: DashboardProduct): void {
+    const item = this.buildCartItem(product);
+    this.cartControl.addItem(item, 1);
+    this.cdr.markForCheck();
+    this.showToast('Agregado al carrito.');
+    if (this.isProductDetailsOpen) {
+      this.closeProductDetails();
+    }
+    this.triggerAddedFade(product.id);
+  }
+
+  openProductDetails(product: DashboardProduct): void {
+    this.selectedProduct = product;
+    this.isProductDetailsOpen = true;
+  }
+
+  closeProductDetails(): void {
+    this.isProductDetailsOpen = false;
+    this.selectedProduct = null;
+  }
+
+  getCartQty(productId: string): number {
+    return this.cartControl.getQty(productId);
   }
 
   placeOrder(): void {
@@ -319,12 +451,62 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }, 2200);
   }
 
+  private triggerAddedFade(itemId: string): void {
+    if (!itemId) {
+      return;
+    }
+    if (this.addFadeRestartTimeout) {
+      window.clearTimeout(this.addFadeRestartTimeout);
+    }
+    if (this.addFadeTimeout) {
+      window.clearTimeout(this.addFadeTimeout);
+    }
+    this.lastAddedItemId = '';
+    this.addFadeRestartTimeout = window.setTimeout(() => {
+      this.lastAddedItemId = itemId;
+      this.cdr.markForCheck();
+      this.addFadeTimeout = window.setTimeout(() => {
+        if (this.lastAddedItemId === itemId) {
+          this.lastAddedItemId = '';
+          this.cdr.markForCheck();
+        }
+      }, 600);
+    }, 0);
+  }
+
   private scrollToSection(id: string): void {
     const section = document.getElementById(id);
     if (!section) {
       return;
     }
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  private collectCartTags(products: DashboardProduct[]): Set<string> {
+    const tags = new Set<string>();
+    for (const item of this.cartItems) {
+      const match = products.find((product) => product.id === item.id);
+      const rawTags = match?.tags?.length ? match.tags : match?.badge ? [match.badge] : item.note ? [item.note] : [];
+      this.normalizeTags(rawTags).forEach((tag) => tags.add(tag));
+    }
+    return tags;
+  }
+
+  private normalizeTags(tags: string[]): string[] {
+    return tags
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => Boolean(tag));
+  }
+
+  private buildCartItem(product: DashboardProduct): CartItem {
+    return {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      qty: 1,
+      note: product.badge || '',
+      img: product.img || ''
+    };
   }
 
   private prefillCustomerAddress(): void {
@@ -346,5 +528,74 @@ export class CarritoComponent implements OnInit, OnDestroy {
         // No-op: fallback to manual entry.
       }
     });
+  }
+
+  openGuestRegisterModal(): void {
+    this.showGuestRegisterModal = true;
+    this.guestRegisterFeedback = '';
+    this.guestRegisterFeedbackType = '';
+  }
+
+  closeGuestRegisterModal(): void {
+    this.showGuestRegisterModal = false;
+    this.guestRegisterFeedback = '';
+    this.guestRegisterFeedbackType = '';
+  }
+
+  submitGuestRegister(): void {
+    if (this.isGuestRegisterSubmitting) {
+      return;
+    }
+    if (!this.guestRegisterForm.name || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+      this.guestRegisterFeedback = 'Completa los campos obligatorios.';
+      this.guestRegisterFeedbackType = 'error';
+      return;
+    }
+    if (this.guestRegisterForm.password !== this.guestRegisterForm.confirmPassword) {
+      this.guestRegisterFeedback = 'Las contraseñas no coinciden.';
+      this.guestRegisterFeedbackType = 'error';
+      return;
+    }
+
+    const payload = {
+      name: this.guestRegisterForm.name.trim(),
+      email: this.guestRegisterForm.email.trim(),
+      phone: this.guestRegisterForm.phone.trim() || undefined,
+      password: this.guestRegisterForm.password,
+      confirmPassword: this.guestRegisterForm.confirmPassword,
+      referralToken: localStorage.getItem('leaderId') || undefined
+    };
+
+    this.isGuestRegisterSubmitting = true;
+    this.api
+      .createAccount(payload)
+      .pipe(
+        finalize(() => {
+          this.isGuestRegisterSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response?.customer) {
+            this.authService.setUserFromCreateAccount(response.customer);
+          }
+          this.guestRegisterForm = {
+            name: '',
+            email: '',
+            phone: '',
+            password: '',
+            confirmPassword: ''
+          };
+          this.showGuestRegisterModal = false;
+          this.showToast('Cuenta creada. Bienvenido.');
+          window.location.reload();
+        },
+        error: (error: any) => {
+          const apiMessage =
+            error?.error?.message || error?.error?.Error || error?.message || 'No se pudo crear la cuenta.';
+          this.guestRegisterFeedback = apiMessage;
+          this.guestRegisterFeedbackType = 'error';
+        }
+      });
   }
 }

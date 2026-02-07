@@ -22,8 +22,7 @@ import { AdminControlService } from '../../services/admin-control.service';
 
 type StructureNode = {
   id: string;
-  role: 'root' | 'L1' | 'L2';
-  level: string;
+  role: 'root' | 'L1' | 'L2' | 'L3';
   label: string;
   x: number;
   y: number;
@@ -72,7 +71,7 @@ export class AdminComponent implements OnInit {
     city: ''
   };
   structureLeader: AdminCustomer | null = null;
-  structureLevel: 'Oro' | 'Plata' | 'Bronce' = 'Oro';
+  structureLevel = 'L1';
   productImagePreviews = new Map<CreateProductAssetPayload['section'], string>();
   productImageUploads = new Map<CreateProductAssetPayload['section'], boolean>();
   productImageFiles = new Map<CreateProductAssetPayload['section'], File>();
@@ -253,19 +252,11 @@ export class AdminComponent implements OnInit {
     return this.authService.currentUser;
   }
 
-  get isSelectedCustomerBronze(): boolean {
-    return this.normalizeLevel(this.selectedCustomer?.level) === 'bronce';
-  }
-
-  get isStructureLevelBronze(): boolean {
-    return this.normalizeLevel(this.structureLevel) === 'bronce';
-  }
-
   get structureLeaderLabel(): string {
     if (!this.structureLeader) {
       return 'Sin líder asignado';
     }
-    return `${this.structureLeader.name} · ${this.structureLeader.level}`;
+    return this.structureLeader.name;
   }
 
   get structureRootLabel(): string {
@@ -280,6 +271,7 @@ export class AdminComponent implements OnInit {
     const referrals = this.buildReferralMap(this.customers);
     const directReferrals = referrals.get(this.selectedCustomer.id) ?? [];
     const indirectReferrals: Array<{ customer: AdminCustomer; parentId: number }> = [];
+    const thirdReferrals: Array<{ customer: AdminCustomer; parentId: number }> = [];
 
     directReferrals.forEach((member) => {
       const children = referrals.get(member.id) ?? [];
@@ -287,18 +279,28 @@ export class AdminComponent implements OnInit {
         indirectReferrals.push({ customer: child, parentId: member.id });
       });
     });
+    indirectReferrals.forEach((entry) => {
+      const children = referrals.get(entry.customer.id) ?? [];
+      children.forEach((child) => {
+        thirdReferrals.push({ customer: child, parentId: entry.customer.id });
+      });
+    });
 
     const l1Positions = this.buildColumnPositions(directReferrals.length, 260);
     const l2Positions = this.buildColumnPositions(indirectReferrals.length, 420, 40, 180);
+    const l3Positions = this.buildColumnPositions(thirdReferrals.length, 580, 40, 180);
     const rootY =
       l1Positions.length > 0
         ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
-        : 110;
+        : l2Positions.length > 0
+          ? (l2Positions[0].y + l2Positions[l2Positions.length - 1].y) / 2
+          : l3Positions.length > 0
+            ? (l3Positions[0].y + l3Positions[l3Positions.length - 1].y) / 2
+            : 110;
 
     const root: StructureNode = {
       id: `customer-${this.selectedCustomer.id}`,
       role: 'root',
-      level: this.selectedCustomer.level,
       label: this.structureRootLabel,
       x: 120,
       y: rootY
@@ -308,7 +310,6 @@ export class AdminComponent implements OnInit {
     const l1Nodes: StructureNode[] = l1Customers.map((customer, index) => ({
       id: `customer-${customer.id}`,
       role: 'L1',
-      level: customer.level,
       label: this.structureNodeLabel(customer.name),
       x: l1Positions[index].x,
       y: l1Positions[index].y
@@ -321,10 +322,20 @@ export class AdminComponent implements OnInit {
     const l2Nodes: StructureNode[] = l2Entries.map((entry, index) => ({
       id: `customer-${entry.customer.id}`,
       role: 'L2',
-      level: entry.customer.level,
       label: this.structureNodeLabel(entry.customer.name),
       x: l2Positions[index].x,
       y: l2Positions[index].y
+    }));
+    const l2NodeById = new Map(l2Entries.map((entry, index) => [entry.customer.id, l2Nodes[index]]));
+    const l3Entries = thirdReferrals
+      .filter((entry) => l2NodeById.has(entry.parentId))
+      .slice(0, l3Positions.length);
+    const l3Nodes: StructureNode[] = l3Entries.map((entry, index) => ({
+      id: `customer-${entry.customer.id}`,
+      role: 'L3',
+      label: this.structureNodeLabel(entry.customer.name),
+      x: l3Positions[index].x,
+      y: l3Positions[index].y
     }));
 
     const links: StructureLink[] = l1Nodes.map((node) => ({
@@ -347,8 +358,21 @@ export class AdminComponent implements OnInit {
         y2: node.y
       });
     });
+    l3Nodes.forEach((node, index) => {
+      const entry = l3Entries[index];
+      const parent = entry ? l2NodeById.get(entry.parentId) : undefined;
+      if (!parent) {
+        return;
+      }
+      links.push({
+        x1: parent.x,
+        y1: parent.y,
+        x2: node.x,
+        y2: node.y
+      });
+    });
 
-    return { nodes: [root, ...l1Nodes, ...l2Nodes], links };
+    return { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
   }
 
   get isStructureFormValid(): boolean {
@@ -359,18 +383,14 @@ export class AdminComponent implements OnInit {
     return Boolean(this.productForm.name.trim() && Number(this.productForm.price));
   }
 
-  structureNodeFill(level: string): string {
-    const normalized = this.normalizeLevel(level);
-    if (normalized === 'oro') {
-      return 'rgba(245,185,66,.92)';
-    }
-    if (normalized === 'plata') {
+  structureNodeFill(role: StructureNode['role']): string {
+    if (role === 'root') {
       return 'rgba(59,130,246,.92)';
     }
-    if (normalized === 'bronce') {
-      return 'rgba(139,92,246,.92)';
+    if (role === 'L1') {
+      return 'rgba(245,185,66,.92)';
     }
-    return 'rgba(148,163,184,.85)';
+    return 'rgba(139,92,246,.92)';
   }
 
   structureNodeRadius(role: StructureNode['role']): number {
@@ -712,11 +732,11 @@ export class AdminComponent implements OnInit {
     this.isSavingStructure = false;
     if (this.selectedCustomer) {
       this.structureLeader = this.selectedCustomer;
-      this.structureLevel = this.getLowerStructureLevel(this.selectedCustomer.level);
+      this.structureLevel = 'L1';
       return;
     }
     this.structureLeader = null;
-    this.structureLevel = 'Oro';
+    this.structureLevel = 'Raíz';
   }
 
   updateStructureField(
@@ -730,17 +750,13 @@ export class AdminComponent implements OnInit {
   }
 
   saveStructureCustomer(): void {
-    //if (this.isStructureLevelBronze || this.isSavingStructure || !this.isStructureFormValid) {
-    //  return;
-    //}
     const payload: CreateStructureCustomerPayload = {
       name: this.structureForm.name.trim(),
       email: this.structureForm.email.trim(),
       phone: this.structureForm.phone?.trim() || undefined,
       address: this.structureForm.address?.trim() || undefined,
       city: this.structureForm.city?.trim() || undefined,
-      leaderId: this.structureLeader?.id ?? null,
-      level: this.structureLevel
+      leaderId: this.structureLeader?.id ?? null
     };
     this.isSavingStructure = true;
     this.adminControl.createStructureCustomer(payload).subscribe({
@@ -1035,10 +1051,6 @@ export class AdminComponent implements OnInit {
     return tags.length ? tags : undefined;
   }
 
-  private normalizeLevel(level?: string): string {
-    return (level ?? '').trim().toLowerCase();
-  }
-
   private structureNodeLabel(name?: string): string {
     const value = (name ?? '').trim();
     if (!value) {
@@ -1075,14 +1087,4 @@ export class AdminComponent implements OnInit {
     }));
   }
 
-  private getLowerStructureLevel(level: string): 'Oro' | 'Plata' | 'Bronce' {
-    const normalized = this.normalizeLevel(level);
-    if (normalized === 'oro') {
-      return 'Plata';
-    }
-    if (normalized === 'plata') {
-      return 'Bronce';
-    }
-    return 'Bronce';
-  }
 }

@@ -73,9 +73,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   isCommissionModalOpen = false;
   isCommissionSubmitting = false;
   isCommissionUploading = false;
+  isUserDetailsOpen = false;
+  isMobileNavOpen = false;
+  isGoalsHighlight = false;
+  achievedGoalsPage = 0;
+  readonly achievedGoalsPageSize = 3;
+  private readonly achievedGoalsStorageKey = 'dashboard-achieved-goals';
+  private newAchievedGoalKeys = new Set<string>();
+  private newAchievedGoalOrder = new Map<string, number>();
+  private goalsAnimTimeout?: number;
+  visualActiveWidth = 0;
+  visualCartWidth = 0;
+  isGoalFilling = false;
+  private goalFillTimeout?: number;
+  private lastActiveGoalKey = '';
+  private lastActiveGoalBase = -1;
+  private lastActiveGoalCart = -1;
   commissionClabe = '';
   commissionUploadName = '';
   showCommissionLedger = false;
+  showBlockedTooltip = false;
   clabeDraft = '';
   clabePending = '';
   isClabeConfirmOpen = false;
@@ -90,6 +107,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private toastTimeout?: number;
   private goalsSub?: Subscription;
 
+
+  
+
   get currentUser(): AuthUser | null {
     return this.authService.currentUser;
   }
@@ -98,13 +118,25 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.currentUser?.role === 'cliente';
   }
 
+  private get dashboardUser(): UserDashboardData['user'] | null {
+    return this.dashboardControl.data?.user ?? null;
+  }
+
+  get userLevel(): string {
+    return this.dashboardUser?.level || this.currentUser?.level || '';
+  }
+
   private get discountPercentValue(): number {
-    const raw = this.currentUser?.discountPercent;
+    const raw = this.dashboardUser?.discountPercent ?? this.currentUser?.discountPercent;
     const value = typeof raw === 'string' ? Number(raw) : Number(raw ?? 0);
     return Number.isFinite(value) ? value : 0;
   }
 
   private get discountActiveValue(): boolean {
+    const raw = this.dashboardUser?.discountActive;
+    if (typeof raw === 'boolean') {
+      return raw;
+    }
     return Boolean(this.currentUser?.discountActive);
   }
 
@@ -375,10 +407,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!pct) {
       return 'Sin descuento';
     }
-    if (pct >= 40) {
+    if (pct >= 50) {
       return `Dto ${pct}% • Nivel 3`;
     }
-    if (pct >= 35) {
+    if (pct >= 40) {
       return `Dto ${pct}% • Nivel 2`;
     }
     if (pct >= 30) {
@@ -393,6 +425,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   get discountPercent(): number {
     return this.hasDiscount ? this.discountPercentValue : 0;
+  }
+
+  get discountPercentMobile(): string {
+    if (!this.hasDiscount) {
+      return '';
+    }
+    return `${Math.round(this.discountPercentValue)}%`;
   }
 
   discountAppliedLabel(): string {
@@ -411,9 +450,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!this.discountActiveValue) {
       return 'fa-lock';
     }
-    if (!this.discountPercentValue) {
-      return 'fa-bolt';
-    }
     return 'fa-tags';
   }
 
@@ -422,23 +458,20 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return 'border-white/10 bg-white/5 text-zinc-300';
     }
     const pct = this.discountPercentValue;
-    if (!pct) {
-      return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
-    }
-    if (pct >= 40) {
+    if (pct >= 50) {
       return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
     }
-    if (pct >= 35) {
-      return 'border-purple-400/30 bg-purple-400/10 text-purple-200';
+    if (pct >= 40) {
+      return 'border-zinc-300/30 bg-zinc-400/10 text-zinc-200';
     }
     if (pct >= 30) {
-      return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+      return 'border-amber-700/40 bg-gradient-to-br from-amber-600/20 via-amber-700/20 to-stone-900/30 text-amber-200';
     }
-    return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+    return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
   }
 
   medalBadgeClass(): string {
-    const level = (this.currentUser?.level || '').toLowerCase();
+    const level = (this.userLevel || '').toLowerCase();
     if (level.includes('oro') || level.includes('gold')) {
       return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
     }
@@ -449,6 +482,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return 'border-amber-400/30 bg-amber-400/10 text-amber-200';
     }
     return 'border-purple-400/30 bg-purple-400/10 text-purple-200';
+  }
+
+  toggleUserDetails(): void {
+    this.isUserDetailsOpen = !this.isUserDetailsOpen;
   }
 
   getCountdownState(): 'calm' | 'focus' | 'urgent' | 'critical' {
@@ -513,17 +550,24 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   } {
     const l1Members = this.networkMembers.filter((member) => member.level === 'L1');
     const l2Members = this.networkMembers.filter((member) => member.level === 'L2');
-    const metrics = this.getGraphMetrics(l1Members.length, l2Members.length);
+    const l3Members = this.networkMembers.filter((member) => member.level === 'L3');
+    const metrics = this.getGraphMetrics(l1Members.length, l2Members.length, l3Members.length);
     const rootX = 120;
     const l1X = 320;
     const l2X = 540;
+    const l3X = 760;
 
     const l1Positions = this.buildColumnPositions(l1Members.length, l1X, metrics.top, metrics.spacing);
     const l2Positions = this.buildColumnPositions(l2Members.length, l2X, metrics.top, metrics.spacing);
+    const l3Positions = this.buildColumnPositions(l3Members.length, l3X, metrics.top, metrics.spacing);
     const rootY =
       l1Positions.length > 0
         ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
-        : metrics.height / 2;
+        : l2Positions.length > 0
+          ? (l2Positions[0].y + l2Positions[l2Positions.length - 1].y) / 2
+          : l3Positions.length > 0
+            ? (l3Positions[0].y + l3Positions[l3Positions.length - 1].y) / 2
+            : metrics.height / 2;
 
     const rootName = this.currentUser?.name || 'Tu';
     const root = {
@@ -565,6 +609,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       };
     });
 
+    const l2ByMemberId = new Map<string, (typeof l2Nodes)[number]>();
+    l2Members.forEach((member, idx) => {
+      const memberId = member.id ? String(member.id) : `idx-${idx}`;
+      l2ByMemberId.set(memberId, l2Nodes[idx]);
+    });
+
+    const l3Nodes = l3Members.map((member, idx) => {
+      const memberId = member.id ? `l3-${member.id}` : `l3-${idx}`;
+      return {
+        id: memberId,
+        level: 'L3',
+        x: l3Positions[idx]?.x ?? l3X,
+        y: l3Positions[idx]?.y ?? rootY,
+        label: this.nodeLabel(member.name),
+        name: member.name || 'Miembro',
+        status: member.status,
+        leaderId: member.leaderId ? String(member.leaderId) : undefined
+      };
+    });
+
     const links: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
     for (const node of l1Nodes) {
       links.push({ x1: root.x, y1: root.y, x2: node.x, y2: node.y });
@@ -574,8 +638,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       const parent = l1ByMemberId.get(parentId) ?? (l1Nodes.length ? l1Nodes[0] : root);
       links.push({ x1: parent.x, y1: parent.y, x2: node.x, y2: node.y });
     }
+    for (const node of l3Nodes) {
+      const parentId = node.leaderId ?? '';
+      const parent = l2ByMemberId.get(parentId) ?? (l2Nodes.length ? l2Nodes[0] : root);
+      links.push({ x1: parent.x, y1: parent.y, x2: node.x, y2: node.y });
+    }
 
-    return { nodes: [root, ...l1Nodes, ...l2Nodes], links };
+    return { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
   }
 
   nodeFill(level: string, status?: NetworkMember['status']): string {
@@ -604,16 +673,21 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   get graphSize(): { width: number; height: number } {
     const l1Count = this.networkMembers.filter((member) => member.level === 'L1').length;
     const l2Count = this.networkMembers.filter((member) => member.level === 'L2').length;
-    const metrics = this.getGraphMetrics(l1Count, l2Count);
+    const l3Count = this.networkMembers.filter((member) => member.level === 'L3').length;
+    const metrics = this.getGraphMetrics(l1Count, l2Count, l3Count);
     return { width: metrics.width, height: metrics.height };
   }
 
-  private getGraphMetrics(l1Count: number, l2Count: number): { width: number; height: number; top: number; spacing: number } {
-    const maxCount = Math.max(l1Count, l2Count, 1);
+  private getGraphMetrics(
+    l1Count: number,
+    l2Count: number,
+    l3Count: number
+  ): { width: number; height: number; top: number; spacing: number } {
+    const maxCount = Math.max(l1Count, l2Count, l3Count, 1);
     const top = 40;
     const spacing = 64;
     const height = Math.max(260, top * 2 + spacing * (maxCount - 1));
-    return { width: 640, height, top, spacing };
+    return { width: 860, height, top, spacing };
   }
 
   private buildColumnPositions(
@@ -701,6 +775,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
+    }
+    if (this.goalsAnimTimeout) {
+      window.clearTimeout(this.goalsAnimTimeout);
+    }
+    if (this.goalFillTimeout) {
+      window.clearTimeout(this.goalFillTimeout);
     }
     this.goalsSub?.unsubscribe();
   }
@@ -817,8 +897,50 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.statusBadgeClass(status);
   }
 
+  orderStatusClass(status?: string): string {
+    const value = (status || '').toLowerCase();
+    if (value === 'pending') {
+      return 'border-rose-400/30 bg-rose-500/10 text-rose-200';
+    }
+    if (value === 'delivered') {
+      return 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200';
+    }
+    if (value === 'shipped') {
+      return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
+    }
+    if (value === 'paid') {
+      return 'border-purple-400/30 bg-purple-500/10 text-purple-200';
+    }
+    return 'border-white/10 bg-white/5 text-zinc-300';
+  }
+
+  orderStatusIcon(status?: string): string {
+    const value = (status || '').toLowerCase();
+    if (value === 'pending') {
+      return 'fa-hourglass-half';
+    }
+    if (value === 'delivered') {
+      return 'fa-circle-check';
+    }
+    if (value === 'shipped') {
+      return 'fa-truck-fast';
+    }
+    if (value === 'paid') {
+      return 'fa-receipt';
+    }
+    return 'fa-circle';
+  }
+
   toggleSecondaryGoals(): void {
     this.secondaryGoalsVisible = !this.secondaryGoalsVisible;
+  }
+
+  toggleMobileNav(): void {
+    this.isMobileNavOpen = !this.isMobileNavOpen;
+  }
+
+  closeMobileNav(): void {
+    this.isMobileNavOpen = false;
   }
 
   setFeatured(id: string): void {
@@ -832,6 +954,113 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   setSocialFormat(format: 'story' | 'feed' | 'banner'): void {
     this.socialFormat = format;
   }
+
+  // Color del icono del usuario: gris inactivo, azul activo.
+levelIconClass(): string {
+  if (!this.isClient || !this.discountActiveValue) {
+    return 'text-zinc-400';
+  }
+  return 'text-blue-300';
+}
+
+// Borde / Anillo principal = Estado + Nivel
+discountRingClass(): string {
+
+  // Inactivo
+  if (!this.isClient || !this.discountActiveValue) {
+    return 'border border-white/10 opacity-60';
+  }
+
+  const p = this.discountPercentNumber();
+
+  // 🥇 ORO 50%
+  if (p >= 50) {
+    return `
+      ring-2 ring-yellow-400/70
+      shadow-[0_0_12px_rgba(250,204,21,0.35)]
+    `;
+  }
+
+  // 🥈 PLATA 40%
+  if (p >= 40) {
+    return `
+      ring-2 ring-zinc-300/70
+      shadow-[0_0_10px_rgba(212,212,216,0.25)]
+    `;
+  }
+
+  // 🥉 BRONCE 30%
+  if (p >= 30) {
+    return `
+      ring-2 ring-amber-500/70
+      shadow-[0_0_10px_rgba(245,158,11,0.25)]
+    `;
+  }
+
+  // 🔵 Activo sin nivel
+  return `
+    ring-2 ring-blue-400/50
+    shadow-[0_0_8px_rgba(96,165,250,0.2)]
+  `;
+}
+
+
+// Mini badge = Refuerzo semántico
+discountBadgeMiniClass(): string {
+
+  // Inactivo = no mostrar
+  if (!this.isClient || !this.discountActiveValue) {
+    return 'bg-white/5 text-zinc-400 border-white/10';
+  }
+
+  const p = this.discountPercentNumber();
+
+  // 🥇 ORO
+  if (p >= 50) {
+    return `
+      bg-yellow-500/15
+      text-yellow-200
+      border-yellow-400/40
+      shadow-sm
+    `;
+  }
+
+  // 🥈 PLATA
+  if (p >= 40) {
+    return `
+      bg-zinc-400/20
+      text-zinc-100
+      border-zinc-300/40
+    `;
+  }
+
+  // 🥉 BRONCE
+  if (p >= 30) {
+    return `
+      bg-amber-600/20
+      text-amber-300
+      border-amber-500/40
+    `;
+  }
+
+  // 🔵 Activo
+  return `
+    bg-blue-500/15
+    text-blue-200
+    border-blue-400/30
+  `;
+}
+
+
+private discountPercentNumber(): number {
+  // Ajusta según tu fuente real:
+  // - si discountPercent = "30%" -> parse
+  // - si ya es number, devuélvelo directo
+  const raw = (this.discountPercent ?? '').toString().trim();
+  const n = Number(raw.replace('%', ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
 
   get hasInactiveIntermediate(): boolean {
     return this.networkMembers.some((member) => member.level === 'L1' && member.status === 'Inactiva');
@@ -1070,6 +1299,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.showCommissionLedger = !this.showCommissionLedger;
   }
 
+  toggleBlockedTooltip(): void {
+    this.showBlockedTooltip = !this.showBlockedTooltip;
+  }
+
   openCommissionReceipt(url?: string): void {
     if (!url) {
       this.showToast('No hay comprobante disponible.');
@@ -1091,6 +1324,48 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   closeGoalsModal(): void {
     this.isGoalsModalOpen = false;
+    this.isGoalsHighlight = false;
+  }
+
+  get pagedAchievedGoals(): DashboardGoal[] {
+    const start = this.achievedGoalsPage * this.achievedGoalsPageSize;
+    return this.achievedGoals.slice(start, start + this.achievedGoalsPageSize);
+  }
+
+  get achievedGoalsTotalPages(): number {
+    return Math.max(1, Math.ceil(this.achievedGoals.length / this.achievedGoalsPageSize));
+  }
+
+  get canPrevAchievedGoals(): boolean {
+    return this.achievedGoalsPage > 0;
+  }
+
+  get canNextAchievedGoals(): boolean {
+    return this.achievedGoalsPage + 1 < this.achievedGoalsTotalPages;
+  }
+
+  nextAchievedGoalsPage(): void {
+    if (this.canNextAchievedGoals) {
+      this.achievedGoalsPage += 1;
+    }
+  }
+
+  prevAchievedGoalsPage(): void {
+    if (this.canPrevAchievedGoals) {
+      this.achievedGoalsPage -= 1;
+    }
+  }
+
+  isNewAchievedGoal(goal: DashboardGoal): boolean {
+    return this.newAchievedGoalKeys.has(goal.key);
+  }
+
+  newGoalDelay(goal: DashboardGoal): string {
+    if (!this.isNewAchievedGoal(goal) || !this.isGoalsHighlight) {
+      return '0ms';
+    }
+    const order = this.newAchievedGoalOrder.get(goal.key) ?? 0;
+    return `${order * 180}ms`;
   }
 
   openProductDetails(product: DashboardProduct): void {
@@ -1240,6 +1515,20 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.activeGoal = available[0] ?? null;
     this.secondaryGoals = available.slice(1);
     this.goalToastState = '';
+    if (this.activeGoal?.key) {
+      const base = this.goalBasePercent(this.activeGoal);
+      const cart = this.goalCartPercent(this.activeGoal);
+      if (
+        this.lastActiveGoalKey !== this.activeGoal.key ||
+        this.lastActiveGoalBase !== base ||
+        this.lastActiveGoalCart !== cart
+      ) {
+        this.lastActiveGoalKey = this.activeGoal.key;
+        this.lastActiveGoalBase = base;
+        this.lastActiveGoalCart = cart;
+        this.animateGoalBar(this.activeGoal);
+      }
+    }
   }
 
   private loadAchievedGoals(goals: DashboardGoal[]): void {
@@ -1249,8 +1538,114 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
     const completed = (goals ?? []).filter((goal) => Boolean(goal?.achieved) && !goal?.locked);
-    this.achievedGoals = completed;
-    this.isGoalsModalOpen = completed.length > 0;
+
+    const monthKey = this.getCurrentMonthKey();
+    const stored = this.readAchievedGoalsStorage();
+    const storedMonth = stored?.month ?? '';
+    const storedKeys = storedMonth === monthKey ? stored?.goals ?? [] : [];
+
+    if (storedMonth && storedMonth !== monthKey) {
+      this.clearAchievedGoalsStorage();
+    }
+
+    const completedKeys = completed.map((goal) => goal.key).filter((key) => Boolean(key));
+    const newKeys = completedKeys.filter((key) => !storedKeys.includes(key));
+    this.newAchievedGoalKeys = new Set(newKeys);
+    const newGoals = completed.filter((goal) => this.newAchievedGoalKeys.has(goal.key));
+    const oldGoals = completed.filter((goal) => !this.newAchievedGoalKeys.has(goal.key));
+    this.achievedGoals = [...newGoals, ...oldGoals];
+    this.newAchievedGoalOrder = new Map(
+      this.achievedGoals
+        .filter((goal) => this.newAchievedGoalKeys.has(goal.key))
+        .map((goal, index) => [goal.key, index])
+    );
+    this.achievedGoalsPage = 0;
+    this.isGoalsModalOpen = newKeys.length > 0;
+    if (newKeys.length > 0) {
+      this.triggerGoalsAnimation();
+    } else {
+      this.isGoalsHighlight = false;
+    }
+
+    if (newKeys.length > 0) {
+      const merged = Array.from(new Set([...storedKeys, ...newKeys]));
+      this.saveAchievedGoalsStorage(monthKey, merged);
+    }
+  }
+
+  private triggerGoalsAnimation(): void {
+    if (this.goalsAnimTimeout) {
+      window.clearTimeout(this.goalsAnimTimeout);
+    }
+    this.isGoalsHighlight = false;
+    this.cdr.markForCheck();
+    this.goalsAnimTimeout = window.setTimeout(() => {
+      this.isGoalsHighlight = true;
+      this.cdr.markForCheck();
+    }, 80);
+  }
+
+  private animateGoalBar(goal: DashboardGoal): void {
+    const targetActive = this.goalBasePercent(goal);
+    const targetCart = this.goalCartPercent(goal);
+    this.isGoalFilling = false;
+    this.visualActiveWidth = 0;
+    this.visualCartWidth = 0;
+    if (this.goalFillTimeout) {
+      window.clearTimeout(this.goalFillTimeout);
+    }
+    this.cdr.markForCheck();
+    requestAnimationFrame(() => {
+      this.isGoalFilling = true;
+      this.cdr.markForCheck();
+      requestAnimationFrame(() => {
+        this.visualActiveWidth = targetActive;
+        this.visualCartWidth = targetCart;
+        this.cdr.markForCheck();
+        this.goalFillTimeout = window.setTimeout(() => {
+          this.isGoalFilling = false;
+          this.cdr.markForCheck();
+        }, 1100);
+      });
+    });
+  }
+
+  private getCurrentMonthKey(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${now.getFullYear()}-${month}`;
+  }
+
+  private readAchievedGoalsStorage(): { month: string; goals: string[] } | null {
+    try {
+      const raw = localStorage.getItem(this.achievedGoalsStorageKey);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw) as { month?: string; goals?: string[] };
+      if (!parsed?.month || !Array.isArray(parsed?.goals)) {
+        return null;
+      }
+      return { month: parsed.month, goals: parsed.goals.filter((key) => typeof key === 'string') };
+    } catch {
+      return null;
+    }
+  }
+
+  private saveAchievedGoalsStorage(month: string, goals: string[]): void {
+    try {
+      localStorage.setItem(this.achievedGoalsStorageKey, JSON.stringify({ month, goals }));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private clearAchievedGoalsStorage(): void {
+    try {
+      localStorage.removeItem(this.achievedGoalsStorageKey);
+    } catch {
+      // ignore storage errors
+    }
   }
 
   remainingForGoal(goal: any): string {
