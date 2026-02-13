@@ -1,5 +1,5 @@
 <section class="antialiased">
-  <header class="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
+  <header class="sticky top-0 z-50 border-b border-[#7C8C72]/20 bg-[#F6F3EE]/90 backdrop-blur">
     <div class="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4">
       <!-- Antes: flex-col en mobile. Ahora: row SIEMPRE -->
       <div class="flex items-center justify-between gap-3">
@@ -14,46 +14,46 @@
           <!-- Mobile nav (hamburger) -->
           <div class="relative lg:hidden shrink-0">
             <button type="button"
-              class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm transition hover:bg-white/10"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-sm transition hover:bg-[#EFE9DD]/90"
               (click)="toggleMobileNav()">
               <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
             </button>
 
             <div
-              class="absolute left-0 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0b0f14]/95 p-2 shadow-xl backdrop-blur"
+              class="absolute left-0 mt-2 w-56 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-2 shadow-xl backdrop-blur"
               [class.hidden]="!isMobileNavOpen">
               <button type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 (click)="scrollToSection('merchant'); closeMobileNav()">
                 <i class="fa-solid fa-store" aria-hidden="true"></i>
                 Tienda
               </button>
               <button *ngIf="!isGuest" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 (click)="scrollToSection('red'); closeMobileNav()">
                 <i class="fa-solid fa-users" aria-hidden="true"></i>
                 Red
               </button>
               <button *ngIf="!isGuest" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 (click)="scrollToSection('links'); closeMobileNav()">
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
                 Links
               </button>
               <button *ngIf="!isGuest" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 (click)="scrollToSection('ordenes'); closeMobileNav()">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                 Ordenes
               </button>
               <button *ngIf="!isGuest && commissionSummary" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 (click)="scrollToSection('comisiones'); closeMobileNav()">
                 <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                 Comisiones
               </button>
               <a *ngIf="isGuest"
-                class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 [routerLink]="['/login']" (click)="closeMobileNav()">
                 <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
                 Iniciar sesion
@@ -69,15 +69,15 @@
           <!-- USER CONTROL -->
           <div *ngIf="currentUser" class="relative shrink-0">
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90"
               (click)="toggleUserDetails()" aria-label="Usuario">
 
-              <span class="relative grid h-9 w-9 place-items-center rounded-full bg-white/5"
+              <span class="relative grid h-9 w-9 place-items-center rounded-full bg-[#FDFBF7]/80"
                 [ngClass]="discountRingClass()">
                 <i class="fa-solid fa-user text-[13px]" [ngClass]="levelIconClass()" aria-hidden="true"></i>
 
                 <span *ngIf="isClient"
-                  class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-white/10 bg-[#0b0f14]/85 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur"
+                  class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30 bg-[#F6F3EE]/90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur"
                   [ngClass]="discountBadgeMiniClass()">
                   <i class="fa-solid fa-tag text-[9px]" aria-hidden="true"></i>
                   <span>{{ discountPercent }}%</span>
@@ -91,24 +91,24 @@
             </button>
 
             <div *ngIf="isUserDetailsOpen"
-              class="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-white/10 bg-[#0b0f14]/95 p-4 shadow-xl backdrop-blur z-50">
+              class="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-4 shadow-xl backdrop-blur z-50">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-xs text-zinc-400">Usuario</span>
+                <span class="text-xs text-[#5A5A5A]">Usuario</span>
                 <span class="font-semibold text-zinc-100">{{ currentUser.name }}</span>
               </div>
 
-              <div class="mt-2 flex items-center justify-between text-xs text-zinc-400">
+              <div class="mt-2 flex items-center justify-between text-xs text-[#5A5A5A]">
                 <span>Rol</span>
                 <span class="text-zinc-200">{{ currentUser.role }}</span>
               </div>
 
-              <div *ngIf="isClient" class="mt-2 flex items-center justify-between text-xs text-zinc-400">
+              <div *ngIf="isClient" class="mt-2 flex items-center justify-between text-xs text-[#5A5A5A]">
                 <span>Descuento</span>
                 <span class="text-zinc-200">{{ discountPercent }}%</span>
               </div>
 
               <button *ngIf="!isGuest" type="button"
-                class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200 transition hover:bg-white/10"
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-zinc-200 transition hover:bg-[#EFE9DD]/90"
                 (click)="logout()">
                 <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
                 Cerrar sesion
@@ -119,41 +119,41 @@
           <!-- Desktop nav -->
           <nav class="hidden items-center gap-2 lg:flex">
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               (click)="scrollToSection('merchant')">
               <i class="fa-solid fa-store" aria-hidden="true"></i>
               Tienda
             </button>
 
             <a *ngIf="isGuest"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               [routerLink]="['/login']">
               <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
               Iniciar sesion
             </a>
 
             <button *ngIf="!isGuest" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               (click)="scrollToSection('red')">
               <i class="fa-solid fa-users" aria-hidden="true"></i>
               Red
             </button>
 
             <button *ngIf="!isGuest" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               (click)="scrollToSection('links')">
               <i class="fa-solid fa-link" aria-hidden="true"></i>
               Links
             </button>
             <button *ngIf="!isGuest" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               (click)="scrollToSection('ordenes')">
               <i class="fa-solid fa-receipt" aria-hidden="true"></i>
               Ordenes
             </button>
 
             <button *ngIf="!isGuest && commissionSummary" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               (click)="scrollToSection('comisiones')">
               <i class="fa-solid fa-wallet" aria-hidden="true"></i>
               Comisiones
@@ -171,13 +171,13 @@
   <main class="mx-auto max-w-6xl space-y-16 px-6 py-10">
     <section class="space-y-4">
       <div class="flex items-center justify-between" *ngIf="!isGuest">
-        <div class="flex items-center gap-2 text-sm text-zinc-400">
+        <div class="flex items-center gap-2 text-sm text-[#5A5A5A]">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Progreso mensual
         </div>
 
         <button
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+          class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
           (click)="toggleSecondaryGoals()">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
           {{ secondaryGoalsVisible ? 'Ocultar metas secundarias' : 'Mostrar metas secundarias' }}
@@ -186,7 +186,7 @@
 
       <div *ngIf="!isGuest && activeGoal">
         <div
-          class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-5 sm:p-6 md:p-8"
+          class="grain relative overflow-hidden rounded-3xl border border-[#C8A96A]/40 bg-gradient-to-r from-[#C8A96A]/20 via-[#D9A441]/10 to-[#C8A96A]/20 p-5 sm:p-6 md:p-8"
           [id]="'goal-' + activeGoal.key">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
@@ -194,9 +194,9 @@
 
           <!-- Corte de mes: en móvil va en flujo; en md+ se fija arriba derecha -->
           <div
-            class="relative mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
+            class="relative mb-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
             title="Cada dia sin accion reduce tu margen.">
-            <div class="flex items-center gap-2 text-xs text-zinc-400">
+            <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
               Corte de mes
             </div>
@@ -208,14 +208,14 @@
           <div class="relative flex flex-col gap-5">
             <!-- Reservar espacio SOLO en md+ para el badge -->
             <div class="md:pr-56">
-              <div class="text-sm font-semibold text-yellow-200">🎯 Objetivo principal del mes</div>
+              <div class="text-sm font-semibold text-[#C8A96A]">🎯 Objetivo principal del mes</div>
               <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">
                 {{ activeGoal.title }}
               </h3>
               <p class="mt-2 text-sm text-zinc-200">{{ activeGoal.subtitle }}</p>
 
               <!-- ojo: en móvil, evita “líneas eternas” -->
-              <div class="mt-3 text-sm text-yellow-100 break-words">
+              <div class="mt-3 text-sm text-[#E8D6B2] break-words">
                 Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo
               </div>
 
@@ -225,13 +225,13 @@
                   <span class="goal-progress-edge" aria-hidden="true"></span>
                   <span class="goal-sparkles" aria-hidden="true"></span>
                 </div>
-                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-90"
+                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] opacity-90"
                   [style.left.%]="visualActiveWidth" [style.width.%]="visualCartWidth"></div>
               </div>
             </div>
 
             <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
-            <button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
+            <button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
                md:absolute md:bottom-6 md:right-6 md:w-auto" (click)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
               {{ activeGoal.ctaText }}
@@ -245,20 +245,20 @@
 
       <div *ngIf="isGuest">
         <div
-          class="grain relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 via-orange-500/10 to-yellow-400/20 p-6 md:p-8">
+          class="grain relative overflow-hidden rounded-3xl border border-[#C8A96A]/40 bg-gradient-to-r from-[#C8A96A]/20 via-[#D9A441]/10 to-[#C8A96A]/20 p-6 md:p-8">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
           </div>
           <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Meta para invitados</div>
+              <div class="text-sm font-semibold text-[#C8A96A]">&#x1F3AF; Meta para invitados</div>
               <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Regístrate para obtener beneficios
               </h3>
               <p class="mt-2 text-sm text-zinc-200">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.
               </p>
             </div>
             <button type="button"
-              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
               (click)="openGuestRegisterModal()">
               <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
               Registrate
@@ -269,21 +269,21 @@
 
       <div class="grid gap-3 lg:grid-cols-4" *ngIf="!isGuest && secondaryGoalsVisible">
         <div *ngFor="let goal of secondaryGoals"
-          class="grain relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 opacity-70"
+          class="grain relative overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4 opacity-70"
           [id]="'goal-' + goal.key">
           <div class="goal-card" [attr.data-goal]="goal.key">
-            <div class="text-xs text-zinc-400">{{ goal.subtitle }}</div>
+            <div class="text-xs text-[#5A5A5A]">{{ goal.subtitle }}</div>
 
-            <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
+            <div class="mt-3 flex items-center justify-between text-xs text-[#5A5A5A]">
               <span>{{ goalProgressLabel(goal) }}</span>
-              <span *ngIf="goal.cart > 0" class="text-yellow-300">+{{ formatMoney(goal.cart) }} en carrito</span>
+              <span *ngIf="goal.cart > 0" class="text-[#C8A96A]">+{{ formatMoney(goal.cart) }} en carrito</span>
             </div>
 
             <div class="relative mt-2 h-3 overflow-hidden rounded-full progress-rail">
               <div class="progress-base absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-300 to-orange-400"
                 [style.width.%]="goalBasePercent(goal)"></div>
               <div
-                class="progress-cart absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-90"
+                class="progress-cart absolute inset-y-0 left-0 bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] opacity-90"
                 [style.left.%]="goalBasePercent(goal)" [style.width.%]="goalCartPercent(goal)"></div>
             </div>
           </div>
@@ -295,24 +295,24 @@
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-store hidden text-yellow-200 md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-store hidden text-[#C8A96A] md:inline" aria-hidden="true"></i>
             Tienda
           </h2>
         </div>
 
         <div class="hidden items-center gap-3 md:flex">
-          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <div class="flex items-center gap-2 text-xs text-zinc-400">
+          <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-3">
+            <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
               <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
               Carrito
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
-            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-emerald-300' : 'text-zinc-500'">
+            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
               {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
             </div>
           </div>
           <button type="button"
-            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
             (click)="goToCart()">
             <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Ver carrito
@@ -320,48 +320,48 @@
         </div>
       </div>
 
-      <div class="grain relative mt-8 overflow-hidden rounded-3xl border border-white/10 bg-ambient">
+      <div class="grain relative mt-8 overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-ambient">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(245,185,66,0.18),transparent_55%)]">
         </div>
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="productOfMonth as pom">
 
           <div class="order-2 md:order-2">
             <span
-              class="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-2 text-xs font-semibold text-yellow-200">
+              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-[#C8A96A]">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes | Recomendado para metas
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">{{ pom.name }}</h3>
-            <p *ngIf="heroGoalHint" class="mt-2 text-sm text-yellow-200">{{ heroGoalHint }}</p>
+            <p *ngIf="heroGoalHint" class="mt-2 text-sm text-[#C8A96A]">{{ heroGoalHint }}</p>
             <p class="mt-3 max-w-xl text-zinc-300">
               {{ pom.hook || 'Producto recomendado para avanzar en tus metas.' }}
             </p>
 
             <div class="mt-6 flex flex-wrap gap-2">
               <span *ngFor="let tag of heroTags"
-                class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200">
+                class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-zinc-200">
                 {{ tag }}
               </span>
             </div>
 
             <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#121826] p-3">
-                <span class="text-sm text-zinc-400">Cantidad</span>
+              <div class="flex items-center gap-3 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3">
+                <span class="text-sm text-[#5A5A5A]">Cantidad</span>
                 <input type="number" min="0" [value]="heroQty" (input)="setHeroQty($any($event.target).value)"
-                  class="w-20 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-                <span class="flex items-center gap-2 text-sm text-zinc-400">
+                  class="w-20 rounded-xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 text-sm text-white" />
+                <span class="flex items-center gap-2 text-sm text-[#5A5A5A]">
                   x
                   <span class="font-semibold text-zinc-100">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
-                  <span *ngIf="hasDiscount" class="text-xs text-zinc-500 line-through">
+                  <span *ngIf="hasDiscount" class="text-xs text-[#6B6B6B] line-through">
                     {{ formatMoney(heroProductPrice) }}
                   </span>
-                  <span *ngIf="hasDiscount" class="text-[11px] text-emerald-300">{{ discountAppliedLabel() }}</span>
-                  <span *ngIf="!hasDiscount" class="text-[11px] text-zinc-500">Sin descuento</span>
+                  <span *ngIf="hasDiscount" class="text-[11px] text-[#7C8C72]">{{ discountAppliedLabel() }}</span>
+                  <span *ngIf="!hasDiscount" class="text-[11px] text-[#6B6B6B]">Sin descuento</span>
                 </span>
               </div>
 
               <button
-                class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
                 (click)="addHeroToCart()">
                 <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                 Agregar al carrito
@@ -370,22 +370,22 @@
           </div>
 
           <div
-            class="order-1 md:order-1 relative h-[260px] overflow-hidden rounded-3xl border border-white/10 md:h-[360px]">
+            class="order-1 md:order-1 relative h-[260px] overflow-hidden rounded-3xl border border-[#7C8C72]/30 md:h-[360px]">
 
             <img [src]="heroImage" [alt]="pom.name" class="hero-image absolute inset-0 h-full w-full object-cover" />
-            <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/70 via-transparent to-transparent"></div>
-            <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl"></div>
+            <div class="absolute inset-0 bg-gradient-to-tr from-[#1B1B1B]/65 via-transparent to-transparent"></div>
+            <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#C8A96A]/12 blur-3xl"></div>
 
             <div class="relative flex h-full flex-col justify-end p-6">
               <div class="text-sm font-semibold text-zinc-200">Oferta estratígica</div>
-              <div class="mt-1 text-xs text-zinc-400">Optimiza tu corte de mes</div>
+              <div class="mt-1 text-xs text-[#5A5A5A]">Optimiza tu corte de mes</div>
             </div>
           </div>
         </div>
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="!productOfMonth">
           <div>
             <span
-              class="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-2 text-xs font-semibold text-yellow-200">
+              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-[#C8A96A]">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes
             </span>
@@ -400,17 +400,17 @@
       <div class="mt-10">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-rotate text-blue-200" aria-hidden="true"></i>
+            <i class="fa-solid fa-rotate text-[#7C8C72]" aria-hidden="true"></i>
             Volver a comprar
           </h3>
-          <p class="text-sm text-zinc-400 sm:text-right">
+          <p class="text-sm text-[#5A5A5A] sm:text-right">
             Tus básicos para mantener metas constantes.
           </p>
         </div>
 
         <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <article *ngFor="let product of buyAgainProducts"
-            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
+            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
             <div
               class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
             </div>
@@ -418,31 +418,31 @@
             <!-- Top row -->
             <div class="relative flex gap-3 sm:gap-4">
               <div
-                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
                 <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
               </div>
 
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <div class="text-xs text-zinc-400">Producto</div>
+                    <div class="text-xs text-[#5A5A5A]">Producto</div>
                     <!-- en móvil mejor permitir 2 líneas en vez de truncar agresivo -->
                     <h4 class="mt-1 font-extrabold tracking-tight leading-snug line-clamp-2 sm:truncate">
                       {{ product.name }}
                     </h4>
-                    <div class="mt-1 text-xs text-zinc-500 line-clamp-1 sm:truncate">
+                    <div class="mt-1 text-xs text-[#6B6B6B] line-clamp-1 sm:truncate">
                       {{ product.badge }}
                     </div>
                   </div>
 
                   <div class="text-right shrink-0">
-                    <div *ngIf="hasDiscount" class="text-[11px] text-zinc-500 line-through">
+                    <div *ngIf="hasDiscount" class="text-[11px] text-[#6B6B6B] line-through">
                       {{ formatMoney(product.price) }}
                     </div>
                     <div class="whitespace-nowrap text-sm font-extrabold">
                       {{ formatMoney(discountedPrice(product.price)) }}
                     </div>
-                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
                       {{ discountAppliedLabel() }}
                     </div>
                   </div>
@@ -453,23 +453,23 @@
             <!-- Bottom controls: stack on mobile -->
             <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div
-                class="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 sm:justify-start">
-                <span class="text-xs text-zinc-400">Qty</span>
+                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 sm:justify-start">
+                <span class="text-xs text-[#5A5A5A]">Qty</span>
                 <input type="number" min="0" [value]="getCartQty(product.id)"
                   (input)="updateCart(product.id, $any($event.target).value)"
-                  class="w-20 sm:w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
+                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-transparent px-2 py-1 text-sm text-white" />
               </div>
 
               <div class="flex w-full flex-col gap-2 sm:flex-1">
                 <button
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-[#EFE9DD]/90"
                   (click)="openProductDetails(product)">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   Ver detalles
                 </button>
 
                 <button
-                  class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                  class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
                   (click)="addQuick(product.id, 1)">
                   <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                   Agregar al carrito
@@ -484,45 +484,45 @@
       <div class="mt-12">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-layer-group text-blue-200" aria-hidden="true"></i>
+            <i class="fa-solid fa-layer-group text-[#7C8C72]" aria-hidden="true"></i>
             Todos los productos
           </h3>
-          <div class="text-sm text-zinc-400 sm:text-right">{{ productsCount }}</div>
+          <div class="text-sm text-[#5A5A5A] sm:text-right">{{ productsCount }}</div>
         </div>
 
         <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <article *ngFor="let product of otherProducts"
-            class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#121826] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
+            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
             <div
               class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
             </div>
 
             <div class="relative flex gap-3 sm:gap-4">
               <div
-                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
                 <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
               </div>
 
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <div class="text-xs text-zinc-400">Producto</div>
+                    <div class="text-xs text-[#5A5A5A]">Producto</div>
                     <h4 class="mt-1 font-extrabold tracking-tight leading-snug line-clamp-2 sm:truncate">
                       {{ product.name }}
                     </h4>
-                    <div class="mt-1 text-xs text-zinc-500 line-clamp-1 sm:truncate">
+                    <div class="mt-1 text-xs text-[#6B6B6B] line-clamp-1 sm:truncate">
                       {{ product.badge }}
                     </div>
                   </div>
 
                   <div class="text-right shrink-0">
-                    <div *ngIf="hasDiscount" class="text-[11px] text-zinc-500 line-through">
+                    <div *ngIf="hasDiscount" class="text-[11px] text-[#6B6B6B] line-through">
                       {{ formatMoney(product.price) }}
                     </div>
                     <div class="whitespace-nowrap text-sm font-extrabold">
                       {{ formatMoney(discountedPrice(product.price)) }}
                     </div>
-                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
                       {{ discountAppliedLabel() }}
                     </div>
                   </div>
@@ -532,23 +532,23 @@
 
             <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div
-                class="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 sm:justify-start">
-                <span class="text-xs text-zinc-400">Qty</span>
+                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 sm:justify-start">
+                <span class="text-xs text-[#5A5A5A]">Qty</span>
                 <input type="number" min="0" [value]="getCartQty(product.id)"
                   (input)="updateCart(product.id, $any($event.target).value)"
-                  class="w-20 sm:w-14 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white" />
+                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-transparent px-2 py-1 text-sm text-white" />
               </div>
 
               <div class="flex w-full flex-col gap-2 sm:flex-1">
                 <button
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-[#EFE9DD]/90"
                   (click)="openProductDetails(product)">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   Ver detalles
                 </button>
 
                 <button
-                  class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                  class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
                   (click)="addQuick(product.id, 1)">
                   <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                   Agregar al carrito
@@ -566,7 +566,7 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-users hidden text-blue-200 md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-users hidden text-[#7C8C72] md:inline" aria-hidden="true"></i>
             Red
           </h2>
         </div>
@@ -574,7 +574,7 @@
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
-        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_40%_20%,rgba(59,130,246,0.12),transparent_55%)]">
           </div>
@@ -587,7 +587,7 @@
             </div>
           </div>
 
-          <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#121826] p-4">
+          <div class="mt-6 overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
             <svg [attr.viewBox]="'0 0 ' + graphSize.width + ' ' + graphSize.height" class="w-full"
               [style.height.px]="graphSize.height">
               <g fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2">
@@ -601,7 +601,7 @@
                     <title>{{ node.name }}</title>
                   </circle>
                   <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle"
-                    [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#0b0f14"
+                    [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#1B1B1B"
                     [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
                 </ng-container>
               </g>
@@ -610,98 +610,98 @@
           </div>
 
           <div *ngIf="hasInactiveIntermediate"
-            class="mt-4 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3 text-xs text-yellow-100">
+            class="mt-4 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 px-4 py-3 text-xs text-[#E8D6B2]">
             <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i>
             Apoya a tu red: cuando hay inactivos en niveles L1, los beneficios de sus L2 no llegan hasta ti.
           </div>
 
           <button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
-            class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+            class="mt-4 inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
             (click)="scrollToSection('links')">
             <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
             Compartir mi enlace
           </button>
           <button *ngIf="!isGuest" type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+            class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
             (click)="scrollToSection('ordenes')">
             <i class="fa-solid fa-receipt" aria-hidden="true"></i>
             Ordenes
           </button>
 
           <button *ngIf="!isGuest && commissionSummary" type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+            class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
             (click)="scrollToSection('comisiones')">
             <i class="fa-solid fa-wallet" aria-hidden="true"></i>
             Comisiones
           </button>
 
           <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div class="text-xs text-zinc-400">Nivel 1</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+              <div class="text-xs text-[#5A5A5A]">Nivel 1</div>
               <div class="mt-1 text-2xl font-extrabold">{{ levelOneCount }}</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div class="text-xs text-zinc-400">Nivel 2</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+              <div class="text-xs text-[#5A5A5A]">Nivel 2</div>
               <div class="mt-1 text-2xl font-extrabold">{{ levelTwoCount }}</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div class="text-xs text-zinc-400">Activos</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+              <div class="text-xs text-[#5A5A5A]">Activos</div>
               <div class="mt-1 text-2xl font-extrabold">{{ activeCount }}</div>
             </div>
           </div>
         </div>
 
-        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]">
           </div>
           <div class="relative">
             <div *ngIf="networkMembers.length === 0"
-              class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
-              <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
+              class="mb-6 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 p-5">
+              <div class="text-sm font-semibold text-[#C8A96A]">&#x1F3AF; Misi&#243;n de red</div>
               <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
               <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
               <div class="mt-4 flex flex-wrap gap-2">
                 <button type="button"
-                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                   (click)="copyLinkAndCopy()">
                   <i class="fa-solid fa-copy" aria-hidden="true"></i>
                   Copiar link + copy
                 </button>
                 <button type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   (click)="scrollToSection('links')">
                   <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                   Compartir mi enlace
                 </button>
                 <button *ngIf="!isGuest" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   (click)="scrollToSection('ordenes')">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                   Ordenes
                 </button>
 
                 <button *ngIf="!isGuest && commissionSummary" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   (click)="scrollToSection('comisiones')">
                   <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                   Comisiones
                 </button>
                 <button type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   (click)="scrollToSection('links')">
                   <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
                   Ver mensajes sugeridos
                 </button>
                 <button *ngIf="!isGuest" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   (click)="scrollToSection('ordenes')">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                   Ordenes
                 </button>
 
                 <button *ngIf="!isGuest && commissionSummary" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   (click)="scrollToSection('comisiones')">
                   <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                   Comisiones
@@ -719,31 +719,31 @@
             </div>
 
             <div *ngIf="networkMembers.length === 0"
-              class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-6 text-center">
+              class="mt-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 text-center">
               <div class="text-sm font-semibold text-zinc-200">A?n no tienes miembros en tu red</div>
-              <div class="mt-1 text-xs text-zinc-400">Comparte tu enlace para empezar</div>
+              <div class="mt-1 text-xs text-[#5A5A5A]">Comparte tu enlace para empezar</div>
               <button type="button"
-                class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="mt-4 inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('links')">
                 <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                 Compartir mi enlace
               </button>
               <button *ngIf="!isGuest" type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('ordenes')">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                 Ordenes
               </button>
 
               <button *ngIf="!isGuest && commissionSummary" type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('comisiones')">
                 <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                 Comisiones
               </button>
             </div>
 
-            <div *ngIf="networkMembers.length > 0" class="mt-6 overflow-hidden rounded-2xl border border-white/10">
+            <div *ngIf="networkMembers.length > 0" class="mt-6 overflow-hidden rounded-2xl border border-[#7C8C72]/30">
               <div class="md:hidden divide-y divide-white/10">
                 <div *ngFor="let member of networkMembers" class="p-4">
                   <div class="flex items-center justify-between">
@@ -751,7 +751,7 @@
                     <span class="rounded-full border px-3 py-1 text-xs" [ngClass]="statusBadgeClass(member.status)">{{
                       member.status }}</span>
                   </div>
-                  <div class="mt-2 grid gap-1 text-xs text-zinc-400">
+                  <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
                     <div>Nivel: <span class="text-zinc-200">{{ member.level }}</span></div>
                     <div>Consumo mes: <span class="text-zinc-200">{{ formatMoney(member.spend) }}</span></div>
                   </div>
@@ -760,7 +760,7 @@
 
               <div class="hidden md:block">
                 <table class="w-full text-sm">
-                  <thead class="bg-white/5 text-zinc-300">
+                  <thead class="bg-[#FDFBF7]/80 text-zinc-300">
                     <tr>
                       <th class="px-4 py-3 text-left font-semibold">Usuario</th>
                       <th class="px-4 py-3 text-left font-semibold">Nivel</th>
@@ -784,14 +784,14 @@
               </div>
             </div>
 
-            <div class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-5">
+            <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-5">
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-xs text-zinc-400">Meta de red (este mes)</div>
+                  <div class="text-xs text-[#5A5A5A]">Meta de red (este mes)</div>
                   <div class="mt-1 text-lg font-extrabold">
                     {{ formatMoney(networkProgress) }} / {{ formatMoney(networkGoal) }}
                   </div>
-                  <div class="mt-1 text-xs text-zinc-400">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir
+                  <div class="mt-1 text-xs text-[#5A5A5A]">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir
                     la meta de red</div>
                 </div>
               </div>
@@ -811,38 +811,38 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-coins hidden text-yellow-200 md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-coins hidden text-[#C8A96A] md:inline" aria-hidden="true"></i>
             Comisiones
           </h2>
-          <p class="mt-2 text-sm text-zinc-400">Resumen del mes {{ commissions.monthKey }}.</p>
+          <p class="mt-2 text-sm text-[#5A5A5A]">Resumen del mes {{ commissions.monthKey }}.</p>
         </div>
       </div>
 
       <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
-        <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div class="grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Comisiones del mes</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="text-xs text-[#5A5A5A]">Comisiones del mes</div>
               <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.monthTotal || 0) }}</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Por confirmar</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="text-xs text-[#5A5A5A]">Por confirmar</div>
               <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.pendingTotal || 0) }}</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="flex items-center gap-2 text-xs text-zinc-400">
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
                 <span>Bloqueadas</span>
                 <span class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
                   <button
                     type="button"
-                    class="inline-flex items-center text-zinc-500 hover:text-zinc-300"
+                    class="inline-flex items-center text-[#6B6B6B] hover:text-zinc-300"
                     aria-label="Info comisiones bloqueadas"
                     (click)="toggleBlockedTooltip()">
                     <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
                   </button>
                   <span
                     *ngIf="showBlockedTooltip"
-                    class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-white/10 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
+                    class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-[#7C8C72]/30 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
                     Las comisiones que pasan por referidos inactivos no llegan a ti.
                   </span>
                 </span>
@@ -853,35 +853,35 @@
 
           <div class="mt-4 flex flex-wrap items-center gap-3">
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300 transition hover:bg-white/10"
+              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-xs text-zinc-300 transition hover:bg-[#EFE9DD]/90"
               (click)="toggleCommissionLedger()">
               <i class="fa-solid" [ngClass]="showCommissionLedger ? 'fa-eye-slash' : 'fa-table'" aria-hidden="true"></i>
               {{ showCommissionLedger ? 'Ocultar detalles' : 'Ver detalles' }}
             </button>
           </div>
 
-          <div *ngIf="showCommissionLedger" class="mt-4 overflow-hidden rounded-2xl border border-white/10">
+          <div *ngIf="showCommissionLedger" class="mt-4 overflow-hidden rounded-2xl border border-[#7C8C72]/30">
             <div class="md:hidden divide-y divide-white/10">
               <div *ngFor="let row of (commissions.ledger || [])" class="p-4">
                 <div class="flex items-center justify-between">
                   <div class="text-sm font-semibold text-zinc-200">{{ row.orderId || '-' }}</div>
-                  <span class="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-300">
+                  <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
                     {{ row.status || '-' }}
                   </span>
                 </div>
-                <div class="mt-2 grid gap-1 text-xs text-zinc-400">
+                <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
                   <div>Nivel: <span class="text-zinc-200">L{{ row.level || '-' }}</span></div>
                   <div>Monto: <span class="text-zinc-200">{{ formatMoney(row.amount || 0) }}</span></div>
                   <div>Fecha: <span class="text-zinc-200">{{ formatLedgerDate(row.createdAt) }}</span></div>
                 </div>
               </div>
-              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="p-4 text-center text-xs text-zinc-500">
+              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="p-4 text-center text-xs text-[#6B6B6B]">
                 Sin movimientos este mes.
               </div>
             </div>
 
             <table class="hidden md:table w-full text-sm">
-              <thead class="bg-white/5 text-zinc-300">
+              <thead class="bg-[#FDFBF7]/80 text-zinc-300">
                 <tr>
                   <th class="px-4 py-3 text-left font-semibold">Orden</th>
                   <th class="px-4 py-3 text-left font-semibold">Nivel</th>
@@ -896,20 +896,20 @@
                   <td class="px-4 py-3 text-zinc-300">L{{ row.level || '-' }}</td>
                   <td class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</td>
                   <td class="px-4 py-3">
-                    <span class="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-300">
+                    <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
                       {{ row.status || '-' }}
                     </span>
                   </td>
-                  <td class="px-4 py-3 text-zinc-400">{{ formatLedgerDate(row.createdAt) }}</td>
+                  <td class="px-4 py-3 text-[#5A5A5A]">{{ formatLedgerDate(row.createdAt) }}</td>
                 </tr>
                 <tr *ngIf="(commissions.ledger?.length || 0) === 0">
-                  <td colspan="5" class="px-4 py-4 text-center text-xs text-zinc-500">Sin movimientos este mes.</td>
+                  <td colspan="5" class="px-4 py-4 text-center text-xs text-[#6B6B6B]">Sin movimientos este mes.</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4 text-sm text-zinc-300">
             <div class="flex items-center justify-between">
               <span>CLABE registrada</span>
               <span class="text-zinc-200">
@@ -917,31 +917,31 @@
               </span>
             </div>
             <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-              <label class="block text-xs text-zinc-400">
+              <label class="block text-xs text-[#5A5A5A]">
                 CLABE interbancaria
                 <input type="text" name="clabeDraft" [(ngModel)]="clabeDraft"
-                  class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-zinc-200 placeholder:text-zinc-500"
+                  class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-2 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
                   placeholder="000000000000000000" />
               </label>
               <button type="button"
-                class="glow-gold h-10 self-end inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                class="glow-gold h-10 self-end inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                 (click)="openClabeConfirm()">
                 <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
                 Guardar
               </button>
             </div>
-            <div class="mt-2 text-xs text-zinc-500">
+            <div class="mt-2 text-xs text-[#6B6B6B]">
               Depositos programados para el dia {{ commissions.payoutDay || 10 }} de cada mes.
             </div>
           </div>
         </div>
 
-        <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div class="text-sm font-semibold text-zinc-200">Mes anterior</div>
-          <div class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <div class="text-xs text-zinc-400">Total</div>
+          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="text-xs text-[#5A5A5A]">Total</div>
             <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
-            <div class="mt-2 text-xs text-zinc-500">
+            <div class="mt-2 text-xs text-[#6B6B6B]">
               Estatus:
               <span class="text-zinc-200">
                 {{
@@ -954,7 +954,7 @@
               </span>
             </div>
             <button
-              class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300 transition hover:bg-white/10"
+              class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-xs text-zinc-300 transition hover:bg-[#EFE9DD]/90"
               *ngIf="commissions.prevStatus === 'paid' && commissions.prevReceiptUrl"
               (click)="openCommissionReceipt(commissions.prevReceiptUrl)">
               <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
@@ -970,19 +970,19 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-receipt hidden text-blue-200 md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-receipt hidden text-[#7C8C72] md:inline" aria-hidden="true"></i>
             Ordenes
           </h2>
-          <p class="mt-2 text-sm text-zinc-400">Seguimiento de tus pedidos recientes.</p>
+          <p class="mt-2 text-sm text-[#5A5A5A]">Seguimiento de tus pedidos recientes.</p>
         </div>
       </div>
 
-      <div class="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6">
-        <div *ngIf="isOrdersLoading" class="text-sm text-zinc-400">Cargando ordenes...</div>
-        <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-zinc-400">
+      <div class="mt-6 rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
+        <div *ngIf="isOrdersLoading" class="text-sm text-[#5A5A5A]">Cargando ordenes...</div>
+        <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-[#5A5A5A]">
           Aun no tienes ordenes registradas.
         </div>
-        <div *ngIf="!isOrdersLoading && orders.length > 0" class="overflow-hidden rounded-2xl border border-white/10">
+        <div *ngIf="!isOrdersLoading && orders.length > 0" class="overflow-hidden rounded-2xl border border-[#7C8C72]/30">
           <div class="md:hidden divide-y divide-white/10">
             <div *ngFor="let order of orders" class="p-4">
               <div class="flex items-center justify-between">
@@ -993,11 +993,11 @@
                   {{ order.status }}
                 </span>
               </div>
-              <div class="mt-2 grid gap-1 text-xs text-zinc-400">
+              <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
                 <div>Fecha: <span class="text-zinc-200">{{ order.createdAt || '-' }}</span></div>
                 <div>Total: <span class="text-zinc-200">{{ formatMoney(order.total) }}</span></div>
               </div>
-              <a class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10"
+              <a class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
                 [routerLink]="['/orden', order.id]">
                 Ver orden
               </a>
@@ -1005,7 +1005,7 @@
           </div>
 
           <table class="hidden md:table w-full text-sm">
-            <thead class="bg-white/5 text-zinc-300">
+            <thead class="bg-[#FDFBF7]/80 text-zinc-300">
               <tr>
                 <th class="px-4 py-3 text-left font-semibold">Orden</th>
                 <th class="px-4 py-3 text-left font-semibold">Fecha</th>
@@ -1017,7 +1017,7 @@
             <tbody class="divide-y divide-white/5 text-zinc-200">
               <tr *ngFor="let order of orders">
                 <td class="px-4 py-3">{{ order.id }}</td>
-                <td class="px-4 py-3 text-zinc-400">{{ order.createdAt || '-' }}</td>
+                <td class="px-4 py-3 text-[#5A5A5A]">{{ order.createdAt || '-' }}</td>
                 <td class="px-4 py-3">{{ formatMoney(order.total) }}</td>
                 <td class="px-4 py-3">
                   <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
@@ -1027,7 +1027,7 @@
                   </span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                  <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs transition hover:bg-white/10"
+                  <a class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs transition hover:bg-[#EFE9DD]/90"
                     [routerLink]="['/orden', order.id]">
                     Ver orden
                   </a>
@@ -1044,14 +1044,14 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-link hidden text-yellow-200 md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-link hidden text-[#C8A96A] md:inline" aria-hidden="true"></i>
             Links de referencia
           </h2>
         </div>
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-1">
-        <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(59,130,246,0.12),transparent_55%)]">
           </div>
@@ -1059,51 +1059,51 @@
 
 
           <div *ngIf="networkMembers.length === 0"
-            class="mb-6 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-5">
-            <div class="text-sm font-semibold text-yellow-200">&#x1F3AF; Misi&#243;n de red</div>
+            class="mb-6 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 p-5">
+            <div class="text-sm font-semibold text-[#C8A96A]">&#x1F3AF; Misi&#243;n de red</div>
             <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
             <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
             <div class="mt-4 flex flex-wrap gap-2">
               <button type="button"
-                class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                 (click)="copyLinkAndCopy()">
                 <i class="fa-solid fa-copy" aria-hidden="true"></i>
                 Copiar link + copy
               </button>
               <button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('links')">
                 <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                 Compartir mi enlace
               </button>
               <button *ngIf="!isGuest" type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('ordenes')">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                 Ordenes
               </button>
 
               <button *ngIf="!isGuest && commissionSummary" type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('comisiones')">
                 <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                 Comisiones
               </button>
               <button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('links')">
                 <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
                 Ver mensajes sugeridos
               </button>
               <button *ngIf="!isGuest" type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('ordenes')">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                 Ordenes
               </button>
 
               <button *ngIf="!isGuest && commissionSummary" type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="scrollToSection('comisiones')">
                 <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                 Comisiones
@@ -1111,43 +1111,43 @@
             </div>
           </div>
 
-          <div class="mb-6 rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <div class="flex items-center gap-2 text-xs font-semibold text-zinc-400">
+          <div class="mb-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="flex items-center gap-2 text-xs font-semibold text-[#5A5A5A]">
               <i class="fa-solid fa-route" aria-hidden="true"></i>
               Tu flujo de 3 pasos
             </div>
             <div class="mt-3 space-y-3 text-sm">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="activeFeaturedId ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-300'">
+                  [ngClass]="activeFeaturedId ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-[#7C8C72]' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
                   <i *ngIf="activeFeaturedId" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!activeFeaturedId">1</span>
                 </div>
                 <div>
                   <div class="font-semibold text-zinc-200">Elige gancho</div>
-                  <div class="text-xs text-zinc-500">Selecciona tu producto destacado.</div>
+                  <div class="text-xs text-[#6B6B6B]">Selecciona tu producto destacado.</div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="hasCopiedLink ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-300'">
+                  [ngClass]="hasCopiedLink ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-[#7C8C72]' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
                   <i *ngIf="hasCopiedLink" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!hasCopiedLink">2</span>
                 </div>
                 <div>
                   <div class="font-semibold text-zinc-200">Copia tu link</div>
-                  <div class="text-xs text-zinc-500">Pegalo en tu bio o chat.</div>
+                  <div class="text-xs text-[#6B6B6B]">Pegalo en tu bio o chat.</div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-300'">
+                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-[#7C8C72]' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
                   <i *ngIf="hasCopiedCopy || hasCopiedAsset" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!(hasCopiedCopy || hasCopiedAsset)">3</span>
                 </div>
                 <div>
                   <div class="font-semibold text-zinc-200">Publica</div>
-                  <div class="text-xs text-zinc-500">Copy + creatividades listas.</div>
+                  <div class="text-xs text-[#6B6B6B]">Copy + creatividades listas.</div>
                 </div>
               </div>
             </div>
@@ -1161,28 +1161,28 @@
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
               <button *ngFor="let item of pagedFeatured"
-                class="rounded-2xl border p-4 text-left transition hover:bg-white/10" (click)="setFeatured(item.id)"
+                class="rounded-2xl border p-4 text-left transition hover:bg-[#EFE9DD]/90" (click)="setFeatured(item.id)"
                 [ngClass]="
                   item.id === activeFeaturedId
-                    ? 'border-blue-400/40 bg-blue-500/10'
-                    : 'border-white/10 bg-white/5'
+                    ? 'border-blue-400/40 bg-[#7C8C72]/10'
+                    : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80'
                 ">
-                <div class="text-xs text-zinc-400">Gancho</div>
+                <div class="text-xs text-[#5A5A5A]">Gancho</div>
                 <div class="mt-1 font-extrabold tracking-tight">{{ item.label }}</div>
-                <div class="mt-2 text-xs text-zinc-400">{{ item.hook }}</div>
+                <div class="mt-2 text-xs text-[#5A5A5A]">{{ item.hook }}</div>
               </button>
             </div>
 
             <div class="mt-4 flex items-center justify-between">
               <button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 [disabled]="!canPrevFeatured" [ngClass]="!canPrevFeatured ? 'opacity-50 cursor-not-allowed' : ''"
                 (click)="prevFeaturedPage()">
                 <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 Atras
               </button>
               <button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 [disabled]="!canNextFeatured" [ngClass]="!canNextFeatured ? 'opacity-50 cursor-not-allowed' : ''"
                 (click)="nextFeaturedPage()">
                 Siguiente
@@ -1190,24 +1190,24 @@
               </button>
             </div>
 
-            <div class="mt-6 rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="flex items-center gap-2 text-xs text-zinc-400">
+            <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
                 Tu link
               </div>
               <div class="mt-2 flex flex-col gap-3 sm:flex-row">
                 <input readonly [value]="referralLink"
-                  class="flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200" />
+                  class="flex-1 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200" />
                 <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
                   <button
-                    class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
                     (click)="copyLink()">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     Copiar
                   </button>
                 </div>
               </div>
-              <div class="mt-2 text-xs text-zinc-500">
+              <div class="mt-2 text-xs text-[#6B6B6B]">
                 Tip: fija el link en tu bio y rep&#237;telo en 3 historias.
               </div>
             </div>
@@ -1224,22 +1224,22 @@
 
               <div class="flex flex-wrap gap-2">
                 <button
-                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  [ngClass]="socialChannel === 'whatsapp' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  [ngClass]="socialChannel === 'whatsapp' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
                   (click)="setChannel('whatsapp')">
                   <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
                   WhatsApp
                 </button>
                 <button
-                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  [ngClass]="socialChannel === 'instagram' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  [ngClass]="socialChannel === 'instagram' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
                   (click)="setChannel('instagram')">
                   <i class="fa-brands fa-instagram" aria-hidden="true"></i>
                   Instagram
                 </button>
                 <button
-                  class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
-                  [ngClass]="socialChannel === 'facebook' ? 'border-blue-400/30 bg-blue-500/10' : ''"
+                  class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  [ngClass]="socialChannel === 'facebook' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
                   (click)="setChannel('facebook')">
                   <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
                   Facebook
@@ -1248,17 +1248,17 @@
             </div>
 
             <div class="mt-6 grid gap-4 md:grid-cols-2">
-              <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#121826]">
-                <div class="bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200">
+              <div class="overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B]">
+                <div class="bg-[#FDFBF7]/80 px-4 py-3 text-sm font-semibold text-zinc-200">
                   Optimizado para {{ socialChannel === 'whatsapp' ? 'WhatsApp' : (socialChannel === 'instagram' ?
                   'Instagram' : 'Facebook') }}
                 </div>
                 <div class="p-4">
-                  <div class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-white/10"
+                  <div class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-[#7C8C72]/30"
                     [style.aspect-ratio]="socialAspectRatio">
                     <img [src]="activeSocialAsset" alt="Social"
                       class="hero-image absolute inset-0 h-full w-full object-cover" />
-                    <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/70 via-transparent to-transparent">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-[#1B1B1B]/65 via-transparent to-transparent">
                     </div>
                     <div class="absolute bottom-0 left-0 right-0 p-4">
                       <div class="text-xs font-semibold text-zinc-200/90">OBTENERLO AHORA</div>
@@ -1268,11 +1268,11 @@
                   </div>
 
                   <div class="mt-4 flex items-center justify-between gap-3">
-                    <!--div class="text-xs text-zinc-500">
+                    <!--div class="text-xs text-[#6B6B6B]">
                       Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
                     </div-->
                     <button
-                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                       (click)="copyAssetPath()">
                       <i class="fa-solid fa-copy" aria-hidden="true"></i>
                       Copiar ruta
@@ -1283,32 +1283,32 @@
 
 
 
-              <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+              <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
                 <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
                   {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ?
                   'Comentario sugerido (editable)' : 'Mensaje sugerido (editable)') }}
                 </div>
                 <textarea rows="10"
-                  class="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+                  class="mt-3 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
                   placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"
                   (ngModelChange)="lastAutoCaption = false"></textarea>
                 <div class="mt-3 flex gap-3">
                   <button
-                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
                     (click)="copyCaption()">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     {{ socialChannel === 'instagram' ? 'Copiar descripción' : (socialChannel === 'facebook' ? 'Copiar
                     comentario' : 'Copiar mensaje') }}
                   </button>
                   <!--button
-                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 transition hover:bg-white/10"
+                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-3 transition hover:bg-[#EFE9DD]/90"
                     (click)="generateTemplate()">
                     <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
                     Generar template
                   </button-->
                 </div>
-                <div class="mt-2 text-xs text-zinc-500">
+                <div class="mt-2 text-xs text-[#6B6B6B]">
                   Recomendación UX: 1 promesa + 1 prueba + 1 CTA. Evita promesas financieras.
                 </div>
               </div>
@@ -1324,7 +1324,7 @@
 
   <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-[#7C8C72]/30 bg-[#1B1B1B] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
     </div>
   </div>
@@ -1333,36 +1333,36 @@
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeCommissionModal()"></div>
     <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-zinc-400">Solicitud de pago</div>
+          <div class="text-xs font-semibold text-[#5A5A5A]">Solicitud de pago</div>
           <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
           <p class="mt-2 text-sm text-zinc-300">Usaremos esta CLABE para depositar tus comisiones.</p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeCommissionModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
 
       <form class="mt-6 grid gap-3" (ngSubmit)="submitCommissionRequest()">
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           CLABE (18 dÃ­gitos)
           <input type="text" name="commissionClabe" [(ngModel)]="commissionClabe"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="000000000000000000" />
         </label>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
             (click)="closeCommissionModal()">
             Cancelar
           </button>
           <button type="submit" [disabled]="isCommissionSubmitting"
-            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
             {{ isCommissionSubmitting ? 'Enviando...' : 'Solicitar pago' }}
           </button>
@@ -1375,10 +1375,10 @@
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeClabeConfirm()"></div>
     <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-zinc-400">Confirmacion</div>
+          <div class="text-xs font-semibold text-[#5A5A5A]">Confirmacion</div>
           <h3 class="mt-2 text-xl font-extrabold">Actualizar CLABE interbancaria</h3>
           <p class="mt-2 text-sm text-zinc-300">
             Estas a punto de guardar la CLABE:
@@ -1386,7 +1386,7 @@
           </p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeClabeConfirm()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
@@ -1394,12 +1394,12 @@
 
       <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
         <button type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+          class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
           (click)="closeClabeConfirm()">
           Cancelar
         </button>
         <button type="button" [disabled]="isClabeSaving" (click)="saveCustomerClabe()"
-          class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+          class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
           <i class="fa-solid fa-check" aria-hidden="true"></i>
           {{ isClabeSaving ? 'Guardando...' : 'Confirmar' }}
         </button>
@@ -1411,67 +1411,67 @@
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeGuestRegisterModal()"></div>
     <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-zinc-400">Registro rapido</div>
+          <div class="text-xs font-semibold text-[#5A5A5A]">Registro rapido</div>
           <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
           <p class="mt-2 text-sm text-zinc-300">Completa tus datos para activar descuentos y red.</p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeGuestRegisterModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
 
       <form class="mt-6 grid gap-3" (ngSubmit)="submitGuestRegister()">
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Nombre completo
           <input type="text" name="guestName" [(ngModel)]="guestRegisterForm.name"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Tu nombre" />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Correo
           <input type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="tucorreo@ejemplo.com" />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Telefono
           <input type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="+52 ..." />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Contrase?a
           <input type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Minimo 8 caracteres" />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Confirmar contrase?a
           <input type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Repite tu contrase?a" />
         </label>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
             (click)="closeGuestRegisterModal()">
             Ahora no
           </button>
           <button type="submit" [disabled]="isGuestRegisterSubmitting"
-            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
             {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Registrate' }}
           </button>
         </div>
         <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
-          [class.text-rose-300]="guestRegisterFeedbackType === 'error'"
-          [class.text-emerald-300]="guestRegisterFeedbackType === 'success'">
+          [class.text-[#9A5A4A]]="guestRegisterFeedbackType === 'error'"
+          [class.text-[#7C8C72]]="guestRegisterFeedbackType === 'success'">
           {{ guestRegisterFeedback }}
         </p>
       </form>
@@ -1482,54 +1482,54 @@
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeProductDetails()"></div>
     <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-xs font-semibold text-zinc-400">Detalle del producto</div>
+          <div class="text-xs font-semibold text-[#5A5A5A]">Detalle del producto</div>
           <h3 class="mt-2 text-xl font-extrabold text-zinc-100">{{ product.name }}</h3>
-          <p class="mt-1 text-sm text-zinc-400">{{ product.badge }}</p>
+          <p class="mt-1 text-sm text-[#5A5A5A]">{{ product.badge }}</p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeProductDetails()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
 
       <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
-        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
           <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
         </div>
         <div>
-          <div class="text-xs text-zinc-400">Precio</div>
+          <div class="text-xs text-[#5A5A5A]">Precio</div>
           <div class="mt-1 flex items-end gap-2">
-            <div *ngIf="hasDiscount" class="text-sm text-zinc-500 line-through">
+            <div *ngIf="hasDiscount" class="text-sm text-[#6B6B6B] line-through">
               {{ formatMoney(product.price) }}
             </div>
             <div class="text-lg font-extrabold text-zinc-100">
               {{ formatMoney(discountedPrice(product.price)) }}
             </div>
-            <div class="text-xs" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+            <div class="text-xs" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
               {{ discountAppliedLabel() }}
             </div>
           </div>
-          <div class="mt-3 text-xs text-zinc-400">Cantidad actual: {{ getCartQty(product.id) }}</div>
+          <div class="mt-3 text-xs text-[#5A5A5A]">Cantidad actual: {{ getCartQty(product.id) }}</div>
         </div>
       </div>
 
-      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-        <div class="text-xs font-semibold text-zinc-400">DescripciÃ³n</div>
+      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+        <div class="text-xs font-semibold text-[#5A5A5A]">DescripciÃ³n</div>
         <p class="mt-2 whitespace-pre-line text-sm text-zinc-200">{{ product.description }}</p>
       </div>
 
       <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <button type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-zinc-200 hover:bg-white/10"
+          class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm text-zinc-200 hover:bg-[#EFE9DD]/90"
           (click)="closeProductDetails()">
           Cerrar
         </button>
         <button type="button"
-          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold"
+          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold"
           (click)="addQuick(product.id, 1)">
           <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
           Agregar
@@ -1543,12 +1543,12 @@
     <div class="absolute inset-0 bg-black/70" (click)="closeGoalsModal()"></div>
 
     <div class="relative w-full max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto
-           rounded-2xl sm:rounded-3xl border border-white/10 bg-[#121826]
+           rounded-2xl sm:rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B]
            p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <!-- Header -->
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <div class="text-[11px] font-semibold text-zinc-400">
+          <div class="text-[11px] font-semibold text-[#5A5A5A]">
             Metas cumplidas del mes
           </div>
           <h3 class="mt-1 text-lg sm:text-xl font-extrabold leading-tight">
@@ -1560,7 +1560,7 @@
         </div>
 
         <button type="button" class="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center
-               rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+               rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeGoalsModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
@@ -1568,7 +1568,7 @@
 
       <!-- List -->
       <div class="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
-        <div *ngFor="let goal of pagedAchievedGoals" class="rounded-2xl border border-white/10 bg-black/20 p-3 sm:p-4"
+        <div *ngFor="let goal of pagedAchievedGoals" class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3 sm:p-4"
           [ngClass]="isNewAchievedGoal(goal) && isGoalsHighlight ? 'goal-epic-card' : ''"
           [style.--goal-delay]="newGoalDelay(goal)">
           <div *ngIf="isNewAchievedGoal(goal) && isGoalsHighlight" class="goal-epic-layer" aria-hidden="true">
@@ -1579,7 +1579,7 @@
 
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="text-[11px] sm:text-xs text-zinc-400 leading-snug">
+              <div class="text-[11px] sm:text-xs text-[#5A5A5A] leading-snug">
                 {{ goal.subtitle }}
               </div>
               <div class="mt-0.5 text-xs sm:text-sm font-semibold text-zinc-100
@@ -1590,20 +1590,20 @@
 
             <!-- Badges compactos + wrap -->
             <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
-              <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-yellow-400/30
-                     bg-yellow-400/10 px-2 py-0.5 text-[11px] text-yellow-200">
+              <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-[#C8A96A]/35
+                     bg-[#C8A96A]/12 px-2 py-0.5 text-[11px] text-[#C8A96A]">
                 <i class="fa-solid fa-star text-[11px]" aria-hidden="true"></i>
                 Nueva
               </span>
 
-              <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-white/10
-                     bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">
+              <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30
+                     bg-[#FDFBF7]/80 px-2 py-0.5 text-[11px] text-zinc-300">
                 <i class="fa-solid fa-eye text-[11px]" aria-hidden="true"></i>
                 Leída
               </span>
 
               <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30
-                     bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-200">
+                     bg-emerald-400/10 px-2 py-0.5 text-[11px] text-[#7C8C72]">
                 <i class="fa-solid fa-check text-[11px]" aria-hidden="true"></i>
                 OK
               </span>
@@ -1615,19 +1615,19 @@
       <!-- Footer -->
       <div class="mt-4 sm:mt-5 flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div *ngIf="achievedGoalsTotalPages > 1" class="flex items-center justify-between gap-2">
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5
-                 px-3 py-1 text-[11px] text-zinc-300 transition hover:bg-white/10" [disabled]="!canPrevAchievedGoals"
+          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80
+                 px-3 py-1 text-[11px] text-zinc-300 transition hover:bg-[#EFE9DD]/90" [disabled]="!canPrevAchievedGoals"
             (click)="prevAchievedGoalsPage()">
             <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
             Anterior
           </button>
 
-          <div class="text-[11px] text-zinc-400">
+          <div class="text-[11px] text-[#5A5A5A]">
             {{ achievedGoalsPage + 1 }} / {{ achievedGoalsTotalPages }}
           </div>
 
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5
-                 px-3 py-1 text-[11px] text-zinc-300 transition hover:bg-white/10" [disabled]="!canNextAchievedGoals"
+          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80
+                 px-3 py-1 text-[11px] text-zinc-300 transition hover:bg-[#EFE9DD]/90" [disabled]="!canNextAchievedGoals"
             (click)="nextAchievedGoalsPage()">
             Siguiente
             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
@@ -1635,7 +1635,7 @@
         </div>
 
         <button type="button" class="glow-gold inline-flex items-center justify-center gap-2 rounded-full
-               bg-gradient-to-r from-yellow-400 to-orange-500
+               bg-gradient-to-r from-[#C8A96A] to-[#D9A441]
                px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
           (click)="closeGoalsModal()">
           Listo
@@ -1648,20 +1648,20 @@
 
   <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
     <button type="button"
-      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.03]"
+      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.03]"
       (click)="goToCart()">
       <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
       Ir a carrito
     </button>
   </div>
 
-  <footer class="border-t border-white/5 bg-[#0b0f14]">
+  <footer class="border-t border-[#7C8C72]/20 bg-[#F6F3EE]">
     <div
       class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
       <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
 
       <div class="flex flex-col items-start gap-3 md:items-end">
-        <div class="text-xs text-zinc-500">© 2026 finding U</div>
+        <div class="text-xs text-[#6B6B6B]">© 2026 finding U</div>
       </div>
     </div>
   </footer>

@@ -1,11 +1,11 @@
 <section class="antialiased">
-  <header class="border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur">
+  <header class="border-b border-[#7C8C72]/20 bg-[#F6F3EE]/90 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
         <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
       <div class="flex shrink-0 items-center gap-2">
-        <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:text-sm"
+        <a class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90 sm:text-sm"
           [routerLink]="['/dashboard']">
           <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
           Regresar
@@ -16,7 +16,7 @@
 
   <main class="mx-auto max-w-3xl px-4 py-10">
     <div
-      class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+      class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
       <!-- Ambient glow -->
       <div
         class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(250,204,21,0.10),transparent_55%)]">
@@ -29,19 +29,19 @@
         <!-- Header -->
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">
               Seguimiento
             </div>
             <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-white">
               Orden {{ orderId }}
             </h1>
-            <div *ngIf="order?.createdAt" class="mt-1 text-xs text-zinc-500">
+            <div *ngIf="order?.createdAt" class="mt-1 text-xs text-[#6B6B6B]">
               Creada: {{ order?.createdAt }}
             </div>
           </div>
 
           <span
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-200"
+            class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs font-semibold text-zinc-200"
             [ngClass]="statusClass">
             <span class="h-1.5 w-1.5 rounded-full bg-current opacity-80"></span>
             {{ statusLabel }}
@@ -50,32 +50,32 @@
 
         <!-- Order summary -->
         <div class="mt-5 grid gap-4 sm:grid-cols-2">
-          <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
+          <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="text-xs font-semibold text-[#5A5A5A] uppercase tracking-wide">
               Detalle
             </div>
 
             <div class="mt-2 space-y-2 text-sm text-zinc-300">
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">ID</span>
+                <span class="text-[#5A5A5A]">ID</span>
                 <span class="font-medium text-white">{{ orderId }}</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Estatus</span>
+                <span class="text-[#5A5A5A]">Estatus</span>
                 <span class="font-medium text-white">{{ statusLabel }}</span>
               </div>
 
               <div class="flex justify-between gap-4" *ngIf="orderSubtotal">
-                <span class="text-zinc-400">Subtotal</span>
+                <span class="text-[#5A5A5A]">Subtotal</span>
                 <span class="font-medium text-white">
                   {{ orderSubtotal | currency:'MXN' }}
                 </span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Descuento</span>
-                <span [ngClass]="orderDiscount > 0 ? 'font-semibold text-emerald-300' : 'text-zinc-500'">
+                <span class="text-[#5A5A5A]">Descuento</span>
+                <span [ngClass]="orderDiscount > 0 ? 'font-semibold text-[#7C8C72]' : 'text-[#6B6B6B]'">
                   {{
                   orderDiscount > 0
                   ? ('-' + (orderDiscount | currency:'MXN') +
@@ -86,8 +86,8 @@
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Total</span>
-                <span class="font-semibold text-yellow-300">
+                <span class="text-[#5A5A5A]">Total</span>
+                <span class="font-semibold text-[#C8A96A]">
                   {{ orderTotal | currency:'MXN' }}
                 </span>
               </div>
@@ -95,21 +95,21 @@
           </div>
 
           <!-- Timeline -->
-          <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Progreso</div>
+          <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="text-xs font-semibold text-[#5A5A5A] uppercase tracking-wide">Progreso</div>
 
             <div class="mt-3 space-y-3 text-sm">
 
               <!-- Orden creada (siempre completado) -->
               <div class="flex items-start gap-3">
                 <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border
-               border-emerald-400/40 bg-emerald-400/20 text-emerald-200 shadow">
+               border-[#7C8C72]/40 bg-[#7C8C72]/20 text-[#7C8C72] shadow">
                   <i class="fa-solid fa-check text-[10px]"></i>
                 </div>
 
                 <div class="flex-1">
                   <div class="font-medium text-white">Orden creada</div>
-                  <div class="text-xs text-zinc-500">Tu pedido fue registrado.</div>
+                  <div class="text-xs text-[#6B6B6B]">Tu pedido fue registrado.</div>
                 </div>
               </div>
 
@@ -122,7 +122,7 @@
 
                 <div class="flex-1">
                   <div class="font-medium text-white">Pago</div>
-                  <div class="text-xs text-zinc-500">Conciliación y confirmación.</div>
+                  <div class="text-xs text-[#6B6B6B]">Conciliación y confirmación.</div>
                 </div>
               </div>
 
@@ -135,7 +135,7 @@
 
                 <div class="flex-1">
                   <div class="font-medium text-white">Preparación</div>
-                  <div class="text-xs text-zinc-500">Armando paquete.</div>
+                  <div class="text-xs text-[#6B6B6B]">Armando paquete.</div>
                 </div>
               </div>
 
@@ -157,7 +157,7 @@
                     </span>
                   </div>
 
-                  <div class="text-xs text-zinc-500">Ruta de entrega.</div>
+                  <div class="text-xs text-[#6B6B6B]">Ruta de entrega.</div>
                 </div>
               </div>
 
@@ -170,7 +170,7 @@
 
                 <div class="flex-1">
                   <div class="font-medium text-white">Entregada</div>
-                  <div class="text-xs text-zinc-500">Confirmación final.</div>
+                  <div class="text-xs text-[#6B6B6B]">Confirmación final.</div>
                 </div>
               </div>
 
@@ -183,7 +183,7 @@
 
         <!-- Envío card -->
         <!-- Envío card (pro, consistente) -->
-        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-5">
+        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-5">
           <div class="flex items-start justify-between gap-4">
             <div class="flex items-start gap-3">
               <!-- Icono -->
@@ -194,7 +194,7 @@
 
               <!-- Header -->
               <div>
-                <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Envío</div>
+                <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">Envío</div>
 
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                   <span
@@ -204,7 +204,7 @@
                   </span>
 
                   <!-- Subtexto corto -->
-                  <span class="text-xs text-zinc-500">
+                  <span class="text-xs text-[#6B6B6B]">
                     {{ order?.shippingType === 'carrier' ? 'Paquetería' : 'Entrega / recolección' }}
                   </span>
                 </div>
@@ -213,8 +213,8 @@
 
             <!-- Total mini, opcional (si quieres reforzar confianza visual) -->
             <div class="text-right">
-              <div class="text-[11px] text-zinc-500">Total</div>
-              <div class="text-sm font-semibold text-yellow-300">{{ orderTotal | currency:'MXN' }}</div>
+              <div class="text-[11px] text-[#6B6B6B]">Total</div>
+              <div class="text-sm font-semibold text-[#C8A96A]">{{ orderTotal | currency:'MXN' }}</div>
             </div>
           </div>
 
@@ -223,18 +223,18 @@
             <!-- Carrier -->
             <ng-container *ngIf="order?.shippingType === 'carrier'">
               <!-- Guía -->
-              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">
+              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
+                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
                   Número de guía
                 </div>
 
                 <div class="mt-1 flex items-center justify-between gap-3">
-                  <span class="font-mono text-sm font-semibold text-yellow-300">
+                  <span class="font-mono text-sm font-semibold text-[#C8A96A]">
                     {{ order?.trackingNumber || '-' }}
                   </span>
 
                   <button type="button"
-                    class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-white/10"
+                    class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-[#EFE9DD]/90"
                     (click)="copyToClipboard(order?.trackingNumber)" [disabled]="!order?.trackingNumber">
                     <i class="fa-regular fa-copy"></i>
                     Copiar
@@ -243,8 +243,8 @@
               </div>
 
               <!-- Dirección -->
-              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">
+              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
+                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
                   Dirección de entrega
                 </div>
 
@@ -261,20 +261,20 @@
                   </div>
 
                   <!-- CP + Estado -->
-                  <div class="text-xs text-zinc-400">
+                  <div class="text-xs text-[#5A5A5A]">
                     {{ order?.postalCode || '-' }} • {{ order?.state || '-' }}
                   </div>
 
                   <!-- Tel -->
-                  <div class="mt-1 text-xs text-zinc-500">
+                  <div class="mt-1 text-xs text-[#6B6B6B]">
                     📞 {{ order?.phone || '-' }}
                   </div>
                 </div>
               </div>
 
               <!-- Estado -->
-              <div class="rounded-xl border border-white/10 bg-white/5 p-3 sm:col-span-2">
-                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">
+              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3 sm:col-span-2">
+                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
                   Estado del envío
                 </div>
 
@@ -286,16 +286,16 @@
 
             <!-- Personal -->
             <ng-container *ngIf="order?.shippingType === 'personal'">
-              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Lugar</div>
-                <div class="mt-1 text-sm font-semibold text-yellow-300">
+              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
+                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">Lugar</div>
+                <div class="mt-1 text-sm font-semibold text-[#C8A96A]">
                   {{ order?.deliveryPlace || '-' }}
                 </div>
               </div>
 
-              <div class="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Fecha</div>
-                <div class="mt-1 text-sm font-semibold text-yellow-300">
+              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
+                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">Fecha</div>
+                <div class="mt-1 text-sm font-semibold text-[#C8A96A]">
                   {{ order?.deliveryDate || '-' }}
                 </div>
               </div>
@@ -303,7 +303,7 @@
           </div>
 
           <!-- Pie opcional: nota -->
-          <div class="mt-3 text-xs text-zinc-500">
+          <div class="mt-3 text-xs text-[#6B6B6B]">
             Tip: guarda tu referencia <span class="font-semibold text-zinc-300">{{ orderId }}</span> por si necesitas
             soporte.
           </div>
@@ -311,40 +311,40 @@
 
 
         <!-- SPEI card (pro) -->
-        <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-white/10 bg-[#121826] p-5">
+        <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">Pago</div>
+              <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">Pago</div>
               <div class="mt-1 text-lg font-extrabold text-white">Transferencia SPEI</div>
-              <div class="mt-1 text-xs text-zinc-500">
+              <div class="mt-1 text-xs text-[#6B6B6B]">
                 Usa estos datos tal cual para validar el pago sin fricción.
               </div>
             </div>
 
-            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-200">
-              Referencia: <span class="text-yellow-300">{{ orderId }}</span>
+            <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs font-semibold text-zinc-200">
+              Referencia: <span class="text-[#C8A96A]">{{ orderId }}</span>
             </span>
           </div>
 
-          <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
             <div class="space-y-2 text-sm text-zinc-300">
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Beneficiario</span>
+                <span class="text-[#5A5A5A]">Beneficiario</span>
                 <span class="font-medium text-white">Finding U</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Cuenta / CLABE</span>
+                <span class="text-[#5A5A5A]">Cuenta / CLABE</span>
                 <span class="font-mono text-white">1234 1234 1234 1234 12</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Referencia</span>
-                <span class="font-semibold text-yellow-300">{{ orderId }}</span>
+                <span class="text-[#5A5A5A]">Referencia</span>
+                <span class="font-semibold text-[#C8A96A]">{{ orderId }}</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-zinc-400">Concepto</span>
+                <span class="text-[#5A5A5A]">Concepto</span>
                 <span class="text-white">Pago de pedido</span>
               </div>
             </div>
@@ -352,22 +352,22 @@
 
           <div class="mt-4 space-y-2 text-sm text-zinc-300">
             <p>Una vez realizada la transferencia, envía tu comprobante para acelerar la confirmación.</p>
-            <p class="text-zinc-400">Soporte: WhatsApp 477 574 2501</p>
+            <p class="text-[#5A5A5A]">Soporte: WhatsApp 477 574 2501</p>
           </div>
         </div>
 
         <!-- States -->
-        <div *ngIf="isLoading" class="mt-4 text-xs text-zinc-400">
+        <div *ngIf="isLoading" class="mt-4 text-xs text-[#5A5A5A]">
           Cargando estado de la orden...
         </div>
 
         <div *ngIf="!isLoading && !order"
-          class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-          <div class="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+          class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4 text-sm text-zinc-300">
+          <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">
             Sin resultados
           </div>
           <div class="mt-2 font-medium text-white">No se encontró la orden.</div>
-          <div class="mt-1 text-xs text-zinc-500">Verifica el ID o intenta nuevamente.</div>
+          <div class="mt-1 text-xs text-[#6B6B6B]">Verifica el ID o intenta nuevamente.</div>
         </div>
       </div>
     </div>

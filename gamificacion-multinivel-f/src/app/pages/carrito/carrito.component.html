@@ -1,12 +1,12 @@
 <section class="antialiased">
-  <header class="sticky top-0 z-40 border-b border-white/10 bg-gradient-to-r from-[#0b0f14]/95 via-[#0f1722]/92 to-[#0b0f14]/95 backdrop-blur">
+  <header class="sticky top-0 z-40 border-b border-[#7C8C72]/30 bg-gradient-to-r from-[#F6F3EE]/95 via-[#EFE8DC]/92 to-[#F6F3EE]/95 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
           <img src="minlogo.png" alt="Logo" class="h-6 w-6" />
         </div>
         <div class="min-w-0">
-          <div class="flex items-center gap-2 text-xs text-zinc-400">
+          <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
             <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Carrito
           </div>
@@ -15,7 +15,7 @@
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
-        <a class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-zinc-100 transition hover:bg-white/10 sm:text-sm"
+        <a class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-xs font-semibold text-zinc-100 transition hover:bg-[#EFE9DD]/90 sm:text-sm"
           [routerLink]="['/dashboard']">
           <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
           Regresar
@@ -27,7 +27,7 @@
   <main class="mx-auto h-[calc(100vh-56px-92px)] max-w-6xl px-4 py-4 sm:h-[calc(100vh-60px-92px)]">
     <div class="grid h-full gap-4 lg:grid-cols-[1.15fr_.85fr]">
       <section id="detalle-carrito"
-        class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+        class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
         </div>
@@ -36,43 +36,43 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <h1 class="flex items-center gap-2 text-xl font-extrabold tracking-tight sm:text-2xl">
-                <i class="fa-solid fa-basket-shopping text-blue-200" aria-hidden="true"></i>
+                <i class="fa-solid fa-basket-shopping text-[#7C8C72]" aria-hidden="true"></i>
                 Confirmar pedido
               </h1>
             </div>
 
             <div class="shrink-0 text-right">
-              <div class="flex items-center justify-end gap-2 text-[11px] text-zinc-400">
+              <div class="flex items-center justify-end gap-2 text-[11px] text-[#5A5A5A]">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                 Total
               </div>
               <div class="text-lg font-extrabold sm:text-xl">{{ formatMoney(total) }}</div>
-              <div class="text-[11px]" [ngClass]="totalDiscount > 0 ? 'text-emerald-300' : 'text-zinc-500'">
+              <div class="text-[11px]" [ngClass]="totalDiscount > 0 ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
                 {{ totalDiscount > 0 ? ('Descuento: -' + formatMoney(totalDiscount) + ' • ' + discountLabel) : 'Sin descuento' }}
               </div>
-              <div class="text-[11px] text-zinc-500">
+              <div class="text-[11px] text-[#6B6B6B]">
                 {{ itemsCount }} artículo{{ itemsCount === 1 ? '' : 's' }}
               </div>
             </div>
           </div>
 
           <div class="mt-3 grid grid-cols-3 gap-2">
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-3">
-              <div class="flex items-center gap-2 text-[11px] text-zinc-400">
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3">
+              <div class="flex items-center gap-2 text-[11px] text-[#5A5A5A]">
                 <i class="fa-solid fa-clock" aria-hidden="true"></i>
                 Corte en
               </div>
               <div class="text-sm font-extrabold">{{ countdownLabel }}</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-3">
-              <div class="flex items-center gap-2 text-[11px] text-zinc-400">
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3">
+              <div class="flex items-center gap-2 text-[11px] text-[#5A5A5A]">
                 <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
                 Pago
               </div>
               <div class="text-sm font-extrabold">Seguro</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-3">
-              <div class="flex items-center gap-2 text-[11px] text-zinc-400">
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3">
+              <div class="flex items-center gap-2 text-[11px] text-[#5A5A5A]">
                 <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                 Entrega
               </div>
@@ -83,7 +83,7 @@
 
         <div class="relative flex-1 space-y-4 overflow-auto px-4 pb-5 sm:px-5">
   <!-- CARRITO -->
-  <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+  <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
         <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
@@ -95,12 +95,12 @@
     <div class="mt-3 space-y-3">
       <div
         *ngFor="let item of cartItems"
-        class="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-start"
+        class="flex flex-col gap-3 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3 sm:flex-row sm:items-start"
         [ngClass]="item.id === lastAddedItemId ? 'fade-in-item' : ''"
       >
         <!-- IMG -->
         <div
-          class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+          class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80"
         >
           <img [src]="item.img" [alt]="item.name" class="h-full w-full object-cover" />
         </div>
@@ -114,7 +114,7 @@
               <div class="font-extrabold tracking-tight sm:truncate">
                 {{ item.name }}
               </div>
-              <div class="mt-1 text-[11px] text-zinc-500 sm:truncate">
+              <div class="mt-1 text-[11px] text-[#6B6B6B] sm:truncate">
                 {{ item.note }}
               </div>
             </div>
@@ -126,10 +126,10 @@
 
           <!-- Discount row -->
           <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
-            <span *ngIf="hasDiscount" class="text-zinc-500 line-through">
+            <span *ngIf="hasDiscount" class="text-[#6B6B6B] line-through">
               {{ formatMoney(item.price) }}
             </span>
-            <span [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+            <span [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
               {{ hasDiscount ? discountLabel : 'Sin descuento' }}
             </span>
           </div>
@@ -138,21 +138,21 @@
           <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <!-- Qty -->
             <div
-              class="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-[#121826] px-3 py-2 sm:justify-start"
+              class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 sm:justify-start"
             >
-              <span class="text-[11px] text-zinc-400">Qty</span>
+              <span class="text-[11px] text-[#5A5A5A]">Qty</span>
               <input
                 type="number"
                 min="0"
                 [value]="item.qty"
                 (input)="setQty(item.id, $any($event.target).value)"
-                class="w-20 rounded-xl border border-white/10 bg-transparent px-2 py-1 text-sm text-white"
+                class="w-20 rounded-xl border border-[#7C8C72]/30 bg-transparent px-2 py-1 text-sm text-white"
               />
             </div>
 
             <!-- Parcial -->
             <div class="text-xs text-zinc-300 sm:text-right">
-              <span class="text-zinc-500">Parcial:</span>
+              <span class="text-[#6B6B6B]">Parcial:</span>
               <span class="font-semibold">
                 {{ formatMoney(discountedPrice(item.price) * item.qty) }}
               </span>
@@ -160,7 +160,7 @@
 
             <!-- Remove -->
             <button
-              class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs transition hover:bg-white/10 sm:w-auto"
+              class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90 sm:w-auto"
               (click)="removeItem(item.id)"
             >
               <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
@@ -181,13 +181,13 @@
   <div class="mt-2 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
     <div
       *ngFor="let product of suggestedProducts"
-      class="flex min-w-0 flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 overflow-hidden"
+      class="flex min-w-0 flex-col gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3 overflow-hidden"
     >
 
       <!-- HEADER -->
       <div class="flex min-w-0 items-center gap-3">
         <div
-          class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/20"
+          class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B]"
         >
           <img
             [src]="product.img"
@@ -206,7 +206,7 @@
           </div>
 
           <div
-            class="truncate text-[11px] text-zinc-500"
+            class="truncate text-[11px] text-[#6B6B6B]"
           >
             {{ product.badge }}
           </div>
@@ -224,7 +224,7 @@
         <div class="flex flex-wrap items-center gap-2">
 
           <button
-            class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] transition hover:bg-white/10 whitespace-nowrap"
+            class="inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-[11px] transition hover:bg-[#EFE9DD]/90 whitespace-nowrap"
             (click)="openProductDetails(product)"
           >
             <i class="fa-solid fa-circle-info"></i>
@@ -232,7 +232,7 @@
           </button>
 
           <button
-            class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] transition hover:bg-white/10 whitespace-nowrap"
+            class="inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-[11px] transition hover:bg-[#EFE9DD]/90 whitespace-nowrap"
             (click)="addSuggestedProduct(product)"
           >
             <i class="fa-solid fa-plus"></i>
@@ -248,21 +248,21 @@
   </div>
 
   <!-- ENTREGA -->
-  <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
+  <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
         <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
         Entrega
       </div>
-      <div class="text-[11px] text-zinc-500">Mínimo requerido</div>
+      <div class="text-[11px] text-[#6B6B6B]">Mínimo requerido</div>
     </div>
 
     <!-- Mobile: 1 col, sm+: 2 cols -->
     <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
       <label class="block">
-        <span class="text-[11px] text-zinc-400">Nombre</span>
+        <span class="text-[11px] text-[#5A5A5A]">Nombre</span>
         <input
-          class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
+          class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-[#7C8C72]/70"
           placeholder="Tu nombre"
           name="deliveryName"
           [(ngModel)]="deliveryName"
@@ -270,9 +270,9 @@
       </label>
 
       <label class="block">
-        <span class="text-[11px] text-zinc-400">Teléfono</span>
+        <span class="text-[11px] text-[#5A5A5A]">Teléfono</span>
         <input
-          class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
+          class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-[#7C8C72]/70"
           placeholder="+52..."
           name="deliveryPhone"
           [(ngModel)]="deliveryPhone"
@@ -280,9 +280,9 @@
       </label>
 
       <label class="block sm:col-span-2">
-        <span class="text-[11px] text-zinc-400">Dirección</span>
+        <span class="text-[11px] text-[#5A5A5A]">Dirección</span>
         <input
-          class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
+          class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-[#7C8C72]/70"
           placeholder="Calle, número, colonia, ciudad"
           name="deliveryAddress"
           [(ngModel)]="deliveryAddress"
@@ -290,9 +290,9 @@
       </label>
 
       <label class="block">
-        <span class="text-[11px] text-zinc-400">CP</span>
+        <span class="text-[11px] text-[#5A5A5A]">CP</span>
         <input
-          class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
+          class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-[#7C8C72]/70"
           placeholder="00000"
           name="deliveryPostalCode"
           [(ngModel)]="deliveryPostalCode"
@@ -300,9 +300,9 @@
       </label>
 
       <label class="block">
-        <span class="text-[11px] text-zinc-400">Estado</span>
+        <span class="text-[11px] text-[#5A5A5A]">Estado</span>
         <input
-          class="mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-blue-500/70"
+          class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-[#7C8C72]/70"
           placeholder="CDMX"
           name="deliveryState"
           [(ngModel)]="deliveryState"
@@ -316,7 +316,7 @@
 
       <aside class="hidden h-full flex-col space-y-4 lg:flex">
         <div id="resumen-carrito"
-          class="grain relative flex-1 overflow-hidden rounded-3xl border border-white/10 bg-ambient">
+          class="grain relative flex-1 overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-ambient">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(59,130,246,0.14),transparent_55%)]">
           </div>
@@ -324,7 +324,7 @@
             <div class="flex items-start justify-between gap-3">
               <div>
                 <h2 class="flex items-center gap-2 text-xl font-bold">
-                  <i class="fa-solid fa-clipboard-list text-yellow-200" aria-hidden="true"></i>
+                  <i class="fa-solid fa-clipboard-list text-[#C8A96A]" aria-hidden="true"></i>
                   Resumen
                 </h2>
               </div>
@@ -348,7 +348,7 @@
               </div>
               <div class="flex items-center justify-between text-zinc-300">
                 <span>Descuento</span>
-                <span class="text-yellow-300">-{{ formatMoney(discount) }}</span>
+                <span class="text-[#C8A96A]">-{{ formatMoney(discount) }}</span>
               </div>
               <div class="flex items-center justify-between text-zinc-300">
                 <span>Nivel de descuento</span>
@@ -356,7 +356,7 @@
               </div>
               <div class="flex items-center justify-between text-zinc-300">
                 <span>Descuento aplicado</span>
-                <span class="text-yellow-300">{{ discountLabel }}</span>
+                <span class="text-[#C8A96A]">{{ discountLabel }}</span>
               </div>
               <div class="h-px bg-white/10"></div>
               <div class="flex items-center justify-between">
@@ -365,9 +365,9 @@
               </div>
             </div>
 
-            <div class="mt-5 mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="mt-5 mb-5 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
               <ng-container *ngIf="isGuest; else goalProgress">
-                <div class="flex items-center gap-2 text-xs font-semibold text-yellow-200">
+                <div class="flex items-center gap-2 text-xs font-semibold text-[#C8A96A]">
                   <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
                   Meta para invitados
                 </div>
@@ -376,60 +376,60 @@
                 </div>
                 <div class="mt-1 text-xs text-zinc-300">Crea tu cuenta para desbloquear promociones y seguimiento.</div>
                 <button type="button"
-                  class="glow-gold mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 text-xs font-semibold text-black transition-transform hover:scale-[1.03]"
+                  class="glow-gold mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-xs font-semibold text-black transition-transform hover:scale-[1.03]"
                   (click)="openGuestRegisterModal()">
                   <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
                   Registrate
                 </button>
               </ng-container>
               <ng-template #goalProgress>
-                <div class="text-[11px] text-zinc-400">Meta principal de consumo</div>
+                <div class="text-[11px] text-[#5A5A5A]">Meta principal de consumo</div>
                 <div class="mt-1 text-lg font-extrabold tracking-tight text-zinc-100">{{ goalTitle }}</div>
-                <div class="mt-1 text-xs text-zinc-400">{{ goalSubtitle }}</div>
+                <div class="mt-1 text-xs text-[#5A5A5A]">{{ goalSubtitle }}</div>
                 <div class="relative mt-3 h-3 overflow-hidden rounded-full bg-white/10">
                   <div class="h-full bg-gradient-to-r from-yellow-300 to-orange-400"
                     [style.width.%]="basePercent"></div>
-                  <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-90"
+                  <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] opacity-90"
                     [style.left.%]="basePercent" [style.width.%]="cartPercent"></div>
                 </div>
-                <div class="mt-2 text-xs text-zinc-500">
-                  Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para
+                <div class="mt-2 text-xs text-[#6B6B6B]">
+                  Te faltan <span class="font-semibold text-[#C8A96A]">{{ formatMoney(gapToGoal) }}</span> para
                   {{ goalTitle }}
                 </div>
               </ng-template>
             </div>
 
             <button
-              class="glow-gold mt-auto inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 font-semibold text-black transition-transform hover:scale-[1.02]"
+              class="glow-gold mt-auto inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-4 font-semibold text-black transition-transform hover:scale-[1.02]"
               [disabled]="isPlacingOrder"
               (click)="placeOrder()">
               <i class="fa-solid fa-lock" aria-hidden="true"></i>
               {{ isPlacingOrder ? 'Creando orden...' : 'Pagar y finalizar' }}
             </button>
 
-            <p class="mt-3 text-xs text-zinc-500">Al finalizar aceptas términos y políticas.</p>
+            <p class="mt-3 text-xs text-[#6B6B6B]">Al finalizar aceptas términos y políticas.</p>
           </div>
         </div>
       </aside>
     </div>
   </main>
 
-  <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0b0f14]/92 backdrop-blur lg:hidden">
+  <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-[#7C8C72]/30 bg-[#F6F3EE]/92 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-6xl px-4 py-3">
       <div class="flex items-center justify-between gap-3">
-        <button class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm transition hover:bg-white/10"
+        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-3 text-sm transition hover:bg-[#EFE9DD]/90"
           (click)="showSummary()">
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
           Ver resumen
         </button>
 
         <div class="text-right">
-          <div class="text-[11px] text-zinc-400">Total</div>
+          <div class="text-[11px] text-[#5A5A5A]">Total</div>
           <div class="text-lg font-extrabold leading-none">{{ formatMoney(total) }}</div>
         </div>
 
         <button
-          class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.02]"
+          class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.02]"
           [disabled]="isPlacingOrder"
           (click)="placeOrder()">
           <i class="fa-solid fa-lock" aria-hidden="true"></i>
@@ -441,7 +441,7 @@
 
   <div class="fixed bottom-[104px] left-1/2 z-[60] -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-white/10 bg-[#121826] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-[#7C8C72]/30 bg-[#1B1B1B] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
     </div>
   </div>
@@ -449,18 +449,18 @@
   <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 px-4 pb-6 overflow-y-auto lg:hidden"
     [class.hidden]="!isSummaryOpen" (click)="closeSummary()">
     <div
-      class="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+      class="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#F6F3EE] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
       (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <h2 class="flex items-center gap-2 text-lg font-bold">
-            <i class="fa-solid fa-clipboard-list text-yellow-200" aria-hidden="true"></i>
+            <i class="fa-solid fa-clipboard-list text-[#C8A96A]" aria-hidden="true"></i>
             Resumen
           </h2>
-          <p class="mt-1 text-xs text-zinc-400">Revisa tu pedido antes de pagar.</p>
+          <p class="mt-1 text-xs text-[#5A5A5A]">Revisa tu pedido antes de pagar.</p>
         </div>
         <button
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-200 transition hover:bg-white/10"
+          class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs text-zinc-200 transition hover:bg-[#EFE9DD]/90"
           (click)="closeSummary()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
@@ -478,7 +478,7 @@
         </div>
         <div class="flex items-center justify-between text-zinc-300">
           <span>Descuento</span>
-          <span class="text-yellow-300">-{{ formatMoney(discount) }}</span>
+          <span class="text-[#C8A96A]">-{{ formatMoney(discount) }}</span>
         </div>
         <div class="flex items-center justify-between text-zinc-300">
           <span>Nivel de descuento</span>
@@ -486,7 +486,7 @@
         </div>
         <div class="flex items-center justify-between text-zinc-300">
           <span>Descuento aplicado</span>
-          <span class="text-yellow-300">{{ discountLabel }}</span>
+          <span class="text-[#C8A96A]">{{ discountLabel }}</span>
         </div>
         <div class="h-px bg-white/10"></div>
         <div class="flex items-center justify-between">
@@ -495,8 +495,8 @@
         </div>
       </div>
 
-      <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-400">
-        Te faltan <span class="font-semibold text-yellow-300">{{ formatMoney(gapToGoal) }}</span> para {{ goalTitle }}.
+      <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3 text-xs text-[#5A5A5A]">
+        Te faltan <span class="font-semibold text-[#C8A96A]">{{ formatMoney(gapToGoal) }}</span> para {{ goalTitle }}.
       </div>
     </div>
   </div>
@@ -505,67 +505,67 @@
     class="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeGuestRegisterModal()"></div>
     <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-zinc-400">Registro rapido</div>
+          <div class="text-xs font-semibold text-[#5A5A5A]">Registro rapido</div>
           <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
           <p class="mt-2 text-sm text-zinc-300">Completa tus datos para activar descuentos y red.</p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeGuestRegisterModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
 
       <form class="mt-6 grid gap-3" (ngSubmit)="submitGuestRegister()">
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Nombre completo
           <input type="text" name="guestName" [(ngModel)]="guestRegisterForm.name"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Tu nombre" />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Correo
           <input type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="tucorreo@ejemplo.com" />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Telefono
           <input type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="+52 ..." />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Contrase?a
           <input type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Minimo 8 caracteres" />
         </label>
-        <label class="block text-xs text-zinc-400">
+        <label class="block text-xs text-[#5A5A5A]">
           Confirmar contrase?a
           <input type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-500"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Repite tu contrase?a" />
         </label>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm transition hover:bg-white/10"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
             (click)="closeGuestRegisterModal()">
             Ahora no
           </button>
           <button type="submit" [disabled]="isGuestRegisterSubmitting"
-            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
             {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Registrate' }}
           </button>
         </div>
         <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
-          [class.text-rose-300]="guestRegisterFeedbackType === 'error'"
-          [class.text-emerald-300]="guestRegisterFeedbackType === 'success'">
+          [class.text-[#9A5A4A]]="guestRegisterFeedbackType === 'error'"
+          [class.text-[#7C8C72]]="guestRegisterFeedbackType === 'success'">
           {{ guestRegisterFeedback }}
         </p>
       </form>
@@ -576,54 +576,54 @@
     class="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeProductDetails()"></div>
     <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-xs font-semibold text-zinc-400">Detalle del producto</div>
+          <div class="text-xs font-semibold text-[#5A5A5A]">Detalle del producto</div>
           <h3 class="mt-2 text-xl font-extrabold text-zinc-100">{{ product.name }}</h3>
-          <p class="mt-1 text-sm text-zinc-400">{{ product.badge }}</p>
+          <p class="mt-1 text-sm text-[#5A5A5A]">{{ product.badge }}</p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
           (click)="closeProductDetails()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
 
       <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
-        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
           <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
         </div>
         <div>
-          <div class="text-xs text-zinc-400">Precio</div>
+          <div class="text-xs text-[#5A5A5A]">Precio</div>
           <div class="mt-1 flex items-end gap-2">
-            <div *ngIf="hasDiscount" class="text-sm text-zinc-500 line-through">
+            <div *ngIf="hasDiscount" class="text-sm text-[#6B6B6B] line-through">
               {{ formatMoney(product.price) }}
             </div>
             <div class="text-lg font-extrabold text-zinc-100">
               {{ formatMoney(discountedPrice(product.price)) }}
             </div>
-            <div class="text-xs" [ngClass]="hasDiscount ? 'text-emerald-300' : 'text-zinc-500'">
+            <div class="text-xs" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
               {{ hasDiscount ? discountLabel : 'Sin descuento' }}
             </div>
           </div>
-          <div class="mt-3 text-xs text-zinc-400">Cantidad actual: {{ getCartQty(product.id) }}</div>
+          <div class="mt-3 text-xs text-[#5A5A5A]">Cantidad actual: {{ getCartQty(product.id) }}</div>
         </div>
       </div>
 
-      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-        <div class="text-xs font-semibold text-zinc-400">Descripcion</div>
+      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+        <div class="text-xs font-semibold text-[#5A5A5A]">Descripcion</div>
         <p class="mt-2 whitespace-pre-line text-sm text-zinc-200">{{ product.description }}</p>
       </div>
 
       <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <button type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-zinc-200 hover:bg-white/10"
+          class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm text-zinc-200 hover:bg-[#EFE9DD]/90"
           (click)="closeProductDetails()">
           Cerrar
         </button>
         <button type="button"
-          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-semibold"
+          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold"
           (click)="addSuggestedProduct(product)">
           <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
           Agregar
