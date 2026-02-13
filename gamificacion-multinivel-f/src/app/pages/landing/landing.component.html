@@ -1,7 +1,7 @@
-<section class="min-h-screen overflow-x-hidden bg-[#0b0f14] text-white antialiased">
+<section class="min-h-screen overflow-x-hidden bg-[#F6F3EE] text-[#2A2A2A] antialiased">
   <!-- HEADER -->
 
-<header class="sticky top-0 z-40 border-b border-white/5 bg-[#0b0f14]/75 backdrop-blur">
+<header class="sticky top-0 z-40 border-b border-[#7C8C72]/20 bg-[#F6F3EE]/75 backdrop-blur">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
     <!-- Logo -->
     <div class="flex items-center gap-3">
@@ -11,16 +11,16 @@
     <!-- Actions: MOBILE (icons only) -->
     <div class="flex items-center gap-2 md:hidden">
       <a
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 transition hover:bg-[#EFE9DD]/90"
         [routerLink]="['/login']"
         aria-label="Entrar">
-        <i class="fa-solid fa-right-to-bracket text-blue-200" aria-hidden="true"></i>
+        <i class="fa-solid fa-right-to-bracket text-[#7C8C72]" aria-hidden="true"></i>
       </a>
 
       <a
         href="#"
         (click)="scrollTo('recompensas', $event)"
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-blue-500/70 bg-blue-500/5 text-blue-300 transition hover:bg-blue-500/10"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/70 bg-[#7C8C72]/10 text-[#7C8C72] transition hover:bg-[#7C8C72]/15"
         aria-label="Cómo funciona">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
       </a>
@@ -28,7 +28,7 @@
       <a
         href="#"
         (click)="scrollTo('registro', $event)"
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 font-semibold transition-transform active:scale-[0.98]"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] font-semibold transition-transform active:scale-[0.98]"
         aria-label="Obtenerlo ahora">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
       </a>
@@ -37,16 +37,16 @@
     <!-- Actions: DESKTOP (text + icons) -->
     <div class="hidden items-center gap-3 md:flex">
       <a
-        class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10"
+        class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
         [routerLink]="['/login']">
-        <i class="fa-solid fa-right-to-bracket text-blue-200" aria-hidden="true"></i>
+        <i class="fa-solid fa-right-to-bracket text-[#7C8C72]" aria-hidden="true"></i>
         Entrar
       </a>
 
       <a
         href="#"
         (click)="scrollTo('recompensas', $event)"
-        class="inline-flex items-center gap-2 rounded-full border border-blue-500/70 px-4 py-2 text-sm text-blue-300 transition hover:bg-blue-500/10">
+        class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/70 px-4 py-2 text-sm text-[#7C8C72] transition hover:bg-[#7C8C72]/15">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         Cómo funciona
       </a>
@@ -54,7 +54,7 @@
       <a
         href="#"
         (click)="scrollTo('registro', $event)"
-        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 text-sm font-semibold transition-transform hover:scale-105">
+        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2 text-sm font-semibold transition-transform hover:scale-105">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
         Obtenerlo ahora
       </a>
@@ -71,23 +71,23 @@
       <!-- TOP (mobile): Image first -->
       <div class="order-1 md:order-2">
         <div
-          class="grain relative h-[260px] w-full overflow-hidden rounded-3xl border border-white/10 sm:h-[340px] md:h-[520px]">
+          class="grain relative h-[260px] w-full overflow-hidden rounded-3xl border border-[#7C8C72]/30 sm:h-[340px] md:h-[520px]">
           <img
             [src]="heroImage"
             [alt]="heroTitle"
             class="absolute inset-0 block h-full w-full object-cover" />
 
           <!-- Stronger overlay in mobile for readability -->
-          <div class="absolute inset-0 bg-gradient-to-tr from-[#0b0f14]/90 via-[#0b0f14]/45 to-transparent md:from-[#0b0f14]/85 md:via-[#0b0f14]/35"></div>
+          <div class="absolute inset-0 bg-gradient-to-tr from-[#1B1B1B]/88 via-[#1B1B1B]/40 to-transparent md:from-[#1B1B1B]/82 md:via-[#1B1B1B]/30"></div>
 
           <!-- Glow blobs (reduced on mobile to avoid weird overflow feeling) -->
-          <div class="absolute -right-24 -top-24 hidden h-72 w-72 rounded-full bg-blue-500/15 blur-3xl md:block"></div>
-          <div class="absolute -left-24 -bottom-24 hidden h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl md:block"></div>
+          <div class="absolute -right-24 -top-24 hidden h-72 w-72 rounded-full bg-[#7C8C72]/20 blur-3xl md:block"></div>
+          <div class="absolute -left-24 -bottom-24 hidden h-72 w-72 rounded-full bg-[#C8A96A]/16 blur-3xl md:block"></div>
 
           <div class="relative z-10 flex h-full flex-col justify-end p-5 sm:p-6 md:p-8">
-            <span class="text-xs text-zinc-300/90">PRODUCTO DESTACADO</span>
+            <span class="text-xs text-[#4E4E4E]/90">PRODUCTO DESTACADO</span>
             <h2 class="mt-2 text-2xl font-extrabold sm:text-3xl md:text-4xl">{{ heroTitle }}</h2>
-            <p class="mt-2 max-w-md text-sm text-zinc-200">
+            <p class="mt-2 max-w-md text-sm text-[#F2EBDD]">
               {{ heroHook }}
             </p>
 
@@ -103,18 +103,18 @@
 
       <!-- BOTTOM (mobile): Copy second -->
       <div class="order-2 md:order-1">
-        <p class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-zinc-300">
-          <span class="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_18px_rgba(59,130,246,.7)]"></span>
+        <p class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-xs text-[#4E4E4E]">
+          <span class="h-2 w-2 rounded-full bg-[#7C8C72] shadow-[0_0_18px_rgba(124,140,114,.55)]"></span>
           Bienestar avanzado · Uso diario · Resultados medibles
         </p>
 
         <h1 class="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:mt-6 md:text-6xl">
           Cuida tu cuerpo.<br />
-          <span class="text-blue-400">Potencia tu energía.</span><br />
+          <span class="text-[#7C8C72]">Potencia tu energía.</span><br />
           Compártelo.
         </h1>
 
-        <p class="mt-4 max-w-xl text-base text-zinc-400 sm:text-lg">
+        <p class="mt-4 max-w-xl text-base text-[#5A5A5A] sm:text-lg">
           Un sistema de bienestar con recompensas: mejoras tú y ayudas a otros a mejorar.
         </p>
 
@@ -122,7 +122,7 @@
           <a
             href="#"
             (click)="scrollTo('registro', $event)"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-8 py-4 font-semibold transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
           </a>
@@ -130,28 +130,28 @@
           <a
             href="#"
             (click)="scrollTo('recompensas', $event)"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-4 transition hover:bg-white/10 sm:w-auto">
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-6 py-4 transition hover:bg-[#EFE9DD]/90 sm:w-auto">
             <i class="fa-solid fa-gift" aria-hidden="true"></i>
             Ver recompensas
           </a>
         </div>
 
         <!-- Benefits: in mobile, 2x2 grid (no horizontal scroll). Desktop: 4 columns -->
-        <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-zinc-200 md:mt-10 md:grid-cols-4 md:gap-4">
-          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-            <i class="fa-solid fa-bolt text-blue-200" aria-hidden="true"></i>
+        <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-[#F2EBDD] md:mt-10 md:grid-cols-4 md:gap-4">
+          <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+            <i class="fa-solid fa-bolt text-[#7C8C72]" aria-hidden="true"></i>
             Energía diaria
           </div>
-          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+          <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
             <i class="fa-solid fa-heart-pulse text-rose-200" aria-hidden="true"></i>
             Recuperación
           </div>
-          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-            <i class="fa-solid fa-leaf text-emerald-200" aria-hidden="true"></i>
+          <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+            <i class="fa-solid fa-leaf text-[#7C8C72]" aria-hidden="true"></i>
             Salud integral
           </div>
-          <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-            <i class="fa-solid fa-trophy text-yellow-200" aria-hidden="true"></i>
+          <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+            <i class="fa-solid fa-trophy text-[#C8A96A]" aria-hidden="true"></i>
             Recompensas
           </div>
         </div>
@@ -162,52 +162,52 @@
 
 
   <!-- REGISTRO -->
-  <section id="registro" class="relative mt-2 bg-[#0b0f14] pt-8 md:pt-8">
-    <div class="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent via-[#0b0f14] to-[#0b0f14]"></div>
+  <section id="registro" class="relative mt-2 bg-[#F6F3EE] pt-8 md:pt-8">
+    <div class="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent via-[#EFE8DC] to-[#F6F3EE]"></div>
 
     <div class="relative mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-16">
       <div class="text-center">
         <h2 class="text-3xl font-extrabold md:text-4xl">Empieza hoy</h2>
-        <p class="mt-3 text-zinc-400">
+        <p class="mt-3 text-[#5A5A5A]">
           Regístrate en 30 segundos. Luego eliges el producto y desbloqueas recompensas.
         </p>
       </div>
 
       <div class="mt-8 grid gap-4 sm:mt-10 md:grid-cols-3">
-        <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <div class="flex items-center gap-2 text-sm font-semibold text-blue-200">
+        <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5">
+          <div class="flex items-center gap-2 text-sm font-semibold text-[#7C8C72]">
             <i class="fa-solid fa-coins" aria-hidden="true"></i>
             Recompensas por compra
           </div>
-          <div class="mt-2 text-sm text-zinc-300">Acumula puntos y beneficios automáticamente.</div>
+          <div class="mt-2 text-sm text-[#4E4E4E]">Acumula puntos y beneficios automáticamente.</div>
         </div>
 
-        <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <div class="flex items-center gap-2 text-sm font-semibold text-yellow-200">
+        <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5">
+          <div class="flex items-center gap-2 text-sm font-semibold text-[#C8A96A]">
             <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
             Recompensas por compartir
           </div>
-          <div class="mt-2 text-sm text-zinc-300">Recomienda lo que usas. Sin fricción.</div>
+          <div class="mt-2 text-sm text-[#4E4E4E]">Recomienda lo que usas. Sin fricción.</div>
         </div>
 
-        <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <div class="flex items-center gap-2 text-sm font-semibold text-purple-200">
+        <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5">
+          <div class="flex items-center gap-2 text-sm font-semibold text-[#8F8673]">
             <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
             Pagos claros
           </div>
-          <div class="mt-2 text-sm text-zinc-300">Transparencia en acumulación y cortes.</div>
+          <div class="mt-2 text-sm text-[#4E4E4E]">Transparencia en acumulación y cortes.</div>
         </div>
       </div>
 
       <form
-        class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-8"
+        class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5 sm:p-8"
         (ngSubmit)="createAccount()">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
         </div>
 
         <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-zinc-400">
+          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
             <i class="fa-solid fa-id-card" aria-hidden="true"></i>
             Nombre completo
           </span>
@@ -216,11 +216,11 @@
             name="name"
             [(ngModel)]="form.name"
             placeholder="Tu nombre"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-zinc-400">
+          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
             <i class="fa-solid fa-envelope" aria-hidden="true"></i>
             Correo electrónico
           </span>
@@ -229,11 +229,11 @@
             name="email"
             [(ngModel)]="form.email"
             placeholder="tucorreo@ejemplo.com"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-zinc-400">
+          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
             <i class="fa-solid fa-phone" aria-hidden="true"></i>
             Teléfono
           </span>
@@ -242,11 +242,11 @@
             name="phone"
             [(ngModel)]="form.phone"
             placeholder="+52 ..."
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-zinc-400">
+          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
             <i class="fa-solid fa-lock" aria-hidden="true"></i>
             Contraseña
           </span>
@@ -255,11 +255,11 @@
             name="password"
             [(ngModel)]="form.password"
             placeholder="Mínimo 8 caracteres"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-zinc-400">
+          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
             <i class="fa-solid fa-lock" aria-hidden="true"></i>
             Confirmar contraseña
           </span>
@@ -268,14 +268,14 @@
             name="confirmPassword"
             [(ngModel)]="form.confirmPassword"
             placeholder="Repite tu contraseña"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white placeholder:text-zinc-500 focus:border-blue-500/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <div class="pt-2">
           <button
             type="submit"
             [disabled]="isSubmitting"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-8 py-4 font-semibold transition-transform hover:scale-[1.02] active:scale-[0.99]">
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-8 py-4 font-semibold transition-transform hover:scale-[1.02] active:scale-[0.99]">
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
             {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
           </button>
@@ -283,12 +283,11 @@
           <p
             *ngIf="feedbackMessage"
             class="mt-3 text-center text-xs"
-            [class.text-rose-300]="feedbackType === 'error'"
-            [class.text-emerald-300]="feedbackType === 'success'">
+            [ngClass]="feedbackType === 'error' ? 'text-[#9A5A4A]' : 'text-[#7C8C72]'">
             {{ feedbackMessage }}
           </p>
 
-          <p class="mt-3 text-center text-xs text-zinc-500">
+          <p class="mt-3 text-center text-xs text-[#6B6B6B]">
             Al registrarte aceptas los términos del programa de recompensas.
           </p>
         </div>
@@ -302,43 +301,43 @@
       <div>
         <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">
           Bienestar que se comparte,<br />
-          <span class="text-yellow-300">se recompensa</span>
+          <span class="text-[#C8A96A]">se recompensa</span>
         </h2>
 
-        <p class="mt-4 max-w-xl text-zinc-400">
+        <p class="mt-4 max-w-xl text-[#5A5A5A]">
           Recomienda productos que usas y recibe beneficios reales. Sin inversiones. Sin promesas irreales.
         </p>
 
         <div class="mt-8 space-y-4">
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C8C72] font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               1
             </div>
-            <p class="text-zinc-200">
-              <i class="fa-solid fa-link text-blue-200" aria-hidden="true"></i>
+            <p class="text-[#F2EBDD]">
+              <i class="fa-solid fa-link text-[#7C8C72]" aria-hidden="true"></i>
               Te registras y obtienes tu enlace personal.
             </p>
           </div>
 
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C8C72] font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               2
             </div>
-            <p class="text-zinc-200">
-              <i class="fa-solid fa-user-group text-blue-200" aria-hidden="true"></i>
+            <p class="text-[#F2EBDD]">
+              <i class="fa-solid fa-user-group text-[#7C8C72]" aria-hidden="true"></i>
               Invitas a alguien a probar los productos.
             </p>
           </div>
 
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold shadow-[0_0_22px_rgba(59,130,246,0.45)]">
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C8C72] font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               3
             </div>
-            <p class="text-zinc-200">
-              <i class="fa-solid fa-gift text-blue-200" aria-hidden="true"></i>
+            <p class="text-[#F2EBDD]">
+              <i class="fa-solid fa-gift text-[#7C8C72]" aria-hidden="true"></i>
               Ambos reciben recompensas acumulables.
             </p>
           </div>
@@ -348,64 +347,64 @@
           <a
             href="#"
             (click)="scrollTo('registro', $event)"
-            class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-8 py-4 font-semibold text-black transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
+            class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-8 py-4 font-semibold text-[#1B1B1B] transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
           </a>
 
           <a
             [routerLink]="['/dashboard']"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-4 font-semibold text-white transition hover:bg-white/10 sm:w-auto">
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-8 py-4 font-semibold text-[#2A2A2A] transition hover:bg-[#EFE9DD]/90 sm:w-auto">
             <i class="fa-solid fa-store" aria-hidden="true"></i>
             Ir a tienda
           </a>
         </div>
       </div>
 
-      <div class="grain relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+      <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6 sm:p-8">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(245,185,66,0.18),transparent_55%)]">
         </div>
 
         <div class="relative">
           <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-medal text-yellow-200" aria-hidden="true"></i>
+            <i class="fa-solid fa-medal text-[#C8A96A]" aria-hidden="true"></i>
             Beneficios del programa
           </h3>
-          <p class="mt-2 text-sm text-zinc-400">Diseñado para ser simple y transparente.</p>
+          <p class="mt-2 text-sm text-[#5A5A5A]">Diseñado para ser simple y transparente.</p>
 
-          <ul class="mt-6 space-y-3 text-zinc-300">
+          <ul class="mt-6 space-y-3 text-[#4E4E4E]">
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-tag text-blue-200" aria-hidden="true"></i>
+              <i class="fa-solid fa-tag text-[#7C8C72]" aria-hidden="true"></i>
               Descuentos por compra
             </li>
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-hand-holding-dollar text-yellow-200" aria-hidden="true"></i>
+              <i class="fa-solid fa-hand-holding-dollar text-[#C8A96A]" aria-hidden="true"></i>
               Bonos por recomendación
             </li>
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-layer-group text-purple-200" aria-hidden="true"></i>
+              <i class="fa-solid fa-layer-group text-[#8F8673]" aria-hidden="true"></i>
               Estructura de niveles
             </li>
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-calendar-check text-emerald-200" aria-hidden="true"></i>
+              <i class="fa-solid fa-calendar-check text-[#7C8C72]" aria-hidden="true"></i>
               Corte mensual y reportes
             </li>
           </ul>
 
           <div
-            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-4 py-3 text-center font-bold text-yellow-200">
+            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-3 text-center font-bold text-[#C8A96A]">
             <i class="fa-solid fa-star" aria-hidden="true"></i>
             Bonos y puntos acumulables
           </div>
 
           <div class="mt-6 grid grid-cols-2 gap-3 text-sm">
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Consumo</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="text-xs text-[#5A5A5A]">Consumo</div>
               <div class="mt-1 text-2xl font-extrabold">$12,001</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-[#121826] p-4">
-              <div class="text-xs text-zinc-400">Descuento</div>
+            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="text-xs text-[#5A5A5A]">Descuento</div>
               <div class="mt-1 text-2xl font-extrabold">50%</div>
             </div>
           </div>
@@ -415,13 +414,13 @@
   </section>
 
   <!-- FOOTER -->
-  <footer class="border-t border-white/5 bg-[#0b0f14]">
+  <footer class="border-t border-[#7C8C72]/20 bg-[#F6F3EE]">
     <div
       class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center">
       <img src="logo.png" alt="Logo findingU" class="h-10 w-auto sm:h-12 md:h-14" />
 
       <div class="flex flex-col items-start gap-3 md:items-end">
-        <div class="text-xs text-zinc-500">© 2026 finding U</div>
+        <div class="text-xs text-[#6B6B6B]">© 2026 finding U</div>
       </div>
     </div>
   </footer>

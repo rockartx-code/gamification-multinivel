@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0b0f14;
-  --bg-secondary: #121826;
+  --bg-primary: #f6f3ee;
+  --bg-secondary: #efe8dc;
+  --bg-dark: #1b1b1b;
+  --text-primary: #2a2a2a;
+  --accent-olive: #7c8c72;
+  --accent-gold: #c8a96a;
+  --accent-amber: #d9a441;
 }
 
 * {
@@ -17,15 +22,23 @@ body {
 body {
   margin: 0;
   background: var(--bg-primary);
-  color: #fff;
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--text-primary);
+  font-family: "Inter", "SF Pro Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Libre Baskerville", "Playfair Display", Georgia, serif;
+  letter-spacing: -0.015em;
 }
 
 .bg-ambient {
   background:
-    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.18), transparent 45%),
-    radial-gradient(circle at 80% 30%, rgba(245, 185, 66, 0.15), transparent 45%),
-    radial-gradient(circle at 50% 85%, rgba(139, 92, 246, 0.12), transparent 55%),
+    radial-gradient(circle at 20% 18%, rgba(124, 140, 114, 0.16), transparent 45%),
+    radial-gradient(circle at 80% 28%, rgba(200, 169, 106, 0.14), transparent 45%),
+    radial-gradient(circle at 52% 85%, rgba(217, 164, 65, 0.12), transparent 55%),
     linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary));
 }
 
@@ -33,19 +46,19 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
-  mix-blend-mode: overlay;
-  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+  opacity: 0.18;
   pointer-events: none;
   border-radius: inherit;
 }
 
 .glow-blue {
-  box-shadow: 0 0 40px rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 36px rgba(124, 140, 114, 0.35);
 }
 
 .glow-gold {
-  box-shadow: 0 0 40px rgba(245, 185, 66, 0.45);
+  box-shadow: 0 0 36px rgba(200, 169, 106, 0.35);
 }
 
 .hero-image {
@@ -54,15 +67,20 @@ body {
 }
 
 .progress-rail {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(42, 42, 42, 0.12);
 }
 
 .progress-base {
-  background: linear-gradient(90deg, rgba(59, 130, 246, 0.95), rgba(99, 102, 241, 0.95));
+  background: linear-gradient(90deg, rgba(124, 140, 114, 0.96), rgba(160, 177, 150, 0.96));
 }
 
 .progress-cart {
-  background: linear-gradient(90deg, rgba(245, 185, 66, 0.95), rgba(249, 115, 22, 0.95));
+  background: linear-gradient(90deg, rgba(200, 169, 106, 0.96), rgba(217, 164, 65, 0.96));
+}
+
+:focus-visible {
+  outline: 2px solid rgba(124, 140, 114, 0.9);
+  outline-offset: 3px;
 }
 
 @media (min-width: 768px) {
@@ -105,9 +123,4 @@ body {
       rgba(0, 0, 0, 0) 100%
     );
   }
-}
-
-:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.85);
-  outline-offset: 3px;
 }
