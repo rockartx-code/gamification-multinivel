@@ -1,9 +1,5 @@
-<div
-  *ngIf="isOpen"
-  class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
-  (click)="onBackdropClick()"
->
-  <div [class]="'modal-card w-full max-h-[90vh] overflow-hidden ' + maxWidthClass + ' ' + contentClass" (click)="$event.stopPropagation()">
+<div *ngIf="isOpen" [class]="containerClass" (click)="onBackdropClick()">
+  <div [class]="panelClass + ' ' + maxWidthClass + ' ' + contentClass" (click)="$event.stopPropagation()">
     <ng-content></ng-content>
   </div>
 </div>

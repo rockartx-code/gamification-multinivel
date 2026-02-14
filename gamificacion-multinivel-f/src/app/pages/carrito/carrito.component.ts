@@ -16,11 +16,12 @@ import { GoalControlService } from '../../services/goal-control.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
 import { UiProductCardComponent } from '../../components/ui-product-card/ui-product-card.component';
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
+import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })

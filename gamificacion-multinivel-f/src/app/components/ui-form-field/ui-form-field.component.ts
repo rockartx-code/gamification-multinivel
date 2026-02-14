@@ -30,6 +30,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
   @Input() step: number | null = null;
   @Input() accept = '';
   @Input() iconClass = '';
+  @Input() leadingIconClass = '';
   @Input() helpText = '';
   @Input() errorText = '';
   @Input() options: FieldOption[] = [];
@@ -66,5 +67,21 @@ export class UiFormFieldComponent implements ControlValueAccessor {
 
   markTouched(): void {
     this.onTouched();
+  }
+
+  get hasError(): boolean {
+    return Boolean(this.errorText);
+  }
+
+  get resolvedLeadingIconClass(): string {
+    return this.leadingIconClass || (!this.label ? this.iconClass : '');
+  }
+
+  get inputStateClass(): string {
+    const baseStateClass = this.hasError
+      ? 'border-danger/70 focus:border-danger focus:ring-danger/20'
+      : 'border-[#7C8C72]/30 focus:border-[#7C8C72]/70 focus:ring-[#7C8C72]/20';
+    const iconPadding = this.resolvedLeadingIconClass ? 'pl-10' : '';
+    return `${baseStateClass} ${iconPadding}`.trim();
   }
 }

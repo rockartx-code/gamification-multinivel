@@ -680,10 +680,7 @@
       </div>
   </ui-modal>
 
-  <div *ngIf="isNewOrderModalOpen" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
-    (click)="closeModals()">
-    <div class="modal-card w-full max-w-lg p-6"
-      (click)="$event.stopPropagation()">
+  <ui-modal [isOpen]="isNewOrderModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeModals()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Nuevo pedido</div>
@@ -701,6 +698,7 @@
           wrapperClass="block"
           kind="select"
           label="Cliente"
+          iconClass="fa-solid fa-user"
           placeholder="Selecciona cliente"
           [options]="customerOptions"
           [ngModel]="newOrderCustomerId"
@@ -737,6 +735,7 @@
           wrapperClass="block"
           kind="select"
           label="Estado inicial"
+          iconClass="fa-solid fa-flag-checkered"
           [options]="orderStatusOptions"
           [ngModel]="newOrderStatus"
           (ngModelChange)="updateNewOrderStatus($event)"></ui-form-field>
@@ -764,14 +763,10 @@
         </ui-button>
         </div>
       </div>
-    </div>
-  </div>
+  </ui-modal>
 
   
-  <div *ngIf="isShippingModalOpen" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
-    (click)="closeShippingModal()">
-    <div class="modal-card w-full max-w-lg p-6"
-      (click)="$event.stopPropagation()">
+  <ui-modal [isOpen]="isShippingModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeShippingModal()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Enviar pedido</div>
@@ -808,7 +803,9 @@
         <div *ngIf="shippingType === 'carrier'" class="grid gap-3">
           <ui-form-field
             label="N?mero de gu?a"
+            leadingIconClass="fa-solid fa-barcode"
             placeholder="Gu?a de paqueter?a"
+            [errorText]="shippingType === 'carrier' ? shippingError : ''"
             [(ngModel)]="shippingTrackingNumber"></ui-form-field>
         </div>
 
@@ -816,18 +813,19 @@
           <ui-form-field
             wrapperClass="block sm:col-span-2"
             label="Lugar de entrega"
+            leadingIconClass="fa-solid fa-location-dot"
             placeholder="Sucursal, domicilio o punto de entrega"
+            [errorText]="shippingType === 'personal' ? shippingError : ''"
             [(ngModel)]="shippingDeliveryPlace"></ui-form-field>
           <ui-form-field
             type="date"
             label="Fecha de entrega"
+            iconClass="fa-solid fa-calendar-days"
+            [errorText]="shippingType === 'personal' ? shippingError : ''"
             [(ngModel)]="shippingDeliveryDate"></ui-form-field>
         </div>
       </div>
 
-      <div *ngIf="shippingError" class="mt-3 text-xs text-[#9A5A4A]">
-        {{ shippingError }}
-      </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
@@ -842,13 +840,9 @@
           Marcar como enviado
         </ui-button>
       </div>
-    </div>
-  </div>
+  </ui-modal>
 
-  <div *ngIf="isReceiptModalOpen" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
-    (click)="closeReceiptModal()">
-    <div class="modal-card w-full max-w-lg p-6"
-      (click)="$event.stopPropagation()">
+  <ui-modal [isOpen]="isReceiptModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeReceiptModal()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Cargar comprobante</div>
@@ -868,10 +862,11 @@
           wrapperClass="block"
           type="file"
           label="Comprobante (PDF o imagen)"
+          iconClass="fa-solid fa-file-arrow-up"
           accept=".pdf,image/*"
+          [errorText]="receiptError"
           inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
           (change)="updateReceiptFile($event)"></ui-form-field>
-        <div *ngIf="receiptError" class="text-xs text-[#9A5A4A]">{{ receiptError }}</div>
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -888,13 +883,9 @@
           {{ isUploadingReceipt ? 'Cargando...' : 'Subir comprobante' }}
         </ui-button>
       </div>
-    </div>
-  </div>
+  </ui-modal>
 
-<div *ngIf="isAddStructureModalOpen" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
-    (click)="closeModals()">
-    <div class="modal-card w-full max-w-lg p-6"
-      (click)="$event.stopPropagation()">
+<ui-modal [isOpen]="isAddStructureModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeModals()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Agregar a estructura</div>
@@ -911,12 +902,14 @@
         <ui-form-field
           wrapperClass="block"
           label="Nombre"
+          iconClass="fa-solid fa-user"
           placeholder="Nombre del cliente"
           [ngModel]="structureForm.name"
           (ngModelChange)="updateStructureField('name', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block"
           label="Teléfono"
+          iconClass="fa-solid fa-phone"
           placeholder="+54 9 11 0000 0000"
           [ngModel]="structureForm.phone"
           (ngModelChange)="updateStructureField('phone', $event)"></ui-form-field>
@@ -924,18 +917,21 @@
           wrapperClass="block sm:col-span-2"
           type="email"
           label="Email"
+          iconClass="fa-solid fa-envelope"
           placeholder="correo@dominio.com"
           [ngModel]="structureForm.email"
           (ngModelChange)="updateStructureField('email', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block sm:col-span-2"
           label="Dirección (opcional)"
+          iconClass="fa-solid fa-map-location-dot"
           placeholder="Calle y número"
           [ngModel]="structureForm.address"
           (ngModelChange)="updateStructureField('address', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block sm:col-span-2"
           label="Ciudad / Provincia (opcional)"
+          iconClass="fa-solid fa-city"
           placeholder="Localidad, provincia"
           [ngModel]="structureForm.city"
           (ngModelChange)="updateStructureField('city', $event)"></ui-form-field>
@@ -979,8 +975,7 @@
           Agregar
         </ui-button>
       </div>
-    </div>
-  </div>
+  </ui-modal>
 
   <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-[#7C8C72]/30 bg-[#F6F3EE]/92 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">

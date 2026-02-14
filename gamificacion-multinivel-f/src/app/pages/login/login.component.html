@@ -25,9 +25,10 @@
           <ui-form-field
             name="username"
             label="Usuario"
-            iconClass="fa-solid fa-user"
+            leadingIconClass="fa-solid fa-user"
             placeholder="Tu usuario"
             [(ngModel)]="username"
+            [errorText]="usernameError"
             inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
           ></ui-form-field>
 
@@ -35,9 +36,10 @@
             name="password"
             type="password"
             label="Password"
-            iconClass="fa-solid fa-key"
+            leadingIconClass="fa-solid fa-key"
             placeholder="Tu contraseña"
             [(ngModel)]="password"
+            [errorText]="passwordError"
             inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
           ></ui-form-field>
 
