@@ -1,12 +1,12 @@
 # Validación del catálogo de componentes y cobertura en HTML
 
-Fecha de validación: 2026-02-14 (fase 9 - cierre de remanentes en landing.component)
+Fecha de validación: 2026-02-14 (fase 10 - cierre de remanentes en user-dashboard)
 
 ## Alcance
 
 - Revisado `gamificacion-multinivel-f/src/app/components/**`.
 - Revisados templates de `gamificacion-multinivel-f/src/app/pages/**/*.html`.
-- Objetivo: validar adopción del catálogo `ui-*`, detectar remanentes y avanzar la migración hacia `componentes-ui` con foco en `landing.component.html`.
+- Objetivo: validar adopción del catálogo `ui-*`, detectar remanentes y completar la migración hacia `componentes-ui` con foco en `user-dashboard.component.html`.
 
 ## Catálogo actual de componentes
 
@@ -25,7 +25,7 @@ Fecha de validación: 2026-02-14 (fase 9 - cierre de remanentes en landing.compo
 | landing.component.html | 11 | 5 | 0 | 0 | 0 |
 | login.component.html | 2 | 2 | 0 | 0 | 0 |
 | order-status.component.html | 2 | 0 | 0 | 0 | 0 |
-| user-dashboard.component.html | 74 | 12 | 4 | 2 | 3 |
+| user-dashboard.component.html | 76 | 12 | 4 | 2 | 3 |
 
 ## Inventario de controles nativos remanentes por pantalla
 
@@ -36,30 +36,28 @@ Fecha de validación: 2026-02-14 (fase 9 - cierre de remanentes en landing.compo
 | landing.component.html | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | login.component.html | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | order-status.component.html | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| user-dashboard.component.html | 0 | 0 | 0 | 0 | 3 | 2 | 2 |
+| user-dashboard.component.html | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ## Resultado de validación
 
-- El catálogo `ui-*` se consolida en `admin.component.html`, `carrito.component.html` y `landing.component.html` con eliminación total de tags HTML nativos de control/formulario/listado.
-- En esta fase se completó la migración de los pendientes de `landing.component.html`:
-  - Anchors (`a`) de navegación/CTA migrados a `ui-button` con `routerLink` y acciones `(pressed)` para scroll.
-  - Formulario nativo de registro (`form`) migrado a contenedor `div` con submit explícito por `ui-button` (`(pressed)="createAccount()"`).
+- Se cerró la migración de remanentes en `user-dashboard.component.html` con eliminación total de tags nativos de control/listado/formulario.
+- Migraciones aplicadas en dashboard:
+  - Anchors (`a`) de acceso a login migrados a `ui-button` con `routerLink`.
+  - Tablas desktop (`table`) migradas a layout componente con `ui-table` + contenedores `div` responsivos.
+  - Formularios de modales (`form`) migrados a contenedores `div` con acciones explícitas vía `(pressed)` en `ui-button`.
 - Mejora medida en inventario nativo:
-  - `landing.component.html`: `a` **10→0**, `form` **1→0**.
+  - `user-dashboard.component.html`: `a` **2→0**, `table` **3→0**, `form` **2→0**.
 
 ## Remanentes pendientes de componentizar
 
-- `user-dashboard.component.html`:
-  - `table` nativas en vistas desktop.
-  - `form` de modales.
-  - `a` de navegación/CTA para invitados.
+- No se detectan remanentes de `button`, `input`, `select`, `textarea`, `table`, `form` o `a` en las páginas revisadas.
 
 ## Próximos pasos recomendados
 
-1. Completar la migración de `table`/`form`/`a` en User Dashboard para cerrar cobertura total en páginas principales.
-2. Evaluar reutilización explícita de `ui-table` en User Dashboard para uniformar estructura de listados.
-3. Ejecutar fase de hardening visual y accesibilidad tras cierre de remanentes en dashboard.
+1. Ejecutar hardening visual responsive del dashboard (especialmente grillas tipo tabla en desktop).
+2. Revisar estandarización de eventos en `ui-button` para unificar `pressed` en todos los usos existentes.
+3. Continuar con auditoría de accesibilidad (focus states, labels y semántica ARIA).
 
 ## Conclusión
 
-Aún **quedan controles por componentizar** en User Dashboard, pero en esta fase queda **cerrada la migración de `landing.component.html`** con cobertura total por componentes UI y sin tags nativos remanentes de formulario/navegación.
+Queda **cerrada esta fase** con cobertura total por componentes UI en las páginas principales (`admin`, `carrito`, `landing`, `login`, `order-status`, `user-dashboard`) y **sin tags nativos remanentes de controles/formularios/listados**.

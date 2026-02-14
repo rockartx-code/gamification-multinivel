@@ -52,12 +52,12 @@
                 <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                 Comisiones
               </ui-button>
-              <a *ngIf="isGuest"
+              <ui-button *ngIf="isGuest"
                 class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                [routerLink]="['/login']" (click)="closeMobileNav()">
+                [routerLink]="['/login']" (pressed)="closeMobileNav()">
                 <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
                 Iniciar sesion
-              </a>
+              </ui-button>
             </div>
           </div>
         </div>
@@ -125,12 +125,12 @@
               Tienda
             </ui-button>
 
-            <a *ngIf="isGuest"
+            <ui-button *ngIf="isGuest"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
               [routerLink]="['/login']">
               <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
               Iniciar sesion
-            </a>
+            </ui-button>
 
             <ui-button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
@@ -759,28 +759,23 @@
                 </div>
               </div>
 
-              <div class="hidden md:block">
-                <table class="table-soft w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th class="px-4 py-3 text-left font-semibold">Usuario</th>
-                      <th class="px-4 py-3 text-left font-semibold">Nivel</th>
-                      <th class="px-4 py-3 text-left font-semibold">Consumo mes</th>
-                      <th class="px-4 py-3 text-left font-semibold">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-white/5">
-                    <tr *ngFor="let member of networkMembers">
-                      <td class="px-4 py-3">{{ member.name }}</td>
-                      <td class="muted px-4 py-3">{{ member.level }}</td>
-                      <td class="px-4 py-3">{{ formatMoney(member.spend) }}</td>
-                      <td class="px-4 py-3">
-                        <ui-badge [tone]="networkStatusTone(member.status)">{{
-                          member.status }}</ui-badge>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="table-soft hidden md:block">
+                <div class="grid grid-cols-4 border-b border-white/10 text-sm font-semibold">
+                  <div class="px-4 py-3">Usuario</div>
+                  <div class="px-4 py-3">Nivel</div>
+                  <div class="px-4 py-3">Consumo mes</div>
+                  <div class="px-4 py-3">Estado</div>
+                </div>
+                <div class="divide-y divide-white/5">
+                  <div *ngFor="let member of networkMembers" class="grid grid-cols-4 text-sm">
+                    <div class="px-4 py-3">{{ member.name }}</div>
+                    <div class="muted px-4 py-3">{{ member.level }}</div>
+                    <div class="px-4 py-3">{{ formatMoney(member.spend) }}</div>
+                    <div class="px-4 py-3">
+                      <ui-badge [tone]="networkStatusTone(member.status)">{{ member.status }}</ui-badge>
+                    </div>
+                  </div>
+                </div>
               </div>
             </ui-table>
 
@@ -880,33 +875,31 @@
               </div>
             </div>
 
-            <table class="table-soft hidden w-full text-sm md:table">
-              <thead>
-                <tr>
-                  <th class="px-4 py-3 text-left font-semibold">Orden</th>
-                  <th class="px-4 py-3 text-left font-semibold">Nivel</th>
-                  <th class="px-4 py-3 text-left font-semibold">Monto</th>
-                  <th class="px-4 py-3 text-left font-semibold">Estado</th>
-                  <th class="px-4 py-3 text-left font-semibold">Fecha</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                <tr *ngFor="let row of (commissions.ledger || [])">
-                  <td class="px-4 py-3">{{ row.orderId || '-' }}</td>
-                  <td class="muted px-4 py-3">L{{ row.level || '-' }}</td>
-                  <td class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</td>
-                  <td class="px-4 py-3">
+            <div class="table-soft hidden md:block">
+              <div class="grid grid-cols-5 border-b border-white/10 text-sm font-semibold">
+                <div class="px-4 py-3">Orden</div>
+                <div class="px-4 py-3">Nivel</div>
+                <div class="px-4 py-3">Monto</div>
+                <div class="px-4 py-3">Estado</div>
+                <div class="px-4 py-3">Fecha</div>
+              </div>
+              <div class="divide-y divide-white/5">
+                <div *ngFor="let row of (commissions.ledger || [])" class="grid grid-cols-5 text-sm">
+                  <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
+                  <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
+                  <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
+                  <div class="px-4 py-3">
                     <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
                       {{ row.status || '-' }}
                     </span>
-                  </td>
-                  <td class="px-4 py-3 text-[#5A5A5A]">{{ formatLedgerDate(row.createdAt) }}</td>
-                </tr>
-                <tr *ngIf="(commissions.ledger?.length || 0) === 0">
-                  <td colspan="5" class="px-4 py-4 text-center text-xs text-[#6B6B6B]">Sin movimientos este mes.</td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <div class="px-4 py-3 text-[#5A5A5A]">{{ formatLedgerDate(row.createdAt) }}</div>
+                </div>
+                <div *ngIf="(commissions.ledger?.length || 0) === 0" class="px-4 py-4 text-center text-xs text-[#6B6B6B]">
+                  Sin movimientos este mes.
+                </div>
+              </div>
+            </div>
           </ui-table>
 
           <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4 text-sm text-zinc-300">
@@ -1010,38 +1003,33 @@
             </div>
           </div>
 
-          <table class="table-soft hidden w-full text-sm md:table">
-            <thead>
-              <tr>
-                <th class="px-4 py-3 text-left font-semibold">Orden</th>
-                <th class="px-4 py-3 text-left font-semibold">Fecha</th>
-                <th class="px-4 py-3 text-left font-semibold">Total</th>
-                <th class="px-4 py-3 text-left font-semibold">Estado</th>
-                <th class="px-4 py-3 text-right font-semibold">Ver</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-              <tr *ngFor="let order of orders">
-                <td class="px-4 py-3">{{ order.id }}</td>
-                <td class="muted px-4 py-3">{{ order.createdAt || '-' }}</td>
-                <td class="px-4 py-3">{{ formatMoney(order.total) }}</td>
-                <td class="px-4 py-3">
+          <div class="table-soft hidden md:block">
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] border-b border-white/10 text-sm font-semibold">
+              <div class="px-4 py-3">Orden</div>
+              <div class="px-4 py-3">Fecha</div>
+              <div class="px-4 py-3">Total</div>
+              <div class="px-4 py-3">Estado</div>
+              <div class="px-4 py-3 text-right">Ver</div>
+            </div>
+            <div class="divide-y divide-white/5">
+              <div *ngFor="let order of orders" class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] items-center text-sm">
+                <div class="px-4 py-3">{{ order.id }}</div>
+                <div class="muted px-4 py-3">{{ order.createdAt || '-' }}</div>
+                <div class="px-4 py-3">{{ formatMoney(order.total) }}</div>
+                <div class="px-4 py-3">
                   <ui-badge [tone]="orderStatusTone(order.status)">
                     <i class="fa-solid" [ngClass]="orderStatusIcon(order.status)" aria-hidden="true"></i>
                     {{ order.status }}
                   </ui-badge>
-                </td>
-                <td class="px-4 py-3 text-right">
-                  <ui-button
-                    variant="ghost"
-                    size="sm"
-                    [routerLink]="['/orden', order.id]">
+                </div>
+                <div class="px-4 py-3 text-right">
+                  <ui-button variant="ghost" size="sm" [routerLink]="['/orden', order.id]">
                     Ver orden
                   </ui-button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </ui-table>
       </div>
     </section>
@@ -1356,7 +1344,7 @@
         </ui-button>
       </div>
 
-      <form class="mt-6 grid gap-3" (ngSubmit)="submitCommissionRequest()">
+      <div class="mt-6 grid gap-3">
         <ui-form-field
           kind="input"
           type="text"
@@ -1378,16 +1366,17 @@
             Cancelar
           </ui-button>
           <ui-button
-            type="submit"
+            type="button"
             [disabled]="isCommissionSubmitting"
             variant="primary"
             size="md"
             iconClass="fa-solid fa-paper-plane"
+            (pressed)="submitCommissionRequest()"
             extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             {{ isCommissionSubmitting ? 'Enviando...' : 'Solicitar pago' }}
           </ui-button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -1459,7 +1448,7 @@
         </ui-button>
       </div>
 
-      <form class="mt-6 grid gap-3" (ngSubmit)="submitGuestRegister()">
+      <div class="mt-6 grid gap-3">
         <ui-form-field name="guestName" [(ngModel)]="guestRegisterForm.name" label="Nombre completo" placeholder="Tu nombre"
           wrapperClass="block"
           inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
@@ -1491,11 +1480,12 @@
             Ahora no
           </ui-button>
           <ui-button
-            type="submit"
+            type="button"
             [disabled]="isGuestRegisterSubmitting"
             variant="primary"
             size="md"
             iconClass="fa-solid fa-user-check"
+            (pressed)="submitGuestRegister()"
             extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Regístrate' }}
           </ui-button>
@@ -1505,7 +1495,7 @@
           [class.text-accent]="guestRegisterFeedbackType === 'success'">
           {{ guestRegisterFeedback }}
         </p>
-      </form>
+      </div>
     </div>
   </div>
 
