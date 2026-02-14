@@ -1,171 +1,72 @@
 <section class="antialiased">
-  <header class="sticky top-0 z-50 border-b border-[#7C8C72]/20 bg-[#F6F3EE]/90 backdrop-blur">
-    <div class="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4">
-      <!-- Antes: flex-col en mobile. Ahora: row SIEMPRE -->
-      <div class="flex items-center justify-between gap-3">
+  <ui-header variant="dashboard" containerClass="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4">
+    <div class="flex w-full items-center justify-between gap-3">
+      <div header-left class="relative lg:hidden shrink-0">
+        <ui-button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-sm transition hover:bg-[#EFE9DD]/90"
+          (pressed)="toggleMobileNav()">
+          <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
+        </ui-button>
 
-        <!-- LEFT: Logo + acciones mobile -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="flex items-center gap-3 shrink-0">
-            <img src="logo.png" alt="Logo findingU" class="hidden h-10 w-auto md:block" />
-            <img src="minlogo.png" alt="Logo" class="h-7 w-7 md:hidden" />
-          </div>
-
-          <!-- Mobile nav (hamburger) -->
-          <div class="relative lg:hidden shrink-0">
-            <ui-button type="button"
-              class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-sm transition hover:bg-[#EFE9DD]/90"
-              (pressed)="toggleMobileNav()">
-              <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
-            </ui-button>
-
-            <div
-              class="absolute left-0 mt-2 w-56 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-2 shadow-xl backdrop-blur"
-              [class.hidden]="!isMobileNavOpen">
-              <ui-button type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (pressed)="scrollToSection('merchant'); closeMobileNav()">
-                <i class="fa-solid fa-store" aria-hidden="true"></i>
-                Tienda
-              </ui-button>
-              <ui-button *ngIf="!isGuest" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (pressed)="scrollToSection('red'); closeMobileNav()">
-                <i class="fa-solid fa-users" aria-hidden="true"></i>
-                Red
-              </ui-button>
-              <ui-button *ngIf="!isGuest" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (pressed)="scrollToSection('links'); closeMobileNav()">
-                <i class="fa-solid fa-link" aria-hidden="true"></i>
-                Links
-              </ui-button>
-              <ui-button *ngIf="!isGuest" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (pressed)="scrollToSection('ordenes'); closeMobileNav()">
-                <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-                Ordenes
-              </ui-button>
-              <ui-button *ngIf="!isGuest && commissionSummary" type="button"
-                class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (pressed)="scrollToSection('comisiones'); closeMobileNav()">
-                <i class="fa-solid fa-wallet" aria-hidden="true"></i>
-                Comisiones
-              </ui-button>
-              <ui-button *ngIf="isGuest"
-                class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                [routerLink]="['/login']" (pressed)="closeMobileNav()">
-                <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-                Iniciar sesion
-              </ui-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT: User control + Desktop nav -->
-        <!-- Antes: flex-col en mobile. Ahora: row en mobile -->
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-
-          <!-- USER CONTROL -->
-          <div *ngIf="currentUser" class="relative shrink-0">
-            <ui-button type="button"
-              class="user-pill inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90"
-              (pressed)="toggleUserDetails()" aria-label="Usuario">
-
-              <span class="relative grid h-9 w-9 place-items-center rounded-full bg-[#FDFBF7]/80"
-                [ngClass]="discountRingClass()">
-                <i class="fa-solid fa-user text-[13px]" [ngClass]="levelIconClass()" aria-hidden="true"></i>
-
-                <span *ngIf="isClient"
-                  class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30 bg-[#F6F3EE]/90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur"
-                  [ngClass]="discountBadgeMiniClass()">
-                  <i class="fa-solid fa-tag text-[9px]" aria-hidden="true"></i>
-                  <span>{{ discountPercent }}%</span>
-                </span>
-              </span>
-
-              <!-- Nombre solo desktop -->
-              <span class="name hidden max-w-[120px] truncate text-sm font-semibold lg:block">
-                {{ currentUser.name }}
-              </span>
-            </ui-button>
-
-            <div *ngIf="isUserDetailsOpen"
-              class="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-4 shadow-xl backdrop-blur z-50">
-              <div class="flex items-center justify-between text-sm">
-                <span class="meta text-xs">Usuario</span>
-                <span class="font-semibold text-main">{{ currentUser.name }}</span>
-              </div>
-
-              <div class="meta mt-2 flex items-center justify-between text-xs">
-                <span>Rol</span>
-                <span class="text-main">{{ currentUser.role }}</span>
-              </div>
-
-              <div *ngIf="isClient" class="meta mt-2 flex items-center justify-between text-xs">
-                <span>Descuento</span>
-                <span class="text-main">{{ discountPercent }}%</span>
-              </div>
-
-              <ui-button *ngIf="!isGuest" type="button"
-                class="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                (pressed)="logout()">
-                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                Cerrar sesion
-              </ui-button>
-            </div>
-          </div>
-
-          <!-- Desktop nav -->
-          <nav class="hidden items-center gap-2 lg:flex">
-            <ui-button type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (pressed)="scrollToSection('merchant')">
-              <i class="fa-solid fa-store" aria-hidden="true"></i>
-              Tienda
-            </ui-button>
-
-            <ui-button *ngIf="isGuest"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              [routerLink]="['/login']">
-              <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-              Iniciar sesion
-            </ui-button>
-
-            <ui-button *ngIf="!isGuest" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (pressed)="scrollToSection('red')">
-              <i class="fa-solid fa-users" aria-hidden="true"></i>
-              Red
-            </ui-button>
-
-            <ui-button *ngIf="!isGuest" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (pressed)="scrollToSection('links')">
-              <i class="fa-solid fa-link" aria-hidden="true"></i>
-              Links
-            </ui-button>
-            <ui-button *ngIf="!isGuest" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (pressed)="scrollToSection('ordenes')">
-              <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-              Ordenes
-            </ui-button>
-
-            <ui-button *ngIf="!isGuest && commissionSummary" type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (pressed)="scrollToSection('comisiones')">
-              <i class="fa-solid fa-wallet" aria-hidden="true"></i>
-              Comisiones
-            </ui-button>
-
-
-          </nav>
-
+        <div
+          class="absolute left-0 mt-2 w-56 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-2 shadow-xl backdrop-blur"
+          [class.hidden]="!isMobileNavOpen">
+          <ui-sidebar-nav [links]="dashboardNavLinks" [compact]="true" (linkSelect)="handleDashboardNavSelect($event)"></ui-sidebar-nav>
+          <ui-button
+            *ngIf="isGuest"
+            class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
+            [routerLink]="['/login']"
+            (pressed)="closeMobileNav()">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            Iniciar sesion
+          </ui-button>
         </div>
       </div>
+
+      <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div *ngIf="currentUser" class="relative shrink-0">
+          <ui-button type="button" class="user-pill inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90" (pressed)="toggleUserDetails()" aria-label="Usuario">
+            <span class="relative grid h-9 w-9 place-items-center rounded-full bg-[#FDFBF7]/80" [ngClass]="discountRingClass()">
+              <i class="fa-solid fa-user text-[13px]" [ngClass]="levelIconClass()" aria-hidden="true"></i>
+              <span *ngIf="isClient" class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30 bg-[#F6F3EE]/90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur" [ngClass]="discountBadgeMiniClass()">
+                <i class="fa-solid fa-tag text-[9px]" aria-hidden="true"></i>
+                <span>{{ discountPercent }}%</span>
+              </span>
+            </span>
+            <span class="name hidden max-w-[120px] truncate text-sm font-semibold lg:block">{{ currentUser.name }}</span>
+          </ui-button>
+
+          <div *ngIf="isUserDetailsOpen" class="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-4 shadow-xl backdrop-blur">
+            <div class="flex items-center justify-between text-sm">
+              <span class="meta text-xs">Usuario</span>
+              <span class="font-semibold text-main">{{ currentUser.name }}</span>
+            </div>
+            <div class="meta mt-2 flex items-center justify-between text-xs">
+              <span>Rol</span>
+              <span class="text-main">{{ currentUser.role }}</span>
+            </div>
+            <div *ngIf="isClient" class="meta mt-2 flex items-center justify-between text-xs">
+              <span>Descuento</span>
+              <span class="text-main">{{ discountPercent }}%</span>
+            </div>
+            <ui-button *ngIf="!isGuest" type="button" class="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90" (pressed)="logout()">
+              <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+              Cerrar sesion
+            </ui-button>
+          </div>
+        </div>
+
+        <nav class="hidden items-center gap-2 lg:flex">
+          <ui-sidebar-nav [links]="dashboardNavLinks" (linkSelect)="scrollToSection($event)"></ui-sidebar-nav>
+          <ui-button *ngIf="isGuest" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90" [routerLink]="['/login']">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            Iniciar sesion
+          </ui-button>
+        </nav>
+      </div>
     </div>
-  </header>
+  </ui-header>
 
 
   <main class="mx-auto max-w-6xl space-y-16 px-6 py-10">
@@ -216,19 +117,16 @@
               <p class="mt-2 text-sm text-muted">{{ activeGoal.subtitle }}</p>
 
               <!-- ojo: en móvil, evita “líneas eternas” -->
-              <div class="mt-3 text-sm text-muted break-words">
-                Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo
-              </div>
-
-              <div class="relative mt-4 h-3 overflow-hidden rounded-full bg-white/10">
-                <div class="relative h-full overflow-hidden bg-gradient-to-r from-yellow-300 to-orange-400 goal-fill"
-                  [class.goal-filling]="isGoalFilling" [style.width.%]="visualActiveWidth">
-                  <span class="goal-progress-edge" aria-hidden="true"></span>
-                  <span class="goal-sparkles" aria-hidden="true"></span>
+              <ui-goal-progress
+                title="Objetivo principal del mes"
+                [subtitle]="activeGoal.title"
+                [currentValue]="activeGoal.base || 0"
+                [cartValue]="activeGoal.cart || 0"
+                [targetValue]="activeGoal.target || 0">
+                <div class="mt-3 text-sm text-muted break-words">
+                  Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo
                 </div>
-                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] opacity-90"
-                  [style.left.%]="visualActiveWidth" [style.width.%]="visualCartWidth"></div>
-              </div>
+              </ui-goal-progress>
             </div>
 
             <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
@@ -412,76 +310,16 @@
         </div>
 
         <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <article *ngFor="let product of buyAgainProducts"
-            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 surface-soft p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
-            <div
-              class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
-            </div>
-
-            <!-- Top row -->
-            <div class="relative flex gap-3 sm:gap-4">
-              <div
-                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
-                <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
-              </div>
-
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="text-xs text-[#5A5A5A]">Producto</div>
-                    <!-- en móvil mejor permitir 2 líneas en vez de truncar agresivo -->
-                    <h4 class="mt-1 font-extrabold tracking-tight leading-snug line-clamp-2 sm:truncate">
-                      {{ product.name }}
-                    </h4>
-                    <div class="mt-1 text-xs text-[#6B6B6B] line-clamp-1 sm:truncate">
-                      {{ product.badge }}
-                    </div>
-                  </div>
-
-                  <div class="text-right shrink-0">
-                    <div *ngIf="hasDiscount" class="text-[11px] text-[#6B6B6B] line-through">
-                      {{ formatMoney(product.price) }}
-                    </div>
-                    <div class="whitespace-nowrap text-sm font-extrabold">
-                      {{ formatMoney(discountedPrice(product.price)) }}
-                    </div>
-                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-accent' : 'text-[#6B6B6B]'">
-                      {{ discountAppliedLabel() }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Bottom controls: stack on mobile -->
-            <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 sm:justify-start">
-                <span class="text-xs text-[#5A5A5A]">Qty</span>
-                <ui-form-field
-                  type="number"
-                  [ngModel]="getCartQty(product.id)"
-                  (ngModelChange)="updateCart(product.id, $event)"
-                  inputClass="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main"></ui-form-field>
-              </div>
-
-              <div class="flex w-full flex-col gap-2 sm:flex-1">
-                <ui-button
-                  class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
-                  (pressed)="openProductDetails(product)">
-                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                  Ver detalles
-                </ui-button>
-
-                <ui-button
-                  class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
-                  (pressed)="addQuick(product.id, 1)">
-                  <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                  Agregar al carrito
-                </ui-button>
-              </div>
-            </div>
-          </article>
+          <ui-product-card
+            *ngFor="let product of buyAgainProducts"
+            [product]="product"
+            [discountedPriceLabel]="formatMoney(discountedPrice(product.price))"
+            [originalPriceLabel]="hasDiscount ? formatMoney(product.price) : ''"
+            [discountLabel]="discountAppliedLabel()"
+            [qty]="getCartQty(product.id)"
+            (qtyChange)="updateCart(product.id, $event)"
+            (viewDetails)="openProductDetails(product)"
+            (add)="addQuick(product.id, 1)"></ui-product-card>
         </div>
       </div>
 
@@ -495,74 +333,17 @@
           <div class="text-sm text-[#5A5A5A] sm:text-right">{{ productsCount }}</div>
         </div>
 
-        <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <article *ngFor="let product of otherProducts"
-            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 surface-soft p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
-            <div
-              class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
-            </div>
-
-            <div class="relative flex gap-3 sm:gap-4">
-              <div
-                class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
-                <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
-              </div>
-
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="text-xs text-[#5A5A5A]">Producto</div>
-                    <h4 class="mt-1 font-extrabold tracking-tight leading-snug line-clamp-2 sm:truncate">
-                      {{ product.name }}
-                    </h4>
-                    <div class="mt-1 text-xs text-[#6B6B6B] line-clamp-1 sm:truncate">
-                      {{ product.badge }}
-                    </div>
-                  </div>
-
-                  <div class="text-right shrink-0">
-                    <div *ngIf="hasDiscount" class="text-[11px] text-[#6B6B6B] line-through">
-                      {{ formatMoney(product.price) }}
-                    </div>
-                    <div class="whitespace-nowrap text-sm font-extrabold">
-                      {{ formatMoney(discountedPrice(product.price)) }}
-                    </div>
-                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-accent' : 'text-[#6B6B6B]'">
-                      {{ discountAppliedLabel() }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 sm:justify-start">
-                <span class="text-xs text-[#5A5A5A]">Qty</span>
-                <ui-form-field
-                  type="number"
-                  [ngModel]="getCartQty(product.id)"
-                  (ngModelChange)="updateCart(product.id, $event)"
-                  inputClass="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main"></ui-form-field>
-              </div>
-
-              <div class="flex w-full flex-col gap-2 sm:flex-1">
-                <ui-button
-                  class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
-                  (pressed)="openProductDetails(product)">
-                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                  Ver detalles
-                </ui-button>
-
-                <ui-button
-                  class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
-                  (pressed)="addQuick(product.id, 1)">
-                  <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                  Agregar al carrito
-                </ui-button>
-              </div>
-            </div>
-          </article>
+                <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <ui-product-card
+            *ngFor="let product of otherProducts"
+            [product]="product"
+            [discountedPriceLabel]="formatMoney(discountedPrice(product.price))"
+            [originalPriceLabel]="hasDiscount ? formatMoney(product.price) : ''"
+            [discountLabel]="discountAppliedLabel()"
+            [qty]="getCartQty(product.id)"
+            (qtyChange)="updateCart(product.id, $event)"
+            (viewDetails)="openProductDetails(product)"
+            (add)="addQuick(product.id, 1)"></ui-product-card>
         </div>
       </div>
 
@@ -745,37 +526,34 @@
             </div>
 
             <ui-table *ngIf="networkMembers.length > 0" class="mt-6">
-              <div class="md:hidden divide-y divide-white/10">
-                <div *ngFor="let member of networkMembers" class="p-4">
-                  <div class="flex items-center justify-between">
-                    <div class="text-sm font-semibold text-main">{{ member.name }}</div>
-                    <ui-badge [tone]="networkStatusTone(member.status)">{{
-                      member.status }}</ui-badge>
-                  </div>
-                  <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                    <div>Nivel: <span class="text-main">{{ member.level }}</span></div>
-                    <div>Consumo mes: <span class="text-main">{{ formatMoney(member.spend) }}</span></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="table-soft hidden md:block">
-                <div class="grid grid-cols-4 border-b border-white/10 text-sm font-semibold">
-                  <div class="px-4 py-3">Usuario</div>
-                  <div class="px-4 py-3">Nivel</div>
-                  <div class="px-4 py-3">Consumo mes</div>
-                  <div class="px-4 py-3">Estado</div>
-                </div>
-                <div class="divide-y divide-white/5">
-                  <div *ngFor="let member of networkMembers" class="grid grid-cols-4 text-sm">
-                    <div class="px-4 py-3">{{ member.name }}</div>
-                    <div class="muted px-4 py-3">{{ member.level }}</div>
-                    <div class="px-4 py-3">{{ formatMoney(member.spend) }}</div>
-                    <div class="px-4 py-3">
-                      <ui-badge [tone]="networkStatusTone(member.status)">{{ member.status }}</ui-badge>
+              <div class="table-soft">
+                <ui-data-table [rows]="networkMembers">
+                  <ng-template #mobileRow let-member>
+                    <div class="p-4">
+                      <div class="flex items-center justify-between">
+                        <div class="text-sm font-semibold text-main">{{ member.name }}</div>
+                        <ui-status-badge context="network" [status]="member.status" [showIcon]="false"></ui-status-badge>
+                      </div>
+                      <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                        <div>Nivel: <span class="text-main">{{ member.level }}</span></div>
+                        <div>Consumo mes: <span class="text-main">{{ formatMoney(member.spend) }}</span></div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </ng-template>
+                  <ng-template #desktopHeader>
+                    <div class="grid grid-cols-4 border-b border-white/10 text-sm font-semibold">
+                      <div class="px-4 py-3">Usuario</div><div class="px-4 py-3">Nivel</div><div class="px-4 py-3">Consumo mes</div><div class="px-4 py-3">Estado</div>
+                    </div>
+                  </ng-template>
+                  <ng-template #desktopRow let-member>
+                    <div class="grid grid-cols-4 text-sm">
+                      <div class="px-4 py-3">{{ member.name }}</div>
+                      <div class="muted px-4 py-3">{{ member.level }}</div>
+                      <div class="px-4 py-3">{{ formatMoney(member.spend) }}</div>
+                      <div class="px-4 py-3"><ui-status-badge context="network" [status]="member.status" [showIcon]="false"></ui-status-badge></div>
+                    </div>
+                  </ng-template>
+                </ui-data-table>
               </div>
             </ui-table>
 
@@ -816,34 +594,24 @@
       <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
         <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div class="grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-              <div class="text-xs text-[#5A5A5A]">Comisiones del mes</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.monthTotal || 0) }}</div>
-            </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-              <div class="text-xs text-[#5A5A5A]">Por confirmar</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.pendingTotal || 0) }}</div>
-            </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-              <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
-                <span>Bloqueadas</span>
-                <span class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
-                  <ui-button
-                    type="button"
-                    class="inline-flex items-center text-[#6B6B6B] hover:text-zinc-300"
-                    aria-label="Info comisiones bloqueadas"
-                    (pressed)="toggleBlockedTooltip()">
-                    <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
-                  </ui-button>
-                  <span
-                    *ngIf="showBlockedTooltip"
-                    class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-[#7C8C72]/30 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
-                    Las comisiones que pasan por referidos inactivos no llegan a ti.
-                  </span>
+            <ui-kpi-card label="Comisiones del mes" [value]="formatMoney(commissions.monthTotal || 0)"></ui-kpi-card>
+            <ui-kpi-card label="Por confirmar" [value]="formatMoney(commissions.pendingTotal || 0)"></ui-kpi-card>
+            <ui-kpi-card label="Bloqueadas" [value]="formatMoney(commissions.blockedTotal || 0)">
+              <span kpi-label-extra class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
+                <ui-button
+                  type="button"
+                  class="inline-flex items-center text-[#6B6B6B] hover:text-zinc-300"
+                  aria-label="Info comisiones bloqueadas"
+                  (pressed)="toggleBlockedTooltip()">
+                  <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
+                </ui-button>
+                <span
+                  *ngIf="showBlockedTooltip"
+                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-[#7C8C72]/30 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
+                  Las comisiones que pasan por referidos inactivos no llegan a ti.
                 </span>
-              </div>
-              <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.blockedTotal || 0) }}</div>
-            </div>
+              </span>
+            </ui-kpi-card>
           </div>
 
           <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -856,49 +624,44 @@
           </div>
 
           <ui-table *ngIf="showCommissionLedger" class="mt-4">
-            <div class="md:hidden divide-y divide-white/10">
-              <div *ngFor="let row of (commissions.ledger || [])" class="p-4">
-                <div class="flex items-center justify-between">
-                  <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
-                  <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
-                    {{ row.status || '-' }}
-                  </span>
-                </div>
-                <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                  <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
-                  <div>Monto: <span class="text-main">{{ formatMoney(row.amount || 0) }}</span></div>
-                  <div>Fecha: <span class="text-main">{{ formatLedgerDate(row.createdAt) }}</span></div>
-                </div>
-              </div>
-              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="p-4 text-center text-xs text-[#6B6B6B]">
-                Sin movimientos este mes.
-              </div>
-            </div>
-
-            <div class="table-soft hidden md:block">
-              <div class="grid grid-cols-5 border-b border-white/10 text-sm font-semibold">
-                <div class="px-4 py-3">Orden</div>
-                <div class="px-4 py-3">Nivel</div>
-                <div class="px-4 py-3">Monto</div>
-                <div class="px-4 py-3">Estado</div>
-                <div class="px-4 py-3">Fecha</div>
-              </div>
-              <div class="divide-y divide-white/5">
-                <div *ngFor="let row of (commissions.ledger || [])" class="grid grid-cols-5 text-sm">
-                  <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
-                  <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
-                  <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
-                  <div class="px-4 py-3">
-                    <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
-                      {{ row.status || '-' }}
-                    </span>
+            <div class="table-soft">
+              <ui-data-table [rows]="commissions.ledger || []">
+                <ng-template #mobileRow let-row>
+                  <div class="p-4">
+                    <div class="flex items-center justify-between">
+                      <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
+                      <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">{{ row.status || '-' }}</span>
+                    </div>
+                    <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                      <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
+                      <div>Monto: <span class="text-main">{{ formatMoney(row.amount || 0) }}</span></div>
+                      <div>Fecha: <span class="text-main">{{ formatLedgerDate(row.createdAt) }}</span></div>
+                    </div>
                   </div>
-                  <div class="px-4 py-3 text-[#5A5A5A]">{{ formatLedgerDate(row.createdAt) }}</div>
-                </div>
-                <div *ngIf="(commissions.ledger?.length || 0) === 0" class="px-4 py-4 text-center text-xs text-[#6B6B6B]">
-                  Sin movimientos este mes.
-                </div>
-              </div>
+                </ng-template>
+
+                <ng-template #desktopHeader>
+                  <div class="grid grid-cols-5 border-b border-white/10 text-sm font-semibold">
+                    <div class="px-4 py-3">Orden</div>
+                    <div class="px-4 py-3">Nivel</div>
+                    <div class="px-4 py-3">Monto</div>
+                    <div class="px-4 py-3">Estado</div>
+                    <div class="px-4 py-3">Fecha</div>
+                  </div>
+                </ng-template>
+
+                <ng-template #desktopRow let-row>
+                  <div class="grid grid-cols-5 text-sm">
+                    <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
+                    <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
+                    <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
+                    <div class="px-4 py-3"><span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">{{ row.status || '-' }}</span></div>
+                    <div class="px-4 py-3 text-[#5A5A5A]">{{ formatLedgerDate(row.createdAt) }}</div>
+                  </div>
+                </ng-template>
+              </ui-data-table>
+
+              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="px-4 py-4 text-center text-xs text-[#6B6B6B]">Sin movimientos este mes.</div>
             </div>
           </ui-table>
 
@@ -979,56 +742,36 @@
           Aun no tienes ordenes registradas.
         </div>
         <ui-table *ngIf="!isOrdersLoading && orders.length > 0">
-          <div class="md:hidden divide-y divide-white/10">
-            <div *ngFor="let order of orders" class="p-4">
-              <div class="flex items-center justify-between">
-                <div class="text-sm font-semibold text-main">{{ order.id }}</div>
-                <ui-badge [tone]="orderStatusTone(order.status)">
-                  <i class="fa-solid" [ngClass]="orderStatusIcon(order.status)" aria-hidden="true"></i>
-                  {{ order.status }}
-                </ui-badge>
-              </div>
-              <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                <div>Fecha: <span class="text-main">{{ order.createdAt || '-' }}</span></div>
-                <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
-              </div>
-              <ui-button
-                variant="ghost"
-                size="sm"
-                [fullWidth]="true"
-                extraClass="mt-3"
-                [routerLink]="['/orden', order.id]">
-                Ver orden
-              </ui-button>
-            </div>
-          </div>
-
-          <div class="table-soft hidden md:block">
-            <div class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] border-b border-white/10 text-sm font-semibold">
-              <div class="px-4 py-3">Orden</div>
-              <div class="px-4 py-3">Fecha</div>
-              <div class="px-4 py-3">Total</div>
-              <div class="px-4 py-3">Estado</div>
-              <div class="px-4 py-3 text-right">Ver</div>
-            </div>
-            <div class="divide-y divide-white/5">
-              <div *ngFor="let order of orders" class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] items-center text-sm">
-                <div class="px-4 py-3">{{ order.id }}</div>
-                <div class="muted px-4 py-3">{{ order.createdAt || '-' }}</div>
-                <div class="px-4 py-3">{{ formatMoney(order.total) }}</div>
-                <div class="px-4 py-3">
-                  <ui-badge [tone]="orderStatusTone(order.status)">
-                    <i class="fa-solid" [ngClass]="orderStatusIcon(order.status)" aria-hidden="true"></i>
-                    {{ order.status }}
-                  </ui-badge>
+          <div class="table-soft">
+            <ui-data-table [rows]="orders">
+              <ng-template #mobileRow let-order>
+                <div class="p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm font-semibold text-main">{{ order.id }}</div>
+                    <ui-status-badge [status]="order.status || ''"></ui-status-badge>
+                  </div>
+                  <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                    <div>Fecha: <span class="text-main">{{ order.createdAt || '-' }}</span></div>
+                    <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
+                  </div>
+                  <ui-button variant="ghost" size="sm" [fullWidth]="true" extraClass="mt-3" [routerLink]="['/orden', order.id]">Ver orden</ui-button>
                 </div>
-                <div class="px-4 py-3 text-right">
-                  <ui-button variant="ghost" size="sm" [routerLink]="['/orden', order.id]">
-                    Ver orden
-                  </ui-button>
+              </ng-template>
+              <ng-template #desktopHeader>
+                <div class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] border-b border-white/10 text-sm font-semibold">
+                  <div class="px-4 py-3">Orden</div><div class="px-4 py-3">Fecha</div><div class="px-4 py-3">Total</div><div class="px-4 py-3">Estado</div><div class="px-4 py-3 text-right">Ver</div>
                 </div>
-              </div>
-            </div>
+              </ng-template>
+              <ng-template #desktopRow let-order>
+                <div class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] items-center text-sm">
+                  <div class="px-4 py-3">{{ order.id }}</div>
+                  <div class="muted px-4 py-3">{{ order.createdAt || '-' }}</div>
+                  <div class="px-4 py-3">{{ formatMoney(order.total) }}</div>
+                  <div class="px-4 py-3"><ui-status-badge [status]="order.status || ''"></ui-status-badge></div>
+                  <div class="px-4 py-3 text-right"><ui-button variant="ghost" size="sm" [routerLink]="['/orden', order.id]">Ver orden</ui-button></div>
+                </div>
+              </ng-template>
+            </ui-data-table>
           </div>
         </ui-table>
       </div>
@@ -1666,14 +1409,5 @@
     </ui-button>
   </div>
 
-  <footer class="border-t border-[#7C8C72]/20 bg-[#F6F3EE]">
-    <div
-      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
-      <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
-
-      <div class="flex flex-col items-start gap-3 md:items-end">
-        <div class="text-xs text-[#6B6B6B]">© 2026 finding U</div>
-      </div>
-    </div>
-  </footer>
+  <ui-footer></ui-footer>
 </section>

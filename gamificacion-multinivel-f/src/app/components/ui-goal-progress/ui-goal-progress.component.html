@@ -1,0 +1,7 @@
+<div class="text-[11px] text-[#5A5A5A]">{{ title }}</div>
+<div class="mt-1 text-lg font-extrabold tracking-tight text-main">{{ subtitle }}</div>
+<div class="relative mt-3 h-3 overflow-hidden rounded-full progress-rail-soft bg-white/10">
+  <div class="h-full progress-fill-olive bg-gradient-to-r from-yellow-300 to-orange-400" [style.width.%]="basePercent"></div>
+  <div class="absolute inset-y-0 left-0 opacity-90 progress-cart bg-gradient-to-r from-[#7C8C72] to-[#C8A96A]" [style.left.%]="basePercent" [style.width.%]="cartPercent"></div>
+</div>
+<ng-content></ng-content>

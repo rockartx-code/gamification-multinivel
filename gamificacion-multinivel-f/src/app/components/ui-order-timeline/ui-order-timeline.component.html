@@ -1,0 +1,11 @@
+<div class="space-y-3 text-sm">
+  <div *ngFor="let step of steps; let i = index" class="flex items-start gap-3">
+    <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow" [ngClass]="stepClass(i)">
+      <i class="fa-solid" [ngClass]="stepIcon(i, step.key)"></i>
+    </div>
+    <div class="flex-1">
+      <div class="font-medium text-main">{{ step.label }}</div>
+      <div class="text-xs text-[#6B6B6B]">{{ step.description }}</div>
+    </div>
+  </div>
+</div>

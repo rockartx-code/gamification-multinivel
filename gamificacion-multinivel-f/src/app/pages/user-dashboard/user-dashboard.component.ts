@@ -19,16 +19,23 @@ import { ApiService } from '../../services/api.service';
 import { CartControlService } from '../../services/cart-control.service';
 import { GoalControlService } from '../../services/goal-control.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
-import { UiBadgeComponent } from '../../components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { UiTableComponent } from '../../components/ui-table/ui-table.component';
+import { UiKpiCardComponent } from '../../components/ui-kpi-card/ui-kpi-card.component';
+import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { SidebarLink, UiSidebarNavComponent } from '../../components/ui-sidebar-nav/ui-sidebar-nav.component';
+import { UiProductCardComponent } from '../../components/ui-product-card/ui-product-card.component';
+import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
+import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
+import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiBadgeComponent, UiModalComponent, UiTableComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -152,6 +159,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return !this.currentUser;
   }
 
+
+  get dashboardNavLinks(): SidebarLink[] {
+    const links: SidebarLink[] = [{ id: 'merchant', icon: 'fa-store', label: 'Tienda' }];
+    if (!this.isGuest) {
+      links.push(
+        { id: 'red', icon: 'fa-users', label: 'Red' },
+        { id: 'links', icon: 'fa-link', label: 'Links' },
+        { id: 'ordenes', icon: 'fa-receipt', label: 'Ordenes' }
+      );
+      if (this.commissionSummary) {
+        links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
+      }
+    }
+    return links;
+  }
+
+  handleDashboardNavSelect(sectionId: string): void {
+    this.scrollToSection(sectionId);
+    this.closeMobileNav();
+  }
   get goals(): DashboardGoal[] {
     return this.goalControl.goals;
   }
@@ -897,47 +924,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.goalProgressLabel(goal);
   }
 
-  networkStatusTone(status: NetworkMember['status']): 'active' | 'inactive' | 'pending' | 'delivered' {
-    const value = String(status || '').toLowerCase();
-    if (value.includes('activa') || value.includes('active')) {
-      return 'active';
-    }
-    if (value.includes('progreso') || value.includes('pending')) {
-      return 'pending';
-    }
-    return 'inactive';
-  }
-
-  orderStatusTone(status?: string): 'active' | 'inactive' | 'pending' | 'delivered' {
-    const value = (status || '').toLowerCase();
-    if (value === 'pending') {
-      return 'pending';
-    }
-    if (value === 'paid') {
-      return 'active';
-    }
-    if (value === 'shipped' || value === 'delivered') {
-      return 'delivered';
-    }
-    return 'inactive';
-  }
-
-  orderStatusIcon(status?: string): string {
-    const value = (status || '').toLowerCase();
-    if (value === 'pending') {
-      return 'fa-hourglass-half';
-    }
-    if (value === 'delivered') {
-      return 'fa-circle-check';
-    }
-    if (value === 'shipped') {
-      return 'fa-truck-fast';
-    }
-    if (value === 'paid') {
-      return 'fa-receipt';
-    }
-    return 'fa-circle';
-  }
 
   toggleSecondaryGoals(): void {
     this.secondaryGoalsVisible = !this.secondaryGoalsVisible;

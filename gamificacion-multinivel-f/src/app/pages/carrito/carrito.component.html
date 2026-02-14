@@ -187,73 +187,13 @@
 
   <!-- GRID -->
   <div class="mt-2 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-    <div
+    <ui-product-card
       *ngFor="let product of suggestedProducts"
-      class="flex min-w-0 flex-col gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3 overflow-hidden"
-    >
-
-      <!-- HEADER -->
-      <div class="flex min-w-0 items-center gap-3">
-        <div
-          class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft"
-        >
-          <img
-            [src]="product.img"
-            [alt]="product.name"
-            class="h-full w-full object-cover"
-          />
-        </div>
-
-        <!-- TEXT -->
-        <div class="min-w-0 flex-1">
-          <div
-            class="truncate text-sm font-semibold text-zinc-100"
-            title="{{ product.name }}"
-          >
-            {{ product.name }}
-          </div>
-
-          <div
-            class="truncate text-[11px] text-[#6B6B6B]"
-          >
-            {{ product.badge }}
-          </div>
-        </div>
-      </div>
-
-      <!-- FOOTER -->
-      <div class="flex flex-wrap items-center justify-between gap-2">
-
-        <div class="text-sm font-extrabold whitespace-nowrap">
-          {{ formatMoney(discountedPrice(product.price)) }}
-        </div>
-
-        <!-- ACTIONS -->
-        <div class="flex flex-wrap items-center gap-2">
-
-          <ui-button
-            variant="ghost"
-            size="sm"
-            iconClass="fa-solid fa-circle-info"
-            extraClass="whitespace-nowrap"
-            (pressed)="openProductDetails(product)"
-          >
-            Ver detalle
-          </ui-button>
-
-          <ui-button
-            variant="ghost"
-            size="sm"
-            iconClass="fa-solid fa-plus"
-            extraClass="whitespace-nowrap"
-            (pressed)="addSuggestedProduct(product)"
-          >
-            Agregar
-          </ui-button>
-
-        </div>
-      </div>
-    </div>
+      mode="compact"
+      [product]="product"
+      [discountedPriceLabel]="formatMoney(discountedPrice(product.price))"
+      (viewDetails)="openProductDetails(product)"
+      (add)="addSuggestedProduct(product)"></ui-product-card>
   </div>
 </div>
 
@@ -382,19 +322,17 @@
                 </ui-button>
               </ng-container>
               <ng-template #goalProgress>
-                <div class="text-[11px] text-[#5A5A5A]">Meta principal de consumo</div>
-                <div class="mt-1 text-lg font-extrabold tracking-tight text-main">{{ goalTitle }}</div>
-                <div class="mt-1 text-xs text-[#5A5A5A]">{{ goalSubtitle }}</div>
-                <div class="relative mt-3 h-3 overflow-hidden rounded-full progress-rail-soft">
-                  <div class="h-full progress-fill-olive"
-                    [style.width.%]="basePercent"></div>
-                  <div class="absolute inset-y-0 left-0 opacity-90 progress-cart"
-                    [style.left.%]="basePercent" [style.width.%]="cartPercent"></div>
-                </div>
-                <div class="mt-2 text-xs text-[#6B6B6B]">
-                  Te faltan <span class="font-semibold text-gold">{{ formatMoney(gapToGoal) }}</span> para
-                  {{ goalTitle }}
-                </div>
+                <ui-goal-progress
+                  title="Meta principal de consumo"
+                  [subtitle]="goalTitle"
+                  [currentValue]="basePercent"
+                  [cartValue]="cartPercent"
+                  [targetValue]="100">
+                  <div class="mt-2 text-xs text-[#6B6B6B]">
+                    Te faltan <span class="font-semibold text-gold">{{ formatMoney(gapToGoal) }}</span> para
+                    {{ goalTitle }}
+                  </div>
+                </ui-goal-progress>
               </ng-template>
             </div>
 
