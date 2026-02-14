@@ -195,12 +195,15 @@
                   <div *ngFor="let customer of customers" class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ customer.name }}</div>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs">
+                      <span [class]="customerLevelClass(customer)">
                         {{ customer.level }}
                       </span>
                     </div>
+                    <div class="mt-2">
+                      <span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span>
+                    </div>
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
-                      <div>Descuento: <span class="text-main">{{ customer.discount }}</span></div>
+                      <div>Descuento: <span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
                       <div>Mes anterior: <span class="text-main">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</span></div>
                     </div>
                     <ui-button size="sm" variant="ghost" class="mt-3 w-full" (pressed)="selectCustomer(customer.id)">
@@ -212,12 +215,13 @@
 
                 <div class="hidden md:block overflow-auto">
                   <div class="table-soft text-sm">
-                    <div class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                      <div>Cliente</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
+                    <div class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
                     </div>
-                    <div *ngFor="let customer of customers" class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                    <div *ngFor="let customer of customers" class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ customer.name }}</div>
-                      <div class="text-gold">{{ customer.discount }}</div>
+                      <div><span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span></div>
+                      <div><span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
                       <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
                       <div><ui-button size="sm" variant="ghost" (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver</ui-button></div>
                     </div>
@@ -246,7 +250,7 @@
                     </div>
                     <div class="text-right">
                       <div class="text-xs text-gray-600">Descuento</div>
-                      <div class="mt-1 text-xs text-gold">{{ customer?.discount }}</div>
+                      <div class="mt-1"><span [class]="customerLevelClass(customer)">{{ customer?.discount }}</span></div>
                     </div>
                   </div>
                 </div>
@@ -282,13 +286,9 @@
                       {{ formatMoney(customer?.commissionsPrevMonth ?? 0) }}
                     </div>
                     <div class="mt-1 text-xs text-gray-600">
-                      {{
-                      customer?.commissionsPrevStatus === 'paid'
-                      ? 'Pagada'
-                      : customer?.commissionsPrevStatus === 'pending'
-                      ? 'Pendiente de pago'
-                      : 'Sin movimientos'
-                      }}
+                      <span [class]="commissionStatusClass(customer?.commissionsPrevStatus)">
+                        {{ commissionStatusLabel(customer?.commissionsPrevStatus) }}
+                      </span>
                     </div>
                     <div class="mt-2 text-xs text-gray-600" *ngIf="customer?.commissionsPrevStatus === 'pending'">
                       CLABE: {{ customer?.clabeInterbancaria || '-' }}
@@ -318,22 +318,10 @@
                   </div>
 
                   <div class="mt-1 text-xs text-gray-600">Mock. En producción: pintar con datos reales.</div>
-                  <svg viewBox="0 0 700 220" class="mt-3 h-[220px] w-full">
-                    <g stroke="rgba(255,255,255,.18)" stroke-width="2">
-                      <line *ngFor="let link of structureGraph.links" [attr.x1]="link.x1" [attr.y1]="link.y1"
-                        [attr.x2]="link.x2" [attr.y2]="link.y2"></line>
-                    </g>
-                    <g>
-                      <ng-container *ngFor="let node of structureGraph.nodes">
-                        <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="structureNodeRadius(node.role)"
-                          [attr.fill]="structureNodeFill(node.role)"></circle>
-                        <text [attr.x]="node.x" [attr.y]="node.y + 4" text-anchor="middle"
-                          [attr.font-size]="structureNodeFont(node.role)" fill="#1B1B1B" font-weight="800">
-                          {{ node.label }}
-                        </text>
-                      </ng-container>
-                    </g>
-                  </svg>
+                  <ui-networkgraph class="block w-full mt-3 h-[220px]" [nodes]="structureGraph.nodes"
+                    [links]="structureGraph.links" [viewBoxWidth]="700" [viewBoxHeight]="220" linkStyle="straight"
+                    labelMode="short">
+                  </ui-networkgraph>
                 </div>
               </div>
             </div>
@@ -908,4 +896,6 @@
 
   <ui-footer></ui-footer>
 </section>
+
+
 

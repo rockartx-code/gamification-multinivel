@@ -31,6 +31,7 @@ import { UiProductCardComponent } from '../../components/ui-product-card/ui-prod
 import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
+import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 
 type GraphNode = {
   id: string;
@@ -41,6 +42,7 @@ type GraphNode = {
   name: string;
   status?: NetworkMember['status'];
   leaderId?: string;
+  meta?: Record<string, unknown>;
 };
 
 type GraphLayout = {
@@ -51,7 +53,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -635,7 +637,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       x: rootX,
       y: rootY,
       label: this.nodeLabel(rootName),
-      name: rootName
+      name: rootName,
+      meta: { spend: 0 }
     };
 
     const l1Nodes = l1Members.map((member, idx) => ({
@@ -645,7 +648,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       y: l1Positions[idx]?.y ?? rootY,
       label: this.nodeLabel(member.name),
       name: member.name || 'Miembro',
-      status: member.status
+      status: member.status,
+      meta: { spend: member.spend ?? 0 }
     }));
 
     const l1ByMemberId = new Map<string, (typeof l1Nodes)[number]>();
@@ -664,7 +668,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         label: this.nodeLabel(member.name),
         name: member.name || 'Miembro',
         status: member.status,
-        leaderId: member.leaderId ? String(member.leaderId) : undefined
+        leaderId: member.leaderId ? String(member.leaderId) : undefined,
+        meta: { spend: member.spend ?? 0 }
       };
     });
 
@@ -684,7 +689,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         label: this.nodeLabel(member.name),
         name: member.name || 'Miembro',
         status: member.status,
-        leaderId: member.leaderId ? String(member.leaderId) : undefined
+        leaderId: member.leaderId ? String(member.leaderId) : undefined,
+        meta: { spend: member.spend ?? 0 }
       };
     });
 
@@ -980,80 +986,79 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   // Color del icono del usuario: gris inactivo, azul activo.
   levelIconClass(): string {
     if (!this.isClient || !this.discountActiveValue) {
-      return 'icon-muted';
+      return 'icon-status-inactive';
     }
-    return 'icon-accent';
+    return 'icon-status-active';
   }
 
-// Borde / Anillo principal = Estado + Nivel
+  // Borde / anillo principal: estado + nivel.
   discountRingClass(): string {
-
-  // Inactivo
-  if (!this.isClient || !this.discountActiveValue) {
-    return 'ring opacity-70';
+    if (!this.isClient || !this.discountActiveValue) {
+      return 'ring ring-status-inactive level-5';
+    }
+    return `ring ring-status-active ${this.discountLevelClass()}`;
   }
 
-  const p = this.discountPercentNumber();
-
-  // 🥇 ORO 50%
-  if (p >= 50) {
-    return 'ring ring-primary';
-  }
-
-  // 🥈 PLATA 40%
-  if (p >= 40) {
-    return 'ring ring-secondary';
-  }
-
-  // 🥉 BRONCE 30%
-  if (p >= 30) {
-    return 'ring ring-secondary';
-  }
-
-  // 🔵 Activo sin nivel
-  return 'ring';
-  }
-
-
-// Mini badge = Refuerzo semántico
   discountBadgeMiniClass(): string {
-
-  // Inactivo = no mostrar
-  if (!this.isClient || !this.discountActiveValue) {
-    return 'badge badge-compact badge-inactive';
+    if (!this.isClient || !this.discountActiveValue) {
+      return 'badge badge-compact status-inactive';
+    }
+    return `badge badge-compact status-active ${this.discountLevelClass()}`;
   }
-
-  const p = this.discountPercentNumber();
-
-  // 🥇 ORO
-  if (p >= 50) {
-    return 'badge badge-compact badge-pending';
-  }
-
-  // 🥈 PLATA
-  if (p >= 40) {
-    return 'badge badge-compact badge-active';
-  }
-
-  // 🥉 BRONCE
-  if (p >= 30) {
-    return 'badge badge-compact badge-active';
-  }
-
-  // 🔵 Activo
-  return 'badge badge-compact badge-active';
-  }
-
 
   private discountPercentNumber(): number {
-  // Ajusta según tu fuente real:
-  // - si discountPercent = "30%" -> parse
-  // - si ya es number, devuélvelo directo
-  const raw = (this.discountPercent ?? '').toString().trim();
-  const n = Number(raw.replace('%', ''));
-  return Number.isFinite(n) ? n : 0;
+    const raw = (this.discountPercent ?? '').toString().trim();
+    const n = Number(raw.replace('%', ''));
+    return Number.isFinite(n) ? n : 0;
   }
 
+  private discountLevelNumber(): number {
+    const pct = this.discountPercentNumber();
+    if (pct >= 50) {
+      return 1;
+    }
+    if (pct >= 40) {
+      return 2;
+    }
+    if (pct >= 30) {
+      return 3;
+    }
+    if (pct >= 20) {
+      return 4;
+    }
+    return 5;
+  }
+
+  discountLevelClass(): string {
+    return `level-${this.discountLevelNumber()}`;
+  }
+
+  commissionLedgerStatusClass(status?: string): string {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized.includes('paid') || normalized.includes('pagad') || normalized.includes('entregad')) {
+      return 'badge badge-compact level-1 status-active';
+    }
+    if (normalized.includes('confirm')) {
+      return 'badge badge-compact level-2 status-active';
+    }
+    if (normalized.includes('pending') || normalized.includes('pendient')) {
+      return 'badge badge-compact level-3';
+    }
+    if (normalized.includes('block') || normalized.includes('bloque')) {
+      return 'badge badge-compact level-5 status-inactive';
+    }
+    return 'badge badge-compact level-4';
+  }
+
+  commissionPrevStatusClass(status?: string): string {
+    if (status === 'paid') {
+      return 'badge badge-compact level-1 status-active';
+    }
+    if (status === 'pending') {
+      return 'badge badge-compact level-3';
+    }
+    return 'badge badge-compact level-5 status-inactive';
+  }
 
   get hasInactiveIntermediate(): boolean {
     return this.networkMembers.some((member) => member.level === 'L1' && member.status === 'Inactiva');
@@ -1795,3 +1800,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     };
   }
 }
+
+
+

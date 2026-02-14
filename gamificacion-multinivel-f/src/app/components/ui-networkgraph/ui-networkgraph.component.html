@@ -1,0 +1,177 @@
+<div #graphHost class="networkgraph grain relative overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80">
+  <div class="networkgraph-overlay pointer-events-none absolute inset-0"></div>
+
+  <div class="relative p-3 sm:p-4">
+    <div *ngIf="hasData; else emptyState" class="relative">
+      <svg
+        #svgEl
+        class="block w-full"
+        [style.height.px]="computedHeightPx"
+        [attr.viewBox]="'0 0 ' + computedViewBoxWidth + ' ' + computedViewBoxHeight"
+        [attr.preserveAspectRatio]="preserveAspect"
+        [attr.aria-label]="ariaLabel"
+        role="img"
+        (click)="onCanvasClick()"
+      >
+        <g
+          class="graph-viewport"
+          [attr.transform]="viewportTransform"
+          (transitionstart)="onViewportTransitionStart()"
+          (transitionend)="onViewportTransitionEnd()"
+        >
+          <g class="links" [class.portrait]="isPortrait">
+            <ng-container *ngFor="let link of renderLinks; trackBy: trackLink">
+              <path
+                *ngIf="isPortrait"
+                [attr.d]="portraitLinkPath(link)"
+                [class.is-connected]="isLinkConnected(link, activeNodeId)"
+                [class.is-dimmed]="activeNodeId && !isLinkConnected(link, activeNodeId)"
+              ></path>
+              <line
+                *ngIf="!isPortrait && linkStyle === 'straight'"
+                [attr.x1]="link.x1"
+                [attr.y1]="link.y1"
+                [attr.x2]="link.x2"
+                [attr.y2]="link.y2"
+                [class.is-connected]="isLinkConnected(link, activeNodeId)"
+                [class.is-dimmed]="activeNodeId && !isLinkConnected(link, activeNodeId)"
+              ></line>
+              <path
+                *ngIf="!isPortrait && linkStyle === 'curved'"
+                [attr.d]="curvePath(link, 0)"
+                [class.is-connected]="isLinkConnected(link, activeNodeId)"
+                [class.is-dimmed]="activeNodeId && !isLinkConnected(link, activeNodeId)"
+              ></path>
+            </ng-container>
+          </g>
+
+          <g class="nodes">
+            <g
+              *ngFor="let node of renderNodes; trackBy: trackNode"
+              class="node"
+              [class.is-hovered]="hoveredNodeId === node.id"
+              [class.is-selected]="selectedNodeId === node.id"
+              [class.is-connected]="isNodeConnected(node)"
+              [class.is-dimmed]="activeNodeId && !isNodeConnected(node)"
+              [class.is-inactive]="isInactive(node.status)"
+              [class.is-root]="nodeRole(node) === 'root'"
+              (mouseenter)="onNodeMouseEnter($event, node)"
+              (mousemove)="onNodeMouseMove($event)"
+              (mouseleave)="onNodeMouseLeave(node)"
+              (focus)="onNodeFocus(node)"
+              (blur)="onNodeBlur(node)"
+              (click)="onNodeClick($event, node)"
+              (keydown)="onNodeKeydown($event, node)"
+              [attr.tabindex]="interactive ? 0 : -1"
+              [attr.role]="interactive ? 'button' : null"
+              [attr.aria-label]="nodeAriaLabel(node)"
+            >
+              <circle
+                class="node-ring-rail"
+                [attr.cx]="node.x"
+                [attr.cy]="node.y"
+                [attr.r]="ringRadius(node)"
+              ></circle>
+
+              <circle
+                class="node-ring-fill"
+                [attr.cx]="node.x"
+                [attr.cy]="node.y"
+                [attr.r]="ringRadius(node)"
+                [attr.transform]="ringTransform(node)"
+                [attr.stroke-dasharray]="ringCircumference(node)"
+                [attr.stroke-dashoffset]="ringDashoffset(node)"
+              ></circle>
+
+              <circle
+                class="node-core"
+                [attr.cx]="node.x"
+                [attr.cy]="node.y"
+                [attr.r]="nodeRadius(node)"
+                [attr.fill]="nodeFill(node)"
+                [attr.stroke]="nodeStroke(node)"
+              >
+                <title>{{ nodeAriaLabel(node) }}</title>
+              </circle>
+
+              <circle
+                *ngIf="showStatusDot"
+                class="status-dot"
+                [class.is-active]="!isInactive(node.status)"
+                [class.is-inactive]="isInactive(node.status)"
+                [attr.cx]="node.x + nodeRadius(node) - 3"
+                [attr.cy]="node.y - nodeRadius(node) + 5"
+                r="4"
+              ></circle>
+
+              <text
+                class="node-inline-label"
+                [attr.x]="node.x"
+                [attr.y]="node.y + nodeRadius(node) + 16"
+                text-anchor="middle"
+              >
+                {{ nodeAlwaysLabel(node) }}
+              </text>
+
+              <foreignObject
+                *ngIf="shouldShowPlate(node)"
+                class="node-plate-wrap"
+                [attr.x]="nodePlateBox(node).x"
+                [attr.y]="nodePlateBox(node).y"
+                [attr.width]="nodePlateBox(node).width"
+                [attr.height]="nodePlateBox(node).height"
+              >
+                <div
+                  xmlns="http://www.w3.org/1999/xhtml"
+                  class="plate-scale"
+                  [style.--plate-w]="(nodePlateBox(node).width +15)+ 'px'"
+                  [style.--plate-h]="(nodePlateBox(node).height + 15) + 'px'"
+                  [style.transform]="plateInverseCssScale"
+                >
+                  <div
+                    class="node-plate"
+                    [class.root]="nodeRole(node) === 'root'"
+                    [class.inactive]="isInactive(node.status)"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <div class="plate-top">
+                      <span class="plate-badge" [class.root]="nodeRole(node) === 'root'">{{ nodeBadge(node) }}</span>
+                      <span class="plate-status" *ngIf="showStatusDot" [class.inactive]="isInactive(node.status)">
+                        <i class="status-indicator" [class.inactive]="isInactive(node.status)"></i>
+                        {{ isInactive(node.status) ? 'Inactiva' : 'Activa' }}
+                      </span>
+                      <button
+                        type="button"
+                        class="plate-close"
+                        *ngIf="zoomedNodeId === node.id"
+                        (click)="closeNodePlate($event)"
+                        aria-label="Cerrar detalle"
+                      >x</button>
+                    </div>
+                    <div class="plate-name" [title]="nodeDisplayName(node)">{{ nodeDisplayName(node) }}</div>
+                    <div class="plate-spend" *ngIf="showSpend">{{ compactMoney(spendValue(node)) }}</div>
+                  </div>
+                </div>
+              </foreignObject>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="empty-state rounded-xl border border-olive-30 surface-soft px-4 py-6 text-center text-sm text-muted">
+        {{ emptyStateText }}
+      </div>
+    </ng-template>
+
+    <div *ngIf="showLegend" class="legend mt-3 flex flex-wrap gap-2 text-xs text-muted">
+      <span class="legend-item"><i class="legend-dot root"></i>Raiz</span>
+      <span class="legend-item"><i class="legend-dot l1"></i>Nivel 1</span>
+      <span class="legend-item"><i class="legend-dot l2"></i>Nivel 2</span>
+      <span class="legend-item"><i class="legend-dot l3"></i>Nivel 3+</span>
+      <span class="legend-item"><i class="legend-dot active"></i>Activa</span>
+      <span class="legend-item"><i class="legend-dot inactive"></i>Inactiva</span>
+    </div>
+  </div>
+</div>

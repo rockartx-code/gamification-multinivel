@@ -37,13 +37,13 @@
 
     <div class="flex w-full flex-col gap-2 sm:flex-1">
       <ui-button size="lg" variant="ghost" class="w-full" (pressed)="viewDetails.emit()">
-        <i class="fa-solid fa-eye" aria-hidden="true"></i>
-        Ver detalles
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        Ver detalle
       </ui-button>
 
       <ui-button size="lg" variant="primary" class="w-full" (pressed)="add.emit()">
-        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-        Agregar
+        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+        Agregar a carrito
       </ui-button>
     </div>
   </div>
@@ -65,7 +65,7 @@
       <div class="text-sm font-extrabold whitespace-nowrap">{{ discountedPriceLabel }}</div>
       <div class="flex flex-wrap items-center gap-2">
         <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-circle-info" extraClass="whitespace-nowrap" (pressed)="viewDetails.emit()">Ver detalle</ui-button>
-        <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-plus" extraClass="whitespace-nowrap" (pressed)="add.emit()">Agregar</ui-button>
+        <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-cart-plus" extraClass="whitespace-nowrap" (pressed)="add.emit()">Agregar a carrito</ui-button>
       </div>
     </div>
   </article>

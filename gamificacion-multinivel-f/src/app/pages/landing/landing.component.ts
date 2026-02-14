@@ -8,6 +8,7 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { UserDashboardData, FeaturedItem } from '../../models/user-dashboard.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { FeatureBadgeComponent } from '../../components/feature-badge/feature-badge.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
@@ -15,7 +16,7 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })

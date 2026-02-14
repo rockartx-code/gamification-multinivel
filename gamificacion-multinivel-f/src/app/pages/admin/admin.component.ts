@@ -28,6 +28,7 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
 import { SidebarLink, UiSidebarNavComponent } from '../../components/ui-sidebar-nav/ui-sidebar-nav.component';
 import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
+import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { AdminControlService } from '../../services/admin-control.service';
 
 type StructureNode = {
@@ -36,6 +37,7 @@ type StructureNode = {
   label: string;
   x: number;
   y: number;
+  meta?: Record<string, unknown>;
 };
 
 type StructureLink = {
@@ -48,7 +50,7 @@ type StructureLink = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -304,6 +306,7 @@ export class AdminComponent implements OnInit {
       return { nodes: [], links: [] };
     }
 
+    const monthlySpendByCustomer = this.getMonthlySpendByCustomerName();
     const referrals = this.buildReferralMap(this.customers);
     const directReferrals = referrals.get(this.selectedCustomer.id) ?? [];
     const indirectReferrals: Array<{ customer: AdminCustomer; parentId: number }> = [];
@@ -339,7 +342,8 @@ export class AdminComponent implements OnInit {
       role: 'root',
       label: this.structureRootLabel,
       x: 120,
-      y: rootY
+      y: rootY,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(this.selectedCustomer.name)) ?? 0 }
     };
 
     const l1Customers = directReferrals.slice(0, l1Positions.length);
@@ -348,7 +352,8 @@ export class AdminComponent implements OnInit {
       role: 'L1',
       label: this.structureNodeLabel(customer.name),
       x: l1Positions[index].x,
-      y: l1Positions[index].y
+      y: l1Positions[index].y,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(customer.name)) ?? 0 }
     }));
 
     const l1NodeById = new Map(l1Customers.map((customer, index) => [customer.id, l1Nodes[index]]));
@@ -360,7 +365,8 @@ export class AdminComponent implements OnInit {
       role: 'L2',
       label: this.structureNodeLabel(entry.customer.name),
       x: l2Positions[index].x,
-      y: l2Positions[index].y
+      y: l2Positions[index].y,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(entry.customer.name)) ?? 0 }
     }));
     const l2NodeById = new Map(l2Entries.map((entry, index) => [entry.customer.id, l2Nodes[index]]));
     const l3Entries = thirdReferrals
@@ -371,7 +377,8 @@ export class AdminComponent implements OnInit {
       role: 'L3',
       label: this.structureNodeLabel(entry.customer.name),
       x: l3Positions[index].x,
-      y: l3Positions[index].y
+      y: l3Positions[index].y,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(entry.customer.name)) ?? 0 }
     }));
 
     const links: StructureLink[] = l1Nodes.map((node) => ({
@@ -451,6 +458,64 @@ export class AdminComponent implements OnInit {
 
   formatMoney(value: number): string {
     return this.adminControl.formatMoney(value);
+  }
+
+  customerStatusClass(customer: AdminCustomer): string {
+    return this.isCustomerActive(customer) ? 'badge badge-compact status-active' : 'badge badge-compact status-inactive';
+  }
+
+  customerStatusLabel(customer: AdminCustomer): string {
+    return this.isCustomerActive(customer) ? 'Activa' : 'Inactiva';
+  }
+
+  customerLevelClass(customer: AdminCustomer): string {
+    const match = String(customer.level || '').match(/\d+/);
+    const parsed = Number(match?.[0] ?? 5);
+    const level = Math.max(1, Math.min(5, Number.isFinite(parsed) ? parsed : 5));
+    return `badge badge-compact level-${level}`;
+  }
+
+  commissionStatusClass(status?: AdminCustomer['commissionsPrevStatus']): string {
+    if (status === 'paid') {
+      return 'badge badge-compact level-1 status-active';
+    }
+    if (status === 'pending') {
+      return 'badge badge-compact level-3';
+    }
+    return 'badge badge-compact level-5 status-inactive';
+  }
+
+  commissionStatusLabel(status?: AdminCustomer['commissionsPrevStatus']): string {
+    if (status === 'paid') {
+      return 'Pagada';
+    }
+    if (status === 'pending') {
+      return 'Pendiente de pago';
+    }
+    return 'Sin movimientos';
+  }
+
+  private isCustomerActive(customer: AdminCustomer): boolean {
+    const anyCustomer = customer as AdminCustomer & { active?: boolean; status?: string };
+    if (typeof anyCustomer.active === 'boolean') {
+      return anyCustomer.active;
+    }
+    if (typeof anyCustomer.status === 'string') {
+      const normalized = anyCustomer.status.toLowerCase();
+      if (normalized.includes('inactiv')) {
+        return false;
+      }
+      if (normalized.includes('activ')) {
+        return true;
+      }
+    }
+    const discount = Number(String(customer.discount || '').replace('%', '').trim());
+    const discountActive = Number.isFinite(discount) && discount > 0;
+    const commissionsActive =
+      (customer.commissionsCurrentConfirmed ?? 0) > 0 ||
+      (customer.commissionsCurrentPending ?? 0) > 0 ||
+      (customer.commissions ?? 0) > 0;
+    return discountActive || commissionsActive;
   }
 
   openReceipt(url?: string): void {
@@ -1126,6 +1191,37 @@ export class AdminComponent implements OnInit {
       x,
       y: top + spacing * index
     }));
+  }
+
+  private getMonthlySpendByCustomerName(date = new Date()): Map<string, number> {
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const totals = new Map<string, number>();
+
+    for (const order of this.orders) {
+      if (!order.createdAt) {
+        continue;
+      }
+      const orderDate = new Date(order.createdAt);
+      if (Number.isNaN(orderDate.getTime())) {
+        continue;
+      }
+      if (orderDate.getMonth() !== month || orderDate.getFullYear() !== year) {
+        continue;
+      }
+      const key = this.normalizeCustomerKey(order.customer);
+      if (!key) {
+        continue;
+      }
+      const total = Number(order.total) || 0;
+      totals.set(key, (totals.get(key) ?? 0) + total);
+    }
+
+    return totals;
+  }
+
+  private normalizeCustomerKey(name?: string): string {
+    return (name ?? '').trim().toLowerCase();
   }
 
 }

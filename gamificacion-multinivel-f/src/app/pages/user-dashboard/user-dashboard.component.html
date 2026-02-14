@@ -25,7 +25,7 @@
     <div class="flex shrink-0 items-center gap-2 sm:gap-3">
       <div *ngIf="currentUser" class="relative shrink-0">
         <ui-button size="sm" variant="ghost" type="button" (pressed)="toggleUserDetails()" aria-label="Usuario">
-          <span class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80"
+          <span id="user-circle-control" class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80"
             [ngClass]="discountRingClass()">
             <i class="fa-solid fa-user text-[13px]" [ngClass]="levelIconClass()" aria-hidden="true"></i>
 
@@ -135,7 +135,7 @@
             </div>
 
             <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
-            <ui-button size="sm" variant="primary" type="button"
+            <ui-button size="lg" variant="primary" type="button"
               class="w-full md:absolute md:bottom-6 md:right-6 md:w-auto"
               (pressed)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
@@ -161,7 +161,7 @@
               <p class="mt-2 text-sm text-muted">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.
               </p>
             </div>
-            <ui-button size="sm" variant="primary" type="button" (pressed)="openGuestRegisterModal()">
+            <ui-button size="lg" variant="primary" type="button" (pressed)="openGuestRegisterModal()">
               <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
               Registrate
             </ui-button>
@@ -211,7 +211,7 @@
               {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
             </div>
           </div>
-          <ui-button size="sm" variant="primary" type="button" (pressed)="goToCart()">
+          <ui-button size="lg" variant="primary" type="button" (pressed)="goToCart()">
             <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Ver carrito
           </ui-button>
@@ -257,9 +257,9 @@
                 </span>
               </div>
 
-              <ui-button size="sm" variant="primary" (pressed)="addHeroToCart()">
+              <ui-button size="lg" variant="primary" (pressed)="addHeroToCart()">
                 <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                Agregar al carrito
+                Agregar a carrito
               </ui-button>
             </div>
           </div>
@@ -361,25 +361,10 @@
           </div>
 
           <div class="mt-6 overflow-hidden rounded-2xl border border-olive-30 surface-soft p-4">
-            <svg [attr.viewBox]="'0 0 ' + graphSize.width + ' ' + graphSize.height" class="w-full"
-              [style.height.px]="graphSize.height">
-              <g fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2">
-                <path *ngFor="let link of graphLayout.links" [attr.d]="curvePath(link, 0)"></path>
-              </g>
-
-              <g>
-                <ng-container *ngFor="let node of graphLayout.nodes">
-                  <circle [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="nodeRadius(node.level)"
-                    [attr.fill]="nodeFill(node.level, node.status)">
-                    <title>{{ node.name }}</title>
-                  </circle>
-                  <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle"
-                    [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#2A2A2A"
-                    [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
-                </ng-container>
-              </g>
-            </svg>
-
+            <ui-networkgraph class="block w-full" [nodes]="graphLayout.nodes" [links]="graphLayout.links"
+              [viewBoxWidth]="graphSize.width" [viewBoxHeight]="graphSize.height" [heightPx]="graphSize.height"
+              linkStyle="curved" labelMode="short">
+            </ui-networkgraph>
           </div>
 
           <div *ngIf="hasInactiveIntermediate" class="callout mt-4 rounded-2xl px-4 py-3 text-xs">
@@ -598,7 +583,7 @@
                   <div class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-1 text-xs text-muted">{{
+                      <span [class]="commissionLedgerStatusClass(row.status)">{{
                         row.status || '-' }}</span>
                     </div>
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
@@ -624,8 +609,7 @@
                     <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
                     <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
                     <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
-                    <div class="px-4 py-3"><span
-                        class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-1 text-xs text-muted">{{
+                    <div class="px-4 py-3"><span [class]="commissionLedgerStatusClass(row.status)">{{
                         row.status || '-' }}</span></div>
                     <div class="px-4 py-3 text-gray-600">{{ formatLedgerDate(row.createdAt) }}</div>
                   </div>
@@ -666,7 +650,7 @@
             <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
             <div class="mt-2 text-xs text-gray-500">
               Estatus:
-              <span class="text-main">
+              <span [class]="commissionPrevStatusClass(commissions.prevStatus)">
                 {{
                 commissions.prevStatus === 'paid'
                 ? 'Pagada'
@@ -1150,9 +1134,9 @@
         <ui-button type="button" variant="ghost" size="md" (pressed)="closeProductDetails()">
           Cerrar
         </ui-button>
-        <ui-button type="button" variant="secondary" size="md" iconClass="fa-solid fa-cart-plus"
+        <ui-button type="button" variant="primary" size="lg" iconClass="fa-solid fa-cart-plus"
           (pressed)="addQuick(product.id, 1)">
-          Agregar
+          Agregar a carrito
         </ui-button>
       </div>
     </ng-container>
@@ -1252,9 +1236,9 @@
   </ui-modal>
 
   <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
-    <ui-button size="sm" variant="primary" type="button" (pressed)="goToCart()">
+    <ui-button size="lg" variant="primary" type="button" (pressed)="goToCart()">
       <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
-      Ir a carrito
+      Ver carrito
     </ui-button>
   </div>
 
