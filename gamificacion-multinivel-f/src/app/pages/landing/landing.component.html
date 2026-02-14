@@ -206,79 +206,75 @@
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
         </div>
 
-        <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
-            <i class="fa-solid fa-id-card" aria-hidden="true"></i>
-            Nombre completo
-          </span>
-          <input
-            type="text"
-            name="name"
-            [(ngModel)]="form.name"
-            placeholder="Tu nombre"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
-        </label>
+        <ui-form-field
+          [(ngModel)]="form.name"
+          name="name"
+          label="Nombre completo"
+          placeholder="Tu nombre"
+          iconClass="fa-solid fa-id-card"
+          wrapperClass="relative block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70">
+        </ui-form-field>
 
-        <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
-            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-            Correo electrónico
-          </span>
-          <input
-            type="email"
-            name="email"
-            [(ngModel)]="form.email"
-            placeholder="tucorreo@ejemplo.com"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
-        </label>
+        <ui-form-field
+          kind="input"
+          type="email"
+          [(ngModel)]="form.email"
+          name="email"
+          label="Correo electrónico"
+          placeholder="tucorreo@ejemplo.com"
+          iconClass="fa-solid fa-envelope"
+          wrapperClass="relative block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70">
+        </ui-form-field>
 
-        <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
-            <i class="fa-solid fa-phone" aria-hidden="true"></i>
-            Teléfono
-          </span>
-          <input
-            type="tel"
-            name="phone"
-            [(ngModel)]="form.phone"
-            placeholder="+52 ..."
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
-        </label>
+        <ui-form-field
+          kind="input"
+          type="tel"
+          [(ngModel)]="form.phone"
+          name="phone"
+          label="Teléfono"
+          placeholder="+52 ..."
+          iconClass="fa-solid fa-phone"
+          wrapperClass="relative block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70">
+        </ui-form-field>
 
-        <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
-            <i class="fa-solid fa-lock" aria-hidden="true"></i>
-            Contraseña
-          </span>
-          <input
-            type="password"
-            name="password"
-            [(ngModel)]="form.password"
-            placeholder="Mínimo 8 caracteres"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
-        </label>
+        <ui-form-field
+          kind="input"
+          type="password"
+          [(ngModel)]="form.password"
+          name="password"
+          label="Contraseña"
+          placeholder="Mínimo 8 caracteres"
+          iconClass="fa-solid fa-lock"
+          wrapperClass="relative block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70">
+        </ui-form-field>
 
-        <label class="relative block">
-          <span class="flex items-center gap-2 text-xs text-[#5A5A5A]">
-            <i class="fa-solid fa-lock" aria-hidden="true"></i>
-            Confirmar contraseña
-          </span>
-          <input
-            type="password"
-            name="confirmPassword"
-            [(ngModel)]="form.confirmPassword"
-            placeholder="Repite tu contraseña"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
-        </label>
+        <ui-form-field
+          kind="input"
+          type="password"
+          [(ngModel)]="form.confirmPassword"
+          name="confirmPassword"
+          label="Confirmar contraseña"
+          placeholder="Repite tu contraseña"
+          iconClass="fa-solid fa-lock"
+          wrapperClass="relative block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70">
+        </ui-form-field>
 
         <div class="pt-2">
-          <button
+          <ui-button
             type="submit"
             [disabled]="isSubmitting"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-8 py-4 font-semibold transition-transform hover:scale-[1.02] active:scale-[0.99]">
-            <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+            variant="olive"
+            size="lg"
+            iconClass="fa-solid fa-user-check"
+            [fullWidth]="true"
+            extraClass="px-8 py-4 transition-transform hover:scale-[1.02] active:scale-[0.99]">
             {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
-          </button>
+          </ui-button>
 
           <p
             *ngIf="feedbackMessage"

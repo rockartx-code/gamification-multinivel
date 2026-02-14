@@ -5,11 +5,14 @@
         <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
       <div class="flex shrink-0 items-center gap-2">
-        <a class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90 sm:text-sm"
-          [routerLink]="['/dashboard']">
-          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        <ui-button
+          variant="ghost"
+          size="md"
+          iconClass="fa-solid fa-arrow-left"
+          [routerLink]="['/dashboard']"
+          extraClass="text-xs sm:text-sm border border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90">
           Regresar
-        </a>
+        </ui-button>
       </div>
     </div>
   </header>
@@ -233,12 +236,16 @@
                     {{ order?.trackingNumber || '-' }}
                   </span>
 
-                  <button type="button"
-                    class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-[11px] font-semibold text-main hover:bg-[#EFE9DD]/90"
-                    (click)="copyToClipboard(order?.trackingNumber)" [disabled]="!order?.trackingNumber">
-                    <i class="fa-regular fa-copy"></i>
+                  <ui-button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    iconClass="fa-regular fa-copy"
+                    (pressed)="copyToClipboard(order?.trackingNumber)"
+                    [disabled]="!order?.trackingNumber"
+                    extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-[11px] text-main hover:bg-[#EFE9DD]/90">
                     Copiar
-                  </button>
+                  </ui-button>
                 </div>
               </div>
 

@@ -601,52 +601,56 @@
                       Incluye todas las imágenes requeridas para marketing.
                     </div>
                   </div>
-                  <button
-                    class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+                  <ui-button
+                    variant="primary"
+                    size="md"
+                    iconClass="fa-solid fa-floppy-disk"
+                    extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
                     [disabled]="!isProductFormValid || isSavingProduct"
-                    (click)="saveProduct()">
-                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                    (pressed)="saveProduct()">
                     {{ isSavingProduct ? 'Guardando...' : 'Guardar' }}
-                  </button>
+                  </ui-button>
                 </div>
                 <div *ngIf="productMessage" class="mt-2 text-xs text-accent">
                   {{ productMessage }}
                 </div>
 
                 <div class="mt-4 grid gap-2 md:grid-cols-2">
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Nombre</span>
-                    <input
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="COLÁGENO..."
-                      [value]="productForm.name"
-                      (input)="updateProductField('name', $any($event.target).value)" />
-                  </label>
-                  <label class="block">
-                    <span class="text-[11px] text-[#5A5A5A]">Precio</span>
-                    <input type="number"
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="0"
-                      [value]="productForm.price"
-                      (input)="updateProductField('price', $any($event.target).value)" />
-                  </label>
-                  <label class="block">
-                    <span class="text-[11px] text-[#5A5A5A]">SKU</span>
-                    <input
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="SKU-0001"
-                      [value]="productForm.sku"
-                      (input)="updateProductField('sku', $any($event.target).value)" />
-                  </label>
+                  <ui-form-field
+                    label="Nombre"
+                    placeholder="COLÁGENO..."
+                    [ngModel]="productForm.name"
+                    (ngModelChange)="updateProductField('name', $event)"
+                    wrapperClass="block md:col-span-2"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
+                  <ui-form-field
+                    kind="input"
+                    type="number"
+                    label="Precio"
+                    placeholder="0"
+                    [ngModel]="productForm.price"
+                    (ngModelChange)="updateProductField('price', $event)"
+                    wrapperClass="block"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
+                  <ui-form-field
+                    label="SKU"
+                    placeholder="SKU-0001"
+                    [ngModel]="productForm.sku"
+                    (ngModelChange)="updateProductField('sku', $event)"
+                    wrapperClass="block"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
 
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Descripción corta (hook)</span>
-                    <input
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="Beneficio principal en 1 línea..."
-                      [value]="productForm.hook"
-                      (input)="updateProductField('hook', $any($event.target).value)" />
-                  </label>
+                  <ui-form-field
+                    label="Descripción corta (hook)"
+                    placeholder="Beneficio principal en 1 línea..."
+                    [ngModel]="productForm.hook"
+                    (ngModelChange)="updateProductField('hook', $event)"
+                    wrapperClass="block md:col-span-2"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
                   <label class="block md:col-span-2">
                     <span class="text-[11px] text-[#5A5A5A]">Descripción</span>
                     <textarea rows="4"
@@ -879,11 +883,14 @@
           Total estimado: <span class="font-semibold text-main">{{ formatMoney(getNewOrderTotal()) }}</span>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeModals()">
-          <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        <ui-button
+          variant="ghost"
+          size="md"
+          iconClass="fa-solid fa-ban"
+          extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeModals()">
           Cancelar
-        </button>
+        </ui-button>
         <button
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
           [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder"
@@ -1111,18 +1118,22 @@
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeModals()">
-          <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        <ui-button
+          variant="ghost"
+          size="md"
+          iconClass="fa-solid fa-ban"
+          extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeModals()">
           Cancelar
-        </button>
-        <button
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
-  
-          (click)="saveStructureCustomer()">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        </ui-button>
+        <ui-button
+          variant="primary"
+          size="md"
+          iconClass="fa-solid fa-plus"
+          extraClass="bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black"
+          (pressed)="saveStructureCustomer()">
           Agregar
-        </button>
+        </ui-button>
       </div>
     </div>
   </div>
@@ -1130,7 +1141,7 @@
   <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-[#7C8C72]/30 bg-[#F6F3EE]/92 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">
       <div class="grid grid-cols-4 gap-2">
-        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
           [ngClass]="
             currentView === 'orders'
               ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
@@ -1139,8 +1150,8 @@
           (click)="setView('orders')">
           <i class="fa-solid fa-receipt" aria-hidden="true"></i>
           Pedidos
-        </button>
-        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+        </ui-button>
+        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
           [ngClass]="
             currentView === 'customers'
               ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
@@ -1149,8 +1160,8 @@
           (click)="setView('customers')">
           <i class="fa-solid fa-users" aria-hidden="true"></i>
           Clientes
-        </button>
-        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+        </ui-button>
+        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
           [ngClass]="
             currentView === 'products'
               ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
@@ -1159,8 +1170,8 @@
           (click)="setView('products')">
           <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
           Productos
-        </button>
-        <button class="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
+        </ui-button>
+        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
           [ngClass]="
             currentView === 'stats'
               ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
@@ -1169,7 +1180,7 @@
           (click)="setView('stats')">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Stats
-        </button>
+        </ui-button>
       </div>
     </div>
   </div>

@@ -1332,32 +1332,46 @@
           <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
           <p class="mt-2 text-sm text-zinc-300">Usaremos esta CLABE para depositar tus comisiones.</p>
         </div>
-        <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
-          (click)="closeCommissionModal()">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+        <ui-button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconClass="fa-solid fa-xmark"
+          extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          (pressed)="closeCommissionModal()">
+        </ui-button>
       </div>
 
       <form class="mt-6 grid gap-3" (ngSubmit)="submitCommissionRequest()">
-        <label class="block text-xs text-[#5A5A5A]">
-          CLABE (18 dÃ­gitos)
-          <input type="text" name="commissionClabe" [(ngModel)]="commissionClabe"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-            placeholder="000000000000000000" />
-        </label>
+        <ui-form-field
+          kind="input"
+          type="text"
+          name="commissionClabe"
+          [(ngModel)]="commissionClabe"
+          label="CLABE (18 dígitos)"
+          placeholder="000000000000000000"
+          wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+        ></ui-form-field>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <button type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
-            (click)="closeCommissionModal()">
+          <ui-button
+            type="button"
+            variant="ghost"
+            size="md"
+            extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
+            (pressed)="closeCommissionModal()">
             Cancelar
-          </button>
-          <button type="submit" [disabled]="isCommissionSubmitting"
-            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
-            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+          </ui-button>
+          <ui-button
+            type="submit"
+            [disabled]="isCommissionSubmitting"
+            variant="primary"
+            size="md"
+            iconClass="fa-solid fa-paper-plane"
+            extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             {{ isCommissionSubmitting ? 'Enviando...' : 'Solicitar pago' }}
-          </button>
+          </ui-button>
         </div>
       </form>
     </div>
@@ -1377,24 +1391,35 @@
             <span class="text-zinc-100">{{ clabePending }}</span>
           </p>
         </div>
-        <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
-          (click)="closeClabeConfirm()">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+        <ui-button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconClass="fa-solid fa-xmark"
+          extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          (pressed)="closeClabeConfirm()">
+        </ui-button>
       </div>
 
       <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-        <button type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
-          (click)="closeClabeConfirm()">
+        <ui-button
+          type="button"
+          variant="ghost"
+          size="md"
+          extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
+          (pressed)="closeClabeConfirm()">
           Cancelar
-        </button>
-        <button type="button" [disabled]="isClabeSaving" (click)="saveCustomerClabe()"
-          class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
-          <i class="fa-solid fa-check" aria-hidden="true"></i>
+        </ui-button>
+        <ui-button
+          type="button"
+          [disabled]="isClabeSaving"
+          variant="primary"
+          size="md"
+          iconClass="fa-solid fa-check"
+          extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+          (pressed)="saveCustomerClabe()">
           {{ isClabeSaving ? 'Guardando...' : 'Confirmar' }}
-        </button>
+        </ui-button>
       </div>
     </div>
   </div>
@@ -1410,56 +1435,56 @@
           <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
           <p class="mt-2 text-sm text-zinc-300">Completa tus datos para activar descuentos y red.</p>
         </div>
-        <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
-          (click)="closeGuestRegisterModal()">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+        <ui-button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconClass="fa-solid fa-xmark"
+          extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          (pressed)="closeGuestRegisterModal()">
+        </ui-button>
       </div>
 
       <form class="mt-6 grid gap-3" (ngSubmit)="submitGuestRegister()">
-        <label class="block text-xs text-[#5A5A5A]">
-          Nombre completo
-          <input type="text" name="guestName" [(ngModel)]="guestRegisterForm.name"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-            placeholder="Tu nombre" />
-        </label>
-        <label class="block text-xs text-[#5A5A5A]">
-          Correo
-          <input type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-            placeholder="tucorreo@ejemplo.com" />
-        </label>
-        <label class="block text-xs text-[#5A5A5A]">
-          Telefono
-          <input type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-            placeholder="+52 ..." />
-        </label>
-        <label class="block text-xs text-[#5A5A5A]">
-          Contrase?a
-          <input type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-            placeholder="Minimo 8 caracteres" />
-        </label>
-        <label class="block text-xs text-[#5A5A5A]">
-          Confirmar contrase?a
-          <input type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-            placeholder="Repite tu contrase?a" />
-        </label>
+        <ui-form-field name="guestName" [(ngModel)]="guestRegisterForm.name" label="Nombre completo" placeholder="Tu nombre"
+          wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+        </ui-form-field>
+        <ui-form-field kind="input" type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email" label="Correo" placeholder="tucorreo@ejemplo.com"
+          wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+        </ui-form-field>
+        <ui-form-field kind="input" type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone" label="Teléfono" placeholder="+52 ..."
+          wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+        </ui-form-field>
+        <ui-form-field kind="input" type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password" label="Contraseña" placeholder="Mínimo 8 caracteres"
+          wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+        </ui-form-field>
+        <ui-form-field kind="input" type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword" label="Confirmar contraseña" placeholder="Repite tu contraseña"
+          wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+        </ui-form-field>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <button type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
-            (click)="closeGuestRegisterModal()">
+          <ui-button
+            type="button"
+            variant="ghost"
+            size="md"
+            extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
+            (pressed)="closeGuestRegisterModal()">
             Ahora no
-          </button>
-          <button type="submit" [disabled]="isGuestRegisterSubmitting"
-            class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
-            <i class="fa-solid fa-user-check" aria-hidden="true"></i>
-            {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Registrate' }}
-          </button>
+          </ui-button>
+          <ui-button
+            type="submit"
+            [disabled]="isGuestRegisterSubmitting"
+            variant="primary"
+            size="md"
+            iconClass="fa-solid fa-user-check"
+            extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Regístrate' }}
+          </ui-button>
         </div>
         <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
           [class.text-[#9A5A4A]]="guestRegisterFeedbackType === 'error'"
@@ -1482,11 +1507,14 @@
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
           <p class="muted mt-1 text-sm">{{ product.badge }}</p>
         </div>
-        <button type="button"
-          class="modal-close inline-flex h-9 w-9 items-center justify-center rounded-full text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeProductDetails()">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+        <ui-button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconClass="fa-solid fa-xmark"
+          extraClass="modal-close h-9 w-9 text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeProductDetails()">
+        </ui-button>
       </div>
 
       <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
