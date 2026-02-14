@@ -64,15 +64,15 @@ export class OrderStatusComponent implements OnInit {
   get statusClass(): string {
     const status = this.normalizeStatus(this.order?.status);
     if (status === 'paid') {
-      return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
     }
     if (status === 'shipped') {
-      return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
+      return 'border-blue-400/30 bg-blue-500/10 text-main';
     }
     if (status === 'delivered') {
-      return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
     }
-    return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
+    return 'border-yellow-400/30 bg-yellow-400/10 text-main';
   }
 
   get statusValue(): (typeof this.allowedStatuses)[number] {
@@ -137,3 +137,4 @@ export class OrderStatusComponent implements OnInit {
     return 'pending';
   }
 }
+

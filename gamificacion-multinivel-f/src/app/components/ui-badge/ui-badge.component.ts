@@ -10,23 +10,13 @@ export class UiBadgeComponent {
   @Input() size: 'default' | 'mini' = 'default';
 
   get classes(): string {
-    const base = this.size === 'mini' ? 'badge-mini' : 'badge';
-    if (this.size === 'mini') {
-      const miniTone = {
-        active: 'badge-mini-active',
-        inactive: 'badge-mini-off',
-        pending: 'badge-mini-gold',
-        delivered: 'badge-mini-silver'
-      };
-      return `${base} ${miniTone[this.tone]}`;
-    }
-
     const toneClass = {
       active: 'badge-active',
       inactive: 'badge-inactive',
       pending: 'badge-pending',
-      delivered: 'badge-delivered'
+      delivered: 'badge-active'
     };
-    return `${base} ${toneClass[this.tone]}`;
+    const sizeClass = this.size === 'mini' ? 'badge badge-compact' : 'badge';
+    return `${sizeClass} ${toneClass[this.tone]}`;
   }
 }

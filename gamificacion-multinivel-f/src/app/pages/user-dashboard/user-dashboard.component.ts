@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -32,6 +32,22 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 
+type GraphNode = {
+  id: string;
+  level: string;
+  x: number;
+  y: number;
+  label: string;
+  name: string;
+  status?: NetworkMember['status'];
+  leaderId?: string;
+};
+
+type GraphLayout = {
+  nodes: GraphNode[];
+  links: Array<{ x1: number; y1: number; x2: number; y2: number }>;
+};
+
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
@@ -46,7 +62,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly cartControl: CartControlService,
     private readonly goalControl: GoalControlService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef,
     private readonly api: ApiService
   ) {}
 
@@ -118,6 +133,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private countdownInterval?: number;
   private toastTimeout?: number;
   private goalsSub?: Subscription;
+  private dashboardNavLinksCache: SidebarLink[] = [];
+  private dashboardNavLinksKey = '';
+  private featuredCarouselCache: FeaturedItem[] = [];
+  private featuredCarouselProductsRef: DashboardProduct[] | null = null;
+  private featuredCarouselFeaturedRef: FeaturedItem[] | null = null;
+  private graphLayoutCache: GraphLayout = { nodes: [], links: [] };
+  private graphSizeCache = { width: 860, height: 260 };
+  private graphMembersRef: NetworkMember[] | null = null;
+  private graphRootNameCache = '';
 
 
   
@@ -161,6 +185,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
 
   get dashboardNavLinks(): SidebarLink[] {
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}`;
+    if (key === this.dashboardNavLinksKey) {
+      return this.dashboardNavLinksCache;
+    }
+
     const links: SidebarLink[] = [{ id: 'merchant', icon: 'fa-store', label: 'Tienda' }];
     if (!this.isGuest) {
       links.push(
@@ -172,7 +201,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
     }
-    return links;
+
+    this.dashboardNavLinksKey = key;
+    this.dashboardNavLinksCache = links;
+    return this.dashboardNavLinksCache;
   }
 
   handleDashboardNavSelect(sectionId: string): void {
@@ -192,6 +224,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get featuredCarousel(): FeaturedItem[] {
+    const featured = this.featured;
+    const products = this.products;
+    if (
+      this.featuredCarouselFeaturedRef === featured &&
+      this.featuredCarouselProductsRef === products
+    ) {
+      return this.featuredCarouselCache;
+    }
+
     const fixed: FeaturedItem[] = [
       {
         id: 'fixed-familia',
@@ -211,8 +252,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }
     ];
 
-    const featuredIds = new Set(this.featured.map((item) => item.id));
-    const productItems: FeaturedItem[] = this.products
+    const featuredIds = new Set(featured.map((item) => item.id));
+    const productItems: FeaturedItem[] = products
       .filter((product) => !featuredIds.has(product.id))
       .map((product) => ({
         id: product.id,
@@ -223,7 +264,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         banner: product.img || ''
       }));
 
-    return [...fixed, ...this.featured, ...productItems];
+    this.featuredCarouselFeaturedRef = featured;
+    this.featuredCarouselProductsRef = products;
+    this.featuredCarouselCache = [...fixed, ...featured, ...productItems];
+    return this.featuredCarouselCache;
   }
 
   get pagedFeatured(): FeaturedItem[] {
@@ -487,33 +531,24 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   discountBadgeClass(): string {
     if (!this.discountActiveValue) {
-      return 'badge-mini badge-mini-off';
+      return 'badge badge-inactive';
     }
     const pct = this.discountPercentValue;
     if (pct >= 50) {
-      return 'badge-mini badge-mini-gold';
+      return 'badge badge-pending';
     }
-    if (pct >= 40) {
-      return 'badge-mini badge-mini-silver';
-    }
-    if (pct >= 30) {
-      return 'badge-mini badge-mini-bronze';
-    }
-    return 'badge-mini badge-mini-active';
+    return 'badge badge-active';
   }
 
   medalBadgeClass(): string {
     const level = (this.userLevel || '').toLowerCase();
     if (level.includes('oro') || level.includes('gold')) {
-      return 'badge-mini badge-mini-gold';
+      return 'badge badge-pending';
     }
     if (level.includes('plata') || level.includes('silver')) {
-      return 'badge-mini badge-mini-silver';
+      return 'badge badge-active';
     }
-    if (level.includes('bronce') || level.includes('bronze')) {
-      return 'badge-mini badge-mini-bronze';
-    }
-    return 'badge-mini badge-mini-off';
+    return 'badge badge-inactive';
   }
 
   toggleUserDetails(): void {
@@ -566,22 +601,16 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
 
-  get graphLayout(): {
-    nodes: Array<{
-      id: string;
-      level: string;
-      x: number;
-      y: number;
-      label: string;
-      name: string;
-      status?: NetworkMember['status'];
-      leaderId?: string;
-    }>;
-    links: Array<{ x1: number; y1: number; x2: number; y2: number }>;
-  } {
-    const l1Members = this.networkMembers.filter((member) => member.level === 'L1');
-    const l2Members = this.networkMembers.filter((member) => member.level === 'L2');
-    const l3Members = this.networkMembers.filter((member) => member.level === 'L3');
+  get graphLayout(): GraphLayout {
+    const members = this.networkMembers;
+    const rootName = this.currentUser?.name || 'Tu';
+    if (this.graphMembersRef === members && this.graphRootNameCache === rootName) {
+      return this.graphLayoutCache;
+    }
+
+    const l1Members = members.filter((member) => member.level === 'L1');
+    const l2Members = members.filter((member) => member.level === 'L2');
+    const l3Members = members.filter((member) => member.level === 'L3');
     const metrics = this.getGraphMetrics(l1Members.length, l2Members.length, l3Members.length);
     const rootX = 120;
     const l1X = 320;
@@ -600,7 +629,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             ? (l3Positions[0].y + l3Positions[l3Positions.length - 1].y) / 2
             : metrics.height / 2;
 
-    const rootName = this.currentUser?.name || 'Tu';
     const root = {
       id: 'root',
       level: 'root',
@@ -660,7 +688,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       };
     });
 
-    const links: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    const links: GraphLayout['links'] = [];
     for (const node of l1Nodes) {
       links.push({ x1: root.x, y1: root.y, x2: node.x, y2: node.y });
     }
@@ -675,7 +703,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       links.push({ x1: parent.x, y1: parent.y, x2: node.x, y2: node.y });
     }
 
-    return { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
+    this.graphMembersRef = members;
+    this.graphRootNameCache = rootName;
+    this.graphLayoutCache = { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
+    this.graphSizeCache = { width: metrics.width, height: metrics.height };
+    return this.graphLayoutCache;
   }
 
   nodeFill(level: string, status?: NetworkMember['status']): string {
@@ -702,11 +734,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get graphSize(): { width: number; height: number } {
-    const l1Count = this.networkMembers.filter((member) => member.level === 'L1').length;
-    const l2Count = this.networkMembers.filter((member) => member.level === 'L2').length;
-    const l3Count = this.networkMembers.filter((member) => member.level === 'L3').length;
-    const metrics = this.getGraphMetrics(l1Count, l2Count, l3Count);
-    return { width: metrics.width, height: metrics.height };
+    this.graphLayout;
+    return this.graphSizeCache;
   }
 
   private getGraphMetrics(
@@ -780,7 +809,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             }
           }
           this.featuredPage = 0;
-          this.cdr.markForCheck();
           this.loadOrders();
         },
         error: () => {
@@ -962,28 +990,28 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Inactivo
   if (!this.isClient || !this.discountActiveValue) {
-    return 'ring-soft opacity-70';
+    return 'ring opacity-70';
   }
 
   const p = this.discountPercentNumber();
 
   // 🥇 ORO 50%
   if (p >= 50) {
-    return 'ring-soft ring-gold';
+    return 'ring ring-primary';
   }
 
   // 🥈 PLATA 40%
   if (p >= 40) {
-    return 'ring-soft ring-silver';
+    return 'ring ring-secondary';
   }
 
   // 🥉 BRONCE 30%
   if (p >= 30) {
-    return 'ring-soft ring-bronze';
+    return 'ring ring-secondary';
   }
 
   // 🔵 Activo sin nivel
-  return 'ring-soft';
+  return 'ring';
   }
 
 
@@ -992,28 +1020,28 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Inactivo = no mostrar
   if (!this.isClient || !this.discountActiveValue) {
-    return 'badge-mini badge-mini-off';
+    return 'badge badge-compact badge-inactive';
   }
 
   const p = this.discountPercentNumber();
 
   // 🥇 ORO
   if (p >= 50) {
-    return 'badge-mini badge-mini-gold';
+    return 'badge badge-compact badge-pending';
   }
 
   // 🥈 PLATA
   if (p >= 40) {
-    return 'badge-mini badge-mini-silver';
+    return 'badge badge-compact badge-active';
   }
 
   // 🥉 BRONCE
   if (p >= 30) {
-    return 'badge-mini badge-mini-bronze';
+    return 'badge badge-compact badge-active';
   }
 
   // 🔵 Activo
-  return 'badge-mini badge-mini-active';
+  return 'badge badge-compact badge-active';
   }
 
 
@@ -1367,7 +1395,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: () => {
           this.showToast('Solicitud enviada. Te contactaremos por el deposito.');
           this.closeCommissionModal();
-          this.dashboardControl.load().subscribe(() => this.cdr.markForCheck());
+          this.dashboardControl.load().subscribe();
         },
         error: () => {
           this.showToast('No se pudo solicitar el pago.');
@@ -1394,7 +1422,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: () => {
           this.showToast('CLABE actualizada.');
           this.closeClabeConfirm();
-          this.dashboardControl.load().subscribe(() => this.cdr.markForCheck());
+          this.dashboardControl.load().subscribe();
         },
         error: () => {
           this.showToast('No se pudo actualizar la CLABE.');
@@ -1543,10 +1571,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       window.clearTimeout(this.goalsAnimTimeout);
     }
     this.isGoalsHighlight = false;
-    this.cdr.markForCheck();
     this.goalsAnimTimeout = window.setTimeout(() => {
       this.isGoalsHighlight = true;
-      this.cdr.markForCheck();
     }, 80);
   }
 
@@ -1559,17 +1585,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.goalFillTimeout) {
       window.clearTimeout(this.goalFillTimeout);
     }
-    this.cdr.markForCheck();
     requestAnimationFrame(() => {
       this.isGoalFilling = true;
-      this.cdr.markForCheck();
       requestAnimationFrame(() => {
         this.visualActiveWidth = targetActive;
         this.visualCartWidth = targetCart;
-        this.cdr.markForCheck();
         this.goalFillTimeout = window.setTimeout(() => {
           this.isGoalFilling = false;
-          this.cdr.markForCheck();
         }, 1100);
       });
     });
@@ -1700,11 +1722,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       next: (orders) => {
         this.orders = orders ?? [];
         this.isOrdersLoading = false;
-        this.cdr.markForCheck();
       },
       error: () => {
         this.isOrdersLoading = false;
-        this.cdr.markForCheck();
       }
     });
   }
@@ -1745,7 +1765,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }))
     );
     this.processGoals(this.goals);
-    this.cdr.markForCheck();
   }
 
   private resolveProduct(productId: string): DashboardProduct | null {

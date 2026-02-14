@@ -17,6 +17,10 @@ import { AuthService } from './auth.service';
 export class UserDashboardControlService {
   private readonly dataSubject = new BehaviorSubject<UserDashboardData | null>(null);
   readonly data$ = this.dataSubject.asObservable();
+  private readonly emptyGoals: DashboardGoal[] = [];
+  private readonly emptyProducts: DashboardProduct[] = [];
+  private readonly emptyFeatured: FeaturedItem[] = [];
+  private readonly emptyNetworkMembers: NetworkMember[] = [];
   private cart: Record<string, number> = {};
   private heroQty = 0;
   private heroProductId = '';
@@ -71,8 +75,6 @@ export class UserDashboardControlService {
         };
         this.networkMembersCache = safeNetworkMembers;
         this.buyAgainIdsCache = new Set(safeBuyAgainIds);
-        console.log('dashboard payload networkMembers:', data.networkMembers);
-        console.log('dashboard mapped networkMembers:', mappedData.networkMembers);
         const clonedData =
           typeof structuredClone === 'function'
             ? structuredClone(mappedData)
@@ -92,19 +94,22 @@ export class UserDashboardControlService {
   }
 
   get goals(): DashboardGoal[] {
-    return this.data?.goals ?? [];
+    return this.data?.goals ?? this.emptyGoals;
   }
 
   get products(): DashboardProduct[] {
-    return this.data?.products ?? [];
+    return this.data?.products ?? this.emptyProducts;
   }
 
   get featured(): FeaturedItem[] {
-    return this.data?.featured ?? [];
+    return this.data?.featured ?? this.emptyFeatured;
   }
 
   get networkMembers(): NetworkMember[] {
-    return this.networkMembersCache.length ? this.networkMembersCache : this.data?.networkMembers ?? [];
+    if (this.networkMembersCache.length) {
+      return this.networkMembersCache;
+    }
+    return this.data?.networkMembers ?? this.emptyNetworkMembers;
   }
 
   get buyAgainIds(): Set<string> {
@@ -156,12 +161,12 @@ export class UserDashboardControlService {
 
   statusBadgeClass(status: NetworkMember['status']): string {
     if (status === 'Activa') {
-      return 'bg-blue-500/15 border-blue-400/20 text-blue-200';
+      return 'bg-emerald-500/10 border-emerald-400/30 text-main';
     }
     if (status === 'En progreso') {
-      return 'bg-yellow-400/15 border-yellow-400/20 text-yellow-200';
+      return 'bg-gold-12 border-gold-35 text-on-gold';
     }
-    return 'bg-white/5 border-white/10 text-zinc-300';
+    return 'bg-ivory-80 border-olive-30 text-muted';
   }
 
   updateCart(productId: string, qty: number): void {
@@ -257,3 +262,4 @@ export class UserDashboardControlService {
     return cutoff;
   }
 }
+

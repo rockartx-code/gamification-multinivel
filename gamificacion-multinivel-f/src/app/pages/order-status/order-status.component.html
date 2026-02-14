@@ -2,15 +2,10 @@
   <header class="border-b border-olive-20 bg-sand-200-90 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
-        <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
+        <img src="logo-320.png" width="320" height="96" alt="Logo findingU" class="h-15 w-40" />
       </div>
       <div class="flex shrink-0 items-center gap-2">
-        <ui-button
-          variant="ghost"
-          size="md"
-          iconClass="fa-solid fa-arrow-left"
-          [routerLink]="['/dashboard']"
-          extraClass="text-xs sm:text-sm border border-olive-30 bg-ivory-80 hover-bg-cream-90">
+        <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/dashboard']" extraClass="sm:text-sm">
           Regresar
         </ui-button>
       </div>
@@ -22,10 +17,10 @@
       class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
       <!-- Ambient glow -->
       <div
-        class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(250,204,21,0.10),transparent_55%)]">
+        class="pointer-events-none absolute inset-0 bg-olive-10">
       </div>
       <div
-        class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(200,169,106,0.12),transparent_60%)]">
+        class="pointer-events-none absolute inset-0 bg-olive-10">
       </div>
 
       <div class="relative">
@@ -113,7 +108,7 @@
             <div class="flex items-start gap-3">
               <!-- Icono -->
               <div
-                class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-200">
+                class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-main">
                 <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
               </div>
 
@@ -123,7 +118,7 @@
 
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                   <span
-                    class="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-semibold text-sky-200">
+                    class="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-semibold text-main">
                     <span class="h-1.5 w-1.5 rounded-full bg-sky-200/80"></span>
                     En camino
                   </span>
@@ -158,14 +153,7 @@
                     {{ order?.trackingNumber || '-' }}
                   </span>
 
-                  <ui-button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    iconClass="fa-regular fa-copy"
-                    (pressed)="copyToClipboard(order?.trackingNumber)"
-                    [disabled]="!order?.trackingNumber"
-                    extraClass="border border-olive-30 bg-ivory-80 text-[11px] text-main hover-bg-cream-90">
+                  <ui-button type="button" variant="ghost" size="sm" iconClass="fa-regular fa-copy" (pressed)="copyToClipboard(order?.trackingNumber)" [disabled]="!order?.trackingNumber">
                     Copiar
                   </ui-button>
                 </div>
@@ -302,3 +290,5 @@
     </div>
   </main>
 </section>
+
+

@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
 
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -54,6 +54,7 @@ export class LandingComponent implements OnInit {
     private readonly route: ActivatedRoute,
     private readonly api: ApiService,
     private readonly cdr: ChangeDetectorRef,
+    private readonly destroyRef: DestroyRef,
     private readonly router: Router,
     private readonly authService: AuthService
   ) {}
@@ -88,9 +89,9 @@ export class LandingComponent implements OnInit {
 
   getTagClass(index: number): string {
     if (index % 2 === 0) {
-      return 'inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-blue-200';
+      return 'inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-sand-200';
     }
-    return 'inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-yellow-200';
+    return 'inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-sand-200';
   }
 
   getTagIcon(index: number): string {
@@ -128,24 +129,24 @@ export class LandingComponent implements OnInit {
     this.isSubmitting = true;
     this.api
       .createAccount(payload)
-      .pipe(
-        finalize(() => {
-          this.isSubmitting = false;
-        })
-      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
+          this.isSubmitting = false;
           if (response?.customer) {
             this.authService.setUserFromCreateAccount(response.customer);
           }
           this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
           this.setFeedback('', 'success');
+          this.cdr.detectChanges();
           this.router.navigate(['/dashboard']);
         },
         error: (error: any) => {
+          this.isSubmitting = false;
           const apiMessage =
             error?.error?.message || error?.error?.Error || error?.message || 'No se pudo crear la cuenta.';
           this.setFeedback(apiMessage, 'error');
+          this.cdr.detectChanges();
         }
       });
   }
@@ -156,24 +157,27 @@ export class LandingComponent implements OnInit {
   }
 
   private loadFeaturedProduct(queryProductId: string): void {
-    this.api.getUserDashboardData().subscribe({
-      next: (data) => {
-        const queryId = (queryProductId ?? '').trim();
-        const fromQuery = queryId ? this.pickFromQuery(data, queryId) : null;
-        const defaultProduct = this.pickDefaultProduct(data);
-        this.featuredProduct = fromQuery ?? defaultProduct;
-        if (fromQuery?.id) {
-          this.productId = fromQuery.id;
-        } else if (defaultProduct?.id) {
-          this.productId = defaultProduct.id;
+    this.api
+      .getUserDashboardData()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          const queryId = (queryProductId ?? '').trim();
+          const fromQuery = queryId ? this.pickFromQuery(data, queryId) : null;
+          const defaultProduct = this.pickDefaultProduct(data);
+          this.featuredProduct = fromQuery ?? defaultProduct;
+          if (fromQuery?.id) {
+            this.productId = fromQuery.id;
+          } else if (defaultProduct?.id) {
+            this.productId = defaultProduct.id;
+          }
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.featuredProduct = null;
+          this.cdr.detectChanges();
         }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.featuredProduct = null;
-        this.cdr.markForCheck();
-      }
-    });
+      });
   }
 
   private getHashQueryParam(param: string): string {
@@ -266,3 +270,4 @@ export class LandingComponent implements OnInit {
     };
   }
 }
+

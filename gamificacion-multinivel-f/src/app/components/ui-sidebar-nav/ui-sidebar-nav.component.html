@@ -1,13 +1,9 @@
 <div class="mt-3 flex flex-col gap-2">
   <ui-button
+    size="sm"
+    [variant]="activeId === link.id ? 'primary' : 'ghost'"
     *ngFor="let link of links"
-    class="navbtn rounded-2xl border px-4 py-3 text-left transition"
-    [ngClass]="[
-      compact ? 'hover-bg-ivory-80' : 'hover-bg-cream-90',
-      activeId === link.id
-        ? 'border-gold-35 bg-olive-10'
-        : 'border-olive-30 bg-ivory-80'
-    ]"
+    class="navbtn text-left"
     (pressed)="onSelect(link.id)">
     <div class="flex items-center gap-2 text-sm font-semibold">
       <i class="fa-solid" [ngClass]="link.icon + ' text-accent'" aria-hidden="true"></i>

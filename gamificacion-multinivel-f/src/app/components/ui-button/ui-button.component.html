@@ -3,7 +3,21 @@
   [disabled]="disabled"
   [class]="classes"
   [routerLink]="routerLink"
-  (click)="onClick($event)">
+  (click)="onClick($event)"
+>
   <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>
-  <ng-content></ng-content>
+
+  <span class="btn-content" [class.stacked]="stacked">
+    <!-- Modo normal -->
+    <ng-content *ngIf="!stacked"></ng-content>
+
+    <!-- Modo stacked -->
+    <span class="btn-title" *ngIf="stacked">
+      <ng-content select="[btnTitle]"></ng-content>
+    </span>
+
+    <span class="btn-subtitle" *ngIf="stacked">
+      <ng-content select="[btnSubtitle]"></ng-content>
+    </span>
+  </span>
 </button>

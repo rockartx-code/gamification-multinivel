@@ -1,9 +1,9 @@
 <section class="antialiased">
-  <header class="sticky top-0 z-40 border-b border-olive-30 bg-gradient-to-r from-sand-200-95 via-cream-92 to-sand-200/95 backdrop-blur">
+  <header class="sticky top-0 z-40 border-b border-olive-30 bg-sand-200-90 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
         <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-olive-30 bg-ivory-80">
-          <img src="minlogo.png" alt="Logo" class="h-6 w-6" />
+          <img src="minlogo-64.png" width="64" height="64" alt="Logo" class="h-6 w-6" />
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2 text-xs text-gray-600">
@@ -15,13 +15,7 @@
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
-        <ui-button
-          variant="ghost"
-          size="md"
-          iconClass="fa-solid fa-arrow-left"
-          [routerLink]="['/dashboard']"
-          extraClass="text-xs sm:text-sm"
-        >
+        <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/dashboard']" extraClass="sm:text-sm">
           Regresar
         </ui-button>
       </div>
@@ -33,7 +27,7 @@
       <section id="detalle-carrito"
         class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(124,140,114,0.14),transparent_55%),radial-gradient(circle_at_80%_28%,rgba(200,169,106,0.12),transparent_55%)]">
+          class="pointer-events-none absolute inset-0 bg-olive-10">
         </div>
 
         <div class="relative px-5 pb-3 pt-5">
@@ -89,7 +83,7 @@
   <!-- CARRITO -->
   <div class="rounded-2xl border border-olive-30 surface-soft p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+      <div class="flex items-center gap-2 text-sm font-semibold text-main">
         <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
         Carrito
       </div>
@@ -100,7 +94,6 @@
       <div
         *ngFor="let item of cartItems"
         class="flex flex-col gap-3 rounded-2xl border border-olive-30 surface-soft p-3 sm:flex-row sm:items-start"
-        [ngClass]="item.id === lastAddedItemId ? 'fade-in-item' : ''"
       >
         <!-- IMG -->
         <div
@@ -156,7 +149,7 @@
             </div>
 
             <!-- Parcial -->
-            <div class="text-xs text-zinc-300 sm:text-right">
+            <div class="text-xs text-muted sm:text-right">
               <span class="text-gray-500">Parcial:</span>
               <span class="font-semibold">
                 {{ formatMoney(discountedPrice(item.price) * item.qty) }}
@@ -164,14 +157,7 @@
             </div>
 
             <!-- Remove -->
-            <ui-button
-              variant="ghost"
-              size="sm"
-              iconClass="fa-solid fa-trash-can"
-              [fullWidth]="true"
-              extraClass="sm:w-auto"
-              (pressed)="removeItem(item.id)"
-            >
+            <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-trash-can" [fullWidth]="true" extraClass="sm:w-auto" (pressed)="removeItem(item.id)">
               Quitar
             </ui-button>
           </div>
@@ -180,7 +166,7 @@
     </div>
 
     <div *ngIf="suggestedProducts.length" class="mt-4">
-  <div class="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+  <div class="flex items-center gap-2 text-xs font-semibold text-main">
     <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
     Sugeridos
   </div>
@@ -202,7 +188,7 @@
   <!-- ENTREGA -->
   <div class="rounded-2xl border border-olive-30 surface-soft p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+      <div class="flex items-center gap-2 text-sm font-semibold text-main">
         <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
         Entrega
       </div>
@@ -256,7 +242,7 @@
         <div id="resumen-carrito"
           class="grain relative flex-1 overflow-hidden rounded-3xl border border-olive-30 bg-ambient">
           <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(124,140,114,0.14),transparent_55%),radial-gradient(circle_at_80%_28%,rgba(200,169,106,0.12),transparent_55%)]">
+            class="pointer-events-none absolute inset-0 bg-olive-10">
           </div>
           <div class="relative flex h-full flex-col p-6">
             <div class="flex items-start justify-between gap-3">
@@ -306,17 +292,13 @@
             <div class="mt-5 mb-5 rounded-2xl border border-olive-30 bg-ivory-80 p-4">
               <ng-container *ngIf="isGuest; else goalProgress">
                 <div class="flex items-center gap-2 text-xs font-semibold text-gold">
-                  <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
                   Meta para invitados
                 </div>
                 <div class="mt-2 text-lg font-extrabold tracking-tight">
                   Registrate para obtener descuentos y beneficios
                 </div>
                 <div class="mt-1 text-xs text-muted">Crea tu cuenta para desbloquear promociones y seguimiento.</div>
-                <ui-button
-                  type="button"
-                  class="glow-gold mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-xs font-semibold text-black transition-transform hover:scale-[1.03]"
-                  (pressed)="openGuestRegisterModal()">
+                <ui-button size="sm" variant="primary" type="button" class="mt-3" (pressed)="openGuestRegisterModal()">
                   <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
                   Registrate
                 </ui-button>
@@ -336,10 +318,7 @@
               </ng-template>
             </div>
 
-            <ui-button
-              class="glow-gold mt-auto inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-6 py-4 font-semibold text-black transition-transform hover:scale-[1.02]"
-              [disabled]="isPlacingOrder"
-              (pressed)="placeOrder()">
+            <ui-button size="lg" variant="primary" class="mt-auto w-full" [disabled]="isPlacingOrder" (pressed)="placeOrder()">
               <i class="fa-solid fa-lock" aria-hidden="true"></i>
               {{ isPlacingOrder ? 'Creando orden...' : 'Pagar y finalizar' }}
             </ui-button>
@@ -351,11 +330,10 @@
     </div>
   </main>
 
-  <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-92 backdrop-blur lg:hidden">
+  <div class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-90 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-6xl px-4 py-3">
       <div class="flex items-center justify-between gap-3">
-        <ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-3 text-sm transition hover-bg-cream-90"
-          (pressed)="showSummary()">
+        <ui-button size="sm" variant="ghost" (pressed)="showSummary()">
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
           Ver resumen
         </ui-button>
@@ -365,10 +343,7 @@
           <div class="text-lg font-extrabold leading-none">{{ formatMoney(total) }}</div>
         </div>
 
-        <ui-button
-          class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.02]"
-          [disabled]="isPlacingOrder"
-          (pressed)="placeOrder()">
+        <ui-button size="sm" variant="primary" [disabled]="isPlacingOrder" (pressed)="placeOrder()">
           <i class="fa-solid fa-lock" aria-hidden="true"></i>
           {{ isPlacingOrder ? 'Creando orden...' : 'Pagar' }}
         </ui-button>
@@ -378,7 +353,7 @@
 
   <div class="fixed bottom-[104px] left-1/2 z-[60] -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
     </div>
   </div>
@@ -398,9 +373,7 @@
           </h2>
           <p class="mt-1 text-xs text-gray-600">Revisa tu pedido antes de pagar.</p>
         </div>
-        <ui-button
-          class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs text-main transition hover-bg-cream-90"
-          (pressed)="closeSummary()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeSummary()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
@@ -451,13 +424,7 @@
           <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
           <p class="mt-2 text-sm text-muted">Completa tus datos para activar descuentos y red.</p>
         </div>
-        <ui-button
-          type="button"
-          variant="ghost"
-          size="sm"
-          iconClass="fa-solid fa-xmark"
-          extraClass="h-9 w-9 border border-olive-30 bg-ivory-80 text-main hover-bg-cream-90"
-          (pressed)="closeGuestRegisterModal()">
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" (pressed)="closeGuestRegisterModal()">
         </ui-button>
       </div>
 
@@ -512,22 +479,10 @@
         ></ui-form-field>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <ui-button
-            type="button"
-            variant="ghost"
-            size="md"
-            extraClass="border border-olive-30 bg-ivory-80 px-5 py-2.5 text-sm transition hover-bg-cream-90"
-            (pressed)="closeGuestRegisterModal()">
+          <ui-button type="button" variant="ghost" size="md" (pressed)="closeGuestRegisterModal()">
             Ahora no
           </ui-button>
-          <ui-button
-            type="button"
-            [disabled]="isGuestRegisterSubmitting"
-            variant="primary"
-            size="md"
-            iconClass="fa-solid fa-user-check"
-            extraClass="glow-gold bg-gradient-to-r from-gold to-amber px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-            (pressed)="submitGuestRegister()">
+          <ui-button type="button" [disabled]="isGuestRegisterSubmitting" variant="primary" size="md" iconClass="fa-solid fa-user-check" (pressed)="submitGuestRegister()">
             {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Regístrate' }}
           </ui-button>
         </div>
@@ -549,16 +504,10 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-xs font-semibold text-gray-600">Detalle del producto</div>
-          <h3 class="mt-2 text-xl font-extrabold text-zinc-100">{{ product.name }}</h3>
+          <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
           <p class="mt-1 text-sm text-gray-600">{{ product.badge }}</p>
         </div>
-        <ui-button
-          type="button"
-          variant="ghost"
-          size="sm"
-          iconClass="fa-solid fa-xmark"
-          extraClass="h-9 w-9 border border-olive-30 bg-ivory-80 text-main hover-bg-cream-90"
-          (pressed)="closeProductDetails()">
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" (pressed)="closeProductDetails()">
         </ui-button>
       </div>
 
@@ -572,7 +521,7 @@
             <div *ngIf="hasDiscount" class="text-sm text-gray-500 line-through">
               {{ formatMoney(product.price) }}
             </div>
-            <div class="text-lg font-extrabold text-zinc-100">
+            <div class="text-lg font-extrabold text-main">
               {{ formatMoney(discountedPrice(product.price)) }}
             </div>
             <div class="text-xs" [ngClass]="hasDiscount ? 'text-accent' : 'text-gray-500'">
@@ -585,28 +534,19 @@
 
       <div *ngIf="product.description" class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
         <div class="text-xs font-semibold text-gray-600">Descripcion</div>
-        <p class="mt-2 whitespace-pre-line text-sm text-zinc-200">{{ product.description }}</p>
+        <p class="mt-2 whitespace-pre-line text-sm text-main">{{ product.description }}</p>
       </div>
 
       <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <ui-button
-          type="button"
-          variant="ghost"
-          size="md"
-          extraClass="border border-olive-30 bg-ivory-80 px-5 py-2.5 text-sm text-zinc-200 hover-bg-cream-90"
-          (pressed)="closeProductDetails()">
+        <ui-button type="button" variant="ghost" size="md" (pressed)="closeProductDetails()">
           Cerrar
         </ui-button>
-        <ui-button
-          type="button"
-          variant="olive"
-          size="md"
-          iconClass="fa-solid fa-cart-plus"
-          extraClass="glow-blue bg-gradient-to-r from-olive to-gold px-5 py-2.5 text-sm font-semibold"
-          (pressed)="addSuggestedProduct(product)">
+        <ui-button type="button" variant="secondary" size="md" iconClass="fa-solid fa-cart-plus" (pressed)="addSuggestedProduct(product)">
           Agregar
         </ui-button>
       </div>
     </ng-container>
   </ui-modal>
 </section>
+
+

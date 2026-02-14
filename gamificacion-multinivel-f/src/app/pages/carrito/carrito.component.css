@@ -1,19 +1,1 @@
-:host {
-  display: block;
-  color: var(--text-main);
-}
 
-.fade-in-item {
-  animation: cartFadeIn 0.45s ease-out;
-}
-
-@keyframes cartFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}

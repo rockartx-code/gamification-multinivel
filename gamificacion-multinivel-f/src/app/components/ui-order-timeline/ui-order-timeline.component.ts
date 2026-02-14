@@ -32,9 +32,9 @@ export class UiOrderTimelineComponent {
   }
 
   stepClass(index: number): string {
-    if (index < this.currentIndex) return 'border-emerald-400/40 bg-emerald-400/20 text-emerald-200';
-    if (index === this.currentIndex) return 'border-sky-400/40 bg-sky-400/15 text-sky-200';
-    return 'border-white/10 bg-white/5 text-zinc-500';
+    if (index < this.currentIndex) return 'border-emerald-400/40 bg-emerald-400/20 text-main';
+    if (index === this.currentIndex) return 'border-sky-400/40 bg-sky-400/15 text-main';
+    return 'border-olive-20 bg-ivory-80 text-muted';
   }
 
   stepIcon(index: number, stepKey: string): string {
@@ -49,3 +49,4 @@ export class UiOrderTimelineComponent {
     return 'fa-circle text-[6px] opacity-60';
   }
 }
+

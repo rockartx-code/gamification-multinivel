@@ -21,19 +21,15 @@
           </span>
         </div>
 
-        <ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
-          (pressed)="showActions()">
+        <ui-button size="sm" variant="ghost" (pressed)="showActions()">
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Acciones
         </ui-button>
-        <ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
-          (pressed)="logout()">
+        <ui-button size="sm" variant="ghost" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           Logout
         </ui-button>
-        <ui-button
-          class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-          (pressed)="openNewOrderModal()">
+        <ui-button size="sm" variant="primary" (pressed)="openNewOrderModal()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           Nuevo
         </ui-button>
@@ -45,7 +41,7 @@
       <aside class="hidden h-full flex-col gap-3 lg:flex">
         <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-4">
           <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(124,140,114,0.12),transparent_55%),radial-gradient(circle_at_80%_25%,rgba(200,169,106,0.10),transparent_55%)]">
+            class="pointer-events-none absolute inset-0 bg-olive-10">
           </div>
           <div class="relative">
             <div class="text-xs text-gray-600">Navegación</div>
@@ -55,7 +51,7 @@
 
         <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ambient p-4">
           <div
-            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(245,185,66,0.12),transparent_55%)]">
+            class="pointer-events-none absolute inset-0 bg-olive-10">
           </div>
           <div class="relative">
             <div class="text-xs text-muted">Estado del mes</div>
@@ -71,7 +67,7 @@
       <section
         class="grain relative flex h-full flex-col overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(124,140,114,0.12),transparent_55%),radial-gradient(circle_at_80%_25%,rgba(200,169,106,0.10),transparent_55%)]">
+          class="pointer-events-none absolute inset-0 bg-olive-10">
         </div>
 
         <div class="relative border-b border-olive-20 px-5 pb-3 pt-5">
@@ -87,36 +83,16 @@
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders'">
-            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover-bg-olive-15"
-              [ngClass]="
-                currentOrderStatus === 'pending'
-                  ? 'border-gold-35 bg-olive-10'
-                  : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-              " (pressed)="setOrderStatus('pending')">
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'pending' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('pending')">
               Pendiente
             </ui-button>
-            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover-bg-cream-90"
-              [ngClass]="
-                currentOrderStatus === 'paid'
-                  ? 'border-gold-35 bg-olive-10'
-                  : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-              " (pressed)="setOrderStatus('paid')">
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'paid' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('paid')">
               Pagado
             </ui-button>
-            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover-bg-cream-90"
-              [ngClass]="
-                currentOrderStatus === 'shipped'
-                  ? 'border-gold-35 bg-olive-10'
-                  : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-              " (pressed)="setOrderStatus('shipped')">
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'shipped' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('shipped')">
               Enviado
             </ui-button>
-            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover-bg-cream-90"
-              [ngClass]="
-                currentOrderStatus === 'delivered'
-                  ? 'border-gold-35 bg-olive-10'
-                  : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-              " (pressed)="setOrderStatus('delivered')">
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'delivered' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('delivered')">
               Entregado
             </ui-button>
           </div>
@@ -141,19 +117,14 @@
                   <span class="text-xs text-gray-600">{{ filteredOrders.length }} pedidos</span>
                 </div>
 
-                <ui-button
-                  variant="primary"
-                  size="sm"
-                  iconClass="fa-solid fa-plus"
-                  extraClass="glow-gold"
-                  (pressed)="openNewOrderModal()">
+                <ui-button variant="primary" size="sm" iconClass="fa-solid fa-plus" (pressed)="openNewOrderModal()">
                   Nuevo pedido
                 </ui-button>
               </div>
 
               <div class="overflow-auto">
                 <div class="table-soft text-sm">
-                  <ui-data-table [rows]="filteredOrders" mobileDividerClass="divide-olive-15" desktopDividerClass="divide-olive-15">
+                  <ui-data-table [rows]="filteredOrders" mobileDividerClass="divide-olive-20" desktopDividerClass="divide-olive-20">
                     <ng-template #mobileRow let-order>
                       <div class="p-4">
                         <div class="flex items-center justify-between">
@@ -220,7 +191,7 @@
                   <span class="text-xs text-gray-600">{{ customersCount }} clientes</span>
                 </div>
 
-                <div class="md:hidden divide-y divide-olive-15">
+                <div class="md:hidden divide-y divide-olive-20">
                   <div *ngFor="let customer of customers" class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ customer.name }}</div>
@@ -232,9 +203,7 @@
                       <div>Descuento: <span class="text-main">{{ customer.discount }}</span></div>
                       <div>Mes anterior: <span class="text-main">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</span></div>
                     </div>
-                    <ui-button
-                      class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-3 py-2 text-xs transition hover-bg-cream-90"
-                      (pressed)="selectCustomer(customer.id)">
+                    <ui-button size="sm" variant="ghost" class="mt-3 w-full" (pressed)="selectCustomer(customer.id)">
                       <i class="fa-solid fa-eye" aria-hidden="true"></i>
                       Ver
                     </ui-button>
@@ -246,11 +215,11 @@
                     <div class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                       <div>Cliente</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
                     </div>
-                    <div *ngFor="let customer of customers" class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] items-center border-b border-olive-15 px-4 py-3 last:border-b-0">
+                    <div *ngFor="let customer of customers" class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ customer.name }}</div>
                       <div class="text-gold">{{ customer.discount }}</div>
                       <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
-                      <div><ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-3 py-2 text-xs transition hover-bg-cream-90" (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver</ui-button></div>
+                      <div><ui-button size="sm" variant="ghost" (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver</ui-button></div>
                     </div>
                   </div>
                 </div>
@@ -262,8 +231,7 @@
                     <div class="text-sm font-semibold text-main">Detalle del cliente</div>
                     <div class="mt-1 text-xs text-gray-600">Estructura simulada.</div>
                   </div>
-                  <ui-button
-                    class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90">
+                  <ui-button size="sm" variant="ghost">
                     <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
                     Perfil
                   </ui-button>
@@ -303,8 +271,7 @@
                       : 'Invitar a subir de nivel.'
                       }}
                     </div>
-                    <ui-button
-                      class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90">
+                    <ui-button size="sm" variant="ghost" class="mt-3 w-full">
                       <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
                       Enviar recordatorio
                     </ui-button>
@@ -326,17 +293,11 @@
                     <div class="mt-2 text-xs text-gray-600" *ngIf="customer?.commissionsPrevStatus === 'pending'">
                       CLABE: {{ customer?.clabeInterbancaria || '-' }}
                     </div>
-                    <ui-button
-                      class="glow-gold mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-                      *ngIf="customer?.commissionsPrevStatus === 'pending'"
-                      (pressed)="openReceiptModal(customer)">
+                    <ui-button size="sm" variant="primary" class="mt-3 w-full" *ngIf="customer?.commissionsPrevStatus === 'pending'" (pressed)="openReceiptModal(customer)">
                       <i class="fa-solid fa-coins" aria-hidden="true"></i>
                       Pagar comisiones
                     </ui-button>
-                    <ui-button
-                      class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
-                      *ngIf="customer?.commissionsPrevStatus === 'paid' && customer?.commissionsPrevReceiptUrl"
-                      (pressed)="openReceipt(customer.commissionsPrevReceiptUrl)">
+                    <ui-button size="sm" variant="ghost" class="mt-3 w-full" *ngIf="customer?.commissionsPrevStatus === 'paid' && customer?.commissionsPrevReceiptUrl" (pressed)="openReceipt(customer.commissionsPrevReceiptUrl)">
                       <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
                       Ver comprobante
                     </ui-button>
@@ -345,15 +306,12 @@
 
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4 overflow-hidden">
                   <div class="mt-3 flex gap-2">
-                    <ui-button
-                      class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90">
+                    <ui-button size="sm" variant="ghost">
                       <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                       Cómo agregar
                     </ui-button>
 
-                    <ui-button
-                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
-                      (pressed)="openAddStructureModal()">
+                    <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" (pressed)="openAddStructureModal()">
                       <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                       Agregar a estructura
                     </ui-button>
@@ -404,7 +362,7 @@
                   <span class="text-xs text-gray-600">{{ productsCount }} productos</span>
                 </div>
 
-                <div class="md:hidden divide-y divide-olive-15">
+                <div class="md:hidden divide-y divide-olive-20">
                   <div *ngFor="let product of products" class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ product.name }}</div>
@@ -416,16 +374,11 @@
                       <div>Precio: <span class="text-main">{{ formatMoney(product.price) }}</span></div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                      <ui-button
-                        class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-3 py-2 text-xs transition hover-bg-cream-90"
-                        (pressed)="editProduct(product)">
+                      <ui-button size="sm" variant="ghost" (pressed)="editProduct(product)">
                         <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                         Editar
                       </ui-button>
-                      <ui-button
-                        class="inline-flex items-center gap-2 rounded-full border border-gold-35 bg-gold-14 px-3 py-2 text-xs text-gold transition hover-bg-gold-20 disabled:cursor-not-allowed disabled:opacity-60"
-                        [disabled]="isSettingProductOfMonth"
-                        (pressed)="setProductOfMonth(product)">
+                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)">
                         <i class="fa-solid fa-star" aria-hidden="true"></i>
                         Producto del mes
                       </ui-button>
@@ -438,13 +391,13 @@
                     <div class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                       <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
                     </div>
-                    <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-15 px-4 py-3 last:border-b-0">
+                    <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ product.name }}</div>
                       <div>{{ formatMoney(product.price) }}</div>
                       <div>{{ product.active ? 'Activo' : 'Inactivo' }}</div>
                       <div class="flex flex-wrap gap-2">
-                        <ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-3 py-2 text-xs transition hover-bg-cream-90" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
-                        <ui-button class="inline-flex items-center gap-2 rounded-full border border-gold-35 bg-gold-14 px-3 py-2 text-xs text-gold transition hover-bg-gold-20 disabled:cursor-not-allowed disabled:opacity-60" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
+                        <ui-button size="sm" variant="ghost" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
+                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
                       </div>
                     </div>
                   </div>
@@ -459,13 +412,7 @@
                       Incluye todas las imágenes requeridas para marketing.
                     </div>
                   </div>
-                  <ui-button
-                    variant="primary"
-                    size="md"
-                    iconClass="fa-solid fa-floppy-disk"
-                    extraClass="glow-gold bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-                    [disabled]="!isProductFormValid || isSavingProduct"
-                    (click)="saveProduct()">
+                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" [disabled]="!isProductFormValid || isSavingProduct" (click)="saveProduct()">
                     {{ isSavingProduct ? 'Guardando...' : 'Guardar' }}
                   </ui-button>
                 </div>
@@ -480,7 +427,7 @@
                     [ngModel]="productForm.name"
                     (ngModelChange)="updateProductField('name', $event)"
                     wrapperClass="block md:col-span-2"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     kind="input"
@@ -490,7 +437,7 @@
                     [ngModel]="productForm.price"
                     (ngModelChange)="updateProductField('price', $event)"
                     wrapperClass="block"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     label="SKU"
@@ -498,7 +445,7 @@
                     [ngModel]="productForm.sku"
                     (ngModelChange)="updateProductField('sku', $event)"
                     wrapperClass="block"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
 
                   <ui-form-field
@@ -507,7 +454,7 @@
                     [ngModel]="productForm.hook"
                     (ngModelChange)="updateProductField('hook', $event)"
                     wrapperClass="block md:col-span-2"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     kind="textarea"
@@ -517,7 +464,7 @@
                     [ngModel]="productForm.description"
                     (ngModelChange)="updateProductField('description', $event)"
                     wrapperClass="block md:col-span-2"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     kind="textarea"
@@ -527,7 +474,7 @@
                     [ngModel]="productForm.copyWhatsapp"
                     (ngModelChange)="updateProductField('copyWhatsapp', $event)"
                     wrapperClass="block md:col-span-2"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     kind="textarea"
@@ -537,7 +484,7 @@
                     [ngModel]="productForm.copyInstagram"
                     (ngModelChange)="updateProductField('copyInstagram', $event)"
                     wrapperClass="block md:col-span-2"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     kind="textarea"
@@ -547,7 +494,7 @@
                     [ngModel]="productForm.copyFacebook"
                     (ngModelChange)="updateProductField('copyFacebook', $event)"
                     wrapperClass="block md:col-span-2"
-                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
+                    inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
                   <ui-form-field
                     wrapperClass="block md:col-span-2"
@@ -566,7 +513,7 @@
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-3">
                     <label *ngFor="let slot of productImageSlots"
-                      class="block rounded-2xl border border-olive-30 bg-ivory-80 p-3 transition hover-bg-cream-90">
+                      class="block rounded-2xl border border-olive-30 bg-ivory-80 p-3  hover-bg-cream-90">
                       <div class="flex items-start justify-between gap-2">
                         <div>
                           <div class="text-xs font-semibold text-main">{{ slot.label }}</div>
@@ -578,7 +525,7 @@
                         type="file"
                         accept="image/*"
                         wrapperClass="mt-3 block"
-                        inputClass="block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-olive-10 file:px-4 file:py-2 file:font-semibold file:text-main hover-file-bg-olive-15"
+                        inputClass="block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-olive-10 file:px-4 file:py-2 file:font-semibold file:text-main hover-file-bg-olive-20"
                         (change)="uploadProductImage($event, slot.key)"></ui-form-field>
                       <div
                         class="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-2xl border border-olive-30 surface-soft">
@@ -660,8 +607,7 @@
           <div class="text-lg font-extrabold text-main">Acciones urgentes</div>
           <div class="mt-1 text-sm text-gray-600">Resolvé pendientes críticos desde aquí.</div>
         </div>
-        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover-bg-cream-90"
-          (pressed)="closeModals()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
@@ -671,8 +617,7 @@
         <div *ngFor="let warning of warnings" class="rounded-2xl border border-olive-30 surface-soft p-4">
           <div class="text-sm font-semibold text-main">{{ warning.text }}</div>
           <div class="mt-1 text-xs text-gray-600">Severidad: {{ warning.severity }}</div>
-          <ui-button
-            class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-xs font-semibold text-black">
+          <ui-button size="sm" variant="primary" class="mt-3 w-full">
             <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
             Resolver ahora
           </ui-button>
@@ -686,8 +631,7 @@
           <div class="text-lg font-extrabold text-main">Nuevo pedido</div>
           <div class="mt-1 text-sm text-gray-600">Registrá un pedido manual.</div>
         </div>
-        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover-bg-cream-90"
-          (pressed)="closeModals()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
@@ -708,11 +652,7 @@
           <div class="mt-3 max-h-[46vh] sm:max-h-[40vh] overflow-y-auto pr-1 grid gap-3">
             <div *ngFor="let product of products" class="rounded-2xl border border-olive-30 surface-soft p-3">
               <div class="flex items-center justify-between gap-3">
-                <ui-button
-                  variant="ghost"
-                  size="sm"
-                  class="inline-flex items-center gap-2 text-sm text-main"
-                  (pressed)="toggleProductSelection(product.id, !newOrderItems.has(product.id))">
+                <ui-button variant="ghost" size="sm" (pressed)="toggleProductSelection(product.id, !newOrderItems.has(product.id))">
                   <i class="fa-regular" [ngClass]="newOrderItems.has(product.id) ? 'fa-square-check text-accent' : 'fa-square text-gray-500'" aria-hidden="true"></i>
                   <span>{{ product.name }}</span>
                 </ui-button>
@@ -724,7 +664,7 @@
                   type="number"
                   [min]="1"
                   wrapperClass="w-20"
-                  inputClass="w-20 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20"
+                  inputClass="w-20 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20"
                   [ngModel]="newOrderItems.get(product.id) || 1"
                   (ngModelChange)="updateProductQty(product.id, $event)"></ui-form-field>
               </div>
@@ -746,18 +686,10 @@
           Total estimado: <span class="font-semibold text-main">{{ formatMoney(getNewOrderTotal()) }}</span>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <ui-button
-          variant="ghost"
-          size="md"
-          iconClass="fa-solid fa-ban"
-          extraClass="border border-olive-30 bg-ivory-80 px-4 py-2 text-sm text-main hover-bg-cream-90"
-          (pressed)="closeModals()">
+        <ui-button variant="ghost" size="md" iconClass="fa-solid fa-ban" (pressed)="closeModals()">
           Cancelar
         </ui-button>
-        <ui-button
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
-          [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder"
-          (pressed)="saveNewOrder()">
+        <ui-button variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder" (pressed)="saveNewOrder()">
           <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
           {{ isSavingOrder ? 'Guardando...' : 'Guardar pedido' }}
         </ui-button>
@@ -772,8 +704,7 @@
           <div class="text-lg font-extrabold text-main">Enviar pedido</div>
           <div class="mt-1 text-sm text-gray-600">Ingresa la gu?a o los datos de entrega personal.</div>
         </div>
-        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover-bg-cream-90"
-          (pressed)="closeShippingModal()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeShippingModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
@@ -783,17 +714,11 @@
         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
           <div class="text-[11px] uppercase tracking-wide text-gray-600">Tipo de entrega</div>
           <div class="mt-3 flex flex-wrap gap-2 text-sm text-main">
-            <ui-button
-              class="inline-flex items-center gap-2 rounded-full border px-4 py-2 transition"
-              [ngClass]="shippingType === 'carrier' ? 'border-gold-35 bg-olive-10' : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'"
-              (pressed)="shippingType = 'carrier'">
+            <ui-button size="sm" [variant]="shippingType === 'carrier' ? 'primary' : 'ghost'" (pressed)="shippingType = 'carrier'">
               <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
               Paquetería (Guía)
             </ui-button>
-            <ui-button
-              class="inline-flex items-center gap-2 rounded-full border px-4 py-2 transition"
-              [ngClass]="shippingType === 'personal' ? 'border-gold-35 bg-olive-10' : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'"
-              (pressed)="shippingType = 'personal'">
+            <ui-button size="sm" [variant]="shippingType === 'personal' ? 'primary' : 'ghost'" (pressed)="shippingType = 'personal'">
               <i class="fa-solid fa-handshake" aria-hidden="true"></i>
               Entrega personal
             </ui-button>
@@ -828,14 +753,11 @@
 
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm text-main hover-bg-cream-90"
-          (pressed)="closeShippingModal()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeShippingModal()">
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
         </ui-button>
-        <ui-button
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black"
-          (pressed)="confirmShipping()">
+        <ui-button size="sm" variant="primary" (pressed)="confirmShipping()">
           <i class="fa-solid fa-truck" aria-hidden="true"></i>
           Marcar como enviado
         </ui-button>
@@ -850,8 +772,7 @@
             Cliente: {{ receiptTargetCustomer?.name || '-' }}
           </div>
         </div>
-        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover-bg-cream-90"
-          (pressed)="closeReceiptModal()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeReceiptModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
@@ -865,20 +786,16 @@
           iconClass="fa-solid fa-file-arrow-up"
           accept=".pdf,image/*"
           [errorText]="receiptError"
-          inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-olive-70 focus:ring-2 focus-ring-olive-20"
+          inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20"
           (change)="updateReceiptFile($event)"></ui-form-field>
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <ui-button class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm text-main hover-bg-cream-90"
-          (pressed)="closeReceiptModal()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeReceiptModal()">
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
         </ui-button>
-        <ui-button
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
-          [disabled]="!receiptFile || isUploadingReceipt"
-          (pressed)="uploadReceipt()">
+        <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="!receiptFile || isUploadingReceipt" (pressed)="uploadReceipt()">
           <i class="fa-solid fa-upload" aria-hidden="true"></i>
           {{ isUploadingReceipt ? 'Cargando...' : 'Subir comprobante' }}
         </ui-button>
@@ -891,8 +808,7 @@
           <div class="text-lg font-extrabold text-main">Agregar a estructura</div>
           <div class="mt-1 text-sm text-gray-600">Completá los datos para crear el alta en la red.</div>
         </div>
-        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover-bg-cream-90"
-          (pressed)="closeModals()">
+        <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
@@ -958,65 +874,31 @@
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <ui-button
-          variant="ghost"
-          size="md"
-          iconClass="fa-solid fa-ban"
-          extraClass="border border-olive-30 bg-ivory-80 px-4 py-2 text-sm text-main hover-bg-cream-90"
-          (pressed)="closeModals()">
+        <ui-button variant="ghost" size="md" iconClass="fa-solid fa-ban" (pressed)="closeModals()">
           Cancelar
         </ui-button>
-        <ui-button
-          variant="primary"
-          size="md"
-          iconClass="fa-solid fa-plus"
-          extraClass="bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black"
-          (pressed)="saveStructureCustomer()">
+        <ui-button variant="primary" size="md" iconClass="fa-solid fa-plus" (pressed)="saveStructureCustomer()">
           Agregar
         </ui-button>
       </div>
   </ui-modal>
 
-  <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-92 backdrop-blur lg:hidden">
+  <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-90 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">
       <div class="grid grid-cols-4 gap-2">
-        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
-          [ngClass]="
-            currentView === 'orders'
-              ? 'border-gold-35 bg-olive-10'
-              : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-          "
-          (click)="setView('orders')">
+        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'orders' ? 'primary' : 'ghost'" (click)="setView('orders')">
           <i class="fa-solid fa-receipt" aria-hidden="true"></i>
           Pedidos
         </ui-button>
-        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
-          [ngClass]="
-            currentView === 'customers'
-              ? 'border-gold-35 bg-olive-10'
-              : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-          "
-          (click)="setView('customers')">
+        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'customers' ? 'primary' : 'ghost'" (click)="setView('customers')">
           <i class="fa-solid fa-users" aria-hidden="true"></i>
           Clientes
         </ui-button>
-        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
-          [ngClass]="
-            currentView === 'products'
-              ? 'border-gold-35 bg-olive-10'
-              : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-          "
-          (click)="setView('products')">
+        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'products' ? 'primary' : 'ghost'" (click)="setView('products')">
           <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
           Productos
         </ui-button>
-        <ui-button variant="ghost" size="md" extraClass="mobbtn rounded-2xl border px-3 py-3 text-xs font-semibold transition"
-          [ngClass]="
-            currentView === 'stats'
-              ? 'border-gold-35 bg-olive-10'
-              : 'border-olive-30 bg-ivory-80 hover-bg-cream-90'
-          "
-          (click)="setView('stats')">
+        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'stats' ? 'primary' : 'ghost'" (click)="setView('stats')">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Stats
         </ui-button>
@@ -1026,3 +908,4 @@
 
   <ui-footer></ui-footer>
 </section>
+

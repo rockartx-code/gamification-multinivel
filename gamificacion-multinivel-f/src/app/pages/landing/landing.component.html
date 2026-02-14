@@ -5,47 +5,32 @@
 
     <!-- Actions: MOBILE (icons only) -->
     <div class="flex items-center gap-2 md:hidden">
-      <ui-button
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 transition hover-bg-cream-90"
-        [routerLink]="['/login']"
-        aria-label="Entrar">
+      <ui-button size="lg" variant="ghost" [routerLink]="['/login']" aria-label="Entrar">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
       </ui-button>
 
-      <ui-button
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-olive-70 bg-olive-10 text-accent transition hover-bg-olive-15"
-        aria-label="Cómo funciona"
-        (pressed)="scrollTo('recompensas')">
+      <ui-button size="lg" variant="ghost" aria-label="Cómo funciona" (pressed)="scrollTo('recompensas')">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
       </ui-button>
 
-      <ui-button
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-olive to-gold font-semibold transition-transform active:scale-[0.98]"
-        aria-label="Obtenerlo ahora"
-        (pressed)="scrollTo('registro')">
+      <ui-button size="lg" variant="primary" aria-label="Obtenerlo ahora" (pressed)="scrollTo('registro')">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
       </ui-button>
     </div>
 
     <!-- Actions: DESKTOP (text + icons) -->
     <div class="hidden items-center gap-3 md:flex">
-      <ui-button
-        class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
-        [routerLink]="['/login']">
+      <ui-button size="sm" variant="ghost" [routerLink]="['/login']">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
         Entrar
       </ui-button>
 
-      <ui-button
-        class="inline-flex items-center gap-2 rounded-full border border-olive-70 px-4 py-2 text-sm text-accent transition hover-bg-olive-15"
-        (pressed)="scrollTo('recompensas')">
+      <ui-button size="sm" variant="ghost" (pressed)="scrollTo('recompensas')">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         Cómo funciona
       </ui-button>
 
-      <ui-button
-        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-olive to-gold px-5 py-2 text-sm font-semibold transition-transform hover:scale-105"
-        (pressed)="scrollTo('registro')">
+      <ui-button size="sm" variant="primary" (pressed)="scrollTo('registro')">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
         Obtenerlo ahora
       </ui-button>
@@ -59,37 +44,37 @@
     <!-- Mobile: stack | Desktop: 2 cols -->
     <div class="grid gap-8 md:grid-cols-2 md:items-center md:gap-12">
       <!-- TOP (mobile): Image first -->
-      <div class="order-1 md:order-2">
-        <div
-          class="grain relative h-[260px] w-full overflow-hidden rounded-3xl border border-olive-30 sm:h-[340px] md:h-[520px]">
-          <img
-            [src]="heroImage"
-            [alt]="heroTitle"
-            class="absolute inset-0 block h-full w-full object-cover" />
+<div class="order-1 md:order-2">
+  <!-- OUTER FRAME: mismo lenguaje que el resto -->
+  <div class="relative overflow-hidden rounded-3xl border border-olive-20 bg-ivory-70 shadow-[0_28px_80px_rgba(17,24,39,0.10)]">
 
-          <!-- Stronger overlay in mobile for readability -->
-          <div class="absolute inset-0 bg-gradient-to-tr from-ink-88 via-ink-40 to-transparent md-from-ink-82 md-via-ink-30"></div>
+    <!-- SOFT LIGHT: para que no se sienta plano -->
+    <div class="pointer-events-none absolute inset-0
+      bg-[radial-gradient(60%_60%_at_70%_20%,rgba(200,166,90,0.22)_0%,rgba(244,241,234,0)_55%)]
+      "></div>
+    <div class="pointer-events-none absolute inset-0
+      bg-[radial-gradient(55%_55%_at_25%_85%,rgba(122,142,102,0.16)_0%,rgba(244,241,234,0)_60%)]
+      "></div>
 
-          <!-- Glow blobs (reduced on mobile to avoid weird overflow feeling) -->
-          <div class="absolute -right-24 -top-24 hidden h-72 w-72 rounded-full bg-olive-20 blur-3xl md:block"></div>
-          <div class="absolute -left-24 -bottom-24 hidden h-72 w-72 rounded-full bg-gold-16 blur-3xl md:block"></div>
+    <!-- MAT (passepartout) -->
+    <div class="relative mx-auto flex h-[360px] items-center justify-center p-8 sm:h-[430px] md:h-[560px] md:p-12">
+      <div class="relative rounded-2xl bg-ivory-90/80 ring-1 ring-black/5 backdrop-blur-[2px]
+                  shadow-[0_18px_50px_rgba(17,24,39,0.10)] px-6 py-7 sm:px-8 sm:py-9">
 
-          <div class="relative z-10 flex h-full flex-col justify-end p-5 sm:p-6 md:p-8">
-            <span class="text-xs text-gray-700-90">PRODUCTO DESTACADO</span>
-            <h2 class="mt-2 text-2xl font-extrabold sm:text-3xl md:text-4xl">{{ heroTitle }}</h2>
-            <p class="mt-2 max-w-md text-sm text-on-gold">
-              {{ heroHook }}
-            </p>
-
-            <div class="mt-4 flex flex-wrap gap-2 md:mt-5">
-              <span *ngFor="let tag of heroTags; let i = index" [ngClass]="getTagClass(i)">
-                <i class="fa-solid" [ngClass]="getTagIcon(i)" aria-hidden="true"></i>
-                {{ tag }}
-              </span>
-            </div>
-          </div>
-        </div>
+        <!-- IMAGE: contenida + con micro-ajuste de color para que combine -->
+        <img
+          [src]="heroImage"
+          [alt]="heroTitle"
+          class="block max-h-[300px] sm:max-h-[350px] md:max-h-[460px] w-auto object-contain
+                 drop-shadow-[0_18px_40px_rgba(0,0,0,0.14)]
+                 saturate-[0.98] contrast-[0.98]" />
       </div>
+    </div>
+  </div>
+</div>
+
+
+
 
       <!-- BOTTOM (mobile): Copy second -->
       <div class="order-2 md:order-1">
@@ -109,16 +94,12 @@
         </p>
 
         <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-          <ui-button
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-olive to-gold px-8 py-4 font-semibold transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105"
-            (pressed)="scrollTo('registro')">
+          <ui-button size="lg" variant="primary" class="w-full sm:w-auto" (pressed)="scrollTo('registro')">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
           </ui-button>
 
-          <ui-button
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-6 py-4 transition hover-bg-cream-90 sm:w-auto"
-            (pressed)="scrollTo('recompensas')">
+          <ui-button size="lg" variant="ghost" class="w-full sm:w-auto" (pressed)="scrollTo('recompensas')">
             <i class="fa-solid fa-gift" aria-hidden="true"></i>
             Ver recompensas
           </ui-button>
@@ -151,8 +132,6 @@
 
   <!-- REGISTRO -->
   <section id="registro" class="relative mt-2 bg-sand-200 pt-8 md:pt-8">
-    <div class="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent via-cream to-sand-200"></div>
-
     <div class="relative mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-16">
       <div class="text-center">
         <h2 class="text-3xl font-extrabold md:text-4xl">Empieza hoy</h2>
@@ -190,7 +169,7 @@
       <div
         class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-5 sm:p-8">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
+          class="pointer-events-none absolute inset-0 bg-olive-10">
         </div>
 
         <ui-form-field
@@ -200,7 +179,7 @@
           placeholder="Tu nombre"
           iconClass="fa-solid fa-id-card"
           wrapperClass="relative block"
-          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sand-200 placeholder-text-muted-light focus:border-olive-70">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
         </ui-form-field>
 
         <ui-form-field
@@ -212,7 +191,7 @@
           placeholder="tucorreo@ejemplo.com"
           iconClass="fa-solid fa-envelope"
           wrapperClass="relative block"
-          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sand-200 placeholder-text-muted-light focus:border-olive-70">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
         </ui-form-field>
 
         <ui-form-field
@@ -224,7 +203,7 @@
           placeholder="+52 ..."
           iconClass="fa-solid fa-phone"
           wrapperClass="relative block"
-          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sand-200 placeholder-text-muted-light focus:border-olive-70">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
         </ui-form-field>
 
         <ui-form-field
@@ -236,7 +215,7 @@
           placeholder="Mínimo 8 caracteres"
           iconClass="fa-solid fa-lock"
           wrapperClass="relative block"
-          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sand-200 placeholder-text-muted-light focus:border-olive-70">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
         </ui-form-field>
 
         <ui-form-field
@@ -248,19 +227,11 @@
           placeholder="Repite tu contraseña"
           iconClass="fa-solid fa-lock"
           wrapperClass="relative block"
-          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sand-200 placeholder-text-muted-light focus:border-olive-70">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
         </ui-form-field>
 
         <div class="pt-2">
-          <ui-button
-            type="button"
-            [disabled]="isSubmitting"
-            variant="olive"
-            size="lg"
-            iconClass="fa-solid fa-user-check"
-            [fullWidth]="true"
-            extraClass="px-8 py-4 transition-transform hover:scale-[1.02] active:scale-[0.99]"
-            (pressed)="createAccount()">
+          <ui-button type="button" [disabled]="isSubmitting" variant="secondary" size="lg" iconClass="fa-solid fa-user-check" [fullWidth]="true" (pressed)="createAccount()">
             {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
           </ui-button>
 
@@ -295,7 +266,7 @@
         <div class="mt-8 space-y-4">
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-ink shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               1
             </div>
             <p class="text-on-gold">
@@ -306,7 +277,7 @@
 
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-ink shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               2
             </div>
             <p class="text-on-gold">
@@ -317,7 +288,7 @@
 
           <div class="flex items-start gap-4">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-ink shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               3
             </div>
             <p class="text-on-gold">
@@ -328,16 +299,12 @@
         </div>
 
         <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
-          <ui-button
-            class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-8 py-4 font-semibold text-ink transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105"
-            (pressed)="scrollTo('registro')">
+          <ui-button size="lg" variant="primary" class="w-full sm:w-auto" (pressed)="scrollTo('registro')">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
           </ui-button>
 
-          <ui-button
-            [routerLink]="['/dashboard']"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-8 py-4 font-semibold text-charcoal transition hover-bg-cream-90 sm:w-auto">
+          <ui-button size="lg" variant="ghost" [routerLink]="['/dashboard']" class="w-full sm:w-auto">
             <i class="fa-solid fa-store" aria-hidden="true"></i>
             Ir a tienda
           </ui-button>
@@ -346,7 +313,7 @@
 
       <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 sm:p-8">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(245,185,66,0.18),transparent_55%)]">
+          class="pointer-events-none absolute inset-0 bg-olive-10">
         </div>
 
         <div class="relative">
@@ -376,7 +343,7 @@
           </ul>
 
           <div
-            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-gold-35 bg-gold-14 px-4 py-3 text-center font-bold text-gold">
+            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-gold-35 bg-gold-20 px-4 py-3 text-center font-bold text-on-gold">
             <i class="fa-solid fa-star" aria-hidden="true"></i>
             Bonos y puntos acumulables
           </div>
@@ -399,3 +366,5 @@
   <!-- FOOTER -->
   <ui-footer logoMode="compact" containerClass="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center"></ui-footer>
 </section>
+
+

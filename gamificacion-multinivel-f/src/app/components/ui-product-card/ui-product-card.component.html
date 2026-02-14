@@ -1,7 +1,7 @@
 <article
   *ngIf="mode === 'detailed'; else compactCard"
   class="relative overflow-hidden rounded-3xl border border-olive-30 surface-soft p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
-  <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]"></div>
+  <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
 
   <div class="relative flex gap-3 sm:gap-4">
     <div class="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80">
@@ -36,12 +36,12 @@
     </div>
 
     <div class="flex w-full flex-col gap-2 sm:flex-1">
-      <ui-button class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover-bg-cream-90" (pressed)="viewDetails.emit()">
+      <ui-button size="lg" variant="ghost" class="w-full" (pressed)="viewDetails.emit()">
         <i class="fa-solid fa-eye" aria-hidden="true"></i>
         Ver detalles
       </ui-button>
 
-      <ui-button class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]" (pressed)="add.emit()">
+      <ui-button size="lg" variant="primary" class="w-full" (pressed)="add.emit()">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
         Agregar
       </ui-button>
@@ -56,7 +56,7 @@
         <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
       </div>
       <div class="min-w-0 flex-1">
-        <div class="truncate text-sm font-semibold text-zinc-100" [title]="product.name">{{ product.name }}</div>
+        <div class="truncate text-sm font-semibold text-main" [title]="product.name">{{ product.name }}</div>
         <div class="truncate text-[11px] text-gray-500">{{ product.badge }}</div>
       </div>
     </div>
@@ -70,3 +70,5 @@
     </div>
   </article>
 </ng-template>
+
+
