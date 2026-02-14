@@ -1,12 +1,6 @@
 <section class="antialiased">
-  <header class="border-b border-[#7C8C72]/20 bg-[#F6F3EE]/90 backdrop-blur">
-    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-      <div class="flex min-w-0 items-center gap-3">
-        <img src="logo.png" alt="Logo findingU" class="hidden h-15 w-40 md:block" />
-        <img src="minlogo.png" alt="Logo" class="h-7 w-7 md:hidden" />
-      </div>
-
-      <div class="flex shrink-0 flex-wrap items-center gap-2">
+  <ui-header variant="admin" containerClass="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
         <div class="hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 sm:block">
           <div class="flex items-center gap-2 text-[11px] text-[#5A5A5A]">
             <i class="fa-solid fa-bell" aria-hidden="true"></i>
@@ -44,8 +38,7 @@
           Nuevo
         </ui-button>
       </div>
-    </div>
-  </header>
+  </ui-header>
 
   <main class="mx-auto h-[calc(100vh-56px)] max-w-7xl px-4 py-4">
     <div class="grid h-full gap-4 lg:grid-cols-[260px_1fr]">
@@ -56,55 +49,7 @@
           </div>
           <div class="relative">
             <div class="text-xs text-[#5A5A5A]">Navegación</div>
-            <div class="mt-3 flex flex-col gap-2">
-              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#7C8C72]/15" [ngClass]="
-                  currentView === 'orders'
-                    ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
-                    : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (pressed)="setView('orders')">
-                <div class="flex items-center gap-2 text-sm font-semibold">
-                  <i class="fa-solid fa-receipt text-accent" aria-hidden="true"></i>
-                  Pedidos
-                </div>
-                <div class="mt-0.5 text-xs text-[#5A5A5A]">Pendiente | Pagado | Enviado | Entregado</div>
-              </ui-button>
-
-              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
-                  currentView === 'customers'
-                    ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
-                    : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (pressed)="setView('customers')">
-                <div class="flex items-center gap-2 text-sm font-semibold">
-                  <i class="fa-solid fa-users text-accent" aria-hidden="true"></i>
-                  Clientes
-                </div>
-                <div class="mt-0.5 text-xs text-[#5A5A5A]">Niveles · Estructura · Comisiones</div>
-              </ui-button>
-
-              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
-                  currentView === 'products'
-                    ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
-                    : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (pressed)="setView('products')">
-                <div class="flex items-center gap-2 text-sm font-semibold">
-                  <i class="fa-solid fa-boxes-stacked text-accent" aria-hidden="true"></i>
-                  Productos
-                </div>
-                <div class="mt-0.5 text-xs text-[#5A5A5A]">Altas · Imágenes · CTA</div>
-              </ui-button>
-
-              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
-                  currentView === 'stats'
-                    ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
-                    : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (pressed)="setView('stats')">
-                <div class="flex items-center gap-2 text-sm font-semibold">
-                  <i class="fa-solid fa-chart-line text-accent" aria-hidden="true"></i>
-                  Estadísticas
-                </div>
-                <div class="mt-0.5 text-xs text-[#5A5A5A]">Ventas · Funnel · Alertas</div>
-              </ui-button>
-            </div>
+            <ui-sidebar-nav [links]="adminNavLinks" [activeId]="currentView" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
           </div>
         </div>
 
@@ -180,22 +125,10 @@
         <div class="relative flex-1 space-y-4 overflow-auto p-5">
           <div class="space-y-4" *ngIf="currentView === 'orders'">
             <div class="grid gap-3 md:grid-cols-4">
-              <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-                <div class="text-[11px] text-[#5A5A5A]">Pendientes</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ pendingCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-                <div class="text-[11px] text-[#5A5A5A]">Pagados</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ paidCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-                <div class="text-[11px] text-[#5A5A5A]">Enviados</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ shipCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-                <div class="text-[11px] text-[#5A5A5A]">Entregados</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ deliveredCount }}</div>
-              </div>
+              <ui-kpi-card label="Pendientes" [value]="pendingCount"></ui-kpi-card>
+              <ui-kpi-card label="Pagados" [value]="paidCount"></ui-kpi-card>
+              <ui-kpi-card label="Enviados" [value]="shipCount"></ui-kpi-card>
+              <ui-kpi-card label="Entregados" [value]="deliveredCount"></ui-kpi-card>
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft">
@@ -218,51 +151,47 @@
                 </ui-button>
               </div>
 
-              <div class="md:hidden divide-y divide-[#7C8C72]/15">
-                <div *ngFor="let order of filteredOrders" class="p-4">
-                  <div class="flex items-center justify-between">
-                    <div class="text-sm font-semibold text-main">
-                      {{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}
-                    </div>
-                    <ui-badge [tone]="getOrderStatusTone(order.status)">
-                      {{ order.status }}
-                    </ui-badge>
-                  </div>
-                  <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                    <div>Cliente: <span class="text-main">{{ order.customer }}</span></div>
-                    <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
-                    <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
-                  </div>
-                  <ui-button
-                    variant="ghost"
-                    size="sm"
-                    iconClass="fa-solid fa-rotate"
-                    [fullWidth]="true"
-                    [disabled]="isUpdatingOrder(order.id)"
-                    extraClass="mt-3"
-                    (click)="advanceOrder(order)">
-                    {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
-                  </ui-button>
-                </div>
-              </div>
-
-              <div class="hidden md:block overflow-auto">
+              <div class="overflow-auto">
                 <div class="table-soft text-sm">
-                  <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] border-b border-[#7C8C72]/20 bg-[#FDFBF7]/80 px-4 py-3 font-semibold">
-                    <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guía / Entrega</div><div>Acción</div>
-                  </div>
-                  <div *ngFor="let order of filteredOrders" class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-[#7C8C72]/15 px-4 py-3 last:border-b-0">
-                    <div>{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}</div>
-                    <div>{{ order.customer }}</div>
-                    <div class="font-semibold">{{ formatMoney(order.total) }}</div>
-                    <div class="capitalize"><ui-badge [tone]="getOrderStatusTone(order.status)">{{ order.status }}</ui-badge></div>
-                    <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
-                    <div>
-                      <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
-                        {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
-                      </ui-button>
-                    </div>
-                  </div>
+                  <ui-data-table [rows]="filteredOrders" mobileDividerClass="divide-[#7C8C72]/15" desktopDividerClass="divide-[#7C8C72]/15">
+                    <ng-template #mobileRow let-order>
+                      <div class="p-4">
+                        <div class="flex items-center justify-between">
+                          <div class="text-sm font-semibold text-main">{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}</div>
+                          <ui-status-badge [status]="order.status"></ui-status-badge>
+                        </div>
+                        <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                          <div>Cliente: <span class="text-main">{{ order.customer }}</span></div>
+                          <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
+                          <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
+                        </div>
+                        <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" extraClass="mt-3" (click)="advanceOrder(order)">
+                          {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
+                        </ui-button>
+                      </div>
+                    </ng-template>
+
+                    <ng-template #desktopHeader>
+                      <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] border-b border-[#7C8C72]/20 bg-[#FDFBF7]/80 px-4 py-3 font-semibold">
+                        <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guía / Entrega</div><div>Acción</div>
+                      </div>
+                    </ng-template>
+
+                    <ng-template #desktopRow let-order>
+                      <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] items-center px-4 py-3">
+                        <div>{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}</div>
+                        <div>{{ order.customer }}</div>
+                        <div class="font-semibold">{{ formatMoney(order.total) }}</div>
+                        <div class="capitalize"><ui-status-badge [status]="order.status"></ui-status-badge></div>
+                        <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
+                        <div>
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
+                            {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
+                          </ui-button>
+                        </div>
+                      </div>
+                    </ng-template>
+                  </ui-data-table>
                 </div>
               </div>
             </div>
@@ -1100,14 +1029,5 @@
     </div>
   </div>
 
-  <footer class="border-t border-[#7C8C72]/20 bg-[#F6F3EE]">
-    <div
-      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
-      <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
-
-      <div class="flex flex-col items-start gap-3 md:items-end">
-        <div class="text-xs text-[#6B6B6B]">© 2026 finding U</div>
-      </div>
-    </div>
-  </footer>
+  <ui-footer></ui-footer>
 </section>

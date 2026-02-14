@@ -19,10 +19,15 @@ import {
   CreateProductAssetPayload,
   CreateStructureCustomerPayload
 } from '../../models/admin.model';
-import { UiBadgeComponent } from '../../components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
+import { UiKpiCardComponent } from '../../components/ui-kpi-card/ui-kpi-card.component';
+import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { SidebarLink, UiSidebarNavComponent } from '../../components/ui-sidebar-nav/ui-sidebar-nav.component';
+import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
+import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { AdminControlService } from '../../services/admin-control.service';
 
 type StructureNode = {
@@ -43,7 +48,7 @@ type StructureLink = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiBadgeComponent, UiModalComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -174,6 +179,15 @@ export class AdminComponent implements OnInit {
   }
 
 
+  get adminNavLinks(): SidebarLink[] {
+    return [
+      { id: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: 'Pendiente | Pagado | Enviado | Entregado' },
+      { id: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: 'Niveles · Estructura · Comisiones' },
+      { id: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: 'Altas · Imágenes · CTA' },
+      { id: 'stats', icon: 'fa-chart-line', label: 'Estadísticas', subtitle: 'Ventas · Funnel · Alertas' }
+    ];
+  }
+
   get viewTitle(): string {
     if (this.currentView === 'customers') {
       return 'Clientes';
@@ -220,18 +234,6 @@ export class AdminComponent implements OnInit {
     return this.orders.filter((order) => order.status === 'delivered').length;
   }
 
-  getOrderStatusTone(status: AdminOrder['status']): 'active' | 'inactive' | 'pending' | 'delivered' {
-    if (status === 'pending') {
-      return 'pending';
-    }
-    if (status === 'paid') {
-      return 'active';
-    }
-    if (status === 'shipped') {
-      return 'delivered';
-    }
-    return 'delivered';
-  }
 
   get ordersCount(): number {
     return this.orders.length;
@@ -456,6 +458,11 @@ export class AdminComponent implements OnInit {
       return;
     }
     window.open(url, '_blank', 'noopener');
+  }
+
+
+  onAdminNavSelect(viewId: string): void {
+    this.setView(viewId as 'orders' | 'customers' | 'products' | 'stats');
   }
 
   setView(view: 'orders' | 'customers' | 'products' | 'stats'): void {

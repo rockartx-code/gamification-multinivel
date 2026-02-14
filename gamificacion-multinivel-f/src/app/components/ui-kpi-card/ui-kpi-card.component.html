@@ -1,0 +1,8 @@
+<div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
+  <div class="flex items-center gap-2 text-[11px] text-[#5A5A5A]">
+    <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>
+    <span>{{ label }}</span>
+    <ng-content select="[kpi-label-extra]"></ng-content>
+  </div>
+  <div class="mt-1 text-2xl font-extrabold">{{ value }}</div>
+</div>

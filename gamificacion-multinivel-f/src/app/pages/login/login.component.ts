@@ -7,11 +7,13 @@ import { finalize } from 'rxjs';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { AuthService } from '../../services/auth.service';
+import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiHeaderComponent, UiFooterComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })

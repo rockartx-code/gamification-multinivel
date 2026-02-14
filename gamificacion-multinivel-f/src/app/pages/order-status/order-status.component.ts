@@ -4,12 +4,13 @@ import { ActivatedRoute } from '@angular/router';
 
 import { AdminOrder } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
 import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, UiButtonComponent],
+  imports: [CommonModule, UiButtonComponent, UiOrderTimelineComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
@@ -26,93 +27,6 @@ export class OrderStatusComponent implements OnInit {
   ) { }
 
   copyToClipboard(txt?: string) { if (txt) navigator.clipboard.writeText(txt); }
-
-  isStepDone(step: 'paid' | 'packing' | 'shipped'): boolean {
-    const v = this.statusValue;
-    if (step === 'paid') return v === 'paid' || v === 'shipped' || v === 'delivered';
-    if (step === 'packing') return v === 'paid' || v === 'shipped' || v === 'delivered';
-    if (step === 'shipped') return v === 'shipped' || v === 'delivered';
-    return false;
-  }
-getStepIndex(step: string): number {
-  const map: any = {
-    paid: 1,
-    packing: 2,
-    shipped: 3,
-    delivered: 4
-  };
-
-  return map[step] ?? 0;
-}
-
-
-/**
- * Mapea el status real al paso actual del timeline
- */
-getCurrentIndex(): number {
-  switch (this.statusValue) {
-
-    case 'pending':
-      return 1; // Pago
-
-    case 'paid':
-      return 2; // Preparación (ya pagó)
-
-    case 'shipped':
-      return 3; // Envío
-
-    case 'delivered':
-      return 4; // Entregada
-
-    default:
-      return 0;
-  }
-}
-
-
-/* Estilo del círculo */
-getStepClass(step: string): string {
-  const stepIndex = this.getStepIndex(step);
-  const current = this.getCurrentIndex();
-
-  // Completado
-  if (stepIndex < current) {
-    return 'border-emerald-400/40 bg-emerald-400/20 text-emerald-200';
-  }
-
-  // Actual
-  if (stepIndex === current) {
-    return 'border-sky-400/40 bg-sky-400/15 text-sky-200';
-  }
-
-  // Futuro
-  return 'border-white/10 bg-white/5 text-zinc-500';
-}
-
-
-/* Iconos */
-getStepIcon(step: string): string {
-  const stepIndex = this.getStepIndex(step);
-  const current = this.getCurrentIndex();
-
-  // Pasado → palomita
-  if (stepIndex < current) {
-    return 'fa-check text-[10px]';
-  }
-
-  // Actual → icono propio
-  if (stepIndex === current) {
-    switch (step) {
-      case 'paid': return 'fa-credit-card text-[11px]';
-      case 'packing': return 'fa-box-open text-[11px]';
-      case 'shipped': return 'fa-truck-fast text-[11px]';
-      case 'delivered': return 'fa-circle-check text-[11px]';
-    }
-  }
-
-  // Futuro → punto
-  return 'fa-circle text-[6px] opacity-60';
-}
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('idOrden') ?? '';

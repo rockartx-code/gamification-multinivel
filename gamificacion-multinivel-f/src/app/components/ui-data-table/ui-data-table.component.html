@@ -1,0 +1,14 @@
+<div class="md:hidden divide-y" [ngClass]="mobileDividerClass" *ngIf="mobileRowTpl">
+  <ng-container *ngFor="let row of rows">
+    <ng-container *ngTemplateOutlet="mobileRowTpl; context: { $implicit: row }"></ng-container>
+  </ng-container>
+</div>
+
+<div class="hidden md:block" *ngIf="desktopRowTpl">
+  <ng-container *ngIf="desktopHeaderTpl" [ngTemplateOutlet]="desktopHeaderTpl"></ng-container>
+  <div class="divide-y" [ngClass]="desktopDividerClass">
+    <ng-container *ngFor="let row of rows">
+      <ng-container *ngTemplateOutlet="desktopRowTpl; context: { $implicit: row }"></ng-container>
+    </ng-container>
+  </div>
+</div>
