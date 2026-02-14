@@ -1195,8 +1195,11 @@
                 Tu link
               </div>
               <div class="mt-2 flex flex-col gap-3 sm:flex-row">
-                <input readonly [value]="referralLink"
-                  class="flex-1 rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200" />
+                <ui-form-field
+                  wrapperClass="flex-1"
+                  [readonly]="true"
+                  [ngModel]="referralLink"
+                  inputClass="w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200"></ui-form-field>
                 <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
                   <ui-button
                     class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
@@ -1288,10 +1291,14 @@
                   {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ?
                   'Comentario sugerido (editable)' : 'Mensaje sugerido (editable)') }}
                 </div>
-                <textarea rows="10"
-                  class="mt-3 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
-                  placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"
-                  (ngModelChange)="lastAutoCaption = false"></textarea>
+                <ui-form-field
+                  wrapperClass="mt-3 block"
+                  kind="textarea"
+                  [rows]="10"
+                  placeholder="Escribe tu copy aquí..."
+                  [ngModel]="captionText"
+                  (ngModelChange)="captionText = $event; lastAutoCaption = false"
+                  inputClass="w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"></ui-form-field>
                 <div class="mt-3 flex gap-3">
                   <ui-button
                     class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"

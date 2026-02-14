@@ -10,54 +10,50 @@
 
     <!-- Actions: MOBILE (icons only) -->
     <div class="flex items-center gap-2 md:hidden">
-      <a
+      <ui-button
         class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 transition hover:bg-[#EFE9DD]/90"
         [routerLink]="['/login']"
         aria-label="Entrar">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
-      </a>
+      </ui-button>
 
-      <a
-        href="#"
-        (click)="scrollTo('recompensas', $event)"
+      <ui-button
         class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/70 bg-[#7C8C72]/10 text-accent transition hover:bg-[#7C8C72]/15"
-        aria-label="Cómo funciona">
+        aria-label="Cómo funciona"
+        (pressed)="scrollTo('recompensas')">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-      </a>
+      </ui-button>
 
-      <a
-        href="#"
-        (click)="scrollTo('registro', $event)"
+      <ui-button
         class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] font-semibold transition-transform active:scale-[0.98]"
-        aria-label="Obtenerlo ahora">
+        aria-label="Obtenerlo ahora"
+        (pressed)="scrollTo('registro')">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-      </a>
+      </ui-button>
     </div>
 
     <!-- Actions: DESKTOP (text + icons) -->
     <div class="hidden items-center gap-3 md:flex">
-      <a
+      <ui-button
         class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
         [routerLink]="['/login']">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
         Entrar
-      </a>
+      </ui-button>
 
-      <a
-        href="#"
-        (click)="scrollTo('recompensas', $event)"
-        class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/70 px-4 py-2 text-sm text-accent transition hover:bg-[#7C8C72]/15">
+      <ui-button
+        class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/70 px-4 py-2 text-sm text-accent transition hover:bg-[#7C8C72]/15"
+        (pressed)="scrollTo('recompensas')">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         Cómo funciona
-      </a>
+      </ui-button>
 
-      <a
-        href="#"
-        (click)="scrollTo('registro', $event)"
-        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2 text-sm font-semibold transition-transform hover:scale-105">
+      <ui-button
+        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2 text-sm font-semibold transition-transform hover:scale-105"
+        (pressed)="scrollTo('registro')">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
         Obtenerlo ahora
-      </a>
+      </ui-button>
     </div>
   </div>
 </header>
@@ -119,21 +115,19 @@
         </p>
 
         <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-          <a
-            href="#"
-            (click)="scrollTo('registro', $event)"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-8 py-4 font-semibold transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
+          <ui-button
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-8 py-4 font-semibold transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105"
+            (pressed)="scrollTo('registro')">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
-          </a>
+          </ui-button>
 
-          <a
-            href="#"
-            (click)="scrollTo('recompensas', $event)"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-6 py-4 transition hover:bg-[#EFE9DD]/90 sm:w-auto">
+          <ui-button
+            class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-6 py-4 transition hover:bg-[#EFE9DD]/90 sm:w-auto"
+            (pressed)="scrollTo('recompensas')">
             <i class="fa-solid fa-gift" aria-hidden="true"></i>
             Ver recompensas
-          </a>
+          </ui-button>
         </div>
 
         <!-- Benefits: in mobile, 2x2 grid (no horizontal scroll). Desktop: 4 columns -->
@@ -199,9 +193,8 @@
         </div>
       </div>
 
-      <form
-        class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5 sm:p-8"
-        (ngSubmit)="createAccount()">
+      <div
+        class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5 sm:p-8">
         <div
           class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_55%)]">
         </div>
@@ -266,13 +259,14 @@
 
         <div class="pt-2">
           <ui-button
-            type="submit"
+            type="button"
             [disabled]="isSubmitting"
             variant="olive"
             size="lg"
             iconClass="fa-solid fa-user-check"
             [fullWidth]="true"
-            extraClass="px-8 py-4 transition-transform hover:scale-[1.02] active:scale-[0.99]">
+            extraClass="px-8 py-4 transition-transform hover:scale-[1.02] active:scale-[0.99]"
+            (pressed)="createAccount()">
             {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
           </ui-button>
 
@@ -287,7 +281,7 @@
             Al registrarte aceptas los términos del programa de recompensas.
           </p>
         </div>
-      </form>
+      </div>
     </div>
   </section>
 
@@ -340,20 +334,19 @@
         </div>
 
         <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
-          <a
-            href="#"
-            (click)="scrollTo('registro', $event)"
-            class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-8 py-4 font-semibold text-[#1B1B1B] transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105">
+          <ui-button
+            class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-8 py-4 font-semibold text-[#1B1B1B] transition-transform active:scale-[0.99] sm:w-auto sm:hover:scale-105"
+            (pressed)="scrollTo('registro')">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
             Obtenerlo ahora
-          </a>
+          </ui-button>
 
-          <a
+          <ui-button
             [routerLink]="['/dashboard']"
             class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-8 py-4 font-semibold text-[#2A2A2A] transition hover:bg-[#EFE9DD]/90 sm:w-auto">
             <i class="fa-solid fa-store" aria-hidden="true"></i>
             Ir a tienda
-          </a>
+          </ui-button>
         </div>
       </div>
 

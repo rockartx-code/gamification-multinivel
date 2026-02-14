@@ -145,6 +145,22 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.productOfMonthId ?? null;
   }
 
+  get customerOptions(): { value: number; label: string }[] {
+    return this.customers.map((customer) => ({
+      value: customer.id,
+      label: `${customer.name} · ${customer.email}`
+    }));
+  }
+
+  get orderStatusOptions(): { value: AdminOrder['status']; label: string }[] {
+    return [
+      { value: 'pending', label: 'Pendiente' },
+      { value: 'paid', label: 'Pagado' },
+      { value: 'shipped', label: 'Enviado' },
+      { value: 'delivered', label: 'Entregado' }
+    ];
+  }
+
   get productOfMonthName(): string {
     const pid = this.productOfMonthId;
     if (pid == null) {

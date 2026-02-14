@@ -24,6 +24,11 @@ export class UiFormFieldComponent implements ControlValueAccessor {
   @Input() placeholder = '';
   @Input() name = '';
   @Input() rows = 3;
+  @Input() readonly = false;
+  @Input() min: number | null = null;
+  @Input() max: number | null = null;
+  @Input() step: number | null = null;
+  @Input() accept = '';
   @Input() iconClass = '';
   @Input() helpText = '';
   @Input() errorText = '';

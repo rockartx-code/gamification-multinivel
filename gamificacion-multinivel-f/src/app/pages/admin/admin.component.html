@@ -138,26 +138,7 @@
               <p class="mt-1 text-xs text-[#5A5A5A] sm:text-sm">{{ viewSubtitle }}</p>
             </div>
 
-            <!--div class="flex items-center gap-2">
-              <div class="hidden items-center gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 md:flex">
-                <i class="fa-solid fa-magnifying-glass text-[#6B6B6B]" aria-hidden="true"></i>
-                <span class="text-xs text-[#5A5A5A]">Buscar</span>
-                <input class="w-56 bg-transparent text-sm text-main placeholder:text-muted outline-none"
-                  placeholder="ID, cliente, email..." />
-              </div>
 
-              <ui-button
-                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90 md:hidden">
-                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                Buscar
-              </ui-button>
-
-              <ui-button
-                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90">
-                <i class="fa-solid fa-file-export" aria-hidden="true"></i>
-                Exportar
-              </ui-button>
-            </div-->
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders'">
@@ -266,41 +247,23 @@
               </div>
 
               <div class="hidden md:block overflow-auto">
-                <table class="table-soft w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th class="px-4 py-3 text-left font-semibold">Fecha de creacion</th>
-                      <th class="px-4 py-3 text-left font-semibold">Cliente</th>
-                      <th class="px-4 py-3 text-left font-semibold">Total</th>
-                      <th class="px-4 py-3 text-left font-semibold">Estado</th>
-                      <th class="px-4 py-3 text-left font-semibold">Gu??a / Entrega</th>
-                      <th class="px-4 py-3 text-left font-semibold">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let order of filteredOrders">
-                      <td class="px-4 py-3">
-                        {{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}
-                      </td>
-                      <td class="px-4 py-3">{{ order.customer }}</td>
-                      <td class="px-4 py-3 font-semibold">{{ formatMoney(order.total) }}</td>
-                      <td class="px-4 py-3 capitalize">
-                        <ui-badge [tone]="getOrderStatusTone(order.status)">{{ order.status }}</ui-badge>
-                      </td>
-                      <td class="px-4 py-3 muted text-xs">{{ getShippingLabel(order) }}</td>
-                      <td class="px-4 py-3">
-                        <ui-button
-                          variant="ghost"
-                          size="sm"
-                          iconClass="fa-solid fa-rotate"
-                          [disabled]="isUpdatingOrder(order.id)"
-                          (pressed)="advanceOrder(order)">
-                          {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
-                        </ui-button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div class="table-soft text-sm">
+                  <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] border-b border-[#7C8C72]/20 bg-[#FDFBF7]/80 px-4 py-3 font-semibold">
+                    <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guía / Entrega</div><div>Acción</div>
+                  </div>
+                  <div *ngFor="let order of filteredOrders" class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-[#7C8C72]/15 px-4 py-3 last:border-b-0">
+                    <div>{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}</div>
+                    <div>{{ order.customer }}</div>
+                    <div class="font-semibold">{{ formatMoney(order.total) }}</div>
+                    <div class="capitalize"><ui-badge [tone]="getOrderStatusTone(order.status)">{{ order.status }}</ui-badge></div>
+                    <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
+                    <div>
+                      <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
+                        {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
+                      </ui-button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -350,31 +313,17 @@
                 </div>
 
                 <div class="hidden md:block overflow-auto">
-                  <table class="table-soft w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th class="px-4 py-3 text-left font-semibold">Cliente</th>
-                        <th class="px-4 py-3 text-left font-semibold">Descuento</th>
-                        <th class="px-4 py-3 text-left font-semibold">Mes anterior</th>
-                        <th class="px-4 py-3 text-left font-semibold">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let customer of customers">
-                        <td class="px-4 py-3">{{ customer.name }}</td>
-                        <td class="px-4 py-3 text-gold">{{ customer.discount }}</td>
-                        <td class="px-4 py-3">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</td>
-                        <td class="px-4 py-3">
-                        <ui-button
-                          class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-                          (pressed)="selectCustomer(customer.id)">
-                          <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                          Ver
-                        </ui-button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div class="table-soft text-sm">
+                    <div class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] border-b border-[#7C8C72]/20 bg-[#FDFBF7]/80 px-4 py-3 font-semibold">
+                      <div>Cliente</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
+                    </div>
+                    <div *ngFor="let customer of customers" class="grid grid-cols-[1.2fr_.8fr_1fr_.8fr] items-center border-b border-[#7C8C72]/15 px-4 py-3 last:border-b-0">
+                      <div>{{ customer.name }}</div>
+                      <div class="text-gold">{{ customer.discount }}</div>
+                      <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
+                      <div><ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90" (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver</ui-button></div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -556,40 +505,20 @@
                 </div>
 
                 <div class="hidden md:block overflow-auto">
-                  <table class="table-soft w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th class="px-4 py-3 text-left font-semibold">Producto</th>
-                        <th class="px-4 py-3 text-left font-semibold">Precio</th>
-                        <th class="px-4 py-3 text-left font-semibold">Estado</th>
-                        <th class="px-4 py-3 text-left font-semibold">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let product of products">
-                        <td class="px-4 py-3">{{ product.name }}</td>
-                        <td class="px-4 py-3">{{ formatMoney(product.price) }}</td>
-                        <td class="px-4 py-3">{{ product.active ? 'Activo' : 'Inactivo' }}</td>
-                        <td class="px-4 py-3">
-                          <div class="flex flex-wrap gap-2">
-                            <ui-button
-                              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-                              (pressed)="editProduct(product)">
-                              <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-                              Editar
-                            </ui-button>
-                            <ui-button
-                              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-3 py-2 text-xs text-gold transition hover:bg-[#C8A96A]/20 disabled:cursor-not-allowed disabled:opacity-60"
-                              [disabled]="isSettingProductOfMonth"
-                              (pressed)="setProductOfMonth(product)">
-                              <i class="fa-solid fa-star" aria-hidden="true"></i>
-                              Producto del mes
-                            </ui-button>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div class="table-soft text-sm">
+                    <div class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] border-b border-[#7C8C72]/20 bg-[#FDFBF7]/80 px-4 py-3 font-semibold">
+                      <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
+                    </div>
+                    <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-[#7C8C72]/15 px-4 py-3 last:border-b-0">
+                      <div>{{ product.name }}</div>
+                      <div>{{ formatMoney(product.price) }}</div>
+                      <div>{{ product.active ? 'Activo' : 'Inactivo' }}</div>
+                      <div class="flex flex-wrap gap-2">
+                        <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
+                        <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-3 py-2 text-xs text-gold transition hover:bg-[#C8A96A]/20 disabled:cursor-not-allowed disabled:opacity-60" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -651,38 +580,46 @@
                     wrapperClass="block md:col-span-2"
                     inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
                   </ui-form-field>
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Descripción</span>
-                    <textarea rows="4"
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="Describe el producto, beneficios, modo de uso..."
-                      [value]="productForm.description"
-                      (input)="updateProductField('description', $any($event.target).value)"></textarea>
-                  </label>
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Copy WhatsApp</span>
-                    <textarea rows="3"
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="Copy para WhatsApp..."
-                      [value]="productForm.copyWhatsapp"
-                      (input)="updateProductField('copyWhatsapp', $any($event.target).value)"></textarea>
-                  </label>
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Copy Instagram</span>
-                    <textarea rows="3"
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="Copy para Instagram..."
-                      [value]="productForm.copyInstagram"
-                      (input)="updateProductField('copyInstagram', $any($event.target).value)"></textarea>
-                  </label>
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Copy Facebook</span>
-                    <textarea rows="3"
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="Copy para Facebook..."
-                      [value]="productForm.copyFacebook"
-                      (input)="updateProductField('copyFacebook', $any($event.target).value)"></textarea>
-                  </label>
+                  <ui-form-field
+                    kind="textarea"
+                    [rows]="4"
+                    label="Descripción"
+                    placeholder="Describe el producto, beneficios, modo de uso..."
+                    [ngModel]="productForm.description"
+                    (ngModelChange)="updateProductField('description', $event)"
+                    wrapperClass="block md:col-span-2"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
+                  <ui-form-field
+                    kind="textarea"
+                    [rows]="3"
+                    label="Copy WhatsApp"
+                    placeholder="Copy para WhatsApp..."
+                    [ngModel]="productForm.copyWhatsapp"
+                    (ngModelChange)="updateProductField('copyWhatsapp', $event)"
+                    wrapperClass="block md:col-span-2"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
+                  <ui-form-field
+                    kind="textarea"
+                    [rows]="3"
+                    label="Copy Instagram"
+                    placeholder="Copy para Instagram..."
+                    [ngModel]="productForm.copyInstagram"
+                    (ngModelChange)="updateProductField('copyInstagram', $event)"
+                    wrapperClass="block md:col-span-2"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
+                  <ui-form-field
+                    kind="textarea"
+                    [rows]="3"
+                    label="Copy Facebook"
+                    placeholder="Copy para Facebook..."
+                    [ngModel]="productForm.copyFacebook"
+                    (ngModelChange)="updateProductField('copyFacebook', $event)"
+                    wrapperClass="block md:col-span-2"
+                    inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20">
+                  </ui-form-field>
                   <ui-form-field
                     wrapperClass="block md:col-span-2"
                     label="Tags"
@@ -708,9 +645,12 @@
                         </div>
                         <span class="text-[11px] text-[#6B6B6B]">.png/.jpg/.webp</span>
                       </div>
-                      <input type="file" accept="image/*"
-                        class="mt-3 block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-[#7C8C72]/10 file:px-4 file:py-2 file:font-semibold file:text-main hover:file:bg-[#7C8C72]/15"
-                        (change)="uploadProductImage($event, slot.key)" />
+                      <ui-form-field
+                        type="file"
+                        accept="image/*"
+                        wrapperClass="mt-3 block"
+                        inputClass="block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-[#7C8C72]/10 file:px-4 file:py-2 file:font-semibold file:text-main hover:file:bg-[#7C8C72]/15"
+                        (change)="uploadProductImage($event, slot.key)"></ui-form-field>
                       <div
                         class="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft">
                         <img *ngIf="productImagePreviews.get(slot.key)" [src]="productImagePreviews.get(slot.key)"
@@ -828,52 +768,49 @@
       </div>
 
       <div class="mt-4 grid gap-3">
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Cliente</span>
-          <select
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            [value]="newOrderCustomerId"
-            (change)="updateNewOrderCustomer($any($event.target).valueAsNumber)">
-            <option *ngFor="let customer of customers" [value]="customer.id">
-              {{ customer.name }} · {{ customer.email }}
-            </option>
-          </select>
-        </label>
+        <ui-form-field
+          wrapperClass="block"
+          kind="select"
+          label="Cliente"
+          placeholder="Selecciona cliente"
+          [options]="customerOptions"
+          [ngModel]="newOrderCustomerId"
+          (ngModelChange)="updateNewOrderCustomer(+$event)"></ui-form-field>
         <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/70 p-3">
           <div class="text-[11px] uppercase tracking-wide text-[#5A5A5A]">Productos</div>
           <div class="mt-3 max-h-[46vh] sm:max-h-[40vh] overflow-y-auto pr-1 grid gap-3">
             <div *ngFor="let product of products" class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-3">
               <div class="flex items-center justify-between gap-3">
-                <label class="flex items-center gap-2 text-sm text-main">
-                  <input type="checkbox" class="h-4 w-4 accent-[#C8A96A]"
-                    [checked]="newOrderItems.has(product.id)"
-                    (change)="toggleProductSelection(product.id, $any($event.target).checked)" />
+                <ui-button
+                  variant="ghost"
+                  size="sm"
+                  class="inline-flex items-center gap-2 text-sm text-main"
+                  (pressed)="toggleProductSelection(product.id, !newOrderItems.has(product.id))">
+                  <i class="fa-regular" [ngClass]="newOrderItems.has(product.id) ? 'fa-square-check text-accent' : 'fa-square text-[#6B6B6B]'" aria-hidden="true"></i>
                   <span>{{ product.name }}</span>
-                </label>
+                </ui-button>
                 <span class="text-xs text-[#5A5A5A]">{{ formatMoney(product.price) }}</span>
               </div>
               <div *ngIf="newOrderItems.has(product.id)" class="mt-2 flex items-center gap-2">
                 <span class="text-[11px] text-[#5A5A5A]">Cantidad</span>
-                <input type="number" min="1"
-                  class="w-20 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                  [value]="newOrderItems.get(product.id)"
-                  (input)="updateProductQty(product.id, $any($event.target).value)" />
+                <ui-form-field
+                  type="number"
+                  [min]="1"
+                  wrapperClass="w-20"
+                  inputClass="w-20 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
+                  [ngModel]="newOrderItems.get(product.id) || 1"
+                  (ngModelChange)="updateProductQty(product.id, $event)"></ui-form-field>
               </div>
             </div>
           </div>
         </div>
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Estado inicial</span>
-          <select
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            [value]="newOrderStatus"
-            (change)="updateNewOrderStatus($any($event.target).value)">
-            <option value="pending">Pendiente</option>
-            <option value="paid">Pagado</option>
-            <option value="shipped">Enviado</option>
-            <option value="delivered">Entregado</option>
-          </select>
-        </label>
+        <ui-form-field
+          wrapperClass="block"
+          kind="select"
+          label="Estado inicial"
+          [options]="orderStatusOptions"
+          [ngModel]="newOrderStatus"
+          (ngModelChange)="updateNewOrderStatus($event)"></ui-form-field>
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -921,19 +858,21 @@
       <div class="mt-4 grid gap-3">
         <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/70 p-3">
           <div class="text-[11px] uppercase tracking-wide text-[#5A5A5A]">Tipo de entrega</div>
-          <div class="mt-3 flex flex-wrap gap-4 text-sm text-main">
-            <label class="inline-flex items-center gap-2">
-              <input type="radio" class="h-4 w-4 accent-[#C8A96A]"
-                [checked]="shippingType === 'carrier'"
-                (change)="shippingType = 'carrier'" />
-              Paqueter?a (Gu?a)
-            </label>
-            <label class="inline-flex items-center gap-2">
-              <input type="radio" class="h-4 w-4 accent-[#C8A96A]"
-                [checked]="shippingType === 'personal'"
-                (change)="shippingType = 'personal'" />
+          <div class="mt-3 flex flex-wrap gap-2 text-sm text-main">
+            <ui-button
+              class="inline-flex items-center gap-2 rounded-full border px-4 py-2 transition"
+              [ngClass]="shippingType === 'carrier' ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'"
+              (pressed)="shippingType = 'carrier'">
+              <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+              Paquetería (Guía)
+            </ui-button>
+            <ui-button
+              class="inline-flex items-center gap-2 rounded-full border px-4 py-2 transition"
+              [ngClass]="shippingType === 'personal' ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'"
+              (pressed)="shippingType = 'personal'">
+              <i class="fa-solid fa-handshake" aria-hidden="true"></i>
               Entrega personal
-            </label>
+            </ui-button>
           </div>
         </div>
 
@@ -996,14 +935,13 @@
       </div>
 
       <div class="mt-4 grid gap-3">
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Comprobante (PDF o imagen)</span>
-          <input
-            type="file"
-            accept=".pdf,image/*"
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            (change)="updateReceiptFile($event)" />
-        </label>
+        <ui-form-field
+          wrapperClass="block"
+          type="file"
+          label="Comprobante (PDF o imagen)"
+          accept=".pdf,image/*"
+          inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
+          (change)="updateReceiptFile($event)"></ui-form-field>
         <div *ngIf="receiptError" class="text-xs text-[#9A5A4A]">{{ receiptError }}</div>
       </div>
 
@@ -1075,20 +1013,20 @@
       </div>
 
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Líder asignado</span>
-          <input
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE] px-3 py-2 text-sm text-muted"
-            [value]="structureLeaderLabel"
-            disabled />
-        </label>
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Profundidad asignada</span>
-          <input
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE] px-3 py-2 text-sm text-muted"
-            [value]="structureLevel"
-            disabled />
-        </label>
+        <ui-form-field
+          wrapperClass="block"
+          label="Líder asignado"
+          [readonly]="true"
+          [disabled]="true"
+          [ngModel]="structureLeaderLabel"
+          inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE] px-3 py-2 text-sm text-muted"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block"
+          label="Profundidad asignada"
+          [readonly]="true"
+          [disabled]="true"
+          [ngModel]="structureLevel"
+          inputClass="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE] px-3 py-2 text-sm text-muted"></ui-form-field>
       </div>
       <div *ngIf="!structureLeader" class="mt-2 text-xs text-[#6B6B6B]">
         Sin cliente seleccionado: se crea sin líder.
