@@ -1,5 +1,5 @@
 <section class="antialiased">
-  <header class="border-b border-[#7C8C72]/20 bg-[#F6F3EE]/90 backdrop-blur">
+  <header class="border-b border-olive-20 bg-sand-200-90 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
         <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
@@ -10,7 +10,7 @@
           size="md"
           iconClass="fa-solid fa-arrow-left"
           [routerLink]="['/dashboard']"
-          extraClass="text-xs sm:text-sm border border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90">
+          extraClass="text-xs sm:text-sm border border-olive-30 bg-ivory-80 hover-bg-cream-90">
           Regresar
         </ui-button>
       </div>
@@ -19,7 +19,7 @@
 
   <main class="mx-auto max-w-3xl px-4 py-10">
     <div
-      class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+      class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
       <!-- Ambient glow -->
       <div
         class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(250,204,21,0.10),transparent_55%)]">
@@ -32,19 +32,19 @@
         <!-- Header -->
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">
+            <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">
               Seguimiento
             </div>
             <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-main">
               Orden {{ orderId }}
             </h1>
-            <div *ngIf="order?.createdAt" class="mt-1 text-xs text-[#6B6B6B]">
+            <div *ngIf="order?.createdAt" class="mt-1 text-xs text-gray-500">
               Creada: {{ order?.createdAt }}
             </div>
           </div>
 
           <span
-            class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs font-semibold text-main"
+            class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs font-semibold text-main"
             [ngClass]="statusClass">
             <span class="h-1.5 w-1.5 rounded-full bg-current opacity-80"></span>
             {{ statusLabel }}
@@ -53,32 +53,32 @@
 
         <!-- Order summary -->
         <div class="mt-5 grid gap-4 sm:grid-cols-2">
-          <div class="rounded-2xl border border-[#7C8C72]/30 bg-white/70 p-4">
-            <div class="text-xs font-semibold text-[#5A5A5A] uppercase tracking-wide">
+          <div class="rounded-2xl border border-olive-30 bg-white/70 p-4">
+            <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               Detalle
             </div>
 
             <div class="mt-2 space-y-2 text-sm text-muted">
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">ID</span>
+                <span class="text-gray-600">ID</span>
                 <span class="font-medium text-main">{{ orderId }}</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Estatus</span>
+                <span class="text-gray-600">Estatus</span>
                 <span class="font-medium text-main">{{ statusLabel }}</span>
               </div>
 
               <div class="flex justify-between gap-4" *ngIf="orderSubtotal">
-                <span class="text-[#5A5A5A]">Subtotal</span>
+                <span class="text-gray-600">Subtotal</span>
                 <span class="font-medium text-main">
                   {{ orderSubtotal | currency:'MXN' }}
                 </span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Descuento</span>
-                <span [ngClass]="orderDiscount > 0 ? 'font-semibold text-accent' : 'text-[#6B6B6B]'">
+                <span class="text-gray-600">Descuento</span>
+                <span [ngClass]="orderDiscount > 0 ? 'font-semibold text-accent' : 'text-gray-500'">
                   {{
                   orderDiscount > 0
                   ? ('-' + (orderDiscount | currency:'MXN') +
@@ -89,7 +89,7 @@
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Total</span>
+                <span class="text-gray-600">Total</span>
                 <span class="font-semibold text-gold">
                   {{ orderTotal | currency:'MXN' }}
                 </span>
@@ -98,8 +98,8 @@
           </div>
 
           <!-- Timeline -->
-          <div class="rounded-2xl border border-[#7C8C72]/30 bg-white/70 p-4">
-            <div class="text-xs font-semibold text-[#5A5A5A] uppercase tracking-wide">Progreso</div>
+          <div class="rounded-2xl border border-olive-30 bg-white/70 p-4">
+            <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Progreso</div>
             <div class="mt-3">
               <ui-order-timeline [status]="statusValue"></ui-order-timeline>
             </div>
@@ -108,7 +108,7 @@
 
         <!-- Envío card -->
         <!-- Envío card (pro, consistente) -->
-        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-white/70 p-5">
+        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
           <div class="flex items-start justify-between gap-4">
             <div class="flex items-start gap-3">
               <!-- Icono -->
@@ -119,7 +119,7 @@
 
               <!-- Header -->
               <div>
-                <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">Envío</div>
+                <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Envío</div>
 
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                   <span
@@ -129,7 +129,7 @@
                   </span>
 
                   <!-- Subtexto corto -->
-                  <span class="text-xs text-[#6B6B6B]">
+                  <span class="text-xs text-gray-500">
                     {{ order?.shippingType === 'carrier' ? 'Paquetería' : 'Entrega / recolección' }}
                   </span>
                 </div>
@@ -138,7 +138,7 @@
 
             <!-- Total mini, opcional (si quieres reforzar confianza visual) -->
             <div class="text-right">
-              <div class="text-[11px] text-[#6B6B6B]">Total</div>
+              <div class="text-[11px] text-gray-500">Total</div>
               <div class="text-sm font-semibold text-gold">{{ orderTotal | currency:'MXN' }}</div>
             </div>
           </div>
@@ -148,8 +148,8 @@
             <!-- Carrier -->
             <ng-container *ngIf="order?.shippingType === 'carrier'">
               <!-- Guía -->
-              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
-                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
+              <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
+                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
                   Número de guía
                 </div>
 
@@ -165,15 +165,15 @@
                     iconClass="fa-regular fa-copy"
                     (pressed)="copyToClipboard(order?.trackingNumber)"
                     [disabled]="!order?.trackingNumber"
-                    extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-[11px] text-main hover:bg-[#EFE9DD]/90">
+                    extraClass="border border-olive-30 bg-ivory-80 text-[11px] text-main hover-bg-cream-90">
                     Copiar
                   </ui-button>
                 </div>
               </div>
 
               <!-- Dirección -->
-              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
-                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
+              <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
+                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
                   Dirección de entrega
                 </div>
 
@@ -190,20 +190,20 @@
                   </div>
 
                   <!-- CP + Estado -->
-                  <div class="text-xs text-[#5A5A5A]">
+                  <div class="text-xs text-gray-600">
                     {{ order?.postalCode || '-' }} • {{ order?.state || '-' }}
                   </div>
 
                   <!-- Tel -->
-                  <div class="mt-1 text-xs text-[#6B6B6B]">
+                  <div class="mt-1 text-xs text-gray-500">
                     📞 {{ order?.phone || '-' }}
                   </div>
                 </div>
               </div>
 
               <!-- Estado -->
-              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3 sm:col-span-2">
-                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
+              <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3 sm:col-span-2">
+                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
                   Estado del envío
                 </div>
 
@@ -215,15 +215,15 @@
 
             <!-- Personal -->
             <ng-container *ngIf="order?.shippingType === 'personal'">
-              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
-                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">Lugar</div>
+              <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
+                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Lugar</div>
                 <div class="mt-1 text-sm font-semibold text-gold">
                   {{ order?.deliveryPlace || '-' }}
                 </div>
               </div>
 
-              <div class="rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-3">
-                <div class="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">Fecha</div>
+              <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
+                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Fecha</div>
                 <div class="mt-1 text-sm font-semibold text-gold">
                   {{ order?.deliveryDate || '-' }}
                 </div>
@@ -232,7 +232,7 @@
           </div>
 
           <!-- Pie opcional: nota -->
-          <div class="mt-3 text-xs text-[#6B6B6B]">
+          <div class="mt-3 text-xs text-gray-500">
             Tip: guarda tu referencia <span class="font-semibold text-main">{{ orderId }}</span> por si necesitas
             soporte.
           </div>
@@ -240,40 +240,40 @@
 
 
         <!-- SPEI card (pro) -->
-        <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-white/70 p-5">
+        <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">Pago</div>
+              <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Pago</div>
               <div class="mt-1 text-lg font-extrabold text-main">Transferencia SPEI</div>
-              <div class="mt-1 text-xs text-[#6B6B6B]">
+              <div class="mt-1 text-xs text-gray-500">
                 Usa estos datos tal cual para validar el pago sin fricción.
               </div>
             </div>
 
-            <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs font-semibold text-main">
+            <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs font-semibold text-main">
               Referencia: <span class="text-gold">{{ orderId }}</span>
             </span>
           </div>
 
-          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
+          <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4">
             <div class="space-y-2 text-sm text-muted">
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Beneficiario</span>
+                <span class="text-gray-600">Beneficiario</span>
                 <span class="font-medium text-main">Finding U</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Cuenta / CLABE</span>
+                <span class="text-gray-600">Cuenta / CLABE</span>
                 <span class="font-mono text-main">1234 1234 1234 1234 12</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Referencia</span>
+                <span class="text-gray-600">Referencia</span>
                 <span class="font-semibold text-gold">{{ orderId }}</span>
               </div>
 
               <div class="flex justify-between gap-4">
-                <span class="text-[#5A5A5A]">Concepto</span>
+                <span class="text-gray-600">Concepto</span>
                 <span class="text-main">Pago de pedido</span>
               </div>
             </div>
@@ -281,22 +281,22 @@
 
           <div class="mt-4 space-y-2 text-sm text-muted">
             <p>Una vez realizada la transferencia, envía tu comprobante para acelerar la confirmación.</p>
-            <p class="text-[#5A5A5A]">Soporte: WhatsApp 477 574 2501</p>
+            <p class="text-gray-600">Soporte: WhatsApp 477 574 2501</p>
           </div>
         </div>
 
         <!-- States -->
-        <div *ngIf="isLoading" class="mt-4 text-xs text-[#5A5A5A]">
+        <div *ngIf="isLoading" class="mt-4 text-xs text-gray-600">
           Cargando estado de la orden...
         </div>
 
         <div *ngIf="!isLoading && !order"
-          class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4 text-sm text-muted">
-          <div class="text-xs font-semibold tracking-wide text-[#5A5A5A] uppercase">
+          class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-muted">
+          <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">
             Sin resultados
           </div>
           <div class="mt-2 font-medium text-main">No se encontró la orden.</div>
-          <div class="mt-1 text-xs text-[#6B6B6B]">Verifica el ID o intenta nuevamente.</div>
+          <div class="mt-1 text-xs text-gray-500">Verifica el ID o intenta nuevamente.</div>
         </div>
       </div>
     </div>

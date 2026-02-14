@@ -4,18 +4,18 @@
       <div header-left class="relative lg:hidden shrink-0">
         <ui-button
           type="button"
-          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-sm transition hover:bg-[#EFE9DD]/90"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-sm transition hover-bg-cream-90"
           (pressed)="toggleMobileNav()">
           <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
         </ui-button>
 
         <div
-          class="absolute left-0 mt-2 w-56 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-2 shadow-xl backdrop-blur"
+          class="absolute left-0 mt-2 w-56 rounded-2xl border border-olive-30 bg-sand-200-95 p-2 shadow-xl backdrop-blur"
           [class.hidden]="!isMobileNavOpen">
           <ui-sidebar-nav [links]="dashboardNavLinks" [compact]="true" (linkSelect)="handleDashboardNavSelect($event)"></ui-sidebar-nav>
           <ui-button
             *ngIf="isGuest"
-            class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
+            class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover-bg-ivory-80"
             [routerLink]="['/login']"
             (pressed)="closeMobileNav()">
             <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
@@ -26,10 +26,10 @@
 
       <div class="flex shrink-0 items-center gap-2 sm:gap-3">
         <div *ngIf="currentUser" class="relative shrink-0">
-          <ui-button type="button" class="user-pill inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90" (pressed)="toggleUserDetails()" aria-label="Usuario">
-            <span class="relative grid h-9 w-9 place-items-center rounded-full bg-[#FDFBF7]/80" [ngClass]="discountRingClass()">
+          <ui-button type="button" class="user-pill inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 transition hover-bg-cream-90" (pressed)="toggleUserDetails()" aria-label="Usuario">
+            <span class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80" [ngClass]="discountRingClass()">
               <i class="fa-solid fa-user text-[13px]" [ngClass]="levelIconClass()" aria-hidden="true"></i>
-              <span *ngIf="isClient" class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30 bg-[#F6F3EE]/90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur" [ngClass]="discountBadgeMiniClass()">
+              <span *ngIf="isClient" class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-olive-30 bg-sand-200-90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur" [ngClass]="discountBadgeMiniClass()">
                 <i class="fa-solid fa-tag text-[9px]" aria-hidden="true"></i>
                 <span>{{ discountPercent }}%</span>
               </span>
@@ -37,7 +37,7 @@
             <span class="name hidden max-w-[120px] truncate text-sm font-semibold lg:block">{{ currentUser.name }}</span>
           </ui-button>
 
-          <div *ngIf="isUserDetailsOpen" class="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-4 shadow-xl backdrop-blur">
+          <div *ngIf="isUserDetailsOpen" class="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-olive-30 bg-sand-200-95 p-4 shadow-xl backdrop-blur">
             <div class="flex items-center justify-between text-sm">
               <span class="meta text-xs">Usuario</span>
               <span class="font-semibold text-main">{{ currentUser.name }}</span>
@@ -50,7 +50,7 @@
               <span>Descuento</span>
               <span class="text-main">{{ discountPercent }}%</span>
             </div>
-            <ui-button *ngIf="!isGuest" type="button" class="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90" (pressed)="logout()">
+            <ui-button *ngIf="!isGuest" type="button" class="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition hover-bg-cream-90" (pressed)="logout()">
               <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
               Cerrar sesion
             </ui-button>
@@ -59,7 +59,7 @@
 
         <nav class="hidden items-center gap-2 lg:flex">
           <ui-sidebar-nav [links]="dashboardNavLinks" (linkSelect)="scrollToSection($event)"></ui-sidebar-nav>
-          <ui-button *ngIf="isGuest" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90" [routerLink]="['/login']">
+          <ui-button *ngIf="isGuest" class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90" [routerLink]="['/login']">
             <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
             Iniciar sesion
           </ui-button>
@@ -72,13 +72,13 @@
   <main class="mx-auto max-w-6xl space-y-16 px-6 py-10">
     <section class="space-y-4">
       <div class="flex items-center justify-between" *ngIf="!isGuest">
-        <div class="flex items-center gap-2 text-sm text-[#5A5A5A]">
+        <div class="flex items-center gap-2 text-sm text-gray-600">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Progreso mensual
         </div>
 
         <ui-button
-          class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+          class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
           (pressed)="toggleSecondaryGoals()">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
           {{ secondaryGoalsVisible ? 'Ocultar metas secundarias' : 'Mostrar metas secundarias' }}
@@ -87,7 +87,7 @@
 
       <div *ngIf="!isGuest && activeGoal">
         <div
-          class="grain relative overflow-hidden rounded-3xl border border-[#C8A96A]/40 bg-gradient-to-r from-[#C8A96A]/20 via-[#D9A441]/10 to-[#C8A96A]/20 p-5 sm:p-6 md:p-8"
+          class="grain relative overflow-hidden rounded-3xl border border-gold-40 bg-gradient-to-r from-gold-20 via-amber-10 to-gold-20 p-5 sm:p-6 md:p-8"
           [id]="'goal-' + activeGoal.key">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
@@ -130,7 +130,7 @@
             </div>
 
             <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
-            <ui-button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
+            <ui-button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
                md:absolute md:bottom-6 md:right-6 md:w-auto" (pressed)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
               {{ activeGoal.ctaText }}
@@ -144,7 +144,7 @@
 
       <div *ngIf="isGuest">
         <div
-          class="grain relative overflow-hidden rounded-3xl border border-[#C8A96A]/40 bg-gradient-to-r from-[#C8A96A]/20 via-[#D9A441]/10 to-[#C8A96A]/20 p-6 md:p-8">
+          class="grain relative overflow-hidden rounded-3xl border border-gold-40 bg-gradient-to-r from-gold-20 via-amber-10 to-gold-20 p-6 md:p-8">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,185,66,0.25),transparent_60%)]">
           </div>
@@ -157,7 +157,7 @@
               </p>
             </div>
             <ui-button type="button"
-              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+              class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
               (pressed)="openGuestRegisterModal()">
               <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
               Registrate
@@ -168,12 +168,12 @@
 
       <div class="grid gap-3 lg:grid-cols-4" *ngIf="!isGuest && secondaryGoalsVisible">
         <div *ngFor="let goal of secondaryGoals"
-          class="grain relative overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4 opacity-70"
+          class="grain relative overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80 p-4 opacity-70"
           [id]="'goal-' + goal.key">
           <div class="goal-card" [attr.data-goal]="goal.key">
-            <div class="text-xs text-[#5A5A5A]">{{ goal.subtitle }}</div>
+            <div class="text-xs text-gray-600">{{ goal.subtitle }}</div>
 
-            <div class="mt-3 flex items-center justify-between text-xs text-[#5A5A5A]">
+            <div class="mt-3 flex items-center justify-between text-xs text-gray-600">
               <span>{{ goalProgressLabel(goal) }}</span>
               <span *ngIf="goal.cart > 0" class="text-gold">+{{ formatMoney(goal.cart) }} en carrito</span>
             </div>
@@ -182,7 +182,7 @@
               <div class="progress-base absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-300 to-orange-400"
                 [style.width.%]="goalBasePercent(goal)"></div>
               <div
-                class="progress-cart absolute inset-y-0 left-0 bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] opacity-90"
+                class="progress-cart absolute inset-y-0 left-0 bg-gradient-to-r from-olive to-gold opacity-90"
                 [style.left.%]="goalBasePercent(goal)" [style.width.%]="goalCartPercent(goal)"></div>
             </div>
           </div>
@@ -200,18 +200,18 @@
         </div>
 
         <div class="hidden items-center gap-3 md:flex">
-          <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-3">
-            <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
+          <div class="rounded-2xl border border-olive-30 bg-ivory-80 px-4 py-3">
+            <div class="flex items-center gap-2 text-xs text-gray-600">
               <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
               Carrito
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
-            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-[#6B6B6B]'">
+            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-gray-500'">
               {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
             </div>
           </div>
           <ui-button type="button"
-            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
+            class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
             (pressed)="goToCart()">
             <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Ver carrito
@@ -219,14 +219,14 @@
         </div>
       </div>
 
-      <div class="grain relative mt-8 overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-ambient">
+      <div class="grain relative mt-8 overflow-hidden rounded-3xl border border-olive-30 bg-ambient">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(245,185,66,0.18),transparent_55%)]">
         </div>
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="productOfMonth as pom">
 
           <div class="order-2 md:order-2">
             <span
-              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-gold">
+              class="inline-flex items-center gap-2 rounded-full border border-gold-35 bg-gold-14 px-4 py-2 text-xs font-semibold text-gold">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes | Recomendado para metas
             </span>
@@ -243,26 +243,26 @@
             </div>
 
             <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div class="flex items-center gap-3 rounded-2xl border border-[#7C8C72]/30 surface-soft p-3">
-                <span class="text-sm text-[#5A5A5A]">Cantidad</span>
+              <div class="flex items-center gap-3 rounded-2xl border border-olive-30 surface-soft p-3">
+                <span class="text-sm text-gray-600">Cantidad</span>
                 <ui-form-field
                   type="number"
                   [ngModel]="heroQty"
                   (ngModelChange)="setHeroQty($event)"
-                  inputClass="w-20 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main"></ui-form-field>
-                <span class="flex items-center gap-2 text-sm text-[#5A5A5A]">
+                  inputClass="w-20 rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main"></ui-form-field>
+                <span class="flex items-center gap-2 text-sm text-gray-600">
                   x
                   <span class="font-semibold text-main">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
-                  <span *ngIf="hasDiscount" class="text-xs text-[#6B6B6B] line-through">
+                  <span *ngIf="hasDiscount" class="text-xs text-gray-500 line-through">
                     {{ formatMoney(heroProductPrice) }}
                   </span>
                   <span *ngIf="hasDiscount" class="text-[11px] text-accent">{{ discountAppliedLabel() }}</span>
-                  <span *ngIf="!hasDiscount" class="text-[11px] text-[#6B6B6B]">Sin descuento</span>
+                  <span *ngIf="!hasDiscount" class="text-[11px] text-gray-500">Sin descuento</span>
                 </span>
               </div>
 
               <ui-button
-                class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-olive to-gold px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
                 (pressed)="addHeroToCart()">
                 <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                 Agregar al carrito
@@ -271,22 +271,22 @@
           </div>
 
           <div
-            class="order-1 md:order-1 relative h-[260px] overflow-hidden rounded-3xl border border-[#7C8C72]/30 md:h-[360px]">
+            class="order-1 md:order-1 relative h-[260px] overflow-hidden rounded-3xl border border-olive-30 md:h-[360px]">
 
             <img [src]="heroImage" [alt]="pom.name" class="hero-image absolute inset-0 h-full w-full object-cover" />
-            <div class="absolute inset-0 bg-gradient-to-tr from-[#1B1B1B]/65 via-transparent to-transparent"></div>
-            <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#C8A96A]/12 blur-3xl"></div>
+            <div class="absolute inset-0 bg-gradient-to-tr from-ink-65 via-transparent to-transparent"></div>
+            <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gold-12 blur-3xl"></div>
 
             <div class="relative flex h-full flex-col justify-end p-6">
               <div class="text-sm font-semibold text-zinc-200">Oferta estratígica</div>
-              <div class="mt-1 text-xs text-[#5A5A5A]">Optimiza tu corte de mes</div>
+              <div class="mt-1 text-xs text-gray-600">Optimiza tu corte de mes</div>
             </div>
           </div>
         </div>
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="!productOfMonth">
           <div>
             <span
-              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-gold">
+              class="inline-flex items-center gap-2 rounded-full border border-gold-35 bg-gold-14 px-4 py-2 text-xs font-semibold text-gold">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes
             </span>
@@ -304,7 +304,7 @@
             <i class="fa-solid fa-rotate text-accent" aria-hidden="true"></i>
             Volver a comprar
           </h3>
-          <p class="text-sm text-[#5A5A5A] sm:text-right">
+          <p class="text-sm text-gray-600 sm:text-right">
             Tus básicos para mantener metas constantes.
           </p>
         </div>
@@ -330,7 +330,7 @@
             <i class="fa-solid fa-layer-group text-accent" aria-hidden="true"></i>
             Todos los productos
           </h3>
-          <div class="text-sm text-[#5A5A5A] sm:text-right">{{ productsCount }}</div>
+          <div class="text-sm text-gray-600 sm:text-right">{{ productsCount }}</div>
         </div>
 
                 <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -362,7 +362,7 @@
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
-        <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
+        <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_40%_20%,rgba(59,130,246,0.12),transparent_55%)]">
           </div>
@@ -375,7 +375,7 @@
             </div>
           </div>
 
-          <div class="mt-6 overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
+          <div class="mt-6 overflow-hidden rounded-2xl border border-olive-30 surface-soft p-4">
             <svg [attr.viewBox]="'0 0 ' + graphSize.width + ' ' + graphSize.height" class="w-full"
               [style.height.px]="graphSize.height">
               <g fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2">
@@ -404,20 +404,20 @@
           </div>
 
           <ui-button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
-            class="mt-4 inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+            class="mt-4 inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
             (pressed)="scrollToSection('links')">
             <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
             Compartir mi enlace
           </ui-button>
           <ui-button *ngIf="!isGuest" type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+            class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
             (pressed)="scrollToSection('ordenes')">
             <i class="fa-solid fa-receipt" aria-hidden="true"></i>
             Ordenes
           </ui-button>
 
           <ui-button *ngIf="!isGuest && commissionSummary" type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+            class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
             (pressed)="scrollToSection('comisiones')">
             <i class="fa-solid fa-wallet" aria-hidden="true"></i>
             Comisiones
@@ -439,57 +439,57 @@
           </div>
         </div>
 
-        <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
+        <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(245,185,66,0.12),transparent_55%)]">
           </div>
           <div class="relative">
             <div *ngIf="networkMembers.length === 0"
-              class="mb-6 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 p-5">
+              class="mb-6 rounded-2xl border border-gold-35 bg-gold-12 p-5">
               <div class="text-sm font-semibold text-gold">&#x1F3AF; Misi&#243;n de red</div>
               <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
               <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
               <div class="mt-4 flex flex-wrap gap-2">
                 <ui-button type="button"
-                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                   (pressed)="copyLinkAndCopy()">
                   <i class="fa-solid fa-copy" aria-hidden="true"></i>
                   Copiar link + copy
                 </ui-button>
                 <ui-button type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                   (pressed)="scrollToSection('links')">
                   <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                   Compartir mi enlace
                 </ui-button>
                 <ui-button *ngIf="!isGuest" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                   (pressed)="scrollToSection('ordenes')">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                   Ordenes
                 </ui-button>
 
                 <ui-button *ngIf="!isGuest && commissionSummary" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                   (pressed)="scrollToSection('comisiones')">
                   <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                   Comisiones
                 </ui-button>
                 <ui-button type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                   (pressed)="scrollToSection('links')">
                   <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
                   Ver mensajes sugeridos
                 </ui-button>
                 <ui-button *ngIf="!isGuest" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                   (pressed)="scrollToSection('ordenes')">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                   Ordenes
                 </ui-button>
 
                 <ui-button *ngIf="!isGuest && commissionSummary" type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                  class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                   (pressed)="scrollToSection('comisiones')">
                   <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                   Comisiones
@@ -507,9 +507,9 @@
             </div>
 
             <div *ngIf="networkMembers.length === 0"
-              class="mt-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-6 text-center">
+              class="mt-6 rounded-2xl border border-olive-30 surface-soft p-6 text-center">
               <div class="text-sm font-semibold text-zinc-200">A?n no tienes miembros en tu red</div>
-              <div class="mt-1 text-xs text-[#5A5A5A]">Comparte tu enlace para empezar</div>
+              <div class="mt-1 text-xs text-gray-600">Comparte tu enlace para empezar</div>
               <ui-button type="button" variant="ghost" size="md" iconClass="fa-solid fa-share-nodes" extraClass="mt-4"
                 (pressed)="scrollToSection('links')">
                 Compartir mi enlace
@@ -534,7 +534,7 @@
                         <div class="text-sm font-semibold text-main">{{ member.name }}</div>
                         <ui-status-badge context="network" [status]="member.status" [showIcon]="false"></ui-status-badge>
                       </div>
-                      <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                      <div class="mt-2 grid gap-1 text-xs text-gray-600">
                         <div>Nivel: <span class="text-main">{{ member.level }}</span></div>
                         <div>Consumo mes: <span class="text-main">{{ formatMoney(member.spend) }}</span></div>
                       </div>
@@ -587,12 +587,12 @@
             <i class="fa-solid fa-coins hidden text-gold md:inline" aria-hidden="true"></i>
             Comisiones
           </h2>
-          <p class="mt-2 text-sm text-[#5A5A5A]">Resumen del mes {{ commissions.monthKey }}.</p>
+          <p class="mt-2 text-sm text-gray-600">Resumen del mes {{ commissions.monthKey }}.</p>
         </div>
       </div>
 
       <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
-        <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
+        <div class="rounded-3xl border border-olive-30 bg-ivory-80 p-6">
           <div class="grid gap-3 sm:grid-cols-3">
             <ui-kpi-card label="Comisiones del mes" [value]="formatMoney(commissions.monthTotal || 0)"></ui-kpi-card>
             <ui-kpi-card label="Por confirmar" [value]="formatMoney(commissions.pendingTotal || 0)"></ui-kpi-card>
@@ -600,14 +600,14 @@
               <span kpi-label-extra class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
                 <ui-button
                   type="button"
-                  class="inline-flex items-center text-[#6B6B6B] hover:text-zinc-300"
+                  class="inline-flex items-center text-gray-500 hover:text-zinc-300"
                   aria-label="Info comisiones bloqueadas"
                   (pressed)="toggleBlockedTooltip()">
                   <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
                 </ui-button>
                 <span
                   *ngIf="showBlockedTooltip"
-                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-[#7C8C72]/30 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
+                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-olive-30 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
                   Las comisiones que pasan por referidos inactivos no llegan a ti.
                 </span>
               </span>
@@ -616,7 +616,7 @@
 
           <div class="mt-4 flex flex-wrap items-center gap-3">
             <ui-button type="button"
-              class="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
+              class="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs transition hover-bg-cream-90"
               (pressed)="toggleCommissionLedger()">
               <i class="fa-solid" [ngClass]="showCommissionLedger ? 'fa-eye-slash' : 'fa-table'" aria-hidden="true"></i>
               {{ showCommissionLedger ? 'Ocultar detalles' : 'Ver detalles' }}
@@ -630,9 +630,9 @@
                   <div class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
-                      <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">{{ row.status || '-' }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-1 text-xs text-zinc-300">{{ row.status || '-' }}</span>
                     </div>
-                    <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                    <div class="mt-2 grid gap-1 text-xs text-gray-600">
                       <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
                       <div>Monto: <span class="text-main">{{ formatMoney(row.amount || 0) }}</span></div>
                       <div>Fecha: <span class="text-main">{{ formatLedgerDate(row.createdAt) }}</span></div>
@@ -655,17 +655,17 @@
                     <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
                     <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
                     <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
-                    <div class="px-4 py-3"><span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">{{ row.status || '-' }}</span></div>
-                    <div class="px-4 py-3 text-[#5A5A5A]">{{ formatLedgerDate(row.createdAt) }}</div>
+                    <div class="px-4 py-3"><span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-1 text-xs text-zinc-300">{{ row.status || '-' }}</span></div>
+                    <div class="px-4 py-3 text-gray-600">{{ formatLedgerDate(row.createdAt) }}</div>
                   </div>
                 </ng-template>
               </ui-data-table>
 
-              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="px-4 py-4 text-center text-xs text-[#6B6B6B]">Sin movimientos este mes.</div>
+              <div *ngIf="(commissions.ledger?.length || 0) === 0" class="px-4 py-4 text-center text-xs text-gray-500">Sin movimientos este mes.</div>
             </div>
           </ui-table>
 
-          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4 text-sm text-zinc-300">
+          <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-zinc-300">
             <div class="flex items-center justify-between">
               <span>CLABE registrada</span>
               <span class="text-zinc-200">
@@ -679,25 +679,25 @@
                 placeholder="000000000000000000"
                 [(ngModel)]="clabeDraft"
                 wrapperClass="block text-xs"
-                inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-2 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+                inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-2 text-sm text-zinc-200 placeholder-text-muted-strong"
               ></ui-form-field>
               <ui-button type="button" variant="primary" size="md" iconClass="fa-solid fa-floppy-disk"
                 extraClass="glow-gold h-10 self-end" (pressed)="openClabeConfirm()">
                 Guardar
               </ui-button>
             </div>
-            <div class="mt-2 text-xs text-[#6B6B6B]">
+            <div class="mt-2 text-xs text-gray-500">
               Depositos programados para el dia {{ commissions.payoutDay || 10 }} de cada mes.
             </div>
           </div>
         </div>
 
-        <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
+        <div class="rounded-3xl border border-olive-30 bg-ivory-80 p-6">
           <div class="text-sm font-semibold text-zinc-200">Mes anterior</div>
-          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-            <div class="text-xs text-[#5A5A5A]">Total</div>
+          <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-xs text-gray-600">Total</div>
             <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
-            <div class="mt-2 text-xs text-[#6B6B6B]">
+            <div class="mt-2 text-xs text-gray-500">
               Estatus:
               <span class="text-zinc-200">
                 {{
@@ -732,13 +732,13 @@
             <i class="fa-solid fa-receipt hidden text-accent md:inline" aria-hidden="true"></i>
             Ordenes
           </h2>
-          <p class="mt-2 text-sm text-[#5A5A5A]">Seguimiento de tus pedidos recientes.</p>
+          <p class="mt-2 text-sm text-gray-600">Seguimiento de tus pedidos recientes.</p>
         </div>
       </div>
 
-      <div class="mt-6 rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
-        <div *ngIf="isOrdersLoading" class="text-sm text-[#5A5A5A]">Cargando ordenes...</div>
-        <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-[#5A5A5A]">
+      <div class="mt-6 rounded-3xl border border-olive-30 bg-ivory-80 p-6">
+        <div *ngIf="isOrdersLoading" class="text-sm text-gray-600">Cargando ordenes...</div>
+        <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-gray-600">
           Aun no tienes ordenes registradas.
         </div>
         <ui-table *ngIf="!isOrdersLoading && orders.length > 0">
@@ -750,7 +750,7 @@
                     <div class="text-sm font-semibold text-main">{{ order.id }}</div>
                     <ui-status-badge [status]="order.status || ''"></ui-status-badge>
                   </div>
-                  <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
+                  <div class="mt-2 grid gap-1 text-xs text-gray-600">
                     <div>Fecha: <span class="text-main">{{ order.createdAt || '-' }}</span></div>
                     <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
                   </div>
@@ -789,7 +789,7 @@
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-1">
-        <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
+        <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6">
           <div
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_35%_20%,rgba(59,130,246,0.12),transparent_55%)]">
           </div>
@@ -797,19 +797,19 @@
 
 
           <div *ngIf="networkMembers.length === 0"
-            class="mb-6 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 p-5">
+            class="mb-6 rounded-2xl border border-gold-35 bg-gold-12 p-5">
             <div class="text-sm font-semibold text-gold">&#x1F3AF; Misi&#243;n de red</div>
             <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
             <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
             <div class="mt-4 flex flex-wrap gap-2">
               <ui-button type="button"
-                class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                 (pressed)="copyLinkAndCopy()">
                 <i class="fa-solid fa-copy" aria-hidden="true"></i>
                 Copiar link + copy
               </ui-button>
               <ui-button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                 (pressed)="scrollToSection('links')">
                 <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                 Compartir mi enlace
@@ -824,7 +824,7 @@
                 Comisiones
               </ui-button>
               <ui-button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                 (pressed)="scrollToSection('links')">
                 <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
                 Ver mensajes sugeridos
@@ -841,43 +841,43 @@
             </div>
           </div>
 
-          <div class="mb-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-            <div class="flex items-center gap-2 text-xs font-semibold text-[#5A5A5A]">
+          <div class="mb-6 rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="flex items-center gap-2 text-xs font-semibold text-gray-600">
               <i class="fa-solid fa-route" aria-hidden="true"></i>
               Tu flujo de 3 pasos
             </div>
             <div class="mt-3 space-y-3 text-sm">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="activeFeaturedId ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-accent' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
+                  [ngClass]="activeFeaturedId ? 'border-olive-40 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-zinc-300'">
                   <i *ngIf="activeFeaturedId" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!activeFeaturedId">1</span>
                 </div>
                 <div>
                   <div class="font-semibold text-zinc-200">Elige gancho</div>
-                  <div class="text-xs text-[#6B6B6B]">Selecciona tu producto destacado.</div>
+                  <div class="text-xs text-gray-500">Selecciona tu producto destacado.</div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="hasCopiedLink ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-accent' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
+                  [ngClass]="hasCopiedLink ? 'border-olive-40 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-zinc-300'">
                   <i *ngIf="hasCopiedLink" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!hasCopiedLink">2</span>
                 </div>
                 <div>
                   <div class="font-semibold text-zinc-200">Copia tu link</div>
-                  <div class="text-xs text-[#6B6B6B]">Pegalo en tu bio o chat.</div>
+                  <div class="text-xs text-gray-500">Pegalo en tu bio o chat.</div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-accent' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
+                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-olive-40 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-zinc-300'">
                   <i *ngIf="hasCopiedCopy || hasCopiedAsset" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!(hasCopiedCopy || hasCopiedAsset)">3</span>
                 </div>
                 <div>
                   <div class="font-semibold text-zinc-200">Publica</div>
-                  <div class="text-xs text-[#6B6B6B]">Copy + creatividades listas.</div>
+                  <div class="text-xs text-gray-500">Copy + creatividades listas.</div>
                 </div>
               </div>
             </div>
@@ -891,28 +891,28 @@
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
               <ui-button *ngFor="let item of pagedFeatured"
-                class="rounded-2xl border p-4 text-left transition hover:bg-[#EFE9DD]/90" (pressed)="setFeatured(item.id)"
+                class="rounded-2xl border p-4 text-left transition hover-bg-cream-90" (pressed)="setFeatured(item.id)"
                 [ngClass]="
                   item.id === activeFeaturedId
-                    ? 'border-blue-400/40 bg-[#7C8C72]/10'
-                    : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80'
+                    ? 'border-blue-400/40 bg-olive-10'
+                    : 'border-olive-30 bg-ivory-80'
                 ">
-                <div class="text-xs text-[#5A5A5A]">Gancho</div>
+                <div class="text-xs text-gray-600">Gancho</div>
                 <div class="mt-1 font-extrabold tracking-tight">{{ item.label }}</div>
-                <div class="mt-2 text-xs text-[#5A5A5A]">{{ item.hook }}</div>
+                <div class="mt-2 text-xs text-gray-600">{{ item.hook }}</div>
               </ui-button>
             </div>
 
             <div class="mt-4 flex items-center justify-between">
               <ui-button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                 [disabled]="!canPrevFeatured" [ngClass]="!canPrevFeatured ? 'opacity-50 cursor-not-allowed' : ''"
                 (pressed)="prevFeaturedPage()">
                 <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 Atras
               </ui-button>
               <ui-button type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+                class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
                 [disabled]="!canNextFeatured" [ngClass]="!canNextFeatured ? 'opacity-50 cursor-not-allowed' : ''"
                 (pressed)="nextFeaturedPage()">
                 Siguiente
@@ -920,8 +920,8 @@
               </ui-button>
             </div>
 
-            <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
-              <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
+            <div class="mt-6 rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="flex items-center gap-2 text-xs text-gray-600">
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
                 Tu link
               </div>
@@ -930,17 +930,17 @@
                   wrapperClass="flex-1"
                   [readonly]="true"
                   [ngModel]="referralLink"
-                  inputClass="w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200"></ui-form-field>
+                  inputClass="w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200"></ui-form-field>
                 <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
                   <ui-button
-                    class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-olive to-gold px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
                     (pressed)="copyLink()">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     Copiar
                   </ui-button>
                 </div>
               </div>
-              <div class="mt-2 text-xs text-[#6B6B6B]">
+              <div class="mt-2 text-xs text-gray-500">
                 Tip: fija el link en tu bio y rep&#237;telo en 3 historias.
               </div>
             </div>
@@ -957,22 +957,22 @@
 
               <div class="flex flex-wrap gap-2">
                 <ui-button
-                  class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  [ngClass]="socialChannel === 'whatsapp' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
+                  class="rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
+                  [ngClass]="socialChannel === 'whatsapp' ? 'border-blue-400/30 bg-olive-10' : ''"
                   (pressed)="setChannel('whatsapp')">
                   <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
                   WhatsApp
                 </ui-button>
                 <ui-button
-                  class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  [ngClass]="socialChannel === 'instagram' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
+                  class="rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
+                  [ngClass]="socialChannel === 'instagram' ? 'border-blue-400/30 bg-olive-10' : ''"
                   (pressed)="setChannel('instagram')">
                   <i class="fa-brands fa-instagram" aria-hidden="true"></i>
                   Instagram
                 </ui-button>
                 <ui-button
-                  class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  [ngClass]="socialChannel === 'facebook' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
+                  class="rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-sm transition hover-bg-cream-90"
+                  [ngClass]="socialChannel === 'facebook' ? 'border-blue-400/30 bg-olive-10' : ''"
                   (pressed)="setChannel('facebook')">
                   <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
                   Facebook
@@ -981,17 +981,17 @@
             </div>
 
             <div class="mt-6 grid gap-4 md:grid-cols-2">
-              <div class="overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft">
-                <div class="bg-[#FDFBF7]/80 px-4 py-3 text-sm font-semibold text-zinc-200">
+              <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
+                <div class="bg-ivory-80 px-4 py-3 text-sm font-semibold text-zinc-200">
                   Optimizado para {{ socialChannel === 'whatsapp' ? 'WhatsApp' : (socialChannel === 'instagram' ?
                   'Instagram' : 'Facebook') }}
                 </div>
                 <div class="p-4">
-                  <div class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-[#7C8C72]/30"
+                  <div class="bg-ambient relative w-full overflow-hidden rounded-2xl border border-olive-30"
                     [style.aspect-ratio]="socialAspectRatio">
                     <img [src]="activeSocialAsset" alt="Social"
                       class="hero-image absolute inset-0 h-full w-full object-cover" />
-                    <div class="absolute inset-0 bg-gradient-to-tr from-[#1B1B1B]/65 via-transparent to-transparent">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-ink-65 via-transparent to-transparent">
                     </div>
                     <div class="absolute bottom-0 left-0 right-0 p-4">
                       <div class="text-xs font-semibold text-zinc-200/90">OBTENERLO AHORA</div>
@@ -1001,11 +1001,11 @@
                   </div>
 
                   <div class="mt-4 flex items-center justify-between gap-3">
-                    <!--div class="text-xs text-[#6B6B6B]">
+                    <!--div class="text-xs text-gray-500">
                       Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
                     </div-->
                     <ui-button
-                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+                      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
                       (pressed)="copyAssetPath()">
                       <i class="fa-solid fa-copy" aria-hidden="true"></i>
                       Copiar ruta
@@ -1016,7 +1016,7 @@
 
 
 
-              <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
                   {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ?
@@ -1029,23 +1029,23 @@
                   placeholder="Escribe tu copy aquí..."
                   [ngModel]="captionText"
                   (ngModelChange)="captionText = $event; lastAutoCaption = false"
-                  inputClass="w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"></ui-form-field>
+                  inputClass="w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong"></ui-form-field>
                 <div class="mt-3 flex gap-3">
                   <ui-button
-                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
+                    class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-olive to-gold px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
                     (pressed)="copyCaption()">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     {{ socialChannel === 'instagram' ? 'Copiar descripción' : (socialChannel === 'facebook' ? 'Copiar
                     comentario' : 'Copiar mensaje') }}
                   </ui-button>
                   <!--button
-                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-3 transition hover:bg-[#EFE9DD]/90"
+                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-5 py-3 transition hover-bg-cream-90"
                     (click)="generateTemplate()">
                     <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
                     Generar template
                   </button-->
                 </div>
-                <div class="mt-2 text-xs text-[#6B6B6B]">
+                <div class="mt-2 text-xs text-gray-500">
                   Recomendación UX: 1 promesa + 1 prueba + 1 CTA. Evita promesas financieras.
                 </div>
               </div>
@@ -1061,7 +1061,7 @@
 
   <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-[#7C8C72]/30 surface-soft px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
     </div>
   </div>
@@ -1073,7 +1073,7 @@
     (closed)="closeCommissionModal()">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-[#5A5A5A]">Solicitud de pago</div>
+          <div class="text-xs font-semibold text-gray-600">Solicitud de pago</div>
           <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
           <p class="mt-2 text-sm text-zinc-300">Usaremos esta CLABE para depositar tus comisiones.</p>
         </div>
@@ -1082,7 +1082,7 @@
           variant="ghost"
           size="sm"
           iconClass="fa-solid fa-xmark"
-          extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          extraClass="h-9 w-9 border border-olive-30 bg-ivory-80 text-zinc-300 hover-bg-cream-90"
           (pressed)="closeCommissionModal()">
         </ui-button>
       </div>
@@ -1096,7 +1096,7 @@
           label="CLABE (18 dígitos)"
           placeholder="000000000000000000"
           wrapperClass="block"
-          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong"
         ></ui-form-field>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -1104,7 +1104,7 @@
             type="button"
             variant="ghost"
             size="md"
-            extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
+            extraClass="border border-olive-30 bg-ivory-80 px-5 py-2.5 text-sm transition hover-bg-cream-90"
             (pressed)="closeCommissionModal()">
             Cancelar
           </ui-button>
@@ -1115,7 +1115,7 @@
             size="md"
             iconClass="fa-solid fa-paper-plane"
             (pressed)="submitCommissionRequest()"
-            extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            extraClass="glow-gold bg-gradient-to-r from-gold to-amber px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             {{ isCommissionSubmitting ? 'Enviando...' : 'Solicitar pago' }}
           </ui-button>
         </div>
@@ -1129,7 +1129,7 @@
     (closed)="closeClabeConfirm()">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-[#5A5A5A]">Confirmacion</div>
+          <div class="text-xs font-semibold text-gray-600">Confirmacion</div>
           <h3 class="mt-2 text-xl font-extrabold">Actualizar CLABE interbancaria</h3>
           <p class="mt-2 text-sm text-zinc-300">
             Estas a punto de guardar la CLABE:
@@ -1141,7 +1141,7 @@
           variant="ghost"
           size="sm"
           iconClass="fa-solid fa-xmark"
-          extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          extraClass="h-9 w-9 border border-olive-30 bg-ivory-80 text-zinc-300 hover-bg-cream-90"
           (pressed)="closeClabeConfirm()">
         </ui-button>
       </div>
@@ -1151,7 +1151,7 @@
           type="button"
           variant="ghost"
           size="md"
-          extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
+          extraClass="border border-olive-30 bg-ivory-80 px-5 py-2.5 text-sm transition hover-bg-cream-90"
           (pressed)="closeClabeConfirm()">
           Cancelar
         </ui-button>
@@ -1161,7 +1161,7 @@
           variant="primary"
           size="md"
           iconClass="fa-solid fa-check"
-          extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
+          extraClass="glow-gold bg-gradient-to-r from-gold to-amber px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
           (pressed)="saveCustomerClabe()">
           {{ isClabeSaving ? 'Guardando...' : 'Confirmar' }}
         </ui-button>
@@ -1175,7 +1175,7 @@
     (closed)="closeGuestRegisterModal()">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-[#5A5A5A]">Registro rapido</div>
+          <div class="text-xs font-semibold text-gray-600">Registro rapido</div>
           <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
           <p class="mt-2 text-sm text-zinc-300">Completa tus datos para activar descuentos y red.</p>
         </div>
@@ -1184,7 +1184,7 @@
           variant="ghost"
           size="sm"
           iconClass="fa-solid fa-xmark"
-          extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          extraClass="h-9 w-9 border border-olive-30 bg-ivory-80 text-zinc-300 hover-bg-cream-90"
           (pressed)="closeGuestRegisterModal()">
         </ui-button>
       </div>
@@ -1192,23 +1192,23 @@
       <div class="mt-6 grid gap-3">
         <ui-form-field name="guestName" [(ngModel)]="guestRegisterForm.name" label="Nombre completo" placeholder="Tu nombre"
           wrapperClass="block"
-          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong">
         </ui-form-field>
         <ui-form-field kind="input" type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email" label="Correo" placeholder="tucorreo@ejemplo.com"
           wrapperClass="block"
-          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong">
         </ui-form-field>
         <ui-form-field kind="input" type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone" label="Teléfono" placeholder="+52 ..."
           wrapperClass="block"
-          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong">
         </ui-form-field>
         <ui-form-field kind="input" type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password" label="Contraseña" placeholder="Mínimo 8 caracteres"
           wrapperClass="block"
-          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong">
         </ui-form-field>
         <ui-form-field kind="input" type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword" label="Confirmar contraseña" placeholder="Repite tu contraseña"
           wrapperClass="block"
-          inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]">
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder-text-muted-strong">
         </ui-form-field>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -1216,7 +1216,7 @@
             type="button"
             variant="ghost"
             size="md"
-            extraClass="border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm transition hover:bg-[#EFE9DD]/90"
+            extraClass="border border-olive-30 bg-ivory-80 px-5 py-2.5 text-sm transition hover-bg-cream-90"
             (pressed)="closeGuestRegisterModal()">
             Ahora no
           </ui-button>
@@ -1227,12 +1227,12 @@
             size="md"
             iconClass="fa-solid fa-user-check"
             (pressed)="submitGuestRegister()"
-            extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
+            extraClass="glow-gold bg-gradient-to-r from-gold to-amber px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]">
             {{ isGuestRegisterSubmitting ? 'Creando cuenta...' : 'Regístrate' }}
           </ui-button>
         </div>
         <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
-          [class.text-[#9A5A4A]]="guestRegisterFeedbackType === 'error'"
+          [class.text-alert-soft]="guestRegisterFeedbackType === 'error'"
           [class.text-accent]="guestRegisterFeedbackType === 'success'">
           {{ guestRegisterFeedback }}
         </p>
@@ -1247,7 +1247,7 @@
     <ng-container *ngIf="selectedProduct as product">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-xs font-semibold text-[#5A5A5A]">Detalle del producto</div>
+          <div class="text-xs font-semibold text-gray-600">Detalle del producto</div>
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
           <p class="muted mt-1 text-sm">{{ product.badge }}</p>
         </div>
@@ -1256,34 +1256,34 @@
           variant="ghost"
           size="sm"
           iconClass="fa-solid fa-xmark"
-          extraClass="modal-close h-9 w-9 text-main hover:bg-[#EFE9DD]/90"
+          extraClass="modal-close h-9 w-9 text-main hover-bg-cream-90"
           (click)="closeProductDetails()">
         </ui-button>
       </div>
 
       <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
-        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80">
+        <div class="h-28 w-28 overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80">
           <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
         </div>
         <div>
-          <div class="text-xs text-[#5A5A5A]">Precio</div>
+          <div class="text-xs text-gray-600">Precio</div>
           <div class="mt-1 flex items-end gap-2">
-            <div *ngIf="hasDiscount" class="text-sm text-[#6B6B6B] line-through">
+            <div *ngIf="hasDiscount" class="text-sm text-gray-500 line-through">
               {{ formatMoney(product.price) }}
             </div>
             <div class="text-lg font-extrabold text-main">
               {{ formatMoney(discountedPrice(product.price)) }}
             </div>
-            <div class="text-xs" [ngClass]="hasDiscount ? 'text-accent' : 'text-[#6B6B6B]'">
+            <div class="text-xs" [ngClass]="hasDiscount ? 'text-accent' : 'text-gray-500'">
               {{ discountAppliedLabel() }}
             </div>
           </div>
-          <div class="mt-3 text-xs text-[#5A5A5A]">Cantidad actual: {{ getCartQty(product.id) }}</div>
+          <div class="mt-3 text-xs text-gray-600">Cantidad actual: {{ getCartQty(product.id) }}</div>
         </div>
       </div>
 
       <div *ngIf="product.description" class="divider mt-4 pt-4">
-        <div class="text-xs font-semibold text-[#5A5A5A]">DescripciÃ³n</div>
+        <div class="text-xs font-semibold text-gray-600">DescripciÃ³n</div>
         <p class="mt-2 whitespace-pre-line text-sm text-main">{{ product.description }}</p>
       </div>
 
@@ -1303,7 +1303,7 @@
       <!-- Header -->
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <div class="text-[11px] font-semibold text-[#5A5A5A]">
+          <div class="text-[11px] font-semibold text-gray-600">
             Metas cumplidas del mes
           </div>
           <h3 class="mt-1 text-lg sm:text-xl font-extrabold leading-tight">
@@ -1315,7 +1315,7 @@
         </div>
 
         <ui-button type="button" class="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center
-               rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8] text-main hover:bg-[#EFE9DD]"
+               rounded-full border border-olive-30 bg-sand-100 text-main hover-bg-cream"
           (pressed)="closeGoalsModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </ui-button>
@@ -1323,7 +1323,7 @@
 
       <!-- List -->
       <div class="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
-        <div *ngFor="let goal of pagedAchievedGoals" class="rounded-2xl border border-[#7C8C72]/30 bg-[#F8F4EC] p-3 sm:p-4"
+        <div *ngFor="let goal of pagedAchievedGoals" class="rounded-2xl border border-olive-30 bg-sand-300 p-3 sm:p-4"
           [ngClass]="isNewAchievedGoal(goal) && isGoalsHighlight ? 'goal-epic-card' : ''"
           [style.--goal-delay]="newGoalDelay(goal)">
           <div *ngIf="isNewAchievedGoal(goal) && isGoalsHighlight" class="goal-epic-layer" aria-hidden="true">
@@ -1334,7 +1334,7 @@
 
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="text-[11px] sm:text-xs text-[#5A5A5A] leading-snug">
+              <div class="text-[11px] sm:text-xs text-gray-600 leading-snug">
                 {{ goal.subtitle }}
               </div>
               <div class="mt-0.5 text-xs sm:text-sm font-semibold text-main
@@ -1345,14 +1345,14 @@
 
             <!-- Badges compactos + wrap -->
             <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
-              <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-[#C8A96A]/35
-                     bg-[#C8A96A]/12 px-2 py-0.5 text-[11px] text-gold">
+              <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-gold-35
+                     bg-gold-12 px-2 py-0.5 text-[11px] text-gold">
                 <i class="fa-solid fa-star text-[11px]" aria-hidden="true"></i>
                 Nueva
               </span>
 
-              <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30
-                     bg-[#F6F1E8] px-2 py-0.5 text-[11px] text-main">
+              <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-olive-30
+                     bg-sand-100 px-2 py-0.5 text-[11px] text-main">
                 <i class="fa-solid fa-eye text-[11px]" aria-hidden="true"></i>
                 Leída
               </span>
@@ -1370,19 +1370,19 @@
       <!-- Footer -->
       <div class="mt-4 sm:mt-5 flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div *ngIf="achievedGoalsTotalPages > 1" class="flex items-center justify-between gap-2">
-          <ui-button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
-                 px-3 py-1 text-[11px] text-main transition hover:bg-[#EFE9DD]" [disabled]="!canPrevAchievedGoals"
+          <ui-button type="button" class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-sand-100
+                 px-3 py-1 text-[11px] text-main transition hover-bg-cream" [disabled]="!canPrevAchievedGoals"
             (pressed)="prevAchievedGoalsPage()">
             <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
             Anterior
           </ui-button>
 
-          <div class="text-[11px] text-[#5A5A5A]">
+          <div class="text-[11px] text-gray-600">
             {{ achievedGoalsPage + 1 }} / {{ achievedGoalsTotalPages }}
           </div>
 
-          <ui-button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
-                 px-3 py-1 text-[11px] text-main transition hover:bg-[#EFE9DD]" [disabled]="!canNextAchievedGoals"
+          <ui-button type="button" class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-sand-100
+                 px-3 py-1 text-[11px] text-main transition hover-bg-cream" [disabled]="!canNextAchievedGoals"
             (pressed)="nextAchievedGoalsPage()">
             Siguiente
             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
@@ -1399,7 +1399,7 @@
 
   <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
     <ui-button type="button"
-      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.03]"
+      class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.03]"
       (pressed)="goToCart()">
       <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
       Ir a carrito

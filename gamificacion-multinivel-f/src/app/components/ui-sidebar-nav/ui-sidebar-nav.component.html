@@ -3,16 +3,16 @@
     *ngFor="let link of links"
     class="navbtn rounded-2xl border px-4 py-3 text-left transition"
     [ngClass]="[
-      compact ? 'hover:bg-[#FDFBF7]/80' : 'hover:bg-[#EFE9DD]/90',
+      compact ? 'hover-bg-ivory-80' : 'hover-bg-cream-90',
       activeId === link.id
-        ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
-        : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80'
+        ? 'border-gold-35 bg-olive-10'
+        : 'border-olive-30 bg-ivory-80'
     ]"
     (pressed)="onSelect(link.id)">
     <div class="flex items-center gap-2 text-sm font-semibold">
       <i class="fa-solid" [ngClass]="link.icon + ' text-accent'" aria-hidden="true"></i>
       {{ link.label }}
     </div>
-    <div *ngIf="link.subtitle" class="mt-0.5 text-xs text-[#5A5A5A]">{{ link.subtitle }}</div>
+    <div *ngIf="link.subtitle" class="mt-0.5 text-xs text-gray-600">{{ link.subtitle }}</div>
   </ui-button>
 </div>
