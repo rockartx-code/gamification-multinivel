@@ -14,13 +14,13 @@
         class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 transition hover:bg-[#EFE9DD]/90"
         [routerLink]="['/login']"
         aria-label="Entrar">
-        <i class="fa-solid fa-right-to-bracket text-[#7C8C72]" aria-hidden="true"></i>
+        <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
       </a>
 
       <a
         href="#"
         (click)="scrollTo('recompensas', $event)"
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/70 bg-[#7C8C72]/10 text-[#7C8C72] transition hover:bg-[#7C8C72]/15"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#7C8C72]/70 bg-[#7C8C72]/10 text-accent transition hover:bg-[#7C8C72]/15"
         aria-label="Cómo funciona">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
       </a>
@@ -39,14 +39,14 @@
       <a
         class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
         [routerLink]="['/login']">
-        <i class="fa-solid fa-right-to-bracket text-[#7C8C72]" aria-hidden="true"></i>
+        <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
         Entrar
       </a>
 
       <a
         href="#"
         (click)="scrollTo('recompensas', $event)"
-        class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/70 px-4 py-2 text-sm text-[#7C8C72] transition hover:bg-[#7C8C72]/15">
+        class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/70 px-4 py-2 text-sm text-accent transition hover:bg-[#7C8C72]/15">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         Cómo funciona
       </a>
@@ -87,7 +87,7 @@
           <div class="relative z-10 flex h-full flex-col justify-end p-5 sm:p-6 md:p-8">
             <span class="text-xs text-[#4E4E4E]/90">PRODUCTO DESTACADO</span>
             <h2 class="mt-2 text-2xl font-extrabold sm:text-3xl md:text-4xl">{{ heroTitle }}</h2>
-            <p class="mt-2 max-w-md text-sm text-[#F2EBDD]">
+            <p class="mt-2 max-w-md text-sm text-on-gold">
               {{ heroHook }}
             </p>
 
@@ -110,7 +110,7 @@
 
         <h1 class="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:mt-6 md:text-6xl">
           Cuida tu cuerpo.<br />
-          <span class="text-[#7C8C72]">Potencia tu energía.</span><br />
+          <span class="text-accent">Potencia tu energía.</span><br />
           Compártelo.
         </h1>
 
@@ -137,9 +137,9 @@
         </div>
 
         <!-- Benefits: in mobile, 2x2 grid (no horizontal scroll). Desktop: 4 columns -->
-        <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-[#F2EBDD] md:mt-10 md:grid-cols-4 md:gap-4">
+        <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-on-gold md:mt-10 md:grid-cols-4 md:gap-4">
           <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
-            <i class="fa-solid fa-bolt text-[#7C8C72]" aria-hidden="true"></i>
+            <i class="fa-solid fa-bolt text-accent" aria-hidden="true"></i>
             Energía diaria
           </div>
           <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
@@ -147,11 +147,11 @@
             Recuperación
           </div>
           <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
-            <i class="fa-solid fa-leaf text-[#7C8C72]" aria-hidden="true"></i>
+            <i class="fa-solid fa-leaf text-accent" aria-hidden="true"></i>
             Salud integral
           </div>
           <div class="flex items-center gap-2 rounded-xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
-            <i class="fa-solid fa-trophy text-[#C8A96A]" aria-hidden="true"></i>
+            <i class="fa-solid fa-trophy text-gold" aria-hidden="true"></i>
             Recompensas
           </div>
         </div>
@@ -175,7 +175,7 @@
 
       <div class="mt-8 grid gap-4 sm:mt-10 md:grid-cols-3">
         <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5">
-          <div class="flex items-center gap-2 text-sm font-semibold text-[#7C8C72]">
+          <div class="flex items-center gap-2 text-sm font-semibold text-accent">
             <i class="fa-solid fa-coins" aria-hidden="true"></i>
             Recompensas por compra
           </div>
@@ -183,7 +183,7 @@
         </div>
 
         <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-5">
-          <div class="flex items-center gap-2 text-sm font-semibold text-[#C8A96A]">
+          <div class="flex items-center gap-2 text-sm font-semibold text-gold">
             <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
             Recompensas por compartir
           </div>
@@ -216,7 +216,7 @@
             name="name"
             [(ngModel)]="form.name"
             placeholder="Tu nombre"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
@@ -229,7 +229,7 @@
             name="email"
             [(ngModel)]="form.email"
             placeholder="tucorreo@ejemplo.com"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
@@ -242,7 +242,7 @@
             name="phone"
             [(ngModel)]="form.phone"
             placeholder="+52 ..."
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
@@ -255,7 +255,7 @@
             name="password"
             [(ngModel)]="form.password"
             placeholder="Mínimo 8 caracteres"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <label class="relative block">
@@ -268,7 +268,7 @@
             name="confirmPassword"
             [(ngModel)]="form.confirmPassword"
             placeholder="Repite tu contraseña"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-[#F6F3EE] placeholder:text-[#B4AEA3] focus:border-[#7C8C72]/70" />
         </label>
 
         <div class="pt-2">
@@ -283,7 +283,7 @@
           <p
             *ngIf="feedbackMessage"
             class="mt-3 text-center text-xs"
-            [ngClass]="feedbackType === 'error' ? 'text-[#9A5A4A]' : 'text-[#7C8C72]'">
+            [ngClass]="feedbackType === 'error' ? 'text-[#9A5A4A]' : 'text-accent'">
             {{ feedbackMessage }}
           </p>
 
@@ -301,7 +301,7 @@
       <div>
         <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">
           Bienestar que se comparte,<br />
-          <span class="text-[#C8A96A]">se recompensa</span>
+          <span class="text-gold">se recompensa</span>
         </h2>
 
         <p class="mt-4 max-w-xl text-[#5A5A5A]">
@@ -314,8 +314,8 @@
               class="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C8C72] font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               1
             </div>
-            <p class="text-[#F2EBDD]">
-              <i class="fa-solid fa-link text-[#7C8C72]" aria-hidden="true"></i>
+            <p class="text-on-gold">
+              <i class="fa-solid fa-link text-accent" aria-hidden="true"></i>
               Te registras y obtienes tu enlace personal.
             </p>
           </div>
@@ -325,8 +325,8 @@
               class="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C8C72] font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               2
             </div>
-            <p class="text-[#F2EBDD]">
-              <i class="fa-solid fa-user-group text-[#7C8C72]" aria-hidden="true"></i>
+            <p class="text-on-gold">
+              <i class="fa-solid fa-user-group text-accent" aria-hidden="true"></i>
               Invitas a alguien a probar los productos.
             </p>
           </div>
@@ -336,8 +336,8 @@
               class="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C8C72] font-bold text-white shadow-[0_0_22px_rgba(124,140,114,0.35)]">
               3
             </div>
-            <p class="text-[#F2EBDD]">
-              <i class="fa-solid fa-gift text-[#7C8C72]" aria-hidden="true"></i>
+            <p class="text-on-gold">
+              <i class="fa-solid fa-gift text-accent" aria-hidden="true"></i>
               Ambos reciben recompensas acumulables.
             </p>
           </div>
@@ -368,18 +368,18 @@
 
         <div class="relative">
           <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-medal text-[#C8A96A]" aria-hidden="true"></i>
+            <i class="fa-solid fa-medal text-gold" aria-hidden="true"></i>
             Beneficios del programa
           </h3>
           <p class="mt-2 text-sm text-[#5A5A5A]">Diseñado para ser simple y transparente.</p>
 
           <ul class="mt-6 space-y-3 text-[#4E4E4E]">
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-tag text-[#7C8C72]" aria-hidden="true"></i>
+              <i class="fa-solid fa-tag text-accent" aria-hidden="true"></i>
               Descuentos por compra
             </li>
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-hand-holding-dollar text-[#C8A96A]" aria-hidden="true"></i>
+              <i class="fa-solid fa-hand-holding-dollar text-gold" aria-hidden="true"></i>
               Bonos por recomendación
             </li>
             <li class="flex items-center gap-2">
@@ -387,23 +387,23 @@
               Estructura de niveles
             </li>
             <li class="flex items-center gap-2">
-              <i class="fa-solid fa-calendar-check text-[#7C8C72]" aria-hidden="true"></i>
+              <i class="fa-solid fa-calendar-check text-accent" aria-hidden="true"></i>
               Corte mensual y reportes
             </li>
           </ul>
 
           <div
-            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-3 text-center font-bold text-[#C8A96A]">
+            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-3 text-center font-bold text-gold">
             <i class="fa-solid fa-star" aria-hidden="true"></i>
             Bonos y puntos acumulables
           </div>
 
           <div class="mt-6 grid grid-cols-2 gap-3 text-sm">
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
               <div class="text-xs text-[#5A5A5A]">Consumo</div>
               <div class="mt-1 text-2xl font-extrabold">$12,001</div>
             </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
               <div class="text-xs text-[#5A5A5A]">Descuento</div>
               <div class="mt-1 text-2xl font-extrabold">50%</div>
             </div>

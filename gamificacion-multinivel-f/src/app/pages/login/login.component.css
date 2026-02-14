@@ -1,6 +1,6 @@
 :host {
   display: block;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .role-card {

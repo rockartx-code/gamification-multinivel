@@ -69,7 +69,7 @@
           <!-- USER CONTROL -->
           <div *ngIf="currentUser" class="relative shrink-0">
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90"
+              class="user-pill inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90"
               (click)="toggleUserDetails()" aria-label="Usuario">
 
               <span class="relative grid h-9 w-9 place-items-center rounded-full bg-[#FDFBF7]/80"
@@ -85,7 +85,7 @@
               </span>
 
               <!-- Nombre solo desktop -->
-              <span class="hidden lg:block max-w-[120px] truncate text-sm font-semibold text-zinc-100">
+              <span class="name hidden max-w-[120px] truncate text-sm font-semibold lg:block">
                 {{ currentUser.name }}
               </span>
             </button>
@@ -93,22 +93,22 @@
             <div *ngIf="isUserDetailsOpen"
               class="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-4 shadow-xl backdrop-blur z-50">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-xs text-[#5A5A5A]">Usuario</span>
-                <span class="font-semibold text-zinc-100">{{ currentUser.name }}</span>
+                <span class="meta text-xs">Usuario</span>
+                <span class="font-semibold text-main">{{ currentUser.name }}</span>
               </div>
 
-              <div class="mt-2 flex items-center justify-between text-xs text-[#5A5A5A]">
+              <div class="meta mt-2 flex items-center justify-between text-xs">
                 <span>Rol</span>
-                <span class="text-zinc-200">{{ currentUser.role }}</span>
+                <span class="text-main">{{ currentUser.role }}</span>
               </div>
 
-              <div *ngIf="isClient" class="mt-2 flex items-center justify-between text-xs text-[#5A5A5A]">
+              <div *ngIf="isClient" class="meta mt-2 flex items-center justify-between text-xs">
                 <span>Descuento</span>
-                <span class="text-zinc-200">{{ discountPercent }}%</span>
+                <span class="text-main">{{ discountPercent }}%</span>
               </div>
 
               <button *ngIf="!isGuest" type="button"
-                class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-zinc-200 transition hover:bg-[#EFE9DD]/90"
+                class="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 (click)="logout()">
                 <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
                 Cerrar sesion
@@ -194,13 +194,14 @@
 
           <!-- Corte de mes: en móvil va en flujo; en md+ se fija arriba derecha -->
           <div
-            class="relative mb-4 rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
+            class="kpi-mini relative mb-4 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
+            [ngClass]="getCountdownColor()"
             title="Cada dia sin accion reduce tu margen.">
-            <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
+            <div class="label flex items-center gap-2">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
               Corte de mes
             </div>
-            <div class="text-lg font-extrabold tracking-tight" [ngClass]="getCountdownColor()">
+            <div class="value text-lg tracking-tight">
               {{ countdownLabel() }}
             </div>
           </div>
@@ -208,14 +209,14 @@
           <div class="relative flex flex-col gap-5">
             <!-- Reservar espacio SOLO en md+ para el badge -->
             <div class="md:pr-56">
-              <div class="text-sm font-semibold text-[#C8A96A]">🎯 Objetivo principal del mes</div>
+              <div class="text-sm font-semibold text-gold">Objetivo principal del mes</div>
               <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">
                 {{ activeGoal.title }}
               </h3>
-              <p class="mt-2 text-sm text-zinc-200">{{ activeGoal.subtitle }}</p>
+              <p class="mt-2 text-sm text-muted">{{ activeGoal.subtitle }}</p>
 
               <!-- ojo: en móvil, evita “líneas eternas” -->
-              <div class="mt-3 text-sm text-[#E8D6B2] break-words">
+              <div class="mt-3 text-sm text-muted break-words">
                 Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo
               </div>
 
@@ -251,10 +252,10 @@
           </div>
           <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div class="text-sm font-semibold text-[#C8A96A]">&#x1F3AF; Meta para invitados</div>
+              <div class="text-sm font-semibold text-gold">&#x1F3AF; Meta para invitados</div>
               <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Regístrate para obtener beneficios
               </h3>
-              <p class="mt-2 text-sm text-zinc-200">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.
+              <p class="mt-2 text-sm text-muted">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.
               </p>
             </div>
             <button type="button"
@@ -276,7 +277,7 @@
 
             <div class="mt-3 flex items-center justify-between text-xs text-[#5A5A5A]">
               <span>{{ goalProgressLabel(goal) }}</span>
-              <span *ngIf="goal.cart > 0" class="text-[#C8A96A]">+{{ formatMoney(goal.cart) }} en carrito</span>
+              <span *ngIf="goal.cart > 0" class="text-gold">+{{ formatMoney(goal.cart) }} en carrito</span>
             </div>
 
             <div class="relative mt-2 h-3 overflow-hidden rounded-full progress-rail">
@@ -295,7 +296,7 @@
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-            <i class="fa-solid fa-store hidden text-[#C8A96A] md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-store hidden text-gold md:inline" aria-hidden="true"></i>
             Tienda
           </h2>
         </div>
@@ -307,7 +308,7 @@
               Carrito
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
-            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
+            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-[#6B6B6B]'">
               {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
             </div>
           </div>
@@ -327,35 +328,34 @@
 
           <div class="order-2 md:order-2">
             <span
-              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-[#C8A96A]">
+              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-gold">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes | Recomendado para metas
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">{{ pom.name }}</h3>
-            <p *ngIf="heroGoalHint" class="mt-2 text-sm text-[#C8A96A]">{{ heroGoalHint }}</p>
-            <p class="mt-3 max-w-xl text-zinc-300">
+            <p *ngIf="heroGoalHint" class="mt-2 text-sm text-gold">{{ heroGoalHint }}</p>
+            <p class="mt-3 max-w-xl text-muted">
               {{ pom.hook || 'Producto recomendado para avanzar en tus metas.' }}
             </p>
 
             <div class="mt-6 flex flex-wrap gap-2">
-              <span *ngFor="let tag of heroTags"
-                class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-zinc-200">
+              <span *ngFor="let tag of heroTags" class="chip">
                 {{ tag }}
               </span>
             </div>
 
             <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div class="flex items-center gap-3 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-[#7C8C72]/30 surface-soft p-3">
                 <span class="text-sm text-[#5A5A5A]">Cantidad</span>
                 <input type="number" min="0" [value]="heroQty" (input)="setHeroQty($any($event.target).value)"
-                  class="w-20 rounded-xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 text-sm text-white" />
+                  class="w-20 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main" />
                 <span class="flex items-center gap-2 text-sm text-[#5A5A5A]">
                   x
-                  <span class="font-semibold text-zinc-100">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
+                  <span class="font-semibold text-main">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
                   <span *ngIf="hasDiscount" class="text-xs text-[#6B6B6B] line-through">
                     {{ formatMoney(heroProductPrice) }}
                   </span>
-                  <span *ngIf="hasDiscount" class="text-[11px] text-[#7C8C72]">{{ discountAppliedLabel() }}</span>
+                  <span *ngIf="hasDiscount" class="text-[11px] text-accent">{{ discountAppliedLabel() }}</span>
                   <span *ngIf="!hasDiscount" class="text-[11px] text-[#6B6B6B]">Sin descuento</span>
                 </span>
               </div>
@@ -385,12 +385,12 @@
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="!productOfMonth">
           <div>
             <span
-              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-[#C8A96A]">
+              class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-4 py-2 text-xs font-semibold text-gold">
               <i class="fa-solid fa-star" aria-hidden="true"></i>
               Producto del mes
             </span>
             <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">Producto destacado</h3>
-            <p class="mt-3 max-w-xl text-zinc-300">
+            <p class="mt-3 max-w-xl text-muted">
               Aún no hay un producto del mes configurado.
             </p>
           </div>
@@ -400,7 +400,7 @@
       <div class="mt-10">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-rotate text-[#7C8C72]" aria-hidden="true"></i>
+            <i class="fa-solid fa-rotate text-accent" aria-hidden="true"></i>
             Volver a comprar
           </h3>
           <p class="text-sm text-[#5A5A5A] sm:text-right">
@@ -410,7 +410,7 @@
 
         <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <article *ngFor="let product of buyAgainProducts"
-            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
+            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 surface-soft p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
             <div
               class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
             </div>
@@ -442,7 +442,7 @@
                     <div class="whitespace-nowrap text-sm font-extrabold">
                       {{ formatMoney(discountedPrice(product.price)) }}
                     </div>
-                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
+                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-accent' : 'text-[#6B6B6B]'">
                       {{ discountAppliedLabel() }}
                     </div>
                   </div>
@@ -453,23 +453,23 @@
             <!-- Bottom controls: stack on mobile -->
             <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div
-                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 sm:justify-start">
+                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 sm:justify-start">
                 <span class="text-xs text-[#5A5A5A]">Qty</span>
                 <input type="number" min="0" [value]="getCartQty(product.id)"
                   (input)="updateCart(product.id, $any($event.target).value)"
-                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-transparent px-2 py-1 text-sm text-white" />
+                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main" />
               </div>
 
               <div class="flex w-full flex-col gap-2 sm:flex-1">
                 <button
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-[#EFE9DD]/90"
+                  class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
                   (click)="openProductDetails(product)">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   Ver detalles
                 </button>
 
                 <button
-                  class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                  class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
                   (click)="addQuick(product.id, 1)">
                   <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                   Agregar al carrito
@@ -484,7 +484,7 @@
       <div class="mt-12">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-layer-group text-[#7C8C72]" aria-hidden="true"></i>
+            <i class="fa-solid fa-layer-group text-accent" aria-hidden="true"></i>
             Todos los productos
           </h3>
           <div class="text-sm text-[#5A5A5A] sm:text-right">{{ productsCount }}</div>
@@ -492,7 +492,7 @@
 
         <div class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <article *ngFor="let product of otherProducts"
-            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
+            class="relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 surface-soft p-4 sm:p-5 transition-shadow hover:shadow-[0_0_70px_rgba(59,130,246,0.18)]">
             <div
               class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.10),transparent_55%)]">
             </div>
@@ -522,7 +522,7 @@
                     <div class="whitespace-nowrap text-sm font-extrabold">
                       {{ formatMoney(discountedPrice(product.price)) }}
                     </div>
-                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
+                    <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-accent' : 'text-[#6B6B6B]'">
                       {{ discountAppliedLabel() }}
                     </div>
                   </div>
@@ -532,23 +532,23 @@
 
             <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div
-                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-3 py-2 sm:justify-start">
+                class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 sm:justify-start">
                 <span class="text-xs text-[#5A5A5A]">Qty</span>
                 <input type="number" min="0" [value]="getCartQty(product.id)"
                   (input)="updateCart(product.id, $any($event.target).value)"
-                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-transparent px-2 py-1 text-sm text-white" />
+                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main" />
               </div>
 
               <div class="flex w-full flex-col gap-2 sm:flex-1">
                 <button
-                  class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-[#EFE9DD]/90"
+                  class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
                   (click)="openProductDetails(product)">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   Ver detalles
                 </button>
 
                 <button
-                  class="glow-blue inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                  class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
                   (click)="addQuick(product.id, 1)">
                   <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                   Agregar al carrito
@@ -566,7 +566,7 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-users hidden text-[#7C8C72] md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-users hidden text-accent md:inline" aria-hidden="true"></i>
             Red
           </h2>
         </div>
@@ -587,7 +587,7 @@
             </div>
           </div>
 
-          <div class="mt-6 overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+          <div class="mt-6 overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
             <svg [attr.viewBox]="'0 0 ' + graphSize.width + ' ' + graphSize.height" class="w-full"
               [style.height.px]="graphSize.height">
               <g fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2">
@@ -601,7 +601,7 @@
                     <title>{{ node.name }}</title>
                   </circle>
                   <text [attr.x]="node.x" [attr.y]="node.y + (node.level === 'root' ? 5 : 4)" text-anchor="middle"
-                    [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#1B1B1B"
+                    [attr.font-size]="node.level === 'root' ? 12 : (node.level === 'L1' ? 11 : 10)" fill="#2A2A2A"
                     [attr.font-weight]="node.level === 'L2' ? 800 : 700">{{ node.label }}</text>
                 </ng-container>
               </g>
@@ -610,9 +610,9 @@
           </div>
 
           <div *ngIf="hasInactiveIntermediate"
-            class="mt-4 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 px-4 py-3 text-xs text-[#E8D6B2]">
+            class="callout mt-4 rounded-2xl px-4 py-3 text-xs">
             <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i>
-            Apoya a tu red: cuando hay inactivos en niveles L1, los beneficios de sus L2 no llegan hasta ti.
+            <strong>Apoya a tu red:</strong> cuando hay inactivos en niveles L1, los beneficios de sus L2 no llegan hasta ti.
           </div>
 
           <button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
@@ -636,17 +636,17 @@
           </button>
 
           <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
-              <div class="text-xs text-[#5A5A5A]">Nivel 1</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ levelOneCount }}</div>
+            <div class="progress-card p-4">
+              <div class="title text-xs">Nivel 1</div>
+              <div class="numbers mt-1 text-2xl font-extrabold">{{ levelOneCount }}</div>
             </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
-              <div class="text-xs text-[#5A5A5A]">Nivel 2</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ levelTwoCount }}</div>
+            <div class="progress-card p-4">
+              <div class="title text-xs">Nivel 2</div>
+              <div class="numbers mt-1 text-2xl font-extrabold">{{ levelTwoCount }}</div>
             </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-4">
-              <div class="text-xs text-[#5A5A5A]">Activos</div>
-              <div class="mt-1 text-2xl font-extrabold">{{ activeCount }}</div>
+            <div class="progress-card p-4">
+              <div class="title text-xs">Activos</div>
+              <div class="numbers mt-1 text-2xl font-extrabold">{{ activeCount }}</div>
             </div>
           </div>
         </div>
@@ -658,7 +658,7 @@
           <div class="relative">
             <div *ngIf="networkMembers.length === 0"
               class="mb-6 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 p-5">
-              <div class="text-sm font-semibold text-[#C8A96A]">&#x1F3AF; Misi&#243;n de red</div>
+              <div class="text-sm font-semibold text-gold">&#x1F3AF; Misi&#243;n de red</div>
               <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
               <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
               <div class="mt-4 flex flex-wrap gap-2">
@@ -719,7 +719,7 @@
             </div>
 
             <div *ngIf="networkMembers.length === 0"
-              class="mt-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 text-center">
+              class="mt-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-6 text-center">
               <div class="text-sm font-semibold text-zinc-200">A?n no tienes miembros en tu red</div>
               <div class="mt-1 text-xs text-[#5A5A5A]">Comparte tu enlace para empezar</div>
               <button type="button"
@@ -747,20 +747,20 @@
               <div class="md:hidden divide-y divide-white/10">
                 <div *ngFor="let member of networkMembers" class="p-4">
                   <div class="flex items-center justify-between">
-                    <div class="text-sm font-semibold text-zinc-200">{{ member.name }}</div>
-                    <span class="rounded-full border px-3 py-1 text-xs" [ngClass]="statusBadgeClass(member.status)">{{
+                    <div class="text-sm font-semibold text-main">{{ member.name }}</div>
+                    <span class="badge" [ngClass]="statusBadgeClass(member.status)">{{
                       member.status }}</span>
                   </div>
                   <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                    <div>Nivel: <span class="text-zinc-200">{{ member.level }}</span></div>
-                    <div>Consumo mes: <span class="text-zinc-200">{{ formatMoney(member.spend) }}</span></div>
+                    <div>Nivel: <span class="text-main">{{ member.level }}</span></div>
+                    <div>Consumo mes: <span class="text-main">{{ formatMoney(member.spend) }}</span></div>
                   </div>
                 </div>
               </div>
 
               <div class="hidden md:block">
-                <table class="w-full text-sm">
-                  <thead class="bg-[#FDFBF7]/80 text-zinc-300">
+                <table class="table-soft w-full text-sm">
+                  <thead>
                     <tr>
                       <th class="px-4 py-3 text-left font-semibold">Usuario</th>
                       <th class="px-4 py-3 text-left font-semibold">Nivel</th>
@@ -768,13 +768,13 @@
                       <th class="px-4 py-3 text-left font-semibold">Estado</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-white/5 text-zinc-200">
+                  <tbody class="divide-y divide-white/5">
                     <tr *ngFor="let member of networkMembers">
                       <td class="px-4 py-3">{{ member.name }}</td>
-                      <td class="px-4 py-3 text-zinc-300">{{ member.level }}</td>
+                      <td class="muted px-4 py-3">{{ member.level }}</td>
                       <td class="px-4 py-3">{{ formatMoney(member.spend) }}</td>
                       <td class="px-4 py-3">
-                        <span class="rounded-full border px-3 py-1 text-xs"
+                        <span class="badge"
                           [ngClass]="statusBadgeClass(member.status)">{{
                           member.status }}</span>
                       </td>
@@ -784,20 +784,20 @@
               </div>
             </div>
 
-            <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-5">
+            <div class="progress-card mt-6 p-5">
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-xs text-[#5A5A5A]">Meta de red (este mes)</div>
-                  <div class="mt-1 text-lg font-extrabold">
+                  <div class="title text-xs">Meta de red (este mes)</div>
+                  <div class="numbers mt-1 text-lg font-extrabold">
                     {{ formatMoney(networkProgress) }} / {{ formatMoney(networkGoal) }}
                   </div>
-                  <div class="mt-1 text-xs text-[#5A5A5A]">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir
+                  <div class="title mt-1 text-xs">Te faltan {{ formatMoney(remainingNetworkGoal) }} para cumplir
                     la meta de red</div>
                 </div>
               </div>
 
-              <div class="progress-rail relative mt-4 h-3 overflow-hidden rounded-full">
-                <div class="progress-base absolute inset-y-0 left-0" [style.width.%]="networkPercent"></div>
+              <div class="progress-rail-soft relative mt-4 h-3 overflow-hidden rounded-full">
+                <div class="progress-fill-olive absolute inset-y-0 left-0" [style.width.%]="networkPercent"></div>
               </div>
 
             </div>
@@ -811,7 +811,7 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-coins hidden text-[#C8A96A] md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-coins hidden text-gold md:inline" aria-hidden="true"></i>
             Comisiones
           </h2>
           <p class="mt-2 text-sm text-[#5A5A5A]">Resumen del mes {{ commissions.monthKey }}.</p>
@@ -821,15 +821,15 @@
       <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
         <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div class="grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
               <div class="text-xs text-[#5A5A5A]">Comisiones del mes</div>
               <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.monthTotal || 0) }}</div>
             </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
               <div class="text-xs text-[#5A5A5A]">Por confirmar</div>
               <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.pendingTotal || 0) }}</div>
             </div>
-            <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
               <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
                 <span>Bloqueadas</span>
                 <span class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
@@ -853,7 +853,7 @@
 
           <div class="mt-4 flex flex-wrap items-center gap-3">
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-xs text-zinc-300 transition hover:bg-[#EFE9DD]/90"
+              class="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
               (click)="toggleCommissionLedger()">
               <i class="fa-solid" [ngClass]="showCommissionLedger ? 'fa-eye-slash' : 'fa-table'" aria-hidden="true"></i>
               {{ showCommissionLedger ? 'Ocultar detalles' : 'Ver detalles' }}
@@ -864,15 +864,15 @@
             <div class="md:hidden divide-y divide-white/10">
               <div *ngFor="let row of (commissions.ledger || [])" class="p-4">
                 <div class="flex items-center justify-between">
-                  <div class="text-sm font-semibold text-zinc-200">{{ row.orderId || '-' }}</div>
+                  <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
                   <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
                     {{ row.status || '-' }}
                   </span>
                 </div>
                 <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                  <div>Nivel: <span class="text-zinc-200">L{{ row.level || '-' }}</span></div>
-                  <div>Monto: <span class="text-zinc-200">{{ formatMoney(row.amount || 0) }}</span></div>
-                  <div>Fecha: <span class="text-zinc-200">{{ formatLedgerDate(row.createdAt) }}</span></div>
+                  <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
+                  <div>Monto: <span class="text-main">{{ formatMoney(row.amount || 0) }}</span></div>
+                  <div>Fecha: <span class="text-main">{{ formatLedgerDate(row.createdAt) }}</span></div>
                 </div>
               </div>
               <div *ngIf="(commissions.ledger?.length || 0) === 0" class="p-4 text-center text-xs text-[#6B6B6B]">
@@ -880,8 +880,8 @@
               </div>
             </div>
 
-            <table class="hidden md:table w-full text-sm">
-              <thead class="bg-[#FDFBF7]/80 text-zinc-300">
+            <table class="table-soft hidden w-full text-sm md:table">
+              <thead>
                 <tr>
                   <th class="px-4 py-3 text-left font-semibold">Orden</th>
                   <th class="px-4 py-3 text-left font-semibold">Nivel</th>
@@ -890,10 +890,10 @@
                   <th class="px-4 py-3 text-left font-semibold">Fecha</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-white/5 text-zinc-200">
+              <tbody class="divide-y divide-white/5">
                 <tr *ngFor="let row of (commissions.ledger || [])">
                   <td class="px-4 py-3">{{ row.orderId || '-' }}</td>
-                  <td class="px-4 py-3 text-zinc-300">L{{ row.level || '-' }}</td>
+                  <td class="muted px-4 py-3">L{{ row.level || '-' }}</td>
                   <td class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</td>
                   <td class="px-4 py-3">
                     <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-2 py-1 text-xs text-zinc-300">
@@ -909,7 +909,7 @@
             </table>
           </div>
 
-          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4 text-sm text-zinc-300">
+          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4 text-sm text-zinc-300">
             <div class="flex items-center justify-between">
               <span>CLABE registrada</span>
               <span class="text-zinc-200">
@@ -920,7 +920,7 @@
               <label class="block text-xs text-[#5A5A5A]">
                 CLABE interbancaria
                 <input type="text" name="clabeDraft" [(ngModel)]="clabeDraft"
-                  class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-2 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+                  class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-2 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
                   placeholder="000000000000000000" />
               </label>
               <button type="button"
@@ -938,7 +938,7 @@
 
         <div class="rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
           <div class="text-sm font-semibold text-zinc-200">Mes anterior</div>
-          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+          <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
             <div class="text-xs text-[#5A5A5A]">Total</div>
             <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissions.paidTotal || 0) }}</div>
             <div class="mt-2 text-xs text-[#6B6B6B]">
@@ -954,7 +954,7 @@
               </span>
             </div>
             <button
-              class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-xs text-zinc-300 transition hover:bg-[#EFE9DD]/90"
+              class="btn-linkish mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
               *ngIf="commissions.prevStatus === 'paid' && commissions.prevReceiptUrl"
               (click)="openCommissionReceipt(commissions.prevReceiptUrl)">
               <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
@@ -970,7 +970,7 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-receipt hidden text-[#7C8C72] md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-receipt hidden text-accent md:inline" aria-hidden="true"></i>
             Ordenes
           </h2>
           <p class="mt-2 text-sm text-[#5A5A5A]">Seguimiento de tus pedidos recientes.</p>
@@ -986,16 +986,16 @@
           <div class="md:hidden divide-y divide-white/10">
             <div *ngFor="let order of orders" class="p-4">
               <div class="flex items-center justify-between">
-                <div class="text-sm font-semibold text-zinc-200">{{ order.id }}</div>
-                <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                <div class="text-sm font-semibold text-main">{{ order.id }}</div>
+                <span class="badge"
                   [ngClass]="orderStatusClass(order.status)">
                   <i class="fa-solid" [ngClass]="orderStatusIcon(order.status)" aria-hidden="true"></i>
                   {{ order.status }}
                 </span>
               </div>
               <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
-                <div>Fecha: <span class="text-zinc-200">{{ order.createdAt || '-' }}</span></div>
-                <div>Total: <span class="text-zinc-200">{{ formatMoney(order.total) }}</span></div>
+                <div>Fecha: <span class="text-main">{{ order.createdAt || '-' }}</span></div>
+                <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
               </div>
               <a class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
                 [routerLink]="['/orden', order.id]">
@@ -1004,8 +1004,8 @@
             </div>
           </div>
 
-          <table class="hidden md:table w-full text-sm">
-            <thead class="bg-[#FDFBF7]/80 text-zinc-300">
+          <table class="table-soft hidden w-full text-sm md:table">
+            <thead>
               <tr>
                 <th class="px-4 py-3 text-left font-semibold">Orden</th>
                 <th class="px-4 py-3 text-left font-semibold">Fecha</th>
@@ -1014,13 +1014,13 @@
                 <th class="px-4 py-3 text-right font-semibold">Ver</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-white/5 text-zinc-200">
+            <tbody class="divide-y divide-white/5">
               <tr *ngFor="let order of orders">
                 <td class="px-4 py-3">{{ order.id }}</td>
-                <td class="px-4 py-3 text-[#5A5A5A]">{{ order.createdAt || '-' }}</td>
+                <td class="muted px-4 py-3">{{ order.createdAt || '-' }}</td>
                 <td class="px-4 py-3">{{ formatMoney(order.total) }}</td>
                 <td class="px-4 py-3">
-                  <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                  <span class="badge"
                     [ngClass]="orderStatusClass(order.status)">
                     <i class="fa-solid" [ngClass]="orderStatusIcon(order.status)" aria-hidden="true"></i>
                     {{ order.status }}
@@ -1044,7 +1044,7 @@
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
 
-            <i class="fa-solid fa-link hidden text-[#C8A96A] md:inline" aria-hidden="true"></i>
+            <i class="fa-solid fa-link hidden text-gold md:inline" aria-hidden="true"></i>
             Links de referencia
           </h2>
         </div>
@@ -1060,7 +1060,7 @@
 
           <div *ngIf="networkMembers.length === 0"
             class="mb-6 rounded-2xl border border-[#C8A96A]/35 bg-[#C8A96A]/12 p-5">
-            <div class="text-sm font-semibold text-[#C8A96A]">&#x1F3AF; Misi&#243;n de red</div>
+            <div class="text-sm font-semibold text-gold">&#x1F3AF; Misi&#243;n de red</div>
             <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
             <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
             <div class="mt-4 flex flex-wrap gap-2">
@@ -1111,7 +1111,7 @@
             </div>
           </div>
 
-          <div class="mb-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+          <div class="mb-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
             <div class="flex items-center gap-2 text-xs font-semibold text-[#5A5A5A]">
               <i class="fa-solid fa-route" aria-hidden="true"></i>
               Tu flujo de 3 pasos
@@ -1119,7 +1119,7 @@
             <div class="mt-3 space-y-3 text-sm">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="activeFeaturedId ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-[#7C8C72]' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
+                  [ngClass]="activeFeaturedId ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-accent' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
                   <i *ngIf="activeFeaturedId" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!activeFeaturedId">1</span>
                 </div>
@@ -1130,7 +1130,7 @@
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="hasCopiedLink ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-[#7C8C72]' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
+                  [ngClass]="hasCopiedLink ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-accent' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
                   <i *ngIf="hasCopiedLink" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!hasCopiedLink">2</span>
                 </div>
@@ -1141,7 +1141,7 @@
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-[#7C8C72]' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
+                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-[#7C8C72]/40 bg-emerald-500/10 text-accent' : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300'">
                   <i *ngIf="hasCopiedCopy || hasCopiedAsset" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!(hasCopiedCopy || hasCopiedAsset)">3</span>
                 </div>
@@ -1190,14 +1190,14 @@
               </button>
             </div>
 
-            <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+            <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
               <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
                 Tu link
               </div>
               <div class="mt-2 flex flex-col gap-3 sm:flex-row">
                 <input readonly [value]="referralLink"
-                  class="flex-1 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200" />
+                  class="flex-1 rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200" />
                 <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
                   <button
                     class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
@@ -1248,7 +1248,7 @@
             </div>
 
             <div class="mt-6 grid gap-4 md:grid-cols-2">
-              <div class="overflow-hidden rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B]">
+              <div class="overflow-hidden rounded-2xl border border-[#7C8C72]/30 surface-soft">
                 <div class="bg-[#FDFBF7]/80 px-4 py-3 text-sm font-semibold text-zinc-200">
                   Optimizado para {{ socialChannel === 'whatsapp' ? 'WhatsApp' : (socialChannel === 'instagram' ?
                   'Instagram' : 'Facebook') }}
@@ -1283,14 +1283,14 @@
 
 
 
-              <div class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+              <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
                 <div class="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
                   {{ socialChannel === 'instagram' ? 'Descripción sugerida (editable)' : (socialChannel === 'facebook' ?
                   'Comentario sugerido (editable)' : 'Mensaje sugerido (editable)') }}
                 </div>
                 <textarea rows="10"
-                  class="mt-3 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+                  class="mt-3 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
                   placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"
                   (ngModelChange)="lastAutoCaption = false"></textarea>
                 <div class="mt-3 flex gap-3">
@@ -1324,7 +1324,7 @@
 
   <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-[#7C8C72]/30 bg-[#1B1B1B] px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-[#7C8C72]/30 surface-soft px-5 py-3 text-sm text-zinc-200 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
       {{ toastMessage }}
     </div>
   </div>
@@ -1332,8 +1332,8 @@
   <div *ngIf="isCommissionModalOpen"
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeCommissionModal()"></div>
-    <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div class="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between">
         <div>
           <div class="text-xs font-semibold text-[#5A5A5A]">Solicitud de pago</div>
@@ -1351,7 +1351,7 @@
         <label class="block text-xs text-[#5A5A5A]">
           CLABE (18 dÃ­gitos)
           <input type="text" name="commissionClabe" [(ngModel)]="commissionClabe"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="000000000000000000" />
         </label>
 
@@ -1374,8 +1374,8 @@
   <div *ngIf="isClabeConfirmOpen"
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeClabeConfirm()"></div>
-    <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div class="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between">
         <div>
           <div class="text-xs font-semibold text-[#5A5A5A]">Confirmacion</div>
@@ -1410,8 +1410,8 @@
   <div *ngIf="showGuestRegisterModal"
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
     <div class="absolute inset-0 bg-black/70" (click)="closeGuestRegisterModal()"></div>
-    <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div class="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between">
         <div>
           <div class="text-xs font-semibold text-[#5A5A5A]">Registro rapido</div>
@@ -1429,31 +1429,31 @@
         <label class="block text-xs text-[#5A5A5A]">
           Nombre completo
           <input type="text" name="guestName" [(ngModel)]="guestRegisterForm.name"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Tu nombre" />
         </label>
         <label class="block text-xs text-[#5A5A5A]">
           Correo
           <input type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="tucorreo@ejemplo.com" />
         </label>
         <label class="block text-xs text-[#5A5A5A]">
           Telefono
           <input type="tel" name="guestPhone" [(ngModel)]="guestRegisterForm.phone"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="+52 ..." />
         </label>
         <label class="block text-xs text-[#5A5A5A]">
           Contrase?a
           <input type="password" name="guestPassword" [(ngModel)]="guestRegisterForm.password"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Minimo 8 caracteres" />
         </label>
         <label class="block text-xs text-[#5A5A5A]">
           Confirmar contrase?a
           <input type="password" name="guestConfirmPassword" [(ngModel)]="guestRegisterForm.confirmPassword"
-            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
+            class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200 placeholder:text-[#6B6B6B]"
             placeholder="Repite tu contrase?a" />
         </label>
 
@@ -1471,7 +1471,7 @@
         </div>
         <p *ngIf="guestRegisterFeedback" class="text-center text-xs"
           [class.text-[#9A5A4A]]="guestRegisterFeedbackType === 'error'"
-          [class.text-[#7C8C72]]="guestRegisterFeedbackType === 'success'">
+          [class.text-accent]="guestRegisterFeedbackType === 'success'">
           {{ guestRegisterFeedback }}
         </p>
       </form>
@@ -1479,18 +1479,18 @@
   </div>
 
   <div *ngIf="isProductDetailsOpen && selectedProduct as product"
-    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center">
-    <div class="absolute inset-0 bg-black/70" (click)="closeProductDetails()"></div>
-    <div
-      class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    class="modal-backdrop flex items-start justify-center overflow-y-auto px-6 py-6 sm:items-center"
+    (click)="closeProductDetails()">
+    <div class="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
+      (click)="$event.stopPropagation()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-xs font-semibold text-[#5A5A5A]">Detalle del producto</div>
-          <h3 class="mt-2 text-xl font-extrabold text-zinc-100">{{ product.name }}</h3>
-          <p class="mt-1 text-sm text-[#5A5A5A]">{{ product.badge }}</p>
+          <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
+          <p class="muted mt-1 text-sm">{{ product.badge }}</p>
         </div>
         <button type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+          class="modal-close inline-flex h-9 w-9 items-center justify-center rounded-full text-main hover:bg-[#EFE9DD]/90"
           (click)="closeProductDetails()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
@@ -1506,10 +1506,10 @@
             <div *ngIf="hasDiscount" class="text-sm text-[#6B6B6B] line-through">
               {{ formatMoney(product.price) }}
             </div>
-            <div class="text-lg font-extrabold text-zinc-100">
+            <div class="text-lg font-extrabold text-main">
               {{ formatMoney(discountedPrice(product.price)) }}
             </div>
-            <div class="text-xs" [ngClass]="hasDiscount ? 'text-[#7C8C72]' : 'text-[#6B6B6B]'">
+            <div class="text-xs" [ngClass]="hasDiscount ? 'text-accent' : 'text-[#6B6B6B]'">
               {{ discountAppliedLabel() }}
             </div>
           </div>
@@ -1517,19 +1517,19 @@
         </div>
       </div>
 
-      <div *ngIf="product.description" class="mt-4 rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-4">
+      <div *ngIf="product.description" class="divider mt-4 pt-4">
         <div class="text-xs font-semibold text-[#5A5A5A]">DescripciÃ³n</div>
-        <p class="mt-2 whitespace-pre-line text-sm text-zinc-200">{{ product.description }}</p>
+        <p class="mt-2 whitespace-pre-line text-sm text-main">{{ product.description }}</p>
       </div>
 
       <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <button type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-2.5 text-sm text-zinc-200 hover:bg-[#EFE9DD]/90"
+          class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm hover:bg-[#EFE9DD]/90"
           (click)="closeProductDetails()">
           Cerrar
         </button>
         <button type="button"
-          class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-2.5 text-sm font-semibold"
+          class="btn-olive inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold"
           (click)="addQuick(product.id, 1)">
           <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
           Agregar
@@ -1538,13 +1538,10 @@
     </div>
   </div>
 
-  <div *ngIf="isGoalsModalOpen"
-    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6 sm:items-center">
-    <div class="absolute inset-0 bg-black/70" (click)="closeGoalsModal()"></div>
-
-    <div class="relative w-full max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto
-           rounded-2xl sm:rounded-3xl border border-[#7C8C72]/30 bg-[#1B1B1B]
-           p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+  <div *ngIf="isGoalsModalOpen" class="modal-backdrop flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-6"
+    (click)="closeGoalsModal()">
+    <div class="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:max-w-lg sm:p-6"
+      (click)="$event.stopPropagation()">
       <!-- Header -->
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
@@ -1560,7 +1557,7 @@
         </div>
 
         <button type="button" class="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center
-               rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
+               rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8] text-main hover:bg-[#EFE9DD]"
           (click)="closeGoalsModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
@@ -1568,7 +1565,7 @@
 
       <!-- List -->
       <div class="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
-        <div *ngFor="let goal of pagedAchievedGoals" class="rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] p-3 sm:p-4"
+        <div *ngFor="let goal of pagedAchievedGoals" class="rounded-2xl border border-[#7C8C72]/30 bg-[#F8F4EC] p-3 sm:p-4"
           [ngClass]="isNewAchievedGoal(goal) && isGoalsHighlight ? 'goal-epic-card' : ''"
           [style.--goal-delay]="newGoalDelay(goal)">
           <div *ngIf="isNewAchievedGoal(goal) && isGoalsHighlight" class="goal-epic-layer" aria-hidden="true">
@@ -1582,7 +1579,7 @@
               <div class="text-[11px] sm:text-xs text-[#5A5A5A] leading-snug">
                 {{ goal.subtitle }}
               </div>
-              <div class="mt-0.5 text-xs sm:text-sm font-semibold text-zinc-100
+              <div class="mt-0.5 text-xs sm:text-sm font-semibold text-main
          break-words whitespace-normal leading-snug line-clamp-2">
                 {{ goal.title }}
               </div>
@@ -1591,19 +1588,19 @@
             <!-- Badges compactos + wrap -->
             <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
               <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-[#C8A96A]/35
-                     bg-[#C8A96A]/12 px-2 py-0.5 text-[11px] text-[#C8A96A]">
+                     bg-[#C8A96A]/12 px-2 py-0.5 text-[11px] text-gold">
                 <i class="fa-solid fa-star text-[11px]" aria-hidden="true"></i>
                 Nueva
               </span>
 
               <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-[#7C8C72]/30
-                     bg-[#FDFBF7]/80 px-2 py-0.5 text-[11px] text-zinc-300">
+                     bg-[#F6F1E8] px-2 py-0.5 text-[11px] text-main">
                 <i class="fa-solid fa-eye text-[11px]" aria-hidden="true"></i>
                 Leída
               </span>
 
               <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30
-                     bg-emerald-400/10 px-2 py-0.5 text-[11px] text-[#7C8C72]">
+                     bg-emerald-400/10 px-2 py-0.5 text-[11px] text-accent">
                 <i class="fa-solid fa-check text-[11px]" aria-hidden="true"></i>
                 OK
               </span>
@@ -1615,8 +1612,8 @@
       <!-- Footer -->
       <div class="mt-4 sm:mt-5 flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div *ngIf="achievedGoalsTotalPages > 1" class="flex items-center justify-between gap-2">
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80
-                 px-3 py-1 text-[11px] text-zinc-300 transition hover:bg-[#EFE9DD]/90" [disabled]="!canPrevAchievedGoals"
+          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
+                 px-3 py-1 text-[11px] text-main transition hover:bg-[#EFE9DD]" [disabled]="!canPrevAchievedGoals"
             (click)="prevAchievedGoalsPage()">
             <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
             Anterior
@@ -1626,17 +1623,16 @@
             {{ achievedGoalsPage + 1 }} / {{ achievedGoalsTotalPages }}
           </div>
 
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80
-                 px-3 py-1 text-[11px] text-zinc-300 transition hover:bg-[#EFE9DD]/90" [disabled]="!canNextAchievedGoals"
+          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
+                 px-3 py-1 text-[11px] text-main transition hover:bg-[#EFE9DD]" [disabled]="!canNextAchievedGoals"
             (click)="nextAchievedGoalsPage()">
             Siguiente
             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
 
-        <button type="button" class="glow-gold inline-flex items-center justify-center gap-2 rounded-full
-               bg-gradient-to-r from-[#C8A96A] to-[#D9A441]
-               px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
+        <button type="button"
+          class="modal-primary-btn inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.02]"
           (click)="closeGoalsModal()">
           Listo
         </button>

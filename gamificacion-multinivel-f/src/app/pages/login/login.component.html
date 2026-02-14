@@ -5,7 +5,7 @@
         <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
-      <a class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+      <a class="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition"
         [routerLink]="['/']">
         <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
         Volver
@@ -18,7 +18,7 @@
 
       <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.18),transparent_55%)]">
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(124,140,114,0.14),transparent_55%),radial-gradient(circle_at_80%_28%,rgba(200,169,106,0.12),transparent_55%)]">
         </div>
 
         <div class="relative space-y-4">
@@ -27,32 +27,32 @@
             Login
           </div>
           <div class="flex items-center gap-2 text-2xl font-extrabold">
-            <i class="fa-solid fa-gauge-high text-[#7C8C72]" aria-hidden="true"></i>
+            <i class="fa-solid fa-gauge-high text-accent" aria-hidden="true"></i>
             Accede a tu panel
           </div>
 
-          <label class="block text-sm text-zinc-300">
+          <label class="block text-sm text-muted">
             <span class="inline-flex items-center gap-2">
               <i class="fa-solid fa-user" aria-hidden="true"></i>
               Usuario
             </span>
             <input type="text" name="username"
-              class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-white outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/30"
+              class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
               placeholder="Tu usuario" [(ngModel)]="username" />
           </label>
 
-          <label class="block text-sm text-zinc-300">
+          <label class="block text-sm text-muted">
             <span class="inline-flex items-center gap-2">
               <i class="fa-solid fa-key" aria-hidden="true"></i>
               Password
             </span>
             <input type="password" name="password"
-              class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-[#1B1B1B] px-4 py-3 text-sm text-white outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/30"
+              class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
               placeholder="Tu contraseña" [(ngModel)]="password" />
           </label>
 
           <p *ngIf="errorMessage"
-            class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+            class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-[#7a2e2e]">
             {{ errorMessage }}
           </p>
 

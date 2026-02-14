@@ -455,33 +455,33 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   discountBadgeClass(): string {
     if (!this.discountActiveValue) {
-      return 'border-white/10 bg-white/5 text-zinc-300';
+      return 'badge-mini badge-mini-off';
     }
     const pct = this.discountPercentValue;
     if (pct >= 50) {
-      return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
+      return 'badge-mini badge-mini-gold';
     }
     if (pct >= 40) {
-      return 'border-zinc-300/30 bg-zinc-400/10 text-zinc-200';
+      return 'badge-mini badge-mini-silver';
     }
     if (pct >= 30) {
-      return 'border-amber-700/40 bg-gradient-to-br from-amber-600/20 via-amber-700/20 to-stone-900/30 text-amber-200';
+      return 'badge-mini badge-mini-bronze';
     }
-    return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
+    return 'badge-mini badge-mini-active';
   }
 
   medalBadgeClass(): string {
     const level = (this.userLevel || '').toLowerCase();
     if (level.includes('oro') || level.includes('gold')) {
-      return 'border-yellow-400/30 bg-yellow-400/10 text-yellow-200';
+      return 'badge-mini badge-mini-gold';
     }
     if (level.includes('plata') || level.includes('silver')) {
-      return 'border-zinc-300/30 bg-zinc-400/10 text-zinc-200';
+      return 'badge-mini badge-mini-silver';
     }
     if (level.includes('bronce') || level.includes('bronze')) {
-      return 'border-amber-400/30 bg-amber-400/10 text-amber-200';
+      return 'badge-mini badge-mini-bronze';
     }
-    return 'border-purple-400/30 bg-purple-400/10 text-purple-200';
+    return 'badge-mini badge-mini-off';
   }
 
   toggleUserDetails(): void {
@@ -523,14 +523,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const state = this.getCountdownState();
     switch (state) {
       case 'calm':
-        return 'text-emerald-300';
       case 'focus':
-        return 'text-blue-300';
+        return 'kpi-good';
       case 'urgent':
-        return 'text-yellow-300';
+        return 'kpi-warn';
       case 'critical':
       default:
-        return 'text-red-400 animate-pulse';
+        return 'kpi-warn';
     }
   }
 
@@ -894,24 +893,31 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   statusBadgeClass(status: NetworkMember['status']): string {
-    return this.dashboardControl.statusBadgeClass(status);
+    const value = String(status || '').toLowerCase();
+    if (value.includes('activa') || value.includes('active')) {
+      return 'badge-active';
+    }
+    if (value.includes('progreso') || value.includes('pending')) {
+      return 'badge-pending';
+    }
+    return 'badge-inactive';
   }
 
   orderStatusClass(status?: string): string {
     const value = (status || '').toLowerCase();
     if (value === 'pending') {
-      return 'border-rose-400/30 bg-rose-500/10 text-rose-200';
+      return 'badge-pending';
     }
     if (value === 'delivered') {
-      return 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200';
+      return 'badge-delivered';
     }
     if (value === 'shipped') {
-      return 'border-blue-400/30 bg-blue-500/10 text-blue-200';
+      return 'badge-delivered';
     }
     if (value === 'paid') {
-      return 'border-purple-400/30 bg-purple-500/10 text-purple-200';
+      return 'badge-delivered';
     }
-    return 'border-white/10 bg-white/5 text-zinc-300';
+    return 'badge-inactive';
   }
 
   orderStatusIcon(status?: string): string {
@@ -956,110 +962,81 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   // Color del icono del usuario: gris inactivo, azul activo.
-levelIconClass(): string {
-  if (!this.isClient || !this.discountActiveValue) {
-    return 'text-zinc-400';
+  levelIconClass(): string {
+    if (!this.isClient || !this.discountActiveValue) {
+      return 'icon-muted';
+    }
+    return 'icon-accent';
   }
-  return 'text-blue-300';
-}
 
 // Borde / Anillo principal = Estado + Nivel
-discountRingClass(): string {
+  discountRingClass(): string {
 
   // Inactivo
   if (!this.isClient || !this.discountActiveValue) {
-    return 'border border-white/10 opacity-60';
+    return 'ring-soft opacity-70';
   }
 
   const p = this.discountPercentNumber();
 
   // 🥇 ORO 50%
   if (p >= 50) {
-    return `
-      ring-2 ring-yellow-400/70
-      shadow-[0_0_12px_rgba(250,204,21,0.35)]
-    `;
+    return 'ring-soft ring-gold';
   }
 
   // 🥈 PLATA 40%
   if (p >= 40) {
-    return `
-      ring-2 ring-zinc-300/70
-      shadow-[0_0_10px_rgba(212,212,216,0.25)]
-    `;
+    return 'ring-soft ring-silver';
   }
 
   // 🥉 BRONCE 30%
   if (p >= 30) {
-    return `
-      ring-2 ring-amber-500/70
-      shadow-[0_0_10px_rgba(245,158,11,0.25)]
-    `;
+    return 'ring-soft ring-bronze';
   }
 
   // 🔵 Activo sin nivel
-  return `
-    ring-2 ring-blue-400/50
-    shadow-[0_0_8px_rgba(96,165,250,0.2)]
-  `;
-}
+  return 'ring-soft';
+  }
 
 
 // Mini badge = Refuerzo semántico
-discountBadgeMiniClass(): string {
+  discountBadgeMiniClass(): string {
 
   // Inactivo = no mostrar
   if (!this.isClient || !this.discountActiveValue) {
-    return 'bg-white/5 text-zinc-400 border-white/10';
+    return 'badge-mini badge-mini-off';
   }
 
   const p = this.discountPercentNumber();
 
   // 🥇 ORO
   if (p >= 50) {
-    return `
-      bg-yellow-500/15
-      text-yellow-200
-      border-yellow-400/40
-      shadow-sm
-    `;
+    return 'badge-mini badge-mini-gold';
   }
 
   // 🥈 PLATA
   if (p >= 40) {
-    return `
-      bg-zinc-400/20
-      text-zinc-100
-      border-zinc-300/40
-    `;
+    return 'badge-mini badge-mini-silver';
   }
 
   // 🥉 BRONCE
   if (p >= 30) {
-    return `
-      bg-amber-600/20
-      text-amber-300
-      border-amber-500/40
-    `;
+    return 'badge-mini badge-mini-bronze';
   }
 
   // 🔵 Activo
-  return `
-    bg-blue-500/15
-    text-blue-200
-    border-blue-400/30
-  `;
-}
+  return 'badge-mini badge-mini-active';
+  }
 
 
-private discountPercentNumber(): number {
+  private discountPercentNumber(): number {
   // Ajusta según tu fuente real:
   // - si discountPercent = "30%" -> parse
   // - si ya es number, devuélvelo directo
   const raw = (this.discountPercent ?? '').toString().trim();
   const n = Number(raw.replace('%', ''));
   return Number.isFinite(n) ? n : 0;
-}
+  }
 
 
   get hasInactiveIntermediate(): boolean {
