@@ -227,12 +227,14 @@
                   <span class="text-xs text-[#5A5A5A]">{{ filteredOrders.length }} pedidos</span>
                 </div>
 
-                <button
-                  class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-xs font-semibold text-black transition-transform hover:scale-[1.02]"
-                  (click)="openNewOrderModal()">
-                  <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                <ui-button
+                  variant="primary"
+                  size="sm"
+                  iconClass="fa-solid fa-plus"
+                  extraClass="glow-gold"
+                  (pressed)="openNewOrderModal()">
                   Nuevo pedido
-                </button>
+                </ui-button>
               </div>
 
               <div class="md:hidden divide-y divide-[#7C8C72]/15">
@@ -241,22 +243,25 @@
                     <div class="text-sm font-semibold text-main">
                       {{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}
                     </div>
-                    <span class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-1 text-xs capitalize">
+                    <ui-badge [tone]="getOrderStatusTone(order.status)">
                       {{ order.status }}
-                    </span>
+                    </ui-badge>
                   </div>
                   <div class="mt-2 grid gap-1 text-xs text-[#5A5A5A]">
                     <div>Cliente: <span class="text-main">{{ order.customer }}</span></div>
                     <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
                     <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
                   </div>
-                  <button
-                    class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  <ui-button
+                    variant="ghost"
+                    size="sm"
+                    iconClass="fa-solid fa-rotate"
+                    [fullWidth]="true"
                     [disabled]="isUpdatingOrder(order.id)"
-                    (click)="advanceOrder(order)">
-                    <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                    extraClass="mt-3"
+                    (pressed)="advanceOrder(order)">
                     {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
-                  </button>
+                  </ui-button>
                 </div>
               </div>
 
@@ -279,16 +284,19 @@
                       </td>
                       <td class="px-4 py-3">{{ order.customer }}</td>
                       <td class="px-4 py-3 font-semibold">{{ formatMoney(order.total) }}</td>
-                      <td class="px-4 py-3 capitalize">{{ order.status }}</td>
+                      <td class="px-4 py-3 capitalize">
+                        <ui-badge [tone]="getOrderStatusTone(order.status)">{{ order.status }}</ui-badge>
+                      </td>
                       <td class="px-4 py-3 muted text-xs">{{ getShippingLabel(order) }}</td>
                       <td class="px-4 py-3">
-                        <button
-                          class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                        <ui-button
+                          variant="ghost"
+                          size="sm"
+                          iconClass="fa-solid fa-rotate"
                           [disabled]="isUpdatingOrder(order.id)"
-                          (click)="advanceOrder(order)">
-                          <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                          (pressed)="advanceOrder(order)">
                           {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
-                        </button>
+                        </ui-button>
                       </td>
                     </tr>
                   </tbody>
@@ -775,10 +783,7 @@
     </div>
   </main>
 
-  <div *ngIf="isActionsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
-    (click)="closeModals()">
-    <div class="modal-card w-full max-w-lg max-h-[90vh] overflow-hidden p-6"
-      (click)="$event.stopPropagation()">
+  <ui-modal [isOpen]="isActionsModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeModals()">
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Acciones urgentes</div>
@@ -802,8 +807,7 @@
           </button>
         </div>
       </div>
-    </div>
-  </div>
+  </ui-modal>
 
   <div *ngIf="isNewOrderModalOpen" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4"
     (click)="closeModals()">
@@ -1181,4 +1185,3 @@
     </div>
   </footer>
 </section>
-

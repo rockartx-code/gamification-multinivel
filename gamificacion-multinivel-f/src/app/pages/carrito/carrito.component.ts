@@ -10,13 +10,15 @@ import { AdminOrderItem } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
+import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { GoalControlService } from '../../services/goal-control.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })

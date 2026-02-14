@@ -4,12 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
