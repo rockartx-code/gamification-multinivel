@@ -19,11 +19,16 @@ import { ApiService } from '../../services/api.service';
 import { CartControlService } from '../../services/cart-control.service';
 import { GoalControlService } from '../../services/goal-control.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
+import { UiBadgeComponent } from '../../components/ui-badge/ui-badge.component';
+import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
+import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
+import { UiTableComponent } from '../../components/ui-table/ui-table.component';
 
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiBadgeComponent, UiModalComponent, UiTableComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -892,32 +897,29 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.goalProgressLabel(goal);
   }
 
-  statusBadgeClass(status: NetworkMember['status']): string {
+  networkStatusTone(status: NetworkMember['status']): 'active' | 'inactive' | 'pending' | 'delivered' {
     const value = String(status || '').toLowerCase();
     if (value.includes('activa') || value.includes('active')) {
-      return 'badge-active';
+      return 'active';
     }
     if (value.includes('progreso') || value.includes('pending')) {
-      return 'badge-pending';
+      return 'pending';
     }
-    return 'badge-inactive';
+    return 'inactive';
   }
 
-  orderStatusClass(status?: string): string {
+  orderStatusTone(status?: string): 'active' | 'inactive' | 'pending' | 'delivered' {
     const value = (status || '').toLowerCase();
     if (value === 'pending') {
-      return 'badge-pending';
-    }
-    if (value === 'delivered') {
-      return 'badge-delivered';
-    }
-    if (value === 'shipped') {
-      return 'badge-delivered';
+      return 'pending';
     }
     if (value === 'paid') {
-      return 'badge-delivered';
+      return 'active';
     }
-    return 'badge-inactive';
+    if (value === 'shipped' || value === 'delivered') {
+      return 'delivered';
+    }
+    return 'inactive';
   }
 
   orderStatusIcon(status?: string): string {

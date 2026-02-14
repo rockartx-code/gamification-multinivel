@@ -5,21 +5,18 @@
         <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
       </div>
 
-      <a class="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition"
-        [routerLink]="['/']">
-        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+      <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/']">
         Volver
-      </a>
+      </ui-button>
     </div>
   </header>
 
   <main class="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
     <div class="grid gap-10 lg:grid-cols-[1.05fr_.95fr]">
-
       <div class="grain relative overflow-hidden rounded-3xl border border-[#7C8C72]/30 bg-[#FDFBF7]/80 p-6">
         <div
-          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(124,140,114,0.14),transparent_55%),radial-gradient(circle_at_80%_28%,rgba(200,169,106,0.12),transparent_55%)]">
-        </div>
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(124,140,114,0.14),transparent_55%),radial-gradient(circle_at_80%_28%,rgba(200,169,106,0.12),transparent_55%)]"
+        ></div>
 
         <div class="relative space-y-4">
           <div class="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-[#5A5A5A]">
@@ -31,46 +28,47 @@
             Accede a tu panel
           </div>
 
-          <label class="block text-sm text-muted">
-            <span class="inline-flex items-center gap-2">
-              <i class="fa-solid fa-user" aria-hidden="true"></i>
-              Usuario
-            </span>
-            <input type="text" name="username"
-              class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
-              placeholder="Tu usuario" [(ngModel)]="username" />
-          </label>
+          <ui-form-field
+            name="username"
+            label="Usuario"
+            iconClass="fa-solid fa-user"
+            placeholder="Tu usuario"
+            [(ngModel)]="username"
+            inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
+          ></ui-form-field>
 
-          <label class="block text-sm text-muted">
-            <span class="inline-flex items-center gap-2">
-              <i class="fa-solid fa-key" aria-hidden="true"></i>
-              Password
-            </span>
-            <input type="password" name="password"
-              class="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
-              placeholder="Tu contraseña" [(ngModel)]="password" />
-          </label>
+          <ui-form-field
+            name="password"
+            type="password"
+            label="Password"
+            iconClass="fa-solid fa-key"
+            placeholder="Tu contraseña"
+            [(ngModel)]="password"
+            inputClass="mt-2 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-4 py-3 text-sm text-main outline-none transition focus:border-[#7C8C72]/60 focus:ring-2 focus:ring-[#7C8C72]/20"
+          ></ui-form-field>
 
-          <p *ngIf="errorMessage"
-            class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-[#7a2e2e]">
+          <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-[#7a2e2e]">
             {{ errorMessage }}
           </p>
 
-          <button type="button"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-6 py-3 text-sm font-semibold transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
-            (click)="login()" [disabled]="isSubmitting">
-            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+          <ui-button
+            variant="olive"
+            size="lg"
+            iconClass="fa-solid fa-right-to-bracket"
+            [fullWidth]="true"
+            [disabled]="isSubmitting"
+            extraClass="bg-gradient-to-r from-[#7C8C72] to-[#C8A96A]"
+            (pressed)="login()"
+          >
             {{ isSubmitting ? 'Validando acceso...' : 'Ingresar al panel' }}
-          </button>
-
+          </ui-button>
         </div>
       </div>
     </div>
   </main>
 
   <footer class="border-t border-[#7C8C72]/20 bg-[#F6F3EE]">
-    <div
-      class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
+    <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-center">
       <img src="logo.png" alt="Logo findingU" class="h-15 w-40" />
 
       <div class="flex flex-col items-start gap-3 md:items-end">

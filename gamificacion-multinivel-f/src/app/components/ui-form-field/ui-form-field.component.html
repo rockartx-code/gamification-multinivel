@@ -1,0 +1,48 @@
+<label [class]="wrapperClass">
+  <span *ngIf="label" class="text-[11px] text-[#5A5A5A] inline-flex items-center gap-2">
+    <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>
+    {{ label }}
+  </span>
+
+  <ng-container [ngSwitch]="kind">
+    <input
+      *ngSwitchCase="'input'"
+      [type]="type"
+      [name]="name"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      [class]="inputClass"
+      [ngModel]="value"
+      (ngModelChange)="updateValue($event)"
+      (blur)="markTouched()"
+    />
+
+    <textarea
+      *ngSwitchCase="'textarea'"
+      [name]="name"
+      [placeholder]="placeholder"
+      [rows]="rows"
+      [disabled]="disabled"
+      [class]="inputClass"
+      [ngModel]="value"
+      (ngModelChange)="updateValue($event)"
+      (blur)="markTouched()"
+    ></textarea>
+
+    <select
+      *ngSwitchCase="'select'"
+      [name]="name"
+      [disabled]="disabled"
+      [class]="inputClass"
+      [ngModel]="value"
+      (ngModelChange)="updateValue($event)"
+      (blur)="markTouched()"
+    >
+      <option *ngIf="placeholder" [ngValue]="''">{{ placeholder }}</option>
+      <option *ngFor="let option of options" [ngValue]="option.value">{{ option.label }}</option>
+    </select>
+  </ng-container>
+
+  <small *ngIf="helpText && !errorText" class="mt-1 block text-xs text-muted">{{ helpText }}</small>
+  <small *ngIf="errorText" class="mt-1 block text-xs text-danger">{{ errorText }}</small>
+</label>

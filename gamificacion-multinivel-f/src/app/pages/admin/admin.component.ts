@@ -18,6 +18,9 @@ import {
   CreateProductAssetPayload,
   CreateStructureCustomerPayload
 } from '../../models/admin.model';
+import { UiBadgeComponent } from '../../components/ui-badge/ui-badge.component';
+import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { AdminControlService } from '../../services/admin-control.service';
 
 type StructureNode = {
@@ -38,7 +41,7 @@ type StructureLink = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, UiButtonComponent, UiBadgeComponent, UiModalComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -197,6 +200,19 @@ export class AdminComponent implements OnInit {
 
   get deliveredCount(): number {
     return this.orders.filter((order) => order.status === 'delivered').length;
+  }
+
+  getOrderStatusTone(status: AdminOrder['status']): 'active' | 'inactive' | 'pending' | 'delivered' {
+    if (status === 'pending') {
+      return 'pending';
+    }
+    if (status === 'paid') {
+      return 'active';
+    }
+    if (status === 'shipped') {
+      return 'delivered';
+    }
+    return 'delivered';
   }
 
   get ordersCount(): number {
