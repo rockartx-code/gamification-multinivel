@@ -23,6 +23,20 @@ export class LoginComponent {
   errorMessage = '';
   isSubmitting = false;
 
+  get usernameError(): string {
+    if (this.errorMessage && !this.username) {
+      return 'Ingresa tu usuario.';
+    }
+    return '';
+  }
+
+  get passwordError(): string {
+    if (this.errorMessage && !this.password) {
+      return 'Ingresa tu contraseña.';
+    }
+    return '';
+  }
+
   constructor(
     private readonly authService: AuthService,
     private readonly router: Router,

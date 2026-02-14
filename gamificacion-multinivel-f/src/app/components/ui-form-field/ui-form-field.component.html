@@ -4,50 +4,58 @@
     {{ label }}
   </span>
 
-  <ng-container [ngSwitch]="kind">
-    <input
-      *ngSwitchCase="'input'"
-      [type]="type"
-      [name]="name"
-      [placeholder]="placeholder"
-      [disabled]="disabled"
-      [readonly]="readonly"
-      [min]="min"
-      [max]="max"
-      [step]="step"
-      [accept]="accept"
-      [class]="inputClass"
-      [ngModel]="value"
-      (ngModelChange)="updateValue($event)"
-      (blur)="markTouched()"
-    />
+  <div class="relative">
+    <i
+      *ngIf="resolvedLeadingIconClass"
+      [class]="resolvedLeadingIconClass + ' pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#6B6B6B]'"
+      aria-hidden="true"
+    ></i>
 
-    <textarea
-      *ngSwitchCase="'textarea'"
-      [name]="name"
-      [placeholder]="placeholder"
-      [rows]="rows"
-      [disabled]="disabled"
-      [readonly]="readonly"
-      [class]="inputClass"
-      [ngModel]="value"
-      (ngModelChange)="updateValue($event)"
-      (blur)="markTouched()"
-    ></textarea>
+    <ng-container [ngSwitch]="kind">
+      <input
+        *ngSwitchCase="'input'"
+        [type]="type"
+        [name]="name"
+        [placeholder]="placeholder"
+        [disabled]="disabled"
+        [readonly]="readonly"
+        [min]="min"
+        [max]="max"
+        [step]="step"
+        [accept]="accept"
+        [class]="inputClass + ' ' + inputStateClass"
+        [ngModel]="value"
+        (ngModelChange)="updateValue($event)"
+        (blur)="markTouched()"
+      />
 
-    <select
-      *ngSwitchCase="'select'"
-      [name]="name"
-      [disabled]="disabled"
-      [class]="inputClass"
-      [ngModel]="value"
-      (ngModelChange)="updateValue($event)"
-      (blur)="markTouched()"
-    >
-      <option *ngIf="placeholder" [ngValue]="''">{{ placeholder }}</option>
-      <option *ngFor="let option of options" [ngValue]="option.value">{{ option.label }}</option>
-    </select>
-  </ng-container>
+      <textarea
+        *ngSwitchCase="'textarea'"
+        [name]="name"
+        [placeholder]="placeholder"
+        [rows]="rows"
+        [disabled]="disabled"
+        [readonly]="readonly"
+        [class]="inputClass + ' ' + inputStateClass"
+        [ngModel]="value"
+        (ngModelChange)="updateValue($event)"
+        (blur)="markTouched()"
+      ></textarea>
+
+      <select
+        *ngSwitchCase="'select'"
+        [name]="name"
+        [disabled]="disabled"
+        [class]="inputClass + ' ' + inputStateClass"
+        [ngModel]="value"
+        (ngModelChange)="updateValue($event)"
+        (blur)="markTouched()"
+      >
+        <option *ngIf="placeholder" [ngValue]="''">{{ placeholder }}</option>
+        <option *ngFor="let option of options" [ngValue]="option.value">{{ option.label }}</option>
+      </select>
+    </ng-container>
+  </div>
 
   <small *ngIf="helpText && !errorText" class="mt-1 block text-xs text-muted">{{ helpText }}</small>
   <small *ngIf="errorText" class="mt-1 block text-xs text-danger">{{ errorText }}</small>
