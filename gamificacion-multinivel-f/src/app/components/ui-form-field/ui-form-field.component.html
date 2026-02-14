@@ -1,5 +1,5 @@
 <label [class]="wrapperClass">
-  <span *ngIf="label" class="text-[11px] text-[#5A5A5A] inline-flex items-center gap-2">
+  <span *ngIf="label" class="text-[11px] text-gray-600 inline-flex items-center gap-2">
     <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>
     {{ label }}
   </span>
@@ -7,7 +7,7 @@
   <div class="relative">
     <i
       *ngIf="resolvedLeadingIconClass"
-      [class]="resolvedLeadingIconClass + ' pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#6B6B6B]'"
+      [class]="resolvedLeadingIconClass + ' pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500'"
       aria-hidden="true"
     ></i>
 

@@ -36,7 +36,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
   @Input() options: FieldOption[] = [];
   @Input() wrapperClass = 'block';
   @Input() inputClass =
-    'mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted focus:border-[#7C8C72]/70';
+    'mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted focus:border-olive-70';
 
   value = '';
   disabled = false;
@@ -80,7 +80,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
   get inputStateClass(): string {
     const baseStateClass = this.hasError
       ? 'border-danger/70 focus:border-danger focus:ring-danger/20'
-      : 'border-[#7C8C72]/30 focus:border-[#7C8C72]/70 focus:ring-[#7C8C72]/20';
+      : 'border-olive-30 focus:border-olive-70 focus-ring-olive-20';
     const iconPadding = this.resolvedLeadingIconClass ? 'pl-10' : '';
     return `${baseStateClass} ${iconPadding}`.trim();
   }

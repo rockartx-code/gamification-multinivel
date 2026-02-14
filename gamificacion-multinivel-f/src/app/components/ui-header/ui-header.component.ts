@@ -12,7 +12,7 @@ export class UiHeaderComponent {
   @Input() containerClass = 'mx-auto flex items-center justify-between gap-4 px-4 py-3';
 
   get headerClass(): string {
-    const base = 'border-b border-[#7C8C72]/20 bg-[#F6F3EE]/90 backdrop-blur';
+    const base = 'border-b border-olive-20 bg-sand-200-90 backdrop-blur';
     if (this.variant === 'landing') {
       return `sticky top-0 z-40 ${base}`;
     }
