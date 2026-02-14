@@ -9,6 +9,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
   templateUrl: './ui-button.component.html'
 })
 export class UiButtonComponent {
+  @Input('class') hostClass = '';
   @Input() type: 'button' | 'submit' | 'reset' = 'button';
   @Input() variant: 'primary' | 'olive' | 'ghost' | 'linkish' = 'ghost';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
@@ -40,6 +41,7 @@ export class UiButtonComponent {
       sizes[this.size],
       this.fullWidth ? 'w-full' : '',
       this.disabled ? 'btn-disabled' : 'hover:scale-[1.02]',
+      this.hostClass,
       this.extraClass
     ]
       .filter(Boolean)

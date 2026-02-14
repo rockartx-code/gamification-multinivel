@@ -13,45 +13,45 @@
 
           <!-- Mobile nav (hamburger) -->
           <div class="relative lg:hidden shrink-0">
-            <button type="button"
+            <ui-button type="button"
               class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-sm transition hover:bg-[#EFE9DD]/90"
-              (click)="toggleMobileNav()">
+              (pressed)="toggleMobileNav()">
               <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
-            </button>
+            </ui-button>
 
             <div
               class="absolute left-0 mt-2 w-56 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-2 shadow-xl backdrop-blur"
               [class.hidden]="!isMobileNavOpen">
-              <button type="button"
+              <ui-button type="button"
                 class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (click)="scrollToSection('merchant'); closeMobileNav()">
+                (pressed)="scrollToSection('merchant'); closeMobileNav()">
                 <i class="fa-solid fa-store" aria-hidden="true"></i>
                 Tienda
-              </button>
-              <button *ngIf="!isGuest" type="button"
+              </ui-button>
+              <ui-button *ngIf="!isGuest" type="button"
                 class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (click)="scrollToSection('red'); closeMobileNav()">
+                (pressed)="scrollToSection('red'); closeMobileNav()">
                 <i class="fa-solid fa-users" aria-hidden="true"></i>
                 Red
-              </button>
-              <button *ngIf="!isGuest" type="button"
+              </ui-button>
+              <ui-button *ngIf="!isGuest" type="button"
                 class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (click)="scrollToSection('links'); closeMobileNav()">
+                (pressed)="scrollToSection('links'); closeMobileNav()">
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
                 Links
-              </button>
-              <button *ngIf="!isGuest" type="button"
+              </ui-button>
+              <ui-button *ngIf="!isGuest" type="button"
                 class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (click)="scrollToSection('ordenes'); closeMobileNav()">
+                (pressed)="scrollToSection('ordenes'); closeMobileNav()">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                 Ordenes
-              </button>
-              <button *ngIf="!isGuest && commissionSummary" type="button"
+              </ui-button>
+              <ui-button *ngIf="!isGuest && commissionSummary" type="button"
                 class="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
-                (click)="scrollToSection('comisiones'); closeMobileNav()">
+                (pressed)="scrollToSection('comisiones'); closeMobileNav()">
                 <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                 Comisiones
-              </button>
+              </ui-button>
               <a *ngIf="isGuest"
                 class="mt-1 inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-[#FDFBF7]/80"
                 [routerLink]="['/login']" (click)="closeMobileNav()">
@@ -68,9 +68,9 @@
 
           <!-- USER CONTROL -->
           <div *ngIf="currentUser" class="relative shrink-0">
-            <button type="button"
+            <ui-button type="button"
               class="user-pill inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 transition hover:bg-[#EFE9DD]/90"
-              (click)="toggleUserDetails()" aria-label="Usuario">
+              (pressed)="toggleUserDetails()" aria-label="Usuario">
 
               <span class="relative grid h-9 w-9 place-items-center rounded-full bg-[#FDFBF7]/80"
                 [ngClass]="discountRingClass()">
@@ -88,7 +88,7 @@
               <span class="name hidden max-w-[120px] truncate text-sm font-semibold lg:block">
                 {{ currentUser.name }}
               </span>
-            </button>
+            </ui-button>
 
             <div *ngIf="isUserDetailsOpen"
               class="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-[#7C8C72]/30 bg-[#F6F3EE]/95 p-4 shadow-xl backdrop-blur z-50">
@@ -107,23 +107,23 @@
                 <span class="text-main">{{ discountPercent }}%</span>
               </div>
 
-              <button *ngIf="!isGuest" type="button"
+              <ui-button *ngIf="!isGuest" type="button"
                 class="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                (click)="logout()">
+                (pressed)="logout()">
                 <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
                 Cerrar sesion
-              </button>
+              </ui-button>
             </div>
           </div>
 
           <!-- Desktop nav -->
           <nav class="hidden items-center gap-2 lg:flex">
-            <button type="button"
+            <ui-button type="button"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (click)="scrollToSection('merchant')">
+              (pressed)="scrollToSection('merchant')">
               <i class="fa-solid fa-store" aria-hidden="true"></i>
               Tienda
-            </button>
+            </ui-button>
 
             <a *ngIf="isGuest"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
@@ -132,32 +132,32 @@
               Iniciar sesion
             </a>
 
-            <button *ngIf="!isGuest" type="button"
+            <ui-button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (click)="scrollToSection('red')">
+              (pressed)="scrollToSection('red')">
               <i class="fa-solid fa-users" aria-hidden="true"></i>
               Red
-            </button>
+            </ui-button>
 
-            <button *ngIf="!isGuest" type="button"
+            <ui-button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (click)="scrollToSection('links')">
+              (pressed)="scrollToSection('links')">
               <i class="fa-solid fa-link" aria-hidden="true"></i>
               Links
-            </button>
-            <button *ngIf="!isGuest" type="button"
+            </ui-button>
+            <ui-button *ngIf="!isGuest" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (click)="scrollToSection('ordenes')">
+              (pressed)="scrollToSection('ordenes')">
               <i class="fa-solid fa-receipt" aria-hidden="true"></i>
               Ordenes
-            </button>
+            </ui-button>
 
-            <button *ngIf="!isGuest && commissionSummary" type="button"
+            <ui-button *ngIf="!isGuest && commissionSummary" type="button"
               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-              (click)="scrollToSection('comisiones')">
+              (pressed)="scrollToSection('comisiones')">
               <i class="fa-solid fa-wallet" aria-hidden="true"></i>
               Comisiones
-            </button>
+            </ui-button>
 
 
           </nav>
@@ -176,12 +176,12 @@
           Progreso mensual
         </div>
 
-        <button
+        <ui-button
           class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-          (click)="toggleSecondaryGoals()">
+          (pressed)="toggleSecondaryGoals()">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
           {{ secondaryGoalsVisible ? 'Ocultar metas secundarias' : 'Mostrar metas secundarias' }}
-        </button>
+        </ui-button>
       </div>
 
       <div *ngIf="!isGuest && activeGoal">
@@ -232,11 +232,11 @@
             </div>
 
             <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
-            <button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
-               md:absolute md:bottom-6 md:right-6 md:w-auto" (click)="scrollToSection(activeGoal.ctaFragment)">
+            <ui-button type="button" class="glow-gold inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]
+               md:absolute md:bottom-6 md:right-6 md:w-auto" (pressed)="scrollToSection(activeGoal.ctaFragment)">
               <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
               {{ activeGoal.ctaText }}
-            </button>
+            </ui-button>
 
             <!-- Espaciador SOLO en md+ para que el contenido no quede debajo del botón absoluto -->
             <div class="hidden md:block md:h-14"></div>
@@ -258,12 +258,12 @@
               <p class="mt-2 text-sm text-muted">Crea tu cuenta para desbloquear descuentos y seguimiento de tu red.
               </p>
             </div>
-            <button type="button"
+            <ui-button type="button"
               class="glow-gold inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-6 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
-              (click)="openGuestRegisterModal()">
+              (pressed)="openGuestRegisterModal()">
               <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
               Registrate
-            </button>
+            </ui-button>
           </div>
         </div>
       </div>
@@ -312,12 +312,12 @@
               {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
             </div>
           </div>
-          <button type="button"
+          <ui-button type="button"
             class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 font-semibold text-black transition-transform hover:scale-[1.03]"
-            (click)="goToCart()">
+            (pressed)="goToCart()">
             <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
             Ver carrito
-          </button>
+          </ui-button>
         </div>
       </div>
 
@@ -347,8 +347,11 @@
             <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div class="flex items-center gap-3 rounded-2xl border border-[#7C8C72]/30 surface-soft p-3">
                 <span class="text-sm text-[#5A5A5A]">Cantidad</span>
-                <input type="number" min="0" [value]="heroQty" (input)="setHeroQty($any($event.target).value)"
-                  class="w-20 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main" />
+                <ui-form-field
+                  type="number"
+                  [ngModel]="heroQty"
+                  (ngModelChange)="setHeroQty($event)"
+                  inputClass="w-20 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main"></ui-form-field>
                 <span class="flex items-center gap-2 text-sm text-[#5A5A5A]">
                   x
                   <span class="font-semibold text-main">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
@@ -360,12 +363,12 @@
                 </span>
               </div>
 
-              <button
+              <ui-button
                 class="glow-blue inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-6 py-3 font-semibold transition-transform hover:scale-[1.03]"
-                (click)="addHeroToCart()">
+                (pressed)="addHeroToCart()">
                 <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                 Agregar al carrito
-              </button>
+              </ui-button>
             </div>
           </div>
 
@@ -455,25 +458,27 @@
               <div
                 class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 sm:justify-start">
                 <span class="text-xs text-[#5A5A5A]">Qty</span>
-                <input type="number" min="0" [value]="getCartQty(product.id)"
-                  (input)="updateCart(product.id, $any($event.target).value)"
-                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main" />
+                <ui-form-field
+                  type="number"
+                  [ngModel]="getCartQty(product.id)"
+                  (ngModelChange)="updateCart(product.id, $event)"
+                  inputClass="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main"></ui-form-field>
               </div>
 
               <div class="flex w-full flex-col gap-2 sm:flex-1">
-                <button
+                <ui-button
                   class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
-                  (click)="openProductDetails(product)">
+                  (pressed)="openProductDetails(product)">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   Ver detalles
-                </button>
+                </ui-button>
 
-                <button
+                <ui-button
                   class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
-                  (click)="addQuick(product.id, 1)">
+                  (pressed)="addQuick(product.id, 1)">
                   <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                   Agregar al carrito
-                </button>
+                </ui-button>
               </div>
             </div>
           </article>
@@ -534,25 +539,27 @@
               <div
                 class="flex items-center justify-between gap-2 rounded-2xl border border-[#7C8C72]/30 surface-soft px-3 py-2 sm:justify-start">
                 <span class="text-xs text-[#5A5A5A]">Qty</span>
-                <input type="number" min="0" [value]="getCartQty(product.id)"
-                  (input)="updateCart(product.id, $any($event.target).value)"
-                  class="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main" />
+                <ui-form-field
+                  type="number"
+                  [ngModel]="getCartQty(product.id)"
+                  (ngModelChange)="updateCart(product.id, $event)"
+                  inputClass="w-20 sm:w-14 rounded-xl border border-[#7C8C72]/30 bg-white/70 px-2 py-1 text-sm text-main"></ui-form-field>
               </div>
 
               <div class="flex w-full flex-col gap-2 sm:flex-1">
-                <button
+                <ui-button
                   class="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
-                  (click)="openProductDetails(product)">
+                  (pressed)="openProductDetails(product)">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   Ver detalles
-                </button>
+                </ui-button>
 
-                <button
+                <ui-button
                   class="btn-olive inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
-                  (click)="addQuick(product.id, 1)">
+                  (pressed)="addQuick(product.id, 1)">
                   <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                   Agregar al carrito
-                </button>
+                </ui-button>
               </div>
             </div>
           </article>
@@ -615,25 +622,25 @@
             <strong>Apoya a tu red:</strong> cuando hay inactivos en niveles L1, los beneficios de sus L2 no llegan hasta ti.
           </div>
 
-          <button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
+          <ui-button *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
             class="mt-4 inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-            (click)="scrollToSection('links')">
+            (pressed)="scrollToSection('links')">
             <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
             Compartir mi enlace
-          </button>
-          <button *ngIf="!isGuest" type="button"
+          </ui-button>
+          <ui-button *ngIf="!isGuest" type="button"
             class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-            (click)="scrollToSection('ordenes')">
+            (pressed)="scrollToSection('ordenes')">
             <i class="fa-solid fa-receipt" aria-hidden="true"></i>
             Ordenes
-          </button>
+          </ui-button>
 
-          <button *ngIf="!isGuest && commissionSummary" type="button"
+          <ui-button *ngIf="!isGuest && commissionSummary" type="button"
             class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-            (click)="scrollToSection('comisiones')">
+            (pressed)="scrollToSection('comisiones')">
             <i class="fa-solid fa-wallet" aria-hidden="true"></i>
             Comisiones
-          </button>
+          </ui-button>
 
           <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
             <div class="progress-card p-4">
@@ -662,50 +669,50 @@
               <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
               <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
               <div class="mt-4 flex flex-wrap gap-2">
-                <button type="button"
+                <ui-button type="button"
                   class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-                  (click)="copyLinkAndCopy()">
+                  (pressed)="copyLinkAndCopy()">
                   <i class="fa-solid fa-copy" aria-hidden="true"></i>
                   Copiar link + copy
-                </button>
-                <button type="button"
+                </ui-button>
+                <ui-button type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  (click)="scrollToSection('links')">
+                  (pressed)="scrollToSection('links')">
                   <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                   Compartir mi enlace
-                </button>
-                <button *ngIf="!isGuest" type="button"
+                </ui-button>
+                <ui-button *ngIf="!isGuest" type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  (click)="scrollToSection('ordenes')">
+                  (pressed)="scrollToSection('ordenes')">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                   Ordenes
-                </button>
+                </ui-button>
 
-                <button *ngIf="!isGuest && commissionSummary" type="button"
+                <ui-button *ngIf="!isGuest && commissionSummary" type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  (click)="scrollToSection('comisiones')">
+                  (pressed)="scrollToSection('comisiones')">
                   <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                   Comisiones
-                </button>
-                <button type="button"
+                </ui-button>
+                <ui-button type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  (click)="scrollToSection('links')">
+                  (pressed)="scrollToSection('links')">
                   <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
                   Ver mensajes sugeridos
-                </button>
-                <button *ngIf="!isGuest" type="button"
+                </ui-button>
+                <ui-button *ngIf="!isGuest" type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  (click)="scrollToSection('ordenes')">
+                  (pressed)="scrollToSection('ordenes')">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
                   Ordenes
-                </button>
+                </ui-button>
 
-                <button *ngIf="!isGuest && commissionSummary" type="button"
+                <ui-button *ngIf="!isGuest && commissionSummary" type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                  (click)="scrollToSection('comisiones')">
+                  (pressed)="scrollToSection('comisiones')">
                   <i class="fa-solid fa-wallet" aria-hidden="true"></i>
                   Comisiones
-                </button>
+                </ui-button>
               </div>
             </div>
             <div class="flex items-center justify-between">
@@ -826,13 +833,13 @@
               <div class="flex items-center gap-2 text-xs text-[#5A5A5A]">
                 <span>Bloqueadas</span>
                 <span class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
-                  <button
+                  <ui-button
                     type="button"
                     class="inline-flex items-center text-[#6B6B6B] hover:text-zinc-300"
                     aria-label="Info comisiones bloqueadas"
-                    (click)="toggleBlockedTooltip()">
+                    (pressed)="toggleBlockedTooltip()">
                     <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
-                  </button>
+                  </ui-button>
                   <span
                     *ngIf="showBlockedTooltip"
                     class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-[#7C8C72]/30 bg-black/90 p-2 text-[11px] text-zinc-200 shadow-lg">
@@ -845,12 +852,12 @@
           </div>
 
           <div class="mt-4 flex flex-wrap items-center gap-3">
-            <button type="button"
+            <ui-button type="button"
               class="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-              (click)="toggleCommissionLedger()">
+              (pressed)="toggleCommissionLedger()">
               <i class="fa-solid" [ngClass]="showCommissionLedger ? 'fa-eye-slash' : 'fa-table'" aria-hidden="true"></i>
               {{ showCommissionLedger ? 'Ocultar detalles' : 'Ver detalles' }}
-            </button>
+            </ui-button>
           </div>
 
           <ui-table *ngIf="showCommissionLedger" class="mt-4">
@@ -953,7 +960,7 @@
               iconClass="fa-solid fa-file-invoice"
               [fullWidth]="true"
               extraClass="mt-3"
-              (pressed)="openCommissionReceipt(commissions.prevReceiptUrl)">
+              (click)="openCommissionReceipt(commissions.prevReceiptUrl)">
               Ver comprobante
             </ui-button>
           </div>
@@ -1064,18 +1071,18 @@
             <div class="mt-2 text-lg font-extrabold">Invita a 1 persona y act&#237;vala este mes</div>
             <div class="mt-1 text-sm text-zinc-200/90">Tu red se activa con tu primer miembro.</div>
             <div class="mt-4 flex flex-wrap gap-2">
-              <button type="button"
+              <ui-button type="button"
                 class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-                (click)="copyLinkAndCopy()">
+                (pressed)="copyLinkAndCopy()">
                 <i class="fa-solid fa-copy" aria-hidden="true"></i>
                 Copiar link + copy
-              </button>
-              <button type="button"
+              </ui-button>
+              <ui-button type="button"
                 class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                (click)="scrollToSection('links')">
+                (pressed)="scrollToSection('links')">
                 <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                 Compartir mi enlace
-              </button>
+              </ui-button>
               <ui-button *ngIf="!isGuest" type="button" variant="ghost" size="md" iconClass="fa-solid fa-receipt"
                 (pressed)="scrollToSection('ordenes')">
                 Ordenes
@@ -1085,12 +1092,12 @@
                 (pressed)="scrollToSection('comisiones')">
                 Comisiones
               </ui-button>
-              <button type="button"
+              <ui-button type="button"
                 class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-                (click)="scrollToSection('links')">
+                (pressed)="scrollToSection('links')">
                 <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
                 Ver mensajes sugeridos
-              </button>
+              </ui-button>
               <ui-button *ngIf="!isGuest" type="button" variant="ghost" size="md" iconClass="fa-solid fa-receipt"
                 (pressed)="scrollToSection('ordenes')">
                 Ordenes
@@ -1152,8 +1159,8 @@
             </h3>
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
-              <button *ngFor="let item of pagedFeatured"
-                class="rounded-2xl border p-4 text-left transition hover:bg-[#EFE9DD]/90" (click)="setFeatured(item.id)"
+              <ui-button *ngFor="let item of pagedFeatured"
+                class="rounded-2xl border p-4 text-left transition hover:bg-[#EFE9DD]/90" (pressed)="setFeatured(item.id)"
                 [ngClass]="
                   item.id === activeFeaturedId
                     ? 'border-blue-400/40 bg-[#7C8C72]/10'
@@ -1162,24 +1169,24 @@
                 <div class="text-xs text-[#5A5A5A]">Gancho</div>
                 <div class="mt-1 font-extrabold tracking-tight">{{ item.label }}</div>
                 <div class="mt-2 text-xs text-[#5A5A5A]">{{ item.hook }}</div>
-              </button>
+              </ui-button>
             </div>
 
             <div class="mt-4 flex items-center justify-between">
-              <button type="button"
+              <ui-button type="button"
                 class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 [disabled]="!canPrevFeatured" [ngClass]="!canPrevFeatured ? 'opacity-50 cursor-not-allowed' : ''"
-                (click)="prevFeaturedPage()">
+                (pressed)="prevFeaturedPage()">
                 <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 Atras
-              </button>
-              <button type="button"
+              </ui-button>
+              <ui-button type="button"
                 class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                 [disabled]="!canNextFeatured" [ngClass]="!canNextFeatured ? 'opacity-50 cursor-not-allowed' : ''"
-                (click)="nextFeaturedPage()">
+                (pressed)="nextFeaturedPage()">
                 Siguiente
                 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-              </button>
+              </ui-button>
             </div>
 
             <div class="mt-6 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
@@ -1191,12 +1198,12 @@
                 <input readonly [value]="referralLink"
                   class="flex-1 rounded-2xl border border-[#7C8C72]/30 surface-soft px-4 py-3 text-sm text-zinc-200" />
                 <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
-                  <button
+                  <ui-button
                     class="glow-blue inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
-                    (click)="copyLink()">
+                    (pressed)="copyLink()">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     Copiar
-                  </button>
+                  </ui-button>
                 </div>
               </div>
               <div class="mt-2 text-xs text-[#6B6B6B]">
@@ -1215,27 +1222,27 @@
               </div>
 
               <div class="flex flex-wrap gap-2">
-                <button
+                <ui-button
                   class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   [ngClass]="socialChannel === 'whatsapp' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
-                  (click)="setChannel('whatsapp')">
+                  (pressed)="setChannel('whatsapp')">
                   <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
                   WhatsApp
-                </button>
-                <button
+                </ui-button>
+                <ui-button
                   class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   [ngClass]="socialChannel === 'instagram' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
-                  (click)="setChannel('instagram')">
+                  (pressed)="setChannel('instagram')">
                   <i class="fa-brands fa-instagram" aria-hidden="true"></i>
                   Instagram
-                </button>
-                <button
+                </ui-button>
+                <ui-button
                   class="rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                   [ngClass]="socialChannel === 'facebook' ? 'border-blue-400/30 bg-[#7C8C72]/10' : ''"
-                  (click)="setChannel('facebook')">
+                  (pressed)="setChannel('facebook')">
                   <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
                   Facebook
-                </button>
+                </ui-button>
               </div>
             </div>
 
@@ -1263,12 +1270,12 @@
                     <!--div class="text-xs text-[#6B6B6B]">
                       Imagen: <span class="text-zinc-300">{{ activeSocialAsset }}</span>
                     </div-->
-                    <button
+                    <ui-button
                       class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-                      (click)="copyAssetPath()">
+                      (pressed)="copyAssetPath()">
                       <i class="fa-solid fa-copy" aria-hidden="true"></i>
                       Copiar ruta
-                    </button>
+                    </ui-button>
                   </div>
                 </div>
               </div>
@@ -1286,13 +1293,13 @@
                   placeholder="Escribe tu copy aquí..." [(ngModel)]="captionText"
                   (ngModelChange)="lastAutoCaption = false"></textarea>
                 <div class="mt-3 flex gap-3">
-                  <button
+                  <ui-button
                     class="glow-blue inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C8C72] to-[#C8A96A] px-5 py-3 font-semibold transition-transform hover:scale-[1.03]"
-                    (click)="copyCaption()">
+                    (pressed)="copyCaption()">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     {{ socialChannel === 'instagram' ? 'Copiar descripción' : (socialChannel === 'facebook' ? 'Copiar
                     comentario' : 'Copiar mensaje') }}
-                  </button>
+                  </ui-button>
                   <!--button
                     class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-5 py-3 transition hover:bg-[#EFE9DD]/90"
                     (click)="generateTemplate()">
@@ -1338,7 +1345,7 @@
           size="sm"
           iconClass="fa-solid fa-xmark"
           extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
-          (pressed)="closeCommissionModal()">
+          (click)="closeCommissionModal()">
         </ui-button>
       </div>
 
@@ -1397,7 +1404,7 @@
           size="sm"
           iconClass="fa-solid fa-xmark"
           extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
-          (pressed)="closeClabeConfirm()">
+          (click)="closeClabeConfirm()">
         </ui-button>
       </div>
 
@@ -1417,7 +1424,7 @@
           size="md"
           iconClass="fa-solid fa-check"
           extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-          (pressed)="saveCustomerClabe()">
+          (click)="saveCustomerClabe()">
           {{ isClabeSaving ? 'Guardando...' : 'Confirmar' }}
         </ui-button>
       </div>
@@ -1441,7 +1448,7 @@
           size="sm"
           iconClass="fa-solid fa-xmark"
           extraClass="h-9 w-9 border border-[#7C8C72]/30 bg-[#FDFBF7]/80 text-zinc-300 hover:bg-[#EFE9DD]/90"
-          (pressed)="closeGuestRegisterModal()">
+          (click)="closeGuestRegisterModal()">
         </ui-button>
       </div>
 
@@ -1513,7 +1520,7 @@
           size="sm"
           iconClass="fa-solid fa-xmark"
           extraClass="modal-close h-9 w-9 text-main hover:bg-[#EFE9DD]/90"
-          (pressed)="closeProductDetails()">
+          (click)="closeProductDetails()">
         </ui-button>
       </div>
 
@@ -1570,11 +1577,11 @@
           </p>
         </div>
 
-        <button type="button" class="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center
+        <ui-button type="button" class="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center
                rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8] text-main hover:bg-[#EFE9DD]"
-          (click)="closeGoalsModal()">
+          (pressed)="closeGoalsModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+        </ui-button>
       </div>
 
       <!-- List -->
@@ -1626,40 +1633,40 @@
       <!-- Footer -->
       <div class="mt-4 sm:mt-5 flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div *ngIf="achievedGoalsTotalPages > 1" class="flex items-center justify-between gap-2">
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
+          <ui-button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
                  px-3 py-1 text-[11px] text-main transition hover:bg-[#EFE9DD]" [disabled]="!canPrevAchievedGoals"
-            (click)="prevAchievedGoalsPage()">
+            (pressed)="prevAchievedGoalsPage()">
             <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
             Anterior
-          </button>
+          </ui-button>
 
           <div class="text-[11px] text-[#5A5A5A]">
             {{ achievedGoalsPage + 1 }} / {{ achievedGoalsTotalPages }}
           </div>
 
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
+          <ui-button type="button" class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#F6F1E8]
                  px-3 py-1 text-[11px] text-main transition hover:bg-[#EFE9DD]" [disabled]="!canNextAchievedGoals"
-            (click)="nextAchievedGoalsPage()">
+            (pressed)="nextAchievedGoalsPage()">
             Siguiente
             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-          </button>
+          </ui-button>
         </div>
 
-        <button type="button"
+        <ui-button type="button"
           class="modal-primary-btn inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-transform hover:scale-[1.02]"
-          (click)="closeGoalsModal()">
+          (pressed)="closeGoalsModal()">
           Listo
-        </button>
+        </ui-button>
       </div>
   </ui-modal>
 
   <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
-    <button type="button"
+    <ui-button type="button"
       class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(0,0,0,0.45)] transition-transform hover:scale-[1.03]"
-      (click)="goToCart()">
+      (pressed)="goToCart()">
       <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
       Ir a carrito
-    </button>
+    </ui-button>
   </div>
 
   <footer class="border-t border-[#7C8C72]/20 bg-[#F6F3EE]">
