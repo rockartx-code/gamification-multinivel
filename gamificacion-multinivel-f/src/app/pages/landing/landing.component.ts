@@ -7,11 +7,13 @@ import { finalize } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { UserDashboardData, FeaturedItem } from '../../models/user-dashboard.model';
+import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })

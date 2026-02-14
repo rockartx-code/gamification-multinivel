@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, type Signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Observable, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
@@ -20,6 +21,7 @@ import {
 } from '../../models/admin.model';
 import { UiBadgeComponent } from '../../components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { AdminControlService } from '../../services/admin-control.service';
 
@@ -41,7 +43,7 @@ type StructureLink = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, UiButtonComponent, UiBadgeComponent, UiModalComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiBadgeComponent, UiModalComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })

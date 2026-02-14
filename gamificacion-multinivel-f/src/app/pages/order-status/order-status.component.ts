@@ -1,14 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 import { AdminOrder } from '../../models/admin.model';
+import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, UiButtonComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
