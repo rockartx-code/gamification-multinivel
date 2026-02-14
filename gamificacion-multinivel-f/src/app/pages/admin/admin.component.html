@@ -27,22 +27,22 @@
           </span>
         </div>
 
-        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-          (click)="showActions()">
+        <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+          (pressed)="showActions()">
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Acciones
-        </button>
-        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
-          (click)="logout()">
+        </ui-button>
+        <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
+          (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           Logout
-        </button>
-        <button
+        </ui-button>
+        <ui-button
           class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-          (click)="openNewOrderModal()">
+          (pressed)="openNewOrderModal()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           Nuevo
-        </button>
+        </ui-button>
       </div>
     </div>
   </header>
@@ -57,53 +57,53 @@
           <div class="relative">
             <div class="text-xs text-[#5A5A5A]">Navegación</div>
             <div class="mt-3 flex flex-col gap-2">
-              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#7C8C72]/15" [ngClass]="
+              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#7C8C72]/15" [ngClass]="
                   currentView === 'orders'
                     ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                     : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (click)="setView('orders')">
+                " (pressed)="setView('orders')">
                 <div class="flex items-center gap-2 text-sm font-semibold">
                   <i class="fa-solid fa-receipt text-accent" aria-hidden="true"></i>
                   Pedidos
                 </div>
                 <div class="mt-0.5 text-xs text-[#5A5A5A]">Pendiente | Pagado | Enviado | Entregado</div>
-              </button>
+              </ui-button>
 
-              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
+              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
                   currentView === 'customers'
                     ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                     : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (click)="setView('customers')">
+                " (pressed)="setView('customers')">
                 <div class="flex items-center gap-2 text-sm font-semibold">
                   <i class="fa-solid fa-users text-accent" aria-hidden="true"></i>
                   Clientes
                 </div>
                 <div class="mt-0.5 text-xs text-[#5A5A5A]">Niveles · Estructura · Comisiones</div>
-              </button>
+              </ui-button>
 
-              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
+              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
                   currentView === 'products'
                     ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                     : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (click)="setView('products')">
+                " (pressed)="setView('products')">
                 <div class="flex items-center gap-2 text-sm font-semibold">
                   <i class="fa-solid fa-boxes-stacked text-accent" aria-hidden="true"></i>
                   Productos
                 </div>
                 <div class="mt-0.5 text-xs text-[#5A5A5A]">Altas · Imágenes · CTA</div>
-              </button>
+              </ui-button>
 
-              <button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
+              <ui-button class="navbtn rounded-2xl border px-4 py-3 text-left transition hover:bg-[#EFE9DD]/90" [ngClass]="
                   currentView === 'stats'
                     ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                     : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-                " (click)="setView('stats')">
+                " (pressed)="setView('stats')">
                 <div class="flex items-center gap-2 text-sm font-semibold">
                   <i class="fa-solid fa-chart-line text-accent" aria-hidden="true"></i>
                   Estadísticas
                 </div>
                 <div class="mt-0.5 text-xs text-[#5A5A5A]">Ventas · Funnel · Alertas</div>
-              </button>
+              </ui-button>
             </div>
           </div>
         </div>
@@ -146,53 +146,53 @@
                   placeholder="ID, cliente, email..." />
               </div>
 
-              <button
+              <ui-button
                 class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90 md:hidden">
                 <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                 Buscar
-              </button>
+              </ui-button>
 
-              <button
+              <ui-button
                 class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90">
                 <i class="fa-solid fa-file-export" aria-hidden="true"></i>
                 Exportar
-              </button>
+              </ui-button>
             </div-->
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders'">
-            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#7C8C72]/15"
+            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#7C8C72]/15"
               [ngClass]="
                 currentOrderStatus === 'pending'
                   ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                   : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-              " (click)="setOrderStatus('pending')">
+              " (pressed)="setOrderStatus('pending')">
               Pendiente
-            </button>
-            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
+            </ui-button>
+            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
               [ngClass]="
                 currentOrderStatus === 'paid'
                   ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                   : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-              " (click)="setOrderStatus('paid')">
+              " (pressed)="setOrderStatus('paid')">
               Pagado
-            </button>
-            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
+            </ui-button>
+            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
               [ngClass]="
                 currentOrderStatus === 'shipped'
                   ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                   : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-              " (click)="setOrderStatus('shipped')">
+              " (pressed)="setOrderStatus('shipped')">
               Enviado
-            </button>
-            <button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
+            </ui-button>
+            <ui-button class="tabbtn rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-[#EFE9DD]/90"
               [ngClass]="
                 currentOrderStatus === 'delivered'
                   ? 'border-[#C8A96A]/35 bg-[#7C8C72]/10'
                   : 'border-[#7C8C72]/30 bg-[#FDFBF7]/80 hover:bg-[#EFE9DD]/90'
-              " (click)="setOrderStatus('delivered')">
+              " (pressed)="setOrderStatus('delivered')">
               Entregado
-            </button>
+            </ui-button>
           </div>
         </div>
 
@@ -259,7 +259,7 @@
                     [fullWidth]="true"
                     [disabled]="isUpdatingOrder(order.id)"
                     extraClass="mt-3"
-                    (pressed)="advanceOrder(order)">
+                    (click)="advanceOrder(order)">
                     {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
                   </ui-button>
                 </div>
@@ -340,12 +340,12 @@
                       <div>Descuento: <span class="text-main">{{ customer.discount }}</span></div>
                       <div>Mes anterior: <span class="text-main">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</span></div>
                     </div>
-                    <button
+                    <ui-button
                       class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-                      (click)="selectCustomer(customer.id)">
+                      (pressed)="selectCustomer(customer.id)">
                       <i class="fa-solid fa-eye" aria-hidden="true"></i>
                       Ver
-                    </button>
+                    </ui-button>
                   </div>
                 </div>
 
@@ -365,12 +365,12 @@
                         <td class="px-4 py-3 text-gold">{{ customer.discount }}</td>
                         <td class="px-4 py-3">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</td>
                         <td class="px-4 py-3">
-                        <button
+                        <ui-button
                           class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-                          (click)="selectCustomer(customer.id)">
+                          (pressed)="selectCustomer(customer.id)">
                           <i class="fa-solid fa-eye" aria-hidden="true"></i>
                           Ver
-                        </button>
+                        </ui-button>
                         </td>
                       </tr>
                     </tbody>
@@ -384,11 +384,11 @@
                     <div class="text-sm font-semibold text-main">Detalle del cliente</div>
                     <div class="mt-1 text-xs text-[#5A5A5A]">Estructura simulada.</div>
                   </div>
-                  <button
+                  <ui-button
                     class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90">
                     <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
                     Perfil
-                  </button>
+                  </ui-button>
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
@@ -425,11 +425,11 @@
                       : 'Invitar a subir de nivel.'
                       }}
                     </div>
-                    <button
+                    <ui-button
                       class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90">
                       <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
                       Enviar recordatorio
-                    </button>
+                    </ui-button>
                   </div>
                   <div class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
                     <div class="text-xs text-[#5A5A5A]">Comisiones mes anterior</div>
@@ -448,37 +448,37 @@
                     <div class="mt-2 text-xs text-[#5A5A5A]" *ngIf="customer?.commissionsPrevStatus === 'pending'">
                       CLABE: {{ customer?.clabeInterbancaria || '-' }}
                     </div>
-                    <button
+                    <ui-button
                       class="glow-gold mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
                       *ngIf="customer?.commissionsPrevStatus === 'pending'"
-                      (click)="openReceiptModal(customer)">
+                      (pressed)="openReceiptModal(customer)">
                       <i class="fa-solid fa-coins" aria-hidden="true"></i>
                       Pagar comisiones
-                    </button>
-                    <button
+                    </ui-button>
+                    <ui-button
                       class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90"
                       *ngIf="customer?.commissionsPrevStatus === 'paid' && customer?.commissionsPrevReceiptUrl"
-                      (click)="openReceipt(customer.commissionsPrevReceiptUrl)">
+                      (pressed)="openReceipt(customer.commissionsPrevReceiptUrl)">
                       <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
                       Ver comprobante
-                    </button>
+                    </ui-button>
                   </div>
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4 overflow-hidden">
                   <div class="mt-3 flex gap-2">
-                    <button
+                    <ui-button
                       class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm transition hover:bg-[#EFE9DD]/90">
                       <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                       Cómo agregar
-                    </button>
+                    </ui-button>
 
-                    <button
+                    <ui-button
                       class="glow-gold inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
-                      (click)="openAddStructureModal()">
+                      (pressed)="openAddStructureModal()">
                       <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                       Agregar a estructura
-                    </button>
+                    </ui-button>
                   </div>
 
                   <div class="mt-1 text-xs text-[#5A5A5A]">Mock. En producción: pintar con datos reales.</div>
@@ -538,19 +538,19 @@
                       <div>Precio: <span class="text-main">{{ formatMoney(product.price) }}</span></div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                      <button
+                      <ui-button
                         class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-                        (click)="editProduct(product)">
+                        (pressed)="editProduct(product)">
                         <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                         Editar
-                      </button>
-                      <button
+                      </ui-button>
+                      <ui-button
                         class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-3 py-2 text-xs text-gold transition hover:bg-[#C8A96A]/20 disabled:cursor-not-allowed disabled:opacity-60"
                         [disabled]="isSettingProductOfMonth"
-                        (click)="setProductOfMonth(product)">
+                        (pressed)="setProductOfMonth(product)">
                         <i class="fa-solid fa-star" aria-hidden="true"></i>
                         Producto del mes
-                      </button>
+                      </ui-button>
                     </div>
                   </div>
                 </div>
@@ -572,19 +572,19 @@
                         <td class="px-4 py-3">{{ product.active ? 'Activo' : 'Inactivo' }}</td>
                         <td class="px-4 py-3">
                           <div class="flex flex-wrap gap-2">
-                            <button
+                            <ui-button
                               class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-3 py-2 text-xs transition hover:bg-[#EFE9DD]/90"
-                              (click)="editProduct(product)">
+                              (pressed)="editProduct(product)">
                               <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                               Editar
-                            </button>
-                            <button
+                            </ui-button>
+                            <ui-button
                               class="inline-flex items-center gap-2 rounded-full border border-[#C8A96A]/35 bg-[#C8A96A]/14 px-3 py-2 text-xs text-gold transition hover:bg-[#C8A96A]/20 disabled:cursor-not-allowed disabled:opacity-60"
                               [disabled]="isSettingProductOfMonth"
-                              (click)="setProductOfMonth(product)">
+                              (pressed)="setProductOfMonth(product)">
                               <i class="fa-solid fa-star" aria-hidden="true"></i>
                               Producto del mes
-                            </button>
+                            </ui-button>
                           </div>
                         </td>
                       </tr>
@@ -607,7 +607,7 @@
                     iconClass="fa-solid fa-floppy-disk"
                     extraClass="glow-gold bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
                     [disabled]="!isProductFormValid || isSavingProduct"
-                    (pressed)="saveProduct()">
+                    (click)="saveProduct()">
                     {{ isSavingProduct ? 'Guardando...' : 'Guardar' }}
                   </ui-button>
                 </div>
@@ -683,15 +683,13 @@
                       [value]="productForm.copyFacebook"
                       (input)="updateProductField('copyFacebook', $any($event.target).value)"></textarea>
                   </label>
-                  <label class="block md:col-span-2">
-                    <span class="text-[11px] text-[#5A5A5A]">Tags</span>
-                    <input
-                      class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-                      placeholder="bienestar, energia, suplemento"
-                      [value]="productForm.tags"
-                      (input)="updateProductField('tags', $any($event.target).value)" />
-                    <span class="mt-1 block text-[10px] text-[#6B6B6B]">Separados por coma.</span>
-                  </label>
+                  <ui-form-field
+                    wrapperClass="block md:col-span-2"
+                    label="Tags"
+                    placeholder="bienestar, energia, suplemento"
+                    [ngModel]="productForm.tags"
+                    (ngModelChange)="updateProductField('tags', $event)"></ui-form-field>
+                  <span class="-mt-1 block text-[10px] text-[#6B6B6B]">Separados por coma.</span>
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
@@ -793,22 +791,22 @@
           <div class="text-lg font-extrabold text-main">Acciones urgentes</div>
           <div class="mt-1 text-sm text-[#5A5A5A]">Resolvé pendientes críticos desde aquí.</div>
         </div>
-        <button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeModals()">
+        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
-        </button>
+        </ui-button>
       </div>
 
       <div class="mt-4 space-y-3">
         <div *ngFor="let warning of warnings" class="rounded-2xl border border-[#7C8C72]/30 surface-soft p-4">
           <div class="text-sm font-semibold text-main">{{ warning.text }}</div>
           <div class="mt-1 text-xs text-[#5A5A5A]">Severidad: {{ warning.severity }}</div>
-          <button
+          <ui-button
             class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-xs font-semibold text-black">
             <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
             Resolver ahora
-          </button>
+          </ui-button>
         </div>
       </div>
   </ui-modal>
@@ -822,11 +820,11 @@
           <div class="text-lg font-extrabold text-main">Nuevo pedido</div>
           <div class="mt-1 text-sm text-[#5A5A5A]">Registrá un pedido manual.</div>
         </div>
-        <button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeModals()">
+        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
-        </button>
+        </ui-button>
       </div>
 
       <div class="mt-4 grid gap-3">
@@ -891,13 +889,13 @@
           (pressed)="closeModals()">
           Cancelar
         </ui-button>
-        <button
+        <ui-button
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
           [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder"
-          (click)="saveNewOrder()">
+          (pressed)="saveNewOrder()">
           <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
           {{ isSavingOrder ? 'Guardando...' : 'Guardar pedido' }}
-        </button>
+        </ui-button>
         </div>
       </div>
     </div>
@@ -913,11 +911,11 @@
           <div class="text-lg font-extrabold text-main">Enviar pedido</div>
           <div class="mt-1 text-sm text-[#5A5A5A]">Ingresa la gu?a o los datos de entrega personal.</div>
         </div>
-        <button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeShippingModal()">
+        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeShippingModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
-        </button>
+        </ui-button>
       </div>
 
       <div class="mt-4 grid gap-3">
@@ -940,33 +938,22 @@
         </div>
 
         <div *ngIf="shippingType === 'carrier'" class="grid gap-3">
-          <label class="block">
-            <span class="text-[11px] text-[#5A5A5A]">N?mero de gu?a</span>
-            <input
-              class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-              placeholder="Gu?a de paqueter?a"
-              [value]="shippingTrackingNumber"
-              (input)="shippingTrackingNumber = $any($event.target).value" />
-          </label>
+          <ui-form-field
+            label="N?mero de gu?a"
+            placeholder="Gu?a de paqueter?a"
+            [(ngModel)]="shippingTrackingNumber"></ui-form-field>
         </div>
 
         <div *ngIf="shippingType === 'personal'" class="grid gap-3 sm:grid-cols-2">
-          <label class="block sm:col-span-2">
-            <span class="text-[11px] text-[#5A5A5A]">Lugar de entrega</span>
-            <input
-              class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-              placeholder="Sucursal, domicilio o punto de entrega"
-              [value]="shippingDeliveryPlace"
-              (input)="shippingDeliveryPlace = $any($event.target).value" />
-          </label>
-          <label class="block">
-            <span class="text-[11px] text-[#5A5A5A]">Fecha de entrega</span>
-            <input
-              type="date"
-              class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-              [value]="shippingDeliveryDate"
-              (input)="shippingDeliveryDate = $any($event.target).value" />
-          </label>
+          <ui-form-field
+            wrapperClass="block sm:col-span-2"
+            label="Lugar de entrega"
+            placeholder="Sucursal, domicilio o punto de entrega"
+            [(ngModel)]="shippingDeliveryPlace"></ui-form-field>
+          <ui-form-field
+            type="date"
+            label="Fecha de entrega"
+            [(ngModel)]="shippingDeliveryDate"></ui-form-field>
         </div>
       </div>
 
@@ -975,17 +962,17 @@
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeShippingModal()">
+        <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeShippingModal()">
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
-        </button>
-        <button
+        </ui-button>
+        <ui-button
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black"
-          (click)="confirmShipping()">
+          (pressed)="confirmShipping()">
           <i class="fa-solid fa-truck" aria-hidden="true"></i>
           Marcar como enviado
-        </button>
+        </ui-button>
       </div>
     </div>
   </div>
@@ -1001,11 +988,11 @@
             Cliente: {{ receiptTargetCustomer?.name || '-' }}
           </div>
         </div>
-        <button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeReceiptModal()">
+        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeReceiptModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
-        </button>
+        </ui-button>
       </div>
 
       <div class="mt-4 grid gap-3">
@@ -1021,18 +1008,18 @@
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeReceiptModal()">
+        <ui-button class="inline-flex items-center gap-2 rounded-full border border-[#7C8C72]/30 bg-[#FDFBF7]/80 px-4 py-2 text-sm text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeReceiptModal()">
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
-        </button>
-        <button
+        </ui-button>
+        <ui-button
           class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C8A96A] to-[#D9A441] px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
           [disabled]="!receiptFile || isUploadingReceipt"
-          (click)="uploadReceipt()">
+          (pressed)="uploadReceipt()">
           <i class="fa-solid fa-upload" aria-hidden="true"></i>
           {{ isUploadingReceipt ? 'Cargando...' : 'Subir comprobante' }}
-        </button>
+        </ui-button>
       </div>
     </div>
   </div>
@@ -1046,55 +1033,45 @@
           <div class="text-lg font-extrabold text-main">Agregar a estructura</div>
           <div class="mt-1 text-sm text-[#5A5A5A]">Completá los datos para crear el alta en la red.</div>
         </div>
-        <button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
-          (click)="closeModals()">
+        <ui-button class="modal-close inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs text-main hover:bg-[#EFE9DD]/90"
+          (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
-        </button>
+        </ui-button>
       </div>
 
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Nombre</span>
-          <input
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            placeholder="Nombre del cliente"
-            [value]="structureForm.name"
-            (input)="updateStructureField('name', $any($event.target).value)" />
-        </label>
-        <label class="block">
-          <span class="text-[11px] text-[#5A5A5A]">Teléfono</span>
-          <input
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            placeholder="+54 9 11 0000 0000"
-            [value]="structureForm.phone"
-            (input)="updateStructureField('phone', $any($event.target).value)" />
-        </label>
-        <label class="block sm:col-span-2">
-          <span class="text-[11px] text-[#5A5A5A]">Email</span>
-          <input
-            type="email"
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            placeholder="correo@dominio.com"
-            [value]="structureForm.email"
-            (input)="updateStructureField('email', $any($event.target).value)" />
-        </label>
-        <label class="block sm:col-span-2">
-          <span class="text-[11px] text-[#5A5A5A]">Dirección (opcional)</span>
-          <input
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            placeholder="Calle y número"
-            [value]="structureForm.address"
-            (input)="updateStructureField('address', $any($event.target).value)" />
-        </label>
-        <label class="block sm:col-span-2">
-          <span class="text-[11px] text-[#5A5A5A]">Ciudad / Provincia (opcional)</span>
-          <input
-            class="mt-1 w-full rounded-2xl border border-[#7C8C72]/30 bg-white/70 px-3 py-2 text-sm text-main placeholder:text-muted outline-none transition focus:border-[#7C8C72]/70 focus:ring-2 focus:ring-[#7C8C72]/20"
-            placeholder="Localidad, provincia"
-            [value]="structureForm.city"
-            (input)="updateStructureField('city', $any($event.target).value)" />
-        </label>
+        <ui-form-field
+          wrapperClass="block"
+          label="Nombre"
+          placeholder="Nombre del cliente"
+          [ngModel]="structureForm.name"
+          (ngModelChange)="updateStructureField('name', $event)"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block"
+          label="Teléfono"
+          placeholder="+54 9 11 0000 0000"
+          [ngModel]="structureForm.phone"
+          (ngModelChange)="updateStructureField('phone', $event)"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block sm:col-span-2"
+          type="email"
+          label="Email"
+          placeholder="correo@dominio.com"
+          [ngModel]="structureForm.email"
+          (ngModelChange)="updateStructureField('email', $event)"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block sm:col-span-2"
+          label="Dirección (opcional)"
+          placeholder="Calle y número"
+          [ngModel]="structureForm.address"
+          (ngModelChange)="updateStructureField('address', $event)"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block sm:col-span-2"
+          label="Ciudad / Provincia (opcional)"
+          placeholder="Localidad, provincia"
+          [ngModel]="structureForm.city"
+          (ngModelChange)="updateStructureField('city', $event)"></ui-form-field>
       </div>
 
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
