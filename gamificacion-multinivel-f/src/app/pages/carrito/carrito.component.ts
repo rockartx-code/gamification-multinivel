@@ -45,6 +45,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
   deliveryAddress = '';
   deliveryPostalCode = '';
   deliveryState = '';
+  deliveryFieldErrors: Record<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', boolean> = {
+    deliveryAddress: false,
+    deliveryPostalCode: false,
+    deliveryState: false
+  };
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
   lastAddedItemId = '';
@@ -366,9 +371,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const address = this.deliveryAddress.trim();
     const postalCode = this.deliveryPostalCode.trim();
     const state = this.deliveryState.trim();
-    if (!address || !postalCode || !state) {
+    if (
+      !this.setDeliveryFieldErrors({
+        deliveryAddress: address,
+        deliveryPostalCode: postalCode,
+        deliveryState: state
+      })
+    ) {
       this.showToast('Completa dirección, CP y estado para continuar.');
       this.scrollToSection('detalle-carrito');
+      this.focusFirstMissingDeliveryField();
       return;
     }
     const user = this.authService.currentUser;
@@ -485,6 +497,47 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  private focusFirstMissingDeliveryField(): void {
+    const requiredFields: Array<{ value: string; name: string }> = [
+      { value: this.deliveryAddress.trim(), name: 'deliveryAddress' },
+      { value: this.deliveryPostalCode.trim(), name: 'deliveryPostalCode' },
+      { value: this.deliveryState.trim(), name: 'deliveryState' }
+    ];
+
+    const missingField = requiredFields.find((field) => !field.value);
+    if (!missingField) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const selector = `[name="${missingField.name}"]`;
+      const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
+      if (!field) {
+        return;
+      }
+      field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      field.focus();
+    }, 180);
+  }
+
+  onDeliveryFieldChange(field: 'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', value: string): void {
+    this.deliveryFieldErrors[field] = !String(value ?? '').trim();
+  }
+
+  private setDeliveryFieldErrors(
+    values: Record<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', string>
+  ): boolean {
+    let valid = true;
+    (Object.keys(values) as Array<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState'>).forEach((field) => {
+      const hasError = !values[field].trim();
+      this.deliveryFieldErrors[field] = hasError;
+      if (hasError) {
+        valid = false;
+      }
+    });
+    return valid;
   }
 
   private collectCartTags(products: DashboardProduct[]): Set<string> {

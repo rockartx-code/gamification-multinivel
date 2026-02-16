@@ -8,6 +8,7 @@ import { Component, Input } from '@angular/core';
 export class UiBadgeComponent {
   @Input() tone: 'active' | 'inactive' | 'pending' | 'delivered' = 'inactive';
   @Input() size: 'default' | 'mini' = 'default';
+  @Input() extraClass = '';
 
   get classes(): string {
     const toneClass = {
@@ -17,6 +18,6 @@ export class UiBadgeComponent {
       delivered: 'badge-active'
     };
     const sizeClass = this.size === 'mini' ? 'badge badge-compact' : 'badge';
-    return `${sizeClass} ${toneClass[this.tone]}`;
+    return `${sizeClass} ${toneClass[this.tone]} ${this.extraClass}`.trim();
   }
 }

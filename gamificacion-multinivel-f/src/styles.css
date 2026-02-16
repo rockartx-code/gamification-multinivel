@@ -380,91 +380,42 @@ select:focus {
   color: var(--text-on-primary);
 }
 
-.level-1 {
-  background: rgba(var(--rgb-primary), 0.22);
-  border-color: rgba(var(--rgb-primary), 0.5);
-  color: var(--text-on-primary);
-}
-
-.level-2 {
-  background: rgba(var(--rgb-primary), 0.18);
+.badge.status-active {
+  background: rgba(var(--rgb-primary), 0.2);
   border-color: rgba(var(--rgb-primary), 0.42);
   color: var(--text-on-primary);
 }
 
-.level-3 {
-  background: rgba(var(--rgb-primary), 0.14);
-  border-color: rgba(var(--rgb-primary), 0.34);
-  color: var(--text-on-primary);
-}
-
-.level-4 {
-  background: rgba(var(--rgb-primary), 0.1);
-  border-color: rgba(var(--rgb-primary), 0.26);
-  color: rgba(var(--rgb-text), 0.78);
-}
-
-.level-5 {
-  background: rgba(var(--rgb-text), 0.06);
-  border-color: rgba(var(--rgb-text), 0.14);
-  color: rgba(var(--rgb-text), 0.58);
-}
-
-.status-active {
-  background: rgba(95, 127, 106, 0.14);
-  border-color: rgba(95, 127, 106, 0.38);
-  color: var(--color-success);
-}
-
-.status-inactive {
-  background: rgba(var(--rgb-text), 0.06);
-  border-color: rgba(var(--rgb-text), 0.16);
-  color: rgba(var(--rgb-text), 0.52);
-}
-
-.status-active .badge,
-.badge.status-active {
-  background: rgba(95, 127, 106, 0.14);
-  border-color: rgba(95, 127, 106, 0.38);
-  color: var(--color-success);
-}
-
-.status-inactive .badge,
 .badge.status-inactive {
   background: rgba(var(--rgb-text), 0.06);
   border-color: rgba(var(--rgb-text), 0.16);
   color: rgba(var(--rgb-text), 0.52);
 }
 
-.level-1 .badge,
 .badge.level-1 {
   background: rgba(var(--rgb-primary), 0.22);
   border-color: rgba(var(--rgb-primary), 0.5);
   color: var(--text-on-primary);
 }
 
-.level-2 .badge,
 .badge.level-2 {
   background: rgba(var(--rgb-primary), 0.18);
   border-color: rgba(var(--rgb-primary), 0.42);
   color: var(--text-on-primary);
 }
 
-.level-3 .badge,
 .badge.level-3 {
   background: rgba(var(--rgb-primary), 0.14);
   border-color: rgba(var(--rgb-primary), 0.34);
   color: var(--text-on-primary);
 }
 
-.level-4 .badge,
 .badge.level-4 {
   background: rgba(var(--rgb-primary), 0.1);
   border-color: rgba(var(--rgb-primary), 0.26);
   color: rgba(var(--rgb-text), 0.78);
 }
 
-.level-5 .badge,
 .badge.level-5 {
   background: rgba(var(--rgb-text), 0.06);
   border-color: rgba(var(--rgb-text), 0.14);
@@ -553,4 +504,3 @@ select:focus {
 .text-stone { color: #8f8673; }
 .text-alert-soft { color: #9a5a4a; }
 .text-sand-200 { color: var(--color-surface-2); }
-

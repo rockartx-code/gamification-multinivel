@@ -216,6 +216,8 @@
         placeholder="Calle, número, colonia, ciudad"
         name="deliveryAddress"
         [(ngModel)]="deliveryAddress"
+        (ngModelChange)="onDeliveryFieldChange('deliveryAddress', $event)"
+        [errorText]="deliveryFieldErrors.deliveryAddress ? 'Campo obligatorio.' : ''"
         wrapperClass="block sm:col-span-2"
       ></ui-form-field>
 
@@ -224,6 +226,8 @@
         placeholder="00000"
         name="deliveryPostalCode"
         [(ngModel)]="deliveryPostalCode"
+        (ngModelChange)="onDeliveryFieldChange('deliveryPostalCode', $event)"
+        [errorText]="deliveryFieldErrors.deliveryPostalCode ? 'Campo obligatorio.' : ''"
       ></ui-form-field>
 
       <ui-form-field
@@ -231,6 +235,8 @@
         placeholder="CDMX"
         name="deliveryState"
         [(ngModel)]="deliveryState"
+        (ngModelChange)="onDeliveryFieldChange('deliveryState', $event)"
+        [errorText]="deliveryFieldErrors.deliveryState ? 'Campo obligatorio.' : ''"
       ></ui-form-field>
     </div>
   </div>

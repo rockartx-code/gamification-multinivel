@@ -183,10 +183,10 @@ export class AdminComponent implements OnInit {
 
   get adminNavLinks(): SidebarLink[] {
     return [
-      { id: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: 'Pendiente | Pagado | Enviado | Entregado' },
-      { id: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: 'Niveles · Estructura · Comisiones' },
-      { id: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: 'Altas · Imágenes · CTA' },
-      { id: 'stats', icon: 'fa-chart-line', label: 'Estadísticas', subtitle: 'Ventas · Funnel · Alertas' }
+      { id: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
+      { id: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
+      { id: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
+      { id: 'stats', icon: 'fa-chart-line', label: 'Estadísticas', subtitle: '' }
     ];
   }
 

@@ -3,7 +3,7 @@
     size="sm"
     [variant]="activeId === link.id ? 'primary' : 'ghost'"
     *ngFor="let link of links"
-    class="navbtn text-left"
+    class="navbtn text-left  w-56"
     (pressed)="onSelect(link.id)">
     <div class="flex items-center gap-2 text-sm font-semibold">
       <i class="fa-solid" [ngClass]="link.icon + ' text-accent'" aria-hidden="true"></i>

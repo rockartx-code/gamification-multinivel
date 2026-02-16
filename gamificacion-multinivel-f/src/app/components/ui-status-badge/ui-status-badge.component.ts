@@ -111,6 +111,13 @@ export class UiStatusBadgeComponent {
     return '';
   }
 
+  get representationClass(): string {
+    if (this.context === 'network' && this.activityClass) {
+      return this.activityClass;
+    }
+    return this.levelClass;
+  }
+
   private get normalized(): string {
     return String(this.status || '').toLowerCase();
   }
