@@ -43,6 +43,26 @@ export interface FeaturedItem {
   banner: string;
 }
 
+export interface DashboardCampaign {
+  id: string;
+  name: string;
+  active?: boolean;
+  hook: string;
+  description?: string;
+  story: string;
+  feed: string;
+  banner: string;
+  heroImage?: string;
+  heroBadge?: string;
+  heroTitle?: string;
+  heroAccent?: string;
+  heroTail?: string;
+  heroDescription?: string;
+  ctaPrimaryText?: string;
+  ctaSecondaryText?: string;
+  benefits?: string[];
+}
+
 export interface DashboardSettings {
   cutoffDay: number;
   cutoffHour: number;
@@ -56,6 +76,7 @@ export interface UserDashboardData {
   goals: DashboardGoal[];
   products: DashboardProduct[];
   featured: FeaturedItem[];
+  campaigns?: DashboardCampaign[];
   user?: {
     level?: string;
     discountPercent?: number;

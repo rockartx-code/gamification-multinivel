@@ -1,23 +1,35 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import {
   AdminCustomer,
   AdminData,
+  AdminCampaign,
+  AppBusinessConfig,
   AdminOrder,
+  AdminOrderItem,
   AdminProduct,
+  AdminStock,
   AssetResponse,
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   CustomerProfile,
+  InventoryMovement,
+  PosSale,
+  StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
-  SaveAdminProductPayload
+  SaveAdminProductPayload,
+  SaveAdminCampaignPayload,
+  OrderStatusLookup,
+  AssociateMonth,
+  UpdateBusinessConfigPayload,
+  UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
@@ -91,23 +103,70 @@ export class RealApiService {
   }
 
   uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
-    return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/admin/commissions/receipt`, payload);
+    return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/admin/commissions/receipt`, payload, {
+      headers: this.actorHeaders()
+    });
   }
 
   saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
-    return this.http.post<{ ok: boolean; clabeLast4?: string }>(`${this.baseUrl}/customers/clabe`, payload);
+    return this.http.post<{ ok: boolean; clabeLast4?: string }>(`${this.baseUrl}/customers/clabe`, payload, {
+      headers: this.actorHeaders()
+    });
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
     return this.http
-      .post<{ order: AdminOrder }>(`${this.baseUrl}/orders`, payload)
+      .post<{ order: AdminOrder }>(`${this.baseUrl}/orders`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.order));
+  }
+
+  createOrderCheckout(
+    orderId: string,
+    payload: {
+      successUrl?: string;
+      failureUrl?: string;
+      pendingUrl?: string;
+      notificationUrl?: string;
+      currencyId?: string;
+    } = {}
+  ): Observable<{
+    orderId: string;
+    checkout?: {
+      provider?: string;
+      preferenceId?: string;
+      initPoint?: string;
+      sandboxInitPoint?: string;
+      externalReference?: string;
+    };
+  }> {
+    return this.http.post<{
+      orderId: string;
+      checkout?: {
+        provider?: string;
+        preferenceId?: string;
+        initPoint?: string;
+        sandboxInitPoint?: string;
+        externalReference?: string;
+      };
+    }>(`${this.baseUrl}/orders/${encodeURIComponent(orderId)}/checkout`, payload, {
+      headers: this.actorHeaders()
+    });
   }
 
   getOrder(orderId: string): Observable<AdminOrder> {
     return this.http
       .get<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`)
       .pipe(map((response) => response.order));
+  }
+
+  getOrderStatus(orderOrPaymentId: string): Observable<OrderStatusLookup> {
+    return this.http.get<OrderStatusLookup>(`${this.baseUrl}/orders/${encodeURIComponent(orderOrPaymentId)}/status`);
+  }
+
+  getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
+    return this.http
+      .get<{ month: AssociateMonth }>(`${this.baseUrl}/associates/${encodeURIComponent(associateId)}/month/${encodeURIComponent(monthKey)}`)
+      .pipe(map((response) => response.month));
   }
 
   getOrders(customerId: string): Observable<AdminOrder[]> {
@@ -138,31 +197,165 @@ export class RealApiService {
 
   createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
     return this.http
-      .post<{ customer: AdminCustomer }>(`${this.baseUrl}/customers`, payload)
+      .post<{ customer: AdminCustomer }>(`${this.baseUrl}/customers`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.customer));
   }
 
   createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
-    return this.http.post<AssetResponse>(`${this.baseUrl}/assets`, payload);
+    return this.http.post<AssetResponse>(`${this.baseUrl}/assets`, payload, { headers: this.actorHeaders() });
   }
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
-    return this.http.post<ProductAssetUpload>(`${this.baseUrl}/products/assets`, payload);
+    return this.http.post<ProductAssetUpload>(`${this.baseUrl}/products/assets`, payload, { headers: this.actorHeaders() });
   }
 
   setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
-    return this.http.post<ProductOfMonthResponse>(`${this.baseUrl}/products/product-of-month`, { productId });
+    return this.http.post<ProductOfMonthResponse>(`${this.baseUrl}/products/product-of-month`, { productId }, { headers: this.actorHeaders() });
   }
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
     return this.http
-      .post<{ product: AdminProduct }>(`${this.baseUrl}/products`, payload)
+      .post<{ product: AdminProduct }>(`${this.baseUrl}/products`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.product));
   }
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
     return this.http
-      .patch<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`, payload)
+      .patch<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.order));
+  }
+
+  listStocks(): Observable<AdminStock[]> {
+    return this.http
+      .get<{ stocks: AdminStock[] }>(`${this.baseUrl}/stocks`)
+      .pipe(map((response) => response.stocks ?? []));
+  }
+
+  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+    return this.http
+      .post<{ stock: AdminStock }>(`${this.baseUrl}/stocks`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.stock));
+  }
+
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+    return this.http
+      .patch<{ stock: AdminStock }>(`${this.baseUrl}/stocks/${encodeURIComponent(stockId)}`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.stock));
+  }
+
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+    return this.http.post<{ stock: AdminStock }>(
+      `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/entries`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+    return this.http.post<{ stock: AdminStock }>(
+      `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/damages`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
+    const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
+    return this.http
+      .get<{ transfers: StockTransfer[] }>(`${this.baseUrl}/stocks/transfers${query}`)
+      .pipe(map((response) => response.transfers ?? []));
+  }
+
+  createStockTransfer(payload: {
+    sourceStockId: string;
+    destinationStockId: string;
+    lines: Array<{ productId: number; qty: number }>;
+    createdByUserId?: number | null;
+  }): Observable<{ transfer: StockTransfer }> {
+    return this.http.post<{ transfer: StockTransfer }>(`${this.baseUrl}/stocks/transfers`, payload, { headers: this.actorHeaders() });
+  }
+
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+    return this.http.post<{ transfer: StockTransfer }>(
+      `${this.baseUrl}/stocks/transfers/${encodeURIComponent(transferId)}/receive`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
+    const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
+    return this.http
+      .get<{ movements: InventoryMovement[] }>(`${this.baseUrl}/stocks/movements${query}`)
+      .pipe(map((response) => response.movements ?? []));
+  }
+
+  listPosSales(stockId?: string): Observable<PosSale[]> {
+    const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
+    return this.http
+      .get<{ sales: PosSale[] }>(`${this.baseUrl}/pos/sales${query}`)
+      .pipe(map((response) => response.sales ?? []));
+  }
+
+  registerPosSale(payload: {
+    stockId: string;
+    attendantUserId?: number | null;
+    customerName?: string;
+    paymentStatus?: 'paid_branch';
+    deliveryStatus?: 'delivered_branch';
+    items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+  }): Observable<{ sale: PosSale }> {
+    return this.http.post<{ sale: PosSale }>(`${this.baseUrl}/pos/sales`, payload, { headers: this.actorHeaders() });
+  }
+
+  updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
+    return this.http
+      .patch<{ customer: AdminCustomer }>(
+        `${this.baseUrl}/customers/${encodeURIComponent(String(customerId))}/privileges`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((response) => response.customer));
+  }
+
+  saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
+    return this.http
+      .post<{ campaign: AdminCampaign }>(`${this.baseUrl}/campaigns`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.campaign));
+  }
+
+  getBusinessConfig(): Observable<AppBusinessConfig> {
+    return this.http
+      .get<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.config));
+  }
+
+  saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
+    return this.http
+      .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.config));
+  }
+
+  private actorHeaders(): HttpHeaders {
+    let headers = new HttpHeaders();
+    const raw = localStorage.getItem('auth-user');
+    if (!raw) {
+      return headers;
+    }
+    try {
+      const user = JSON.parse(raw) as { userId?: string; name?: string; role?: string };
+      if (user.userId) {
+        headers = headers.set('x-user-id', String(user.userId));
+      }
+      if (user.name) {
+        headers = headers.set('x-user-name', String(user.name));
+      }
+      if (user.role) {
+        headers = headers.set('x-user-role', String(user.role));
+      }
+    } catch {
+      return headers;
+    }
+    return headers;
   }
 }

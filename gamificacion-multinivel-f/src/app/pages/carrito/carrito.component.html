@@ -288,6 +288,9 @@
                 <span>Descuento aplicado</span>
                 <span class="text-gold">{{ discountLabel }}</span>
               </div>
+              <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+                {{ discountUpgradeMessage }}
+              </div>
               <div class="my-2 border-t border-olive-20"></div>
               <div class="flex items-center justify-between">
                 <span class="font-semibold text-main">Total</span>
@@ -405,6 +408,9 @@
         <div class="flex items-center justify-between text-muted">
           <span>Descuento aplicado</span>
           <span class="text-gold">{{ discountLabel }}</span>
+        </div>
+        <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+          {{ discountUpgradeMessage }}
         </div>
         <div class="my-2 border-t border-olive-20"></div>
         <div class="flex items-center justify-between">

@@ -1,3 +1,5 @@
+import { UserPrivileges } from './privileges.model';
+
 export interface AdminOrder {
   id: string;
   createdAt?: string;
@@ -17,6 +19,37 @@ export interface AdminOrder {
   address?: string;
   postalCode?: string;
   state?: string;
+  items?: AdminOrderItem[];
+  stockId?: string;
+  attendantUserId?: number | null;
+  paymentStatus?: string;
+  paymentTransactionId?: string;
+  paymentRawStatus?: string;
+  paymentProvider?: string;
+  paymentPreferenceId?: string;
+  paymentInitPoint?: string;
+  paymentSandboxInitPoint?: string;
+  deliveryStatus?: string;
+}
+
+export interface OrderStatusLookup {
+  orderId: string;
+  status: string;
+  paymentStatus?: string;
+  paymentTransactionId?: string;
+  paymentRawStatus?: string;
+  paymentWebhookAt?: string;
+  markedByWebhook?: boolean;
+  discountCutoffWindow?: boolean;
+  discountCutoffCountdown?: string;
+  discountCutoffMessage?: string;
+}
+
+export interface AssociateMonth {
+  associateId: string;
+  monthKey: string;
+  netVolume: number;
+  isActive: boolean;
 }
 
 export interface AdminOrderItem {
@@ -44,6 +77,8 @@ export interface UpdateOrderStatusPayload {
   trackingNumber?: string;
   deliveryPlace?: string;
   deliveryDate?: string;
+  stockId?: string;
+  dispatchLines?: Array<{ productId: number; quantity: number }>;
 }
 
 export interface CustomerProfile {
@@ -143,6 +178,9 @@ export interface AdminCustomer {
   id: number;
   name: string;
   email: string;
+  canAccessAdmin?: boolean;
+  privileges?: UserPrivileges;
+  isSuperUser?: boolean;
   leaderId?: number | null;
   level: string;
   discount: string;
@@ -175,10 +213,69 @@ export interface AdminProduct {
   }>;
 }
 
+export interface AdminCampaign {
+  id: string;
+  name: string;
+  active: boolean;
+  hook: string;
+  description?: string;
+  story: string;
+  feed: string;
+  banner: string;
+  heroImage?: string;
+  heroBadge?: string;
+  heroTitle?: string;
+  heroAccent?: string;
+  heroTail?: string;
+  heroDescription?: string;
+  ctaPrimaryText?: string;
+  ctaSecondaryText?: string;
+  benefits?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AdminWarning {
   type: string;
   text: string;
   severity: 'high' | 'medium' | 'low';
+}
+
+export interface RewardsConfig {
+  version: string;
+  activationNetMin: number;
+  discountTiers: Array<{ min: number; max: number | null; rate: number }>;
+  commissionByDepth: { '1': number; '2': number; '3': number };
+  payoutDay: number;
+  cutRule: string;
+}
+
+export interface AppBusinessConfig {
+  version: string;
+  rewards: RewardsConfig;
+  orders: {
+    requireStockOnShipped: boolean;
+    requireDispatchLinesOnShipped: boolean;
+  };
+  pos: {
+    defaultCustomerName: string;
+    defaultPaymentStatus: string;
+    defaultDeliveryStatus: string;
+    orderStatusByDeliveryStatus: {
+      delivered_branch: string;
+      paid_branch: string;
+    };
+  };
+  stocks: {
+    requireLinkedUserForTransferReceive: boolean;
+  };
+  adminWarnings: {
+    showCommissions: boolean;
+    showShipping: boolean;
+    showPendingPayments: boolean;
+    showPendingTransfers: boolean;
+    showPosSalesToday: boolean;
+  };
 }
 
 export interface AdminAssetSlot {
@@ -190,7 +287,90 @@ export interface AdminData {
   orders: AdminOrder[];
   customers: AdminCustomer[];
   products: AdminProduct[];
+  campaigns?: AdminCampaign[];
+  businessConfig?: AppBusinessConfig;
   warnings: AdminWarning[];
   assetSlots: AdminAssetSlot[];
   productOfMonthId?: number | null;
+}
+
+export interface UpdateCustomerPrivilegesPayload {
+  canAccessAdmin?: boolean;
+  privileges?: UserPrivileges;
+}
+
+export interface SaveAdminCampaignPayload {
+  id?: string;
+  name: string;
+  active: boolean;
+  hook: string;
+  description?: string;
+  story: string;
+  feed: string;
+  banner: string;
+  heroImage?: string;
+  heroBadge?: string;
+  heroTitle?: string;
+  heroAccent?: string;
+  heroTail?: string;
+  heroDescription?: string;
+  ctaPrimaryText?: string;
+  ctaSecondaryText?: string;
+  benefits?: string[];
+}
+
+export interface AdminStock {
+  id: string;
+  name: string;
+  location: string;
+  linkedUserIds: number[];
+  inventory: Record<number, number> | Record<string, number>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StockTransferLine {
+  productId: number;
+  qty: number;
+}
+
+export interface StockTransfer {
+  id: string;
+  sourceStockId: string;
+  destinationStockId: string;
+  lines: StockTransferLine[];
+  status: 'pending' | 'received';
+  createdByUserId?: number | null;
+  receivedByUserId?: number | null;
+  createdAt?: string;
+  receivedAt?: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  type: 'entry' | 'exit_order' | 'exit_transfer' | 'entry_transfer' | 'damaged' | 'pos_sale';
+  stockId: string;
+  productId: number;
+  qty: number;
+  userId?: number | null;
+  reason?: string;
+  referenceId?: string;
+  createdAt?: string;
+}
+
+export interface PosSale {
+  id: string;
+  orderId: string;
+  stockId: string;
+  attendantUserId?: number | null;
+  customerName: string;
+  paymentStatus: 'paid_branch';
+  deliveryStatus: 'delivered_branch';
+  total: number;
+  lines: AdminOrderItem[];
+  createdAt?: string;
+}
+
+export interface UpdateBusinessConfigPayload {
+  config: AppBusinessConfig;
 }

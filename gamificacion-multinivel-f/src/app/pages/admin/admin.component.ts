@@ -9,6 +9,8 @@ import { AuthService, AuthUser } from '../../services/auth.service';
 import {
   AdminCustomer,
   AdminData,
+  AdminCampaign,
+  AppBusinessConfig,
   AdminOrder,
   AdminOrderItem,
   AdminProduct,
@@ -19,6 +21,7 @@ import {
   CreateProductAssetPayload,
   CreateStructureCustomerPayload
 } from '../../models/admin.model';
+import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
@@ -47,6 +50,73 @@ type StructureLink = {
   y2: number;
 };
 
+type AdminStock = {
+  id: string;
+  name: string;
+  location: string;
+  linkedUserIds: number[];
+  inventory: Record<number, number>;
+};
+
+type StockTransferLine = {
+  productId: number;
+  qty: number;
+};
+
+type StockTransfer = {
+  id: string;
+  sourceStockId: string;
+  destinationStockId: string;
+  lines: StockTransferLine[];
+  status: 'pending' | 'received';
+  createdAt: string;
+  createdByUserId: number | null;
+  receivedAt?: string;
+  receivedByUserId?: number | null;
+};
+
+type StockDamage = {
+  id: string;
+  stockId: string;
+  productId: number;
+  qty: number;
+  reason: string;
+  createdAt: string;
+  reportedByUserId: number | null;
+};
+
+type PosSale = {
+  id: string;
+  orderId: string;
+  stockId: string;
+  attendantUserId: number | null;
+  customerName: string;
+  total: number;
+  paymentStatus: 'paid_branch';
+  deliveryStatus: 'delivered_branch';
+  createdAt: string;
+  lines: AdminOrderItem[];
+};
+
+type InventoryMovementType = 'entry' | 'exit_order' | 'exit_transfer' | 'entry_transfer' | 'damaged' | 'pos_sale';
+
+type InventoryMovement = {
+  id: string;
+  type: InventoryMovementType;
+  stockId: string;
+  productId: number;
+  qty: number;
+  createdAt: string;
+  userId: number | null;
+  reason?: string;
+  referenceId?: string;
+};
+
+type CustomerPrivilegeOption = {
+  key: AppPrivilege;
+  label: string;
+};
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -65,7 +135,7 @@ export class AdminComponent implements OnInit {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
 
-  currentView: 'orders' | 'customers' | 'products' | 'stats' = 'orders';
+  currentView: AdminViewId = 'orders';
   currentOrderStatus: AdminOrder['status'] = 'pending';
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
@@ -75,6 +145,39 @@ export class AdminComponent implements OnInit {
   isUploadingReceipt = false;
 
   selectedCustomer: AdminCustomer | null = null;
+  selectedCustomerAdminAccess = false;
+  selectedCustomerPrivilegeDraft: UserPrivileges = {};
+  isSavingCustomerPrivileges = false;
+  readonly customerPrivilegeOptions: CustomerPrivilegeOption[] = [
+    { key: 'access_screen_orders', label: 'Acceso pantalla: Pedidos' },
+    { key: 'access_screen_customers', label: 'Acceso pantalla: Clientes' },
+    { key: 'access_screen_products', label: 'Acceso pantalla: Productos' },
+    { key: 'access_screen_stocks', label: 'Acceso pantalla: Stocks' },
+    { key: 'access_screen_pos', label: 'Acceso pantalla: Punto de Venta' },
+    { key: 'access_screen_stats', label: 'Acceso pantalla: Estadisticas' },
+    { key: 'access_screen_settings', label: 'Acceso pantalla: Configuracion' },
+    { key: 'order_mark_paid', label: 'Cambiar orden a Pagado' },
+    { key: 'order_mark_shipped', label: 'Cambiar orden a Enviado' },
+    { key: 'order_mark_delivered', label: 'Cambiar orden a Entregado' },
+    { key: 'order_create', label: 'Registrar nueva orden' },
+    { key: 'customer_add', label: 'Agregar cliente' },
+    { key: 'commissions_register_payment', label: 'Registrar pago de comisiones' },
+    { key: 'product_add', label: 'Agregar nuevo producto' },
+    { key: 'product_update', label: 'Actualizar producto' },
+    { key: 'product_set_month', label: 'Establecer producto del mes' },
+    { key: 'stock_create', label: 'Crear stock' },
+    { key: 'stock_create_transfer', label: 'Crear transferencia' },
+    { key: 'stock_add_inventory', label: 'Agregar inventario a stock' },
+    { key: 'stock_mark_damaged', label: 'Marcar stock como danado' },
+    { key: 'stock_receive_transfer', label: 'Registrar transferencia como entregada' },
+    { key: 'pos_register_sale', label: 'Registrar venta' },
+    { key: 'user_mark_admin', label: 'Marcar usuario como administrador' },
+    { key: 'user_manage_privileges', label: 'Registrar privilegios' },
+    { key: 'config_manage', label: 'Gestionar configuracion de negocio' }
+  ];
+  businessConfigDraft: AppBusinessConfig = this.getDefaultBusinessConfig();
+  isSavingBusinessConfig = false;
+  businessConfigMessage = '';
   structureForm = {
     name: '',
     phone: '',
@@ -102,6 +205,27 @@ export class AdminComponent implements OnInit {
     tags: ''
   };
   productExistingImages: AdminProduct['images'] = [];
+  campaignMessage = '';
+  isSavingCampaign = false;
+  campaignForm = {
+    id: '',
+    name: '',
+    active: true,
+    hook: '',
+    description: '',
+    story: '',
+    feed: '',
+    banner: '',
+    heroImage: '',
+    heroBadge: '',
+    heroTitle: '',
+    heroAccent: '',
+    heroTail: '',
+    heroDescription: '',
+    ctaPrimaryText: '',
+    ctaSecondaryText: '',
+    benefits: ''
+  };
   productImageSlots = [
     { key: 'redes', label: 'Redes', hint: 'Story / Feed' },
     { key: 'landing', label: 'Landing', hint: 'Hero 16:9' },
@@ -125,14 +249,71 @@ export class AdminComponent implements OnInit {
   receiptTargetCustomer: AdminCustomer | null = null;
   private readonly updatingOrderIds = new Set<string>();
 
+  stocks: AdminStock[] = [];
+  selectedStockId = '';
+  stockForm = {
+    name: '',
+    location: ''
+  };
+  stockUserLinkDraft = new Set<number>();
+  isStockEntryModalOpen = false;
+  isStockDamageModalOpen = false;
+  stockEntryForm = {
+    stockId: '',
+    productId: null as number | null,
+    qty: 1,
+    note: '',
+    createdByUserId: null as number | null
+  };
+  stockTransferForm = {
+    sourceStockId: '',
+    destinationStockId: '',
+    lines: [{ productId: null as number | null, qty: 1 }],
+    createdByUserId: null as number | null
+  };
+  stockDamageForm = {
+    stockId: '',
+    productId: null as number | null,
+    qty: 1,
+    reason: '',
+    reportedByUserId: null as number | null
+  };
+  transferReceiverUserId: number | null = null;
+  transfers: StockTransfer[] = [];
+  stockDamages: StockDamage[] = [];
+  inventoryMovements: InventoryMovement[] = [];
+
+  shippingStockId = '';
+  shippingFallbackProductId: number | null = null;
+  shippingFallbackQty = 1;
+
+  posForm = {
+    stockId: '',
+    attendantUserId: null as number | null,
+    customerName: '',
+    status: 'paid' as 'paid' | 'delivered'
+  };
+  posItems = new Map<number, number>();
+  posSales: PosSale[] = [];
+
   ngOnInit(): void {
+    this.currentView = this.getFirstAllowedView();
     this.adminControl.load().subscribe(() => {
       if (!this.selectedCustomer) {
         this.selectedCustomer = this.customers[0] ?? null;
       }
+      this.syncSelectedCustomerAccessDraft();
+      this.ensureCurrentViewAllowed();
       if (!this.newOrderCustomerId) {
         this.newOrderCustomerId = this.customers[0]?.id ?? null;
       }
+      this.stockEntryForm.createdByUserId = this.stockEntryForm.createdByUserId ?? this.customers[0]?.id ?? null;
+      this.stockTransferForm.createdByUserId = this.stockTransferForm.createdByUserId ?? this.customers[0]?.id ?? null;
+      this.stockDamageForm.reportedByUserId = this.stockDamageForm.reportedByUserId ?? this.customers[0]?.id ?? null;
+      this.transferReceiverUserId = this.transferReceiverUserId ?? this.customers[0]?.id ?? null;
+      this.posForm.attendantUserId = this.posForm.attendantUserId ?? this.customers[0]?.id ?? null;
+      this.syncBusinessConfigDraft();
+      this.loadStocksAndPosState();
     });
   }
 
@@ -148,6 +329,10 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.products ?? [];
   }
 
+  get campaigns(): AdminCampaign[] {
+    return this.adminData()?.campaigns ?? [];
+  }
+
   get productOfMonthId(): number | null {
     return this.adminData()?.productOfMonthId ?? null;
   }
@@ -155,7 +340,7 @@ export class AdminComponent implements OnInit {
   get customerOptions(): { value: number; label: string }[] {
     return this.customers.map((customer) => ({
       value: customer.id,
-      label: `${customer.name} · ${customer.email}`
+      label: `${customer.name} Â· ${customer.email}`
     }));
   }
 
@@ -180,14 +365,22 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.warnings ?? [];
   }
 
+  get businessConfig(): AppBusinessConfig | null {
+    return this.adminData()?.businessConfig ?? null;
+  }
+
 
   get adminNavLinks(): SidebarLink[] {
-    return [
-      { id: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
-      { id: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
-      { id: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-      { id: 'stats', icon: 'fa-chart-line', label: 'Estadísticas', subtitle: '' }
+    const links: Array<SidebarLink & { view: AdminViewId }> = [
+      { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
+      { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
+      { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
+      { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
+      { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
+      { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+      { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
     ];
+    return links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
   }
 
   get viewTitle(): string {
@@ -197,8 +390,17 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'products') {
       return 'Productos';
     }
+    if (this.currentView === 'stocks') {
+      return 'Stocks';
+    }
+    if (this.currentView === 'pos') {
+      return 'Punto de Venta';
+    }
     if (this.currentView === 'stats') {
-      return 'Estadísticas';
+      return 'Estadisticas';
+    }
+    if (this.currentView === 'settings') {
+      return 'Configuracion';
     }
     return 'Pedidos';
   }
@@ -208,12 +410,85 @@ export class AdminComponent implements OnInit {
       return 'Niveles, estructura y comisiones.';
     }
     if (this.currentView === 'products') {
-      return 'Altas, imágenes y CTA.';
+      return 'Altas, imagenes y CTA.';
+    }
+    if (this.currentView === 'stocks') {
+      return 'Inventario por sucursal, transferencias, recepciones y danos.';
+    }
+    if (this.currentView === 'pos') {
+      return 'Ventas en sucursal vinculadas a stock y operador.';
     }
     if (this.currentView === 'stats') {
       return 'Ventas, funnel y alertas.';
     }
+    if (this.currentView === 'settings') {
+      return 'Variables de negocio para reglas operativas.';
+    }
     return 'Cambia estado: pendiente, pagado, enviado, entregado.';
+  }
+
+  get stockOptions(): { value: string; label: string }[] {
+    return this.stocks.map((stock) => ({
+      value: stock.id,
+      label: `${stock.name} Â· ${stock.location}`
+    }));
+  }
+
+  get selectedStock(): AdminStock | null {
+    return this.stocks.find((stock) => stock.id === this.selectedStockId) ?? null;
+  }
+
+  get productOptions(): { value: number; label: string }[] {
+    return this.products.map((product) => ({
+      value: product.id,
+      label: `${product.name} · ${this.formatMoney(product.price)}`
+    }));
+  }
+
+  get stockInventoryRows(): Array<{ productId: number; productName: string; qty: number }> {
+    const stock = this.selectedStock;
+    if (!stock) {
+      return [];
+    }
+    return this.products.map((product) => ({
+      productId: product.id,
+      productName: product.name,
+      qty: stock.inventory[product.id] ?? 0
+    }));
+  }
+
+  get stockTransferRows(): Array<StockTransfer & { sourceName: string; destinationName: string; productSummary: string }> {
+    return this.transfers.map((transfer) => ({
+      ...transfer,
+      sourceName: this.stockName(transfer.sourceStockId),
+      destinationName: this.stockName(transfer.destinationStockId),
+      productSummary: transfer.lines.map((line) => `${this.productName(line.productId)} x${line.qty}`).join(', ')
+    }));
+  }
+
+  get inventoryMovementRows(): Array<
+    InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
+  > {
+    return this.inventoryMovements.map((movement) => ({
+      ...movement,
+      stockName: this.stockName(movement.stockId),
+      productName: this.productName(movement.productId),
+      userName: this.customerName(movement.userId),
+      typeLabel: this.movementTypeLabel(movement.type),
+      signedQty: this.movementSignedQty(movement)
+    }));
+  }
+
+  get posTotal(): number {
+    return this.getPosItems().reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }
+
+  get pendingTransfersCount(): number {
+    return this.transfers.filter((transfer) => transfer.status === 'pending').length;
+  }
+
+  get posSalesTotal(): number {
+    return this.posSales.reduce((acc, sale) => acc + sale.total, 0);
   }
 
   get filteredOrders(): AdminOrder[] {
@@ -290,9 +565,32 @@ export class AdminComponent implements OnInit {
     return this.authService.currentUser;
   }
 
+  canAccessView(view: AdminViewId): boolean {
+    return this.authService.canAccessAdminView(view, this.currentUser);
+  }
+
+  hasPermission(privilege: AppPrivilege): boolean {
+    return this.authService.hasPrivilege(privilege, this.currentUser);
+  }
+
+  customerHasPrivilege(privilege: AppPrivilege): boolean {
+    return this.selectedCustomerPrivilegeDraft?.[privilege] === true;
+  }
+
+  private getFirstAllowedView(): AdminViewId {
+    const ordered: AdminViewId[] = ['orders', 'customers', 'products', 'stocks', 'pos', 'stats', 'settings'];
+    return ordered.find((view) => this.canAccessView(view)) ?? 'orders';
+  }
+
+  private ensureCurrentViewAllowed(): void {
+    if (!this.canAccessView(this.currentView)) {
+      this.currentView = this.getFirstAllowedView();
+    }
+  }
+
   get structureLeaderLabel(): string {
     if (!this.structureLeader) {
-      return 'Sin líder asignado';
+      return 'Sin lÃ­der asignado';
     }
     return this.structureLeader.name;
   }
@@ -527,11 +825,102 @@ export class AdminComponent implements OnInit {
 
 
   onAdminNavSelect(viewId: string): void {
-    this.setView(viewId as 'orders' | 'customers' | 'products' | 'stats');
+    this.setView(viewId as AdminViewId);
   }
 
-  setView(view: 'orders' | 'customers' | 'products' | 'stats'): void {
+  setView(view: AdminViewId): void {
+    if (!this.canAccessView(view)) {
+      return;
+    }
     this.currentView = view;
+    if (view === 'stocks' || view === 'pos') {
+      this.loadStocksAndPosState();
+      return;
+    }
+    if (view === 'settings') {
+      this.syncBusinessConfigDraft();
+    }
+  }
+
+  private loadStocksAndPosState(): void {
+    this.adminControl.loadStocksAndPosState().subscribe({
+      next: (state) => {
+        this.stocks = (state.stocks ?? []).map((stock) => ({
+          id: stock.id,
+          name: stock.name,
+          location: stock.location,
+          linkedUserIds: stock.linkedUserIds ?? [],
+          inventory: this.normalizeInventoryRecord(stock.inventory as Record<number, number> | Record<string, number>)
+        }));
+
+        this.transfers = (state.transfers ?? []).map((transfer) => ({
+          id: transfer.id,
+          sourceStockId: transfer.sourceStockId,
+          destinationStockId: transfer.destinationStockId,
+          lines: (transfer.lines ?? []).map((line) => ({ productId: Number(line.productId), qty: Number(line.qty) })),
+          status: transfer.status,
+          createdAt: transfer.createdAt ?? '',
+          createdByUserId: transfer.createdByUserId ?? null,
+          receivedAt: transfer.receivedAt,
+          receivedByUserId: transfer.receivedByUserId ?? null
+        }));
+
+        this.inventoryMovements = (state.movements ?? []).map((movement) => ({
+          id: movement.id,
+          type: movement.type,
+          stockId: movement.stockId,
+          productId: Number(movement.productId),
+          qty: Number(movement.qty),
+          createdAt: movement.createdAt ?? '',
+          userId: movement.userId ?? null,
+          reason: movement.reason,
+          referenceId: movement.referenceId
+        }));
+
+        this.stockDamages = this.inventoryMovements
+          .filter((movement) => movement.type === 'damaged')
+          .map((movement) => ({
+            id: movement.referenceId || movement.id,
+            stockId: movement.stockId,
+            productId: movement.productId,
+            qty: movement.qty,
+            reason: movement.reason || '',
+            createdAt: movement.createdAt,
+            reportedByUserId: movement.userId ?? null
+          }));
+
+        this.posSales = (state.posSales ?? []).map((sale) => ({
+          id: sale.id,
+          orderId: sale.orderId,
+          stockId: sale.stockId,
+          attendantUserId: sale.attendantUserId ?? null,
+          customerName: sale.customerName,
+          total: Number(sale.total),
+          paymentStatus: sale.paymentStatus,
+          deliveryStatus: sale.deliveryStatus,
+          createdAt: sale.createdAt ?? '',
+          lines: sale.lines ?? []
+        }));
+
+        if (!this.selectedStockId && this.stocks.length) {
+          this.selectStock(this.stocks[0].id);
+        } else if (this.selectedStockId && !this.stocks.some((stock) => stock.id === this.selectedStockId)) {
+          this.selectStock(this.stocks[0]?.id ?? '');
+        }
+      }
+    });
+  }
+
+  private normalizeInventoryRecord(raw: Record<number, number> | Record<string, number> | undefined): Record<number, number> {
+    const source = raw ?? {};
+    return Object.entries(source).reduce<Record<number, number>>((acc, [key, value]) => {
+      const pid = Number(key);
+      if (!Number.isFinite(pid)) {
+        return acc;
+      }
+      acc[pid] = Number(value) || 0;
+      return acc;
+    }, {});
   }
 
   setOrderStatus(status: AdminOrder['status']): void {
@@ -539,6 +928,9 @@ export class AdminComponent implements OnInit {
   }
 
   showActions(): void {
+    if (!this.canAccessView('stats')) {
+      return;
+    }
     this.currentView = 'stats';
     this.isActionsModalOpen = true;
     setTimeout(() => {
@@ -548,11 +940,17 @@ export class AdminComponent implements OnInit {
   }
 
   openNewOrderModal(): void {
+    if (!this.hasPermission('order_create')) {
+      return;
+    }
     this.resetNewOrderForm();
     this.isNewOrderModalOpen = true;
   }
 
   openAddStructureModal(): void {
+    if (!this.hasPermission('customer_add')) {
+      return;
+    }
     this.resetStructureForm();
     this.isAddStructureModalOpen = true;
   }
@@ -571,6 +969,9 @@ export class AdminComponent implements OnInit {
   }
 
   openReceiptModal(customer: AdminCustomer): void {
+    if (!this.hasPermission('commissions_register_payment')) {
+      return;
+    }
     this.receiptTargetCustomer = customer;
     this.receiptFile = null;
     this.receiptError = '';
@@ -601,6 +1002,9 @@ export class AdminComponent implements OnInit {
   }
 
   uploadReceipt(): void {
+    if (!this.hasPermission('commissions_register_payment')) {
+      return;
+    }
     if (!this.receiptTargetCustomer || !this.receiptFile || this.isUploadingReceipt) {
       this.receiptError = 'Selecciona un comprobante.';
       return;
@@ -644,6 +1048,13 @@ export class AdminComponent implements OnInit {
   }
 
   advanceOrder(order: AdminOrder): void {
+    if (
+      (order.status === 'pending' && !this.hasPermission('order_mark_paid')) ||
+      (order.status === 'paid' && !this.hasPermission('order_mark_shipped')) ||
+      (order.status === 'shipped' && !this.hasPermission('order_mark_delivered'))
+    ) {
+      return;
+    }
     if (this.updatingOrderIds.has(order.id)) {
       return;
     }
@@ -673,6 +1084,9 @@ export class AdminComponent implements OnInit {
     this.shippingTrackingNumber = '';
     this.shippingDeliveryPlace = '';
     this.shippingDeliveryDate = '';
+    this.shippingStockId = order.stockId ?? this.selectedStockId;
+    this.shippingFallbackProductId = this.products[0]?.id ?? null;
+    this.shippingFallbackQty = 1;
     this.shippingError = '';
     this.isShippingModalOpen = true;
   }
@@ -680,15 +1094,21 @@ export class AdminComponent implements OnInit {
   closeShippingModal(): void {
     this.isShippingModalOpen = false;
     this.shippingTargetOrder = null;
+    this.shippingStockId = '';
+    this.shippingFallbackProductId = null;
+    this.shippingFallbackQty = 1;
     this.shippingError = '';
   }
 
   confirmShipping(): void {
+    if (!this.hasPermission('order_mark_shipped')) {
+      return;
+    }
     if (!this.shippingTargetOrder) {
       return;
     }
     if (this.shippingType === 'carrier' && !this.shippingTrackingNumber.trim()) {
-      this.shippingError = 'Ingresa el nÃºmero de guÃ­a.';
+      this.shippingError = 'Ingresa el nÃƒÂºmero de guÃƒÂ­a.';
       return;
     }
     if (
@@ -698,13 +1118,24 @@ export class AdminComponent implements OnInit {
       this.shippingError = 'Ingresa lugar y fecha de entrega personal.';
       return;
     }
+    if (!this.shippingStockId) {
+      this.shippingError = 'Selecciona el stock origen para el envio.';
+      return;
+    }
+    const dispatchLines = this.resolveDispatchLines(this.shippingTargetOrder);
+    if (!dispatchLines.length) {
+      this.shippingError = 'Agrega producto y cantidad para descontar stock.';
+      return;
+    }
     this.shippingError = '';
     const payload = {
       status: 'shipped' as const,
       shippingType: this.shippingType,
       trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
       deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
-      deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined
+      deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined,
+      stockId: this.shippingStockId,
+      dispatchLines: dispatchLines.map((line) => ({ productId: line.productId, quantity: line.quantity }))
     };
     const orderId = this.shippingTargetOrder.id;
     this.updatingOrderIds.add(orderId);
@@ -721,6 +1152,19 @@ export class AdminComponent implements OnInit {
 
   isUpdatingOrder(orderId: string): boolean {
     return this.updatingOrderIds.has(orderId);
+  }
+
+  canAdvanceOrder(order: AdminOrder): boolean {
+    if (order.status === 'pending') {
+      return this.hasPermission('order_mark_paid');
+    }
+    if (order.status === 'paid') {
+      return this.hasPermission('order_mark_shipped');
+    }
+    if (order.status === 'shipped') {
+      return this.hasPermission('order_mark_delivered');
+    }
+    return false;
   }
 
   updateNewOrderCustomer(customerId: number): void {
@@ -762,18 +1206,26 @@ export class AdminComponent implements OnInit {
   }
 
   getShippingLabel(order: AdminOrder): string {
+    const stockId = order.stockId;
+    const stockLabel = stockId ? this.stockName(stockId) : '';
+    if (order.paymentStatus && order.deliveryStatus) {
+      return `${order.paymentStatus} · ${order.deliveryStatus}${stockLabel ? ` · ${stockLabel}` : ''}`;
+    }
     if (order.shippingType === 'carrier' && order.trackingNumber) {
-      return `GuÃ­a: ${order.trackingNumber}`;
+      return `Guia: ${order.trackingNumber}${stockLabel ? ` · ${stockLabel}` : ''}`;
     }
     if (order.shippingType === 'personal' && (order.deliveryPlace || order.deliveryDate)) {
       const place = order.deliveryPlace ? order.deliveryPlace : 'Entrega personal';
-      const date = order.deliveryDate ? `Â· ${order.deliveryDate}` : '';
-      return `${place}${date}`;
+      const date = order.deliveryDate ? ` · ${order.deliveryDate}` : '';
+      return `${place}${date}${stockLabel ? ` · ${stockLabel}` : ''}`;
     }
-    return '-';
+    return stockLabel || '-';
   }
 
   saveNewOrder(): void {
+    if (!this.hasPermission('order_create')) {
+      return;
+    }
     console.log('[Admin] saveNewOrder() start', {
       newOrderCustomerId: this.newOrderCustomerId,
       items: this.newOrderItems.size,
@@ -788,11 +1240,12 @@ export class AdminComponent implements OnInit {
       console.log('[Admin] saveNewOrder() aborted: customer not found');
       return;
     }
+    const orderItems = this.getNewOrderItems();
     const payload: CreateAdminOrderPayload = {
       customerId: customer.id,
       customerName: customer.name,
       status: this.newOrderStatus,
-      items: this.getNewOrderItems()
+      items: orderItems
     };
     this.isSavingOrder = true;
     console.log('[Admin] saveNewOrder() call createOrder', payload);
@@ -842,7 +1295,7 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.structureLeader = null;
-    this.structureLevel = 'Raíz';
+    this.structureLevel = 'RaÃ­z';
   }
 
   updateStructureField(
@@ -856,6 +1309,9 @@ export class AdminComponent implements OnInit {
   }
 
   saveStructureCustomer(): void {
+    if (!this.hasPermission('customer_add')) {
+      return;
+    }
     const payload: CreateStructureCustomerPayload = {
       name: this.structureForm.name.trim(),
       email: this.structureForm.email.trim(),
@@ -880,6 +1336,53 @@ export class AdminComponent implements OnInit {
   selectCustomer(customerId: number): void {
     const selected = this.customers.find((customer) => customer.id === customerId) ?? null;
     this.selectedCustomer = selected;
+    this.syncSelectedCustomerAccessDraft();
+  }
+
+  updateSelectedCustomerAdminAccess(enabled: boolean): void {
+    this.selectedCustomerAdminAccess = enabled;
+  }
+
+  updateSelectedCustomerPrivilege(privilege: AppPrivilege, enabled: boolean): void {
+    this.selectedCustomerPrivilegeDraft = {
+      ...this.selectedCustomerPrivilegeDraft,
+      [privilege]: enabled
+    };
+  }
+
+  saveSelectedCustomerAccess(): void {
+    if (!this.selectedCustomer || this.isSavingCustomerPrivileges) {
+      return;
+    }
+    if (!this.hasPermission('user_manage_privileges')) {
+      return;
+    }
+    if (!this.hasPermission('user_mark_admin') && this.selectedCustomerAdminAccess) {
+      return;
+    }
+    this.isSavingCustomerPrivileges = true;
+    this.adminControl
+      .updateCustomerPrivileges(this.selectedCustomer.id, {
+        canAccessAdmin: this.selectedCustomerAdminAccess,
+        privileges: normalizePrivileges(this.selectedCustomerPrivilegeDraft)
+      })
+      .pipe(
+        finalize(() => {
+          this.isSavingCustomerPrivileges = false;
+        })
+      )
+      .subscribe({
+        next: (updated) => {
+          this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+          this.syncSelectedCustomerAccessDraft();
+        }
+      });
+  }
+
+  private syncSelectedCustomerAccessDraft(): void {
+    const selected = this.selectedCustomer;
+    this.selectedCustomerAdminAccess = Boolean(selected?.canAccessAdmin);
+    this.selectedCustomerPrivilegeDraft = normalizePrivileges(selected?.privileges);
   }
 
   editProduct(product: AdminProduct): void {
@@ -912,6 +1415,9 @@ export class AdminComponent implements OnInit {
   }
 
   setProductOfMonth(product: AdminProduct): void {
+    if (!this.hasPermission('product_set_month')) {
+      return;
+    }
     if (this.isSettingProductOfMonth) {
       return;
     }
@@ -935,6 +1441,13 @@ export class AdminComponent implements OnInit {
 
 
   saveProduct(): void {
+    const isEditing = this.productForm.id != null;
+    if (isEditing && !this.hasPermission('product_update')) {
+      return;
+    }
+    if (!isEditing && !this.hasPermission('product_add')) {
+      return;
+    }
     if (this.isSavingProduct || !this.isProductFormValid) {
       return;
     }
@@ -987,6 +1500,132 @@ export class AdminComponent implements OnInit {
           this.announceProductMessage('No se pudo guardar el producto.');
         }
       });
+  }
+
+  get isCampaignFormValid(): boolean {
+    return Boolean(
+      this.campaignForm.name.trim() &&
+        this.campaignForm.hook.trim() &&
+        this.campaignForm.story.trim() &&
+        this.campaignForm.feed.trim() &&
+        this.campaignForm.banner.trim()
+    );
+  }
+
+  editCampaign(campaign: AdminCampaign): void {
+    this.campaignForm = {
+      id: campaign.id,
+      name: campaign.name,
+      active: campaign.active,
+      hook: campaign.hook || '',
+      description: campaign.description || '',
+      story: campaign.story || '',
+      feed: campaign.feed || '',
+      banner: campaign.banner || '',
+      heroImage: campaign.heroImage || '',
+      heroBadge: campaign.heroBadge || '',
+      heroTitle: campaign.heroTitle || '',
+      heroAccent: campaign.heroAccent || '',
+      heroTail: campaign.heroTail || '',
+      heroDescription: campaign.heroDescription || '',
+      ctaPrimaryText: campaign.ctaPrimaryText || '',
+      ctaSecondaryText: campaign.ctaSecondaryText || '',
+      benefits: (campaign.benefits ?? []).join(', ')
+    };
+    this.campaignMessage = `Editando campana: ${campaign.name}.`;
+  }
+
+  updateCampaignField(
+    field:
+      | 'name'
+      | 'hook'
+      | 'description'
+      | 'story'
+      | 'feed'
+      | 'banner'
+      | 'heroImage'
+      | 'heroBadge'
+      | 'heroTitle'
+      | 'heroAccent'
+      | 'heroTail'
+      | 'heroDescription'
+      | 'ctaPrimaryText'
+      | 'ctaSecondaryText'
+      | 'benefits',
+    value: string
+  ): void {
+    this.campaignForm = {
+      ...this.campaignForm,
+      [field]: value
+    };
+  }
+
+  saveCampaign(): void {
+    if (this.isSavingCampaign || !this.isCampaignFormValid) {
+      return;
+    }
+    this.isSavingCampaign = true;
+    const benefits = (this.campaignForm.benefits || '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+    this.adminControl
+      .saveCampaign({
+        id: this.campaignForm.id || undefined,
+        name: this.campaignForm.name.trim(),
+        active: this.campaignForm.active,
+        hook: this.campaignForm.hook.trim(),
+        description: this.campaignForm.description.trim() || undefined,
+        story: this.campaignForm.story.trim(),
+        feed: this.campaignForm.feed.trim(),
+        banner: this.campaignForm.banner.trim(),
+        heroImage: this.campaignForm.heroImage.trim() || undefined,
+        heroBadge: this.campaignForm.heroBadge.trim() || undefined,
+        heroTitle: this.campaignForm.heroTitle.trim() || undefined,
+        heroAccent: this.campaignForm.heroAccent.trim() || undefined,
+        heroTail: this.campaignForm.heroTail.trim() || undefined,
+        heroDescription: this.campaignForm.heroDescription.trim() || undefined,
+        ctaPrimaryText: this.campaignForm.ctaPrimaryText.trim() || undefined,
+        ctaSecondaryText: this.campaignForm.ctaSecondaryText.trim() || undefined,
+        benefits
+      })
+      .pipe(
+        finalize(() => {
+          this.isSavingCampaign = false;
+        })
+      )
+      .subscribe({
+        next: (campaign) => {
+          this.campaignMessage = `Campana guardada: ${campaign.name}.`;
+          this.resetCampaignForm();
+        },
+        error: () => {
+          this.campaignMessage = 'No se pudo guardar la campana.';
+        }
+      });
+  }
+
+  resetCampaignForm(): void {
+    this.campaignForm = {
+      id: '',
+      name: '',
+      active: true,
+      hook: '',
+      description: '',
+      story: '',
+      feed: '',
+      banner: '',
+      heroImage: '',
+      heroBadge: '',
+      heroTitle: '',
+      heroAccent: '',
+      heroTail: '',
+      heroDescription: '',
+      ctaPrimaryText: '',
+      ctaSecondaryText: '',
+      benefits: ''
+    };
   }
 
   private resetProductForm(): void {
@@ -1157,6 +1796,453 @@ export class AdminComponent implements OnInit {
     return tags.length ? tags : undefined;
   }
 
+  createStock(): void {
+    if (!this.hasPermission('stock_create')) {
+      return;
+    }
+    const name = this.stockForm.name.trim();
+    const location = this.stockForm.location.trim();
+    if (!name || !location) {
+      return;
+    }
+    this.adminControl.createStock({ name, location }).subscribe({
+      next: (stock) => {
+        this.stockForm = { name: '', location: '' };
+        this.selectedStockId = stock.id;
+        this.loadStocksAndPosState();
+      }
+    });
+  }
+
+  selectStock(stockId: string): void {
+    this.selectedStockId = stockId;
+    const selected = this.selectedStock;
+    if (!selected) {
+      return;
+    }
+    this.stockDamageForm.stockId = selected.id;
+    this.stockEntryForm.stockId = selected.id;
+    this.stockTransferForm.sourceStockId = this.stockTransferForm.sourceStockId || selected.id;
+    this.posForm.stockId = this.posForm.stockId || selected.id;
+    this.stockUserLinkDraft = new Set(selected.linkedUserIds);
+  }
+
+  saveStockLinks(): void {
+    const stock = this.selectedStock;
+    if (!stock) {
+      return;
+    }
+    this.adminControl
+      .updateStock(stock.id, { linkedUserIds: [...this.stockUserLinkDraft] })
+      .subscribe({ next: () => this.loadStocksAndPosState() });
+  }
+
+  openStockEntryModal(productId: number): void {
+    const stockId = this.selectedStockId;
+    if (!stockId) {
+      return;
+    }
+    this.stockEntryForm.stockId = stockId;
+    this.stockEntryForm.productId = productId;
+    this.stockEntryForm.qty = 1;
+    this.stockEntryForm.note = '';
+    this.isStockEntryModalOpen = true;
+  }
+
+  closeStockEntryModal(): void {
+    this.isStockEntryModalOpen = false;
+  }
+
+  registerStockEntry(): void {
+    if (!this.hasPermission('stock_add_inventory')) {
+      return;
+    }
+    const { stockId, productId, qty, note, createdByUserId } = this.stockEntryForm;
+    if (!stockId || !productId || qty <= 0) {
+      return;
+    }
+    const normalizedQty = Math.floor(Number(qty));
+    if (!Number.isFinite(normalizedQty) || normalizedQty <= 0) {
+      return;
+    }
+    this.adminControl.registerStockEntry(stockId, {
+      productId,
+      qty: normalizedQty,
+      note: note.trim() || undefined,
+      userId: createdByUserId
+    }).subscribe({
+      next: () => {
+        this.closeStockEntryModal();
+        this.loadStocksAndPosState();
+      }
+    });
+  }
+
+  addTransferLine(): void {
+    this.stockTransferForm.lines = [...this.stockTransferForm.lines, { productId: null, qty: 1 }];
+  }
+
+  removeTransferLine(index: number): void {
+    if (this.stockTransferForm.lines.length <= 1) {
+      return;
+    }
+    this.stockTransferForm.lines = this.stockTransferForm.lines.filter((_, idx) => idx !== index);
+  }
+
+  createTransfer(): void {
+    if (!this.hasPermission('stock_create_transfer')) {
+      return;
+    }
+    const { sourceStockId, destinationStockId, createdByUserId } = this.stockTransferForm;
+    const normalizedLines = this.normalizeTransferLines(this.stockTransferForm.lines);
+    if (!sourceStockId || !destinationStockId || sourceStockId === destinationStockId || !normalizedLines.length) {
+      return;
+    }
+    const sourceStock = this.stocks.find((stock) => stock.id === sourceStockId);
+    if (!sourceStock) {
+      return;
+    }
+    const hasInsufficient = normalizedLines.some((line) => (sourceStock.inventory[line.productId] ?? 0) < line.qty);
+    if (hasInsufficient) {
+      return;
+    }
+    this.adminControl
+      .createStockTransfer({ sourceStockId, destinationStockId, lines: normalizedLines, createdByUserId })
+      .subscribe({
+        next: () => {
+          this.stockTransferForm.lines = [{ productId: this.products[0]?.id ?? null, qty: 1 }];
+          this.loadStocksAndPosState();
+        }
+      });
+  }
+
+  receiveTransfer(transferId: string): void {
+    if (!this.hasPermission('stock_receive_transfer')) {
+      return;
+    }
+    const transfer = this.transfers.find((item) => item.id === transferId);
+    if (!transfer || transfer.status === 'received') {
+      return;
+    }
+    const destination = this.stocks.find((stock) => stock.id === transfer.destinationStockId);
+    if (!destination || !this.transferReceiverUserId) {
+      return;
+    }
+    if (!destination.linkedUserIds.includes(this.transferReceiverUserId)) {
+      return;
+    }
+
+    this.adminControl
+      .receiveStockTransfer(transferId, { receivedByUserId: this.transferReceiverUserId })
+      .subscribe({ next: () => this.loadStocksAndPosState() });
+  }
+
+  openDamageModal(productId: number): void {
+    const stockId = this.selectedStockId;
+    if (!stockId) {
+      return;
+    }
+    this.stockDamageForm.stockId = stockId;
+    this.stockDamageForm.productId = productId;
+    this.stockDamageForm.qty = 1;
+    this.stockDamageForm.reason = '';
+    this.isStockDamageModalOpen = true;
+  }
+
+  closeDamageModal(): void {
+    this.isStockDamageModalOpen = false;
+  }
+
+  registerDamage(): void {
+    if (!this.hasPermission('stock_mark_damaged')) {
+      return;
+    }
+    const { stockId, productId, qty, reason, reportedByUserId } = this.stockDamageForm;
+    if (!stockId || !productId || qty <= 0 || !reason.trim()) {
+      return;
+    }
+    const stock = this.stocks.find((entry) => entry.id === stockId);
+    if (!stock) {
+      return;
+    }
+    const currentQty = stock.inventory[productId] ?? 0;
+    if (currentQty < qty) {
+      return;
+    }
+    this.adminControl.registerStockDamage(stockId, {
+      productId,
+      qty,
+      reason: reason.trim(),
+      userId: reportedByUserId
+    }).subscribe({
+      next: () => {
+        this.stockDamageForm.qty = 1;
+        this.stockDamageForm.reason = '';
+        this.closeDamageModal();
+        this.loadStocksAndPosState();
+      }
+    });
+  }
+
+  toggleStockUserLink(userId: number, enabled: boolean): void {
+    if (enabled) {
+      this.stockUserLinkDraft.add(userId);
+      return;
+    }
+    this.stockUserLinkDraft.delete(userId);
+  }
+
+  isStockUserLinked(userId: number): boolean {
+    return this.stockUserLinkDraft.has(userId);
+  }
+
+  isReceiverEligible(transfer: StockTransfer): boolean {
+    const destination = this.stocks.find((stock) => stock.id === transfer.destinationStockId);
+    if (!destination || !this.transferReceiverUserId) {
+      return false;
+    }
+    return destination.linkedUserIds.includes(this.transferReceiverUserId);
+  }
+
+  movementQtyClass(movement: InventoryMovement): string {
+    return this.movementSignedQty(movement) >= 0 ? 'text-accent' : 'text-red-600';
+  }
+
+  stockName(stockId: string): string {
+    return this.stocks.find((stock) => stock.id === stockId)?.name ?? 'Sin stock';
+  }
+
+  customerName(customerId: number | null | undefined): string {
+    if (!customerId) {
+      return '-';
+    }
+    return this.customers.find((customer) => customer.id === customerId)?.name ?? `Usuario ${customerId}`;
+  }
+
+  productName(productId: number): string {
+    return this.products.find((product) => product.id === productId)?.name ?? `Producto ${productId}`;
+  }
+
+  stockQty(stockId: string, productId: number): number {
+    const stock = this.stocks.find((entry) => entry.id === stockId);
+    return stock?.inventory[productId] ?? 0;
+  }
+
+  togglePosProductSelection(productId: number, selected: boolean): void {
+    if (selected) {
+      this.posItems.set(productId, this.posItems.get(productId) ?? 1);
+      return;
+    }
+    this.posItems.delete(productId);
+  }
+
+  updatePosQty(productId: number, qtyRaw: string): void {
+    const qty = Math.max(1, Number(qtyRaw) || 1);
+    if (!this.posItems.has(productId)) {
+      return;
+    }
+    this.posItems.set(productId, qty);
+  }
+
+  getPosItems(): AdminOrderItem[] {
+    return this.products
+      .filter((product) => this.posItems.has(product.id))
+      .map((product) => ({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: this.posItems.get(product.id) ?? 1
+      }));
+  }
+
+  registerPosSale(): void {
+    if (!this.hasPermission('pos_register_sale')) {
+      return;
+    }
+    if (!this.posForm.stockId || !this.posForm.attendantUserId || !this.posItems.size) {
+      return;
+    }
+    const lineItems = this.getPosItems();
+    const stockError = this.validateStockAvailability(this.posForm.stockId, lineItems);
+    if (stockError) {
+      return;
+    }
+    this.adminControl
+      .registerPosSale({
+        stockId: this.posForm.stockId,
+        attendantUserId: this.posForm.attendantUserId,
+        customerName: this.posForm.customerName.trim() || 'Venta mostrador',
+        paymentStatus: 'paid_branch',
+        deliveryStatus: 'delivered_branch',
+        items: lineItems
+      })
+      .subscribe({
+        next: () => {
+          this.posItems.clear();
+          this.posForm.customerName = '';
+          this.posForm.status = 'paid';
+          this.adminControl.load().subscribe();
+          this.loadStocksAndPosState();
+        }
+      });
+  }
+
+  saveBusinessConfig(): void {
+    if (!this.hasPermission('config_manage')) {
+      return;
+    }
+    this.isSavingBusinessConfig = true;
+    this.businessConfigMessage = '';
+    this.adminControl
+      .saveBusinessConfig({ config: structuredClone(this.businessConfigDraft) })
+      .pipe(finalize(() => (this.isSavingBusinessConfig = false)))
+      .subscribe({
+        next: (config) => {
+          this.businessConfigDraft = structuredClone(config);
+          this.businessConfigMessage = 'Configuracion guardada.';
+        },
+        error: () => {
+          this.businessConfigMessage = 'No se pudo guardar la configuracion.';
+        }
+      });
+  }
+
+  restoreBusinessConfigDefaults(): void {
+    if (!this.hasPermission('config_manage')) {
+      return;
+    }
+    this.businessConfigDraft = this.getDefaultBusinessConfig();
+    this.businessConfigMessage = 'Se cargaron valores por defecto locales. Guarda para aplicar.';
+  }
+
+  private syncBusinessConfigDraft(): void {
+    const inlineConfig = this.businessConfig;
+    if (inlineConfig) {
+      this.businessConfigDraft = structuredClone(inlineConfig);
+      return;
+    }
+    this.adminControl.getBusinessConfig().subscribe({
+      next: (config) => {
+        this.businessConfigDraft = structuredClone(config);
+      }
+    });
+  }
+
+  private getDefaultBusinessConfig(): AppBusinessConfig {
+    return {
+      version: 'app-v1',
+      rewards: {
+        version: 'v1',
+        activationNetMin: 2500,
+        discountTiers: [
+          { min: 3600, max: 8000, rate: 0.3 },
+          { min: 8001, max: 12000, rate: 0.4 },
+          { min: 12001, max: null, rate: 0.5 }
+        ],
+        commissionByDepth: { '1': 0.1, '2': 0.05, '3': 0.03 },
+        payoutDay: 10,
+        cutRule: 'hard_cut_no_pass'
+      },
+      orders: {
+        requireStockOnShipped: true,
+        requireDispatchLinesOnShipped: true
+      },
+      pos: {
+        defaultCustomerName: 'Venta mostrador',
+        defaultPaymentStatus: 'paid_branch',
+        defaultDeliveryStatus: 'delivered_branch',
+        orderStatusByDeliveryStatus: {
+          delivered_branch: 'delivered',
+          paid_branch: 'paid'
+        }
+      },
+      stocks: {
+        requireLinkedUserForTransferReceive: true
+      },
+      adminWarnings: {
+        showCommissions: true,
+        showShipping: true,
+        showPendingPayments: true,
+        showPendingTransfers: true,
+        showPosSalesToday: true
+      }
+    };
+  }
+
+  private resolveDispatchLines(order: AdminOrder): AdminOrderItem[] {
+    const existingLines = Array.isArray(order.items) ? order.items : [];
+    if (existingLines.length) {
+      return existingLines;
+    }
+    if (!this.shippingFallbackProductId || this.shippingFallbackQty <= 0) {
+      return [];
+    }
+    const product = this.products.find((entry) => entry.id === this.shippingFallbackProductId);
+    if (!product) {
+      return [];
+    }
+    const lines: AdminOrderItem[] = [
+      {
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: this.shippingFallbackQty
+      }
+    ];
+    return lines;
+  }
+
+  private validateStockAvailability(stockId: string, lines: AdminOrderItem[]): string {
+    for (const item of lines) {
+      const currentQty = this.stockQty(stockId, item.productId);
+      if (currentQty < item.quantity) {
+        return `Stock insuficiente para ${this.productName(item.productId)}.`;
+      }
+    }
+    return '';
+  }
+
+  private normalizeTransferLines(lines: Array<{ productId: number | null; qty: number }>): StockTransferLine[] {
+    const grouped = new Map<number, number>();
+    for (const line of lines) {
+      if (!line.productId) {
+        continue;
+      }
+      const qty = Math.floor(Number(line.qty));
+      if (!Number.isFinite(qty) || qty <= 0) {
+        continue;
+      }
+      grouped.set(line.productId, (grouped.get(line.productId) ?? 0) + qty);
+    }
+    return Array.from(grouped.entries()).map(([productId, qty]) => ({ productId, qty }));
+  }
+
+  private movementTypeLabel(type: InventoryMovementType): string {
+    if (type === 'entry') {
+      return 'Entrada';
+    }
+    if (type === 'exit_order') {
+      return 'Salida por envio';
+    }
+    if (type === 'exit_transfer') {
+      return 'Salida por transferencia';
+    }
+    if (type === 'entry_transfer') {
+      return 'Entrada por transferencia';
+    }
+    if (type === 'damaged') {
+      return 'Dano';
+    }
+    return 'Salida por venta POS';
+  }
+
+  private movementSignedQty(movement: InventoryMovement): number {
+    if (movement.type === 'entry' || movement.type === 'entry_transfer') {
+      return movement.qty;
+    }
+    return movement.qty * -1;
+  }
+
   private structureNodeLabel(name?: string): string {
     const value = (name ?? '').trim();
     if (!value) {
@@ -1225,3 +2311,7 @@ export class AdminComponent implements OnInit {
   }
 
 }
+
+
+
+

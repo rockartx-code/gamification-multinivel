@@ -1,0 +1,532 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Arquitectura BI mensual: S3 raw orders, Athena monthly CSV, Dynamo history ingest,
+  monthly archive to Glacier/Deep Archive, orchestrated by Step Functions and EventBridge Scheduler.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: gamificacion-bi
+  ScheduleExpression:
+    Type: String
+    Default: cron(0 3 1 * ? *)
+    Description: Ejecuta el dia 1 de cada mes a las 03:00 UTC.
+  AthenaWorkGroup:
+    Type: String
+    Default: primary
+  AthenaDatabaseName:
+    Type: String
+    Default: bi_orders
+  AthenaTableName:
+    Type: String
+    Default: orders_json
+  ArchiveStorageClass:
+    Type: String
+    Default: DEEP_ARCHIVE
+    AllowedValues:
+      - GLACIER
+      - DEEP_ARCHIVE
+  CsvResultsPrefix:
+    Type: String
+    Default: athena-results/monthly-stats/
+  RawOrdersPrefix:
+    Type: String
+    Default: Ordenes/
+  ArchivePrefix:
+    Type: String
+    Default: archives/orders/
+
+Resources:
+  DataLakeBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  BehaviorHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      TableName: !Sub "${ProjectName}-behavior-history"
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+
+  AthenaDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref AthenaDatabaseName
+
+  AthenaOrdersTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref AthenaDatabaseName
+      TableInput:
+        Name: !Ref AthenaTableName
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          EXTERNAL: "TRUE"
+          classification: json
+          has_encrypted_data: "false"
+        PartitionKeys:
+          - Name: yyyymm
+            Type: string
+        StorageDescriptor:
+          Location: !Sub "s3://${DataLakeBucket}/${RawOrdersPrefix}"
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.openx.data.jsonserde.JsonSerDe
+            Parameters:
+              ignore.malformed.json: "true"
+          Columns:
+            - Name: entityType
+              Type: string
+            - Name: orderId
+              Type: string
+            - Name: customerId
+              Type: string
+            - Name: customerName
+              Type: string
+            - Name: buyerType
+              Type: string
+            - Name: status
+              Type: string
+            - Name: netTotal
+              Type: double
+            - Name: grossSubtotal
+              Type: double
+            - Name: discountRate
+              Type: double
+            - Name: discountAmount
+              Type: double
+            - Name: monthKey
+              Type: string
+            - Name: createdAt
+              Type: string
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaDataAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3RW
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "arn:aws:s3:::${DataLakeBucket}/*"
+              - Sid: S3List
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${DataLakeBucket}"
+              - Sid: DynamoWrite
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:BatchWriteItem
+                Resource: !GetAtt BehaviorHistoryTable.Arn
+
+  ResolveMonthFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-resolve-month"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          from datetime import datetime, timezone
+          def handler(event, context):
+              now = datetime.now(timezone.utc)
+              y = now.year
+              m = now.month - 1
+              if m == 0:
+                  y -= 1
+                  m = 12
+              target = f"{y}{m:02d}"
+              out = dict(event or {})
+              out["targetMonth"] = target
+              return out
+
+  IngestCsvFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-bi-ingest-csv"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 120
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref BehaviorHistoryTable
+      Code:
+        ZipFile: |
+          import csv, io, os, boto3
+          s3 = boto3.client("s3")
+          ddb = boto3.client("dynamodb")
+          TABLE = os.environ["TABLE_NAME"]
+          def to_num(v):
+              try:
+                  return str(float(v))
+              except Exception:
+                  return "0"
+          def handler(event, context):
+              bucket = event["bucket"]
+              key = event["key"]
+              month = event["targetMonth"]
+              obj = s3.get_object(Bucket=bucket, Key=key)
+              content = obj["Body"].read().decode("utf-8")
+              reader = csv.DictReader(io.StringIO(content))
+              rows = list(reader)
+              if not rows:
+                  return {"ok": True, "written": 0, "month": month, "key": key}
+              row = rows[0]
+              items = [
+                  {
+                      "PutRequest": {
+                          "Item": {
+                              "PK": {"S": f"MONTH#{month}"},
+                              "SK": {"S": "METRIC#orders"},
+                              "value": {"N": to_num(row.get("orders", 0))},
+                              "sourceCsvKey": {"S": key}
+                          }
+                      }
+                  },
+                  {
+                      "PutRequest": {
+                          "Item": {
+                              "PK": {"S": f"MONTH#{month}"},
+                              "SK": {"S": "METRIC#revenue"},
+                              "value": {"N": to_num(row.get("revenue", 0))},
+                              "sourceCsvKey": {"S": key}
+                          }
+                      }
+                  },
+                  {
+                      "PutRequest": {
+                          "Item": {
+                              "PK": {"S": f"MONTH#{month}"},
+                              "SK": {"S": "METRIC#avg_ticket"},
+                              "value": {"N": to_num(row.get("avg_ticket", 0))},
+                              "sourceCsvKey": {"S": key}
+                          }
+                      }
+                  }
+              ]
+              ddb.batch_write_item(RequestItems={TABLE: items})
+              return {"ok": True, "written": len(items), "month": month, "key": key}
+
+  ArchiveMonthFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-archive-month"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 900
+      MemorySize: 2048
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          STORAGE_CLASS: !Ref ArchiveStorageClass
+      Code:
+        ZipFile: |
+          import io, os, json, tarfile, hashlib, boto3
+          s3 = boto3.client("s3")
+          STORAGE_CLASS = os.environ.get("STORAGE_CLASS", "DEEP_ARCHIVE")
+          def handler(event, context):
+              bucket = event["bucket"]
+              month = event["targetMonth"]
+              source_prefix = event["sourcePrefix"]
+              archive_prefix = event["archivePrefix"]
+              month_prefix = f"{source_prefix}{month}/"
+              archive_key = f"{archive_prefix}{month}.tar.gz"
+              manifest_key = f"{archive_prefix}{month}.manifest.json"
+
+              paginator = s3.get_paginator("list_objects_v2")
+              keys = []
+              for page in paginator.paginate(Bucket=bucket, Prefix=month_prefix):
+                  for obj in page.get("Contents", []):
+                      k = obj["Key"]
+                      if not k.endswith("/"):
+                          keys.append(k)
+              if not keys:
+                  return {"ok": True, "archived": False, "reason": "no_objects", "month": month}
+
+              buf = io.BytesIO()
+              with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+                  for k in keys:
+                      body = s3.get_object(Bucket=bucket, Key=k)["Body"].read()
+                      ti = tarfile.TarInfo(name=k.replace(month_prefix, ""))
+                      ti.size = len(body)
+                      tar.addfile(ti, io.BytesIO(body))
+              data = buf.getvalue()
+              sha256 = hashlib.sha256(data).hexdigest()
+
+              s3.put_object(
+                  Bucket=bucket,
+                  Key=archive_key,
+                  Body=data,
+                  StorageClass=STORAGE_CLASS,
+                  ContentType="application/gzip"
+              )
+              manifest = {
+                  "month": month,
+                  "sourcePrefix": month_prefix,
+                  "archiveKey": archive_key,
+                  "objectCount": len(keys),
+                  "sha256": sha256
+              }
+              s3.put_object(
+                  Bucket=bucket,
+                  Key=manifest_key,
+                  Body=json.dumps(manifest).encode("utf-8"),
+                  ContentType="application/json"
+              )
+
+              # Batch delete in chunks of 1000
+              for i in range(0, len(keys), 1000):
+                  chunk = keys[i:i+1000]
+                  s3.delete_objects(
+                      Bucket=bucket,
+                      Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True}
+                  )
+              return {"ok": True, "archived": True, "month": month, "archiveKey": archive_key, "deleted": len(keys)}
+
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionsPipelinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AthenaExec
+                Effect: Allow
+                Action:
+                  - athena:StartQueryExecution
+                  - athena:GetQueryExecution
+                Resource: "*"
+              - Sid: InvokeLambdas
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt ResolveMonthFunction.Arn
+                  - !GetAtt IngestCsvFunction.Arn
+                  - !GetAtt ArchiveMonthFunction.Arn
+
+  BiPipelineStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub "${ProjectName}-monthly-bi-pipeline"
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      DefinitionString: !Sub |
+        {
+          "StartAt": "ResolveMonth",
+          "States": {
+            "ResolveMonth": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${ResolveMonthFunction.Arn}",
+                "Payload.$": "$"
+              },
+              "ResultPath": "$.ResolveMonthResult",
+              "Next": "PrepareContext"
+            },
+            "PrepareContext": {
+              "Type": "Pass",
+              "Parameters": {
+                "targetMonth.$": "$.ResolveMonthResult.Payload.targetMonth",
+                "dataBucket": "${DataLakeBucket}",
+                "csvPrefix": "${CsvResultsPrefix}",
+                "rawOrdersPrefix": "${RawOrdersPrefix}",
+                "archivePrefix": "${ArchivePrefix}"
+              },
+              "ResultPath": "$.ctx",
+              "Next": "StartAthenaQuery"
+            },
+            "StartAthenaQuery": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:athena:startQueryExecution",
+              "Parameters": {
+                "WorkGroup": "${AthenaWorkGroup}",
+                "QueryExecutionContext": {
+                  "Database": "${AthenaDatabaseName}"
+                },
+                "ResultConfiguration": {
+                  "OutputLocation": "s3://${DataLakeBucket}/${CsvResultsPrefix}"
+                },
+                "QueryString.$": "States.Format(\"SELECT '{}' AS yyyymm, COUNT(1) AS orders, COALESCE(SUM(netTotal), 0) AS revenue, COALESCE(AVG(netTotal), 0) AS avg_ticket FROM ${AthenaTableName} WHERE yyyymm='{}'\", $.ctx.targetMonth, $.ctx.targetMonth)"
+              },
+              "ResultPath": "$.AthenaStart",
+              "Next": "WaitAthena"
+            },
+            "WaitAthena": {
+              "Type": "Wait",
+              "Seconds": 20,
+              "Next": "GetAthenaStatus"
+            },
+            "GetAthenaStatus": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:athena:getQueryExecution",
+              "Parameters": {
+                "QueryExecutionId.$": "$.AthenaStart.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaStatus",
+              "Next": "AthenaState"
+            },
+            "AthenaState": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.AthenaStatus.QueryExecution.Status.State",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "IngestCsvToDynamo"
+                },
+                {
+                  "Variable": "$.AthenaStatus.QueryExecution.Status.State",
+                  "StringEquals": "FAILED",
+                  "Next": "AthenaFailed"
+                },
+                {
+                  "Variable": "$.AthenaStatus.QueryExecution.Status.State",
+                  "StringEquals": "CANCELLED",
+                  "Next": "AthenaFailed"
+                }
+              ],
+              "Default": "WaitAthena"
+            },
+            "IngestCsvToDynamo": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${IngestCsvFunction.Arn}",
+                "Payload": {
+                  "bucket.$": "$.ctx.dataBucket",
+                  "key.$": "States.Format('{}{}.csv', $.ctx.csvPrefix, $.AthenaStart.QueryExecutionId)",
+                  "targetMonth.$": "$.ctx.targetMonth"
+                }
+              },
+              "ResultPath": "$.IngestResult",
+              "Next": "ArchiveMonthRawOrders"
+            },
+            "ArchiveMonthRawOrders": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${ArchiveMonthFunction.Arn}",
+                "Payload": {
+                  "bucket.$": "$.ctx.dataBucket",
+                  "targetMonth.$": "$.ctx.targetMonth",
+                  "sourcePrefix.$": "$.ctx.rawOrdersPrefix",
+                  "archivePrefix.$": "$.ctx.archivePrefix"
+                }
+              },
+              "ResultPath": "$.ArchiveResult",
+              "End": true
+            },
+            "AthenaFailed": {
+              "Type": "Fail",
+              "Cause": "Athena query execution failed or was cancelled."
+            }
+          }
+        }
+
+  SchedulerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SchedulerStartStateMachine
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref BiPipelineStateMachine
+
+  MonthlyBiSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub "${ProjectName}-monthly-bi-schedule"
+      Description: Ejecuta pipeline BI mensual.
+      State: ENABLED
+      ScheduleExpression: !Ref ScheduleExpression
+      FlexibleTimeWindow:
+        Mode: OFF
+      Target:
+        Arn: !Ref BiPipelineStateMachine
+        RoleArn: !GetAtt SchedulerExecutionRole.Arn
+        Input: "{}"
+
+Outputs:
+  DataLakeBucketName:
+    Description: Bucket para raw orders, resultados Athena y archivos mensuales.
+    Value: !Ref DataLakeBucket
+  DynamoBehaviorHistoryTableName:
+    Description: Tabla de historico de comportamiento.
+    Value: !Ref BehaviorHistoryTable
+  StateMachineArn:
+    Description: ARN de Step Functions.
+    Value: !Ref BiPipelineStateMachine
+  ScheduleName:
+    Description: Nombre del schedule mensual.
+    Value: !Ref MonthlyBiSchedule

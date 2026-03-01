@@ -1,9 +1,9 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
-import { AuthService } from '../services/auth.service';
+import { AuthService, AuthUser } from '../services/auth.service';
 
-const roleHome = (role: 'admin' | 'cliente'): string => (role === 'admin' ? '/admin' : '/dashboard');
+const userHome = (auth: AuthService, user: AuthUser): string => (auth.hasAdminPanelAccess(user) ? '/admin' : '/dashboard');
 
 export const loginGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
@@ -13,7 +13,7 @@ export const loginGuard: CanActivateFn = () => {
     return true;
   }
 
-  return router.parseUrl(roleHome(auth.currentUser.role));
+  return router.parseUrl(userHome(auth, auth.currentUser));
 };
 
 export const adminGuard: CanActivateFn = () => {
@@ -24,8 +24,8 @@ export const adminGuard: CanActivateFn = () => {
     return router.parseUrl('/login');
   }
 
-  if (auth.currentUser.role !== 'admin') {
-    return router.parseUrl(roleHome(auth.currentUser.role));
+  if (!auth.hasAdminPanelAccess(auth.currentUser)) {
+    return router.parseUrl(userHome(auth, auth.currentUser));
   }
 
   return true;
@@ -39,8 +39,8 @@ export const dashboardGuard: CanActivateFn = () => {
     return true;
   }
 
-  if (auth.currentUser.role !== 'cliente') {
-    return router.parseUrl(roleHome(auth.currentUser.role));
+  if (auth.hasAdminPanelAccess(auth.currentUser)) {
+    return router.parseUrl('/admin');
   }
 
   return true;

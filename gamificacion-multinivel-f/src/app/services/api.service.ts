@@ -5,18 +5,30 @@ import { environment } from '../../environments/environment';
 import {
   AdminCustomer,
   AdminData,
+  AdminCampaign,
+  AppBusinessConfig,
   AdminOrder,
+  AdminOrderItem,
   AdminProduct,
+  AdminStock,
   AssetResponse,
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   CustomerProfile,
+  InventoryMovement,
+  PosSale,
+  StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
-  SaveAdminProductPayload
+  SaveAdminProductPayload,
+  SaveAdminCampaignPayload,
+  OrderStatusLookup,
+  AssociateMonth,
+  UpdateBusinessConfigPayload,
+  UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
@@ -79,8 +91,38 @@ export class ApiService {
     return this.resolveApi().createOrder(payload);
   }
 
+  createOrderCheckout(
+    orderId: string,
+    payload: {
+      successUrl?: string;
+      failureUrl?: string;
+      pendingUrl?: string;
+      notificationUrl?: string;
+      currencyId?: string;
+    } = {}
+  ): Observable<{
+    orderId: string;
+    checkout?: {
+      provider?: string;
+      preferenceId?: string;
+      initPoint?: string;
+      sandboxInitPoint?: string;
+      externalReference?: string;
+    };
+  }> {
+    return this.resolveApi().createOrderCheckout(orderId, payload);
+  }
+
   getOrder(orderId: string): Observable<AdminOrder> {
     return this.resolveApi().getOrder(orderId);
+  }
+
+  getOrderStatus(orderOrPaymentId: string): Observable<OrderStatusLookup> {
+    return this.resolveApi().getOrderStatus(orderOrPaymentId);
+  }
+
+  getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
+    return this.resolveApi().getAssociateMonth(associateId, monthKey);
   }
 
   getOrders(customerId: string): Observable<AdminOrder[]> {
@@ -113,6 +155,78 @@ export class ApiService {
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
     return this.resolveApi().updateOrderStatus(orderId, payload);
+  }
+
+  listStocks(): Observable<AdminStock[]> {
+    return this.resolveApi().listStocks();
+  }
+
+  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+    return this.resolveApi().createStock(payload);
+  }
+
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+    return this.resolveApi().updateStock(stockId, payload);
+  }
+
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+    return this.resolveApi().registerStockEntry(stockId, payload);
+  }
+
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+    return this.resolveApi().registerStockDamage(stockId, payload);
+  }
+
+  listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
+    return this.resolveApi().listStockTransfers(stockId);
+  }
+
+  createStockTransfer(payload: {
+    sourceStockId: string;
+    destinationStockId: string;
+    lines: Array<{ productId: number; qty: number }>;
+    createdByUserId?: number | null;
+  }): Observable<{ transfer: StockTransfer }> {
+    return this.resolveApi().createStockTransfer(payload);
+  }
+
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+    return this.resolveApi().receiveStockTransfer(transferId, payload);
+  }
+
+  listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
+    return this.resolveApi().listInventoryMovements(stockId);
+  }
+
+  listPosSales(stockId?: string): Observable<PosSale[]> {
+    return this.resolveApi().listPosSales(stockId);
+  }
+
+  registerPosSale(payload: {
+    stockId: string;
+    attendantUserId?: number | null;
+    customerName?: string;
+    paymentStatus?: 'paid_branch';
+    deliveryStatus?: 'delivered_branch';
+    items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+  }): Observable<{ sale: PosSale }> {
+    return this.resolveApi().registerPosSale(payload);
+  }
+
+  updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
+    return this.resolveApi().updateCustomerPrivileges(customerId, payload);
+  }
+
+  saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
+    return this.resolveApi().saveCampaign(payload);
+  }
+
+  getBusinessConfig(): Observable<AppBusinessConfig> {
+    return this.resolveApi().getBusinessConfig();
+  }
+
+  saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
+    return this.resolveApi().saveBusinessConfig(payload);
   }
 
   private resolveApi(): MockApiService | RealApiService {

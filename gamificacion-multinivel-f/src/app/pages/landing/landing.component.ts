@@ -6,7 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
-import { UserDashboardData, FeaturedItem } from '../../models/user-dashboard.model';
+import { UserDashboardData, FeaturedItem, DashboardCampaign } from '../../models/user-dashboard.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { FeatureBadgeComponent } from '../../components/feature-badge/feature-badge.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -25,9 +25,15 @@ export class LandingComponent implements OnInit {
   readonly defaultHero = {
     id: '',
     name: 'COLAGENO',
-    hook: 'Regeneracion, soporte articular y recuperacion diaria.',
+    badge: 'Bienestar avanzado · Uso diario · Resultados medibles',
+    title: 'Cuida tu cuerpo.',
+    accent: 'Potencia tu energia.',
+    tail: 'Compartelo.',
+    description: 'Un sistema de bienestar con recompensas: mejoras tu y ayudas a otros a mejorar.',
+    ctaPrimaryText: 'Obtenerlo ahora',
+    ctaSecondaryText: 'Ver recompensas',
     img: 'images/Colageno-Clean.png',
-    tags: ['10g por porcion', 'Alta biodisponibilidad']
+    tags: ['Energia diaria', 'Recuperacion', 'Salud integral', 'Recompensas']
   };
 
   form = {
@@ -47,6 +53,13 @@ export class LandingComponent implements OnInit {
     id: string;
     name: string;
     hook: string;
+    badge?: string;
+    title?: string;
+    accent?: string;
+    tail?: string;
+    description?: string;
+    ctaPrimaryText?: string;
+    ctaSecondaryText?: string;
     img: string;
     tags: string[];
   } | null = null;
@@ -72,11 +85,31 @@ export class LandingComponent implements OnInit {
   }
 
   get heroTitle(): string {
-    return this.featuredProduct?.name || this.defaultHero.name;
+    return this.featuredProduct?.title || this.defaultHero.title;
   }
 
-  get heroHook(): string {
-    return this.featuredProduct?.hook || this.defaultHero.hook;
+  get heroAccent(): string {
+    return this.featuredProduct?.accent || this.defaultHero.accent;
+  }
+
+  get heroTail(): string {
+    return this.featuredProduct?.tail || this.defaultHero.tail;
+  }
+
+  get heroDescription(): string {
+    return this.featuredProduct?.description || this.defaultHero.description;
+  }
+
+  get heroBadge(): string {
+    return this.featuredProduct?.badge || this.defaultHero.badge;
+  }
+
+  get heroPrimaryCta(): string {
+    return this.featuredProduct?.ctaPrimaryText || this.defaultHero.ctaPrimaryText;
+  }
+
+  get heroSecondaryCta(): string {
+    return this.featuredProduct?.ctaSecondaryText || this.defaultHero.ctaSecondaryText;
   }
 
   get heroImage(): string {
@@ -199,11 +232,25 @@ export class LandingComponent implements OnInit {
   }
 
   private pickFromQuery(data: UserDashboardData, queryId: string): LandingComponent['featuredProduct'] | null {
+    if (queryId.startsWith('campaign:')) {
+      const campaignId = queryId.slice('campaign:'.length);
+      const campaign = (data.campaigns ?? []).find((entry) => entry.id === campaignId);
+      if (campaign) {
+        return this.mapCampaign(campaign);
+      }
+    }
     if (queryId === 'fixed-familia' ) {
       return {
         id: queryId,
         name: '',
         hook: '',
+        title: 'Cuida tu cuerpo.',
+        accent: 'Potencia tu energia.',
+        tail: 'Compartelo.',
+        description: this.defaultHero.description,
+        badge: this.defaultHero.badge,
+        ctaPrimaryText: this.defaultHero.ctaPrimaryText,
+        ctaSecondaryText: this.defaultHero.ctaSecondaryText,
         img: 'images/L-Programa3.png',
         tags: []
       };
@@ -213,6 +260,13 @@ export class LandingComponent implements OnInit {
         id: queryId,
         name: '',
         hook: '',
+        title: 'Cuida tu cuerpo.',
+        accent: 'Potencia tu energia.',
+        tail: 'Compartelo.',
+        description: this.defaultHero.description,
+        badge: this.defaultHero.badge,
+        ctaPrimaryText: this.defaultHero.ctaPrimaryText,
+        ctaSecondaryText: this.defaultHero.ctaSecondaryText,
         img: 'images/L-Programa2.png',
         tags: []
       };
@@ -227,6 +281,13 @@ export class LandingComponent implements OnInit {
         id: productMatch.id,
         name: productMatch.name,
         hook: productMatch.badge || '',
+        title: 'Cuida tu cuerpo.',
+        accent: 'Potencia tu energia.',
+        tail: productMatch.name || 'Compartelo.',
+        description: productMatch.description || this.defaultHero.description,
+        badge: this.defaultHero.badge,
+        ctaPrimaryText: this.defaultHero.ctaPrimaryText,
+        ctaSecondaryText: this.defaultHero.ctaSecondaryText,
         img: productMatch.img,
         tags: productMatch.badge ? [productMatch.badge] : []
       };
@@ -241,6 +302,13 @@ export class LandingComponent implements OnInit {
         id: pom.id,
         name: pom.name,
         hook: pom.hook || pom.badge || '',
+        title: 'Cuida tu cuerpo.',
+        accent: pom.name || 'Potencia tu energia.',
+        tail: 'Compartelo.',
+        description: pom.description || this.defaultHero.description,
+        badge: this.defaultHero.badge,
+        ctaPrimaryText: this.defaultHero.ctaPrimaryText,
+        ctaSecondaryText: this.defaultHero.ctaSecondaryText,
         img: pom.img || '',
         tags: pom.tags?.length ? pom.tags : pom.badge ? [pom.badge] : []
       };
@@ -266,8 +334,32 @@ export class LandingComponent implements OnInit {
       id: item.id,
       name: item.label,
       hook: item.hook,
+      title: 'Cuida tu cuerpo.',
+      accent: item.label || 'Potencia tu energia.',
+      tail: 'Compartelo.',
+      description: item.hook || this.defaultHero.description,
+      badge: this.defaultHero.badge,
+      ctaPrimaryText: this.defaultHero.ctaPrimaryText,
+      ctaSecondaryText: this.defaultHero.ctaSecondaryText,
       img: item.banner || item.feed || item.story,
       tags: []
+    };
+  }
+
+  private mapCampaign(campaign: DashboardCampaign): LandingComponent['featuredProduct'] {
+    return {
+      id: `campaign:${campaign.id}`,
+      name: campaign.name,
+      hook: campaign.hook || '',
+      badge: campaign.heroBadge || this.defaultHero.badge,
+      title: campaign.heroTitle || this.defaultHero.title,
+      accent: campaign.heroAccent || this.defaultHero.accent,
+      tail: campaign.heroTail || this.defaultHero.tail,
+      description: campaign.heroDescription || campaign.description || this.defaultHero.description,
+      ctaPrimaryText: campaign.ctaPrimaryText || this.defaultHero.ctaPrimaryText,
+      ctaSecondaryText: campaign.ctaSecondaryText || this.defaultHero.ctaSecondaryText,
+      img: campaign.heroImage || campaign.banner || campaign.feed || campaign.story || this.defaultHero.img,
+      tags: Array.isArray(campaign.benefits) && campaign.benefits.length ? campaign.benefits : this.defaultHero.tags
     };
   }
 }

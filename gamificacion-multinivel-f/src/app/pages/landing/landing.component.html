@@ -33,8 +33,8 @@
 
       <ui-button size="sm" variant="primary" (pressed)="scrollTo('registro')">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-        Obtenerlo ahora
-      </ui-button>
+              {{ heroPrimaryCta }}
+            </ui-button>
     </div>
   </ui-header>
 
@@ -81,37 +81,37 @@
           <p
             class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-xs text-gray-700">
             <span class="h-2 w-2 rounded-full bg-olive shadow-[0_0_18px_rgba(124,140,114,.55)]"></span>
-            Bienestar avanzado · Uso diario · Resultados medibles
+            {{ heroBadge }}
           </p>
 
           <h1 class="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:mt-6 md:text-6xl">
-            Cuida tu cuerpo.<br />
-            <span class="text-accent">Potencia tu energía.</span><br />
-            Compártelo.
+            {{ heroTitle }}<br />
+            <span class="text-accent">{{ heroAccent }}</span><br />
+            {{ heroTail }}
           </h1>
 
           <p class="mt-4 max-w-xl text-base text-gray-600 sm:text-lg">
-            Un sistema de bienestar con recompensas: mejoras tú y ayudas a otros a mejorar.
+            {{ heroDescription }}
           </p>
 
           <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <ui-button size="lg" variant="primary" class="w-full sm:w-auto" (pressed)="scrollTo('registro')">
               <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-              Obtenerlo ahora
+              {{ heroPrimaryCta }}
             </ui-button>
 
             <ui-button size="lg" variant="ghost" class="w-full sm:w-auto" (pressed)="scrollTo('recompensas')">
               <i class="fa-solid fa-gift" aria-hidden="true"></i>
-              Ver recompensas
+              {{ heroSecondaryCta }}
             </ui-button>
           </div>
 
-          <!-- Benefits: in mobile, 2x2 grid (no horizontal scroll). Desktop: 4 columns -->
           <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-on-gold md:mt-10 ">
-            <feature-badge icon="fa-solid fa-bolt text-accent" label="Energía diaria"></feature-badge>
-            <feature-badge icon="fa-solid fa-heart-pulse text-rose-200" label="Recuperación"></feature-badge>
-            <feature-badge icon="fa-solid fa-leaf text-accent" label="Salud integral"></feature-badge>
-            <feature-badge icon="fa-solid fa-trophy text-gold" label="Recompensas"></feature-badge>
+            <feature-badge
+              *ngFor="let tag of heroTags; let i = index"
+              [icon]="i % 4 === 0 ? 'fa-solid fa-bolt text-accent' : i % 4 === 1 ? 'fa-solid fa-heart-pulse text-rose-200' : i % 4 === 2 ? 'fa-solid fa-leaf text-accent' : 'fa-solid fa-trophy text-gold'"
+              [label]="tag">
+            </feature-badge>
           </div>
         </div>
       </div>
@@ -314,8 +314,8 @@
         <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
           <ui-button size="lg" variant="primary" class="w-full sm:w-auto" (pressed)="scrollTo('registro')">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-            Obtenerlo ahora
-          </ui-button>
+              {{ heroPrimaryCta }}
+            </ui-button>
 
           <ui-button size="lg" variant="ghost" [routerLink]="['/dashboard']" class="w-full sm:w-auto">
             <i class="fa-solid fa-store" aria-hidden="true"></i>

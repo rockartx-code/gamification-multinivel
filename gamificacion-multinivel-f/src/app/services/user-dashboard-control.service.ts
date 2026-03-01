@@ -5,6 +5,7 @@ import {
   DashboardGoal,
   DashboardProduct,
   FeaturedItem,
+  DashboardCampaign,
   NetworkMember,
   UserDashboardData
 } from '../models/user-dashboard.model';
@@ -20,6 +21,7 @@ export class UserDashboardControlService {
   private readonly emptyGoals: DashboardGoal[] = [];
   private readonly emptyProducts: DashboardProduct[] = [];
   private readonly emptyFeatured: FeaturedItem[] = [];
+  private readonly emptyCampaigns: DashboardCampaign[] = [];
   private readonly emptyNetworkMembers: NetworkMember[] = [];
   private cart: Record<string, number> = {};
   private heroQty = 0;
@@ -103,6 +105,10 @@ export class UserDashboardControlService {
 
   get featured(): FeaturedItem[] {
     return this.data?.featured ?? this.emptyFeatured;
+  }
+
+  get campaigns(): DashboardCampaign[] {
+    return this.data?.campaigns ?? this.emptyCampaigns;
   }
 
   get networkMembers(): NetworkMember[] {

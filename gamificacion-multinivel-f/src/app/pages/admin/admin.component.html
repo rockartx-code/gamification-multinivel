@@ -29,7 +29,7 @@
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           Logout
         </ui-button>
-        <ui-button size="sm" variant="primary" (pressed)="openNewOrderModal()">
+        <ui-button size="sm" variant="primary" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           Nuevo
         </ui-button>
@@ -44,7 +44,7 @@
             class="pointer-events-none absolute inset-0 bg-olive-10">
           </div>
           <div class="relative">
-            <div class="text-xs text-gray-600">Navegación</div>
+            <div class="text-xs text-gray-600">NavegaciÃ³n</div>
             <ui-sidebar-nav [links]="adminNavLinks" [activeId]="currentView" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
           </div>
         </div>
@@ -59,7 +59,7 @@
             <div class="mt-1 text-xs text-gray-600">Pedidos: {{ ordersCount }}</div>
             <div class="mt-1 text-xs text-gray-600">Pendientes: {{ pendingCount }}</div>
             <div class="mt-1 text-xs text-gray-600">Pagados: {{ paidCount }}</div>
-            <div class="mt-1 text-xs text-gray-600">Pendientes envío: {{ pendingShippingCount }}</div>
+            <div class="mt-1 text-xs text-gray-600">Pendientes envÃ­o: {{ pendingShippingCount }}</div>
           </div>
         </div>
       </aside>
@@ -82,7 +82,7 @@
 
           </div>
 
-          <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders'">
+          <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders' && canAccessView('orders')">
             <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'pending' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('pending')">
               Pendiente
             </ui-button>
@@ -99,7 +99,7 @@
         </div>
 
         <div class="relative flex-1 space-y-4 overflow-auto p-5">
-          <div class="space-y-4" *ngIf="currentView === 'orders'">
+          <div class="space-y-4" *ngIf="currentView === 'orders' && canAccessView('orders')">
             <div class="grid gap-3 md:grid-cols-4">
               <ui-kpi-card label="Pendientes" [value]="pendingCount"></ui-kpi-card>
               <ui-kpi-card label="Pagados" [value]="paidCount"></ui-kpi-card>
@@ -117,7 +117,7 @@
                   <span class="text-xs text-gray-600">{{ filteredOrders.length }} pedidos</span>
                 </div>
 
-                <ui-button variant="primary" size="sm" iconClass="fa-solid fa-plus" (pressed)="openNewOrderModal()">
+                <ui-button variant="primary" size="sm" iconClass="fa-solid fa-plus" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
                   Nuevo pedido
                 </ui-button>
               </div>
@@ -136,7 +136,7 @@
                           <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
                           <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
                         </div>
-                        <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" extraClass="mt-3" (click)="advanceOrder(order)">
+                        <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" extraClass="mt-3" (click)="advanceOrder(order)">
                           {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
                         </ui-button>
                       </div>
@@ -144,7 +144,7 @@
 
                     <ng-template #desktopHeader>
                       <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                        <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guía / Entrega</div><div>Acción</div>
+                        <div>Fecha de creaciÃ³n</div><div>Cliente</div><div>Total</div><div>Estado</div><div>GuÃ­a / Entrega</div><div>AcciÃ³n</div>
                       </div>
                     </ng-template>
 
@@ -156,7 +156,7 @@
                         <div class="capitalize"><ui-status-badge [status]="order.status"></ui-status-badge></div>
                         <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
                         <div>
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
                           </ui-button>
                         </div>
@@ -168,7 +168,7 @@
             </div>
           </div>
 
-          <div class="space-y-4" *ngIf="currentView === 'customers'">
+          <div class="space-y-4" *ngIf="currentView === 'customers' && canAccessView('customers')">
             <div class="grid gap-3 md:grid-cols-3">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-[11px] text-gray-600">Clientes totales</div>
@@ -216,7 +216,7 @@
                 <div class="hidden md:block overflow-auto">
                   <div class="table-soft text-sm">
                     <div class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
+                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>AcciÃ³n</div>
                     </div>
                     <div *ngFor="let customer of customers" class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ customer.name }}</div>
@@ -267,7 +267,7 @@
                     </div>
                   </div>
                   <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                    <div class="text-xs text-gray-600">Acción sugerida</div>
+                    <div class="text-xs text-gray-600">AcciÃ³n sugerida</div>
                     <div class="mt-1 text-sm text-muted">
                       {{
                       (customer?.commissions ?? 0) > 0
@@ -293,7 +293,7 @@
                     <div class="mt-2 text-xs text-gray-600" *ngIf="customer?.commissionsPrevStatus === 'pending'">
                       CLABE: {{ customer?.clabeInterbancaria || '-' }}
                     </div>
-                    <ui-button size="sm" variant="primary" class="mt-3 w-full" *ngIf="customer?.commissionsPrevStatus === 'pending'" (pressed)="openReceiptModal(customer)">
+                    <ui-button size="sm" variant="primary" class="mt-3 w-full" *ngIf="customer?.commissionsPrevStatus === 'pending' && hasPermission('commissions_register_payment')" (pressed)="openReceiptModal(customer)">
                       <i class="fa-solid fa-coins" aria-hidden="true"></i>
                       Pagar comisiones
                     </ui-button>
@@ -304,20 +304,47 @@
                   </div>
                 </div>
 
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedCustomer as customer">
+                  <div class="text-sm font-semibold text-main">Acceso y privilegios</div>
+                  <div class="mt-1 text-xs text-gray-600">Controla acceso admin y permisos por accion para este usuario.</div>
+
+                  <div class="mt-3 flex items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">
+                    <div class="text-sm text-main">Acceso a panel admin</div>
+                    <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                      <input type="checkbox" [checked]="selectedCustomerAdminAccess" [disabled]="!hasPermission('user_mark_admin')" (change)="updateSelectedCustomerAdminAccess($any($event.target).checked)" />
+                      Habilitado
+                    </label>
+                  </div>
+
+                  <div class="mt-3 max-h-56 overflow-auto rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                    <div *ngFor="let option of customerPrivilegeOptions" class="flex items-center justify-between border-b border-olive-20 py-2 text-xs last:border-b-0">
+                      <span class="text-main">{{ option.label }}</span>
+                      <input type="checkbox" [checked]="customerHasPrivilege(option.key)" [disabled]="!hasPermission('user_manage_privileges')" (change)="updateSelectedCustomerPrivilege(option.key, $any($event.target).checked)" />
+                    </div>
+                  </div>
+
+                  <div class="mt-3 flex justify-end">
+                    <ui-button size="sm" variant="primary" *ngIf="hasPermission('user_manage_privileges')" [disabled]="isSavingCustomerPrivileges" (pressed)="saveSelectedCustomerAccess()">
+                      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                      {{ isSavingCustomerPrivileges ? 'Guardando...' : 'Guardar privilegios' }}
+                    </ui-button>
+                  </div>
+                </div>
+
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4 overflow-hidden">
                   <div class="mt-3 flex gap-2">
                     <ui-button size="sm" variant="ghost">
                       <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                      Cómo agregar
+                      CÃ³mo agregar
                     </ui-button>
 
-                    <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" (pressed)="openAddStructureModal()">
+                    <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('customer_add')" (pressed)="openAddStructureModal()">
                       <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                       Agregar a estructura
                     </ui-button>
                   </div>
 
-                  <div class="mt-1 text-xs text-gray-600">Mock. En producción: pintar con datos reales.</div>
+                  <div class="mt-1 text-xs text-gray-600">Mock. En producciÃ³n: pintar con datos reales.</div>
                   <ui-networkgraph class="block w-full mt-3 h-[220px]" [nodes]="structureGraph.nodes"
                     [links]="structureGraph.links" [viewBoxWidth]="700" [viewBoxHeight]="220" linkStyle="straight"
                     labelMode="short">
@@ -327,7 +354,7 @@
             </div>
           </div>
 
-          <div class="space-y-4" *ngIf="currentView === 'products'">
+          <div class="space-y-4" *ngIf="currentView === 'products' && canAccessView('products')">
             <div class="grid gap-3 md:grid-cols-3">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-[11px] text-gray-600">Productos activos</div>
@@ -346,7 +373,7 @@
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
                 <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
-                  <span>Catálogo</span>
+                  <span>CatÃ¡logo</span>
                   <span class="text-xs text-gray-600">{{ productsCount }} productos</span>
                 </div>
 
@@ -362,11 +389,11 @@
                       <div>Precio: <span class="text-main">{{ formatMoney(product.price) }}</span></div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                      <ui-button size="sm" variant="ghost" (pressed)="editProduct(product)">
+                      <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
                         <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                         Editar
                       </ui-button>
-                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)">
+                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)">
                         <i class="fa-solid fa-star" aria-hidden="true"></i>
                         Producto del mes
                       </ui-button>
@@ -377,15 +404,15 @@
                 <div class="hidden md:block overflow-auto">
                   <div class="table-soft text-sm">
                     <div class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                      <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
+                      <div>Producto</div><div>Precio</div><div>Estado</div><div>AcciÃ³n</div>
                     </div>
                     <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ product.name }}</div>
                       <div>{{ formatMoney(product.price) }}</div>
                       <div>{{ product.active ? 'Activo' : 'Inactivo' }}</div>
                       <div class="flex flex-wrap gap-2">
-                        <ui-button size="sm" variant="ghost" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
-                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
+                        <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
+                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
                       </div>
                     </div>
                   </div>
@@ -397,10 +424,10 @@
                   <div>
                     <div class="text-sm font-semibold text-main">Agregar / editar producto</div>
                     <div class="mt-1 text-xs text-gray-600">
-                      Incluye todas las imágenes requeridas para marketing.
+                      Incluye todas las imÃ¡genes requeridas para marketing.
                     </div>
                   </div>
-                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" [disabled]="!isProductFormValid || isSavingProduct" (click)="saveProduct()">
+                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" *ngIf="hasPermission(productForm.id ? 'product_update' : 'product_add')" [disabled]="!isProductFormValid || isSavingProduct" (click)="saveProduct()">
                     {{ isSavingProduct ? 'Guardando...' : 'Guardar' }}
                   </ui-button>
                 </div>
@@ -411,7 +438,7 @@
                 <div class="mt-4 grid gap-2 md:grid-cols-2">
                   <ui-form-field
                     label="Nombre"
-                    placeholder="COLÁGENO..."
+                    placeholder="COLÃGENO..."
                     [ngModel]="productForm.name"
                     (ngModelChange)="updateProductField('name', $event)"
                     wrapperClass="block md:col-span-2"
@@ -437,8 +464,8 @@
                   </ui-form-field>
 
                   <ui-form-field
-                    label="Descripción corta (hook)"
-                    placeholder="Beneficio principal en 1 línea..."
+                    label="DescripciÃ³n corta (hook)"
+                    placeholder="Beneficio principal en 1 lÃ­nea..."
                     [ngModel]="productForm.hook"
                     (ngModelChange)="updateProductField('hook', $event)"
                     wrapperClass="block md:col-span-2"
@@ -447,7 +474,7 @@
                   <ui-form-field
                     kind="textarea"
                     [rows]="4"
-                    label="Descripción"
+                    label="DescripciÃ³n"
                     placeholder="Describe el producto, beneficios, modo de uso..."
                     [ngModel]="productForm.description"
                     (ngModelChange)="updateProductField('description', $event)"
@@ -494,9 +521,9 @@
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-sm font-semibold text-main">Imágenes / Assets</div>
+                  <div class="text-sm font-semibold text-main">ImÃ¡genes / Assets</div>
                   <div class="mt-1 text-xs text-gray-600">
-                    Sube las imágenes necesarias para: CTA, links de redes, miniatura de carrito y Producto del Mes.
+                    Sube las imÃ¡genes necesarias para: CTA, links de redes, miniatura de carrito y Producto del Mes.
                   </div>
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -530,14 +557,314 @@
             </div>
           </div>
 
-          <div class="space-y-4" *ngIf="currentView === 'stats'">
+          <div class="space-y-4" *ngIf="currentView === 'stocks' && canAccessView('stocks')">
+            <div class="grid gap-3 md:grid-cols-4">
+              <ui-kpi-card label="Stocks" [value]="stocks.length"></ui-kpi-card>
+              <ui-kpi-card label="Transferencias" [value]="transfers.length"></ui-kpi-card>
+              <ui-kpi-card label="Pendientes recibir" [value]="pendingTransfersCount"></ui-kpi-card>
+              <ui-kpi-card label="Danos registrados" [value]="stockDamages.length"></ui-kpi-card>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Alta de stock</div>
+                <div class="mt-1 text-xs text-gray-600">Crea bodega/sucursal con nombre y ubicacion.</div>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <ui-form-field
+                    label="Nombre"
+                    placeholder="Stock Norte"
+                    [ngModel]="stockForm.name"
+                    (ngModelChange)="stockForm.name = $event"></ui-form-field>
+                  <ui-form-field
+                    label="Ubicacion"
+                    placeholder="Monterrey Centro"
+                    [ngModel]="stockForm.location"
+                    (ngModelChange)="stockForm.location = $event"></ui-form-field>
+                </div>
+                <ui-button variant="primary" size="sm" class="mt-3" *ngIf="hasPermission('stock_create')" (pressed)="createStock()">
+                  <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                  Crear stock
+                </ui-button>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Stock activo</div>
+                <div class="mt-1 text-xs text-gray-600">Selecciona stock para inventario y usuarios vinculados.</div>
+                <ui-form-field
+                  wrapperClass="mt-3 block"
+                  kind="select"
+                  label="Stock"
+                  placeholder="Selecciona stock"
+                  [options]="stockOptions"
+                  [ngModel]="selectedStockId"
+                  (ngModelChange)="selectStock($event)"></ui-form-field>
+
+                <div *ngIf="selectedStock as stock" class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                  <div class="text-sm font-semibold text-main">{{ stock.name }}</div>
+                  <div class="text-xs text-gray-600">{{ stock.location }}</div>
+                  <div class="mt-3 text-xs font-semibold text-main">Usuarios vinculados</div>
+                  <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    <label *ngFor="let customer of customers" class="flex items-center gap-2 text-xs text-main">
+                      <input
+                        type="checkbox"
+                        [checked]="isStockUserLinked(customer.id)"
+                        (change)="toggleStockUserLink(customer.id, $any($event.target).checked)" />
+                      {{ customer.name }}
+                    </label>
+                  </div>
+                  <ui-button size="sm" variant="primary" class="mt-3" (pressed)="saveStockLinks()">
+                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                    Guardar vinculacion
+                  </ui-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedStock">
+              <div class="text-sm font-semibold text-main">Inventario por producto</div>
+              <div class="mt-1 text-xs text-gray-600">Solo se registran entradas; las salidas quedan en bitacora.</div>
+              <div class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
+                <div class="grid grid-cols-[1.2fr_.8fr_1fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                  <div>Producto</div><div>Existencia</div><div>Acciones</div>
+                </div>
+                <div *ngFor="let row of stockInventoryRows" class="grid grid-cols-[1.2fr_.8fr_1fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                  <div>{{ row.productName }}</div>
+                  <div class="font-semibold">{{ row.qty }}</div>
+                  <div class="flex flex-wrap gap-2">
+                    <ui-button size="sm" variant="ghost" *ngIf="hasPermission('stock_add_inventory')" (pressed)="openStockEntryModal(row.productId)">
+                      <i class="fa-solid fa-circle-plus" aria-hidden="true"></i>
+                      Entrada
+                    </ui-button>
+                    <ui-button size="sm" variant="ghost" *ngIf="hasPermission('stock_mark_damaged')" (pressed)="openDamageModal(row.productId)">
+                      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                      Marcar danado
+                    </ui-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Nueva transferencia</div>
+                <div class="mt-1 text-xs text-gray-600">Una transferencia puede incluir varios productos.</div>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <ui-form-field kind="select" label="Stock origen" [options]="stockOptions" [ngModel]="stockTransferForm.sourceStockId" (ngModelChange)="stockTransferForm.sourceStockId = $event"></ui-form-field>
+                  <ui-form-field kind="select" label="Stock destino" [options]="stockOptions" [ngModel]="stockTransferForm.destinationStockId" (ngModelChange)="stockTransferForm.destinationStockId = $event"></ui-form-field>
+                  <ui-form-field wrapperClass="block sm:col-span-2" kind="select" label="Solicitado por" [options]="customerOptions" [ngModel]="stockTransferForm.createdByUserId" (ngModelChange)="stockTransferForm.createdByUserId = +$event"></ui-form-field>
+                </div>
+                <div class="mt-3 space-y-2">
+                  <div *ngFor="let line of stockTransferForm.lines; let i = index" class="grid gap-2 sm:grid-cols-[1fr_.5fr_auto]">
+                    <ui-form-field kind="select" label="Producto" [options]="productOptions" [ngModel]="line.productId" (ngModelChange)="line.productId = +$event"></ui-form-field>
+                    <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="line.qty" (ngModelChange)="line.qty = +$event || 1"></ui-form-field>
+                    <ui-button size="sm" variant="ghost" class="self-end" [disabled]="stockTransferForm.lines.length === 1" (pressed)="removeTransferLine(i)">
+                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </ui-button>
+                  </div>
+                  <ui-button size="sm" variant="ghost" (pressed)="addTransferLine()">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    Agregar producto
+                  </ui-button>
+                </div>
+                <ui-button size="sm" variant="primary" class="mt-3" *ngIf="hasPermission('stock_create_transfer')" (pressed)="createTransfer()">
+                  <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+                  Crear transferencia
+                </ui-button>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Transferencias</div>
+                <div class="mt-1 text-xs text-gray-600">El usuario vinculado al destino puede marcar "recibir".</div>
+                <ui-form-field
+                  wrapperClass="mt-3 block"
+                  kind="select"
+                  label="Usuario que recibe"
+                  [options]="customerOptions"
+                  [ngModel]="transferReceiverUserId"
+                  (ngModelChange)="transferReceiverUserId = +$event"></ui-form-field>
+                <div class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
+                  <div class="grid grid-cols-[.9fr_1fr_1fr_1.2fr_.7fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                    <div>Fecha</div><div>Origen</div><div>Destino</div><div>Productos</div><div>Estatus</div><div>Accion</div>
+                  </div>
+                  <div *ngFor="let transfer of stockTransferRows" class="grid grid-cols-[.9fr_1fr_1fr_1.2fr_.7fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                    <div>{{ transfer.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+                    <div>{{ transfer.sourceName }}</div>
+                    <div>{{ transfer.destinationName }}</div>
+                    <div class="text-xs">{{ transfer.productSummary }}</div>
+                    <div>{{ transfer.status === 'received' ? 'Recibida' : 'Pendiente' }}</div>
+                    <div>
+                      <ui-button
+                        *ngIf="hasPermission('stock_receive_transfer')"
+                        size="sm"
+                        variant="ghost"
+                        [disabled]="transfer.status === 'received' || !isReceiverEligible(transfer)"
+                        (pressed)="receiveTransfer(transfer.id)">
+                        {{ transfer.status === 'received' ? 'Recibida' : 'Recibir' }}
+                      </ui-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="text-sm font-semibold text-main">Registro de entradas y salidas</div>
+              <div class="mt-1 text-xs text-gray-600">Bitacora de inventario por producto y stock.</div>
+              <div class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
+                <div class="grid grid-cols-[.9fr_1fr_1fr_.9fr_.8fr_1fr_1fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                  <div>Fecha</div><div>Stock</div><div>Producto</div><div>Tipo</div><div>Cantidad</div><div>Motivo/Ref</div><div>Usuario</div>
+                </div>
+                <div *ngFor="let movement of inventoryMovementRows" class="grid grid-cols-[.9fr_1fr_1fr_.9fr_.8fr_1fr_1fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                  <div>{{ movement.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+                  <div>{{ movement.stockName }}</div>
+                  <div>{{ movement.productName }}</div>
+                  <div class="text-xs">{{ movement.typeLabel }}</div>
+                  <div [ngClass]="movementQtyClass(movement)">
+                    {{ movement.signedQty > 0 ? '+' : '' }}{{ movement.signedQty }}
+                  </div>
+                  <div class="text-xs">{{ movement.reason || movement.referenceId || '-' }}</div>
+                  <div class="text-xs">{{ movement.userName }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+              <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
+                <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
+                  <span>Campanas</span>
+                  <span class="text-xs text-gray-600">{{ campaigns.length }} registradas</span>
+                </div>
+                <div class="divide-y divide-olive-20">
+                  <div *ngFor="let campaign of campaigns" class="p-4">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="text-sm font-semibold text-main">{{ campaign.name }}</div>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs">
+                        {{ campaign.active ? 'Activa' : 'Inactiva' }}
+                      </span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-600">{{ campaign.hook }}</div>
+                    <div class="mt-2 text-[11px] text-gray-500">
+                      Assets: story, feed, banner
+                    </div>
+                    <div class="mt-3">
+                      <ui-button size="sm" variant="ghost" (pressed)="editCampaign(campaign)">
+                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                        Editar campana
+                      </ui-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <div class="text-sm font-semibold text-main">Crear / editar campana</div>
+                    <div class="mt-1 text-xs text-gray-600">
+                      Hero personalizado basado en Landing: badge, titulos, descripcion, CTA y beneficios.
+                    </div>
+                  </div>
+                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" [disabled]="!isCampaignFormValid || isSavingCampaign" (pressed)="saveCampaign()">
+                    {{ isSavingCampaign ? 'Guardando...' : 'Guardar campana' }}
+                  </ui-button>
+                </div>
+                <div *ngIf="campaignMessage" class="mt-2 text-xs text-accent">{{ campaignMessage }}</div>
+
+                <div class="mt-4 grid gap-2 md:grid-cols-2">
+                  <ui-form-field label="Nombre" [ngModel]="campaignForm.name" (ngModelChange)="updateCampaignField('name', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field label="Hook corto" [ngModel]="campaignForm.hook" (ngModelChange)="updateCampaignField('hook', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field kind="textarea" [rows]="3" label="Descripcion" [ngModel]="campaignForm.description" (ngModelChange)="updateCampaignField('description', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field label="Hero badge" [ngModel]="campaignForm.heroBadge" (ngModelChange)="updateCampaignField('heroBadge', $event)"></ui-form-field>
+                  <label class="mt-2 flex items-center gap-2 text-xs text-main">
+                    <input type="checkbox" [checked]="campaignForm.active" (change)="campaignForm.active = $any($event.target).checked" />
+                    Campana activa
+                  </label>
+                  <ui-form-field label="Hero titulo (linea 1)" [ngModel]="campaignForm.heroTitle" (ngModelChange)="updateCampaignField('heroTitle', $event)"></ui-form-field>
+                  <ui-form-field label="Hero acento (linea 2)" [ngModel]="campaignForm.heroAccent" (ngModelChange)="updateCampaignField('heroAccent', $event)"></ui-form-field>
+                  <ui-form-field label="Hero cola (linea 3)" [ngModel]="campaignForm.heroTail" (ngModelChange)="updateCampaignField('heroTail', $event)"></ui-form-field>
+                  <ui-form-field kind="textarea" [rows]="3" label="Hero descripcion" [ngModel]="campaignForm.heroDescription" (ngModelChange)="updateCampaignField('heroDescription', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field label="CTA primario" [ngModel]="campaignForm.ctaPrimaryText" (ngModelChange)="updateCampaignField('ctaPrimaryText', $event)"></ui-form-field>
+                  <ui-form-field label="CTA secundario" [ngModel]="campaignForm.ctaSecondaryText" (ngModelChange)="updateCampaignField('ctaSecondaryText', $event)"></ui-form-field>
+                  <ui-form-field wrapperClass="block md:col-span-2" label="Beneficios (4 max, separados por coma)" [ngModel]="campaignForm.benefits" (ngModelChange)="updateCampaignField('benefits', $event)"></ui-form-field>
+                  <ui-form-field label="Asset Story (9:16)" [ngModel]="campaignForm.story" (ngModelChange)="updateCampaignField('story', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field label="Asset Feed (1:1)" [ngModel]="campaignForm.feed" (ngModelChange)="updateCampaignField('feed', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field label="Asset Banner (16:9)" [ngModel]="campaignForm.banner" (ngModelChange)="updateCampaignField('banner', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                  <ui-form-field label="Hero imagen (opcional)" [ngModel]="campaignForm.heroImage" (ngModelChange)="updateCampaignField('heroImage', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-4" *ngIf="currentView === 'pos' && canAccessView('pos')">
+            <div class="grid gap-3 md:grid-cols-4">
+              <ui-kpi-card label="Ventas POS" [value]="posSales.length"></ui-kpi-card>
+              <ui-kpi-card label="Total POS" [value]="formatMoney(posSalesTotal)"></ui-kpi-card>
+              <ui-kpi-card label="Stock vinculado" [value]="stockName(posForm.stockId)"></ui-kpi-card>
+              <ui-kpi-card label="Atiende" [value]="customerName(posForm.attendantUserId)"></ui-kpi-card>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Nueva venta en sucursal</div>
+                <div class="mt-1 text-xs text-gray-600">Marca la orden como pagada/entregada en sucursal y descuenta stock.</div>
+
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <ui-form-field kind="select" label="Stock" [options]="stockOptions" [ngModel]="posForm.stockId" (ngModelChange)="posForm.stockId = $event"></ui-form-field>
+                  <ui-form-field kind="select" label="Atendio" [options]="customerOptions" [ngModel]="posForm.attendantUserId" (ngModelChange)="posForm.attendantUserId = +$event"></ui-form-field>
+                  <ui-form-field wrapperClass="block sm:col-span-2" label="Cliente" placeholder="Mostrador o nombre cliente" [ngModel]="posForm.customerName" (ngModelChange)="posForm.customerName = $event"></ui-form-field>
+                  <ui-form-field kind="select" label="Estado de orden" [options]="[{ value: 'paid', label: 'Pagada en sucursal' }, { value: 'delivered', label: 'Entregada en sucursal' }]" [ngModel]="posForm.status" (ngModelChange)="posForm.status = $event"></ui-form-field>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                  <div class="text-xs font-semibold text-main">Productos</div>
+                  <div class="mt-3 max-h-56 overflow-auto space-y-3">
+                    <div *ngFor="let product of products" class="rounded-2xl border border-olive-30 surface-soft p-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <ui-button variant="ghost" size="sm" (pressed)="togglePosProductSelection(product.id, !posItems.has(product.id))">
+                          <i class="fa-regular" [ngClass]="posItems.has(product.id) ? 'fa-square-check text-accent' : 'fa-square text-gray-500'" aria-hidden="true"></i>
+                          {{ product.name }}
+                        </ui-button>
+                        <span class="text-xs text-gray-600">{{ formatMoney(product.price) }}</span>
+                      </div>
+                      <div *ngIf="posItems.has(product.id)" class="mt-2 flex items-center gap-2">
+                        <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="posItems.get(product.id) || 1" (ngModelChange)="updatePosQty(product.id, $event)"></ui-form-field>
+                        <span class="text-[11px] text-gray-600">Disponible: {{ stockQty(posForm.stockId, product.id) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 flex items-center justify-between">
+                  <div class="text-sm text-gray-600">Total: <span class="font-semibold text-main">{{ formatMoney(posTotal) }}</span></div>
+                  <ui-button variant="primary" size="sm" *ngIf="hasPermission('pos_register_sale')" [disabled]="!posForm.stockId || !posForm.attendantUserId || posItems.size === 0" (pressed)="registerPosSale()">
+                    <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
+                    Registrar venta
+                  </ui-button>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Ventas registradas</div>
+                <div class="mt-1 text-xs text-gray-600">Todas quedan con metadata: pagada/entregada en sucursal, stock y atendio.</div>
+                <div class="mt-3 space-y-2 max-h-[460px] overflow-auto">
+                  <div *ngFor="let sale of posSales" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                    <div class="text-xs font-semibold text-main">{{ sale.orderId }} Â· {{ formatMoney(sale.total) }}</div>
+                    <div class="text-[11px] text-gray-600">{{ stockName(sale.stockId) }} Â· {{ customerName(sale.attendantUserId) }}</div>
+                    <div class="mt-1 text-[11px] text-accent">pagada en sucursal Â· entregada en sucursal</div>
+                    <div class="mt-1 text-[11px] text-gray-600">{{ sale.lines.length }} producto(s)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4" *ngIf="currentView === 'stats' && canAccessView('stats')">
             <div class="grid gap-3 md:grid-cols-4">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-[11px] text-gray-600">Ventas (mes)</div>
                 <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(ordersTotal) }}</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Conversión</div>
+                <div class="text-[11px] text-gray-600">ConversiÃ³n</div>
                 <div class="mt-1 text-2xl font-extrabold">{{ conversionRate | number: '1.1-1' }}%</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -578,9 +905,89 @@
                     <circle cx="540" cy="30" r="6" fill="rgba(245,185,66,.92)" />
                   </svg>
                   <div class="mt-3 text-xs text-gray-500">
-                    En producción: alimenta con ventas por día, cohortes, y funnel del checkout.
+                    En producciÃ³n: alimenta con ventas por dÃ­a, cohortes, y funnel del checkout.
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4" *ngIf="currentView === 'settings' && canAccessView('settings')">
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold text-main">Configuracion de negocio</div>
+                  <div class="mt-1 text-xs text-gray-600">Reglas globales para pedidos, recompensas, stocks, POS y advertencias.</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <ui-button size="sm" variant="ghost" *ngIf="hasPermission('config_manage')" (pressed)="restoreBusinessConfigDefaults()">
+                    Restaurar defaults
+                  </ui-button>
+                  <ui-button size="sm" variant="primary" *ngIf="hasPermission('config_manage')" [disabled]="isSavingBusinessConfig" (pressed)="saveBusinessConfig()">
+                    Guardar configuracion
+                  </ui-button>
+                </div>
+              </div>
+              <div *ngIf="businessConfigMessage" class="mt-2 text-xs text-accent">{{ businessConfigMessage }}</div>
+            </div>
+
+            <div class="grid gap-4 xl:grid-cols-2">
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Pedidos</div>
+                <div class="mt-3 space-y-3 text-sm">
+                  <label class="flex items-center justify-between gap-3">
+                    <span>Exigir stock al marcar enviado</span>
+                    <input type="checkbox" [checked]="businessConfigDraft.orders.requireStockOnShipped" (change)="businessConfigDraft.orders.requireStockOnShipped = $any($event.target).checked" />
+                  </label>
+                  <label class="flex items-center justify-between gap-3">
+                    <span>Exigir lineas de salida al marcar enviado</span>
+                    <input type="checkbox" [checked]="businessConfigDraft.orders.requireDispatchLinesOnShipped" (change)="businessConfigDraft.orders.requireDispatchLinesOnShipped = $any($event.target).checked" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Punto de Venta</div>
+                <div class="mt-3 grid gap-3">
+                  <ui-form-field label="Cliente por defecto" [ngModel]="businessConfigDraft.pos.defaultCustomerName" (ngModelChange)="businessConfigDraft.pos.defaultCustomerName = $event"></ui-form-field>
+                  <ui-form-field label="Estatus pago por defecto" [ngModel]="businessConfigDraft.pos.defaultPaymentStatus" (ngModelChange)="businessConfigDraft.pos.defaultPaymentStatus = $event"></ui-form-field>
+                  <ui-form-field label="Estatus entrega por defecto" [ngModel]="businessConfigDraft.pos.defaultDeliveryStatus" (ngModelChange)="businessConfigDraft.pos.defaultDeliveryStatus = $event"></ui-form-field>
+                  <ui-form-field label="Mapeo delivered_branch -> orden" [ngModel]="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch" (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch = $event"></ui-form-field>
+                  <ui-form-field label="Mapeo paid_branch -> orden" [ngModel]="businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch" (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch = $event"></ui-form-field>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Stocks</div>
+                <div class="mt-3 text-sm">
+                  <label class="flex items-center justify-between gap-3">
+                    <span>Exigir usuario vinculado para recibir transferencia</span>
+                    <input type="checkbox" [checked]="businessConfigDraft.stocks.requireLinkedUserForTransferReceive" (change)="businessConfigDraft.stocks.requireLinkedUserForTransferReceive = $any($event.target).checked" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Advertencias admin</div>
+                <div class="mt-3 space-y-3 text-sm">
+                  <label class="flex items-center justify-between gap-3"><span>Comisiones pendientes</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showCommissions" (change)="businessConfigDraft.adminWarnings.showCommissions = $any($event.target).checked" /></label>
+                  <label class="flex items-center justify-between gap-3"><span>Pedidos pagados sin envio</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showShipping" (change)="businessConfigDraft.adminWarnings.showShipping = $any($event.target).checked" /></label>
+                  <label class="flex items-center justify-between gap-3"><span>Pedidos pendientes de pago</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showPendingPayments" (change)="businessConfigDraft.adminWarnings.showPendingPayments = $any($event.target).checked" /></label>
+                  <label class="flex items-center justify-between gap-3"><span>Transferencias pendientes</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showPendingTransfers" (change)="businessConfigDraft.adminWarnings.showPendingTransfers = $any($event.target).checked" /></label>
+                  <label class="flex items-center justify-between gap-3"><span>Ventas POS del dia</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showPosSalesToday" (change)="businessConfigDraft.adminWarnings.showPosSalesToday = $any($event.target).checked" /></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="text-sm font-semibold text-main">Recompensas</div>
+              <div class="mt-3 grid gap-3 md:grid-cols-2">
+                <ui-form-field type="number" [min]="0" label="Activacion neta minima" [ngModel]="businessConfigDraft.rewards.activationNetMin" (ngModelChange)="businessConfigDraft.rewards.activationNetMin = +$event || 0"></ui-form-field>
+                <ui-form-field type="number" [min]="1" label="Dia de pago" [ngModel]="businessConfigDraft.rewards.payoutDay" (ngModelChange)="businessConfigDraft.rewards.payoutDay = +$event || 1"></ui-form-field>
+                <ui-form-field label="Regla de corte" [ngModel]="businessConfigDraft.rewards.cutRule" (ngModelChange)="businessConfigDraft.rewards.cutRule = $event" wrapperClass="block md:col-span-2"></ui-form-field>
+                <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 1" [ngModel]="businessConfigDraft.rewards.commissionByDepth['1']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['1'] = +$event || 0"></ui-form-field>
+                <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 2" [ngModel]="businessConfigDraft.rewards.commissionByDepth['2']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['2'] = +$event || 0"></ui-form-field>
+                <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 3" [ngModel]="businessConfigDraft.rewards.commissionByDepth['3']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['3'] = +$event || 0"></ui-form-field>
               </div>
             </div>
           </div>
@@ -593,7 +1000,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Acciones urgentes</div>
-          <div class="mt-1 text-sm text-gray-600">Resolvé pendientes críticos desde aquí.</div>
+          <div class="mt-1 text-sm text-gray-600">ResolvÃ© pendientes crÃ­ticos desde aquÃ­.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -617,7 +1024,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Nuevo pedido</div>
-          <div class="mt-1 text-sm text-gray-600">Registrá un pedido manual.</div>
+          <div class="mt-1 text-sm text-gray-600">RegistrÃ¡ un pedido manual.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -677,7 +1084,7 @@
         <ui-button variant="ghost" size="md" iconClass="fa-solid fa-ban" (pressed)="closeModals()">
           Cancelar
         </ui-button>
-        <ui-button variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder" (pressed)="saveNewOrder()">
+        <ui-button variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('order_create')" [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder" (pressed)="saveNewOrder()">
           <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
           {{ isSavingOrder ? 'Guardando...' : 'Guardar pedido' }}
         </ui-button>
@@ -699,12 +1106,22 @@
       </div>
 
       <div class="mt-4 grid gap-3">
+        <ui-form-field
+          wrapperClass="block"
+          kind="select"
+          label="Stock origen"
+          iconClass="fa-solid fa-warehouse"
+          placeholder="Selecciona stock"
+          [options]="stockOptions"
+          [ngModel]="shippingStockId"
+          (ngModelChange)="shippingStockId = $event"></ui-form-field>
+
         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
           <div class="text-[11px] uppercase tracking-wide text-gray-600">Tipo de entrega</div>
           <div class="mt-3 flex flex-wrap gap-2 text-sm text-main">
             <ui-button size="sm" [variant]="shippingType === 'carrier' ? 'primary' : 'ghost'" (pressed)="shippingType = 'carrier'">
               <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
-              Paquetería (Guía)
+              PaqueterÃ­a (GuÃ­a)
             </ui-button>
             <ui-button size="sm" [variant]="shippingType === 'personal' ? 'primary' : 'ghost'" (pressed)="shippingType = 'personal'">
               <i class="fa-solid fa-handshake" aria-hidden="true"></i>
@@ -737,6 +1154,28 @@
             [errorText]="shippingType === 'personal' ? shippingError : ''"
             [(ngModel)]="shippingDeliveryDate"></ui-form-field>
         </div>
+
+        <div *ngIf="shippingTargetOrder && !shippingTargetOrder.items?.length" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+          <div class="text-[11px] uppercase tracking-wide text-gray-600">Descuento de inventario</div>
+          <div class="mt-2 text-xs text-gray-600">
+            Esta orden no tiene detalle de productos en memoria. Captura al menos una linea para descontar stock.
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <ui-form-field
+              kind="select"
+              label="Producto"
+              placeholder="Selecciona producto"
+              [options]="productOptions"
+              [ngModel]="shippingFallbackProductId"
+              (ngModelChange)="shippingFallbackProductId = +$event"></ui-form-field>
+            <ui-form-field
+              type="number"
+              [min]="1"
+              label="Cantidad"
+              [ngModel]="shippingFallbackQty"
+              (ngModelChange)="shippingFallbackQty = +$event || 1"></ui-form-field>
+          </div>
+        </div>
       </div>
 
 
@@ -745,7 +1184,7 @@
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
         </ui-button>
-        <ui-button size="sm" variant="primary" (pressed)="confirmShipping()">
+        <ui-button size="sm" variant="primary" *ngIf="hasPermission('order_mark_shipped')" (pressed)="confirmShipping()">
           <i class="fa-solid fa-truck" aria-hidden="true"></i>
           Marcar como enviado
         </ui-button>
@@ -783,7 +1222,7 @@
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
         </ui-button>
-        <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" [disabled]="!receiptFile || isUploadingReceipt" (pressed)="uploadReceipt()">
+        <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('commissions_register_payment')" [disabled]="!receiptFile || isUploadingReceipt" (pressed)="uploadReceipt()">
           <i class="fa-solid fa-upload" aria-hidden="true"></i>
           {{ isUploadingReceipt ? 'Cargando...' : 'Subir comprobante' }}
         </ui-button>
@@ -794,7 +1233,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Agregar a estructura</div>
-          <div class="mt-1 text-sm text-gray-600">Completá los datos para crear el alta en la red.</div>
+          <div class="mt-1 text-sm text-gray-600">CompletÃ¡ los datos para crear el alta en la red.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -812,7 +1251,7 @@
           (ngModelChange)="updateStructureField('name', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block"
-          label="Teléfono"
+          label="TelÃ©fono"
           iconClass="fa-solid fa-phone"
           placeholder="+54 9 11 0000 0000"
           [ngModel]="structureForm.phone"
@@ -827,9 +1266,9 @@
           (ngModelChange)="updateStructureField('email', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block sm:col-span-2"
-          label="Dirección (opcional)"
+          label="DirecciÃ³n (opcional)"
           iconClass="fa-solid fa-map-location-dot"
-          placeholder="Calle y número"
+          placeholder="Calle y nÃºmero"
           [ngModel]="structureForm.address"
           (ngModelChange)="updateStructureField('address', $event)"></ui-form-field>
         <ui-form-field
@@ -844,7 +1283,7 @@
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <ui-form-field
           wrapperClass="block"
-          label="Líder asignado"
+          label="LÃ­der asignado"
           [readonly]="true"
           [disabled]="true"
           [ngModel]="structureLeaderLabel"
@@ -858,37 +1297,113 @@
           inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-sand-200 px-3 py-2 text-sm text-muted"></ui-form-field>
       </div>
       <div *ngIf="!structureLeader" class="mt-2 text-xs text-gray-500">
-        Sin cliente seleccionado: se crea sin líder.
+        Sin cliente seleccionado: se crea sin lÃ­der.
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <ui-button variant="ghost" size="md" iconClass="fa-solid fa-ban" (pressed)="closeModals()">
           Cancelar
         </ui-button>
-        <ui-button variant="primary" size="md" iconClass="fa-solid fa-plus" (pressed)="saveStructureCustomer()">
+        <ui-button variant="primary" size="md" iconClass="fa-solid fa-plus" *ngIf="hasPermission('customer_add')" (pressed)="saveStructureCustomer()">
           Agregar
         </ui-button>
       </div>
   </ui-modal>
 
+  <ui-modal [isOpen]="isStockEntryModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeStockEntryModal()">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-lg font-extrabold text-main">Registrar entrada de inventario</div>
+        <div class="mt-1 text-sm text-gray-600">Solo permite agregar unidades al stock seleccionado.</div>
+      </div>
+      <ui-button size="sm" variant="ghost" (pressed)="closeStockEntryModal()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Cerrar
+      </ui-button>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <ui-form-field kind="select" label="Stock" [options]="stockOptions" [ngModel]="stockEntryForm.stockId" (ngModelChange)="stockEntryForm.stockId = $event"></ui-form-field>
+      <ui-form-field kind="select" label="Producto" [options]="productOptions" [ngModel]="stockEntryForm.productId" (ngModelChange)="stockEntryForm.productId = +$event"></ui-form-field>
+      <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockEntryForm.qty" (ngModelChange)="stockEntryForm.qty = +$event || 1"></ui-form-field>
+      <ui-form-field kind="select" label="Registrado por" [options]="customerOptions" [ngModel]="stockEntryForm.createdByUserId" (ngModelChange)="stockEntryForm.createdByUserId = +$event"></ui-form-field>
+      <ui-form-field wrapperClass="block sm:col-span-2" label="Nota (opcional)" [ngModel]="stockEntryForm.note" (ngModelChange)="stockEntryForm.note = $event"></ui-form-field>
+    </div>
+
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <ui-button size="sm" variant="ghost" (pressed)="closeStockEntryModal()">
+        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        Cancelar
+      </ui-button>
+      <ui-button size="sm" variant="primary" *ngIf="hasPermission('stock_add_inventory')" (pressed)="registerStockEntry()">
+        <i class="fa-solid fa-circle-plus" aria-hidden="true"></i>
+        Registrar entrada
+      </ui-button>
+    </div>
+  </ui-modal>
+
+  <ui-modal [isOpen]="isStockDamageModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeDamageModal()">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-lg font-extrabold text-main">Marcar producto como danado</div>
+        <div class="mt-1 text-sm text-gray-600">Se descontara del stock y quedara en el registro.</div>
+      </div>
+      <ui-button size="sm" variant="ghost" (pressed)="closeDamageModal()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Cerrar
+      </ui-button>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <ui-form-field kind="select" label="Stock" [options]="stockOptions" [ngModel]="stockDamageForm.stockId" (ngModelChange)="stockDamageForm.stockId = $event"></ui-form-field>
+      <ui-form-field kind="select" label="Producto" [options]="productOptions" [ngModel]="stockDamageForm.productId" (ngModelChange)="stockDamageForm.productId = +$event"></ui-form-field>
+      <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockDamageForm.qty" (ngModelChange)="stockDamageForm.qty = +$event || 1"></ui-form-field>
+      <ui-form-field kind="select" label="Reportado por" [options]="customerOptions" [ngModel]="stockDamageForm.reportedByUserId" (ngModelChange)="stockDamageForm.reportedByUserId = +$event"></ui-form-field>
+      <ui-form-field wrapperClass="block sm:col-span-2" label="Motivo" [ngModel]="stockDamageForm.reason" (ngModelChange)="stockDamageForm.reason = $event"></ui-form-field>
+    </div>
+
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <ui-button size="sm" variant="ghost" (pressed)="closeDamageModal()">
+        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        Cancelar
+      </ui-button>
+      <ui-button size="sm" variant="primary" *ngIf="hasPermission('stock_mark_damaged')" (pressed)="registerDamage()">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        Confirmar dano
+      </ui-button>
+    </div>
+  </ui-modal>
+
   <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-90 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">
-      <div class="grid grid-cols-4 gap-2">
-        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'orders' ? 'primary' : 'ghost'" (click)="setView('orders')">
+      <div class="grid grid-cols-3 gap-2">
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('orders')" [variant]="currentView === 'orders' ? 'primary' : 'ghost'" (click)="setView('orders')">
           <i class="fa-solid fa-receipt" aria-hidden="true"></i>
           Pedidos
         </ui-button>
-        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'customers' ? 'primary' : 'ghost'" (click)="setView('customers')">
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('customers')" [variant]="currentView === 'customers' ? 'primary' : 'ghost'" (click)="setView('customers')">
           <i class="fa-solid fa-users" aria-hidden="true"></i>
           Clientes
         </ui-button>
-        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'products' ? 'primary' : 'ghost'" (click)="setView('products')">
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('products')" [variant]="currentView === 'products' ? 'primary' : 'ghost'" (click)="setView('products')">
           <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
           Productos
         </ui-button>
-        <ui-button size="md" extraClass="mobbtn" [variant]="currentView === 'stats' ? 'primary' : 'ghost'" (click)="setView('stats')">
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stocks')" [variant]="currentView === 'stocks' ? 'primary' : 'ghost'" (click)="setView('stocks')">
+          <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
+          Stocks
+        </ui-button>
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('pos')" [variant]="currentView === 'pos' ? 'primary' : 'ghost'" (click)="setView('pos')">
+          <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
+          PV
+        </ui-button>
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stats')" [variant]="currentView === 'stats' ? 'primary' : 'ghost'" (click)="setView('stats')">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Stats
+        </ui-button>
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('settings')" [variant]="currentView === 'settings' ? 'primary' : 'ghost'" (click)="setView('settings')">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+          Config
         </ui-button>
       </div>
     </div>
@@ -896,6 +1411,7 @@
 
   <ui-footer></ui-footer>
 </section>
+
 
 
 

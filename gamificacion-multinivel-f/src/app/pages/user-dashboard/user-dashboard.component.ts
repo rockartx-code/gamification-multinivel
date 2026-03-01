@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { finalize } from 'rxjs';
 
 import {
   DashboardGoal,
+  DashboardCampaign,
   DashboardProduct,
   FeaturedItem,
   NetworkMember,
@@ -64,7 +65,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly cartControl: CartControlService,
     private readonly goalControl: GoalControlService,
     private readonly router: Router,
-    private readonly api: ApiService
+    private readonly api: ApiService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   readonly countdownLabel = signal('');
@@ -140,6 +142,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private featuredCarouselCache: FeaturedItem[] = [];
   private featuredCarouselProductsRef: DashboardProduct[] | null = null;
   private featuredCarouselFeaturedRef: FeaturedItem[] | null = null;
+  private featuredCarouselCampaignsRef: DashboardCampaign[] | null = null;
   private graphLayoutCache: GraphLayout = { nodes: [], links: [] };
   private graphSizeCache = { width: 860, height: 260 };
   private graphMembersRef: NetworkMember[] | null = null;
@@ -187,7 +190,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
 
   get dashboardNavLinks(): SidebarLink[] {
-    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}`;
+    const adminAccess = this.authService.hasAdminPanelAccess(this.currentUser) ? 'admin' : 'no-admin';
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|${adminAccess}`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
     }
@@ -202,6 +206,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
+      if (this.authService.hasAdminPanelAccess(this.currentUser)) {
+        links.push({ id: 'admin-panel', icon: 'fa-shield-halved', label: 'Administracion' });
+      }
     }
 
     this.dashboardNavLinksKey = key;
@@ -210,6 +217,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   handleDashboardNavSelect(sectionId: string): void {
+    if (sectionId === 'admin-panel') {
+      this.router.navigate(['/admin']);
+      this.closeMobileNav();
+      return;
+    }
     this.scrollToSection(sectionId);
     this.closeMobileNav();
   }
@@ -225,12 +237,18 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.featured;
   }
 
+  get campaigns(): DashboardCampaign[] {
+    return this.dashboardControl.campaigns;
+  }
+
   get featuredCarousel(): FeaturedItem[] {
     const featured = this.featured;
     const products = this.products;
+    const campaigns = this.campaigns;
     if (
       this.featuredCarouselFeaturedRef === featured &&
-      this.featuredCarouselProductsRef === products
+      this.featuredCarouselProductsRef === products &&
+      this.featuredCarouselCampaignsRef === campaigns
     ) {
       return this.featuredCarouselCache;
     }
@@ -255,6 +273,16 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     ];
 
     const featuredIds = new Set(featured.map((item) => item.id));
+    const campaignItems: FeaturedItem[] = campaigns
+      .filter((campaign) => campaign.active !== false)
+      .map((campaign) => ({
+        id: `campaign:${campaign.id}`,
+        label: campaign.name,
+        hook: campaign.hook || campaign.heroDescription || 'Campana especial',
+        story: campaign.story || campaign.heroImage || '',
+        feed: campaign.feed || campaign.heroImage || '',
+        banner: campaign.banner || campaign.heroImage || ''
+      }));
     const productItems: FeaturedItem[] = products
       .filter((product) => !featuredIds.has(product.id))
       .map((product) => ({
@@ -268,7 +296,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.featuredCarouselFeaturedRef = featured;
     this.featuredCarouselProductsRef = products;
-    this.featuredCarouselCache = [...fixed, ...featured, ...productItems];
+    this.featuredCarouselCampaignsRef = campaigns;
+    this.featuredCarouselCache = [...fixed, ...featured, ...campaignItems, ...productItems];
     return this.featuredCarouselCache;
   }
 
@@ -794,6 +823,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.goalsSub = this.goalControl.goals$.subscribe((goals) => {
       if (goals) {
         this.processGoals(goals);
+        this.cdr.markForCheck();
       }
     });
     this.goalControl
@@ -802,6 +832,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         finalize(() => {
           this.isLoading = false;
           this.updateCountdown();
+          this.cdr.markForCheck();
         })
       )
       .subscribe({
@@ -816,9 +847,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           }
           this.featuredPage = 0;
           this.loadOrders();
+          this.cdr.markForCheck();
         },
         error: () => {
           this.showToast('No se pudo cargar el dashboard.');
+          this.cdr.markForCheck();
         }
       });
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
@@ -1727,9 +1760,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       next: (orders) => {
         this.orders = orders ?? [];
         this.isOrdersLoading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.isOrdersLoading = false;
+        this.cdr.markForCheck();
       }
     });
   }

@@ -6,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
-import { AdminOrderItem } from '../../models/admin.model';
+import { AdminOrderItem, AppBusinessConfig } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
@@ -71,6 +71,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private customerSub?: Subscription;
   private addFadeTimeout?: number;
   private addFadeRestartTimeout?: number;
+  private discountTiers: Array<{ min: number; max: number | null; rate: number }> = [];
+  private monthNetVolume = 0;
 
   ngOnInit(): void {
     this.cartControl.load().subscribe();
@@ -80,6 +82,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.updateCountdown();
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
     this.prefillCustomerAddress();
+    this.loadDiscountProjectionContext();
   }
 
   ngOnDestroy(): void {
@@ -190,13 +193,25 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private get discountPercentValue(): number {
+    if (!this.authService.currentUser || this.authService.currentUser.role !== 'cliente') {
+      const raw = this.authService.currentUser?.discountPercent;
+      const value = typeof raw === 'string' ? Number(raw) : Number(raw ?? 0);
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    const current = this.currentDiscountPercentValue;
+    const projected = this.projectedDiscountPercentValue;
+    return Math.max(current, projected);
+  }
+
+  private get currentDiscountPercentValue(): number {
     const raw = this.authService.currentUser?.discountPercent;
     const value = typeof raw === 'string' ? Number(raw) : Number(raw ?? 0);
     return Number.isFinite(value) ? value : 0;
   }
 
   private get discountActiveValue(): boolean {
-    return Boolean(this.authService.currentUser?.discountActive);
+    return Boolean(this.authService.currentUser?.discountActive) || this.discountPercentValue > 0;
   }
 
   get discountLevelLabel(): string {
@@ -236,6 +251,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return 'Sin descuento';
     }
     return `Dto ${pct}%`;
+  }
+
+  get discountUpgradeMessage(): string {
+    const current = Math.max(0, this.currentDiscountPercentValue);
+    const projected = Math.max(0, this.projectedDiscountPercentValue);
+    if (projected <= current || projected <= 0) {
+      return '';
+    }
+    return `Con esta compra subes a ${this.discountLevelLabelByPercent(projected)} (${projected}%).`;
   }
 
   discountedPrice(value: number): number {
@@ -416,7 +440,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
             (order as { orderId?: string | number } | null)?.orderId ??
             '';
           if (!resolvedId) {
-            this.showToast('Orden creada, pero no se recibió el ID.');
+            this.showToast('Orden creada, pero no se recibiÃ³ el ID.');
             return;
           }
           const orderId = String(resolvedId);
@@ -455,6 +479,74 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     this.cartControl.updateCountdown(`${d}d ${h}h`);
+  }
+
+  private loadDiscountProjectionContext(): void {
+    const user = this.authService.currentUser;
+    if (!user?.userId || user.role !== 'cliente') {
+      return;
+    }
+    const userId = String(user.userId);
+    this.api.getBusinessConfig().subscribe({
+      next: (cfg: AppBusinessConfig) => {
+        this.discountTiers = Array.isArray(cfg?.rewards?.discountTiers) ? cfg.rewards.discountTiers : [];
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+
+    this.api.getAssociateMonth(userId, this.monthKeyNow()).subscribe({
+      next: (month) => {
+        const value = Number(month?.netVolume ?? 0);
+        this.monthNetVolume = Number.isFinite(value) ? value : 0;
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+  }
+
+  private get projectedDiscountPercentValue(): number {
+    if (!this.discountTiers.length) {
+      return 0;
+    }
+    const projectedNet = this.monthNetVolume + this.subtotal;
+    const rate = this.calculateTierRate(projectedNet);
+    return Math.round(rate * 100);
+  }
+
+  private calculateTierRate(volume: number): number {
+    if (!Number.isFinite(volume) || volume <= 0) {
+      return 0;
+    }
+    for (const tier of this.discountTiers) {
+      const min = Number(tier.min ?? 0);
+      const max = tier.max == null ? null : Number(tier.max);
+      const rate = Number(tier.rate ?? 0);
+      if (volume >= min && (max == null || volume <= max)) {
+        return Number.isFinite(rate) ? rate : 0;
+      }
+    }
+    return 0;
+  }
+
+  private monthKeyNow(): string {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
+
+  private discountLevelLabelByPercent(pct: number): string {
+    if (pct >= 50) {
+      return 'Nivel 3';
+    }
+    if (pct >= 40) {
+      return 'Nivel 2';
+    }
+    if (pct >= 30) {
+      return 'Nivel 1';
+    }
+    return 'Nivel base';
   }
 
   private showToast(message: string): void {

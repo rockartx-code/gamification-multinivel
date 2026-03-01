@@ -4,18 +4,30 @@ import { delay, Observable, of, throwError } from 'rxjs';
 import {
   AdminCustomer,
   AdminData,
+  AdminCampaign,
+  AppBusinessConfig,
   AdminOrder,
+  AdminOrderItem,
   AdminProduct,
+  AdminStock,
   AssetResponse,
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   CustomerProfile,
+  InventoryMovement,
+  PosSale,
+  StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
-  SaveAdminProductPayload
+  SaveAdminProductPayload,
+  SaveAdminCampaignPayload,
+  OrderStatusLookup,
+  AssociateMonth,
+  UpdateBusinessConfigPayload,
+  UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
 import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
@@ -26,11 +38,134 @@ import {
   UserDashboardData
 } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
+import { ALL_PRIVILEGES, normalizePrivileges } from '../models/privileges.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MockApiService {
+  private businessConfig: AppBusinessConfig = {
+    version: 'app-v1',
+    rewards: {
+      version: 'v1',
+      activationNetMin: 2500,
+      discountTiers: [
+        { min: 3600, max: 8000, rate: 0.3 },
+        { min: 8001, max: 12000, rate: 0.4 },
+        { min: 12001, max: null, rate: 0.5 }
+      ],
+      commissionByDepth: { '1': 0.1, '2': 0.05, '3': 0.03 },
+      payoutDay: 10,
+      cutRule: 'hard_cut_no_pass'
+    },
+    orders: {
+      requireStockOnShipped: true,
+      requireDispatchLinesOnShipped: true
+    },
+    pos: {
+      defaultCustomerName: 'Venta mostrador',
+      defaultPaymentStatus: 'paid_branch',
+      defaultDeliveryStatus: 'delivered_branch',
+      orderStatusByDeliveryStatus: {
+        delivered_branch: 'delivered',
+        paid_branch: 'paid'
+      }
+    },
+    stocks: {
+      requireLinkedUserForTransferReceive: true
+    },
+    adminWarnings: {
+      showCommissions: true,
+      showShipping: true,
+      showPendingPayments: true,
+      showPendingTransfers: true,
+      showPosSalesToday: true
+    }
+  };
+  private stocks: AdminStock[] = [];
+  private stockTransfers: StockTransfer[] = [];
+  private inventoryMovements: InventoryMovement[] = [];
+  private posSales: PosSale[] = [];
+  private campaigns: AdminCampaign[] = [
+    {
+      id: 'CMP-LANZAMIENTO-ENERGIA',
+      name: 'Lanzamiento Energia',
+      active: true,
+      hook: 'Campana especial de energia diaria.',
+      description: 'Push de conversion para nuevos registros con foco en energia.',
+      story: 'images/L-Programa3.png',
+      feed: 'images/L-Programa3.png',
+      banner: 'images/L-Programa3.png',
+      heroImage: 'images/L-Programa3.png',
+      heroBadge: 'Campana del mes',
+      heroTitle: 'Activa tu',
+      heroAccent: 'energia',
+      heroTail: 'desde hoy',
+      heroDescription: 'Un empuje inicial para compartir bienestar y activar recompensas.',
+      ctaPrimaryText: 'Quiero activar la campana',
+      ctaSecondaryText: 'Ver recompensas',
+      benefits: ['Energia diaria', 'Recuperacion', 'Red activa', 'Bonos'],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+  private customers: AdminCustomer[] = [
+    {
+      id: 1,
+      name: 'Ana LÃ³pez',
+      email: 'ana@mail.com',
+      canAccessAdmin: true,
+      privileges: Object.fromEntries(ALL_PRIVILEGES.map((privilege) => [privilege, true])),
+      leaderId: null,
+      level: 'L1',
+      discount: '15%',
+      commissions: 320,
+      commissionsPrevMonth: 180,
+      commissionsPrevMonthKey: '2026-01',
+      commissionsCurrentPending: 60,
+      commissionsCurrentConfirmed: 120,
+      commissionsPrevStatus: 'pending',
+      commissionsPrevReceiptUrl: '',
+      clabeInterbancaria: '012345678901234567'
+    },
+    {
+      id: 2,
+      name: 'Carlos Ruiz',
+      email: 'carlos@mail.com',
+      canAccessAdmin: false,
+      privileges: {},
+      leaderId: 1,
+      level: 'L2',
+      discount: '10%',
+      commissions: 120,
+      commissionsPrevMonth: 0,
+      commissionsPrevMonthKey: '2026-01',
+      commissionsCurrentPending: 0,
+      commissionsCurrentConfirmed: 40,
+      commissionsPrevStatus: 'no_moves',
+      commissionsPrevReceiptUrl: '',
+      clabeInterbancaria: ''
+    },
+    {
+      id: 3,
+      name: 'MarÃ­a PÃ©rez',
+      email: 'maria@mail.com',
+      canAccessAdmin: false,
+      privileges: {},
+      leaderId: 2,
+      level: 'L3',
+      discount: '5%',
+      commissions: 0,
+      commissionsPrevMonth: 90,
+      commissionsPrevMonthKey: '2026-01',
+      commissionsCurrentPending: 0,
+      commissionsCurrentConfirmed: 0,
+      commissionsPrevStatus: 'paid',
+      commissionsPrevReceiptUrl: 'https://example.com/recibo.pdf',
+      clabeInterbancaria: '987654321098765432'
+    }
+  ];
+
   private readonly loginUsers = [
     {
       username: 'admin',
@@ -38,16 +173,29 @@ export class MockApiService {
       profile: {
         userId: 'admin-001',
         name: 'Admin Rivera',
-        role: 'admin' as const
+        role: 'admin' as const,
+        canAccessAdmin: true,
+        isSuperUser: true,
+        privileges: Object.fromEntries(ALL_PRIVILEGES.map((privilege) => [privilege, true]))
       }
     },
     {
       username: 'cliente',
       password: 'cliente123',
       profile: {
-        userId: 'client-001',
-        name: 'Valeria Torres',
+        userId: '1',
+        name: 'Ana LÃ³pez',
         role: 'cliente' as const,
+        canAccessAdmin: true,
+        privileges: Object.fromEntries(
+          [
+            'access_screen_orders',
+            'access_screen_customers',
+            'order_mark_paid',
+            'order_mark_shipped',
+            'order_mark_delivered'
+          ].map((privilege) => [privilege, true])
+        ),
         discountPercent: 15,
         discountActive: true
       }
@@ -158,57 +306,13 @@ export class MockApiService {
           status: 'delivered'
         }
       ],
-      customers: [
-        {
-          id: 1,
-          name: 'Ana López',
-          email: 'ana@mail.com',
-          leaderId: null,
-          level: 'L1',
-          discount: '15%',
-          commissions: 320,
-          commissionsPrevMonth: 180,
-          commissionsPrevMonthKey: '2026-01',
-          commissionsCurrentPending: 60,
-          commissionsCurrentConfirmed: 120,
-          commissionsPrevStatus: 'pending',
-          commissionsPrevReceiptUrl: '',
-          clabeInterbancaria: '012345678901234567'
-        },
-        {
-          id: 2,
-          name: 'Carlos Ruiz',
-          email: 'carlos@mail.com',
-          leaderId: 1,
-          level: 'L2',
-          discount: '10%',
-          commissions: 120,
-          commissionsPrevMonth: 0,
-          commissionsPrevMonthKey: '2026-01',
-          commissionsCurrentPending: 0,
-          commissionsCurrentConfirmed: 40,
-          commissionsPrevStatus: 'no_moves',
-          commissionsPrevReceiptUrl: '',
-          clabeInterbancaria: ''
-        },
-        {
-          id: 3,
-          name: 'María Pérez',
-          email: 'maria@mail.com',
-          leaderId: 2,
-          level: 'L3',
-          discount: '5%',
-          commissions: 0,
-          commissionsPrevMonth: 90,
-          commissionsPrevMonthKey: '2026-01',
-          commissionsCurrentPending: 0,
-          commissionsCurrentConfirmed: 0,
-          commissionsPrevStatus: 'paid',
-          commissionsPrevReceiptUrl: 'https://example.com/recibo.pdf',
-          clabeInterbancaria: '987654321098765432'
-        }
-      ],
+      customers: this.customers.map((customer) => ({
+        ...customer,
+        privileges: normalizePrivileges(customer.privileges)
+      })),
       products: [...this.products],
+      campaigns: [...this.campaigns],
+      businessConfig: structuredClone(this.businessConfig),
       warnings: [
         { type: 'commissions', text: '3 comisiones pendientes por depositar', severity: 'high' },
         { type: 'shipping', text: '2 pedidos pagados sin envío', severity: 'high' },
@@ -446,6 +550,26 @@ export class MockApiService {
           banner: 'images/L-Antioxidante.png'
         }
       ],
+      campaigns: this.campaigns
+        .filter((campaign) => campaign.active)
+        .map((campaign) => ({
+          id: campaign.id,
+          name: campaign.name,
+          hook: campaign.hook,
+          description: campaign.description,
+          story: campaign.story,
+          feed: campaign.feed,
+          banner: campaign.banner,
+          heroImage: campaign.heroImage,
+          heroBadge: campaign.heroBadge,
+          heroTitle: campaign.heroTitle,
+          heroAccent: campaign.heroAccent,
+          heroTail: campaign.heroTail,
+          heroDescription: campaign.heroDescription,
+          ctaPrimaryText: campaign.ctaPrimaryText,
+          ctaSecondaryText: campaign.ctaSecondaryText,
+          benefits: campaign.benefits ?? []
+        })),
       networkMembers: [
         { id: 'c-1', name: 'Mar?a G.', level: 'L1', spend: 80, status: 'Activa', leaderId: 'client-001' },
         { id: 'c-2', name: 'Luis R.', level: 'L1', spend: 25, status: 'En progreso', leaderId: 'client-001' },
@@ -549,6 +673,59 @@ export class MockApiService {
     return of(order).pipe(delay(120));
   }
 
+  createOrderCheckout(
+    orderId: string,
+    _payload: {
+      successUrl?: string;
+      failureUrl?: string;
+      pendingUrl?: string;
+      notificationUrl?: string;
+      currencyId?: string;
+    } = {}
+  ): Observable<{
+    orderId: string;
+    checkout?: {
+      provider?: string;
+      preferenceId?: string;
+      initPoint?: string;
+      sandboxInitPoint?: string;
+      externalReference?: string;
+    };
+  }> {
+    const preferenceId = `MOCK-PREF-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+    return of({
+      orderId,
+      checkout: {
+        provider: 'mercadolibre',
+        preferenceId,
+        initPoint: `https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=${preferenceId}`,
+        sandboxInitPoint: `https://sandbox.mercadopago.com.mx/checkout/v1/redirect?pref_id=${preferenceId}`,
+        externalReference: orderId
+      }
+    }).pipe(delay(120));
+  }
+
+  getOrderStatus(orderOrPaymentId: string): Observable<OrderStatusLookup> {
+    const payload: OrderStatusLookup = {
+      orderId: orderOrPaymentId,
+      status: 'pending',
+      paymentStatus: 'mercadolibre_pending',
+      paymentTransactionId: orderOrPaymentId,
+      paymentRawStatus: 'pending',
+      markedByWebhook: false
+    };
+    return of(payload).pipe(delay(120));
+  }
+
+  getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
+    return of({
+      associateId,
+      monthKey,
+      netVolume: 0,
+      isActive: false
+    }).pipe(delay(120));
+  }
+
   getOrders(customerId: string): Observable<AdminOrder[]> {
     const orders: AdminOrder[] = [
       {
@@ -585,11 +762,14 @@ export class MockApiService {
       id: Math.floor(100000 + Math.random() * 900000),
       name: payload.name,
       email: payload.email,
+      canAccessAdmin: false,
+      privileges: {},
       leaderId: payload.leaderId ?? null,
       level: 'L1',
       discount: '0%',
       commissions: 0
     };
+    this.customers = [customer, ...this.customers];
     return of(customer).pipe(delay(120));
   }
 
@@ -635,5 +815,216 @@ export class MockApiService {
         productId
       }
     }).pipe(delay(120));
+  }
+
+  listStocks(): Observable<AdminStock[]> {
+    return of([...this.stocks]).pipe(delay(120));
+  }
+
+  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+    const stock: AdminStock = {
+      id: `STK-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      name: payload.name,
+      location: payload.location,
+      linkedUserIds: payload.linkedUserIds ?? [],
+      inventory: payload.inventory ?? {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.stocks = [stock, ...this.stocks];
+    return of(stock).pipe(delay(120));
+  }
+
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+    const current = this.stocks.find((stock) => stock.id === stockId);
+    if (!current) {
+      throw new Error('Stock no encontrado');
+    }
+    const updated: AdminStock = {
+      ...current,
+      ...payload,
+      updatedAt: new Date().toISOString()
+    };
+    this.stocks = this.stocks.map((stock) => (stock.id === stockId ? updated : stock));
+    return of(updated).pipe(delay(120));
+  }
+
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+    const stock = this.stocks.find((entry) => entry.id === stockId);
+    if (!stock) {
+      throw new Error('Stock no encontrado');
+    }
+    const nextInventory = { ...(stock.inventory as Record<number, number>) };
+    nextInventory[payload.productId] = (nextInventory[payload.productId] ?? 0) + payload.qty;
+    const updated = { ...stock, inventory: nextInventory, updatedAt: new Date().toISOString() };
+    this.stocks = this.stocks.map((entry) => (entry.id === stockId ? updated : entry));
+    this.inventoryMovements = [
+      {
+        id: `MOV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+        type: 'entry',
+        stockId,
+        productId: payload.productId,
+        qty: payload.qty,
+        userId: payload.userId ?? null,
+        reason: payload.note,
+        createdAt: new Date().toISOString()
+      },
+      ...this.inventoryMovements
+    ];
+    return of({ stock: updated }).pipe(delay(120));
+  }
+
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+    const stock = this.stocks.find((entry) => entry.id === stockId);
+    if (!stock) {
+      throw new Error('Stock no encontrado');
+    }
+    const nextInventory = { ...(stock.inventory as Record<number, number>) };
+    nextInventory[payload.productId] = Math.max(0, (nextInventory[payload.productId] ?? 0) - payload.qty);
+    const updated = { ...stock, inventory: nextInventory, updatedAt: new Date().toISOString() };
+    this.stocks = this.stocks.map((entry) => (entry.id === stockId ? updated : entry));
+    this.inventoryMovements = [
+      {
+        id: `MOV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+        type: 'damaged',
+        stockId,
+        productId: payload.productId,
+        qty: payload.qty,
+        userId: payload.userId ?? null,
+        reason: payload.reason,
+        createdAt: new Date().toISOString()
+      },
+      ...this.inventoryMovements
+    ];
+    return of({ stock: updated }).pipe(delay(120));
+  }
+
+  listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
+    const rows = stockId
+      ? this.stockTransfers.filter((transfer) => transfer.sourceStockId === stockId || transfer.destinationStockId === stockId)
+      : this.stockTransfers;
+    return of([...rows]).pipe(delay(120));
+  }
+
+  createStockTransfer(payload: {
+    sourceStockId: string;
+    destinationStockId: string;
+    lines: Array<{ productId: number; qty: number }>;
+    createdByUserId?: number | null;
+  }): Observable<{ transfer: StockTransfer }> {
+    const transfer: StockTransfer = {
+      id: `TRF-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      sourceStockId: payload.sourceStockId,
+      destinationStockId: payload.destinationStockId,
+      lines: payload.lines,
+      status: 'pending',
+      createdByUserId: payload.createdByUserId ?? null,
+      createdAt: new Date().toISOString()
+    };
+    this.stockTransfers = [transfer, ...this.stockTransfers];
+    return of({ transfer }).pipe(delay(120));
+  }
+
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+    const transfer = this.stockTransfers.find((item) => item.id === transferId);
+    if (!transfer) {
+      throw new Error('Transferencia no encontrada');
+    }
+    const updated: StockTransfer = {
+      ...transfer,
+      status: 'received',
+      receivedByUserId: payload.receivedByUserId ?? null,
+      receivedAt: new Date().toISOString()
+    };
+    this.stockTransfers = this.stockTransfers.map((item) => (item.id === transferId ? updated : item));
+    return of({ transfer: updated }).pipe(delay(120));
+  }
+
+  listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
+    const rows = stockId ? this.inventoryMovements.filter((movement) => movement.stockId === stockId) : this.inventoryMovements;
+    return of([...rows]).pipe(delay(120));
+  }
+
+  listPosSales(stockId?: string): Observable<PosSale[]> {
+    const rows = stockId ? this.posSales.filter((sale) => sale.stockId === stockId) : this.posSales;
+    return of([...rows]).pipe(delay(120));
+  }
+
+  registerPosSale(payload: {
+    stockId: string;
+    attendantUserId?: number | null;
+    customerName?: string;
+    paymentStatus?: 'paid_branch';
+    deliveryStatus?: 'delivered_branch';
+    items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+  }): Observable<{ sale: PosSale }> {
+    const total = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const sale: PosSale = {
+      id: `SALE-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      orderId: `POS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      stockId: payload.stockId,
+      attendantUserId: payload.attendantUserId ?? null,
+      customerName: payload.customerName || 'Venta mostrador',
+      paymentStatus: payload.paymentStatus ?? 'paid_branch',
+      deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
+      total,
+      lines: payload.items.map((item) => ({ ...item })),
+      createdAt: new Date().toISOString()
+    };
+    this.posSales = [sale, ...this.posSales];
+    return of({ sale }).pipe(delay(120));
+  }
+
+  updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
+    const customer = this.customers.find((entry) => entry.id === customerId);
+    if (!customer) {
+      return throwError(() => new Error('Cliente no encontrado'));
+    }
+    const updated: AdminCustomer = {
+      ...customer,
+      canAccessAdmin: payload.canAccessAdmin ?? customer.canAccessAdmin ?? false,
+      privileges: normalizePrivileges(payload.privileges ?? customer.privileges)
+    };
+    this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
+    return of(updated).pipe(delay(120));
+  }
+
+  saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
+    const now = new Date().toISOString();
+    const existing = payload.id ? this.campaigns.find((entry) => entry.id === payload.id) : null;
+    const campaign: AdminCampaign = {
+      id: payload.id || `CMP-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      name: payload.name,
+      active: payload.active,
+      hook: payload.hook,
+      description: payload.description,
+      story: payload.story,
+      feed: payload.feed,
+      banner: payload.banner,
+      heroImage: payload.heroImage,
+      heroBadge: payload.heroBadge,
+      heroTitle: payload.heroTitle,
+      heroAccent: payload.heroAccent,
+      heroTail: payload.heroTail,
+      heroDescription: payload.heroDescription,
+      ctaPrimaryText: payload.ctaPrimaryText,
+      ctaSecondaryText: payload.ctaSecondaryText,
+      benefits: payload.benefits ?? [],
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    };
+    this.campaigns = existing
+      ? this.campaigns.map((entry) => (entry.id === campaign.id ? campaign : entry))
+      : [campaign, ...this.campaigns];
+    return of(campaign).pipe(delay(120));
+  }
+
+  getBusinessConfig(): Observable<AppBusinessConfig> {
+    return of(structuredClone(this.businessConfig)).pipe(delay(120));
+  }
+
+  saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
+    this.businessConfig = structuredClone(payload.config);
+    return of(structuredClone(this.businessConfig)).pipe(delay(120));
   }
 }

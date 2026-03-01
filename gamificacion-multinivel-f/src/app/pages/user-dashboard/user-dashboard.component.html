@@ -68,7 +68,7 @@
 
       <nav class="hidden lg:flex items-center gap-2">
         <ui-button size="sm" variant="ghost" *ngFor="let l of dashboardNavLinks" type="button"
-          (pressed)="scrollToSection(l.id)">
+          (pressed)="handleDashboardNavSelect(l.id)">
           <i class="fa-solid" [ngClass]="l.icon" aria-hidden="true"></i>
           <span>{{ l.label }}</span>
         </ui-button>

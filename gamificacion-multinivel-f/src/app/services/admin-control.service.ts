@@ -1,20 +1,30 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, forkJoin, map, Observable, tap } from 'rxjs';
 
 import {
   AdminCustomer,
   AdminData,
+  AdminCampaign,
+  AppBusinessConfig,
   AdminOrder,
+  AdminOrderItem,
   AdminProduct,
+  AdminStock,
   AssetResponse,
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  InventoryMovement,
+  PosSale,
+  StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
   ProductOfMonthResponse,
-  SaveAdminProductPayload
+  SaveAdminProductPayload,
+  SaveAdminCampaignPayload,
+  UpdateBusinessConfigPayload,
+  UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
 import { CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
@@ -36,6 +46,8 @@ export class AdminControlService {
           orders: data.orders ?? [],
           customers: data.customers ?? [],
           products: data.products ?? [],
+          campaigns: data.campaigns ?? [],
+          businessConfig: data.businessConfig,
           warnings: data.warnings ?? [],
           assetSlots: data.assetSlots ?? []
         };
@@ -104,7 +116,12 @@ export class AdminControlService {
                 shippingType: order.shippingType ?? payload.shippingType ?? entry.shippingType,
                 trackingNumber: order.trackingNumber ?? payload.trackingNumber ?? entry.trackingNumber,
                 deliveryPlace: order.deliveryPlace ?? payload.deliveryPlace ?? entry.deliveryPlace,
-                deliveryDate: order.deliveryDate ?? payload.deliveryDate ?? entry.deliveryDate
+                deliveryDate: order.deliveryDate ?? payload.deliveryDate ?? entry.deliveryDate,
+                stockId: order.stockId ?? payload.stockId ?? entry.stockId,
+                paymentStatus: order.paymentStatus ?? entry.paymentStatus,
+                deliveryStatus: order.deliveryStatus ?? entry.deliveryStatus,
+                attendantUserId: order.attendantUserId ?? entry.attendantUserId,
+                items: order.items ?? entry.items
               }
             : entry
         );
@@ -172,5 +189,128 @@ export class AdminControlService {
 
   selectCustomer(customerId: number): AdminCustomer | null {
     return this.customers.find((customer) => customer.id === customerId) ?? null;
+  }
+
+  saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
+    return this.api.saveCampaign(payload).pipe(
+      tap((campaign) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const existingIndex = (current.campaigns ?? []).findIndex((entry) => entry.id === campaign.id);
+        const nextCampaigns =
+          existingIndex >= 0
+            ? (current.campaigns ?? []).map((entry, index) => (index === existingIndex ? campaign : entry))
+            : [campaign, ...(current.campaigns ?? [])];
+        this.dataSubject.next({ ...current, campaigns: nextCampaigns });
+      })
+    );
+  }
+
+  getBusinessConfig(): Observable<AppBusinessConfig> {
+    return this.api.getBusinessConfig();
+  }
+
+  saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
+    return this.api.saveBusinessConfig(payload).pipe(
+      tap((config) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        this.dataSubject.next({ ...current, businessConfig: config });
+      })
+    );
+  }
+
+  listStocks(): Observable<AdminStock[]> {
+    return this.api.listStocks();
+  }
+
+  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+    return this.api.createStock(payload);
+  }
+
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+    return this.api.updateStock(stockId, payload);
+  }
+
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+    return this.api.registerStockEntry(stockId, payload);
+  }
+
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+    return this.api.registerStockDamage(stockId, payload);
+  }
+
+  listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
+    return this.api.listStockTransfers(stockId);
+  }
+
+  createStockTransfer(payload: {
+    sourceStockId: string;
+    destinationStockId: string;
+    lines: Array<{ productId: number; qty: number }>;
+    createdByUserId?: number | null;
+  }): Observable<{ transfer: StockTransfer }> {
+    return this.api.createStockTransfer(payload);
+  }
+
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+    return this.api.receiveStockTransfer(transferId, payload);
+  }
+
+  listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
+    return this.api.listInventoryMovements(stockId);
+  }
+
+  listPosSales(stockId?: string): Observable<PosSale[]> {
+    return this.api.listPosSales(stockId);
+  }
+
+  registerPosSale(payload: {
+    stockId: string;
+    attendantUserId?: number | null;
+    customerName?: string;
+    paymentStatus?: 'paid_branch';
+    deliveryStatus?: 'delivered_branch';
+    items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+  }): Observable<{ sale: PosSale }> {
+    return this.api.registerPosSale(payload);
+  }
+
+  updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
+    return this.api.updateCustomerPrivileges(customerId, payload).pipe(
+      tap((customer) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...customer } : entry));
+        this.dataSubject.next({ ...current, customers });
+      })
+    );
+  }
+
+  loadStocksAndPosState(): Observable<{
+    stocks: AdminStock[];
+    transfers: StockTransfer[];
+    movements: InventoryMovement[];
+    posSales: PosSale[];
+  }> {
+    return forkJoin({
+      stocks: this.api.listStocks(),
+      transfers: this.api.listStockTransfers(),
+      movements: this.api.listInventoryMovements(),
+      posSales: this.api.listPosSales()
+    }).pipe(
+      map((response) => ({
+        stocks: response.stocks ?? [],
+        transfers: response.transfers ?? [],
+        movements: response.movements ?? [],
+        posSales: response.posSales ?? []
+      }))
+    );
   }
 }

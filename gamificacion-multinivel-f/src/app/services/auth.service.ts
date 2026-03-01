@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 import { CreateAccountCustomer } from '../models/auth.model';
+import { AdminViewId, AppPrivilege, normalizePrivileges, SCREEN_PRIVILEGE_BY_VIEW, UserPrivileges } from '../models/privileges.model';
 import { ApiService } from './api.service';
 
 export type UserRole = 'admin' | 'cliente';
@@ -10,6 +11,9 @@ export interface AuthUser {
   userId?: string;
   name: string;
   role: UserRole;
+  canAccessAdmin?: boolean;
+  privileges?: UserPrivileges;
+  isSuperUser?: boolean;
   discountPercent?: number;
   discountActive?: boolean;
   level?: string;
@@ -44,12 +48,15 @@ export class AuthService {
         ? {
             userId: 'admin-001',
             name: 'Admin Rivera',
-            role: 'admin'
+            role: 'admin',
+            canAccessAdmin: true,
+            isSuperUser: true
           }
         : {
             userId: 'client-001',
             name: 'Valeria Torres',
             role: 'cliente',
+            canAccessAdmin: false,
             discountPercent: 15,
             discountActive: true
           };
@@ -76,8 +83,50 @@ export class AuthService {
   }
 
   private setUser(user: AuthUser): void {
-    this.userSubject.next(user);
-    localStorage.setItem(this.storageKey, JSON.stringify(user));
+    const normalized: AuthUser = {
+      ...user,
+      canAccessAdmin: Boolean(user.canAccessAdmin),
+      privileges: normalizePrivileges(user.privileges)
+    };
+    this.userSubject.next(normalized);
+    localStorage.setItem(this.storageKey, JSON.stringify(normalized));
+  }
+
+  isSuperUser(user: AuthUser | null | undefined = this.currentUser): boolean {
+    if (!user) {
+      return false;
+    }
+    if (user.isSuperUser) {
+      return true;
+    }
+    return user.userId === 'admin-001' || user.name.trim().toLowerCase() === 'admin';
+  }
+
+  hasAdminPanelAccess(user: AuthUser | null | undefined = this.currentUser): boolean {
+    if (!user) {
+      return false;
+    }
+    if (this.isSuperUser(user)) {
+      return true;
+    }
+    return Boolean(user.canAccessAdmin || user.role === 'admin');
+  }
+
+  hasPrivilege(privilege: AppPrivilege, user: AuthUser | null | undefined = this.currentUser): boolean {
+    if (!user) {
+      return false;
+    }
+    if (this.isSuperUser(user)) {
+      return true;
+    }
+    return user.privileges?.[privilege] === true;
+  }
+
+  canAccessAdminView(view: AdminViewId, user: AuthUser | null | undefined = this.currentUser): boolean {
+    if (!this.hasAdminPanelAccess(user)) {
+      return false;
+    }
+    return this.hasPrivilege(SCREEN_PRIVILEGE_BY_VIEW[view], user);
   }
 
   private loadUser(): AuthUser | null {
@@ -87,7 +136,12 @@ export class AuthService {
     }
 
     try {
-      return JSON.parse(raw) as AuthUser;
+      const parsed = JSON.parse(raw) as AuthUser;
+      return {
+        ...parsed,
+        canAccessAdmin: Boolean(parsed.canAccessAdmin),
+        privileges: normalizePrivileges(parsed.privileges)
+      };
     } catch {
       localStorage.removeItem(this.storageKey);
       return null;
