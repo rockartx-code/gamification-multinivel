@@ -9,6 +9,7 @@ import {
   NetworkMember,
   UserDashboardData
 } from '../models/user-dashboard.model';
+import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 
@@ -23,6 +24,7 @@ export class UserDashboardControlService {
   private readonly emptyFeatured: FeaturedItem[] = [];
   private readonly emptyCampaigns: DashboardCampaign[] = [];
   private readonly emptyNetworkMembers: NetworkMember[] = [];
+  private readonly emptyNotifications: PortalNotification[] = [];
   private cart: Record<string, number> = {};
   private heroQty = 0;
   private heroProductId = '';
@@ -73,6 +75,7 @@ export class UserDashboardControlService {
           ...data,
           networkMembers: safeNetworkMembers,
           buyAgainIds: safeBuyAgainIds,
+          notifications: Array.isArray(data.notifications) ? data.notifications : [],
           commissions: normalizedCommissions
         };
         this.networkMembersCache = safeNetworkMembers;
@@ -118,6 +121,10 @@ export class UserDashboardControlService {
     return this.data?.networkMembers ?? this.emptyNetworkMembers;
   }
 
+  get notifications(): PortalNotification[] {
+    return this.data?.notifications ?? this.emptyNotifications;
+  }
+
   get buyAgainIds(): Set<string> {
     return this.buyAgainIdsCache.size ? new Set(this.buyAgainIdsCache) : new Set(this.data?.buyAgainIds ?? []);
   }
@@ -142,7 +149,12 @@ export class UserDashboardControlService {
   }
 
   formatMoney(value: number): string {
-    return `$${value.toFixed(0)}`;
+    const amount = Number.isFinite(value) ? value : 0;
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      maximumFractionDigits: 0
+    }).format(amount);
   }
 
   goalBasePercent(goal: DashboardGoal): number {
@@ -223,6 +235,31 @@ export class UserDashboardControlService {
     const m = Math.floor((diff / (1000 * 60)) % 60);
     const s = Math.floor((diff / 1000) % 60);
     return `${d}d ${h}h ${m}m ${s}s`;
+  }
+
+  markNotificationRead(notificationId: string): Observable<NotificationReadResponse> {
+    const customerId = this.authService.currentUser?.userId;
+    return this.api.markNotificationRead(notificationId, customerId ? { customerId } : {}).pipe(
+      tap((response) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const notifications = (current.notifications ?? []).map((notification) =>
+          notification.id === notificationId
+            ? {
+                ...notification,
+                isRead: true,
+                readAt: response.readAt ?? notification.readAt ?? ''
+              }
+            : notification
+        );
+        this.dataSubject.next({
+          ...current,
+          notifications
+        });
+      })
+    );
   }
 
   private syncGoalCartTotals(): void {

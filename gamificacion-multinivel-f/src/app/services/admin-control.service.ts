@@ -23,9 +23,12 @@ import {
   ProductOfMonthResponse,
   SaveAdminProductPayload,
   SaveAdminCampaignPayload,
+  SaveAdminNotificationPayload,
   UpdateBusinessConfigPayload,
+  UpdateCustomerPayload,
   UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
+import { PortalNotification } from '../models/portal-notification.model';
 import { CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
 
@@ -47,6 +50,7 @@ export class AdminControlService {
           customers: data.customers ?? [],
           products: data.products ?? [],
           campaigns: data.campaigns ?? [],
+          notifications: data.notifications ?? [],
           businessConfig: data.businessConfig,
           warnings: data.warnings ?? [],
           assetSlots: data.assetSlots ?? []
@@ -93,7 +97,12 @@ export class AdminControlService {
   }
 
   formatMoney(value: number): string {
-    return `$${value.toFixed(0)}`;
+    const amount = Number.isFinite(value) ? value : 0;
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      maximumFractionDigits: 0
+    }).format(amount);
   }
 
   getFilteredOrders(status: AdminOrder['status']): AdminOrder[] {
@@ -208,6 +217,26 @@ export class AdminControlService {
     );
   }
 
+  saveNotification(payload: SaveAdminNotificationPayload): Observable<PortalNotification> {
+    return this.api.saveNotification(payload).pipe(
+      tap((notification) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const nextNotifications = [...(current.notifications ?? [])];
+        const existingIndex = nextNotifications.findIndex((entry) => entry.id === notification.id);
+        if (existingIndex >= 0) {
+          nextNotifications[existingIndex] = notification;
+        } else {
+          nextNotifications.unshift(notification);
+        }
+        nextNotifications.sort((a, b) => String(b.startAt ?? '').localeCompare(String(a.startAt ?? '')));
+        this.dataSubject.next({ ...current, notifications: nextNotifications });
+      })
+    );
+  }
+
   getBusinessConfig(): Observable<AppBusinessConfig> {
     return this.api.getBusinessConfig();
   }
@@ -282,6 +311,19 @@ export class AdminControlService {
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
     return this.api.updateCustomerPrivileges(customerId, payload).pipe(
+      tap((customer) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...customer } : entry));
+        this.dataSubject.next({ ...current, customers });
+      })
+    );
+  }
+
+  updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
+    return this.api.updateCustomer(customerId, payload).pipe(
       tap((customer) => {
         const current = this.dataSubject.value;
         if (!current) {

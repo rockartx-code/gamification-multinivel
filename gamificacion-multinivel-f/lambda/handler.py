@@ -8,7 +8,7 @@ import functools
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -21,6 +21,13 @@ from boto3.dynamodb.conditions import Attr, Key
 TABLE_NAME = os.getenv("TABLE_NAME", "multinivel")
 BUCKET_NAME = os.getenv("BUCKET_NAME", "findingu-ventas")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+SES_FROM_EMAIL = (os.getenv("SES_FROM_EMAIL") or os.getenv("SES_SOURCE_EMAIL") or "info@findingu.com.mx").strip()
+SES_REPLY_TO = (os.getenv("SES_REPLY_TO") or "").strip()
+FRONTEND_BASE_URL = (os.getenv("FRONTEND_BASE_URL") or "https://www.findingu.com.mx/").strip().rstrip("/")
+PASSWORD_RESET_OTP_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_OTP_TTL_MINUTES", "15"))
+DEFAULT_SPONSOR_NAME = (os.getenv("DEFAULT_SPONSOR_NAME") or "FindingU").strip() or "FindingU"
+DEFAULT_SPONSOR_EMAIL = (os.getenv("DEFAULT_SPONSOR_EMAIL") or "coach@findingu.com.mx").strip()
+DEFAULT_SPONSOR_PHONE = (os.getenv("DEFAULT_SPONSOR_PHONE") or "+52 1 55 1498 2351").strip()
 MERCADOLIBRE_ACCESS_TOKEN = (os.getenv("MERCADOLIBRE_ACCESS_TOKEN") or "").strip()
 _MERCADOLIBRE_ENABLED_RAW = (
     os.getenv("MERCADOLIBRE_ENABLED")
@@ -34,6 +41,7 @@ MERCADOLIBRE_ENABLED_ENV: Optional[bool] = (
 _dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 _table = _dynamodb.Table(TABLE_NAME)
 _s3 = boto3.client("s3", region_name=AWS_REGION)
+_ses = boto3.client("ses", region_name=AWS_REGION)
 
 # Decimal Constants for performance
 D_ZERO = Decimal("0")
@@ -46,6 +54,8 @@ DEFAULT_COMMISSION_BY_DEPTH = {
     2: Decimal("0.05"),
     3: Decimal("0.03"),
 }
+NOTIFICATION_LINK_TEXT_DEFAULT = "Ver"
+MAX_NOTIFICATION_DESCRIPTION_LENGTH = 300
 
 # ---------------------------------------------------------------------------
 # JSON / HTTP helpers
@@ -73,6 +83,29 @@ def _json_response(status_code: int, payload: dict) -> dict:
             ),
         },
         "body": json.dumps(payload, default=_json_default),
+    }
+
+def _debug_json(value: Any) -> str:
+    try:
+        return json.dumps(value, default=_json_default, sort_keys=True)
+    except Exception as exc:
+        return f"<json_error:{exc}> {value!r}"
+
+def _address_log(step: str, **fields: Any) -> None:
+    print(f"[order][address][{step}] {_debug_json(fields)}")
+
+def _address_snapshot_for_log(value: Any) -> dict:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        "addressId": value.get("addressId") or value.get("id"),
+        "label": value.get("label"),
+        "recipientName": value.get("recipientName"),
+        "phone": value.get("phone"),
+        "address": value.get("address"),
+        "postalCode": value.get("postalCode"),
+        "state": value.get("state") or value.get("city"),
+        "isDefault": value.get("isDefault"),
     }
 
 def _public_s3_url(bucket: str, key: str, region: str) -> str:
@@ -134,6 +167,12 @@ def _to_decimal(n: Any) -> Decimal:
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+def _hash_otp(otp: str) -> str:
+    return hashlib.sha256(otp.encode("utf-8")).hexdigest()
+
+def _generate_otp_code(length: int = 6) -> str:
+    return "".join(random.choices("0123456789", k=length))
 
 def _parse_int_or_str(value: Any) -> Any:
     if value is None or value == "":
@@ -198,7 +237,10 @@ def _iso_to_dt(iso: Optional[str]) -> Optional[datetime]:
     try:
         if iso.endswith("Z"):
             iso = iso[:-1] + "+00:00"
-        return datetime.fromisoformat(iso)
+        parsed = datetime.fromisoformat(iso)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
     except Exception:
         return None
 
@@ -584,8 +626,40 @@ def _put_entity(entity: str, entity_id: Any, item: dict, created_at_iso: Optiona
 
     # TransactWriteItems could guarantee atomicity, but PutItem is faster/cheaper. 
     # Reliability tradeoff acceptable for this demo scope.
-    _table.put_item(Item=main_item)
-    _table.put_item(Item=ref_item)
+    if entity in {"ORDER", "CUSTOMER"}:
+        _address_log(
+            "put_entity.start",
+            entity=entity,
+            entityId=entity_id,
+            pk=main_item["PK"],
+            sk=main_item["SK"],
+            address=_address_snapshot_for_log(main_item.get("shippingAddress") or main_item),
+            addressCount=len(main_item.get("addresses") or main_item.get("shippingAddresses") or []),
+        )
+    try:
+        _table.put_item(Item=main_item)
+        _table.put_item(Item=ref_item)
+    except Exception as exc:
+        if entity in {"ORDER", "CUSTOMER"}:
+            _address_log(
+                "put_entity.error",
+                entity=entity,
+                entityId=entity_id,
+                pk=main_item["PK"],
+                sk=main_item["SK"],
+                error=str(exc),
+            )
+        raise
+    if entity in {"ORDER", "CUSTOMER"}:
+        _address_log(
+            "put_entity.ok",
+            entity=entity,
+            entityId=entity_id,
+            pk=main_item["PK"],
+            sk=main_item["SK"],
+            address=_address_snapshot_for_log(main_item.get("shippingAddress") or main_item),
+            addressCount=len(main_item.get("addresses") or main_item.get("shippingAddresses") or []),
+        )
     return main_item
 
 def _get_ref(entity: str, entity_id: Any) -> Optional[dict]:
@@ -609,6 +683,8 @@ def _update_by_id(
 ) -> dict:
     ref = _get_ref(entity, entity_id)
     if not ref:
+        if str(entity).upper() == "CUSTOMER":
+            _address_log("update_by_id.ref_missing", entity=str(entity).upper(), entityId=entity_id)
         raise KeyError(f"{entity.upper()}_REF_NOT_FOUND")
 
     kwargs = {
@@ -620,7 +696,42 @@ def _update_by_id(
     if ean:
         kwargs["ExpressionAttributeNames"] = ean
 
-    resp = _table.update_item(**kwargs)
+    if str(entity).upper() == "CUSTOMER":
+        _address_log(
+            "update_by_id.start",
+            entity=str(entity).upper(),
+            entityId=entity_id,
+            ref=ref,
+            updateExpression=update_expression,
+            expressionAttributeValues=eav,
+            expressionAttributeNames=ean or {},
+        )
+    try:
+        resp = _table.update_item(**kwargs)
+    except Exception as exc:
+        if str(entity).upper() == "CUSTOMER":
+            _address_log(
+                "update_by_id.error",
+                entity=str(entity).upper(),
+                entityId=entity_id,
+                ref=ref,
+                updateExpression=update_expression,
+                expressionAttributeValues=eav,
+                expressionAttributeNames=ean or {},
+                error=str(exc),
+            )
+        raise
+    if str(entity).upper() == "CUSTOMER":
+        attrs = resp.get("Attributes") or {}
+        _address_log(
+            "update_by_id.ok",
+            entity=str(entity).upper(),
+            entityId=entity_id,
+            address=_address_snapshot_for_log(attrs),
+            defaultAddressId=attrs.get("defaultAddressId"),
+            defaultShippingAddressId=attrs.get("defaultShippingAddressId"),
+            addressCount=len(attrs.get("addresses") or attrs.get("shippingAddresses") or []),
+        )
     return resp.get("Attributes") or {}
 
 def _query_bucket(entity: str, limit: Optional[int] = None, scan_forward: bool = False) -> List[dict]:
@@ -657,6 +768,33 @@ def _query_bucket(entity: str, limit: Optional[int] = None, scan_forward: bool =
         if len(items) > 5000:
             break
             
+    return items
+
+def _query_exact_pk(pk: str, limit: Optional[int] = None, scan_forward: bool = False) -> List[dict]:
+    items = []
+    query_kwargs = {
+        "KeyConditionExpression": Key("PK").eq(pk),
+        "ScanIndexForward": scan_forward,
+    }
+
+    if limit:
+        query_kwargs["Limit"] = limit
+        resp = _table.query(**query_kwargs)
+        return resp.get("Items", []) or []
+
+    while True:
+        resp = _table.query(**query_kwargs)
+        batch = resp.get("Items", [])
+        items.extend(batch)
+
+        lek = resp.get("LastEvaluatedKey")
+        if not lek:
+            break
+        query_kwargs["ExclusiveStartKey"] = lek
+
+        if len(items) > 5000:
+            break
+
     return items
 
 # ---------------------------------------------------------------------------
@@ -800,6 +938,260 @@ def _find_customer_by_email(email: str) -> Optional[dict]:
         if _normalize_email(customer.get("email")) == email_norm:
             return customer
     return None
+
+def _password_reset_url(email: str, otp: str) -> str:
+    if not FRONTEND_BASE_URL:
+        return ""
+    query = urllib.parse.urlencode({"email": email, "otp": otp})
+    return f"{FRONTEND_BASE_URL}/#/recuperar-contrasena?{query}"
+
+def _send_email_via_ses(to_email: str, subject: str, text_body: str, html_body: str) -> None:
+    if not SES_FROM_EMAIL:
+        raise RuntimeError("SES_FROM_EMAIL no configurado")
+
+    payload = {
+        "Source": SES_FROM_EMAIL,
+        "Destination": {"ToAddresses": [to_email]},
+        "Message": {
+            "Subject": {"Data": subject, "Charset": "UTF-8"},
+            "Body": {
+                "Text": {"Data": text_body, "Charset": "UTF-8"},
+                "Html": {"Data": html_body, "Charset": "UTF-8"},
+            },
+        },
+    }
+    if SES_REPLY_TO:
+        payload["ReplyToAddresses"] = [SES_REPLY_TO]
+
+    _ses.send_email(**payload)
+
+def _send_password_reset_otp_email(name: str, email: str, otp: str) -> None:
+    reset_url = _password_reset_url(email, otp)
+    ttl_minutes = PASSWORD_RESET_OTP_TTL_MINUTES
+    subject = "Recupera tu contrasena"
+    text_lines = [
+        f"Hola {name or 'usuario'},",
+        "",
+        f"Tu codigo OTP para recuperar la contrasena es: {otp}",
+        f"Este codigo vence en {ttl_minutes} minutos.",
+    ]
+    if reset_url:
+        text_lines.extend(["", f"Tambien puedes abrir este enlace: {reset_url}"])
+    text_lines.extend(["", "Si no solicitaste este cambio, ignora este correo."])
+    text_body = "\n".join(text_lines)
+
+    html_body = (
+        f"<html><body>"
+        f"<p>Hola {name or 'usuario'},</p>"
+        f"<p>Tu codigo OTP para recuperar la contrasena es:</p>"
+        f"<p style='font-size:24px;font-weight:bold;letter-spacing:4px;'>{otp}</p>"
+        f"<p>Este codigo vence en {ttl_minutes} minutos.</p>"
+        + (f"<p><a href='{reset_url}'>Abrir pantalla de cambio de contrasena</a></p>" if reset_url else "")
+        + "<p>Si no solicitaste este cambio, ignora este correo.</p>"
+        + "</body></html>"
+    )
+    _send_email_via_ses(email, subject, text_body, html_body)
+
+def _send_welcome_email(name: str, email: str) -> None:
+    subject = "Bienvenido a FindingU"
+    text_body = (
+        f"Hola {name or 'usuario'},\n\n"
+        "Tu registro fue completado correctamente.\n"
+        "Ya puedes iniciar sesion y acceder a tu panel.\n\n"
+        "Gracias por unirte a FindingU."
+    )
+    html_body = (
+        f"<html><body>"
+        f"<p>Hola {name or 'usuario'},</p>"
+        "<p>Tu registro fue completado correctamente.</p>"
+        "<p>Ya puedes iniciar sesion y acceder a tu panel.</p>"
+        "<p>Gracias por unirte a <strong>FindingU</strong>.</p>"
+        "</body></html>"
+    )
+    _send_email_via_ses(email, subject, text_body, html_body)
+
+def _send_network_join_email(sponsor: dict, member: dict) -> None:
+    sponsor_email = _normalize_email(sponsor.get("email"))
+    if not sponsor_email:
+        return
+
+    sponsor_name = sponsor.get("name") or "usuario"
+    member_name = member.get("name") or "Nuevo miembro"
+    member_email = member.get("email") or ""
+    member_phone = member.get("phone") or ""
+    subject = "Nuevo miembro en tu red"
+    text_body = (
+        f"Hola {sponsor_name},\n\n"
+        f"{member_name} acaba de entrar a tu red.\n"
+        f"Correo: {member_email or '-'}\n"
+        f"Telefono: {member_phone or '-'}\n\n"
+        "Entra a tu panel para darle seguimiento."
+    )
+    html_body = (
+        f"<html><body>"
+        f"<p>Hola {sponsor_name},</p>"
+        f"<p><strong>{member_name}</strong> acaba de entrar a tu red.</p>"
+        f"<p>Correo: {member_email or '-'}</p>"
+        f"<p>Telefono: {member_phone or '-'}</p>"
+        f"<p>Entra a tu panel para darle seguimiento.</p>"
+        f"</body></html>"
+    )
+    _send_email_via_ses(sponsor_email, subject, text_body, html_body)
+
+def _sponsor_contact_payload(customer: Optional[dict]) -> dict:
+    if customer and isinstance(customer, dict):
+        return {
+            "name": (customer.get("name") or DEFAULT_SPONSOR_NAME).strip() or DEFAULT_SPONSOR_NAME,
+            "email": (_normalize_email(customer.get("email")) or DEFAULT_SPONSOR_EMAIL),
+            "phone": (str(customer.get("phone") or "").strip() or DEFAULT_SPONSOR_PHONE),
+            "isDefault": False,
+        }
+    return {
+        "name": DEFAULT_SPONSOR_NAME,
+        "email": DEFAULT_SPONSOR_EMAIL,
+        "phone": DEFAULT_SPONSOR_PHONE,
+        "isDefault": True,
+    }
+
+def _find_effective_sponsor(customer: Optional[dict]) -> dict:
+    if not customer or not isinstance(customer, dict):
+        return _sponsor_contact_payload(None)
+    sponsor_id = customer.get("leaderId")
+    sponsor = _get_by_id("CUSTOMER", int(sponsor_id)) if sponsor_id not in (None, "") else None
+    return _sponsor_contact_payload(sponsor)
+
+def _would_create_leader_cycle(customers_raw: List[dict], customer_id: Any, leader_id: Any) -> bool:
+    if customer_id in (None, "") or leader_id in (None, ""):
+        return False
+    customer_id_str = str(customer_id)
+    current = str(leader_id)
+    leader_by_customer = {
+        str(item.get("customerId")): str(item.get("leaderId"))
+        for item in customers_raw
+        if item.get("customerId") not in (None, "") and item.get("leaderId") not in (None, "")
+    }
+    seen = set()
+    while current and current not in seen:
+        if current == customer_id_str:
+            return True
+        seen.add(current)
+        current = leader_by_customer.get(current, "")
+    return False
+
+def _store_password_reset_otp(email: str, customer_id: Any, otp: str) -> dict:
+    now_dt = _utc_now()
+    now_iso = now_dt.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    expires_at = (now_dt + timedelta(minutes=PASSWORD_RESET_OTP_TTL_MINUTES)).replace(microsecond=0)
+    expires_iso = expires_at.isoformat().replace("+00:00", "Z")
+    item = {
+        "entityType": "passwordReset",
+        "passwordResetId": email,
+        "email": email,
+        "customerId": customer_id,
+        "otpHash": _hash_otp(otp),
+        "otpLast4": otp[-4:],
+        "used": False,
+        "attempts": 0,
+        "expiresAt": expires_iso,
+        "createdAt": now_iso,
+        "updatedAt": now_iso,
+    }
+    return _put_entity("PASSWORD_RESET", email, item, created_at_iso=now_iso)
+
+def _request_password_recovery(payload: dict) -> dict:
+    email_norm = _normalize_email(payload.get("email"))
+    if not email_norm:
+        return _json_response(200, {"message": "Ingresa un correo electronico valido", "Error": "BadRequest"})
+
+    auth = _get_auth_by_email(email_norm)
+    customer = _find_customer_by_email(email_norm)
+    customer_id = None
+    name = ""
+    if auth and auth.get("customerId") is not None:
+        customer_id = auth.get("customerId")
+        customer = customer or _get_by_id("CUSTOMER", customer_id)
+    elif customer and customer.get("customerId") is not None:
+        customer_id = customer.get("customerId")
+
+    if customer:
+        name = customer.get("name") or ""
+
+    if customer_id is None:
+        return _json_response(200, {
+            "ok": True,
+            "message": "Si el correo existe, te enviamos un codigo OTP para recuperar tu contrasena."
+        })
+
+    otp = _generate_otp_code()
+    _store_password_reset_otp(email_norm, customer_id, otp)
+    try:
+        _send_password_reset_otp_email(name, email_norm, otp)
+    except Exception as exc:
+        print(f"[password-recovery] SES send failed: {exc}")
+        return _json_response(200, {"message": "No se pudo enviar el correo OTP", "Error": "EmailSendFailed"})
+
+    return _json_response(200, {
+        "ok": True,
+        "message": "Si el correo existe, te enviamos un codigo OTP para recuperar tu contrasena."
+    })
+
+def _reset_password(payload: dict) -> dict:
+    email_norm = _normalize_email(payload.get("email"))
+    otp = str(payload.get("otp") or "").strip()
+    password = payload.get("password")
+    confirm = payload.get("confirmPassword")
+
+    if not email_norm or not otp or not password or not confirm:
+        return _json_response(200, {"message": "email, otp, password y confirmPassword son obligatorios", "Error": "BadRequest"})
+    if password != confirm:
+        return _json_response(200, {"message": "Las contrasenas no coinciden", "Error": "BadRequest"})
+
+    reset_record = _get_by_id("PASSWORD_RESET", email_norm)
+    if not reset_record:
+        return _json_response(200, {"message": "OTP invalido o expirado", "Error": "Unauthorized"})
+    if bool(reset_record.get("used")):
+        return _json_response(200, {"message": "OTP invalido o expirado", "Error": "Unauthorized"})
+    expires_at = _iso_to_dt(reset_record.get("expiresAt"))
+    if not expires_at or expires_at <= _utc_now():
+        return _json_response(200, {"message": "OTP invalido o expirado", "Error": "Unauthorized"})
+    if reset_record.get("otpHash") != _hash_otp(otp):
+        attempts = int(reset_record.get("attempts") or 0) + 1
+        try:
+            _update_by_id(
+                "PASSWORD_RESET",
+                email_norm,
+                "SET attempts = :a, updatedAt = :u",
+                {":a": attempts, ":u": _now_iso()},
+            )
+        except Exception:
+            pass
+        return _json_response(200, {"message": "OTP invalido o expirado", "Error": "Unauthorized"})
+
+    auth = _get_auth_by_email(email_norm)
+    customer = _find_customer_by_email(email_norm)
+    if not auth and customer and customer.get("customerId") is not None:
+        auth = _create_auth_record(email_norm, _hash_password(str(password)), customer.get("customerId"))
+    if not auth:
+        return _json_response(200, {"message": "No existe una cuenta asociada al correo", "Error": "NoEncontrado"})
+
+    password_hash = _hash_password(str(password))
+    _update_by_id("AUTH", email_norm, "SET passwordHash = :p, updatedAt = :u", {":p": password_hash, ":u": _now_iso()})
+
+    customer_id = auth.get("customerId")
+    if customer_id is not None:
+        try:
+            _update_by_id("CUSTOMER", customer_id, "SET passwordHash = :p, updatedAt = :u", {":p": password_hash, ":u": _now_iso()})
+        except Exception:
+            pass
+
+    _update_by_id(
+        "PASSWORD_RESET",
+        email_norm,
+        "SET used = :used, usedAt = :usedAt, updatedAt = :u",
+        {":used": True, ":usedAt": _now_iso(), ":u": _now_iso()},
+    )
+
+    return _json_response(200, {"ok": True, "message": "Contrasena actualizada correctamente"})
 
 def _normalize_user_id(value: Any) -> Optional[Any]:
     if value is None or value == "":
@@ -1244,6 +1636,328 @@ def _is_active_cached(associate_id: Any, month_key: str, cache: dict) -> bool:
 # ---------------------------------------------------------------------------
 # Customer Helpers
 # ---------------------------------------------------------------------------
+def _clean_str(value: Any) -> str:
+    return str(value or "").strip()
+
+def _customer_entity_id(value: Any) -> Optional[Any]:
+    normalized = _parse_int_or_str(value)
+    return None if normalized in (None, "", 0, "0") else normalized
+
+def _truthy_flag(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return _clean_str(value).lower() in {"1", "true", "yes", "on"}
+
+def _build_shipping_address_entry(
+    *,
+    recipient_name: str = "",
+    phone: str = "",
+    address: str = "",
+    postal_code: str = "",
+    state: str = "",
+    label: str = "",
+    address_id: Optional[str] = None,
+    is_default: bool = False,
+    created_at: Optional[str] = None,
+    updated_at: Optional[str] = None,
+) -> Optional[dict]:
+    recipient_name = _clean_str(recipient_name)
+    phone = _clean_str(phone)
+    address = _clean_str(address)
+    postal_code = _clean_str(postal_code)
+    state = _clean_str(state)
+    label = _clean_str(label)
+
+    if not any([address, postal_code, state]):
+        return None
+
+    item = {
+        "label": label,
+        "recipientName": recipient_name,
+        "phone": phone,
+        "address": address,
+        "postalCode": postal_code,
+        "state": state,
+        "isDefault": bool(is_default),
+    }
+    if address_id:
+        item["addressId"] = address_id
+    if created_at:
+        item["createdAt"] = created_at
+    if updated_at:
+        item["updatedAt"] = updated_at
+    return item
+
+def _shipping_address_from_payload(payload: dict, fallback_label: str = "") -> Optional[dict]:
+    if not isinstance(payload, dict):
+        _address_log("payload.invalid", payloadType=type(payload).__name__)
+        return None
+    shipping_address = payload.get("shippingAddress") if isinstance(payload.get("shippingAddress"), dict) else {}
+    snapshot = _build_shipping_address_entry(
+        recipient_name=shipping_address.get("recipientName") or payload.get("recipientName") or payload.get("customerName"),
+        phone=shipping_address.get("phone") or payload.get("phone"),
+        address=shipping_address.get("address") or payload.get("address"),
+        postal_code=shipping_address.get("postalCode") or payload.get("postalCode"),
+        state=shipping_address.get("state") or shipping_address.get("city") or payload.get("state") or payload.get("city"),
+        label=shipping_address.get("label") or payload.get("shippingAddressLabel") or fallback_label,
+        address_id=shipping_address.get("addressId") or shipping_address.get("id") or payload.get("shippingAddressId"),
+        is_default=bool(shipping_address.get("isDefault")),
+    )
+    _address_log(
+        "payload.snapshot",
+        customerId=payload.get("customerId"),
+        shippingAddress=_address_snapshot_for_log(shipping_address),
+        directAddress={
+            "recipientName": payload.get("recipientName"),
+            "phone": payload.get("phone"),
+            "address": payload.get("address"),
+            "postalCode": payload.get("postalCode"),
+            "state": payload.get("state") or payload.get("city"),
+            "shippingAddressId": payload.get("shippingAddressId"),
+            "shippingAddressLabel": payload.get("shippingAddressLabel"),
+            "saveShippingAddress": payload.get("saveShippingAddress"),
+        },
+        snapshot=_address_snapshot_for_log(snapshot),
+    )
+    return snapshot
+
+def _normalize_customer_shipping_addresses(customer: Optional[dict]) -> List[dict]:
+    if not customer or not isinstance(customer, dict):
+        _address_log("normalize_addresses.empty_customer", customer=customer)
+        return []
+
+    addresses: List[dict] = []
+    default_id = _clean_str(customer.get("defaultAddressId") or customer.get("defaultShippingAddressId"))
+    raw_items = customer.get("addresses")
+    if not isinstance(raw_items, list):
+        raw_items = customer.get("shippingAddresses")
+    if isinstance(raw_items, list):
+        for idx, raw in enumerate(raw_items, start=1):
+            if not isinstance(raw, dict):
+                continue
+            entry = _build_shipping_address_entry(
+                recipient_name=raw.get("recipientName") or customer.get("name"),
+                phone=raw.get("phone") or customer.get("phone"),
+                address=raw.get("address"),
+                postal_code=raw.get("postalCode"),
+                state=raw.get("state") or raw.get("city") or customer.get("state") or customer.get("city"),
+                label=raw.get("label") or f"Direccion {idx}",
+                address_id=_clean_str(raw.get("addressId")) or f"ADDR-{idx}",
+                is_default=bool(raw.get("isDefault")),
+                created_at=raw.get("createdAt"),
+                updated_at=raw.get("updatedAt"),
+            )
+            if entry:
+                addresses.append(entry)
+
+    if not addresses:
+        legacy = _build_shipping_address_entry(
+            recipient_name=customer.get("name"),
+            phone=customer.get("phone"),
+            address=customer.get("address"),
+            postal_code=customer.get("postalCode"),
+            state=customer.get("state") or customer.get("city"),
+            label=customer.get("defaultShippingAddressLabel") or "Principal",
+            address_id=default_id or "default",
+            is_default=True,
+            created_at=customer.get("createdAt"),
+            updated_at=customer.get("updatedAt"),
+        )
+        if legacy:
+            addresses.append(legacy)
+
+    if default_id:
+        matched = False
+        for entry in addresses:
+            is_default = _clean_str(entry.get("addressId")) == default_id
+            entry["isDefault"] = is_default
+            matched = matched or is_default
+        if not matched and addresses:
+            addresses[0]["isDefault"] = True
+    elif addresses and not any(bool(entry.get("isDefault")) for entry in addresses):
+        addresses[0]["isDefault"] = True
+
+    addresses.sort(key=lambda entry: 0 if entry.get("isDefault") else 1)
+    _address_log(
+        "normalize_addresses.result",
+        customerId=customer.get("customerId"),
+        defaultAddressId=default_id,
+        count=len(addresses),
+        addresses=[_address_snapshot_for_log(entry) for entry in addresses],
+    )
+    return addresses
+
+def _set_customer_addresses_fields(item: dict, addresses: List[dict]) -> dict:
+    if not isinstance(item, dict):
+        return item
+    if not addresses:
+        item.pop("addresses", None)
+        item.pop("shippingAddresses", None)
+        item.pop("defaultAddressId", None)
+        item.pop("defaultShippingAddressId", None)
+        return item
+
+    item["addresses"] = addresses
+    item["defaultAddressId"] = addresses[0].get("addressId")
+    # Transitional aliases while frontend/backend code paths converge.
+    item["shippingAddresses"] = addresses
+    item["defaultShippingAddressId"] = addresses[0].get("addressId")
+    return item
+
+def _default_shipping_address(customer: Optional[dict]) -> Optional[dict]:
+    addresses = _normalize_customer_shipping_addresses(customer)
+    return addresses[0] if addresses else None
+
+def _upsert_customer_shipping_address(
+    customer: Optional[dict],
+    payload: dict,
+    persist_address: bool = False,
+) -> Tuple[List[dict], Optional[dict]]:
+    addresses = _normalize_customer_shipping_addresses(customer)
+    snapshot = _shipping_address_from_payload(payload)
+    if not snapshot:
+        _address_log(
+            "upsert.skip_no_snapshot",
+            customerId=(customer or {}).get("customerId") if isinstance(customer, dict) else None,
+            persistAddress=persist_address,
+        )
+        return addresses, None
+
+    shipping_address = payload.get("shippingAddress") if isinstance(payload.get("shippingAddress"), dict) else {}
+    requested_id = _clean_str(payload.get("shippingAddressId") or shipping_address.get("addressId") or shipping_address.get("id"))
+    save_address = persist_address or _truthy_flag(payload.get("saveShippingAddress"), default=False)
+    _address_log(
+        "upsert.start",
+        customerId=(customer or {}).get("customerId") if isinstance(customer, dict) else None,
+        requestedId=requested_id,
+        saveAddress=save_address,
+        persistAddress=persist_address,
+        currentCount=len(addresses),
+        snapshot=_address_snapshot_for_log(snapshot),
+    )
+
+    existing = next((entry for entry in addresses if _clean_str(entry.get("addressId")) == requested_id), None) if requested_id else None
+    if existing and not snapshot.get("label"):
+        snapshot["label"] = existing.get("label") or ""
+
+    if not save_address:
+        _address_log(
+            "upsert.snapshot_only",
+            customerId=(customer or {}).get("customerId") if isinstance(customer, dict) else None,
+            requestedId=requested_id,
+            snapshot=_address_snapshot_for_log(snapshot),
+        )
+        return addresses, snapshot
+
+    now = _now_iso()
+    match_index = None
+    if requested_id:
+        for idx, entry in enumerate(addresses):
+            if _clean_str(entry.get("addressId")) == requested_id:
+                match_index = idx
+                break
+
+    if match_index is None:
+        for idx, entry in enumerate(addresses):
+            if (
+                _clean_str(entry.get("address")) == _clean_str(snapshot.get("address"))
+                and _clean_str(entry.get("postalCode")) == _clean_str(snapshot.get("postalCode"))
+                and _clean_str(entry.get("state")) == _clean_str(snapshot.get("state"))
+                and _clean_str(entry.get("recipientName")) == _clean_str(snapshot.get("recipientName"))
+                and _clean_str(entry.get("phone")) == _clean_str(snapshot.get("phone"))
+            ):
+                match_index = idx
+                break
+
+    if match_index is not None:
+        current = addresses[match_index]
+        saved = {
+            **current,
+            **snapshot,
+            "addressId": _clean_str(current.get("addressId")) or requested_id or f"ADDR-{uuid.uuid4().hex[:10].upper()}",
+            "label": _clean_str(snapshot.get("label")) or _clean_str(current.get("label")) or f"Direccion {match_index + 1}",
+            "isDefault": True,
+            "createdAt": current.get("createdAt") or now,
+            "updatedAt": now,
+        }
+        addresses[match_index] = saved
+    else:
+        saved = {
+            **snapshot,
+            "addressId": requested_id or f"ADDR-{uuid.uuid4().hex[:10].upper()}",
+            "label": _clean_str(snapshot.get("label")) or f"Direccion {len(addresses) + 1}",
+            "isDefault": True,
+            "createdAt": now,
+            "updatedAt": now,
+        }
+        addresses.insert(0, saved)
+
+    saved_id = _clean_str(saved.get("addressId"))
+    for entry in addresses:
+        entry["isDefault"] = _clean_str(entry.get("addressId")) == saved_id
+    addresses.sort(key=lambda entry: 0 if entry.get("isDefault") else 1)
+    _address_log(
+        "upsert.result",
+        customerId=(customer or {}).get("customerId") if isinstance(customer, dict) else None,
+        requestedId=requested_id,
+        matchIndex=match_index,
+        saved=_address_snapshot_for_log(saved),
+        count=len(addresses),
+        addresses=[_address_snapshot_for_log(entry) for entry in addresses],
+    )
+    return addresses, saved
+
+def _ensure_customer_shell_record(customer_id: Any, customer_name: str, payload: dict, now_iso: Optional[str] = None) -> Optional[dict]:
+    entity_id = _customer_entity_id(customer_id)
+    if entity_id is None:
+        _address_log("ensure_customer_shell.invalid_id", customerId=customer_id)
+        return None
+
+    existing = _get_by_id("CUSTOMER", entity_id)
+    if existing:
+        _address_log(
+            "ensure_customer_shell.exists",
+            customerId=entity_id,
+            address=_address_snapshot_for_log(existing),
+            defaultAddressId=existing.get("defaultAddressId"),
+            count=len(existing.get("addresses") or existing.get("shippingAddresses") or []),
+        )
+        return existing
+
+    now = now_iso or _now_iso()
+    fallback_email = f"{entity_id}@placeholder.local"
+    item = {
+        "entityType": "customer",
+        "customerId": entity_id,
+        "name": _clean_str(customer_name) or _clean_str(payload.get("recipientName")) or "Cliente",
+        "email": _normalize_email(payload.get("email")) or fallback_email,
+        "phone": payload.get("phone"),
+        "address": payload.get("address"),
+        "city": payload.get("state"),
+        "leaderId": None,
+        "isAssociate": True,
+        "canAccessAdmin": False,
+        "privileges": _normalize_privileges(None),
+        "activeBuyer": False,
+        "discountRate": D_ZERO,
+        "discount": "0%",
+        "commissions": D_ZERO,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    shipping_addresses = _normalize_customer_shipping_addresses(item)
+    _set_customer_addresses_fields(item, shipping_addresses)
+    _address_log(
+        "ensure_customer_shell.create",
+        customerId=entity_id,
+        itemAddress=_address_snapshot_for_log(item),
+        count=len(shipping_addresses),
+        addresses=[_address_snapshot_for_log(entry) for entry in shipping_addresses],
+    )
+    return _put_entity("CUSTOMER", entity_id, item, created_at_iso=now)
+
 def _get_customer_profile(customer_id: Any) -> Optional[dict]:
     return _get_by_id("CUSTOMER", customer_id) if customer_id is not None else None
 
@@ -2032,9 +2746,14 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
     if not customer_name or not items:
         return _json_response(200, {"message": "customerName e items son obligatorios", "Error": "BadRequest"})
     
-    address = (payload.get("address") or "").strip()
-    postal_code = (payload.get("postalCode") or "").strip()
-    state = (payload.get("state") or "").strip()
+    shipping_address = payload.get("shippingAddress") if isinstance(payload.get("shippingAddress"), dict) else {}
+    address = _clean_str(payload.get("address") or shipping_address.get("address"))
+    postal_code = _clean_str(payload.get("postalCode") or shipping_address.get("postalCode"))
+    state = _clean_str(payload.get("state") or shipping_address.get("state") or shipping_address.get("city"))
+    phone = _clean_str(payload.get("phone") or shipping_address.get("phone"))
+    recipient_name = _clean_str(payload.get("recipientName") or shipping_address.get("recipientName"))
+    shipping_address_label = _clean_str(payload.get("shippingAddressLabel") or shipping_address.get("label"))
+    shipping_address_id = _clean_str(payload.get("shippingAddressId") or shipping_address.get("addressId") or shipping_address.get("id"))
 
     buyer_type = (payload.get("buyerType") or ("guest" if not customer_id else "registered")).lower()
     order_id = _generate_order_id()
@@ -2043,6 +2762,25 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
     print(
         f"[order][create][start] order_id={order_id} customer_id={customer_id} "
         f"buyer_type={buyer_type} items_count={len(items)}"
+    )
+    _address_log(
+        "create_order.input",
+        orderId=order_id,
+        customerIdRaw=customer_id,
+        customerName=customer_name,
+        buyerType=buyer_type,
+        itemCount=len(items),
+        shippingAddress=_address_snapshot_for_log(shipping_address),
+        directAddress={
+            "recipientName": recipient_name,
+            "phone": phone,
+            "address": address,
+            "postalCode": postal_code,
+            "state": state,
+            "shippingAddressId": shipping_address_id,
+            "shippingAddressLabel": shipping_address_label,
+            "saveShippingAddress": payload.get("saveShippingAddress"),
+        },
     )
 
     normalized_items = []
@@ -2073,6 +2811,71 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
     discount_amount = (gross * discount_rate).quantize(D_CENT)
     net_total = (gross - discount_amount).quantize(D_CENT)
 
+    cid_val = _customer_entity_id(customer_id)
+    _address_log("create_order.customer_id", orderId=order_id, customerIdRaw=customer_id, customerIdNormalized=cid_val)
+    customer_item = _get_by_id("CUSTOMER", cid_val) if cid_val is not None else None
+    _address_log(
+        "create_order.customer_lookup",
+        orderId=order_id,
+        customerIdNormalized=cid_val,
+        found=bool(customer_item),
+        customerAddress=_address_snapshot_for_log(customer_item),
+        defaultAddressId=customer_item.get("defaultAddressId") if isinstance(customer_item, dict) else None,
+        addressCount=len((customer_item or {}).get("addresses") or (customer_item or {}).get("shippingAddresses") or []) if isinstance(customer_item, dict) else 0,
+    )
+    if customer_item is None and cid_val is not None and buyer_type in {"registered", "associate"}:
+        customer_item = _ensure_customer_shell_record(cid_val, customer_name, payload, now_iso=now)
+        _address_log(
+            "create_order.customer_shell_result",
+            orderId=order_id,
+            customerIdNormalized=cid_val,
+            created=bool(customer_item),
+            customerAddress=_address_snapshot_for_log(customer_item),
+            defaultAddressId=customer_item.get("defaultAddressId") if isinstance(customer_item, dict) else None,
+            addressCount=len((customer_item or {}).get("addresses") or (customer_item or {}).get("shippingAddresses") or []) if isinstance(customer_item, dict) else 0,
+        )
+    shipping_addresses_to_save, persisted_shipping_address = _upsert_customer_shipping_address(
+        customer_item,
+        payload,
+        persist_address=cid_val is not None,
+    )
+    shipping_snapshot = persisted_shipping_address or _shipping_address_from_payload(payload)
+    default_shipping_address = _default_shipping_address(customer_item)
+    _address_log(
+        "create_order.address_after_upsert",
+        orderId=order_id,
+        customerIdNormalized=cid_val,
+        persistedShippingAddress=_address_snapshot_for_log(persisted_shipping_address),
+        shippingSnapshot=_address_snapshot_for_log(shipping_snapshot),
+        defaultShippingAddress=_address_snapshot_for_log(default_shipping_address),
+        addressCount=len(shipping_addresses_to_save),
+        addresses=[_address_snapshot_for_log(entry) for entry in shipping_addresses_to_save],
+    )
+    if not shipping_snapshot and default_shipping_address:
+        shipping_snapshot = {
+            "addressId": default_shipping_address.get("addressId"),
+            "label": default_shipping_address.get("label") or "",
+            "recipientName": default_shipping_address.get("recipientName") or "",
+            "phone": default_shipping_address.get("phone") or "",
+            "address": default_shipping_address.get("address") or "",
+            "postalCode": default_shipping_address.get("postalCode") or "",
+            "state": default_shipping_address.get("state") or "",
+            "isDefault": bool(default_shipping_address.get("isDefault")),
+        }
+    if shipping_snapshot:
+        shipping_address_id = _clean_str(
+            persisted_shipping_address.get("addressId") if persisted_shipping_address else shipping_address_id or shipping_snapshot.get("addressId")
+        )
+        shipping_address_label = _clean_str(shipping_snapshot.get("label")) or shipping_address_label
+    _address_log(
+        "create_order.address_final",
+        orderId=order_id,
+        customerIdNormalized=cid_val,
+        shippingSnapshot=_address_snapshot_for_log(shipping_snapshot),
+        shippingAddressId=shipping_address_id,
+        shippingAddressLabel=shipping_address_label,
+    )
+
     order_item = {
         "entityType": "order",
         "orderId": order_id,
@@ -2091,6 +2894,23 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         "createdAt": now,
         "updatedAt": now,
     }
+
+    if shipping_snapshot:
+        order_item["shippingAddress"] = shipping_snapshot
+        if shipping_address_id:
+            order_item["shippingAddressId"] = shipping_address_id
+        if shipping_address_label:
+            order_item["shippingAddressLabel"] = shipping_address_label
+        if shipping_snapshot.get("recipientName"):
+            order_item["recipientName"] = shipping_snapshot.get("recipientName")
+        if shipping_snapshot.get("phone"):
+            order_item["phone"] = shipping_snapshot.get("phone")
+        if shipping_snapshot.get("address"):
+            order_item["address"] = shipping_snapshot.get("address")
+        if shipping_snapshot.get("postalCode"):
+            order_item["postalCode"] = shipping_snapshot.get("postalCode")
+        if shipping_snapshot.get("state"):
+            order_item["state"] = shipping_snapshot.get("state")
     
     # Optional fields
     for field in ["shippingType", "trackingNumber", "deliveryPlace", "deliveryDate", "recipientName", "phone", "address", "postalCode", "state"]:
@@ -2098,27 +2918,117 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         if val:
             order_item[field] = val.strip() if isinstance(val, str) else val
 
+    _address_log(
+        "create_order.order_item_before_put",
+        orderId=order_id,
+        customerIdNormalized=cid_val,
+        orderAddress=_address_snapshot_for_log(order_item.get("shippingAddress") or order_item),
+        shippingAddressId=order_item.get("shippingAddressId"),
+        shippingAddressLabel=order_item.get("shippingAddressLabel"),
+    )
     main = _put_entity("ORDER", order_id, order_item, created_at_iso=now)
     print(
         f"[order][create][ok] order_id={order_id} status={order_item.get('status')} "
         "mercadopago_flow=not_started"
     )
+    _address_log(
+        "create_order.order_saved",
+        orderId=order_id,
+        customerIdNormalized=cid_val,
+        orderAddress=_address_snapshot_for_log(main.get("shippingAddress") or main),
+        shippingAddressId=main.get("shippingAddressId"),
+        shippingAddressLabel=main.get("shippingAddressLabel"),
+    )
     
     # Update customer profile address if applicable
-    cid_val = _parse_int_or_str(customer_id)
-    if isinstance(cid_val, int) and cid_val > 0:
+    if cid_val is not None:
         updates = []
         eav = {":u": now}
-        if address: updates.append("address = :a"); eav[":a"] = address
-        if state: updates.append("state = :st"); eav[":st"] = state
-        if postal_code: updates.append("postalCode = :pc"); eav[":pc"] = postal_code
-        if payload.get("phone"): updates.append("phone = :ph"); eav[":ph"] = payload.get("phone")
+        ean = {}
+        selected_shipping_address = persisted_shipping_address if persisted_shipping_address else None
+        if selected_shipping_address:
+            if selected_shipping_address.get("address"): updates.append("address = :a"); eav[":a"] = selected_shipping_address.get("address")
+            if selected_shipping_address.get("state"):
+                updates.append("#state = :st")
+                eav[":st"] = selected_shipping_address.get("state")
+                ean["#state"] = "state"
+            if selected_shipping_address.get("postalCode"): updates.append("postalCode = :pc"); eav[":pc"] = selected_shipping_address.get("postalCode")
+            if selected_shipping_address.get("phone"): updates.append("phone = :ph"); eav[":ph"] = selected_shipping_address.get("phone")
+            if selected_shipping_address.get("addressId"):
+                updates.append("defaultAddressId = :dsa")
+                updates.append("defaultShippingAddressId = :dsa")
+                eav[":dsa"] = selected_shipping_address.get("addressId")
+            if shipping_addresses_to_save:
+                updates.append("addresses = :sa")
+                updates.append("shippingAddresses = :sa")
+                eav[":sa"] = shipping_addresses_to_save
+        else:
+            if address: updates.append("address = :a"); eav[":a"] = address
+            if state:
+                updates.append("#state = :st")
+                eav[":st"] = state
+                ean["#state"] = "state"
+            if postal_code: updates.append("postalCode = :pc"); eav[":pc"] = postal_code
+            if phone: updates.append("phone = :ph"); eav[":ph"] = phone
         
         if updates:
+            update_expression = "SET " + ", ".join(updates) + ", updatedAt = :u"
+            _address_log(
+                "create_order.customer_update.prepared",
+                orderId=order_id,
+                customerIdNormalized=cid_val,
+                updateExpression=update_expression,
+                expressionAttributeValues=eav,
+                expressionAttributeNames=ean,
+            )
             try:
-                _update_by_id("CUSTOMER", cid_val, "SET " + ", ".join(updates) + ", updatedAt = :u", eav)
-            except Exception:
+                customer_updated = _update_by_id("CUSTOMER", cid_val, update_expression, eav, ean=ean or None)
+                _address_log(
+                    "create_order.customer_update.ok",
+                    orderId=order_id,
+                    customerIdNormalized=cid_val,
+                    customerAddress=_address_snapshot_for_log(customer_updated),
+                    defaultAddressId=customer_updated.get("defaultAddressId"),
+                    defaultShippingAddressId=customer_updated.get("defaultShippingAddressId"),
+                    addressCount=len(customer_updated.get("addresses") or customer_updated.get("shippingAddresses") or []),
+                )
+                customer_reloaded = _get_by_id("CUSTOMER", cid_val)
+                _address_log(
+                    "create_order.customer_update.reload",
+                    orderId=order_id,
+                    customerIdNormalized=cid_val,
+                    found=bool(customer_reloaded),
+                    customerAddress=_address_snapshot_for_log(customer_reloaded),
+                    defaultAddressId=customer_reloaded.get("defaultAddressId") if isinstance(customer_reloaded, dict) else None,
+                    defaultShippingAddressId=customer_reloaded.get("defaultShippingAddressId") if isinstance(customer_reloaded, dict) else None,
+                    addressCount=len((customer_reloaded or {}).get("addresses") or (customer_reloaded or {}).get("shippingAddresses") or []) if isinstance(customer_reloaded, dict) else 0,
+                )
+            except Exception as exc:
+                _address_log(
+                    "create_order.customer_update.error",
+                    orderId=order_id,
+                    customerIdNormalized=cid_val,
+                    error=str(exc),
+                    updateExpression=update_expression,
+                    expressionAttributeValues=eav,
+                )
                 pass
+        else:
+            _address_log(
+                "create_order.customer_update.skipped",
+                orderId=order_id,
+                customerIdNormalized=cid_val,
+                reason="no_updates",
+                selectedShippingAddress=_address_snapshot_for_log(selected_shipping_address),
+                directAddress={
+                    "phone": phone,
+                    "address": address,
+                    "postalCode": postal_code,
+                    "state": state,
+                },
+            )
+    else:
+        _address_log("create_order.customer_update.skipped", orderId=order_id, customerIdNormalized=cid_val, reason="customer_id_missing")
                 
     _audit_event("order.create", headers, payload, {"orderId": order_id, "customerId": customer_id})
     return _json_response(201, {"order": main})
@@ -2509,6 +3419,8 @@ def _update_order_status(order_id: str, payload: dict, headers: Optional[dict] =
         "paymentTransactionId": updated.get("paymentTransactionId"),
         "paymentRawStatus": updated.get("paymentRawStatus"),
         "deliveryStatus": updated.get("deliveryStatus"),
+        "shippingAddressId": updated.get("shippingAddressId"),
+        "shippingAddressLabel": updated.get("shippingAddressLabel"),
     }
     if rewards_result is not None:
         _audit_event("order.status.update", headers, payload, {"orderId": order_id, "status": status})
@@ -2756,6 +3668,8 @@ def _create_customer(payload: dict, headers: Optional[dict] = None) -> dict:
     }
     if payload.get("level") is not None:
         item["level"] = payload.get("level")
+    shipping_addresses = _normalize_customer_shipping_addresses(item)
+    _set_customer_addresses_fields(item, shipping_addresses)
     main = _put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
     
     response = {"customer": {
@@ -2782,8 +3696,8 @@ def _create_account(payload: dict) -> dict:
     email_norm = _normalize_email(email)
     if not email_norm:
         return _json_response(200, {"message": "email invalido", "Error": "BadRequest"})
-    if _get_auth_by_email(email_norm):
-        return _json_response(200, {"message": "El correo ya esta registrado", "Error": "Conflict"})
+    if _get_auth_by_email(email_norm) or _find_customer_by_email(email_norm):
+        return _json_response(200, {"message": "El correo ya esta registrado. Intenta usar recuperar contrasena.", "Error": "Conflict"})
 
     customer_id = payload.get("customerId") or int(datetime.now(timezone.utc).timestamp() * 1000)
     leader_token = payload.get("referralToken") or payload.get("leaderId")
@@ -2804,9 +3718,22 @@ def _create_account(payload: dict) -> dict:
     }
     if payload.get("level") is not None:
         item["level"] = payload.get("level")
+    shipping_addresses = _normalize_customer_shipping_addresses(item)
+    _set_customer_addresses_fields(item, shipping_addresses)
     
     main = _put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
     _create_auth_record(email_norm, password_hash, customer_id, role="cliente")
+    try:
+        _send_welcome_email(name, email_norm)
+    except Exception as exc:
+        print(f"[create-account] welcome email failed: {exc}")
+    if leader_id not in (None, ""):
+        try:
+            sponsor = _get_by_id("CUSTOMER", int(leader_id))
+            if sponsor:
+                _send_network_join_email(sponsor, main)
+        except Exception as exc:
+            print(f"[create-account] network join email failed: {exc}")
     
     return _json_response(201, {"customer": {
         "id": customer_id, "name": main["name"], "email": main["email"],
@@ -2819,8 +3746,20 @@ def _create_account(payload: dict) -> dict:
     }})
 
 def _get_customer(customer_id: str) -> dict:
-    item = _get_by_id("CUSTOMER", int(customer_id))
-    return _json_response(200, {"customer": item}) if item else _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
+    entity_id = _customer_entity_id(customer_id)
+    item = _get_by_id("CUSTOMER", entity_id) if entity_id is not None else None
+    if not item:
+        return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
+
+    customer_payload = dict(item)
+    shipping_addresses = _normalize_customer_shipping_addresses(item)
+    customer_payload["addresses"] = shipping_addresses
+    customer_payload["shippingAddresses"] = shipping_addresses
+    if shipping_addresses:
+        default_shipping = shipping_addresses[0]
+        customer_payload["defaultAddressId"] = default_shipping.get("addressId")
+        customer_payload["defaultShippingAddressId"] = default_shipping.get("addressId")
+    return _json_response(200, {"customer": customer_payload})
 
 def _update_customer_privileges(customer_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
     cid = int(customer_id)
@@ -2856,6 +3795,69 @@ def _update_customer_privileges(customer_id: str, payload: dict, headers: Option
         "privileges": _normalize_privileges(updated.get("privileges")),
     }
     _audit_event("customer.privileges.update", headers, payload, {"customerId": cid})
+    return _json_response(200, {"customer": response_customer})
+
+def _update_customer(customer_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
+    cid = int(customer_id)
+    customer = _get_by_id("CUSTOMER", cid)
+    if not customer:
+        return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
+
+    customers_raw = _query_bucket("CUSTOMER")
+    updates = ["updatedAt = :u"]
+    eav: dict = {":u": _now_iso()}
+    ean: dict = {}
+    leader_changed = False
+    next_leader_id = customer.get("leaderId")
+
+    if "leaderId" in payload:
+        raw_leader_id = payload.get("leaderId")
+        if raw_leader_id in ("", None):
+            resolved_leader_id = None
+        else:
+            resolved_leader_id = _resolve_leader_id(raw_leader_id)
+            if resolved_leader_id is None:
+                return _json_response(200, {"message": "Patrocinador no encontrado", "Error": "BadRequest"})
+        if resolved_leader_id == cid:
+            return _json_response(200, {"message": "Un usuario no puede ser su propio patrocinador", "Error": "BadRequest"})
+        if _would_create_leader_cycle(customers_raw, cid, resolved_leader_id):
+            return _json_response(200, {"message": "El cambio generaria un ciclo en la red", "Error": "BadRequest"})
+        next_leader_id = resolved_leader_id
+        if next_leader_id != customer.get("leaderId"):
+            updates.append("leaderId = :lid")
+            eav[":lid"] = next_leader_id
+            leader_changed = True
+
+    if "level" in payload:
+        updates.append("#lvl = :lvl")
+        ean["#lvl"] = "level"
+        eav[":lvl"] = (payload.get("level") or "").strip()
+
+    if len(updates) <= 1:
+        return _json_response(200, {"message": "Sin cambios para actualizar", "Error": "BadRequest"})
+
+    updated = _update_by_id("CUSTOMER", cid, "SET " + ", ".join(updates), eav, ean=ean if ean else None)
+
+    if leader_changed and next_leader_id not in (None, ""):
+        try:
+            sponsor = _get_by_id("CUSTOMER", int(next_leader_id))
+            if sponsor:
+                _send_network_join_email(sponsor, updated)
+        except Exception as exc:
+            print(f"[customer.update] network join email failed: {exc}")
+
+    response_customer = {
+        "id": updated.get("customerId"),
+        "name": updated.get("name"),
+        "email": updated.get("email"),
+        "leaderId": updated.get("leaderId"),
+        "level": updated.get("level"),
+        "discount": updated.get("discount"),
+        "commissions": float(updated.get("commissions") or 0),
+        "canAccessAdmin": bool(updated.get("canAccessAdmin")),
+        "privileges": _normalize_privileges(updated.get("privileges")),
+    }
+    _audit_event("customer.update", headers, payload, {"customerId": cid, "leaderId": next_leader_id})
     return _json_response(200, {"customer": response_customer})
 
 def _get_network(customer_id: str, query: dict) -> dict:
@@ -2913,6 +3915,8 @@ def _get_order(order_id: str) -> dict:
         "paymentInitPoint": item.get("paymentInitPoint"),
         "paymentSandboxInitPoint": item.get("paymentSandboxInitPoint"),
         "deliveryStatus": item.get("deliveryStatus"),
+        "shippingAddressId": item.get("shippingAddressId"),
+        "shippingAddressLabel": item.get("shippingAddressLabel"),
     }})
 
 def _list_orders_for_customer(customer_id: str) -> dict:
@@ -3692,6 +4696,254 @@ def _upload_admin_commission_receipt(payload: dict, headers: Optional[dict] = No
     return _json_response(201, {"receipt": main, "asset": asset})
 
 # ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+def _notification_reads_pk(customer_id: Any) -> str:
+    return f"NOTIFICATION_READ#{customer_id}"
+
+def _notification_status(item: Optional[dict], now_dt: Optional[datetime] = None) -> str:
+    if not item or not isinstance(item, dict):
+        return "inactive"
+    if not bool(item.get("active", True)):
+        return "inactive"
+
+    now = now_dt or _utc_now()
+    start_at = _iso_to_dt(item.get("startAt"))
+    end_at = _iso_to_dt(item.get("endAt"))
+
+    if start_at and start_at > now:
+        return "scheduled"
+    if end_at and end_at < now:
+        return "expired"
+    return "active"
+
+def _notification_payload(
+    item: dict,
+    *,
+    read_at: Optional[str] = None,
+    now_dt: Optional[datetime] = None,
+) -> dict:
+    link_url = str(item.get("linkUrl") or "").strip()
+    link_text = str(item.get("linkText") or "").strip()
+    if link_url and not link_text:
+        link_text = NOTIFICATION_LINK_TEXT_DEFAULT
+
+    return {
+        "id": str(item.get("notificationId") or ""),
+        "title": str(item.get("title") or "").strip(),
+        "description": str(item.get("description") or "").strip(),
+        "linkUrl": link_url,
+        "linkText": link_text,
+        "startAt": item.get("startAt"),
+        "endAt": item.get("endAt"),
+        "active": bool(item.get("active", True)),
+        "status": _notification_status(item, now_dt=now_dt),
+        "isRead": bool(read_at),
+        "readAt": read_at or "",
+        "createdAt": item.get("createdAt"),
+        "updatedAt": item.get("updatedAt"),
+    }
+
+def _list_notifications_for_admin() -> List[dict]:
+    now_dt = _utc_now()
+    notifications = [
+        _notification_payload(item, now_dt=now_dt)
+        for item in _query_bucket("NOTIFICATION")
+        if isinstance(item, dict)
+    ]
+    notifications.sort(
+        key=lambda item: (
+            item.get("startAt") or "",
+            item.get("createdAt") or "",
+            item.get("id") or "",
+        ),
+        reverse=True,
+    )
+    return notifications
+
+def _notification_reads_for_customer(customer_id: Any) -> Dict[str, str]:
+    if customer_id in (None, ""):
+        return {}
+
+    items = _query_exact_pk(_notification_reads_pk(customer_id))
+    reads: Dict[str, str] = {}
+    for item in items:
+        notification_id = str(item.get("notificationId") or item.get("SK") or "").strip()
+        if not notification_id:
+            continue
+        reads[notification_id] = str(item.get("readAt") or item.get("createdAt") or "").strip()
+    return reads
+
+def _active_notifications_for_customer(customer_id: Any) -> List[dict]:
+    if customer_id in (None, ""):
+        return []
+
+    now_dt = _utc_now()
+    reads = _notification_reads_for_customer(customer_id)
+    notifications: List[dict] = []
+
+    for item in _query_bucket("NOTIFICATION"):
+        if not isinstance(item, dict):
+            continue
+        notification_id = str(item.get("notificationId") or "").strip()
+        if not notification_id:
+            continue
+        payload = _notification_payload(item, read_at=reads.get(notification_id), now_dt=now_dt)
+        if payload.get("status") != "active":
+            continue
+        notifications.append(payload)
+
+    notifications.sort(
+        key=lambda item: (
+            item.get("startAt") or "",
+            item.get("createdAt") or "",
+            item.get("id") or "",
+        ),
+        reverse=True,
+    )
+    return notifications
+
+def _save_notification(payload: dict, headers: Optional[dict] = None) -> dict:
+    notification_id = str(payload.get("id") or payload.get("notificationId") or "").strip()
+    title = str(payload.get("title") or "").strip()
+    description = str(payload.get("description") or "").strip()
+    link_url = str(payload.get("linkUrl") or payload.get("link") or payload.get("url") or "").strip()
+    link_text = str(payload.get("linkText") or "").strip()
+    start_at = str(payload.get("startAt") or "").strip()
+    end_at = str(payload.get("endAt") or "").strip()
+    active = bool(payload.get("active", True))
+
+    if not title:
+        return _json_response(200, {"message": "title es obligatorio", "Error": "BadRequest"})
+    if not description:
+        return _json_response(200, {"message": "description es obligatoria", "Error": "BadRequest"})
+    if len(description) > MAX_NOTIFICATION_DESCRIPTION_LENGTH:
+        return _json_response(
+            200,
+            {
+                "message": f"description no puede exceder {MAX_NOTIFICATION_DESCRIPTION_LENGTH} caracteres",
+                "Error": "BadRequest",
+            },
+        )
+    if not start_at or not end_at:
+        return _json_response(200, {"message": "startAt y endAt son obligatorios", "Error": "BadRequest"})
+
+    start_dt = _iso_to_dt(start_at)
+    end_dt = _iso_to_dt(end_at)
+    if not start_dt or not end_dt:
+        return _json_response(200, {"message": "startAt o endAt tienen formato invalido", "Error": "BadRequest"})
+    if end_dt < start_dt:
+        return _json_response(200, {"message": "endAt debe ser mayor o igual a startAt", "Error": "BadRequest"})
+
+    if link_url and not link_text:
+        link_text = NOTIFICATION_LINK_TEXT_DEFAULT
+    if not link_url:
+        link_text = ""
+
+    actor_user_id, actor_name, _ = _resolve_actor(headers, payload)
+    now = _now_iso()
+    existing = _get_by_id("NOTIFICATION", notification_id) if notification_id else None
+
+    if notification_id and not existing:
+        return _json_response(200, {"message": "Notificacion no encontrada", "Error": "NoEncontrado"})
+
+    if existing:
+        item = dict(existing)
+        item.update(
+            {
+                "title": title,
+                "description": description,
+                "linkUrl": link_url,
+                "linkText": link_text,
+                "startAt": start_at,
+                "endAt": end_at,
+                "active": active,
+                "updatedAt": now,
+                "updatedByUserId": actor_user_id,
+                "updatedByName": actor_name,
+            }
+        )
+        _table.put_item(Item=item)
+        status_code = 200
+        audit_action = "notification.update"
+        saved = item
+    else:
+        notification_id = notification_id or f"NTF-{uuid.uuid4().hex[:12].upper()}"
+        item = {
+            "entityType": "notification",
+            "notificationId": notification_id,
+            "title": title,
+            "description": description,
+            "linkUrl": link_url,
+            "linkText": link_text,
+            "startAt": start_at,
+            "endAt": end_at,
+            "active": active,
+            "createdByUserId": actor_user_id,
+            "createdByName": actor_name,
+            "updatedByUserId": actor_user_id,
+            "updatedByName": actor_name,
+            "createdAt": now,
+            "updatedAt": now,
+        }
+        saved = _put_entity("NOTIFICATION", notification_id, item, created_at_iso=now)
+        status_code = 201
+        audit_action = "notification.create"
+
+    _audit_event(audit_action, headers, payload, {"notificationId": notification_id})
+    return _json_response(status_code, {"notification": _notification_payload(saved, now_dt=_utc_now())})
+
+def _mark_notification_read(notification_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
+    notification_id = str(notification_id or "").strip()
+    if not notification_id:
+        return _json_response(200, {"message": "notificationId es obligatorio", "Error": "BadRequest"})
+
+    notification = _get_by_id("NOTIFICATION", notification_id)
+    if not notification:
+        return _json_response(200, {"message": "Notificacion no encontrada", "Error": "NoEncontrado"})
+
+    customer_id = _parse_int_or_str(
+        payload.get("customerId")
+        or payload.get("userId")
+        or (headers or {}).get("x-user-id")
+        or (headers or {}).get("X-User-Id")
+    )
+    if customer_id in (None, ""):
+        return _json_response(200, {"message": "customerId es obligatorio", "Error": "BadRequest"})
+
+    customer = _get_by_id("CUSTOMER", int(customer_id)) if isinstance(customer_id, int) else _get_by_id("CUSTOMER", customer_id)
+    if not customer:
+        return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
+
+    pk = _notification_reads_pk(customer_id)
+    existing = _table.get_item(Key={"PK": pk, "SK": notification_id}).get("Item")
+    if existing:
+        return _json_response(
+            200,
+            {
+                "ok": True,
+                "notificationId": notification_id,
+                "customerId": customer_id,
+                "readAt": existing.get("readAt") or existing.get("createdAt") or "",
+            },
+        )
+
+    now = _now_iso()
+    item = {
+        "PK": pk,
+        "SK": notification_id,
+        "entityType": "notificationRead",
+        "notificationId": notification_id,
+        "customerId": customer_id,
+        "readAt": now,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    _table.put_item(Item=item)
+    _audit_event("notification.read", headers, payload, {"notificationId": notification_id, "customerId": customer_id})
+    return _json_response(200, {"ok": True, "notificationId": notification_id, "customerId": customer_id, "readAt": now})
+
+# ---------------------------------------------------------------------------
 # Admin Dashboard
 # ---------------------------------------------------------------------------
 def _build_admin_warnings(
@@ -3767,6 +5019,7 @@ def _get_admin_dashboard() -> dict:
     products_raw = _query_bucket("PRODUCT")
     campaigns_raw = _query_bucket("CAMPAIGN")
     receipts_raw = _query_bucket("COMMISSION_RECEIPT")
+    commission_month_items = _query_exact_pk("COMMISSION_MONTH")
     pom_item = _get_product_of_month_item()
     product_of_month_id = int(pom_item.get("productId")) if pom_item and pom_item.get("productId") is not None else None
 
@@ -3788,14 +5041,24 @@ def _get_admin_dashboard() -> dict:
         if key not in receipt_by_customer_month:
             receipt_by_customer_month[key] = url
 
+    commission_month_by_customer_month: Dict[str, dict] = {}
+    for item in commission_month_items:
+        beneficiary_id = item.get("beneficiaryId")
+        month_key = item.get("monthKey")
+        if beneficiary_id in (None, "") or not month_key:
+            continue
+        commission_month_by_customer_month[f"{beneficiary_id}#{month_key}"] = item
+
     for item in customers_raw:
         comm = float(item.get("commissions") or 0)
         cid = item.get("customerId")
-        comm_item = _get_commission_month_item(cid, current_month_key) if cid is not None else None
+        current_comm_key = f"{cid}#{current_month_key}" if cid is not None else ""
+        prev_comm_key = f"{cid}#{prev_month_key}" if cid is not None else ""
+        comm_item = commission_month_by_customer_month.get(current_comm_key)
         current_pending = float(_to_decimal(comm_item.get("totalPending")) if comm_item else D_ZERO)
         current_confirmed = float(_to_decimal(comm_item.get("totalConfirmed")) if comm_item else D_ZERO)
 
-        prev_comm_item = _get_commission_month_item(cid, prev_month_key) if cid is not None else None
+        prev_comm_item = commission_month_by_customer_month.get(prev_comm_key)
         prev_confirmed = float(_to_decimal(prev_comm_item.get("totalConfirmed")) if prev_comm_item else D_ZERO)
 
         receipt_key = f"{cid}#{prev_month_key}" if cid is not None else ""
@@ -3868,6 +5131,7 @@ def _get_admin_dashboard() -> dict:
         })
 
     campaigns = [_campaign_payload(item) for item in campaigns_raw]
+    notifications = _list_notifications_for_admin()
 
     stock_transfers_raw = _query_bucket("STOCK_TRANSFER")
     pending_transfers_count = 0
@@ -3900,6 +5164,7 @@ def _get_admin_dashboard() -> dict:
         "statusCounts": status_counts, "customersByLevel": customers_by_level,
         "warnings": warnings,
         "customers": customers, "orders": orders, "products": products, "campaigns": campaigns,
+        "notifications": notifications,
         "productOfMonthId": product_of_month_id,
         "businessConfig": app_cfg,
     })
@@ -4008,6 +5273,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
     computed_network, computed_goals = [], []
     commission_summary = None
     buy_again_ids = []
+    active_notifications: List[dict] = []
 
     if customer and isinstance(customer, dict):
         tree = _build_network_tree_with_month(
@@ -4023,6 +5289,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
         
         buy_again_ids, _ = _compute_buy_again_ids_and_maybe_update(customer, products_raw)
         _persist_customer_dashboard_fields(customer.get("customerId"), computed_goals, computed_network, buy_again_ids)
+        active_notifications = _active_notifications_for_customer(customer.get("customerId"))
 
         cid = int(customer.get("customerId"))
         comm_item = _get_commission_month_item(cid, month_key)
@@ -4068,6 +5335,7 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
         buy_again_ids = [str(p["id"]) for p in products[:3]]
 
     user_payload = None
+    sponsor_payload = _find_effective_sponsor(customer)
     if customer and isinstance(customer, dict):
         dr = _to_decimal(customer.get("discountRate"))
         user_payload = {
@@ -4082,9 +5350,11 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
             "userCode": "" if is_guest else str(user_id), "networkGoal": 300,
         },
         "user": user_payload,
+        "sponsor": sponsor_payload,
         "goals": computed_goals,
         "products": products, "featured": featured, "productOfMonth": product_of_month,
         "campaigns": campaigns,
+        "notifications": active_notifications,
         "networkMembers": computed_network, "buyAgainIds": buy_again_ids,
         "commissions": commission_summary,
     }
@@ -4193,15 +5463,19 @@ def lambda_handler(event, context):
     if route_key == (1, "assets", "POST"): return _create_asset(_parse_body(event))
     if route_key == (1, "products", "POST"): return _save_product(_parse_body(event), headers)
     if route_key == (1, "campaigns", "POST"): return _save_campaign(_parse_body(event), headers)
+    if route_key == (1, "notifications", "POST"): return _save_notification(_parse_body(event), headers)
     if route_key == (1, "orders", "POST"): return _create_order(_parse_body(event), headers)
     if route_key == (1, "orders", "GET") and query.get("customerId"): return _list_orders_for_customer(query.get("customerId"))
     if route_key == (1, "customers", "POST"): return _create_customer(_parse_body(event), headers)
     if route_key == (1, "stocks", "GET"): return _list_stocks()
     if route_key == (1, "stocks", "POST"): return _create_stock(_parse_body(event), headers)
     if route_key == (1, "campaigns", "GET"): return _json_response(200, {"campaigns": [_campaign_payload(item) for item in _query_bucket("CAMPAIGN")]})
+    if route_key == (1, "notifications", "GET"): return _json_response(200, {"notifications": _list_notifications_for_admin()})
     if route_key == (1, "user-dashboard", "GET"): return _get_user_dashboard(query, headers)
     
     # 2 segments
+    if route_key == (2, "password", "POST") and segments[1] == "recovery": return _request_password_recovery(_parse_body(event))
+    if route_key == (2, "password", "POST") and segments[1] == "reset": return _reset_password(_parse_body(event))
     if route_key == (2, "config", "GET") and segments[1] == "rewards": return _get_rewards_config_handler()
     if route_key == (2, "config", "PUT") and segments[1] == "rewards": return _put_rewards_config(_parse_body(event), headers)
     if route_key == (2, "config", "GET") and segments[1] == "app": return _get_app_config_handler()
@@ -4216,6 +5490,7 @@ def lambda_handler(event, context):
     if route_key == (2, "commissions", "POST") and segments[1] == "request": return _request_commission_payout(_parse_body(event))
     if route_key == (2, "commissions", "POST") and segments[1] == "receipt": return _upload_commission_receipt(_parse_body(event))
     if route_key == (2, "customers", "GET"): return _get_customer(segments[1])
+    if route_key == (2, "customers", "PATCH"): return _update_customer(segments[1], _parse_body(event), headers)
     if route_key == (2, "customers", "POST") and segments[1] == "clabe": return _update_customer_clabe(_parse_body(event))
     if route_key == (2, "admin", "GET") and segments[1] == "dashboard": return _get_admin_dashboard()
     if route_key == (2, "stocks", "PATCH"): return _update_stock(segments[1], _parse_body(event), headers)
@@ -4237,6 +5512,7 @@ def lambda_handler(event, context):
     if route_key == (3, "stocks", "POST") and segments[2] == "entries": return _register_stock_entry(segments[1], _parse_body(event), headers)
     if route_key == (3, "stocks", "POST") and segments[2] == "damages": return _register_stock_damage(segments[1], _parse_body(event), headers)
     if route_key == (3, "customers", "PATCH") and segments[2] == "privileges": return _update_customer_privileges(segments[1], _parse_body(event), headers)
+    if route_key == (3, "notifications", "POST") and segments[2] == "read": return _mark_notification_read(segments[1], _parse_body(event), headers)
 
     # 4 segments
     if route_key == (4, "associates", "GET") and segments[2] == "month": return _get_associate_month(segments[1], segments[3])

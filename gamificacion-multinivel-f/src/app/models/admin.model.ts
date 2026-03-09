@@ -1,4 +1,5 @@
 import { UserPrivileges } from './privileges.model';
+import { PortalNotification, SavePortalNotificationPayload } from './portal-notification.model';
 
 export interface AdminOrder {
   id: string;
@@ -30,6 +31,8 @@ export interface AdminOrder {
   paymentInitPoint?: string;
   paymentSandboxInitPoint?: string;
   deliveryStatus?: string;
+  shippingAddressId?: string;
+  shippingAddressLabel?: string;
 }
 
 export interface OrderStatusLookup {
@@ -59,16 +62,43 @@ export interface AdminOrderItem {
   quantity: number;
 }
 
-export interface CreateAdminOrderPayload {
-  customerId: number;
-  customerName: string;
-  status: AdminOrder['status'];
-  items: AdminOrderItem[];
+export interface CustomerShippingAddress {
+  id: string;
+  label: string;
+  recipientName?: string;
+  phone?: string;
+  address: string;
+  postalCode: string;
+  state: string;
+  isDefault?: boolean;
+}
+
+export interface OrderShippingAddressPayload {
+  id?: string;
+  addressId?: string;
+  label?: string;
   recipientName?: string;
   phone?: string;
   address?: string;
   postalCode?: string;
   state?: string;
+  isDefault?: boolean;
+}
+
+export interface CreateAdminOrderPayload {
+  customerId: number | string;
+  customerName: string;
+  status: AdminOrder['status'];
+  items: AdminOrderItem[];
+  shippingAddress?: OrderShippingAddressPayload;
+  recipientName?: string;
+  phone?: string;
+  address?: string;
+  postalCode?: string;
+  state?: string;
+  shippingAddressId?: string;
+  shippingAddressLabel?: string;
+  saveShippingAddress?: boolean;
 }
 
 export interface UpdateOrderStatusPayload {
@@ -82,7 +112,7 @@ export interface UpdateOrderStatusPayload {
 }
 
 export interface CustomerProfile {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   phone?: string;
@@ -90,6 +120,10 @@ export interface CustomerProfile {
   city?: string;
   state?: string;
   postalCode?: string;
+  addresses?: CustomerShippingAddress[];
+  defaultAddressId?: string;
+  shippingAddresses?: CustomerShippingAddress[];
+  defaultShippingAddressId?: string;
 }
 
 export interface CreateStructureCustomerPayload {
@@ -288,6 +322,7 @@ export interface AdminData {
   customers: AdminCustomer[];
   products: AdminProduct[];
   campaigns?: AdminCampaign[];
+  notifications?: PortalNotification[];
   businessConfig?: AppBusinessConfig;
   warnings: AdminWarning[];
   assetSlots: AdminAssetSlot[];
@@ -297,6 +332,11 @@ export interface AdminData {
 export interface UpdateCustomerPrivilegesPayload {
   canAccessAdmin?: boolean;
   privileges?: UserPrivileges;
+}
+
+export interface UpdateCustomerPayload {
+  leaderId?: number | null;
+  level?: string;
 }
 
 export interface SaveAdminCampaignPayload {
@@ -374,3 +414,5 @@ export interface PosSale {
 export interface UpdateBusinessConfigPayload {
   config: AppBusinessConfig;
 }
+
+export type SaveAdminNotificationPayload = SavePortalNotificationPayload;

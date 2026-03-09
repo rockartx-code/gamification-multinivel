@@ -169,3 +169,19 @@
   100% { transform: translateY(-50%) scale(1.15); }
 }
 
+.notification-modal-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(211, 179, 80, 0.22), transparent 42%),
+    linear-gradient(135deg, rgba(246, 243, 238, 0.92), rgba(236, 228, 210, 0.92));
+}
+
+.notification-modal-glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle, rgba(200, 169, 106, 0.18), transparent 55%);
+  filter: blur(16px);
+  pointer-events: none;
+}
+

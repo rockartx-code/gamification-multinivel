@@ -40,6 +40,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
 
   value = '';
   disabled = false;
+  showPassword = false;
 
   private onChange: (value: string) => void = () => undefined;
   private onTouched: () => void = () => undefined;
@@ -82,6 +83,25 @@ export class UiFormFieldComponent implements ControlValueAccessor {
       ? 'border-danger/70 focus:border-danger focus:ring-danger/20'
       : 'border-olive-30 focus:border-olive-70 focus-ring-olive-20';
     const iconPadding = this.resolvedLeadingIconClass ? 'pl-10' : '';
-    return `${baseStateClass} ${iconPadding}`.trim();
+    const passwordPadding = this.isPasswordField ? 'pr-12' : '';
+    return `${baseStateClass} ${iconPadding} ${passwordPadding}`.trim();
+  }
+
+  get isPasswordField(): boolean {
+    return this.kind === 'input' && this.type === 'password';
+  }
+
+  get resolvedInputType(): string {
+    if (!this.isPasswordField) {
+      return this.type;
+    }
+    return this.showPassword ? 'text' : 'password';
+  }
+
+  togglePasswordVisibility(): void {
+    if (this.disabled || !this.isPasswordField) {
+      return;
+    }
+    this.showPassword = !this.showPassword;
   }
 }

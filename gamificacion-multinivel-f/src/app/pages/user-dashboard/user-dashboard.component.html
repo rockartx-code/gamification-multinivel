@@ -23,6 +23,18 @@
 
     <!-- DERECHA (hijo directo) -->
     <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+      <ui-button *ngIf="!isGuest && hasCurrentNotifications" size="sm" variant="ghost" type="button"
+        (pressed)="openNotificationsCenter()" aria-label="Ver avisos del portal">
+        <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
+          <i class="fa-solid fa-bell text-[13px] text-main" aria-hidden="true"></i>
+          <span *ngIf="unreadNotificationsCount > 0"
+            class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-[10px] font-bold leading-none text-main">
+            {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
+          </span>
+        </span>
+        <span class="hidden text-sm font-semibold lg:block">Avisos</span>
+      </ui-button>
+
       <div *ngIf="currentUser" class="relative shrink-0">
         <ui-button size="sm" variant="ghost" type="button" (pressed)="toggleUserDetails()" aria-label="Usuario">
           <span id="user-circle-control" class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80"
@@ -281,7 +293,7 @@
         </div>
       </div>
 
-      <div class="mt-10">
+      <div class="mt-10" *ngIf="hasBuyAgainProducts">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
             <i class="fa-solid fa-rotate text-accent" aria-hidden="true"></i>
@@ -447,6 +459,34 @@
                 </h3>
               </div>
 
+            </div>
+
+            <div *ngIf="sponsor as sponsorContact" class="mt-6 rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-xs text-gray-600">Patrocinador</div>
+                  <div class="mt-1 text-lg font-extrabold text-main">{{ sponsorContact.name }}</div>
+                  <div class="mt-1 text-xs text-gray-500">
+                    {{ sponsorContact.isDefault ? 'Soporte FindingU asignado' : 'Tu contacto directo en la red' }}
+                  </div>
+                </div>
+                <div class="text-right text-xs text-gray-600">
+                  Contacto
+                </div>
+              </div>
+
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm text-main transition hover:border-gold-35 hover:bg-gold-12"
+                  [href]="sponsorEmailHref">
+                  <div class="text-xs text-gray-600">Correo</div>
+                  <div class="mt-1 font-semibold">{{ sponsorContact.email }}</div>
+                </a>
+                <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm text-main transition hover:border-gold-35 hover:bg-gold-12"
+                  [href]="sponsorWhatsappHref">
+                  <div class="text-xs text-gray-600">WhatsApp</div>
+                  <div class="mt-1 font-semibold">{{ sponsorContact.phone }}</div>
+                </a>
+              </div>
             </div>
 
             <div *ngIf="networkMembers.length === 0"
@@ -666,6 +706,41 @@
 
             <i class="fa-solid fa-receipt hidden text-accent md:inline" aria-hidden="true"></i>
             Ordenes
+            <span class="relative inline-flex">
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-sm text-gray-600 transition hover:bg-olive-10 hover:text-main"
+                (click)="toggleOrdersHelp()"
+                aria-label="Explicar estados de orden"
+                title="Explicar estados de orden"
+              >
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+              </button>
+              <div
+                *ngIf="showOrdersHelp"
+                class="absolute left-0 top-full z-20 mt-3 w-80 rounded-2xl border border-olive-30 bg-white/95 p-4 text-sm text-gray-700 shadow-xl backdrop-blur"
+              >
+                <div class="font-semibold text-main">Estados posibles de una orden</div>
+                <div class="mt-3 space-y-3">
+                  <div class="flex items-start gap-3">
+                    <ui-status-badge status="pending"></ui-status-badge>
+                    <div>La orden fue creada y el pago aun no se confirma.</div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <ui-status-badge status="paid"></ui-status-badge>
+                    <div>El pago fue validado correctamente.</div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <ui-status-badge status="shipped"></ui-status-badge>
+                    <div>El pedido ya va en camino o esta en proceso de entrega.</div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <ui-status-badge status="delivered"></ui-status-badge>
+                    <div>El pedido ya fue recibido por el cliente.</div>
+                  </div>
+                </div>
+              </div>
+            </span>
           </h2>
           <p class="mt-2 text-sm text-gray-600">Seguimiento de tus pedidos recientes.</p>
         </div>
@@ -962,6 +1037,97 @@
       </div>
     </section>
   </main>
+
+  <ui-modal [isOpen]="isNotificationsCenterOpen" maxWidthClass="max-w-2xl" contentClass="p-6"
+    (closed)="closeNotificationsCenter()">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-xs font-semibold text-gray-600">Centro de avisos</div>
+        <h3 class="mt-2 text-xl font-extrabold text-main">Notificaciones vigentes</h3>
+        <p class="mt-2 text-sm text-muted">Puedes volver a abrir cualquier aviso activo aunque ya lo hayas visto.</p>
+      </div>
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+        (pressed)="closeNotificationsCenter()">
+      </ui-button>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-2 text-xs">
+      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 font-semibold text-main">
+        {{ currentNotifications.length }} vigentes
+      </span>
+      <span *ngIf="unreadNotificationsCount > 0"
+        class="rounded-full border border-gold-35 bg-gold-20 px-3 py-1 font-semibold text-on-gold">
+        {{ unreadNotificationsCount }} nuevas
+      </span>
+    </div>
+
+    <div class="mt-6 space-y-3">
+      <button *ngFor="let notification of currentNotifications" type="button"
+        class="notification-modal-card w-full rounded-3xl border border-olive-30 p-4 text-left transition duration-150 hover:-translate-y-0.5"
+        (click)="openNotification(notification)">
+        <div class="notification-modal-glow"></div>
+        <div class="relative flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+              <span class="rounded-full border px-2 py-1 font-semibold"
+                [ngClass]="notification.isRead ? 'border-olive-30 bg-ivory-80 text-muted' : 'border-gold-35 bg-gold-20 text-on-gold'">
+                {{ notification.isRead ? 'Vista' : 'Nueva' }}
+              </span>
+              <span *ngIf="notification.readAt">Vista: {{ formatLedgerDate(notification.readAt) }}</span>
+              <span *ngIf="!notification.readAt && (notification.startAt || notification.createdAt)">
+                Vigente desde {{ formatLedgerDate(notification.startAt || notification.createdAt) }}
+              </span>
+            </div>
+
+            <h4 class="mt-3 text-base font-extrabold text-main">{{ notification.title }}</h4>
+            <p class="mt-2 text-sm text-main">{{ notification.description }}</p>
+
+            <div *ngIf="notification.linkUrl" class="mt-3 text-xs font-semibold text-gold">
+              {{ notification.linkText || 'Ver' }}
+            </div>
+          </div>
+
+          <i class="fa-solid fa-chevron-right mt-1 text-sm text-gray-500" aria-hidden="true"></i>
+        </div>
+      </button>
+    </div>
+  </ui-modal>
+
+  <ui-modal [isOpen]="isNotificationModalOpen && !!activeNotification" maxWidthClass="max-w-lg"
+    contentClass="p-6" (closed)="closeNotificationModal()">
+    <ng-container *ngIf="activeNotification as notification">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-xs font-semibold text-gray-600">Aviso del portal</div>
+          <h3 class="mt-2 text-xl font-extrabold text-main">{{ notification.title }}</h3>
+        </div>
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+          (pressed)="closeNotificationModal()">
+        </ui-button>
+      </div>
+
+      <div class="notification-modal-card mt-5 rounded-3xl border border-olive-30 p-5">
+        <div class="notification-modal-glow"></div>
+        <div class="relative">
+          <div class="flex items-center gap-2 text-sm text-gray-600">
+            <i class="fa-solid fa-bell text-gold" aria-hidden="true"></i>
+            Recordatorio importante
+          </div>
+          <p class="mt-3 whitespace-pre-line text-sm text-main">{{ notification.description }}</p>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <ui-button type="button" variant="ghost" size="md" (pressed)="closeNotificationModal()">
+          Cerrar
+        </ui-button>
+        <ui-button *ngIf="notification.linkUrl" type="button" variant="primary" size="md"
+          iconClass="fa-solid fa-arrow-up-right-from-square" (pressed)="openNotificationLink(notification.linkUrl)">
+          {{ notification.linkText || 'Ver' }}
+        </ui-button>
+      </div>
+    </ng-container>
+  </ui-modal>
 
   <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div

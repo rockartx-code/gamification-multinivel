@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
-import { CreateAccountCustomer } from '../models/auth.model';
+import {
+  CreateAccountCustomer,
+  PasswordRecoveryRequestResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse
+} from '../models/auth.model';
 import { AdminViewId, AppPrivilege, normalizePrivileges, SCREEN_PRIVILEGE_BY_VIEW, UserPrivileges } from '../models/privileges.model';
 import { ApiService } from './api.service';
 
@@ -40,6 +45,14 @@ export class AuthService {
 
   login(username: string, password: string): Observable<AuthUser> {
     return this.api.login(username, password).pipe(tap((user) => this.setUser(user)));
+  }
+
+  requestPasswordRecovery(email: string): Observable<PasswordRecoveryRequestResponse> {
+    return this.api.requestPasswordRecovery({ email });
+  }
+
+  resetPassword(payload: ResetPasswordPayload): Observable<ResetPasswordResponse> {
+    return this.api.resetPassword(payload);
   }
 
   loginAs(role: UserRole): AuthUser {

@@ -61,7 +61,12 @@ export class CartControlService {
   }
 
   formatMoney(value: number): string {
-    return `$${value.toFixed(0)}`;
+    const amount = Number.isFinite(value) ? value : 0;
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      maximumFractionDigits: 0
+    }).format(amount);
   }
 
   get subtotal(): number {

@@ -17,6 +17,7 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerShippingAddress,
   CustomerProfile,
   InventoryMovement,
   PosSale,
@@ -26,12 +27,22 @@ import {
   ProductOfMonthResponse,
   SaveAdminProductPayload,
   SaveAdminCampaignPayload,
+  SaveAdminNotificationPayload,
   OrderStatusLookup,
   AssociateMonth,
   UpdateBusinessConfigPayload,
+  UpdateCustomerPayload,
   UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
-import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
+import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
+import {
+  CreateAccountPayload,
+  CreateAccountResponse,
+  PasswordRecoveryRequestPayload,
+  PasswordRecoveryRequestResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse
+} from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
   CommissionReceiptPayload,
@@ -77,6 +88,35 @@ export class RealApiService {
             return { customer: response.customer };
           }
           throw new Error(response.message ?? 'No se pudo crear la cuenta.');
+        })
+      );
+  }
+
+  requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
+    return this.http
+      .post<PasswordRecoveryRequestResponse & { Error?: string }>(
+        `${this.baseUrl}/password/recovery`,
+        payload
+      )
+      .pipe(
+        map((response) => {
+          if (response.ok) {
+            return response;
+          }
+          throw new Error(response.message ?? 'No se pudo enviar el codigo OTP.');
+        })
+      );
+  }
+
+  resetPassword(payload: ResetPasswordPayload): Observable<ResetPasswordResponse> {
+    return this.http
+      .post<ResetPasswordResponse & { Error?: string }>(`${this.baseUrl}/password/reset`, payload)
+      .pipe(
+        map((response) => {
+          if (response.ok) {
+            return response;
+          }
+          throw new Error(response.message ?? 'No se pudo actualizar la contrasena.');
         })
       );
   }
@@ -181,15 +221,58 @@ export class RealApiService {
       .pipe(
         map((response) => {
           const customer = response.customer ?? {};
+          const rawCustomerId = customer['customerId'] ?? customer['id'] ?? '';
+          const numericCustomerId = Number(rawCustomerId);
+          const addresses = Array.isArray(customer['addresses'])
+            ? customer['addresses']
+            : Array.isArray(customer['shippingAddresses'])
+              ? customer['shippingAddresses']
+              : [];
+          const shippingAddresses = addresses
+                .map((entry): CustomerShippingAddress | null => {
+                  if (!entry || typeof entry !== 'object') {
+                    return null;
+                  }
+                  const raw = entry as Record<string, unknown>;
+                  const address = String(raw['address'] ?? '').trim();
+                  const postalCode = String(raw['postalCode'] ?? '').trim();
+                  const state = String(raw['state'] ?? '').trim();
+                  if (!address && !postalCode && !state) {
+                    return null;
+                  }
+                  return {
+                    id: String(raw['addressId'] ?? raw['id'] ?? ''),
+                    label: String(raw['label'] ?? ''),
+                    recipientName: raw['recipientName'] ? String(raw['recipientName']) : undefined,
+                    phone: raw['phone'] ? String(raw['phone']) : undefined,
+                    address,
+                    postalCode,
+                    state,
+                    isDefault: Boolean(raw['isDefault'])
+                  };
+                })
+                .filter((entry): entry is CustomerShippingAddress => Boolean(entry));
+          const defaultAddressId = customer['defaultAddressId']
+            ? String(customer['defaultAddressId'])
+            : customer['defaultShippingAddressId']
+              ? String(customer['defaultShippingAddressId'])
+              : shippingAddresses.find((entry) => entry.isDefault)?.id;
+
           return {
-            id: Number(customer['customerId'] ?? customer['id'] ?? 0),
+            id: Number.isFinite(numericCustomerId) && String(rawCustomerId).trim() !== ''
+              ? numericCustomerId
+              : String(rawCustomerId ?? ''),
             name: String(customer['name'] ?? ''),
             email: String(customer['email'] ?? ''),
             phone: customer['phone'] ? String(customer['phone']) : undefined,
             address: customer['address'] ? String(customer['address']) : undefined,
             city: customer['city'] ? String(customer['city']) : undefined,
             state: customer['state'] ? String(customer['state']) : undefined,
-            postalCode: customer['postalCode'] ? String(customer['postalCode']) : undefined
+            postalCode: customer['postalCode'] ? String(customer['postalCode']) : undefined,
+            addresses: shippingAddresses,
+            defaultAddressId,
+            shippingAddresses,
+            defaultShippingAddressId: defaultAddressId
           };
         })
       );
@@ -318,10 +401,34 @@ export class RealApiService {
       .pipe(map((response) => response.customer));
   }
 
+  updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
+    return this.http
+      .patch<{ customer: AdminCustomer }>(
+        `${this.baseUrl}/customers/${encodeURIComponent(String(customerId))}`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((response) => response.customer));
+  }
+
   saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
     return this.http
       .post<{ campaign: AdminCampaign }>(`${this.baseUrl}/campaigns`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.campaign));
+  }
+
+  saveNotification(payload: SaveAdminNotificationPayload): Observable<PortalNotification> {
+    return this.http
+      .post<{ notification: PortalNotification }>(`${this.baseUrl}/notifications`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.notification));
+  }
+
+  markNotificationRead(notificationId: string, payload: { customerId?: number | string } = {}): Observable<NotificationReadResponse> {
+    return this.http.post<NotificationReadResponse>(
+      `${this.baseUrl}/notifications/${encodeURIComponent(notificationId)}/read`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
   }
 
   getBusinessConfig(): Observable<AppBusinessConfig> {

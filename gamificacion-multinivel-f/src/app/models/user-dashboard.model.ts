@@ -1,3 +1,5 @@
+import { PortalNotification } from './portal-notification.model';
+
 export interface DashboardGoal {
   key: string;
   title: string;
@@ -32,6 +34,13 @@ export interface NetworkMember {
   status: 'Activa' | 'En progreso' | 'Inactiva';
   id?: string;
   leaderId?: string;
+}
+
+export interface SponsorContact {
+  name: string;
+  email: string;
+  phone: string;
+  isDefault?: boolean;
 }
 
 export interface FeaturedItem {
@@ -77,11 +86,13 @@ export interface UserDashboardData {
   products: DashboardProduct[];
   featured: FeaturedItem[];
   campaigns?: DashboardCampaign[];
+  notifications?: PortalNotification[];
   user?: {
     level?: string;
     discountPercent?: number;
     discountActive?: boolean;
   };
+  sponsor?: SponsorContact | null;
   isGuest?: boolean;
   productOfMonth?: {
     id: string;

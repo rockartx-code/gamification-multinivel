@@ -15,6 +15,7 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerShippingAddress,
   CustomerProfile,
   InventoryMovement,
   PosSale,
@@ -24,12 +25,22 @@ import {
   ProductOfMonthResponse,
   SaveAdminProductPayload,
   SaveAdminCampaignPayload,
+  SaveAdminNotificationPayload,
   OrderStatusLookup,
   AssociateMonth,
   UpdateBusinessConfigPayload,
+  UpdateCustomerPayload,
   UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
-import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
+import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
+import {
+  CreateAccountPayload,
+  CreateAccountResponse,
+  PasswordRecoveryRequestPayload,
+  PasswordRecoveryRequestResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse
+} from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
   CommissionReceiptPayload,
@@ -109,6 +120,35 @@ export class MockApiService {
       updatedAt: new Date().toISOString()
     }
   ];
+  private notifications: PortalNotification[] = [
+    {
+      id: 'NTF-BIENVENIDA',
+      title: 'Capacitacion de bienvenida',
+      description: 'Recuerda conectarte a la capacitacion de onboarding este martes a las 7:00 pm para revisar producto, pedidos y recompensas.',
+      linkUrl: 'https://www.findingu.com.mx/#/dashboard',
+      linkText: 'Ver',
+      startAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      endAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString(),
+      active: true,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'NTF-PROXIMA-CAMPANA',
+      title: 'Nueva campana programada',
+      description: 'La siguiente campana de contenidos iniciara la proxima semana. Deja lista tu red para compartir los nuevos materiales.',
+      startAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(),
+      endAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10).toISOString(),
+      active: true,
+      status: 'scheduled',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+  private notificationReads: Record<string, Record<string, string>> = {
+    '1': {}
+  };
   private customers: AdminCustomer[] = [
     {
       id: 1,
@@ -165,6 +205,64 @@ export class MockApiService {
       clabeInterbancaria: '987654321098765432'
     }
   ];
+  private customerProfiles: Record<string, CustomerProfile> = {
+    '1': {
+      id: 1,
+      name: 'Valeria Torres',
+      email: 'valeria@mail.com',
+      phone: '+52 555-0101',
+      address: 'Av. Insurgentes 123',
+      city: 'CDMX',
+      state: 'CDMX',
+      postalCode: '03100',
+      defaultAddressId: 'addr-home',
+      defaultShippingAddressId: 'addr-home',
+      addresses: [
+        {
+          id: 'addr-home',
+          label: 'Casa',
+          recipientName: 'Valeria Torres',
+          phone: '+52 555-0101',
+          address: 'Av. Insurgentes 123',
+          postalCode: '03100',
+          state: 'CDMX',
+          isDefault: true
+        },
+        {
+          id: 'addr-office',
+          label: 'Oficina',
+          recipientName: 'Valeria Torres',
+          phone: '+52 555-0101',
+          address: 'Reforma 250, Piso 8',
+          postalCode: '06600',
+          state: 'CDMX',
+          isDefault: false
+        }
+      ],
+      shippingAddresses: [
+        {
+          id: 'addr-home',
+          label: 'Casa',
+          recipientName: 'Valeria Torres',
+          phone: '+52 555-0101',
+          address: 'Av. Insurgentes 123',
+          postalCode: '03100',
+          state: 'CDMX',
+          isDefault: true
+        },
+        {
+          id: 'addr-office',
+          label: 'Oficina',
+          recipientName: 'Valeria Torres',
+          phone: '+52 555-0101',
+          address: 'Reforma 250, Piso 8',
+          postalCode: '06600',
+          state: 'CDMX',
+          isDefault: false
+        }
+      ]
+    }
+  };
 
   private readonly loginUsers = [
     {
@@ -256,6 +354,12 @@ export class MockApiService {
     if (!payload.name || !payload.email || !payload.password) {
       return throwError(() => new Error('Datos incompletos'));
     }
+    const emailExists = this.customers.some(
+      (customer) => customer.email.trim().toLowerCase() === payload.email.trim().toLowerCase()
+    );
+    if (emailExists) {
+      return throwError(() => new Error('El correo ya está registrado. Intenta usar "recuperar contraseña".'));
+    }
     if (payload.password !== payload.confirmPassword) {
       return throwError(() => new Error('Las contrase?as no coinciden'));
     }
@@ -271,6 +375,29 @@ export class MockApiService {
       commissions: 0
     };
     return of({ customer }).pipe(delay(160));
+  }
+
+  requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
+    if (!payload.email?.trim()) {
+      return throwError(() => new Error('Ingresa tu correo electronico.'));
+    }
+    return of({
+      ok: true,
+      message: 'Si el correo existe, te enviamos un codigo OTP para recuperar tu contrasena.'
+    }).pipe(delay(140));
+  }
+
+  resetPassword(payload: ResetPasswordPayload): Observable<ResetPasswordResponse> {
+    if (!payload.email?.trim() || !payload.otp?.trim() || !payload.password) {
+      return throwError(() => new Error('Completa correo, OTP y nueva contrasena.'));
+    }
+    if (payload.password !== payload.confirmPassword) {
+      return throwError(() => new Error('Las contrasenas no coinciden.'));
+    }
+    return of({
+      ok: true,
+      message: 'Contrasena actualizada correctamente.'
+    }).pipe(delay(160));
   }
 
   getAdminData(): Observable<AdminData> {
@@ -312,6 +439,7 @@ export class MockApiService {
       })),
       products: [...this.products],
       campaigns: [...this.campaigns],
+      notifications: this.notifications.map((notification) => this.normalizeNotification(notification)),
       businessConfig: structuredClone(this.businessConfig),
       warnings: [
         { type: 'commissions', text: '3 comisiones pendientes por depositar', severity: 'high' },
@@ -411,6 +539,7 @@ export class MockApiService {
   }
 
   getUserDashboardData(userId?: string): Observable<UserDashboardData> {
+    const customerKey = this.normalizeCustomerKey(userId || '1') || '1';
     const payload: UserDashboardData = {
       settings: {
         cutoffDay: 25,
@@ -422,6 +551,12 @@ export class MockApiService {
       user: {
         discountPercent: 15,
         discountActive: true
+      },
+      sponsor: {
+        name: 'FindingU',
+        email: 'coach@findingu.com.mx',
+        phone: '+52 1 55 1498 2351',
+        isDefault: true
       },
       goals: [
         {
@@ -570,6 +705,7 @@ export class MockApiService {
           ctaSecondaryText: campaign.ctaSecondaryText,
           benefits: campaign.benefits ?? []
         })),
+      notifications: this.buildActiveNotifications(customerKey),
       networkMembers: [
         { id: 'c-1', name: 'Mar?a G.', level: 'L1', spend: 80, status: 'Activa', leaderId: 'client-001' },
         { id: 'c-2', name: 'Luis R.', level: 'L1', spend: 25, status: 'En progreso', leaderId: 'client-001' },
@@ -639,6 +775,49 @@ export class MockApiService {
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
     const total = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const customerKey = this.normalizeCustomerKey(payload.customerId);
+    const trimmedAddress = payload.address?.trim() ?? '';
+    const trimmedPostalCode = payload.postalCode?.trim() ?? '';
+    const trimmedState = payload.state?.trim() ?? '';
+    const trimmedPhone = payload.phone?.trim() ?? '';
+    const trimmedRecipientName = payload.recipientName?.trim() ?? payload.customerName?.trim() ?? '';
+    const trimmedLabel = payload.shippingAddressLabel?.trim() ?? '';
+    const shippingAddressId = payload.shippingAddressId?.trim() ?? '';
+
+    if (customerKey && payload.saveShippingAddress && (trimmedAddress || trimmedPostalCode || trimmedState)) {
+      const profile = this.ensureCustomerProfile(customerKey, payload.customerName);
+      const nextAddresses = [...(profile.addresses ?? profile.shippingAddresses ?? [])];
+      const existingIndex = shippingAddressId ? nextAddresses.findIndex((entry) => entry.id === shippingAddressId) : -1;
+      const savedAddress: CustomerShippingAddress = {
+        id: shippingAddressId || `addr-${Math.random().toString(16).slice(2, 10)}`,
+        label: trimmedLabel || `Direccion ${nextAddresses.length + (existingIndex >= 0 ? 0 : 1)}`,
+        recipientName: trimmedRecipientName || undefined,
+        phone: trimmedPhone || undefined,
+        address: trimmedAddress,
+        postalCode: trimmedPostalCode,
+        state: trimmedState,
+        isDefault: true
+      };
+      if (existingIndex >= 0) {
+        nextAddresses[existingIndex] = savedAddress;
+      } else {
+        nextAddresses.unshift(savedAddress);
+      }
+      const normalizedAddresses = nextAddresses.map((entry) => ({
+        ...entry,
+        isDefault: entry.id === savedAddress.id
+      }));
+      profile.addresses = normalizedAddresses;
+      profile.shippingAddresses = normalizedAddresses;
+      profile.defaultAddressId = savedAddress.id;
+      profile.defaultShippingAddressId = savedAddress.id;
+      profile.phone = savedAddress.phone || profile.phone;
+      profile.address = savedAddress.address || profile.address;
+      profile.state = savedAddress.state || profile.state;
+      profile.postalCode = savedAddress.postalCode || profile.postalCode;
+      this.customerProfiles[customerKey] = profile;
+    }
+
     const order: AdminOrder = {
       id: `#${Math.floor(1000 + Math.random() * 9000)}`,
       createdAt: new Date().toISOString(),
@@ -653,7 +832,9 @@ export class MockApiService {
       phone: payload.phone,
       address: payload.address,
       postalCode: payload.postalCode,
-      state: payload.state
+      state: payload.state,
+      shippingAddressId: payload.shippingAddressId,
+      shippingAddressLabel: payload.shippingAddressLabel
     };
     return of(order).pipe(delay(120));
   }
@@ -744,16 +925,7 @@ export class MockApiService {
   }
 
   getCustomer(customerId: string): Observable<CustomerProfile> {
-    const customer: CustomerProfile = {
-      id: Number(customerId) || 1001,
-      name: 'Valeria Torres',
-      email: 'valeria@mail.com',
-      phone: '+52 555-0101',
-      address: 'Av. Insurgentes 123',
-      city: 'CDMX',
-      state: 'CDMX',
-      postalCode: '03100'
-    };
+    const customer = this.ensureCustomerProfile(this.normalizeCustomerKey(customerId) || '1');
     return of(customer).pipe(delay(120));
   }
 
@@ -989,6 +1161,86 @@ export class MockApiService {
     return of(updated).pipe(delay(120));
   }
 
+  updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
+    const customer = this.customers.find((entry) => entry.id === customerId);
+    if (!customer) {
+      return throwError(() => new Error('Cliente no encontrado'));
+    }
+    const updated: AdminCustomer = {
+      ...customer,
+      leaderId: payload.leaderId !== undefined ? payload.leaderId : customer.leaderId,
+      level: payload.level !== undefined ? payload.level : customer.level
+    };
+    this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
+    return of(updated).pipe(delay(120));
+  }
+
+  private ensureCustomerProfile(customerId: number | string, customerName = 'Valeria Torres'): CustomerProfile {
+    const key = this.normalizeCustomerKey(customerId) || '1';
+    const existing = this.customerProfiles[key];
+    if (existing) {
+      return {
+        ...existing,
+        addresses: [...(existing.addresses ?? existing.shippingAddresses ?? [])],
+        shippingAddresses: [...(existing.addresses ?? existing.shippingAddresses ?? [])]
+      };
+    }
+    const numericCustomerId = Number(key);
+    const profile: CustomerProfile = {
+      id: Number.isFinite(numericCustomerId) ? numericCustomerId : key,
+      name: customerName,
+      email: `${key}@mail.com`,
+      addresses: [],
+      shippingAddresses: []
+    };
+    this.customerProfiles[key] = profile;
+    return { ...profile, addresses: [], shippingAddresses: [] };
+  }
+
+  private normalizeCustomerKey(customerId: number | string | null | undefined): string {
+    const raw = String(customerId ?? '').trim();
+    if (!raw || raw === '0' || raw.toLowerCase() === 'nan') {
+      return '';
+    }
+    return raw;
+  }
+
+  private buildActiveNotifications(customerKey: string): PortalNotification[] {
+    const reads = this.notificationReads[customerKey] ?? {};
+    return this.notifications
+      .map((notification) => this.normalizeNotification(notification))
+      .filter((notification) => notification.status === 'active')
+      .map((notification) => ({
+        ...notification,
+        isRead: Boolean(reads[notification.id]),
+        readAt: reads[notification.id] ?? ''
+      }));
+  }
+
+  private normalizeNotification(notification: PortalNotification): PortalNotification {
+    return {
+      ...notification,
+      linkText: notification.linkUrl ? notification.linkText || 'Ver' : '',
+      status: this.resolveNotificationStatus(notification)
+    };
+  }
+
+  private resolveNotificationStatus(notification: PortalNotification): PortalNotification['status'] {
+    if (!notification.active) {
+      return 'inactive';
+    }
+    const now = Date.now();
+    const start = notification.startAt ? new Date(notification.startAt).getTime() : 0;
+    const end = notification.endAt ? new Date(notification.endAt).getTime() : 0;
+    if (start && start > now) {
+      return 'scheduled';
+    }
+    if (end && end < now) {
+      return 'expired';
+    }
+    return 'active';
+  }
+
   saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
     const now = new Date().toISOString();
     const existing = payload.id ? this.campaigns.find((entry) => entry.id === payload.id) : null;
@@ -1017,6 +1269,42 @@ export class MockApiService {
       ? this.campaigns.map((entry) => (entry.id === campaign.id ? campaign : entry))
       : [campaign, ...this.campaigns];
     return of(campaign).pipe(delay(120));
+  }
+
+  saveNotification(payload: SaveAdminNotificationPayload): Observable<PortalNotification> {
+    const now = new Date().toISOString();
+    const existing = payload.id ? this.notifications.find((entry) => entry.id === payload.id) : null;
+    const notification: PortalNotification = this.normalizeNotification({
+      id: payload.id || `NTF-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      title: payload.title,
+      description: payload.description.slice(0, 300),
+      linkUrl: payload.linkUrl?.trim() || '',
+      linkText: payload.linkUrl?.trim() ? payload.linkText?.trim() || 'Ver' : '',
+      startAt: payload.startAt,
+      endAt: payload.endAt,
+      active: payload.active,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    });
+    this.notifications = existing
+      ? this.notifications.map((entry) => (entry.id === notification.id ? notification : entry))
+      : [notification, ...this.notifications];
+    this.notifications.sort((a, b) => String(b.startAt ?? '').localeCompare(String(a.startAt ?? '')));
+    return of(notification).pipe(delay(120));
+  }
+
+  markNotificationRead(notificationId: string, payload: { customerId?: number | string } = {}): Observable<NotificationReadResponse> {
+    const customerKey = this.normalizeCustomerKey(payload.customerId || '1') || '1';
+    const readAt = new Date().toISOString();
+    const reads = this.notificationReads[customerKey] ?? {};
+    reads[notificationId] = reads[notificationId] || readAt;
+    this.notificationReads[customerKey] = reads;
+    return of({
+      ok: true,
+      notificationId,
+      customerId: customerKey,
+      readAt: reads[notificationId]
+    }).pipe(delay(120));
   }
 
   getBusinessConfig(): Observable<AppBusinessConfig> {

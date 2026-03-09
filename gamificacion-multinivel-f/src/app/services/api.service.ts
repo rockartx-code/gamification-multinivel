@@ -25,12 +25,22 @@ import {
   ProductOfMonthResponse,
   SaveAdminProductPayload,
   SaveAdminCampaignPayload,
+  SaveAdminNotificationPayload,
   OrderStatusLookup,
   AssociateMonth,
   UpdateBusinessConfigPayload,
+  UpdateCustomerPayload,
   UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
-import { CreateAccountPayload, CreateAccountResponse } from '../models/auth.model';
+import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
+import {
+  CreateAccountPayload,
+  CreateAccountResponse,
+  PasswordRecoveryRequestPayload,
+  PasswordRecoveryRequestResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse
+} from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
   CommissionReceiptPayload,
@@ -57,6 +67,14 @@ export class ApiService {
 
   createAccount(payload: CreateAccountPayload): Observable<CreateAccountResponse> {
     return this.resolveApi().createAccount(payload);
+  }
+
+  requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
+    return this.resolveApi().requestPasswordRecovery(payload);
+  }
+
+  resetPassword(payload: ResetPasswordPayload): Observable<ResetPasswordResponse> {
+    return this.resolveApi().resetPassword(payload);
   }
 
   getAdminData(): Observable<AdminData> {
@@ -217,8 +235,20 @@ export class ApiService {
     return this.resolveApi().updateCustomerPrivileges(customerId, payload);
   }
 
+  updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
+    return this.resolveApi().updateCustomer(customerId, payload);
+  }
+
   saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
     return this.resolveApi().saveCampaign(payload);
+  }
+
+  saveNotification(payload: SaveAdminNotificationPayload): Observable<PortalNotification> {
+    return this.resolveApi().saveNotification(payload);
+  }
+
+  markNotificationRead(notificationId: string, payload: { customerId?: number | string } = {}): Observable<NotificationReadResponse> {
+    return this.resolveApi().markNotificationRead(notificationId, payload);
   }
 
   getBusinessConfig(): Observable<AppBusinessConfig> {

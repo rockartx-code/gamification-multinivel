@@ -2,7 +2,7 @@
   <header class="border-b border-olive-20 bg-sand-200-90 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
       <div class="flex min-w-0 items-center gap-3">
-        <img src="logo-320.png" width="320" height="96" alt="Logo findingU" class="h-15 w-40" />
+        <img src="Logo-colores.svg" width="320" height="96" alt="Logo findingU" class="h-15 w-40" />
       </div>
       <div class="flex shrink-0 items-center gap-2">
         <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/dashboard']" extraClass="sm:text-sm">
@@ -67,7 +67,7 @@
               <div class="flex justify-between gap-4" *ngIf="orderSubtotal">
                 <span class="text-gray-600">Subtotal</span>
                 <span class="font-medium text-main">
-                  {{ orderSubtotal | currency:'MXN' }}
+                  {{ formatMoney(orderSubtotal) }}
                 </span>
               </div>
 
@@ -76,7 +76,7 @@
                 <span [ngClass]="orderDiscount > 0 ? 'font-semibold text-accent' : 'text-gray-500'">
                   {{
                   orderDiscount > 0
-                  ? ('-' + (orderDiscount | currency:'MXN') +
+                  ? ('-' + formatMoney(orderDiscount) +
                   (orderDiscountPercent ? ' - ' + orderDiscountPercent + '%' : ''))
                   : 'Sin descuento'
                   }}
@@ -86,7 +86,7 @@
               <div class="flex justify-between gap-4">
                 <span class="text-gray-600">Total</span>
                 <span class="font-semibold text-gold">
-                  {{ orderTotal | currency:'MXN' }}
+                  {{ formatMoney(orderTotal) }}
                 </span>
               </div>
             </div>
@@ -141,7 +141,7 @@
             <!-- Total mini, opcional (si quieres reforzar confianza visual) -->
             <div class="text-right">
               <div class="text-[11px] text-gray-500">Total</div>
-              <div class="text-sm font-semibold text-gold">{{ orderTotal | currency:'MXN' }}</div>
+              <div class="text-sm font-semibold text-gold">{{ formatMoney(orderTotal) }}</div>
             </div>
           </div>
 

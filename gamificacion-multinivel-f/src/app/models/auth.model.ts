@@ -24,3 +24,24 @@ export interface CreateAccountCustomer {
 export interface CreateAccountResponse {
   customer: CreateAccountCustomer;
 }
+
+export interface PasswordRecoveryRequestPayload {
+  email: string;
+}
+
+export interface PasswordRecoveryRequestResponse {
+  ok: boolean;
+  message: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  ok: boolean;
+  message: string;
+}

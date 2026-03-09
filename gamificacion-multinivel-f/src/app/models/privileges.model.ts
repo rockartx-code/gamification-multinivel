@@ -1,4 +1,4 @@
-export type AdminViewId = 'orders' | 'customers' | 'products' | 'stocks' | 'pos' | 'stats' | 'settings';
+export type AdminViewId = 'orders' | 'customers' | 'products' | 'stocks' | 'pos' | 'stats' | 'notifications' | 'settings';
 
 export type AppPrivilege =
   | 'access_screen_orders'
@@ -64,6 +64,7 @@ export const SCREEN_PRIVILEGE_BY_VIEW: Record<AdminViewId, AppPrivilege> = {
   stocks: 'access_screen_stocks',
   pos: 'access_screen_pos',
   stats: 'access_screen_stats',
+  notifications: 'config_manage',
   settings: 'access_screen_settings'
 };
 

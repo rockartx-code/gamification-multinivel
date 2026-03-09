@@ -39,7 +39,11 @@ Resultado para el usuario:
 
 ## 2.2 Login (`/login`)
 
-Pantalla de acceso con validación de usuario y contraseña.
+Pantalla de acceso con validación de correo/usuario y contraseña.
+
+- Incluye icono de ojo para mostrar u ocultar la contraseña.
+- Incluye flujo de recuperación por correo con OTP.
+- El cambio de contraseña vive en `/recuperar-contrasena` y puede recibir `email` y `otp` por query string.
 
 - Si credenciales son correctas:
   - Admin va a `/admin`.
@@ -52,6 +56,10 @@ Es el centro operativo del asociado. Incluye:
 
 - **Meta principal del mes** con barra de progreso.
 - **Metas secundarias** (opcionalmente visibles).
+- **Notificaciones del portal**:
+  - aparecen al iniciar sesiÃ³n,
+  - aceptan link opcional para capacitaciones o recordatorios,
+  - se marcan como leÃ­das para no repetirse.
 - **Tienda** con producto del mes, productos destacados y sugeridos.
 - **Carrito** rápido y acceso a checkout.
 - **Red** (estructura de miembros y su estado).
@@ -116,6 +124,11 @@ Panel único para operación diaria con secciones:
   - selección de producto del mes.
 - **Estadísticas**:
   - KPIs y alertas operativas (pagos pendientes, envíos, activos, etc.).
+
+- **Notificaciones**:
+  - alta y edición de avisos,
+  - programación por rango de fechas,
+  - link opcional a materiales, sesiones o recursos.
 
 Además incluye acciones rápidas:
 

@@ -8,49 +8,132 @@
   <main class="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
     <div class="grid gap-10 lg:grid-cols-[1.05fr_.95fr]">
       <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6">
-        <div
-          class="pointer-events-none absolute inset-0 bg-olive-10"
-        ></div>
+        <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
 
         <div class="relative space-y-4">
           <div class="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-600">
             <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
-            Login
+            {{ showRecoveryForm ? 'Recuperar contrasena' : 'Login' }}
           </div>
           <div class="flex items-center gap-2 text-2xl font-extrabold">
             <i class="fa-solid fa-gauge-high text-accent" aria-hidden="true"></i>
-            Accede a tu panel
+            {{ showRecoveryForm ? 'Recupera el acceso' : 'Accede a tu panel' }}
           </div>
 
-          <ui-form-field
-            name="username"
-            label="Usuario"
-            leadingIconClass="fa-solid fa-user"
-            placeholder="Tu usuario"
-            [(ngModel)]="username"
-            [errorText]="usernameError"
-            inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none  focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
-          ></ui-form-field>
+          <ng-container *ngIf="!showRecoveryForm; else recoveryForm">
+            <ui-form-field
+              name="username"
+              label="Correo electronico"
+              leadingIconClass="fa-solid fa-user"
+              placeholder="tu@correo.com"
+              [(ngModel)]="username"
+              [errorText]="usernameError"
+              inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
+            ></ui-form-field>
 
-          <ui-form-field
-            name="password"
-            type="password"
-            label="Password"
-            leadingIconClass="fa-solid fa-key"
-            placeholder="Tu contraseña"
-            [(ngModel)]="password"
-            [errorText]="passwordError"
-            inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none  focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
-          ></ui-form-field>
+            <label class="block">
+              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">Contrasena</span>
+              <div class="relative">
+                <i
+                  class="fa-solid fa-key pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-500"
+                  aria-hidden="true"
+                ></i>
+                <input
+                  [type]="showPassword ? 'text' : 'password'"
+                  name="password"
+                  placeholder="Tu contrasena"
+                  [(ngModel)]="password"
+                  class="mt-2 w-full rounded-2xl border bg-white/70 px-4 py-3 pl-10 pr-12 text-sm text-main outline-none focus:ring-2 focus-ring-olive-20"
+                  [class.border-danger]="passwordError"
+                  [class.border-olive-30]="!passwordError"
+                  [class.focus-border-danger]="passwordError"
+                  [class.focus-border-olive-60]="!passwordError"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
+                  (click)="togglePasswordVisibility()"
+                  [attr.aria-label]="showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+                  [title]="showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+                >
+                  <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" aria-hidden="true"></i>
+                </button>
+              </div>
+              <small *ngIf="passwordError" class="mt-1 block text-xs text-danger">{{ passwordError }}</small>
+            </label>
 
-          <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
-            {{ errorMessage }}
-          </p>
-          <div class="mt-2">
-          <ui-button variant="secondary" size="lg" iconClass="fa-solid fa-right-to-bracket" [fullWidth]="true" [disabled]="isSubmitting" (pressed)="login()">
-            {{ isSubmitting ? 'Validando acceso...' : 'Ingresar al panel' }}
-          </ui-button>
-          </div>
+            <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
+              {{ errorMessage }}
+            </p>
+            <div class="mt-2">
+              <ui-button
+                variant="secondary"
+                size="lg"
+                iconClass="fa-solid fa-right-to-bracket"
+                [fullWidth]="true"
+                [disabled]="isSubmitting"
+                (pressed)="login()"
+              >
+                {{ isSubmitting ? 'Validando acceso...' : 'Ingresar al panel' }}
+              </ui-button>
+            </div>
+            <div class="pt-1 text-center">
+              <button
+                type="button"
+                class="text-sm text-accent underline-offset-2 hover:underline"
+                (click)="openRecoveryForm()"
+              >
+                Recuperar contrasena
+              </button>
+            </div>
+          </ng-container>
+
+          <ng-template #recoveryForm>
+            <div class="rounded-2xl border border-olive-30 bg-white/60 p-4">
+              <div class="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
+                <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i>
+                Recuperar contrasena
+              </div>
+              <ui-form-field
+                name="recoveryEmail"
+                type="email"
+                label="Correo electronico"
+                leadingIconClass="fa-solid fa-envelope"
+                placeholder="tu@correo.com"
+                [(ngModel)]="recoveryEmail"
+                inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
+              ></ui-form-field>
+              <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <ui-button
+                  variant="ghost"
+                  size="md"
+                  iconClass="fa-solid fa-paper-plane"
+                  [disabled]="isRecovering"
+                  (pressed)="requestPasswordRecovery()"
+                >
+                  {{ isRecovering ? 'Enviando correo...' : 'Enviar Correo de recuperacion' }}
+                </ui-button>
+                <a routerLink="/recuperar-contrasena" class="text-sm text-accent underline-offset-2 hover:underline">
+                  Ya tengo un codigo
+                </a>
+              </div>
+              <p *ngIf="recoveryMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
+                {{ recoveryMessage }}
+              </p>
+              <p *ngIf="recoveryErrorMessage" class="mt-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
+                {{ recoveryErrorMessage }}
+              </p>
+              <div class="pt-3">
+                <button
+                  type="button"
+                  class="text-sm text-accent underline-offset-2 hover:underline"
+                  (click)="openLoginForm()"
+                >
+                  Volver al login
+                </button>
+              </div>
+            </div>
+          </ng-template>
         </div>
       </div>
     </div>
@@ -58,4 +141,3 @@
 
   <ui-footer></ui-footer>
 </section>
-

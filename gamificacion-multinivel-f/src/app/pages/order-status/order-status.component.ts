@@ -239,6 +239,15 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return Number(this.order.total ?? 0);
   }
 
+  formatMoney(value: number): string {
+    const amount = Number.isFinite(value) ? value : 0;
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      maximumFractionDigits: 0
+    }).format(amount);
+  }
+
   get displayOrderRef(): string {
     return this.orderReference || this.orderId || this.paymentId || '';
   }

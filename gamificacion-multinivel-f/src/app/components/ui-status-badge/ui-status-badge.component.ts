@@ -14,6 +14,36 @@ export class UiStatusBadgeComponent {
   @Input() context: 'order' | 'network' = 'order';
   @Input() showIcon = true;
 
+  get displayStatus(): string {
+    const value = this.normalized;
+    if (this.context === 'network') {
+      if (value.includes('activa') || value.includes('active')) {
+        return 'Activa';
+      }
+      if (value.includes('progreso') || value.includes('pending')) {
+        return 'En progreso';
+      }
+      if (value.includes('inact') || value.includes('inactive')) {
+        return 'Inactiva';
+      }
+      return this.status || '-';
+    }
+
+    if (value === 'pending') {
+      return 'Pendiente';
+    }
+    if (value === 'paid') {
+      return 'Pagada';
+    }
+    if (value === 'shipped') {
+      return 'Enviada';
+    }
+    if (value === 'delivered') {
+      return 'Entregada';
+    }
+    return this.status || '-';
+  }
+
   get tone(): 'active' | 'inactive' | 'pending' | 'delivered' {
     const value = this.normalized;
     if (this.context === 'network') {

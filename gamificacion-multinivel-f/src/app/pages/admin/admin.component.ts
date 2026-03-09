@@ -21,6 +21,7 @@ import {
   CreateProductAssetPayload,
   CreateStructureCustomerPayload
 } from '../../models/admin.model';
+import { PortalNotification } from '../../models/portal-notification.model';
 import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -117,6 +118,11 @@ type CustomerPrivilegeOption = {
   label: string;
 };
 
+type SelectOption<T extends string | number> = {
+  value: T;
+  label: string;
+};
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -126,6 +132,52 @@ type CustomerPrivilegeOption = {
 })
 export class AdminComponent implements OnInit {
   private readonly adminData: Signal<AdminData | null>;
+  private adminNavLinksCache: { user: AuthUser | null; links: SidebarLink[] } | null = null;
+  private customerOptionsCache: { customersRef: AdminCustomer[]; options: Array<SelectOption<number>> } | null = null;
+  private stockOptionsCache: { stocksRef: AdminStock[]; options: Array<SelectOption<string>> } | null = null;
+  private productOptionsCache: { productsRef: AdminProduct[]; options: Array<SelectOption<number>> } | null = null;
+  private filteredOrdersCache: { ordersRef: AdminOrder[]; status: AdminOrder['status']; rows: AdminOrder[] } | null = null;
+  private structureGraphCache:
+    | {
+        selectedCustomerId: number | null;
+        customersRef: AdminCustomer[];
+        graph: { nodes: StructureNode[]; links: StructureLink[] };
+      }
+    | null = null;
+  private stockInventoryRowsCache:
+    | {
+        selectedStockId: string;
+        stockRef: AdminStock | null;
+        productsRef: AdminProduct[];
+        rows: Array<{ productId: number; productName: string; qty: number }>;
+      }
+    | null = null;
+  private stockTransferRowsCache:
+    | {
+        transfersRef: StockTransfer[];
+        stocksRef: AdminStock[];
+        productsRef: AdminProduct[];
+        rows: Array<StockTransfer & { sourceName: string; destinationName: string; productSummary: string }>;
+      }
+    | null = null;
+  private inventoryMovementRowsCache:
+    | {
+        movementsRef: InventoryMovement[];
+        stocksRef: AdminStock[];
+        productsRef: AdminProduct[];
+        customersRef: AdminCustomer[];
+        rows: Array<
+          InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
+        >;
+      }
+    | null = null;
+  private warningsCache: { warningsRef: AdminWarning[]; warnings: AdminWarning[] } | null = null;
+  private readonly orderStatusOptionsValue: Array<SelectOption<AdminOrder['status']>> = [
+    { value: 'pending', label: 'Pendiente' },
+    { value: 'paid', label: 'Pagado' },
+    { value: 'shipped', label: 'Enviado' },
+    { value: 'delivered', label: 'Entregado' }
+  ];
 
   constructor(
     private readonly adminControl: AdminControlService,
@@ -147,7 +199,14 @@ export class AdminComponent implements OnInit {
   selectedCustomer: AdminCustomer | null = null;
   selectedCustomerAdminAccess = false;
   selectedCustomerPrivilegeDraft: UserPrivileges = {};
+  selectedCustomerLeaderId = '';
+  selectedCustomerSponsorSearch = '';
+  selectedCustomerSponsorRecommendations: Array<{ id: string; name: string; email: string; label: string }> = [];
+  selectedSponsorLabel = 'FindingU (sin patrocinador)';
+  hasValidSelectedSponsorId = true;
+  canSaveSelectedCustomerPosition = false;
   isSavingCustomerPrivileges = false;
+  isSavingCustomerPosition = false;
   readonly customerPrivilegeOptions: CustomerPrivilegeOption[] = [
     { key: 'access_screen_orders', label: 'Acceso pantalla: Pedidos' },
     { key: 'access_screen_customers', label: 'Acceso pantalla: Clientes' },
@@ -226,6 +285,9 @@ export class AdminComponent implements OnInit {
     ctaSecondaryText: '',
     benefits: ''
   };
+  notificationMessage = '';
+  isSavingNotification = false;
+  notificationForm = this.getDefaultNotificationForm();
   productImageSlots = [
     { key: 'redes', label: 'Redes', hint: 'Story / Feed' },
     { key: 'landing', label: 'Landing', hint: 'Hero 16:9' },
@@ -333,6 +395,22 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.campaigns ?? [];
   }
 
+  get notifications(): PortalNotification[] {
+    return this.adminData()?.notifications ?? [];
+  }
+
+  get activeNotificationsCount(): number {
+    return this.notifications.filter((item) => item.status === 'active').length;
+  }
+
+  get scheduledNotificationsCount(): number {
+    return this.notifications.filter((item) => item.status === 'scheduled').length;
+  }
+
+  get inactiveNotificationsCount(): number {
+    return this.notifications.filter((item) => item.status === 'expired' || item.status === 'inactive').length;
+  }
+
   get productOfMonthId(): number | null {
     return this.adminData()?.productOfMonthId ?? null;
   }
@@ -365,6 +443,13 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.warnings ?? [];
   }
 
+  get selectedCustomerSponsorName(): string {
+    if (this.selectedCustomer?.leaderId == null) {
+      return 'FindingU';
+    }
+    return this.customers.find((customer) => customer.id === this.selectedCustomer?.leaderId)?.name ?? `Usuario ${this.selectedCustomer.leaderId}`;
+  }
+
   get businessConfig(): AppBusinessConfig | null {
     return this.adminData()?.businessConfig ?? null;
   }
@@ -378,9 +463,54 @@ export class AdminComponent implements OnInit {
       { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
       { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+      { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
       { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
     ];
     return links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
+  }
+
+  get customerOptionsStable(): Array<SelectOption<number>> {
+    if (this.customerOptionsCache?.customersRef === this.customers) {
+      return this.customerOptionsCache.options;
+    }
+    const options = this.customers.map((customer) => ({
+      value: customer.id,
+      label: `${customer.name} · ${customer.email}`
+    }));
+    this.customerOptionsCache = { customersRef: this.customers, options };
+    return options;
+  }
+
+  get orderStatusOptionsStable(): Array<SelectOption<AdminOrder['status']>> {
+    return this.orderStatusOptionsValue;
+  }
+
+  get warningsStable(): AdminWarning[] {
+    const warnings = this.adminData()?.warnings ?? [];
+    if (this.warningsCache?.warningsRef === warnings) {
+      return this.warningsCache.warnings;
+    }
+    this.warningsCache = { warningsRef: warnings, warnings };
+    return warnings;
+  }
+
+  get adminNavLinksStable(): SidebarLink[] {
+    if (this.adminNavLinksCache?.user === this.currentUser) {
+      return this.adminNavLinksCache.links;
+    }
+    const links: Array<SidebarLink & { view: AdminViewId }> = [
+      { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
+      { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
+      { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
+      { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
+      { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
+      { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+      { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
+      { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
+    ];
+    const resolved = links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
+    this.adminNavLinksCache = { user: this.currentUser, links: resolved };
+    return resolved;
   }
 
   get viewTitle(): string {
@@ -398,6 +528,9 @@ export class AdminComponent implements OnInit {
     }
     if (this.currentView === 'stats') {
       return 'Estadisticas';
+    }
+    if (this.currentView === 'notifications') {
+      return 'Notificaciones';
     }
     if (this.currentView === 'settings') {
       return 'Configuracion';
@@ -421,6 +554,9 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'stats') {
       return 'Ventas, funnel y alertas.';
     }
+    if (this.currentView === 'notifications') {
+      return 'Recordatorios, noticias y avisos programados para los usuarios.';
+    }
     if (this.currentView === 'settings') {
       return 'Variables de negocio para reglas operativas.';
     }
@@ -436,6 +572,120 @@ export class AdminComponent implements OnInit {
 
   get selectedStock(): AdminStock | null {
     return this.stocks.find((stock) => stock.id === this.selectedStockId) ?? null;
+  }
+
+  get stockOptionsStable(): Array<SelectOption<string>> {
+    if (this.stockOptionsCache?.stocksRef === this.stocks) {
+      return this.stockOptionsCache.options;
+    }
+    const options = this.stocks.map((stock) => ({
+      value: stock.id,
+      label: `${stock.name} · ${stock.location}`
+    }));
+    this.stockOptionsCache = { stocksRef: this.stocks, options };
+    return options;
+  }
+
+  get productOptionsStable(): Array<SelectOption<number>> {
+    if (this.productOptionsCache?.productsRef === this.products) {
+      return this.productOptionsCache.options;
+    }
+    const options = this.products.map((product) => ({
+      value: product.id,
+      label: `${product.name} · ${this.formatMoney(product.price)}`
+    }));
+    this.productOptionsCache = { productsRef: this.products, options };
+    return options;
+  }
+
+  get stockInventoryRowsStable(): Array<{ productId: number; productName: string; qty: number }> {
+    const stock = this.selectedStock;
+    if (!stock) {
+      return [];
+    }
+    if (
+      this.stockInventoryRowsCache?.selectedStockId === this.selectedStockId &&
+      this.stockInventoryRowsCache.stockRef === stock &&
+      this.stockInventoryRowsCache.productsRef === this.products
+    ) {
+      return this.stockInventoryRowsCache.rows;
+    }
+    const rows = this.products.map((product) => ({
+      productId: product.id,
+      productName: product.name,
+      qty: stock.inventory[product.id] ?? 0
+    }));
+    this.stockInventoryRowsCache = {
+      selectedStockId: this.selectedStockId,
+      stockRef: stock,
+      productsRef: this.products,
+      rows
+    };
+    return rows;
+  }
+
+  get stockTransferRowsStable(): Array<StockTransfer & { sourceName: string; destinationName: string; productSummary: string }> {
+    if (
+      this.stockTransferRowsCache?.transfersRef === this.transfers &&
+      this.stockTransferRowsCache.stocksRef === this.stocks &&
+      this.stockTransferRowsCache.productsRef === this.products
+    ) {
+      return this.stockTransferRowsCache.rows;
+    }
+    const rows = this.transfers.map((transfer) => ({
+      ...transfer,
+      sourceName: this.stockName(transfer.sourceStockId),
+      destinationName: this.stockName(transfer.destinationStockId),
+      productSummary: transfer.lines.map((line) => `${this.productName(line.productId)} x${line.qty}`).join(', ')
+    }));
+    this.stockTransferRowsCache = {
+      transfersRef: this.transfers,
+      stocksRef: this.stocks,
+      productsRef: this.products,
+      rows
+    };
+    return rows;
+  }
+
+  get inventoryMovementRowsStable(): Array<
+    InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
+  > {
+    if (
+      this.inventoryMovementRowsCache?.movementsRef === this.inventoryMovements &&
+      this.inventoryMovementRowsCache.stocksRef === this.stocks &&
+      this.inventoryMovementRowsCache.productsRef === this.products &&
+      this.inventoryMovementRowsCache.customersRef === this.customers
+    ) {
+      return this.inventoryMovementRowsCache.rows;
+    }
+    const rows = this.inventoryMovements.map((movement) => ({
+      ...movement,
+      stockName: this.stockName(movement.stockId),
+      productName: this.productName(movement.productId),
+      userName: this.customerName(movement.userId),
+      typeLabel: this.movementTypeLabel(movement.type),
+      signedQty: this.movementSignedQty(movement)
+    }));
+    this.inventoryMovementRowsCache = {
+      movementsRef: this.inventoryMovements,
+      stocksRef: this.stocks,
+      productsRef: this.products,
+      customersRef: this.customers,
+      rows
+    };
+    return rows;
+  }
+
+  get filteredOrdersStable(): AdminOrder[] {
+    if (
+      this.filteredOrdersCache?.ordersRef === this.orders &&
+      this.filteredOrdersCache.status === this.currentOrderStatus
+    ) {
+      return this.filteredOrdersCache.rows;
+    }
+    const rows = this.orders.filter((order) => order.status === this.currentOrderStatus);
+    this.filteredOrdersCache = { ordersRef: this.orders, status: this.currentOrderStatus, rows };
+    return rows;
   }
 
   get productOptions(): { value: number; label: string }[] {
@@ -565,6 +815,21 @@ export class AdminComponent implements OnInit {
     return this.authService.currentUser;
   }
 
+  get notificationDescriptionLength(): number {
+    return this.notificationForm.description.length;
+  }
+
+  get isNotificationFormValid(): boolean {
+    return Boolean(
+      this.notificationForm.title.trim() &&
+        this.notificationForm.description.trim() &&
+        this.notificationForm.startAt &&
+        this.notificationForm.endAt &&
+        this.notificationDescriptionLength <= 300 &&
+        new Date(this.notificationForm.endAt).getTime() >= new Date(this.notificationForm.startAt).getTime()
+    );
+  }
+
   canAccessView(view: AdminViewId): boolean {
     return this.authService.canAccessAdminView(view, this.currentUser);
   }
@@ -578,7 +843,7 @@ export class AdminComponent implements OnInit {
   }
 
   private getFirstAllowedView(): AdminViewId {
-    const ordered: AdminViewId[] = ['orders', 'customers', 'products', 'stocks', 'pos', 'stats', 'settings'];
+    const ordered: AdminViewId[] = ['orders', 'customers', 'products', 'stocks', 'pos', 'stats', 'notifications', 'settings'];
     return ordered.find((view) => this.canAccessView(view)) ?? 'orders';
   }
 
@@ -714,6 +979,135 @@ export class AdminComponent implements OnInit {
     });
 
     return { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
+  }
+
+  get structureGraphStable(): { nodes: StructureNode[]; links: StructureLink[] } {
+    if (!this.selectedCustomer) {
+      return { nodes: [], links: [] };
+    }
+    if (
+      this.structureGraphCache?.selectedCustomerId === this.selectedCustomer.id &&
+      this.structureGraphCache.customersRef === this.customers
+    ) {
+      return this.structureGraphCache.graph;
+    }
+
+    const monthlySpendByCustomer = this.getMonthlySpendByCustomerName();
+    const referrals = this.buildReferralMap(this.customers);
+    const directReferrals = referrals.get(this.selectedCustomer.id) ?? [];
+    const indirectReferrals: Array<{ customer: AdminCustomer; parentId: number }> = [];
+    const thirdReferrals: Array<{ customer: AdminCustomer; parentId: number }> = [];
+
+    directReferrals.forEach((member) => {
+      const children = referrals.get(member.id) ?? [];
+      children.forEach((child) => {
+        indirectReferrals.push({ customer: child, parentId: member.id });
+      });
+    });
+    indirectReferrals.forEach((entry) => {
+      const children = referrals.get(entry.customer.id) ?? [];
+      children.forEach((child) => {
+        thirdReferrals.push({ customer: child, parentId: entry.customer.id });
+      });
+    });
+
+    const l1Positions = this.buildColumnPositions(directReferrals.length, 260);
+    const l2Positions = this.buildColumnPositions(indirectReferrals.length, 420, 40, 180);
+    const l3Positions = this.buildColumnPositions(thirdReferrals.length, 580, 40, 180);
+    const rootY =
+      l1Positions.length > 0
+        ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
+        : l2Positions.length > 0
+          ? (l2Positions[0].y + l2Positions[l2Positions.length - 1].y) / 2
+          : l3Positions.length > 0
+            ? (l3Positions[0].y + l3Positions[l3Positions.length - 1].y) / 2
+            : 110;
+
+    const root: StructureNode = {
+      id: `customer-${this.selectedCustomer.id}`,
+      role: 'root',
+      label: this.structureRootLabel,
+      x: 120,
+      y: rootY,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(this.selectedCustomer.name)) ?? 0 }
+    };
+
+    const l1Customers = directReferrals.slice(0, l1Positions.length);
+    const l1Nodes: StructureNode[] = l1Customers.map((customer, index) => ({
+      id: `customer-${customer.id}`,
+      role: 'L1',
+      label: this.structureNodeLabel(customer.name),
+      x: l1Positions[index].x,
+      y: l1Positions[index].y,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(customer.name)) ?? 0 }
+    }));
+
+    const l1NodeById = new Map(l1Customers.map((customer, index) => [customer.id, l1Nodes[index]]));
+    const l2Entries = indirectReferrals
+      .filter((entry) => l1NodeById.has(entry.parentId))
+      .slice(0, l2Positions.length);
+    const l2Nodes: StructureNode[] = l2Entries.map((entry, index) => ({
+      id: `customer-${entry.customer.id}`,
+      role: 'L2',
+      label: this.structureNodeLabel(entry.customer.name),
+      x: l2Positions[index].x,
+      y: l2Positions[index].y,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(entry.customer.name)) ?? 0 }
+    }));
+    const l2NodeById = new Map(l2Entries.map((entry, index) => [entry.customer.id, l2Nodes[index]]));
+    const l3Entries = thirdReferrals
+      .filter((entry) => l2NodeById.has(entry.parentId))
+      .slice(0, l3Positions.length);
+    const l3Nodes: StructureNode[] = l3Entries.map((entry, index) => ({
+      id: `customer-${entry.customer.id}`,
+      role: 'L3',
+      label: this.structureNodeLabel(entry.customer.name),
+      x: l3Positions[index].x,
+      y: l3Positions[index].y,
+      meta: { spend: monthlySpendByCustomer.get(this.normalizeCustomerKey(entry.customer.name)) ?? 0 }
+    }));
+
+    const links: StructureLink[] = l1Nodes.map((node) => ({
+      x1: root.x,
+      y1: root.y,
+      x2: node.x,
+      y2: node.y
+    }));
+
+    l2Nodes.forEach((node, index) => {
+      const entry = l2Entries[index];
+      const parent = entry ? l1NodeById.get(entry.parentId) : undefined;
+      if (!parent) {
+        return;
+      }
+      links.push({
+        x1: parent.x,
+        y1: parent.y,
+        x2: node.x,
+        y2: node.y
+      });
+    });
+    l3Nodes.forEach((node, index) => {
+      const entry = l3Entries[index];
+      const parent = entry ? l2NodeById.get(entry.parentId) : undefined;
+      if (!parent) {
+        return;
+      }
+      links.push({
+        x1: parent.x,
+        y1: parent.y,
+        x2: node.x,
+        y2: node.y
+      });
+    });
+
+    const graph = { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
+    this.structureGraphCache = {
+      selectedCustomerId: this.selectedCustomer.id,
+      customersRef: this.customers,
+      graph
+    };
+    return graph;
   }
 
   get isStructureFormValid(): boolean {
@@ -1350,6 +1744,55 @@ export class AdminComponent implements OnInit {
     };
   }
 
+  updateSelectedCustomerSponsorSearch(value: string): void {
+    this.selectedCustomerSponsorSearch = value;
+    const normalized = this.normalizeSponsorSearch(value);
+    const exactMatch = this.getSelectedCustomerSponsorCandidates().find(
+      (customer) => this.normalizeSponsorSearch(`${customer.name} ${customer.email}`) === normalized
+    );
+    this.selectedCustomerLeaderId = exactMatch ? String(exactMatch.id) : '';
+    this.refreshSelectedCustomerSponsorState();
+  }
+
+  selectFindingUSponsor(): void {
+    this.selectedCustomerLeaderId = '';
+    this.selectedCustomerSponsorSearch = 'FindingU';
+    this.refreshSelectedCustomerSponsorState();
+  }
+
+  selectSponsorRecommendation(sponsorId: string): void {
+    const sponsor = this.customers.find((customer) => String(customer.id) === sponsorId);
+    if (!sponsor) {
+      return;
+    }
+    this.selectedCustomerLeaderId = sponsorId;
+    this.selectedCustomerSponsorSearch = `${sponsor.name} · ${sponsor.email}`;
+    this.refreshSelectedCustomerSponsorState();
+  }
+
+  saveSelectedCustomerPosition(): void {
+    if (!this.selectedCustomer || !this.canSaveSelectedCustomerPosition) {
+      return;
+    }
+    const leaderId = this.selectedCustomerLeaderId ? Number(this.selectedCustomerLeaderId) : null;
+    this.isSavingCustomerPosition = true;
+    this.refreshSelectedCustomerSponsorState();
+    this.adminControl
+      .updateCustomer(this.selectedCustomer.id, { leaderId })
+      .pipe(
+        finalize(() => {
+          this.isSavingCustomerPosition = false;
+          this.refreshSelectedCustomerSponsorState();
+        })
+      )
+      .subscribe({
+        next: (updated) => {
+          this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+          this.syncSelectedCustomerAccessDraft();
+        }
+      });
+  }
+
   saveSelectedCustomerAccess(): void {
     if (!this.selectedCustomer || this.isSavingCustomerPrivileges) {
       return;
@@ -1383,6 +1826,55 @@ export class AdminComponent implements OnInit {
     const selected = this.selectedCustomer;
     this.selectedCustomerAdminAccess = Boolean(selected?.canAccessAdmin);
     this.selectedCustomerPrivilegeDraft = normalizePrivileges(selected?.privileges);
+    this.selectedCustomerLeaderId = selected?.leaderId != null ? String(selected.leaderId) : '';
+    if (selected?.leaderId != null) {
+      const sponsor = this.customers.find((customer) => customer.id === selected.leaderId);
+      this.selectedCustomerSponsorSearch = sponsor ? `${sponsor.name} · ${sponsor.email}` : '';
+    } else {
+      this.selectedCustomerSponsorSearch = 'FindingU';
+    }
+    this.refreshSelectedCustomerSponsorState();
+  }
+
+  private normalizeSponsorSearch(value: string): string {
+    return (value ?? '').trim().toLowerCase();
+  }
+
+  private getSelectedCustomerSponsorCandidates(): AdminCustomer[] {
+    const selectedId = this.selectedCustomer?.id;
+    return this.customers.filter((customer) => customer.id !== selectedId);
+  }
+
+  private refreshSelectedCustomerSponsorState(): void {
+    const query = this.normalizeSponsorSearch(this.selectedCustomerSponsorSearch);
+    const base = this.getSelectedCustomerSponsorCandidates().map((customer) => ({
+      id: String(customer.id),
+      name: customer.name,
+      email: customer.email,
+      label: `${customer.name} · ${customer.email}`
+    }));
+
+    this.selectedCustomerSponsorRecommendations = (!query
+      ? base
+      : base.filter((candidate) => this.normalizeSponsorSearch(`${candidate.name} ${candidate.email}`).includes(query))
+    ).slice(0, 8);
+
+    if (this.selectedCustomerLeaderId === '') {
+      this.selectedSponsorLabel = 'FindingU (sin patrocinador)';
+      this.hasValidSelectedSponsorId = true;
+    } else {
+      const sponsor = this.customers.find((customer) => String(customer.id) === this.selectedCustomerLeaderId && customer.id !== this.selectedCustomer?.id);
+      this.selectedSponsorLabel = sponsor ? `${sponsor.name} · ${sponsor.email}` : 'Sin patrocinador valido';
+      this.hasValidSelectedSponsorId = Boolean(sponsor);
+    }
+
+    const nextLeaderId = this.selectedCustomerLeaderId ? Number(this.selectedCustomerLeaderId) : null;
+    this.canSaveSelectedCustomerPosition = Boolean(
+      !this.isSavingCustomerPosition &&
+      this.selectedCustomer &&
+      this.hasValidSelectedSponsorId &&
+      (this.selectedCustomer.leaderId ?? null) !== nextLeaderId
+    );
   }
 
   editProduct(product: AdminProduct): void {
@@ -1628,6 +2120,69 @@ export class AdminComponent implements OnInit {
     };
   }
 
+  editNotification(notification: PortalNotification): void {
+    this.notificationForm = {
+      id: notification.id,
+      title: notification.title,
+      description: notification.description,
+      linkUrl: notification.linkUrl || '',
+      linkText: notification.linkText || 'Ver',
+      startAt: this.toDateTimeLocalInput(notification.startAt),
+      endAt: this.toDateTimeLocalInput(notification.endAt),
+      active: notification.active !== false
+    };
+    this.notificationMessage = `Editando notificacion: ${notification.title}.`;
+  }
+
+  updateNotificationField(
+    field: 'title' | 'description' | 'linkUrl' | 'linkText' | 'startAt' | 'endAt',
+    value: string
+  ): void {
+    this.notificationForm = {
+      ...this.notificationForm,
+      [field]: value
+    };
+  }
+
+  saveNotification(): void {
+    if (!this.hasPermission('config_manage') || this.isSavingNotification || !this.isNotificationFormValid) {
+      return;
+    }
+    this.isSavingNotification = true;
+    const linkUrl = this.notificationForm.linkUrl.trim();
+    this.adminControl
+      .saveNotification({
+        id: this.notificationForm.id || undefined,
+        title: this.notificationForm.title.trim(),
+        description: this.notificationForm.description.trim(),
+        linkUrl: linkUrl || undefined,
+        linkText: linkUrl ? this.notificationForm.linkText.trim() || 'Ver' : undefined,
+        startAt: this.fromDateTimeLocalInput(this.notificationForm.startAt),
+        endAt: this.fromDateTimeLocalInput(this.notificationForm.endAt),
+        active: this.notificationForm.active
+      })
+      .pipe(
+        finalize(() => {
+          this.isSavingNotification = false;
+        })
+      )
+      .subscribe({
+        next: (notification) => {
+          this.notificationMessage = this.notificationForm.id
+            ? `Notificacion actualizada: ${notification.title}.`
+            : `Notificacion creada: ${notification.title}.`;
+          this.resetNotificationForm();
+        },
+        error: () => {
+          this.notificationMessage = 'No se pudo guardar la notificacion.';
+        }
+      });
+  }
+
+  resetNotificationForm(): void {
+    this.notificationForm = this.getDefaultNotificationForm();
+  }
+
   private resetProductForm(): void {
     this.productForm = {
       id: null,
@@ -1653,6 +2208,96 @@ export class AdminComponent implements OnInit {
     this.productMessageTimeout = window.setTimeout(() => {
       this.productMessage = '';
     }, 2800);
+  }
+
+  notificationStatusLabel(status?: PortalNotification['status']): string {
+    if (status === 'scheduled') {
+      return 'Programada';
+    }
+    if (status === 'expired') {
+      return 'Expirada';
+    }
+    if (status === 'inactive') {
+      return 'Inactiva';
+    }
+    return 'Activa';
+  }
+
+  notificationStatusClass(status?: PortalNotification['status']): string {
+    if (status === 'scheduled') {
+      return 'badge badge-pending';
+    }
+    if (status === 'expired' || status === 'inactive') {
+      return 'badge badge-inactive';
+    }
+    return 'badge badge-active';
+  }
+
+  notificationWindowLabel(notification: PortalNotification): string {
+    const start = this.formatDateTime(notification.startAt);
+    const end = this.formatDateTime(notification.endAt);
+    if (!start && !end) {
+      return 'Sin ventana programada';
+    }
+    return `${start || '-'} a ${end || '-'}`;
+  }
+
+  formatDateTime(value?: string): string {
+    if (!value) {
+      return '';
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+    return parsed.toLocaleString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  private getDefaultNotificationForm(): {
+    id: string;
+    title: string;
+    description: string;
+    linkUrl: string;
+    linkText: string;
+    startAt: string;
+    endAt: string;
+    active: boolean;
+  } {
+    const now = new Date();
+    const end = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7);
+    return {
+      id: '',
+      title: '',
+      description: '',
+      linkUrl: '',
+      linkText: 'Ver',
+      startAt: this.toDateTimeLocalInput(now.toISOString()),
+      endAt: this.toDateTimeLocalInput(end.toISOString()),
+      active: true
+    };
+  }
+
+  private toDateTimeLocalInput(value?: string): string {
+    if (!value) {
+      return '';
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+    const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  }
+
+  private fromDateTimeLocalInput(value: string): string {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
   }
 
   uploadProductImage(event: Event, section: CreateProductAssetPayload['section']): void {

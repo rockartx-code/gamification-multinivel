@@ -11,8 +11,10 @@ import {
   DashboardProduct,
   FeaturedItem,
   NetworkMember,
+  SponsorContact,
   UserDashboardData
 } from '../../models/user-dashboard.model';
+import { PortalNotification } from '../../models/portal-notification.model';
 import { CartItem } from '../../models/cart.model';
 import { AdminOrder } from '../../models/admin.model';
 import { AuthService, AuthUser } from '../../services/auth.service';
@@ -104,6 +106,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   isCommissionModalOpen = false;
   isCommissionSubmitting = false;
   isCommissionUploading = false;
+  isNotificationModalOpen = false;
+  isNotificationsCenterOpen = false;
   isUserDetailsOpen = false;
   isMobileNavOpen = false;
   isGoalsHighlight = false;
@@ -124,6 +128,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   commissionUploadName = '';
   showCommissionLedger = false;
   showBlockedTooltip = false;
+  showOrdersHelp = false;
   clabeDraft = '';
   clabePending = '';
   isClabeConfirmOpen = false;
@@ -131,6 +136,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   isGoalsModalOpen = false;
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
+  activeNotification: PortalNotification | null = null;
   achievedGoals: DashboardGoal[] = [];
   private goalToastState: 'near' | 'done' | '' = '';
 
@@ -147,6 +153,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private graphSizeCache = { width: 860, height: 260 };
   private graphMembersRef: NetworkMember[] | null = null;
   private graphRootNameCache = '';
+  private notificationQueue: PortalNotification[] = [];
 
 
   
@@ -322,6 +329,37 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.data?.commissions ?? null;
   }
 
+  get currentNotifications(): PortalNotification[] {
+    return this.dashboardControl.notifications;
+  }
+
+  get hasCurrentNotifications(): boolean {
+    return this.currentNotifications.length > 0;
+  }
+
+  get unreadNotificationsCount(): number {
+    return this.currentNotifications.filter((notification) => !notification.isRead).length;
+  }
+
+  get sponsor(): SponsorContact | null {
+    return this.dashboardControl.data?.sponsor ?? null;
+  }
+
+  get sponsorEmailHref(): string {
+    const email = (this.sponsor?.email ?? '').trim();
+    if (!email) {
+      return 'mailto:coach@findingu.com.mx';
+    }
+    return `mailto:${encodeURIComponent(email)}`;
+  }
+
+  get sponsorWhatsappHref(): string {
+    const rawPhone = this.sponsor?.phone ?? '+52 1 55 1498 2351';
+    const digits = rawPhone.replace(/\D/g, '');
+    const text = encodeURIComponent('Hola, necesito ayuda con mi red de FindingU.');
+    return `whatsapp://send?phone=${digits}&text=${text}`;
+  }
+
   get hasCommissionPending(): boolean {
     return Boolean(this.commissionSummary?.hasPending);
   }
@@ -336,6 +374,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   get buyAgainProducts(): DashboardProduct[] {
     return this.products.filter((product) => this.dashboardControl.buyAgainIds.has(product.id));
+  }
+
+  get hasBuyAgainProducts(): boolean {
+    return this.buyAgainProducts.length > 0;
   }
 
   get otherProducts(): DashboardProduct[] {
@@ -584,6 +626,44 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   toggleUserDetails(): void {
     this.isUserDetailsOpen = !this.isUserDetailsOpen;
+  }
+
+  closeNotificationModal(): void {
+    this.isNotificationModalOpen = false;
+    this.activeNotification = null;
+    if (this.notificationQueue.length) {
+      window.setTimeout(() => this.openNextNotification(), 0);
+    }
+  }
+
+  openNotificationsCenter(): void {
+    if (!this.hasCurrentNotifications) {
+      return;
+    }
+    this.isNotificationsCenterOpen = true;
+  }
+
+  closeNotificationsCenter(): void {
+    this.isNotificationsCenterOpen = false;
+  }
+
+  openNotification(notification: PortalNotification): void {
+    if (!notification) {
+      return;
+    }
+    this.isNotificationsCenterOpen = false;
+    this.activeNotification = notification;
+    this.isNotificationModalOpen = true;
+    if (!notification.isRead) {
+      this.markNotificationAsRead(notification);
+    }
+  }
+
+  openNotificationLink(url?: string): void {
+    if (!url) {
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
   }
 
   getCountdownState(): 'calm' | 'focus' | 'urgent' | 'critical' {
@@ -839,6 +919,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: (data) => {
           this.processGoals(data?.goals ?? []);
           this.loadAchievedGoals(data?.goals ?? []);
+          this.prepareNotifications(data?.notifications ?? []);
           if (!this.activeFeaturedId) {
             const nextFeaturedId = this.featuredCarousel[0]?.id ?? data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
             if (nextFeaturedId) {
@@ -1334,6 +1415,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.showBlockedTooltip = !this.showBlockedTooltip;
   }
 
+  toggleOrdersHelp(): void {
+    this.showOrdersHelp = !this.showOrdersHelp;
+  }
+
   openCommissionReceipt(url?: string): void {
     if (!url) {
       this.showToast('No hay comprobante disponible.');
@@ -1704,6 +1789,38 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private updateCountdown(): void {
     this.countdownLabel.set(this.dashboardControl.getCountdownLabel());
+  }
+
+  private prepareNotifications(notifications: PortalNotification[]): void {
+    if (this.isGuest || !notifications.length) {
+      this.notificationQueue = [];
+      return;
+    }
+    this.notificationQueue = notifications.filter((notification) => !notification.isRead);
+    if (!this.isNotificationModalOpen && this.notificationQueue.length) {
+      this.openNextNotification();
+    }
+  }
+
+  private openNextNotification(): void {
+    const next = this.notificationQueue.shift() ?? null;
+    if (!next) {
+      this.activeNotification = null;
+      this.isNotificationModalOpen = false;
+      return;
+    }
+    this.openNotification(next);
+  }
+
+  private markNotificationAsRead(notification: PortalNotification): void {
+    if (!notification?.id || !this.currentUser?.userId) {
+      return;
+    }
+    this.dashboardControl.markNotificationRead(notification.id).subscribe({
+      error: () => {
+        this.showToast('No se pudo registrar la lectura del aviso.');
+      }
+    });
   }
 
   private buildAutoCaption(): string {

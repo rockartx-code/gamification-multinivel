@@ -6,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
-import { AdminOrderItem, AppBusinessConfig } from '../../models/admin.model';
+import { AdminOrderItem, AppBusinessConfig, CustomerShippingAddress } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
@@ -45,6 +45,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
   deliveryAddress = '';
   deliveryPostalCode = '';
   deliveryState = '';
+  shippingAddresses: CustomerShippingAddress[] = [];
+  selectedShippingAddressId = '';
+  shippingAddressLabel = '';
+  saveShippingAddress = false;
   deliveryFieldErrors: Record<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', boolean> = {
     deliveryAddress: false,
     deliveryPostalCode: false,
@@ -155,6 +159,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   get isGuest(): boolean {
     return !this.authService.currentUser;
+  }
+
+  get hasSavedShippingAddresses(): boolean {
+    return this.shippingAddresses.length > 0;
   }
 
   get goalTitle(): string {
@@ -414,16 +422,30 @@ export class CarritoComponent implements OnInit, OnDestroy {
       price: item.price,
       quantity: item.qty
     }));
+    const shippingAddress = {
+      id: this.selectedShippingAddressId || undefined,
+      addressId: this.selectedShippingAddressId || undefined,
+      label: this.resolveShippingAddressLabel() || undefined,
+      recipientName: this.deliveryName.trim() || user?.name || undefined,
+      phone: this.deliveryPhone.trim() || undefined,
+      address: address || undefined,
+      postalCode: postalCode || undefined,
+      state: state || undefined
+    };
     const payload = {
-      customerId: user?.userId ? Number(user.userId) : 0,
+      customerId: this.resolveOrderCustomerId(),
       customerName: user?.name || this.deliveryName.trim() || 'Cliente',
       status: 'pending' as const,
       items,
+      shippingAddress,
       recipientName: this.deliveryName.trim() || user?.name,
       phone: this.deliveryPhone.trim() || undefined,
       address,
       postalCode,
-      state
+      state,
+      shippingAddressId: this.selectedShippingAddressId || undefined,
+      shippingAddressLabel: this.resolveShippingAddressLabel() || undefined,
+      saveShippingAddress: Boolean(user?.userId && this.saveShippingAddress)
     };
     this.isPlacingOrder = true;
     this.api
@@ -618,6 +640,31 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.deliveryFieldErrors[field] = !String(value ?? '').trim();
   }
 
+  selectShippingAddress(addressId: string): void {
+    const selected = this.shippingAddresses.find((entry) => entry.id === addressId);
+    if (!selected) {
+      return;
+    }
+    this.selectedShippingAddressId = selected.id;
+    this.shippingAddressLabel = selected.label || '';
+    this.saveShippingAddress = false;
+    this.applyShippingAddress(selected);
+  }
+
+  startNewShippingAddress(): void {
+    this.selectedShippingAddressId = '';
+    this.shippingAddressLabel = '';
+    this.saveShippingAddress = true;
+    this.deliveryAddress = '';
+    this.deliveryPostalCode = '';
+    this.deliveryState = '';
+    this.deliveryFieldErrors = {
+      deliveryAddress: false,
+      deliveryPostalCode: false,
+      deliveryState: false
+    };
+  }
+
   private setDeliveryFieldErrors(
     values: Record<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', string>
   ): boolean {
@@ -668,10 +715,25 @@ export class CarritoComponent implements OnInit, OnDestroy {
       next: (customer) => {
         this.deliveryName = this.deliveryName || customer.name || '';
         this.deliveryPhone = this.deliveryPhone || customer.phone || '';
-        this.deliveryAddress = this.deliveryAddress || customer.address || '';
-        const resolvedState = customer.state || customer.city || '';
-        this.deliveryState = this.deliveryState || resolvedState;
-        this.deliveryPostalCode = this.deliveryPostalCode || customer.postalCode || '';
+        this.shippingAddresses = [...(customer.addresses ?? customer.shippingAddresses ?? [])];
+
+        const defaultShippingAddress =
+          this.shippingAddresses.find((entry) => entry.id === (customer.defaultAddressId || customer.defaultShippingAddressId)) ||
+          this.shippingAddresses.find((entry) => entry.isDefault) ||
+          this.shippingAddresses[0];
+
+        if (defaultShippingAddress) {
+          this.selectedShippingAddressId = defaultShippingAddress.id;
+          this.shippingAddressLabel = defaultShippingAddress.label || '';
+          this.saveShippingAddress = false;
+          this.applyShippingAddress(defaultShippingAddress);
+        } else {
+          this.deliveryAddress = this.deliveryAddress || customer.address || '';
+          const resolvedState = customer.state || customer.city || '';
+          this.deliveryState = this.deliveryState || resolvedState;
+          this.deliveryPostalCode = this.deliveryPostalCode || customer.postalCode || '';
+          this.saveShippingAddress = true;
+        }
         this.cdr.markForCheck();
       },
       error: () => {
@@ -747,5 +809,36 @@ export class CarritoComponent implements OnInit, OnDestroy {
           this.guestRegisterFeedbackType = 'error';
         }
       });
+  }
+
+  private applyShippingAddress(address: CustomerShippingAddress): void {
+    this.deliveryName = address.recipientName?.trim() || this.deliveryName || this.authService.currentUser?.name || '';
+    this.deliveryPhone = address.phone?.trim() || this.deliveryPhone;
+    this.deliveryAddress = address.address?.trim() || '';
+    this.deliveryPostalCode = address.postalCode?.trim() || '';
+    this.deliveryState = address.state?.trim() || '';
+    this.setDeliveryFieldErrors({
+      deliveryAddress: this.deliveryAddress,
+      deliveryPostalCode: this.deliveryPostalCode,
+      deliveryState: this.deliveryState
+    });
+  }
+
+  private resolveShippingAddressLabel(): string {
+    const explicitLabel = this.shippingAddressLabel.trim();
+    if (explicitLabel) {
+      return explicitLabel;
+    }
+    const selected = this.shippingAddresses.find((entry) => entry.id === this.selectedShippingAddressId);
+    return selected?.label?.trim() || '';
+  }
+
+  private resolveOrderCustomerId(): number | string {
+    const rawUserId = String(this.authService.currentUser?.userId ?? '').trim();
+    if (!rawUserId) {
+      return 0;
+    }
+    const numericId = Number(rawUserId);
+    return Number.isFinite(numericId) ? numericId : rawUserId;
   }
 }
