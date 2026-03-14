@@ -125,6 +125,27 @@ export class AuthService {
     return Boolean(user.canAccessAdmin || user.role === 'admin');
   }
 
+  hasUserDashboardAccess(user: AuthUser | null | undefined = this.currentUser): boolean {
+    if (!user) {
+      return false;
+    }
+    return !this.isSuperUser(user);
+  }
+
+  hasAdminAndUserAccess(user: AuthUser | null | undefined = this.currentUser): boolean {
+    return this.hasAdminPanelAccess(user) && this.hasUserDashboardAccess(user);
+  }
+
+  defaultRoute(user: AuthUser | null | undefined = this.currentUser): string {
+    if (this.hasUserDashboardAccess(user)) {
+      return '/dashboard';
+    }
+    if (this.hasAdminPanelAccess(user)) {
+      return '/admin';
+    }
+    return '/dashboard';
+  }
+
   hasPrivilege(privilege: AppPrivilege, user: AuthUser | null | undefined = this.currentUser): boolean {
     if (!user) {
       return false;

@@ -2,6 +2,15 @@
   <span *ngIf="label" class="text-[11px] text-gray-600 inline-flex items-center gap-2">
     <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>
     {{ label }}
+    <span
+      *ngIf="tooltipText"
+      class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-olive-30 bg-white/80 text-[10px] font-semibold text-gray-500"
+      [attr.title]="tooltipText"
+      [attr.aria-label]="tooltipText"
+      tabindex="0"
+    >
+      i
+    </span>
   </span>
 
   <div class="relative">

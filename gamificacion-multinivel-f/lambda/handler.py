@@ -1299,7 +1299,7 @@ def _default_app_config() -> dict:
             "requireDispatchLinesOnShipped": True,
         },
         "pos": {
-            "defaultCustomerName": "Venta mostrador",
+            "defaultCustomerName": "Publico en General",
             "defaultPaymentStatus": "paid_branch",
             "defaultDeliveryStatus": "delivered_branch",
             "orderStatusByDeliveryStatus": {
@@ -1396,7 +1396,7 @@ def _normalize_app_config(raw: Any) -> dict:
             "requireDispatchLinesOnShipped": bool(orders_raw.get("requireDispatchLinesOnShipped", True)),
         },
         "pos": {
-            "defaultCustomerName": str(pos_raw.get("defaultCustomerName") or "Venta mostrador"),
+            "defaultCustomerName": str(pos_raw.get("defaultCustomerName") or "Publico en General"),
             "defaultPaymentStatus": str(pos_raw.get("defaultPaymentStatus") or "paid_branch"),
             "defaultDeliveryStatus": str(pos_raw.get("defaultDeliveryStatus") or "delivered_branch"),
             "orderStatusByDeliveryStatus": {
@@ -4064,6 +4064,17 @@ def _create_inventory_movement(
     }
     return _put_entity("INVENTORY_MOVEMENT", movement_id, item, created_at_iso=now)
 
+def _product_display_name(product_id: Any) -> str:
+    product_key = _parse_int_or_str(product_id)
+    if product_key in (None, ""):
+        return "producto"
+    product = _get_by_id("PRODUCT", int(product_key)) if isinstance(product_key, int) else _get_by_id("PRODUCT", product_key)
+    product_name = (product or {}).get("name") if isinstance(product, dict) else None
+    return str(product_name or product_id).strip() or "producto"
+
+def _stock_insufficient_message(product_id: Any) -> str:
+    return f"Stock insuficiente para {_product_display_name(product_id)}"
+
 def _apply_stock_delta(stock_id: str, deltas: Dict[str, int]) -> Tuple[Optional[dict], Optional[str]]:
     stock = _get_by_id("STOCK", stock_id)
     if not stock:
@@ -4075,7 +4086,7 @@ def _apply_stock_delta(stock_id: str, deltas: Dict[str, int]) -> Tuple[Optional[
         current = int(next_inventory.get(pid, 0))
         nxt = current + int(delta)
         if nxt < 0:
-            return None, f"Stock insuficiente para producto {pid}"
+            return None, _stock_insufficient_message(pid)
         next_inventory[pid] = nxt
 
     updated = _update_by_id(
@@ -4248,7 +4259,7 @@ def _create_stock_transfer(payload: dict, headers: Optional[dict] = None) -> dic
         if qty <= 0:
             continue
         if int(source_inventory.get(pid_key, 0)) < qty:
-            return _json_response(200, {"message": f"Stock insuficiente para producto {pid_key}", "Error": "BadRequest"})
+            return _json_response(200, {"message": _stock_insufficient_message(pid_key), "Error": "BadRequest"})
         deltas[pid_key] = deltas.get(pid_key, 0) - qty
 
     updated_source, error = _apply_stock_delta(source_stock_id, deltas)
@@ -4373,22 +4384,134 @@ def _pos_sale_payload(item: dict) -> dict:
         "orderId": item.get("orderId"),
         "stockId": item.get("stockId"),
         "attendantUserId": item.get("attendantUserId"),
+        "customerId": item.get("customerId"),
         "customerName": item.get("customerName"),
         "paymentStatus": item.get("paymentStatus"),
         "deliveryStatus": item.get("deliveryStatus"),
+        "grossSubtotal": float(_to_decimal(item.get("grossSubtotal"))),
+        "discountRate": float(_to_decimal(item.get("discountRate"))),
+        "discountAmount": float(_to_decimal(item.get("discountAmount"))),
         "total": float(_to_decimal(item.get("total"))),
         "lines": item.get("lines") or [],
         "createdAt": item.get("createdAt"),
     }
 
+def _pos_cash_cut_payload(item: dict) -> dict:
+    return {
+        "id": item.get("cashCutId"),
+        "stockId": item.get("stockId"),
+        "attendantUserId": item.get("attendantUserId"),
+        "total": float(_to_decimal(item.get("total"))),
+        "salesCount": int(item.get("salesCount") or 0),
+        "startedAt": item.get("startedAt"),
+        "endedAt": item.get("endedAt"),
+        "createdAt": item.get("createdAt"),
+    }
+
+def _resolve_pos_operator_and_stock(stock_candidate: Any, headers: Optional[dict], payload: Optional[dict] = None) -> Tuple[Optional[int], Optional[dict], Optional[str]]:
+    actor_user_id, _, _ = _resolve_actor(headers, payload or {})
+    try:
+        attendant_user_id = int(actor_user_id)
+    except Exception:
+        return None, None, "Se requiere un usuario logeado para operar POS"
+
+    linked_stocks = [
+        stock
+        for stock in _query_bucket("STOCK")
+        if attendant_user_id in _normalize_user_ids(stock.get("linkedUserIds"))
+    ]
+    if not linked_stocks:
+        return attendant_user_id, None, "El usuario logeado no tiene un stock vinculado"
+
+    requested_stock_id = _stock_id(stock_candidate)
+    if not requested_stock_id:
+        return attendant_user_id, linked_stocks[0], None
+
+    selected_stock = next((stock for stock in linked_stocks if _stock_id(stock.get("stockId")) == requested_stock_id), None)
+    if not selected_stock:
+        return attendant_user_id, None, "El stock no esta vinculado al usuario logeado"
+
+    return attendant_user_id, selected_stock, None
+
+def _last_pos_cash_cut(stock_id: str, attendant_user_id: int) -> Optional[dict]:
+    cuts = [
+        item
+        for item in _query_bucket("POS_CASH_CUT")
+        if _stock_id(item.get("stockId")) == _stock_id(stock_id) and _parse_int_or_str(item.get("attendantUserId")) == attendant_user_id
+    ]
+    if not cuts:
+        return None
+    cuts.sort(key=lambda item: str(item.get("createdAt") or ""), reverse=True)
+    return cuts[0]
+
+def _build_pos_cash_control(stock_id: str, attendant_user_id: int) -> dict:
+    last_cut = _last_pos_cash_cut(stock_id, attendant_user_id)
+    last_cut_at = str(last_cut.get("createdAt") or "") if isinstance(last_cut, dict) else ""
+    sales = [
+        item
+        for item in _query_bucket("POS_SALE")
+        if _stock_id(item.get("stockId")) == _stock_id(stock_id)
+        and _parse_int_or_str(item.get("attendantUserId")) == attendant_user_id
+        and (not last_cut_at or str(item.get("createdAt") or "") > last_cut_at)
+    ]
+    sales.sort(key=lambda item: str(item.get("createdAt") or ""))
+    current_total = sum((_to_decimal(item.get("total")) for item in sales), D_ZERO)
+    return {
+        "stockId": stock_id,
+        "attendantUserId": attendant_user_id,
+        "currentTotal": float(current_total),
+        "salesCount": len(sales),
+        "startedAt": sales[0].get("createdAt") if sales else (last_cut.get("createdAt") if isinstance(last_cut, dict) else None),
+        "lastCutAt": last_cut.get("createdAt") if isinstance(last_cut, dict) else None,
+        "lastCutTotal": float(_to_decimal(last_cut.get("total"))) if isinstance(last_cut, dict) else 0.0,
+        "lastCutSalesCount": int(last_cut.get("salesCount") or 0) if isinstance(last_cut, dict) else 0,
+        "lastSaleAt": sales[-1].get("createdAt") if sales else None,
+    }
+
+def _get_pos_cash_control(query: dict, headers: Optional[dict] = None) -> dict:
+    attendant_user_id, stock, error = _resolve_pos_operator_and_stock(query.get("stockId"), headers, query)
+    if error:
+        return _json_response(200, {"message": error, "Error": "BadRequest"})
+    stock_id = _stock_id(stock.get("stockId"))
+    control = _build_pos_cash_control(stock_id, attendant_user_id)
+    return _json_response(200, {"control": control})
+
+def _create_pos_cash_cut(payload: dict, headers: Optional[dict] = None) -> dict:
+    attendant_user_id, stock, error = _resolve_pos_operator_and_stock(payload.get("stockId"), headers, payload)
+    if error:
+        return _json_response(200, {"message": error, "Error": "BadRequest"})
+
+    stock_id = _stock_id(stock.get("stockId"))
+    control = _build_pos_cash_control(stock_id, attendant_user_id)
+    if control.get("salesCount", 0) <= 0 or _to_decimal(control.get("currentTotal")) <= 0:
+        return _json_response(200, {"message": "No hay ventas pendientes para corte", "Error": "BadRequest"})
+
+    now = _now_iso()
+    cut_id = _stock_id(payload.get("cashCutId") or f"CUT-{uuid.uuid4().hex[:10].upper()}")
+    cut_item = {
+        "entityType": "posCashCut",
+        "cashCutId": cut_id,
+        "stockId": stock_id,
+        "attendantUserId": attendant_user_id,
+        "total": _to_decimal(control.get("currentTotal")),
+        "salesCount": int(control.get("salesCount") or 0),
+        "startedAt": control.get("startedAt"),
+        "endedAt": now,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    main = _put_entity("POS_CASH_CUT", cut_id, cut_item, created_at_iso=now)
+    next_control = _build_pos_cash_control(stock_id, attendant_user_id)
+    _audit_event("pos.cash.cut", headers, payload, {"cashCutId": cut_id, "stockId": stock_id, "attendantUserId": attendant_user_id})
+    return _json_response(201, {"cut": _pos_cash_cut_payload(main), "control": next_control})
+
 def _register_pos_sale(payload: dict, headers: Optional[dict] = None) -> dict:
     app_cfg = _load_app_config()
     pos_cfg = app_cfg.get("pos") if isinstance(app_cfg, dict) else {}
-    stock_id = _stock_id(payload.get("stockId"))
-    if not stock_id:
-        return _json_response(200, {"message": "stockId es obligatorio", "Error": "BadRequest"})
-    if not _get_by_id("STOCK", stock_id):
-        return _json_response(200, {"message": "Stock no encontrado", "Error": "NoEncontrado"})
+    attendant_user_id, stock, stock_error = _resolve_pos_operator_and_stock(payload.get("stockId"), headers, payload)
+    if stock_error:
+        return _json_response(200, {"message": stock_error, "Error": "BadRequest"})
+    stock_id = _stock_id(stock.get("stockId"))
 
     raw_items = payload.get("items") or payload.get("lines") or []
     if not isinstance(raw_items, list) or not raw_items:
@@ -4427,6 +4550,14 @@ def _register_pos_sale(payload: dict, headers: Optional[dict] = None) -> dict:
     if not lines:
         return _json_response(200, {"message": "items no contiene lineas validas", "Error": "BadRequest"})
 
+    month_key = _month_key()
+    customer_id = _parse_int_or_str(payload.get("customerId"))
+    customer = None
+    if customer_id is not None:
+        customer = _get_by_id("CUSTOMER", int(customer_id)) if isinstance(customer_id, int) else _get_by_id("CUSTOMER", customer_id)
+        if not customer:
+            return _json_response(200, {"message": "Cliente no encontrado", "Error": "NoEncontrado"})
+
     updated_stock, error = _apply_stock_delta(stock_id, deltas)
     if error:
         return _json_response(200, {"message": error, "Error": "BadRequest"})
@@ -4434,21 +4565,44 @@ def _register_pos_sale(payload: dict, headers: Optional[dict] = None) -> dict:
     now = _now_iso()
     sale_id = _stock_id(payload.get("saleId") or f"SALE-{uuid.uuid4().hex[:10].upper()}")
     order_id = _stock_id(payload.get("orderId") or f"POS-{uuid.uuid4().hex[:10].upper()}")
+    buyer_type = "guest"
+    if customer:
+        buyer_type = "associate" if bool(customer.get("isAssociate", True)) else "registered"
+
+    gross_subtotal = total.quantize(D_CENT)
+    discount_rate = _effective_discount_rate_for_order(
+        buyer_id=customer_id,
+        buyer_type=buyer_type,
+        gross_subtotal=gross_subtotal,
+        month_key=month_key,
+        tiers=((app_cfg.get("rewards") or {}).get("discountTiers") or []),
+        current_order_rate=D_ZERO,
+    ) if customer else D_ZERO
+    discount_amount = (gross_subtotal * discount_rate).quantize(D_CENT)
+    net_total = (gross_subtotal - discount_amount).quantize(D_CENT)
+    customer_name = (
+        customer.get("name")
+        if customer
+        else (payload.get("customerName") or pos_cfg.get("defaultCustomerName") or "Publico en General").strip() or "Publico en General"
+    )
     sale_item = {
         "entityType": "posSale",
         "saleId": sale_id,
         "orderId": order_id,
         "stockId": stock_id,
-        "attendantUserId": _parse_int_or_str(payload.get("attendantUserId")),
-        "customerName": (payload.get("customerName") or pos_cfg.get("defaultCustomerName") or "Venta mostrador").strip() or "Venta mostrador",
+        "attendantUserId": attendant_user_id,
+        "customerId": customer_id,
+        "customerName": customer_name,
         "paymentStatus": payload.get("paymentStatus") or pos_cfg.get("defaultPaymentStatus") or "paid_branch",
         "deliveryStatus": payload.get("deliveryStatus") or pos_cfg.get("defaultDeliveryStatus") or "delivered_branch",
-        "total": total.quantize(D_CENT),
+        "grossSubtotal": gross_subtotal,
+        "discountRate": discount_rate,
+        "discountAmount": discount_amount,
+        "total": net_total,
         "lines": lines,
         "createdAt": now,
         "updatedAt": now,
     }
-    sale = _put_entity("POS_SALE", sale_id, sale_item, created_at_iso=now)
 
     status_by_delivery = pos_cfg.get("orderStatusByDeliveryStatus") if isinstance(pos_cfg.get("orderStatusByDeliveryStatus"), dict) else {}
     order_status = str(status_by_delivery.get(sale_item.get("deliveryStatus")) or "")
@@ -4457,27 +4611,38 @@ def _register_pos_sale(payload: dict, headers: Optional[dict] = None) -> dict:
     order_item = {
         "entityType": "order",
         "orderId": order_id,
-        "customerId": None,
+        "customerId": customer_id,
         "customerName": sale_item.get("customerName"),
-        "buyerType": "guest",
+        "buyerType": buyer_type,
         "status": order_status,
         "items": lines,
-        "grossSubtotal": total.quantize(D_CENT),
-        "discountRate": D_ZERO,
-        "discountAmount": D_ZERO,
-        "netTotal": total.quantize(D_CENT),
-        "total": total.quantize(D_CENT),
-        "monthKey": _month_key(),
+        "grossSubtotal": gross_subtotal,
+        "discountRate": discount_rate,
+        "discountAmount": discount_amount,
+        "netTotal": net_total,
+        "total": net_total,
+        "monthKey": month_key,
         "shippingType": "personal",
         "deliveryPlace": f"Sucursal: {stock_id}",
         "stockId": stock_id,
-        "attendantUserId": sale_item.get("attendantUserId"),
+        "attendantUserId": attendant_user_id,
         "paymentStatus": sale_item.get("paymentStatus"),
         "deliveryStatus": sale_item.get("deliveryStatus"),
         "createdAt": now,
         "updatedAt": now,
     }
-    _put_entity("ORDER", order_id, order_item, created_at_iso=now)
+    stored_order = _put_entity("ORDER", order_id, order_item, created_at_iso=now)
+    if customer and order_status in {"paid", "delivered"}:
+        _apply_rewards_on_paid_order(stored_order)
+        stored_order = _find_order(order_id) or stored_order
+        if order_status == "delivered":
+            try:
+                _confirm_order_commissions(stored_order)
+            except Exception:
+                pass
+            stored_order = _find_order(order_id) or stored_order
+
+    sale = _put_entity("POS_SALE", sale_id, sale_item, created_at_iso=now)
 
     movements = []
     for line in lines:
@@ -4488,13 +4653,18 @@ def _register_pos_sale(payload: dict, headers: Optional[dict] = None) -> dict:
                     stock_id=stock_id,
                     product_id=line.get("productId"),
                     qty=int(line.get("quantity") or 0),
-                    user_id=payload.get("attendantUserId"),
+                    user_id=attendant_user_id,
                     reference_id=order_id,
                 )
             )
         )
-    _audit_event("pos.sale.register", headers, payload, {"saleId": sale_id, "orderId": order_id, "stockId": stock_id})
-    return _json_response(201, {"sale": _pos_sale_payload(sale), "order": order_item, "stock": _stock_payload(updated_stock), "movements": movements})
+    _audit_event(
+        "pos.sale.register",
+        headers,
+        payload,
+        {"saleId": sale_id, "orderId": order_id, "stockId": stock_id, "attendantUserId": attendant_user_id, "customerId": customer_id},
+    )
+    return _json_response(201, {"sale": _pos_sale_payload(sale), "order": stored_order, "stock": _stock_payload(updated_stock), "movements": movements})
 
 def _list_pos_sales(query: dict) -> dict:
     stock_id = _stock_id(query.get("stockId"))
@@ -5499,7 +5669,9 @@ def lambda_handler(event, context):
     if route_key == (2, "stocks", "POST") and segments[1] == "transfers": return _create_stock_transfer(_parse_body(event), headers)
     if route_key == (2, "stocks", "GET") and segments[1] == "movements": return _list_inventory_movements(query)
     if route_key == (2, "pos", "GET") and segments[1] == "sales": return _list_pos_sales(query)
+    if route_key == (2, "pos", "GET") and segments[1] == "cash-control": return _get_pos_cash_control(query, headers)
     if route_key == (2, "pos", "POST") and segments[1] == "sales": return _register_pos_sale(_parse_body(event), headers)
+    if route_key == (2, "pos", "POST") and segments[1] == "cash-cut": return _create_pos_cash_cut(_parse_body(event), headers)
     if route_key == (2, "webhooks", "POST") and segments[1] == "mercadolibre": return _mercadolibre_webhook(query, _parse_body(event), headers)
     if route_key == (2, "webhooks", "GET") and segments[1] == "mercadolibre": return _mercadolibre_webhook(query, _parse_body(event), headers)
 

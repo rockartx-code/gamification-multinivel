@@ -1,4 +1,13 @@
-export type AdminViewId = 'orders' | 'customers' | 'products' | 'stocks' | 'pos' | 'stats' | 'notifications' | 'settings';
+export type AdminViewId =
+  | 'orders'
+  | 'customers'
+  | 'products'
+  | 'stocks'
+  | 'campaigns'
+  | 'pos'
+  | 'stats'
+  | 'notifications'
+  | 'settings';
 
 export type AppPrivilege =
   | 'access_screen_orders'
@@ -62,6 +71,8 @@ export const SCREEN_PRIVILEGE_BY_VIEW: Record<AdminViewId, AppPrivilege> = {
   customers: 'access_screen_customers',
   products: 'access_screen_products',
   stocks: 'access_screen_stocks',
+  // Preserve the existing access model while campaigns moves out of Stocks.
+  campaigns: 'access_screen_stocks',
   pos: 'access_screen_pos',
   stats: 'access_screen_stats',
   notifications: 'config_manage',

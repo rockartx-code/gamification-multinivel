@@ -403,11 +403,38 @@ export interface PosSale {
   orderId: string;
   stockId: string;
   attendantUserId?: number | null;
+  customerId?: number | null;
   customerName: string;
   paymentStatus: 'paid_branch';
   deliveryStatus: 'delivered_branch';
+  grossSubtotal?: number;
+  discountRate?: number;
+  discountAmount?: number;
   total: number;
   lines: AdminOrderItem[];
+  createdAt?: string;
+}
+
+export interface PosCashControl {
+  stockId: string;
+  attendantUserId?: number | null;
+  currentTotal: number;
+  salesCount: number;
+  startedAt?: string;
+  lastCutAt?: string;
+  lastCutTotal?: number;
+  lastCutSalesCount?: number;
+  lastSaleAt?: string;
+}
+
+export interface PosCashCut {
+  id: string;
+  stockId: string;
+  attendantUserId?: number | null;
+  total: number;
+  salesCount: number;
+  startedAt?: string;
+  endedAt?: string;
   createdAt?: string;
 }
 

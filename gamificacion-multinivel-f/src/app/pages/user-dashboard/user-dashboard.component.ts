@@ -195,9 +195,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return !this.currentUser;
   }
 
+  get canOpenAdminPanel(): boolean {
+    return this.authService.hasAdminAndUserAccess(this.currentUser);
+  }
 
   get dashboardNavLinks(): SidebarLink[] {
-    const adminAccess = this.authService.hasAdminPanelAccess(this.currentUser) ? 'admin' : 'no-admin';
+    const adminAccess = this.canOpenAdminPanel ? 'admin' : 'no-admin';
     const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|${adminAccess}`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
@@ -213,7 +216,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
-      if (this.authService.hasAdminPanelAccess(this.currentUser)) {
+      if (this.canOpenAdminPanel) {
         links.push({ id: 'admin-panel', icon: 'fa-shield-halved', label: 'Administracion' });
       }
     }
@@ -225,13 +228,20 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   handleDashboardNavSelect(sectionId: string): void {
     if (sectionId === 'admin-panel') {
-      this.router.navigate(['/admin']);
+      void this.router.navigate(['/admin']);
       this.closeMobileNav();
       return;
     }
     this.scrollToSection(sectionId);
     this.closeMobileNav();
   }
+
+  openAdminPanel(): void {
+    this.isUserDetailsOpen = false;
+    this.closeMobileNav();
+    void this.router.navigate(['/admin']);
+  }
+
   get goals(): DashboardGoal[] {
     return this.goalControl.goals;
   }

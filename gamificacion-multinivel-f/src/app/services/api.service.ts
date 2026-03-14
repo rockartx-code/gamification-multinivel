@@ -18,6 +18,8 @@ import {
   CreateStructureCustomerPayload,
   CustomerProfile,
   InventoryMovement,
+  PosCashControl,
+  PosCashCut,
   PosSale,
   StockTransfer,
   UpdateOrderStatusPayload,
@@ -222,13 +224,21 @@ export class ApiService {
 
   registerPosSale(payload: {
     stockId: string;
-    attendantUserId?: number | null;
+    customerId?: number | null;
     customerName?: string;
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
   }): Observable<{ sale: PosSale }> {
     return this.resolveApi().registerPosSale(payload);
+  }
+
+  getPosCashControl(stockId?: string): Observable<PosCashControl> {
+    return this.resolveApi().getPosCashControl(stockId);
+  }
+
+  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+    return this.resolveApi().createPosCashCut(payload);
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {

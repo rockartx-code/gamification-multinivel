@@ -25,6 +25,10 @@
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Acciones
         </ui-button>
+        <ui-button size="sm" variant="ghost" *ngIf="canOpenUserDashboard" (pressed)="openUserDashboard()">
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          Panel Usuario
+        </ui-button>
         <ui-button size="sm" variant="ghost" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           Logout
@@ -630,6 +634,11 @@
               <ui-kpi-card label="Danos registrados" [value]="stockDamages.length"></ui-kpi-card>
             </div>
 
+            <div *ngIf="stockFeedbackMessage" class="rounded-2xl border px-4 py-3 text-sm"
+              [ngClass]="stockFeedbackTone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+              {{ stockFeedbackMessage }}
+            </div>
+
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Alta de stock</div>
@@ -793,133 +802,311 @@
               </div>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
-              <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
-                <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
-                  <span>Campanas</span>
-                  <span class="text-xs text-gray-600">{{ campaigns.length }} registradas</span>
-                </div>
-                <div class="divide-y divide-olive-20">
-                  <div *ngFor="let campaign of campaigns" class="p-4">
-                    <div class="flex items-center justify-between gap-2">
-                      <div class="text-sm font-semibold text-main">{{ campaign.name }}</div>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs">
-                        {{ campaign.active ? 'Activa' : 'Inactiva' }}
-                      </span>
-                    </div>
-                    <div class="mt-1 text-xs text-gray-600">{{ campaign.hook }}</div>
-                    <div class="mt-2 text-[11px] text-gray-500">
-                      Assets: story, feed, banner
-                    </div>
-                    <div class="mt-3">
-                      <ui-button size="sm" variant="ghost" (pressed)="editCampaign(campaign)">
-                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-                        Editar campana
-                      </ui-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <div class="text-sm font-semibold text-main">Crear / editar campana</div>
-                    <div class="mt-1 text-xs text-gray-600">
-                      Hero personalizado basado en Landing: badge, titulos, descripcion, CTA y beneficios.
-                    </div>
-                  </div>
-                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" [disabled]="!isCampaignFormValid || isSavingCampaign" (pressed)="saveCampaign()">
-                    {{ isSavingCampaign ? 'Guardando...' : 'Guardar campana' }}
-                  </ui-button>
-                </div>
-                <div *ngIf="campaignMessage" class="mt-2 text-xs text-accent">{{ campaignMessage }}</div>
-
-                <div class="mt-4 grid gap-2 md:grid-cols-2">
-                  <ui-form-field label="Nombre" [ngModel]="campaignForm.name" (ngModelChange)="updateCampaignField('name', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field label="Hook corto" [ngModel]="campaignForm.hook" (ngModelChange)="updateCampaignField('hook', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field kind="textarea" [rows]="3" label="Descripcion" [ngModel]="campaignForm.description" (ngModelChange)="updateCampaignField('description', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field label="Hero badge" [ngModel]="campaignForm.heroBadge" (ngModelChange)="updateCampaignField('heroBadge', $event)"></ui-form-field>
-                  <label class="mt-2 flex items-center gap-2 text-xs text-main">
-                    <input type="checkbox" [checked]="campaignForm.active" (change)="campaignForm.active = $any($event.target).checked" />
-                    Campana activa
-                  </label>
-                  <ui-form-field label="Hero titulo (linea 1)" [ngModel]="campaignForm.heroTitle" (ngModelChange)="updateCampaignField('heroTitle', $event)"></ui-form-field>
-                  <ui-form-field label="Hero acento (linea 2)" [ngModel]="campaignForm.heroAccent" (ngModelChange)="updateCampaignField('heroAccent', $event)"></ui-form-field>
-                  <ui-form-field label="Hero cola (linea 3)" [ngModel]="campaignForm.heroTail" (ngModelChange)="updateCampaignField('heroTail', $event)"></ui-form-field>
-                  <ui-form-field kind="textarea" [rows]="3" label="Hero descripcion" [ngModel]="campaignForm.heroDescription" (ngModelChange)="updateCampaignField('heroDescription', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field label="CTA primario" [ngModel]="campaignForm.ctaPrimaryText" (ngModelChange)="updateCampaignField('ctaPrimaryText', $event)"></ui-form-field>
-                  <ui-form-field label="CTA secundario" [ngModel]="campaignForm.ctaSecondaryText" (ngModelChange)="updateCampaignField('ctaSecondaryText', $event)"></ui-form-field>
-                  <ui-form-field wrapperClass="block md:col-span-2" label="Beneficios (4 max, separados por coma)" [ngModel]="campaignForm.benefits" (ngModelChange)="updateCampaignField('benefits', $event)"></ui-form-field>
-                  <ui-form-field label="Asset Story (9:16)" [ngModel]="campaignForm.story" (ngModelChange)="updateCampaignField('story', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field label="Asset Feed (1:1)" [ngModel]="campaignForm.feed" (ngModelChange)="updateCampaignField('feed', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field label="Asset Banner (16:9)" [ngModel]="campaignForm.banner" (ngModelChange)="updateCampaignField('banner', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                  <ui-form-field label="Hero imagen (opcional)" [ngModel]="campaignForm.heroImage" (ngModelChange)="updateCampaignField('heroImage', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-                </div>
-              </div>
-            </div>
+          </div>
+          <div class="space-y-4" *ngIf="currentView === 'campaigns' && canAccessView('campaigns')">
+            <app-admin-campaigns [campaigns]="campaigns"></app-admin-campaigns>
           </div>
           <div class="space-y-4" *ngIf="currentView === 'pos' && canAccessView('pos')">
             <div class="grid gap-3 md:grid-cols-4">
-              <ui-kpi-card label="Ventas POS" [value]="posSales.length"></ui-kpi-card>
-              <ui-kpi-card label="Total POS" [value]="formatMoney(posSalesTotal)"></ui-kpi-card>
-              <ui-kpi-card label="Stock vinculado" [value]="stockName(posForm.stockId)"></ui-kpi-card>
-              <ui-kpi-card label="Atiende" [value]="customerName(posForm.attendantUserId)"></ui-kpi-card>
+              <ui-kpi-card label="Ventas en caja" [value]="visiblePosSales.length"></ui-kpi-card>
+              <ui-kpi-card label="Caja actual" [value]="formatMoney(posCashControl ? posCashControl.currentTotal : 0)"></ui-kpi-card>
+              <ui-kpi-card label="Stock actual" [value]="currentPosStock ? stockName(currentPosStock.id) : 'Sin stock asignado'"></ui-kpi-card>
+              <ui-kpi-card label="Operador" [value]="currentOperatorName"></ui-kpi-card>
             </div>
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Nueva venta en sucursal</div>
-                <div class="mt-1 text-xs text-gray-600">Marca la orden como pagada/entregada en sucursal y descuenta stock.</div>
+                <div class="mt-1 text-xs text-gray-600">El operador es el usuario logeado, el stock queda fijo a sus ligas y las ventas de clientes registrados aplican a metas y descuentos.</div>
 
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                  <ui-form-field kind="select" label="Stock" [options]="stockOptionsStable" [ngModel]="posForm.stockId" (ngModelChange)="posForm.stockId = $event"></ui-form-field>
-                  <ui-form-field kind="select" label="Atendio" [options]="customerOptionsStable" [ngModel]="posForm.attendantUserId" (ngModelChange)="posForm.attendantUserId = +$event"></ui-form-field>
-                  <ui-form-field wrapperClass="block sm:col-span-2" label="Cliente" placeholder="Mostrador o nombre cliente" [ngModel]="posForm.customerName" (ngModelChange)="posForm.customerName = $event"></ui-form-field>
-                  <ui-form-field kind="select" label="Estado de orden" [options]="[{ value: 'paid', label: 'Pagada en sucursal' }, { value: 'delivered', label: 'Entregada en sucursal' }]" [ngModel]="posForm.status" (ngModelChange)="posForm.status = $event"></ui-form-field>
+                <div *ngIf="!hasLinkedPosStock" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  No tienes un stock ligado. Vincula este usuario a un stock para poder registrar ventas.
                 </div>
 
-                <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                  <div class="text-xs font-semibold text-main">Productos</div>
-                  <div class="mt-3 max-h-56 overflow-auto space-y-3">
-                    <div *ngFor="let product of products" class="rounded-2xl border border-olive-30 surface-soft p-3">
+                <ng-container *ngIf="hasLinkedPosStock && currentPosStock">
+                  <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Operador</div>
+                      <div class="mt-1 text-sm font-semibold text-main">{{ currentOperatorName }}</div>
+                      <div class="mt-1 text-[11px] text-gray-600">Usuario ligado a esta caja.</div>
+                    </div>
+
+                    <ng-container *ngIf="posStockOptions.length > 1; else fixedPosStock">
+                      <ui-form-field
+                        kind="select"
+                        label="Stock ligado"
+                        [options]="posStockOptions"
+                        [ngModel]="currentPosStock.id"
+                        (ngModelChange)="setPosStock($event)">
+                      </ui-form-field>
+                    </ng-container>
+
+                    <ng-template #fixedPosStock>
+                      <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                        <div class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Stock ligado</div>
+                        <div class="mt-1 text-sm font-semibold text-main">{{ currentPosStock.name }}</div>
+                        <div class="mt-1 text-[11px] text-gray-600">{{ currentPosStock.location }}</div>
+                      </div>
+                    </ng-template>
+                  </div>
+
+                  <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                      <div>
+                        <div class="text-xs font-semibold text-main">Cliente</div>
+                        <div class="mt-1 text-[11px] text-gray-600">Autocomplete por nombre o correo. Por defecto se usa Publico en General.</div>
+                      </div>
+                      <ui-button size="sm" [variant]="selectedPosCustomer ? 'ghost' : 'primary'" (pressed)="selectPublicGeneralCustomer()">
+                        <i class="fa-solid fa-user" aria-hidden="true"></i>
+                        Publico en General
+                      </ui-button>
+                    </div>
+
+                    <div class="mt-3">
+                      <ui-form-field
+                        label="Buscar cliente"
+                        placeholder="Nombre o correo"
+                        [ngModel]="posCustomerSearch"
+                        (ngModelChange)="updatePosCustomerSearch($event)">
+                      </ui-form-field>
+                    </div>
+
+                    <div class="mt-3 rounded-2xl border border-olive-30 surface-soft p-3">
+                      <div class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Seleccion actual</div>
+                      <div *ngIf="selectedPosCustomer; else publicCustomerCard" class="mt-2">
+                        <div class="text-sm font-semibold text-main">{{ selectedPosCustomer.name }}</div>
+                        <div class="text-[11px] text-gray-600">{{ selectedPosCustomer.email }}</div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                          <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Descuento actual: {{ posCurrentDiscountLabel }}</span>
+                          <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Meta proyectada: {{ posProjectedDiscountLabel }}</span>
+                        </div>
+                      </div>
+                      <ng-template #publicCustomerCard>
+                        <div class="mt-2 text-sm font-semibold text-main">Publico en General</div>
+                        <div class="text-[11px] text-gray-600">Venta mostrador sin metas ni descuentos acumulados.</div>
+                      </ng-template>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <ui-button size="sm" [variant]="selectedPosCustomer ? 'ghost' : 'primary'" (pressed)="selectPublicGeneralCustomer()">
+                        Publico en General
+                      </ui-button>
+                      <ui-button
+                        size="sm"
+                        *ngFor="let recommendation of posCustomerRecommendations"
+                        [variant]="selectedPosCustomer?.id === recommendation.id ? 'primary' : 'ghost'"
+                        (pressed)="selectPosCustomerRecommendation(recommendation.id)">
+                        {{ recommendation.name }}
+                      </ui-button>
+                    </div>
+
+                    <div *ngIf="selectedPosCustomer; else publicCustomerNotice" class="mt-4 rounded-2xl border border-olive-30 surface-soft p-3">
                       <div class="flex items-center justify-between gap-2">
-                        <ui-button variant="ghost" size="sm" (pressed)="togglePosProductSelection(product.id, !posItems.has(product.id))">
-                          <i class="fa-regular" [ngClass]="posItems.has(product.id) ? 'fa-square-check text-accent' : 'fa-square text-gray-500'" aria-hidden="true"></i>
-                          {{ product.name }}
-                        </ui-button>
-                        <span class="text-xs text-gray-600">{{ formatMoney(product.price) }}</span>
+                        <div class="text-xs font-semibold text-main">Metas y descuento aplicable</div>
+                        <span *ngIf="isLoadingPosCustomerProjection" class="text-[11px] text-gray-500">Cargando...</span>
                       </div>
-                      <div *ngIf="posItems.has(product.id)" class="mt-2 flex items-center gap-2">
-                        <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="posItems.get(product.id) || 1" (ngModelChange)="updatePosQty(product.id, $event)"></ui-form-field>
-                        <span class="text-[11px] text-gray-600">Disponible: {{ stockQty(posForm.stockId, product.id) }}</span>
+                      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                          <div class="text-[11px] text-gray-500">Consumo acumulado del mes</div>
+                          <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posCustomerMonthNet) }}</div>
+                        </div>
+                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                          <div class="text-[11px] text-gray-500">Consumo proyectado con esta venta</div>
+                          <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedMonthNet) }}</div>
+                        </div>
+                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                          <div class="text-[11px] text-gray-500">Descuento actual</div>
+                          <div class="mt-1 text-lg font-semibold text-main">{{ posCurrentDiscountLabel }}</div>
+                        </div>
+                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                          <div class="text-[11px] text-gray-500">Descuento aplicable hoy</div>
+                          <div class="mt-1 text-lg font-semibold text-main">{{ posProjectedDiscountLabel }}</div>
+                        </div>
                       </div>
+                      <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <div class="text-[11px] text-gray-500">Descuento en esta venta</div>
+                            <div class="mt-1 text-sm font-semibold text-main">{{ formatMoney(posProjectedDiscountAmount) }}</div>
+                          </div>
+                          <div *ngIf="posNextGoal" class="text-right">
+                            <div class="text-[11px] text-gray-500">Siguiente meta</div>
+                            <div class="mt-1 text-sm font-semibold text-main">{{ posNextGoal.label }}</div>
+                            <div class="text-[11px] text-gray-600">Faltan {{ formatMoney(posRemainingForNextGoal) }}</div>
+                          </div>
+                          <div *ngIf="!posNextGoal" class="text-right">
+                            <div class="text-[11px] text-gray-500">Siguiente meta</div>
+                            <div class="mt-1 text-sm font-semibold text-main">Meta mas alta alcanzada</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ng-template #publicCustomerNotice>
+                      <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-sm text-gray-700">
+                        Publico en General no acumula consumo, metas ni descuentos personalizados.
+                      </div>
+                    </ng-template>
+                  </div>
+
+                  <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="text-xs font-semibold text-main">Productos disponibles en stock</div>
+                      <div class="text-[11px] text-gray-600">{{ availablePosProducts.length }} disponibles</div>
+                    </div>
+                    <div *ngIf="!availablePosProducts.length" class="mt-3 rounded-2xl border border-dashed border-olive-30 bg-white/60 p-4 text-sm text-gray-600">
+                      No hay productos con inventario disponible en este stock.
+                    </div>
+                    <div *ngIf="availablePosProducts.length" class="mt-3 max-h-64 space-y-3 overflow-auto">
+                      <div *ngFor="let product of availablePosProducts" class="rounded-2xl border border-olive-30 surface-soft p-3">
+                        <div class="flex items-center justify-between gap-2">
+                          <ui-button variant="ghost" size="sm" (pressed)="togglePosProductSelection(product.id, !posItems.has(product.id))">
+                            <i class="fa-regular" [ngClass]="posItems.has(product.id) ? 'fa-square-check text-accent' : 'fa-square text-gray-500'" aria-hidden="true"></i>
+                            {{ product.name }}
+                          </ui-button>
+                          <div class="text-right text-xs text-gray-600">
+                            <div>{{ formatMoney(product.price) }}</div>
+                            <div>Disp. {{ stockQty(currentPosStock.id, product.id) }}</div>
+                          </div>
+                        </div>
+                        <div *ngIf="posItems.has(product.id)" class="mt-2 flex items-center gap-2">
+                          <ui-form-field
+                            type="number"
+                            [min]="1"
+                            [max]="stockQty(currentPosStock.id, product.id)"
+                            label="Cantidad"
+                            [ngModel]="posItems.get(product.id) || 1"
+                            (ngModelChange)="updatePosQty(product.id, $event)">
+                          </ui-form-field>
+                          <span class="text-[11px] text-gray-600">Maximo disponible: {{ stockQty(currentPosStock.id, product.id) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <div class="text-[11px] text-gray-500">Subtotal</div>
+                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posSubtotal) }}</div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] text-gray-500">Descuento</div>
+                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedDiscountAmount) }}</div>
+                      </div>
+                      <div>
+                        <div class="text-[11px] text-gray-500">Total neto</div>
+                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedNetTotal) }}</div>
+                      </div>
+                    </div>
+
+                    <div *ngIf="posFeedbackMessage" class="mt-4 rounded-2xl border px-4 py-3 text-sm"
+                      [ngClass]="posFeedbackTone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+                      {{ posFeedbackMessage }}
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-end">
+                      <ui-button
+                        variant="primary"
+                        size="md"
+                        *ngIf="hasPermission('pos_register_sale')"
+                        [disabled]="!canRegisterPosSale"
+                        (pressed)="registerPosSale()">
+                        <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
+                        {{ isRegisteringPosSale ? 'Registrando...' : 'Cobrar ' + formatMoney(posProjectedNetTotal) }}
+                      </ui-button>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-semibold text-main">Control de caja actual</div>
+                      <div class="mt-1 text-xs text-gray-600">Resumen de la caja abierta para el operador y stock actual.</div>
+                    </div>
+                    <ui-button
+                      size="sm"
+                      variant="ghost"
+                      *ngIf="hasPermission('pos_register_sale')"
+                      [disabled]="!canCreatePosCashCut"
+                      (pressed)="createPosCashCut()">
+                      <i class="fa-solid fa-scissors" aria-hidden="true"></i>
+                      {{ isCuttingPosCash ? 'Registrando...' : 'Hacer corte de caja' }}
+                    </ui-button>
+                  </div>
+
+                  <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-[11px] text-gray-500">Caja actual</div>
+                      <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posCashControl ? posCashControl.currentTotal : 0) }}</div>
+                    </div>
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-[11px] text-gray-500">Ventas registradas</div>
+                      <div class="mt-1 text-lg font-semibold text-main">{{ posCashControl ? posCashControl.salesCount : 0 }}</div>
+                    </div>
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-[11px] text-gray-500">Inicio de caja</div>
+                      <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.startedAt) }}</div>
+                    </div>
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-[11px] text-gray-500">Ultima venta</div>
+                      <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastSaleAt) }}</div>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                    <div class="text-[11px] text-gray-500">Ultimo corte</div>
+                    <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastCutAt) }}</div>
+                    <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-600">
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Monto: {{ formatMoney(posCashControl ? (posCashControl.lastCutTotal || 0) : 0) }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas: {{ posCashControl ? (posCashControl.lastCutSalesCount || 0) : 0 }}</span>
                     </div>
                   </div>
                 </div>
 
-                <div class="mt-4 flex items-center justify-between">
-                  <div class="text-sm text-gray-600">Total: <span class="font-semibold text-main">{{ formatMoney(posTotal) }}</span></div>
-                  <ui-button variant="primary" size="sm" *ngIf="hasPermission('pos_register_sale')" [disabled]="!posForm.stockId || !posForm.attendantUserId || posItems.size === 0" (pressed)="registerPosSale()">
-                    <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
-                    Registrar venta
-                  </ui-button>
-                </div>
-              </div>
-
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-sm font-semibold text-main">Ventas registradas</div>
-                <div class="mt-1 text-xs text-gray-600">Todas quedan con metadata: pagada/entregada en sucursal, stock y atendio.</div>
-                <div class="mt-3 space-y-2 max-h-[460px] overflow-auto">
-                  <div *ngFor="let sale of posSales" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-sm font-semibold text-main">Ventas registradas</div>
+                  <div class="mt-1 text-xs text-gray-600">Solo se muestran las ventas del operador actual sobre su stock ligado.</div>
+                  <div *ngIf="!visiblePosSales.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4 text-sm text-gray-600">
+                    No hay ventas registradas para esta caja.
+                  </div>
+                  <div *ngIf="visiblePosSales.length" class="mt-3 space-y-2 max-h-[520px] overflow-auto">
+                    <div *ngFor="let sale of visiblePosSales" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
+                          <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
+                          <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                        </div>
+                      </div>
+                      <div class="mt-2 text-[11px] text-gray-600">
+                        {{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}
+                      </div>
+                      <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Subtotal: {{ formatMoney(sale.grossSubtotal || sale.total) }}</span>
+                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Descuento: {{ formatMoney(sale.discountAmount || 0) }}</span>
+                        <span *ngIf="(sale.discountRate || 0) > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Tasa: {{ ((sale.discountRate || 0) * 100) | number: '1.0-0' }}%</span>
+                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">{{ sale.lines.length }} producto(s)</span>
+                      </div>
+                    </div>
+                    <ng-container *ngIf="false">
+                    <div *ngFor="let sale of visiblePosSales" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                     <div class="text-xs font-semibold text-main">{{ sale.orderId }} Â· {{ formatMoney(sale.total) }}</div>
                     <div class="text-[11px] text-gray-600">{{ stockName(sale.stockId) }} Â· {{ customerName(sale.attendantUserId) }}</div>
                     <div class="mt-1 text-[11px] text-accent">pagada en sucursal Â· entregada en sucursal</div>
                     <div class="mt-1 text-[11px] text-gray-600">{{ sale.lines.length }} producto(s)</div>
                   </div>
+                    </ng-container>
                 </div>
               </div>
             </div>
+          </div>
           </div>
 
           <div class="space-y-4" *ngIf="currentView === 'stats' && canAccessView('stats')">
@@ -1169,10 +1356,38 @@
                 <div class="text-sm font-semibold text-main">Punto de Venta</div>
                 <div class="mt-3 grid gap-3">
                   <ui-form-field label="Cliente por defecto" [ngModel]="businessConfigDraft.pos.defaultCustomerName" (ngModelChange)="businessConfigDraft.pos.defaultCustomerName = $event"></ui-form-field>
-                  <ui-form-field label="Estatus pago por defecto" [ngModel]="businessConfigDraft.pos.defaultPaymentStatus" (ngModelChange)="businessConfigDraft.pos.defaultPaymentStatus = $event"></ui-form-field>
-                  <ui-form-field label="Estatus entrega por defecto" [ngModel]="businessConfigDraft.pos.defaultDeliveryStatus" (ngModelChange)="businessConfigDraft.pos.defaultDeliveryStatus = $event"></ui-form-field>
-                  <ui-form-field label="Mapeo delivered_branch -> orden" [ngModel]="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch" (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch = $event"></ui-form-field>
-                  <ui-form-field label="Mapeo paid_branch -> orden" [ngModel]="businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch" (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch = $event"></ui-form-field>
+                  <ui-form-field
+                    kind="select"
+                    label="Estatus pago por defecto"
+                    [options]="posPaymentStatusConfigOptions"
+                    [tooltipText]="posPaymentStatusConfigTooltip"
+                    [helpText]="configOptionDescription(businessConfigDraft.pos.defaultPaymentStatus, posPaymentStatusConfigOptions)"
+                    [ngModel]="businessConfigDraft.pos.defaultPaymentStatus"
+                    (ngModelChange)="businessConfigDraft.pos.defaultPaymentStatus = $event"></ui-form-field>
+                  <ui-form-field
+                    kind="select"
+                    label="Estatus entrega por defecto"
+                    [options]="posDeliveryStatusConfigOptions"
+                    [tooltipText]="posDeliveryStatusConfigTooltip"
+                    [helpText]="configOptionDescription(businessConfigDraft.pos.defaultDeliveryStatus, posDeliveryStatusConfigOptions)"
+                    [ngModel]="businessConfigDraft.pos.defaultDeliveryStatus"
+                    (ngModelChange)="businessConfigDraft.pos.defaultDeliveryStatus = $event"></ui-form-field>
+                  <ui-form-field
+                    kind="select"
+                    label="Mapeo delivered_branch -> orden"
+                    [options]="posOrderStatusMappingConfigOptions"
+                    [tooltipText]="posOrderStatusMappingConfigTooltip"
+                    [helpText]="configOptionDescription(businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch, posOrderStatusMappingConfigOptions)"
+                    [ngModel]="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch"
+                    (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch = $event"></ui-form-field>
+                  <ui-form-field
+                    kind="select"
+                    label="Mapeo paid_branch -> orden"
+                    [options]="posOrderStatusMappingConfigOptions"
+                    [tooltipText]="posOrderStatusMappingConfigTooltip"
+                    [helpText]="configOptionDescription(businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch, posOrderStatusMappingConfigOptions)"
+                    [ngModel]="businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch"
+                    (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch = $event"></ui-form-field>
                 </div>
               </div>
 
@@ -1203,7 +1418,39 @@
               <div class="mt-3 grid gap-3 md:grid-cols-2">
                 <ui-form-field type="number" [min]="0" label="Activacion neta minima" [ngModel]="businessConfigDraft.rewards.activationNetMin" (ngModelChange)="businessConfigDraft.rewards.activationNetMin = +$event || 0"></ui-form-field>
                 <ui-form-field type="number" [min]="1" label="Dia de pago" [ngModel]="businessConfigDraft.rewards.payoutDay" (ngModelChange)="businessConfigDraft.rewards.payoutDay = +$event || 1"></ui-form-field>
-                <ui-form-field label="Regla de corte" [ngModel]="businessConfigDraft.rewards.cutRule" (ngModelChange)="businessConfigDraft.rewards.cutRule = $event" wrapperClass="block md:col-span-2"></ui-form-field>
+                <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-4 md:col-span-2">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-semibold text-main">Niveles de descuento</div>
+                      <div class="mt-1 text-xs text-gray-600">Define el monto minimo y el porcentaje para cada nivel. El tope se calcula con el siguiente nivel.</div>
+                    </div>
+                    <div class="text-xs text-gray-600">{{ businessConfigDraft.rewards.discountTiers.length }} niveles</div>
+                  </div>
+                  <div class="mt-4 grid gap-3">
+                    <div *ngFor="let tier of businessConfigDraft.rewards.discountTiers; let index = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-sm font-semibold text-main">Nivel {{ index + 1 }}</div>
+                        <div class="text-xs text-gray-600">{{ discountTierRangeLabel(tier) }}</div>
+                      </div>
+                      <div class="mt-3 grid gap-3 md:grid-cols-2">
+                        <ui-form-field type="number" [min]="0" [step]="1" label="Monto minimo" [ngModel]="tier.min" (ngModelChange)="updateDiscountTierMin(index, $event)"></ui-form-field>
+                        <ui-form-field type="number" [min]="0" [max]="100" [step]="0.1" label="Descuento (%)" [ngModel]="discountTierPercentValue(tier)" (ngModelChange)="updateDiscountTierRate(index, $event)"></ui-form-field>
+                      </div>
+                      <div class="mt-2 text-[11px] text-gray-600">
+                        {{ tier.max == null ? 'Sin tope maximo en este nivel.' : 'Tope automatico: ' + formatMoney(tier.max) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ui-form-field
+                  kind="select"
+                  label="Regla de corte"
+                  wrapperClass="block md:col-span-2"
+                  [options]="rewardCutRuleOptions"
+                  [tooltipText]="rewardCutRuleTooltip"
+                  [helpText]="configOptionDescription(businessConfigDraft.rewards.cutRule, rewardCutRuleOptions)"
+                  [ngModel]="businessConfigDraft.rewards.cutRule"
+                  (ngModelChange)="businessConfigDraft.rewards.cutRule = $event"></ui-form-field>
                 <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 1" [ngModel]="businessConfigDraft.rewards.commissionByDepth['1']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['1'] = +$event || 0"></ui-form-field>
                 <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 2" [ngModel]="businessConfigDraft.rewards.commissionByDepth['2']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['2'] = +$event || 0"></ui-form-field>
                 <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 3" [ngModel]="businessConfigDraft.rewards.commissionByDepth['3']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['3'] = +$event || 0"></ui-form-field>
@@ -1324,6 +1571,10 @@
         </ui-button>
       </div>
 
+      <div *ngIf="shippingError" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ shippingError }}
+      </div>
+
       <div class="mt-4 grid gap-3">
         <ui-form-field
           wrapperClass="block"
@@ -1403,7 +1654,7 @@
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
         </ui-button>
-        <ui-button size="sm" variant="primary" *ngIf="hasPermission('order_mark_shipped')" (pressed)="confirmShipping()">
+        <ui-button size="sm" variant="primary" *ngIf="hasPermission('order_mark_shipped')" (pressed)="confirmShippingWithChangeDetection()">
           <i class="fa-solid fa-truck" aria-hidden="true"></i>
           Marcar como enviado
         </ui-button>
@@ -1549,6 +1800,11 @@
       <ui-form-field wrapperClass="block sm:col-span-2" label="Nota (opcional)" [ngModel]="stockEntryForm.note" (ngModelChange)="stockEntryForm.note = $event"></ui-form-field>
     </div>
 
+    <div *ngIf="stockFeedbackMessage" class="mt-4 rounded-2xl border px-4 py-3 text-sm"
+      [ngClass]="stockFeedbackTone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+      {{ stockFeedbackMessage }}
+    </div>
+
     <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
       <ui-button size="sm" variant="ghost" (pressed)="closeStockEntryModal()">
         <i class="fa-solid fa-ban" aria-hidden="true"></i>
@@ -1579,6 +1835,11 @@
       <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockDamageForm.qty" (ngModelChange)="stockDamageForm.qty = +$event || 1"></ui-form-field>
       <ui-form-field kind="select" label="Reportado por" [options]="customerOptionsStable" [ngModel]="stockDamageForm.reportedByUserId" (ngModelChange)="stockDamageForm.reportedByUserId = +$event"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" label="Motivo" [ngModel]="stockDamageForm.reason" (ngModelChange)="stockDamageForm.reason = $event"></ui-form-field>
+    </div>
+
+    <div *ngIf="stockFeedbackMessage" class="mt-4 rounded-2xl border px-4 py-3 text-sm"
+      [ngClass]="stockFeedbackTone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+      {{ stockFeedbackMessage }}
     </div>
 
     <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -1612,6 +1873,10 @@
           <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
           Stocks
         </ui-button>
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('campaigns')" [variant]="currentView === 'campaigns' ? 'primary' : 'ghost'" (click)="setView('campaigns')">
+          <i class="fa-solid fa-bullhorn" aria-hidden="true"></i>
+          Campanas
+        </ui-button>
         <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('pos')" [variant]="currentView === 'pos' ? 'primary' : 'ghost'" (click)="setView('pos')">
           <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
           PV
@@ -1634,7 +1899,3 @@
 
   <ui-footer></ui-footer>
 </section>
-
-
-
-

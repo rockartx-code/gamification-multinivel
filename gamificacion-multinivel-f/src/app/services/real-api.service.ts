@@ -20,6 +20,8 @@ import {
   CustomerShippingAddress,
   CustomerProfile,
   InventoryMovement,
+  PosCashControl,
+  PosCashCut,
   PosSale,
   StockTransfer,
   UpdateOrderStatusPayload,
@@ -59,6 +61,17 @@ export class RealApiService {
   private readonly baseUrl = environment.apiBaseUrl;
 
   constructor(private readonly http: HttpClient) {}
+
+  private requireBusinessValue<T>(
+    response: { message?: string; Error?: string },
+    value: T | null | undefined,
+    fallbackMessage: string
+  ): T {
+    if (response.Error || value == null) {
+      throw new Error(response.message ?? fallbackMessage);
+    }
+    return value;
+  }
 
   login(username: string, password: string): Observable<AuthUser> {
     return this.http
@@ -304,8 +317,12 @@ export class RealApiService {
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
     return this.http
-      .patch<{ order: AdminOrder }>(`${this.baseUrl}/orders/${orderId}`, payload, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.order));
+      .patch<{ order?: AdminOrder; message?: string; Error?: string }>(`${this.baseUrl}/orders/${orderId}`, payload, {
+        headers: this.actorHeaders()
+      })
+      .pipe(
+        map((response) => this.requireBusinessValue(response, response.order, 'No se pudo actualizar el pedido.'))
+      );
   }
 
   listStocks(): Observable<AdminStock[]> {
@@ -327,19 +344,31 @@ export class RealApiService {
   }
 
   registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
-    return this.http.post<{ stock: AdminStock }>(
-      `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/entries`,
-      payload,
-      { headers: this.actorHeaders() }
-    );
+    return this.http
+      .post<{ stock?: AdminStock; message?: string; Error?: string }>(
+        `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/entries`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(
+        map((response) => ({
+          stock: this.requireBusinessValue(response, response.stock, 'No se pudo registrar la entrada de inventario.')
+        }))
+      );
   }
 
   registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
-    return this.http.post<{ stock: AdminStock }>(
-      `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/damages`,
-      payload,
-      { headers: this.actorHeaders() }
-    );
+    return this.http
+      .post<{ stock?: AdminStock; message?: string; Error?: string }>(
+        `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/damages`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(
+        map((response) => ({
+          stock: this.requireBusinessValue(response, response.stock, 'No se pudo registrar la merma de inventario.')
+        }))
+      );
   }
 
   listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
@@ -355,15 +384,29 @@ export class RealApiService {
     lines: Array<{ productId: number; qty: number }>;
     createdByUserId?: number | null;
   }): Observable<{ transfer: StockTransfer }> {
-    return this.http.post<{ transfer: StockTransfer }>(`${this.baseUrl}/stocks/transfers`, payload, { headers: this.actorHeaders() });
+    return this.http
+      .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(`${this.baseUrl}/stocks/transfers`, payload, {
+        headers: this.actorHeaders()
+      })
+      .pipe(
+        map((response) => ({
+          transfer: this.requireBusinessValue(response, response.transfer, 'No se pudo crear la transferencia.')
+        }))
+      );
   }
 
   receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
-    return this.http.post<{ transfer: StockTransfer }>(
-      `${this.baseUrl}/stocks/transfers/${encodeURIComponent(transferId)}/receive`,
-      payload,
-      { headers: this.actorHeaders() }
-    );
+    return this.http
+      .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(
+        `${this.baseUrl}/stocks/transfers/${encodeURIComponent(transferId)}/receive`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(
+        map((response) => ({
+          transfer: this.requireBusinessValue(response, response.transfer, 'No se pudo recibir la transferencia.')
+        }))
+      );
   }
 
   listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
@@ -382,13 +425,34 @@ export class RealApiService {
 
   registerPosSale(payload: {
     stockId: string;
-    attendantUserId?: number | null;
+    customerId?: number | null;
     customerName?: string;
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
   }): Observable<{ sale: PosSale }> {
-    return this.http.post<{ sale: PosSale }>(`${this.baseUrl}/pos/sales`, payload, { headers: this.actorHeaders() });
+    return this.http
+      .post<{ sale?: PosSale; message?: string; Error?: string }>(`${this.baseUrl}/pos/sales`, payload, {
+        headers: this.actorHeaders()
+      })
+      .pipe(
+        map((response) => ({
+          sale: this.requireBusinessValue(response, response.sale, 'No se pudo registrar la venta.')
+        }))
+      );
+  }
+
+  getPosCashControl(stockId?: string): Observable<PosCashControl> {
+    const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
+    return this.http
+      .get<{ control: PosCashControl }>(`${this.baseUrl}/pos/cash-control${query}`, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.control));
+  }
+
+  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+    return this.http.post<{ cut: PosCashCut; control: PosCashControl }>(`${this.baseUrl}/pos/cash-cut`, payload, {
+      headers: this.actorHeaders()
+    });
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {

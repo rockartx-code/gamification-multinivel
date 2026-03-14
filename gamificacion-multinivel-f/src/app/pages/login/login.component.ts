@@ -62,7 +62,7 @@ export class LoginComponent {
       .pipe(finalize(() => (this.isSubmitting = false)))
       .subscribe({
         next: (user) => {
-          const target = this.authService.hasAdminPanelAccess(user) ? '/admin' : '/dashboard';
+          const target = this.authService.defaultRoute(user);
           void this.router.navigate([target]);
         },
         error: () => {

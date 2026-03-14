@@ -8,6 +8,7 @@ import {
   AppBusinessConfig,
   AdminOrder,
   AdminOrderItem,
+  AssociateMonth,
   AdminProduct,
   AdminStock,
   AssetResponse,
@@ -16,6 +17,8 @@ import {
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
   InventoryMovement,
+  PosCashControl,
+  PosCashCut,
   PosSale,
   StockTransfer,
   UpdateOrderStatusPayload,
@@ -300,13 +303,25 @@ export class AdminControlService {
 
   registerPosSale(payload: {
     stockId: string;
-    attendantUserId?: number | null;
+    customerId?: number | null;
     customerName?: string;
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
   }): Observable<{ sale: PosSale }> {
     return this.api.registerPosSale(payload);
+  }
+
+  getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
+    return this.api.getAssociateMonth(associateId, monthKey);
+  }
+
+  getPosCashControl(stockId?: string): Observable<PosCashControl> {
+    return this.api.getPosCashControl(stockId);
+  }
+
+  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+    return this.api.createPosCashCut(payload);
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {

@@ -3,7 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 
 import { AuthService, AuthUser } from '../services/auth.service';
 
-const userHome = (auth: AuthService, user: AuthUser): string => (auth.hasAdminPanelAccess(user) ? '/admin' : '/dashboard');
+const userHome = (auth: AuthService, user: AuthUser): string => auth.defaultRoute(user);
 
 export const loginGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
@@ -39,7 +39,7 @@ export const dashboardGuard: CanActivateFn = () => {
     return true;
   }
 
-  if (auth.hasAdminPanelAccess(auth.currentUser)) {
+  if (!auth.hasUserDashboardAccess(auth.currentUser) && auth.hasAdminPanelAccess(auth.currentUser)) {
     return router.parseUrl('/admin');
   }
 

@@ -32,6 +32,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
   @Input() iconClass = '';
   @Input() leadingIconClass = '';
   @Input() helpText = '';
+  @Input() tooltipText = '';
   @Input() errorText = '';
   @Input() options: FieldOption[] = [];
   @Input() wrapperClass = 'block';

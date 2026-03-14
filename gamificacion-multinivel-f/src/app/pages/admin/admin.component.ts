@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, type Signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, type Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -13,6 +13,7 @@ import {
   AppBusinessConfig,
   AdminOrder,
   AdminOrderItem,
+  AssociateMonth,
   AdminProduct,
   AdminWarning,
   AssetResponse,
@@ -34,6 +35,7 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { AdminControlService } from '../../services/admin-control.service';
+import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 
 type StructureNode = {
   id: string;
@@ -91,12 +93,28 @@ type PosSale = {
   orderId: string;
   stockId: string;
   attendantUserId: number | null;
+  customerId: number | null;
   customerName: string;
+  grossSubtotal: number;
+  discountRate: number;
+  discountAmount: number;
   total: number;
   paymentStatus: 'paid_branch';
   deliveryStatus: 'delivered_branch';
   createdAt: string;
   lines: AdminOrderItem[];
+};
+
+type PosCashControl = {
+  stockId: string;
+  attendantUserId: number | null;
+  currentTotal: number;
+  salesCount: number;
+  startedAt?: string;
+  lastCutAt?: string;
+  lastCutTotal?: number;
+  lastCutSalesCount?: number;
+  lastSaleAt?: string;
 };
 
 type InventoryMovementType = 'entry' | 'exit_order' | 'exit_transfer' | 'entry_transfer' | 'damaged' | 'pos_sale';
@@ -123,10 +141,23 @@ type SelectOption<T extends string | number> = {
   label: string;
 };
 
+type ExplainedSelectOption<T extends string | number> = SelectOption<T> & {
+  description: string;
+};
+
+type PosCustomerRecommendation = {
+  id: number;
+  name: string;
+  email: string;
+  label: string;
+};
+
+type DiscountTierDraft = AppBusinessConfig['rewards']['discountTiers'][number];
+
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -178,11 +209,74 @@ export class AdminComponent implements OnInit {
     { value: 'shipped', label: 'Enviado' },
     { value: 'delivered', label: 'Entregado' }
   ];
+  readonly rewardCutRuleOptions: Array<ExplainedSelectOption<string>> = [
+    {
+      value: 'hard_cut_no_pass',
+      label: 'Corte estricto mensual',
+      description: 'El descuento se calcula dentro del mes actual y no se arrastra al siguiente periodo.'
+    }
+  ];
+  readonly posPaymentStatusConfigOptions: Array<ExplainedSelectOption<string>> = [
+    {
+      value: 'paid_branch',
+      label: 'Pagado en sucursal',
+      description: 'La venta POS se registra como cobrada al momento de capturarla en caja.'
+    }
+  ];
+  readonly posDeliveryStatusConfigOptions: Array<ExplainedSelectOption<string>> = [
+    {
+      value: 'delivered_branch',
+      label: 'Entregado en sucursal',
+      description: 'La venta POS se considera entregada en el punto de venta.'
+    },
+    {
+      value: 'paid_branch',
+      label: 'Solo pagado en sucursal',
+      description: 'La venta POS queda cobrada, pero la orden no se marca como entregada automaticamente.'
+    }
+  ];
+  readonly posOrderStatusMappingConfigOptions: Array<ExplainedSelectOption<string>> = [
+    {
+      value: 'pending',
+      label: 'Pendiente',
+      description: 'Crea la orden sin pago confirmado.'
+    },
+    {
+      value: 'paid',
+      label: 'Pagado',
+      description: 'Marca la orden como pagada, pendiente de entrega o envio.'
+    },
+    {
+      value: 'shipped',
+      label: 'Enviado',
+      description: 'Marca la orden como enviada.'
+    },
+    {
+      value: 'delivered',
+      label: 'Entregado',
+      description: 'Marca la orden como completada y entregada.'
+    },
+    {
+      value: 'canceled',
+      label: 'Cancelado',
+      description: 'Marca la orden como cancelada.'
+    },
+    {
+      value: 'refunded',
+      label: 'Reembolsado',
+      description: 'Marca la orden como reembolsada.'
+    }
+  ];
+  readonly rewardCutRuleTooltip = this.buildSelectTooltip(this.rewardCutRuleOptions);
+  readonly posPaymentStatusConfigTooltip = this.buildSelectTooltip(this.posPaymentStatusConfigOptions);
+  readonly posDeliveryStatusConfigTooltip = this.buildSelectTooltip(this.posDeliveryStatusConfigOptions);
+  readonly posOrderStatusMappingConfigTooltip = this.buildSelectTooltip(this.posOrderStatusMappingConfigOptions);
 
   constructor(
     private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
@@ -264,27 +358,6 @@ export class AdminComponent implements OnInit {
     tags: ''
   };
   productExistingImages: AdminProduct['images'] = [];
-  campaignMessage = '';
-  isSavingCampaign = false;
-  campaignForm = {
-    id: '',
-    name: '',
-    active: true,
-    hook: '',
-    description: '',
-    story: '',
-    feed: '',
-    banner: '',
-    heroImage: '',
-    heroBadge: '',
-    heroTitle: '',
-    heroAccent: '',
-    heroTail: '',
-    heroDescription: '',
-    ctaPrimaryText: '',
-    ctaSecondaryText: '',
-    benefits: ''
-  };
   notificationMessage = '';
   isSavingNotification = false;
   notificationForm = this.getDefaultNotificationForm();
@@ -344,6 +417,8 @@ export class AdminComponent implements OnInit {
   transfers: StockTransfer[] = [];
   stockDamages: StockDamage[] = [];
   inventoryMovements: InventoryMovement[] = [];
+  stockFeedbackMessage = '';
+  stockFeedbackTone: 'error' | 'success' | '' = '';
 
   shippingStockId = '';
   shippingFallbackProductId: number | null = null;
@@ -351,12 +426,20 @@ export class AdminComponent implements OnInit {
 
   posForm = {
     stockId: '',
-    attendantUserId: null as number | null,
-    customerName: '',
-    status: 'paid' as 'paid' | 'delivered'
+    status: 'delivered' as 'paid' | 'delivered'
   };
   posItems = new Map<number, number>();
   posSales: PosSale[] = [];
+  posCashControl: PosCashControl | null = null;
+  posCustomerSearch = 'Publico en General';
+  selectedPosCustomerId: number | null = null;
+  posCustomerRecommendations: PosCustomerRecommendation[] = [];
+  posSelectedCustomerMonth: AssociateMonth | null = null;
+  isLoadingPosCustomerProjection = false;
+  isRegisteringPosSale = false;
+  isCuttingPosCash = false;
+  posFeedbackMessage = '';
+  posFeedbackTone: 'error' | 'success' | '' = '';
 
   ngOnInit(): void {
     this.currentView = this.getFirstAllowedView();
@@ -373,7 +456,7 @@ export class AdminComponent implements OnInit {
       this.stockTransferForm.createdByUserId = this.stockTransferForm.createdByUserId ?? this.customers[0]?.id ?? null;
       this.stockDamageForm.reportedByUserId = this.stockDamageForm.reportedByUserId ?? this.customers[0]?.id ?? null;
       this.transferReceiverUserId = this.transferReceiverUserId ?? this.customers[0]?.id ?? null;
-      this.posForm.attendantUserId = this.posForm.attendantUserId ?? this.customers[0]?.id ?? null;
+      this.selectPublicGeneralCustomer();
       this.syncBusinessConfigDraft();
       this.loadStocksAndPosState();
     });
@@ -461,6 +544,7 @@ export class AdminComponent implements OnInit {
       { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
       { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
       { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
+      { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
       { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
       { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
@@ -503,6 +587,7 @@ export class AdminComponent implements OnInit {
       { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
       { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
       { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
+      { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
       { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
       { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
@@ -522,6 +607,9 @@ export class AdminComponent implements OnInit {
     }
     if (this.currentView === 'stocks') {
       return 'Stocks';
+    }
+    if (this.currentView === 'campaigns') {
+      return 'Campanas';
     }
     if (this.currentView === 'pos') {
       return 'Punto de Venta';
@@ -547,6 +635,9 @@ export class AdminComponent implements OnInit {
     }
     if (this.currentView === 'stocks') {
       return 'Inventario por sucursal, transferencias, recepciones y danos.';
+    }
+    if (this.currentView === 'campaigns') {
+      return 'Campanas, assets y copy comercial para compartir con la red.';
     }
     if (this.currentView === 'pos') {
       return 'Ventas en sucursal vinculadas a stock y operador.';
@@ -729,7 +820,51 @@ export class AdminComponent implements OnInit {
     }));
   }
 
-  get posTotal(): number {
+  get currentOperatorId(): number | null {
+    const raw = Number(this.currentUser?.userId ?? NaN);
+    return Number.isFinite(raw) ? raw : null;
+  }
+
+  get currentOperatorName(): string {
+    return this.currentUser?.name?.trim() || this.customerName(this.currentOperatorId);
+  }
+
+  get linkedPosStocks(): AdminStock[] {
+    const operatorId = this.currentOperatorId;
+    if (operatorId == null) {
+      return [];
+    }
+    return this.stocks.filter((stock) => stock.linkedUserIds.includes(operatorId));
+  }
+
+  get hasLinkedPosStock(): boolean {
+    return this.linkedPosStocks.length > 0;
+  }
+
+  get currentPosStock(): AdminStock | null {
+    return this.linkedPosStocks.find((stock) => stock.id === this.posForm.stockId) ?? this.linkedPosStocks[0] ?? null;
+  }
+
+  get posStockOptions(): Array<SelectOption<string>> {
+    return this.linkedPosStocks.map((stock) => ({
+      value: stock.id,
+      label: `${stock.name} · ${stock.location}`
+    }));
+  }
+
+  get selectedPosCustomer(): AdminCustomer | null {
+    return this.customers.find((customer) => customer.id === this.selectedPosCustomerId) ?? null;
+  }
+
+  get visiblePosSales(): PosSale[] {
+    const stockId = this.currentPosStock?.id;
+    const operatorId = this.currentOperatorId;
+    return this.posSales.filter(
+      (sale) => (!stockId || sale.stockId === stockId) && (operatorId == null || sale.attendantUserId === operatorId)
+    );
+  }
+
+  get posSubtotal(): number {
     return this.getPosItems().reduce((acc, item) => acc + item.price * item.quantity, 0);
   }
 
@@ -738,7 +873,87 @@ export class AdminComponent implements OnInit {
   }
 
   get posSalesTotal(): number {
-    return this.posSales.reduce((acc, sale) => acc + sale.total, 0);
+    return this.visiblePosSales.reduce((acc, sale) => acc + sale.total, 0);
+  }
+
+  get posCustomerMonthNet(): number {
+    return Number(this.posSelectedCustomerMonth?.netVolume ?? 0) || 0;
+  }
+
+  get posProjectedMonthNet(): number {
+    if (!this.selectedPosCustomer) {
+      return 0;
+    }
+    return this.posCustomerMonthNet + this.posSubtotal;
+  }
+
+  get posProjectedDiscountRate(): number {
+    const customer = this.selectedPosCustomer;
+    if (!customer) {
+      return 0;
+    }
+    return Math.max(this.parseCustomerDiscountRate(customer), this.calculateDiscountTierRate(this.posProjectedMonthNet));
+  }
+
+  get posProjectedDiscountAmount(): number {
+    return this.roundMoney(this.posSubtotal * this.posProjectedDiscountRate);
+  }
+
+  get posProjectedNetTotal(): number {
+    return this.roundMoney(this.posSubtotal - this.posProjectedDiscountAmount);
+  }
+
+  get posProjectedDiscountLabel(): string {
+    return `${Math.round(this.posProjectedDiscountRate * 100)}%`;
+  }
+
+  get posCurrentDiscountLabel(): string {
+    return this.selectedPosCustomer?.discount ?? '0%';
+  }
+
+  get posNextGoal(): { label: string; min: number } | null {
+    const rewards = this.businessConfig?.rewards;
+    if (!rewards || !this.selectedPosCustomer) {
+      return null;
+    }
+    const milestones = [
+      { min: Number(rewards.activationNetMin ?? 0), label: 'Activacion del mes' },
+      ...((rewards.discountTiers ?? []).map((tier, index) => ({
+        min: Number(tier.min ?? 0),
+        label: `Nivel ${index + 1} de descuento`
+      })) ?? [])
+    ]
+      .filter((goal) => Number.isFinite(goal.min) && goal.min > 0)
+      .sort((left, right) => left.min - right.min)
+      .filter((goal, index, source) => index === source.findIndex((entry) => entry.min === goal.min));
+    return milestones.find((goal) => goal.min > this.posProjectedMonthNet) ?? null;
+  }
+
+  get posRemainingForNextGoal(): number {
+    const nextGoal = this.posNextGoal;
+    if (!nextGoal) {
+      return 0;
+    }
+    return Math.max(0, this.roundMoney(nextGoal.min - this.posProjectedMonthNet));
+  }
+
+  get canRegisterPosSale(): boolean {
+    return Boolean(
+      this.hasPermission('pos_register_sale') &&
+        this.hasLinkedPosStock &&
+        this.currentPosStock &&
+        this.posItems.size > 0 &&
+        !this.isRegisteringPosSale
+    );
+  }
+
+  get canCreatePosCashCut(): boolean {
+    return Boolean(
+      this.hasPermission('pos_register_sale') &&
+        this.currentPosStock &&
+        (this.posCashControl?.salesCount ?? 0) > 0 &&
+        !this.isCuttingPosCash
+    );
   }
 
   get filteredOrders(): AdminOrder[] {
@@ -815,6 +1030,10 @@ export class AdminComponent implements OnInit {
     return this.authService.currentUser;
   }
 
+  get canOpenUserDashboard(): boolean {
+    return this.authService.hasAdminAndUserAccess(this.currentUser);
+  }
+
   get notificationDescriptionLength(): number {
     return this.notificationForm.description.length;
   }
@@ -843,7 +1062,7 @@ export class AdminComponent implements OnInit {
   }
 
   private getFirstAllowedView(): AdminViewId {
-    const ordered: AdminViewId[] = ['orders', 'customers', 'products', 'stocks', 'pos', 'stats', 'notifications', 'settings'];
+    const ordered: AdminViewId[] = ['orders', 'customers', 'products', 'stocks', 'campaigns', 'pos', 'stats', 'notifications', 'settings'];
     return ordered.find((view) => this.canAccessView(view)) ?? 'orders';
   }
 
@@ -1152,6 +1371,41 @@ export class AdminComponent implements OnInit {
     return this.adminControl.formatMoney(value);
   }
 
+  discountTierPercentValue(tier: DiscountTierDraft): number {
+    return this.roundMoney(this.normalizeDiscountRateValue(tier?.rate) * 100);
+  }
+
+  discountTierRangeLabel(tier: DiscountTierDraft): string {
+    const min = this.parseNonNegativeNumber(tier?.min);
+    const max = tier?.max == null ? null : this.parseNonNegativeNumber(tier.max);
+    if (max == null || max < min) {
+      return `Desde ${this.formatMoney(min)}`;
+    }
+    return `${this.formatMoney(min)} a ${this.formatMoney(max)}`;
+  }
+
+  updateDiscountTierMin(index: number, value: unknown): void {
+    const tiers = this.businessConfigDraft.rewards.discountTiers ?? [];
+    if (!tiers[index]) {
+      return;
+    }
+    tiers[index].min = this.parseNonNegativeNumber(value);
+    this.refreshDiscountTierThresholds();
+  }
+
+  updateDiscountTierRate(index: number, value: unknown): void {
+    const tiers = this.businessConfigDraft.rewards.discountTiers ?? [];
+    if (!tiers[index]) {
+      return;
+    }
+    const percent = Math.min(100, this.parseNonNegativeNumber(value));
+    tiers[index].rate = this.roundMoney(percent / 100);
+  }
+
+  configOptionDescription(value: string, options: Array<ExplainedSelectOption<string>>): string {
+    return options.find((option) => String(option.value) === String(value))?.description ?? '';
+  }
+
   customerStatusClass(customer: AdminCustomer): string {
     return this.isCustomerActive(customer) ? 'badge badge-compact status-active' : 'badge badge-compact status-inactive';
   }
@@ -1288,7 +1542,11 @@ export class AdminComponent implements OnInit {
           orderId: sale.orderId,
           stockId: sale.stockId,
           attendantUserId: sale.attendantUserId ?? null,
+          customerId: sale.customerId ?? null,
           customerName: sale.customerName,
+          grossSubtotal: Number(sale.grossSubtotal ?? sale.total ?? 0),
+          discountRate: Number(sale.discountRate ?? 0),
+          discountAmount: Number(sale.discountAmount ?? 0),
           total: Number(sale.total),
           paymentStatus: sale.paymentStatus,
           deliveryStatus: sale.deliveryStatus,
@@ -1301,6 +1559,8 @@ export class AdminComponent implements OnInit {
         } else if (this.selectedStockId && !this.stocks.some((stock) => stock.id === this.selectedStockId)) {
           this.selectStock(this.stocks[0]?.id ?? '');
         }
+        this.syncPosOperatorContext();
+        this.refreshPosCashControl();
       }
     });
   }
@@ -1441,6 +1701,10 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
+  openUserDashboard(): void {
+    void this.router.navigate(['/dashboard']);
+  }
+
   advanceOrder(order: AdminOrder): void {
     if (
       (order.status === 'pending' && !this.hasPermission('order_mark_paid')) ||
@@ -1467,6 +1731,7 @@ export class AdminComponent implements OnInit {
       .pipe(
         finalize(() => {
           this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
         })
       )
       .subscribe();
@@ -1538,10 +1803,78 @@ export class AdminComponent implements OnInit {
       .pipe(
         finalize(() => {
           this.updatingOrderIds.delete(orderId);
-          this.closeShippingModal();
         })
       )
-      .subscribe();
+      .subscribe({
+        next: () => {
+          this.closeShippingModal();
+        },
+        error: (error: unknown) => {
+          this.shippingError = this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.');
+        }
+      });
+  }
+
+  confirmShippingWithChangeDetection(): void {
+    if (!this.hasPermission('order_mark_shipped')) {
+      return;
+    }
+    if (!this.shippingTargetOrder) {
+      return;
+    }
+    if (this.shippingType === 'carrier' && !this.shippingTrackingNumber.trim()) {
+      this.setShippingError('Ingresa el numero de guia.');
+      return;
+    }
+    if (
+      this.shippingType === 'personal' &&
+      (!this.shippingDeliveryPlace.trim() || !this.shippingDeliveryDate.trim())
+    ) {
+      this.setShippingError('Ingresa lugar y fecha de entrega personal.');
+      return;
+    }
+    if (!this.shippingStockId) {
+      this.setShippingError('Selecciona el stock origen para el envio.');
+      return;
+    }
+
+    const dispatchLines = this.resolveDispatchLines(this.shippingTargetOrder);
+    if (!dispatchLines.length) {
+      this.setShippingError('Agrega producto y cantidad para descontar stock.');
+      return;
+    }
+
+    this.setShippingError('');
+    const payload = {
+      status: 'shipped' as const,
+      shippingType: this.shippingType,
+      trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
+      deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
+      deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined,
+      stockId: this.shippingStockId,
+      dispatchLines: dispatchLines.map((line) => ({ productId: line.productId, quantity: line.quantity }))
+    };
+    const orderId = this.shippingTargetOrder.id;
+    this.updatingOrderIds.add(orderId);
+    this.requestViewUpdate();
+
+    this.adminControl
+      .updateOrderStatus(orderId, payload)
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(orderId);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.closeShippingModal();
+          this.requestViewUpdate();
+        },
+        error: (error: unknown) => {
+          this.setShippingError(this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.'));
+        }
+      });
   }
 
   isUpdatingOrder(orderId: string): boolean {
@@ -1994,132 +2327,6 @@ export class AdminComponent implements OnInit {
       });
   }
 
-  get isCampaignFormValid(): boolean {
-    return Boolean(
-      this.campaignForm.name.trim() &&
-        this.campaignForm.hook.trim() &&
-        this.campaignForm.story.trim() &&
-        this.campaignForm.feed.trim() &&
-        this.campaignForm.banner.trim()
-    );
-  }
-
-  editCampaign(campaign: AdminCampaign): void {
-    this.campaignForm = {
-      id: campaign.id,
-      name: campaign.name,
-      active: campaign.active,
-      hook: campaign.hook || '',
-      description: campaign.description || '',
-      story: campaign.story || '',
-      feed: campaign.feed || '',
-      banner: campaign.banner || '',
-      heroImage: campaign.heroImage || '',
-      heroBadge: campaign.heroBadge || '',
-      heroTitle: campaign.heroTitle || '',
-      heroAccent: campaign.heroAccent || '',
-      heroTail: campaign.heroTail || '',
-      heroDescription: campaign.heroDescription || '',
-      ctaPrimaryText: campaign.ctaPrimaryText || '',
-      ctaSecondaryText: campaign.ctaSecondaryText || '',
-      benefits: (campaign.benefits ?? []).join(', ')
-    };
-    this.campaignMessage = `Editando campana: ${campaign.name}.`;
-  }
-
-  updateCampaignField(
-    field:
-      | 'name'
-      | 'hook'
-      | 'description'
-      | 'story'
-      | 'feed'
-      | 'banner'
-      | 'heroImage'
-      | 'heroBadge'
-      | 'heroTitle'
-      | 'heroAccent'
-      | 'heroTail'
-      | 'heroDescription'
-      | 'ctaPrimaryText'
-      | 'ctaSecondaryText'
-      | 'benefits',
-    value: string
-  ): void {
-    this.campaignForm = {
-      ...this.campaignForm,
-      [field]: value
-    };
-  }
-
-  saveCampaign(): void {
-    if (this.isSavingCampaign || !this.isCampaignFormValid) {
-      return;
-    }
-    this.isSavingCampaign = true;
-    const benefits = (this.campaignForm.benefits || '')
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean)
-      .slice(0, 4);
-    this.adminControl
-      .saveCampaign({
-        id: this.campaignForm.id || undefined,
-        name: this.campaignForm.name.trim(),
-        active: this.campaignForm.active,
-        hook: this.campaignForm.hook.trim(),
-        description: this.campaignForm.description.trim() || undefined,
-        story: this.campaignForm.story.trim(),
-        feed: this.campaignForm.feed.trim(),
-        banner: this.campaignForm.banner.trim(),
-        heroImage: this.campaignForm.heroImage.trim() || undefined,
-        heroBadge: this.campaignForm.heroBadge.trim() || undefined,
-        heroTitle: this.campaignForm.heroTitle.trim() || undefined,
-        heroAccent: this.campaignForm.heroAccent.trim() || undefined,
-        heroTail: this.campaignForm.heroTail.trim() || undefined,
-        heroDescription: this.campaignForm.heroDescription.trim() || undefined,
-        ctaPrimaryText: this.campaignForm.ctaPrimaryText.trim() || undefined,
-        ctaSecondaryText: this.campaignForm.ctaSecondaryText.trim() || undefined,
-        benefits
-      })
-      .pipe(
-        finalize(() => {
-          this.isSavingCampaign = false;
-        })
-      )
-      .subscribe({
-        next: (campaign) => {
-          this.campaignMessage = `Campana guardada: ${campaign.name}.`;
-          this.resetCampaignForm();
-        },
-        error: () => {
-          this.campaignMessage = 'No se pudo guardar la campana.';
-        }
-      });
-  }
-
-  resetCampaignForm(): void {
-    this.campaignForm = {
-      id: '',
-      name: '',
-      active: true,
-      hook: '',
-      description: '',
-      story: '',
-      feed: '',
-      banner: '',
-      heroImage: '',
-      heroBadge: '',
-      heroTitle: '',
-      heroAccent: '',
-      heroTail: '',
-      heroDescription: '',
-      ctaPrimaryText: '',
-      ctaSecondaryText: '',
-      benefits: ''
-    };
-  }
-
   editNotification(notification: PortalNotification): void {
     this.notificationForm = {
       id: notification.id,
@@ -2487,6 +2694,7 @@ export class AdminComponent implements OnInit {
     if (!stockId) {
       return;
     }
+    this.setStockFeedback('', '');
     this.stockEntryForm.stockId = stockId;
     this.stockEntryForm.productId = productId;
     this.stockEntryForm.qty = 1;
@@ -2504,12 +2712,15 @@ export class AdminComponent implements OnInit {
     }
     const { stockId, productId, qty, note, createdByUserId } = this.stockEntryForm;
     if (!stockId || !productId || qty <= 0) {
+      this.setStockFeedback('Selecciona stock, producto y una cantidad valida.', 'error');
       return;
     }
     const normalizedQty = Math.floor(Number(qty));
     if (!Number.isFinite(normalizedQty) || normalizedQty <= 0) {
+      this.setStockFeedback('La cantidad debe ser mayor a cero.', 'error');
       return;
     }
+    this.setStockFeedback('', '');
     this.adminControl.registerStockEntry(stockId, {
       productId,
       qty: normalizedQty,
@@ -2517,8 +2728,15 @@ export class AdminComponent implements OnInit {
       userId: createdByUserId
     }).subscribe({
       next: () => {
+        this.setStockFeedback('Entrada de inventario registrada.', 'success');
         this.closeStockEntryModal();
         this.loadStocksAndPosState();
+      },
+      error: (error: { error?: { message?: string }; message?: string }) => {
+        this.setStockFeedback(
+          error?.error?.message || error?.message || 'No se pudo registrar la entrada de inventario.',
+          'error'
+        );
       }
     });
   }
@@ -2541,22 +2759,33 @@ export class AdminComponent implements OnInit {
     const { sourceStockId, destinationStockId, createdByUserId } = this.stockTransferForm;
     const normalizedLines = this.normalizeTransferLines(this.stockTransferForm.lines);
     if (!sourceStockId || !destinationStockId || sourceStockId === destinationStockId || !normalizedLines.length) {
+      this.setStockFeedback('Completa origen, destino y al menos una linea valida.', 'error');
       return;
     }
     const sourceStock = this.stocks.find((stock) => stock.id === sourceStockId);
     if (!sourceStock) {
+      this.setStockFeedback('Selecciona un stock origen valido.', 'error');
       return;
     }
-    const hasInsufficient = normalizedLines.some((line) => (sourceStock.inventory[line.productId] ?? 0) < line.qty);
-    if (hasInsufficient) {
+    const insufficientLine = normalizedLines.find((line) => (sourceStock.inventory[line.productId] ?? 0) < line.qty);
+    if (insufficientLine) {
+      this.setStockFeedback(`Stock insuficiente para ${this.productName(insufficientLine.productId)}.`, 'error');
       return;
     }
+    this.setStockFeedback('', '');
     this.adminControl
       .createStockTransfer({ sourceStockId, destinationStockId, lines: normalizedLines, createdByUserId })
       .subscribe({
         next: () => {
+          this.setStockFeedback('Transferencia creada.', 'success');
           this.stockTransferForm.lines = [{ productId: this.products[0]?.id ?? null, qty: 1 }];
           this.loadStocksAndPosState();
+        },
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.setStockFeedback(
+            error?.error?.message || error?.message || 'No se pudo crear la transferencia.',
+            'error'
+          );
         }
       });
   }
@@ -2571,15 +2800,29 @@ export class AdminComponent implements OnInit {
     }
     const destination = this.stocks.find((stock) => stock.id === transfer.destinationStockId);
     if (!destination || !this.transferReceiverUserId) {
+      this.setStockFeedback('Selecciona un usuario valido para recibir la transferencia.', 'error');
       return;
     }
     if (!destination.linkedUserIds.includes(this.transferReceiverUserId)) {
+      this.setStockFeedback('El usuario seleccionado no esta vinculado al stock destino.', 'error');
       return;
     }
 
+    this.setStockFeedback('', '');
     this.adminControl
       .receiveStockTransfer(transferId, { receivedByUserId: this.transferReceiverUserId })
-      .subscribe({ next: () => this.loadStocksAndPosState() });
+      .subscribe({
+        next: () => {
+          this.setStockFeedback('Transferencia recibida.', 'success');
+          this.loadStocksAndPosState();
+        },
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.setStockFeedback(
+            error?.error?.message || error?.message || 'No se pudo recibir la transferencia.',
+            'error'
+          );
+        }
+      });
   }
 
   openDamageModal(productId: number): void {
@@ -2587,6 +2830,7 @@ export class AdminComponent implements OnInit {
     if (!stockId) {
       return;
     }
+    this.setStockFeedback('', '');
     this.stockDamageForm.stockId = stockId;
     this.stockDamageForm.productId = productId;
     this.stockDamageForm.qty = 1;
@@ -2604,16 +2848,20 @@ export class AdminComponent implements OnInit {
     }
     const { stockId, productId, qty, reason, reportedByUserId } = this.stockDamageForm;
     if (!stockId || !productId || qty <= 0 || !reason.trim()) {
+      this.setStockFeedback('Completa stock, producto, cantidad y motivo.', 'error');
       return;
     }
     const stock = this.stocks.find((entry) => entry.id === stockId);
     if (!stock) {
+      this.setStockFeedback('Selecciona un stock valido.', 'error');
       return;
     }
     const currentQty = stock.inventory[productId] ?? 0;
     if (currentQty < qty) {
+      this.setStockFeedback(`Stock insuficiente para ${this.productName(productId)}.`, 'error');
       return;
     }
+    this.setStockFeedback('', '');
     this.adminControl.registerStockDamage(stockId, {
       productId,
       qty,
@@ -2621,10 +2869,17 @@ export class AdminComponent implements OnInit {
       userId: reportedByUserId
     }).subscribe({
       next: () => {
+        this.setStockFeedback('Dano registrado en inventario.', 'success');
         this.stockDamageForm.qty = 1;
         this.stockDamageForm.reason = '';
         this.closeDamageModal();
         this.loadStocksAndPosState();
+      },
+      error: (error: { error?: { message?: string }; message?: string }) => {
+        this.setStockFeedback(
+          error?.error?.message || error?.message || 'No se pudo registrar el dano de inventario.',
+          'error'
+        );
       }
     });
   }
@@ -2668,21 +2923,68 @@ export class AdminComponent implements OnInit {
     return this.products.find((product) => product.id === productId)?.name ?? `Producto ${productId}`;
   }
 
+  get availablePosProducts(): AdminProduct[] {
+    const stockId = this.currentPosStock?.id;
+    if (!stockId) {
+      return [];
+    }
+    return this.products.filter((product) => product.active && this.stockQty(stockId, product.id) > 0);
+  }
+
   stockQty(stockId: string, productId: number): number {
     const stock = this.stocks.find((entry) => entry.id === stockId);
     return stock?.inventory[productId] ?? 0;
   }
 
+  setPosStock(stockId: string): void {
+    this.posForm.stockId = stockId;
+    this.syncPosSelectedItems();
+    this.refreshPosCashControl();
+  }
+
+  updatePosCustomerSearch(value: string): void {
+    this.posCustomerSearch = value;
+    this.refreshPosCustomerRecommendations();
+  }
+
+  selectPublicGeneralCustomer(): void {
+    this.selectedPosCustomerId = null;
+    this.posCustomerSearch = 'Publico en General';
+    this.posSelectedCustomerMonth = null;
+    this.isLoadingPosCustomerProjection = false;
+    this.refreshPosCustomerRecommendations();
+  }
+
+  selectPosCustomerRecommendation(customerId: number): void {
+    const customer = this.customers.find((entry) => entry.id === customerId);
+    if (!customer) {
+      return;
+    }
+    this.selectedPosCustomerId = customer.id;
+    this.posCustomerSearch = `${customer.name} · ${customer.email}`;
+    this.refreshPosCustomerRecommendations();
+    this.loadSelectedPosCustomerProjection();
+  }
+
   togglePosProductSelection(productId: number, selected: boolean): void {
+    const stockId = this.currentPosStock?.id;
+    if (!stockId) {
+      return;
+    }
     if (selected) {
-      this.posItems.set(productId, this.posItems.get(productId) ?? 1);
+      const availableQty = this.stockQty(stockId, productId);
+      if (availableQty <= 0) {
+        return;
+      }
+      this.posItems.set(productId, Math.min(this.posItems.get(productId) ?? 1, availableQty));
       return;
     }
     this.posItems.delete(productId);
   }
 
   updatePosQty(productId: number, qtyRaw: string): void {
-    const qty = Math.max(1, Number(qtyRaw) || 1);
+    const maxQty = this.stockQty(this.currentPosStock?.id ?? '', productId);
+    const qty = Math.max(1, Math.min(maxQty || 1, Number(qtyRaw) || 1));
     if (!this.posItems.has(productId)) {
       return;
     }
@@ -2690,7 +2992,7 @@ export class AdminComponent implements OnInit {
   }
 
   getPosItems(): AdminOrderItem[] {
-    return this.products
+    return this.availablePosProducts
       .filter((product) => this.posItems.has(product.id))
       .map((product) => ({
         productId: product.id,
@@ -2701,35 +3003,304 @@ export class AdminComponent implements OnInit {
   }
 
   registerPosSale(): void {
-    if (!this.hasPermission('pos_register_sale')) {
-      return;
-    }
-    if (!this.posForm.stockId || !this.posForm.attendantUserId || !this.posItems.size) {
+    if (!this.canRegisterPosSale || !this.currentPosStock) {
       return;
     }
     const lineItems = this.getPosItems();
-    const stockError = this.validateStockAvailability(this.posForm.stockId, lineItems);
-    if (stockError) {
+    if (!lineItems.length) {
       return;
     }
+    const stockError = this.validateStockAvailability(this.currentPosStock.id, lineItems);
+    if (stockError) {
+      this.setPosFeedback(stockError, 'error');
+      return;
+    }
+    this.isRegisteringPosSale = true;
+    this.setPosFeedback('', '');
     this.adminControl
       .registerPosSale({
-        stockId: this.posForm.stockId,
-        attendantUserId: this.posForm.attendantUserId,
-        customerName: this.posForm.customerName.trim() || 'Venta mostrador',
+        stockId: this.currentPosStock.id,
+        customerId: this.selectedPosCustomer?.id,
+        customerName: this.selectedPosCustomer?.name || 'Publico en General',
         paymentStatus: 'paid_branch',
         deliveryStatus: 'delivered_branch',
         items: lineItems
       })
+      .pipe(finalize(() => (this.isRegisteringPosSale = false)))
       .subscribe({
         next: () => {
           this.posItems.clear();
-          this.posForm.customerName = '';
-          this.posForm.status = 'paid';
-          this.adminControl.load().subscribe();
-          this.loadStocksAndPosState();
+          this.posForm.status = 'delivered';
+          this.selectPublicGeneralCustomer();
+          this.setPosFeedback('Venta registrada en caja.', 'success');
+          this.adminControl.load().subscribe({
+            next: () => this.loadStocksAndPosState(),
+            error: () => this.loadStocksAndPosState()
+          });
+        },
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.setPosFeedback(error?.error?.message || error?.message || 'No se pudo registrar la venta.', 'error');
         }
       });
+  }
+
+  createPosCashCut(): void {
+    if (!this.canCreatePosCashCut || !this.currentPosStock) {
+      return;
+    }
+    this.isCuttingPosCash = true;
+    this.setPosFeedback('', '');
+    this.adminControl
+      .createPosCashCut({ stockId: this.currentPosStock.id })
+      .pipe(finalize(() => (this.isCuttingPosCash = false)))
+      .subscribe({
+        next: ({ control }) => {
+          this.posCashControl = {
+            stockId: control.stockId,
+            attendantUserId: control.attendantUserId ?? null,
+            currentTotal: Number(control.currentTotal ?? 0),
+            salesCount: Number(control.salesCount ?? 0),
+            startedAt: control.startedAt,
+            lastCutAt: control.lastCutAt,
+            lastCutTotal: Number(control.lastCutTotal ?? 0),
+            lastCutSalesCount: Number(control.lastCutSalesCount ?? 0),
+            lastSaleAt: control.lastSaleAt
+          };
+          this.setPosFeedback('Corte de caja registrado.', 'success');
+        },
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.setPosFeedback(error?.error?.message || error?.message || 'No se pudo registrar el corte.', 'error');
+        }
+      });
+  }
+
+  private syncPosOperatorContext(): void {
+    const linkedStocks = this.linkedPosStocks;
+    if (!linkedStocks.length) {
+      this.posForm.stockId = '';
+      this.posItems.clear();
+      this.posCashControl = null;
+      this.refreshPosCustomerRecommendations();
+      return;
+    }
+    if (!linkedStocks.some((stock) => stock.id === this.posForm.stockId)) {
+      this.posForm.stockId = linkedStocks[0].id;
+    }
+    this.syncPosSelectedItems();
+    this.refreshPosCustomerRecommendations();
+  }
+
+  private syncPosSelectedItems(): void {
+    const stockId = this.posForm.stockId;
+    if (!stockId) {
+      this.posItems.clear();
+      return;
+    }
+    for (const [productId, qty] of [...this.posItems.entries()]) {
+      const available = this.stockQty(stockId, productId);
+      if (available <= 0) {
+        this.posItems.delete(productId);
+        continue;
+      }
+      if (qty > available) {
+        this.posItems.set(productId, available);
+      }
+    }
+  }
+
+  private normalizePosCustomerSearch(value: string): string {
+    return (value ?? '').trim().toLowerCase();
+  }
+
+  private refreshPosCustomerRecommendations(): void {
+    const query = this.normalizePosCustomerSearch(this.posCustomerSearch);
+    const base = this.customers.map((customer) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      label: `${customer.name} · ${customer.email}`
+    }));
+    this.posCustomerRecommendations = (!query || query === this.normalizePosCustomerSearch('Publico en General')
+      ? base
+      : base.filter((candidate) => this.normalizePosCustomerSearch(`${candidate.name} ${candidate.email}`).includes(query))
+    ).slice(0, 8);
+  }
+
+  private loadSelectedPosCustomerProjection(): void {
+    const customer = this.selectedPosCustomer;
+    if (!customer) {
+      this.posSelectedCustomerMonth = null;
+      return;
+    }
+    this.isLoadingPosCustomerProjection = true;
+    this.adminControl
+      .getAssociateMonth(String(customer.id), this.currentMonthKey())
+      .pipe(
+        finalize(() => (this.isLoadingPosCustomerProjection = false)),
+        catchError(() =>
+          of({
+            associateId: String(customer.id),
+            monthKey: this.currentMonthKey(),
+            netVolume: 0,
+            isActive: false
+          })
+        )
+      )
+      .subscribe((month) => {
+        this.posSelectedCustomerMonth = {
+          associateId: String(month.associateId),
+          monthKey: month.monthKey,
+          netVolume: Number(month.netVolume ?? 0),
+          isActive: Boolean(month.isActive)
+        };
+      });
+  }
+
+  private refreshPosCashControl(): void {
+    const stockId = this.currentPosStock?.id;
+    if (!stockId) {
+      this.posCashControl = null;
+      return;
+    }
+    this.adminControl
+      .getPosCashControl(stockId)
+      .pipe(catchError(() => of(null)))
+      .subscribe((control) => {
+        if (!control) {
+          this.posCashControl = null;
+          return;
+        }
+        this.posCashControl = {
+          stockId: control.stockId,
+          attendantUserId: control.attendantUserId ?? null,
+          currentTotal: Number(control.currentTotal ?? 0),
+          salesCount: Number(control.salesCount ?? 0),
+          startedAt: control.startedAt,
+          lastCutAt: control.lastCutAt,
+          lastCutTotal: Number(control.lastCutTotal ?? 0),
+          lastCutSalesCount: Number(control.lastCutSalesCount ?? 0),
+          lastSaleAt: control.lastSaleAt
+        };
+      });
+  }
+
+  private parseCustomerDiscountRate(customer: AdminCustomer): number {
+    const match = String(customer.discount ?? '').match(/(\d+(?:\.\d+)?)\s*%/);
+    if (!match) {
+      return 0;
+    }
+    const value = Number(match[1]);
+    return Number.isFinite(value) ? value / 100 : 0;
+  }
+
+  private calculateDiscountTierRate(volume: number): number {
+    const tiers = this.businessConfig?.rewards?.discountTiers ?? [];
+    for (const tier of tiers) {
+      const min = Number(tier.min ?? 0);
+      const max = tier.max == null ? null : Number(tier.max);
+      const rate = Number(tier.rate ?? 0);
+      if (volume >= min && (max == null || volume <= max)) {
+        return Number.isFinite(rate) ? rate : 0;
+      }
+    }
+    return 0;
+  }
+
+  private currentMonthKey(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private roundMoney(value: number): number {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+  }
+
+  private setPosFeedback(message: string, tone: 'error' | 'success' | ''): void {
+    this.posFeedbackMessage = message;
+    this.posFeedbackTone = tone;
+    this.requestViewUpdate();
+  }
+
+  private setStockFeedback(message: string, tone: 'error' | 'success' | ''): void {
+    this.stockFeedbackMessage = message;
+    this.stockFeedbackTone = tone;
+    this.requestViewUpdate();
+  }
+
+  private setShippingError(message: string): void {
+    this.shippingError = message;
+    this.requestViewUpdate();
+  }
+
+  private requestViewUpdate(): void {
+    this.cdr.markForCheck();
+  }
+
+  private resolveUiErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+    if (!error || typeof error !== 'object') {
+      return fallback;
+    }
+
+    const candidate = error as {
+      message?: unknown;
+      error?: unknown;
+      body?: unknown;
+    };
+
+    if (typeof candidate.message === 'string' && candidate.message.trim()) {
+      return candidate.message.trim();
+    }
+
+    const nested = candidate.error;
+    if (typeof nested === 'string' && nested.trim()) {
+      try {
+        const parsed = JSON.parse(nested) as { message?: unknown; body?: unknown };
+        if (typeof parsed.message === 'string' && parsed.message.trim()) {
+          return parsed.message.trim();
+        }
+        if (typeof parsed.body === 'string' && parsed.body.trim()) {
+          const parsedBody = JSON.parse(parsed.body) as { message?: unknown };
+          if (typeof parsedBody.message === 'string' && parsedBody.message.trim()) {
+            return parsedBody.message.trim();
+          }
+        }
+      } catch {
+        return nested.trim();
+      }
+    }
+
+    if (nested && typeof nested === 'object') {
+      const nestedRecord = nested as { message?: unknown; body?: unknown };
+      if (typeof nestedRecord.message === 'string' && nestedRecord.message.trim()) {
+        return nestedRecord.message.trim();
+      }
+      if (typeof nestedRecord.body === 'string' && nestedRecord.body.trim()) {
+        try {
+          const parsedBody = JSON.parse(nestedRecord.body) as { message?: unknown };
+          if (typeof parsedBody.message === 'string' && parsedBody.message.trim()) {
+            return parsedBody.message.trim();
+          }
+        } catch {
+          return nestedRecord.body.trim();
+        }
+      }
+    }
+
+    if (typeof candidate.body === 'string' && candidate.body.trim()) {
+      try {
+        const parsedBody = JSON.parse(candidate.body) as { message?: unknown };
+        if (typeof parsedBody.message === 'string' && parsedBody.message.trim()) {
+          return parsedBody.message.trim();
+        }
+      } catch {
+        return candidate.body.trim();
+      }
+    }
+
+    return fallback;
   }
 
   saveBusinessConfig(): void {
@@ -2738,12 +3309,14 @@ export class AdminComponent implements OnInit {
     }
     this.isSavingBusinessConfig = true;
     this.businessConfigMessage = '';
+    const configToSave = this.normalizeBusinessConfigForSave(this.businessConfigDraft);
+    this.businessConfigDraft = structuredClone(configToSave);
     this.adminControl
-      .saveBusinessConfig({ config: structuredClone(this.businessConfigDraft) })
+      .saveBusinessConfig({ config: structuredClone(configToSave) })
       .pipe(finalize(() => (this.isSavingBusinessConfig = false)))
       .subscribe({
         next: (config) => {
-          this.businessConfigDraft = structuredClone(config);
+          this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
           this.businessConfigMessage = 'Configuracion guardada.';
         },
         error: () => {
@@ -2756,21 +3329,115 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('config_manage')) {
       return;
     }
-    this.businessConfigDraft = this.getDefaultBusinessConfig();
+    this.businessConfigDraft = this.normalizeBusinessConfigDraft(this.getDefaultBusinessConfig());
     this.businessConfigMessage = 'Se cargaron valores por defecto locales. Guarda para aplicar.';
   }
 
   private syncBusinessConfigDraft(): void {
     const inlineConfig = this.businessConfig;
     if (inlineConfig) {
-      this.businessConfigDraft = structuredClone(inlineConfig);
+      this.businessConfigDraft = this.normalizeBusinessConfigDraft(inlineConfig);
       return;
     }
     this.adminControl.getBusinessConfig().subscribe({
       next: (config) => {
-        this.businessConfigDraft = structuredClone(config);
+        this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
       }
     });
+  }
+
+  private normalizeBusinessConfigDraft(config: AppBusinessConfig): AppBusinessConfig {
+    const draft = structuredClone(config);
+    draft.rewards.discountTiers = this.normalizeDiscountTiers(draft.rewards.discountTiers, false);
+    this.normalizeBusinessConfigSelectValues(draft);
+    return draft;
+  }
+
+  private normalizeBusinessConfigForSave(config: AppBusinessConfig): AppBusinessConfig {
+    const next = structuredClone(config);
+    next.rewards.discountTiers = this.normalizeDiscountTiers(next.rewards.discountTiers, true);
+    this.normalizeBusinessConfigSelectValues(next);
+    return next;
+  }
+
+  private normalizeBusinessConfigSelectValues(config: AppBusinessConfig): void {
+    config.rewards.cutRule = this.ensureAllowedConfigValue(
+      config.rewards.cutRule,
+      this.rewardCutRuleOptions,
+      'hard_cut_no_pass'
+    );
+    config.pos.defaultPaymentStatus = this.ensureAllowedConfigValue(
+      config.pos.defaultPaymentStatus,
+      this.posPaymentStatusConfigOptions,
+      'paid_branch'
+    );
+    config.pos.defaultDeliveryStatus = this.ensureAllowedConfigValue(
+      config.pos.defaultDeliveryStatus,
+      this.posDeliveryStatusConfigOptions,
+      'delivered_branch'
+    );
+    config.pos.orderStatusByDeliveryStatus.delivered_branch = this.ensureAllowedConfigValue(
+      config.pos.orderStatusByDeliveryStatus.delivered_branch,
+      this.posOrderStatusMappingConfigOptions,
+      'delivered'
+    );
+    config.pos.orderStatusByDeliveryStatus.paid_branch = this.ensureAllowedConfigValue(
+      config.pos.orderStatusByDeliveryStatus.paid_branch,
+      this.posOrderStatusMappingConfigOptions,
+      'paid'
+    );
+  }
+
+  private normalizeDiscountTiers(tiers: DiscountTierDraft[], sortByMin: boolean): DiscountTierDraft[] {
+    const fallback = this.getDefaultBusinessConfig().rewards.discountTiers;
+    const source = Array.isArray(tiers) && tiers.length ? tiers : fallback;
+    const normalized = source.map((tier) => ({
+      min: this.parseNonNegativeNumber(tier?.min),
+      max: null,
+      rate: this.normalizeDiscountRateValue(tier?.rate)
+    }));
+    const ordered = sortByMin ? [...normalized].sort((left, right) => left.min - right.min) : normalized;
+    return ordered.map((tier, index) => {
+      const nextMin = ordered[index + 1]?.min;
+      return {
+        ...tier,
+        max: Number.isFinite(nextMin) && nextMin > tier.min ? nextMin - 1 : null
+      };
+    });
+  }
+
+  private refreshDiscountTierThresholds(): void {
+    this.businessConfigDraft.rewards.discountTiers = this.normalizeDiscountTiers(
+      this.businessConfigDraft.rewards.discountTiers ?? [],
+      false
+    );
+  }
+
+  private parseNonNegativeNumber(value: unknown): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return 0;
+    }
+    return this.roundMoney(parsed);
+  }
+
+  private normalizeDiscountRateValue(value: unknown): number {
+    const parsed = this.parseNonNegativeNumber(value);
+    const normalized = parsed > 1 ? parsed / 100 : parsed;
+    return Math.min(1, this.roundMoney(normalized));
+  }
+
+  private ensureAllowedConfigValue<T extends string | number>(
+    value: unknown,
+    options: Array<ExplainedSelectOption<T>>,
+    fallback: T
+  ): T {
+    const matched = options.find((option) => String(option.value) === String(value));
+    return matched?.value ?? fallback;
+  }
+
+  private buildSelectTooltip(options: Array<ExplainedSelectOption<string>>): string {
+    return options.map((option) => `${option.label}: ${option.description}`).join('\n');
   }
 
   private getDefaultBusinessConfig(): AppBusinessConfig {
@@ -2793,7 +3460,7 @@ export class AdminComponent implements OnInit {
         requireDispatchLinesOnShipped: true
       },
       pos: {
-        defaultCustomerName: 'Venta mostrador',
+        defaultCustomerName: 'Publico en General',
         defaultPaymentStatus: 'paid_branch',
         defaultDeliveryStatus: 'delivered_branch',
         orderStatusByDeliveryStatus: {

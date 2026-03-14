@@ -18,6 +18,8 @@ import {
   CustomerShippingAddress,
   CustomerProfile,
   InventoryMovement,
+  PosCashControl,
+  PosCashCut,
   PosSale,
   StockTransfer,
   UpdateOrderStatusPayload,
@@ -74,7 +76,7 @@ export class MockApiService {
       requireDispatchLinesOnShipped: true
     },
     pos: {
-      defaultCustomerName: 'Venta mostrador',
+      defaultCustomerName: 'Publico en General',
       defaultPaymentStatus: 'paid_branch',
       defaultDeliveryStatus: 'delivered_branch',
       orderStatusByDeliveryStatus: {
@@ -97,6 +99,8 @@ export class MockApiService {
   private stockTransfers: StockTransfer[] = [];
   private inventoryMovements: InventoryMovement[] = [];
   private posSales: PosSale[] = [];
+  private posCashCuts: PosCashCut[] = [];
+  private associateMonths: Record<string, AssociateMonth> = {};
   private campaigns: AdminCampaign[] = [
     {
       id: 'CMP-LANZAMIENTO-ENERGIA',
@@ -899,12 +903,16 @@ export class MockApiService {
   }
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
-    return of({
-      associateId,
-      monthKey,
-      netVolume: 0,
-      isActive: false
-    }).pipe(delay(120));
+    return of(
+      structuredClone(
+        this.associateMonths[this.monthStateKey(associateId, monthKey)] ?? {
+          associateId,
+          monthKey,
+          netVolume: 0,
+          isActive: false
+        }
+      )
+    ).pipe(delay(120));
   }
 
   getOrders(customerId: string): Observable<AdminOrder[]> {
@@ -1124,27 +1132,155 @@ export class MockApiService {
 
   registerPosSale(payload: {
     stockId: string;
-    attendantUserId?: number | null;
+    customerId?: number | null;
     customerName?: string;
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
   }): Observable<{ sale: PosSale }> {
-    const total = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const actorId = this.currentActorId();
+    if (!actorId) {
+      return throwError(() => new Error('Se requiere un usuario logeado para operar POS'));
+    }
+    const stock = this.stocks.find((entry) => entry.id === payload.stockId && entry.linkedUserIds.includes(actorId));
+    if (!stock) {
+      return throwError(() => new Error('El stock no esta vinculado al usuario logeado'));
+    }
+
+    const customer = payload.customerId != null ? this.customers.find((entry) => entry.id === payload.customerId) ?? null : null;
+    if (payload.customerId != null && !customer) {
+      return throwError(() => new Error('Cliente no encontrado'));
+    }
+
+    const grossSubtotal = payload.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const monthKey = this.monthKeyNow();
+    const monthState =
+      customer != null
+        ? this.associateMonths[this.monthStateKey(customer.id, monthKey)] ?? {
+            associateId: String(customer.id),
+            monthKey,
+            netVolume: 0,
+            isActive: false
+          }
+        : null;
+    const projectedRate = customer ? this.calculateDiscountRate((monthState?.netVolume ?? 0) + grossSubtotal) : 0;
+    const discountRate = customer ? Math.max(this.parseDiscountRate(customer.discount), projectedRate) : 0;
+    const discountAmount = grossSubtotal * discountRate;
+    const total = grossSubtotal - discountAmount;
+
+    const nextInventory = { ...(stock.inventory as Record<number, number>) };
+    for (const item of payload.items) {
+      const currentQty = Number(nextInventory[item.productId] ?? 0);
+      if (currentQty < item.quantity) {
+        return throwError(() => new Error(`Stock insuficiente para ${item.name}`));
+      }
+      nextInventory[item.productId] = currentQty - item.quantity;
+    }
+    this.stocks = this.stocks.map((entry) =>
+      entry.id === stock.id
+        ? {
+            ...entry,
+            inventory: nextInventory,
+            updatedAt: new Date().toISOString()
+          }
+        : entry
+    );
+
     const sale: PosSale = {
       id: `SALE-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       orderId: `POS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       stockId: payload.stockId,
-      attendantUserId: payload.attendantUserId ?? null,
-      customerName: payload.customerName || 'Venta mostrador',
+      attendantUserId: actorId,
+      customerId: customer?.id ?? null,
+      customerName: customer?.name || payload.customerName || 'Publico en General',
       paymentStatus: payload.paymentStatus ?? 'paid_branch',
       deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
+      grossSubtotal,
+      discountRate,
+      discountAmount,
       total,
       lines: payload.items.map((item) => ({ ...item })),
       createdAt: new Date().toISOString()
     };
+    this.inventoryMovements = [
+      ...payload.items.map((item) => ({
+        id: `MOV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+        type: 'pos_sale' as const,
+        stockId: payload.stockId,
+        productId: item.productId,
+        qty: item.quantity,
+        userId: actorId,
+        referenceId: sale.orderId,
+        createdAt: sale.createdAt
+      })),
+      ...this.inventoryMovements
+    ];
     this.posSales = [sale, ...this.posSales];
+    if (customer && monthState) {
+      const netVolume = monthState.netVolume + grossSubtotal;
+      this.associateMonths[this.monthStateKey(customer.id, monthKey)] = {
+        associateId: String(customer.id),
+        monthKey,
+        netVolume,
+        isActive: netVolume >= this.businessConfig.rewards.activationNetMin
+      };
+      this.customers = this.customers.map((entry) =>
+        entry.id === customer.id
+          ? {
+              ...entry,
+              discount: `${Math.round(discountRate * 100)}%`
+            }
+          : entry
+      );
+    }
     return of({ sale }).pipe(delay(120));
+  }
+
+  getPosCashControl(stockId?: string): Observable<PosCashControl> {
+    const actorId = this.currentActorId();
+    if (!actorId) {
+      return throwError(() => new Error('Se requiere un usuario logeado para operar POS'));
+    }
+    const control = this.buildPosCashControl(stockId, actorId);
+    if (!control) {
+      return throwError(() => new Error('El usuario logeado no tiene un stock vinculado'));
+    }
+    return of(control).pipe(delay(120));
+  }
+
+  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+    const actorId = this.currentActorId();
+    if (!actorId) {
+      return throwError(() => new Error('Se requiere un usuario logeado para operar POS'));
+    }
+    const control = this.buildPosCashControl(payload.stockId, actorId);
+    if (!control) {
+      return throwError(() => new Error('El usuario logeado no tiene un stock vinculado'));
+    }
+    if (control.salesCount <= 0 || control.currentTotal <= 0) {
+      return throwError(() => new Error('No hay ventas pendientes para corte'));
+    }
+    const now = new Date().toISOString();
+    const cut: PosCashCut = {
+      id: `CUT-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      stockId: control.stockId,
+      attendantUserId: actorId,
+      total: control.currentTotal,
+      salesCount: control.salesCount,
+      startedAt: control.startedAt,
+      endedAt: now,
+      createdAt: now
+    };
+    this.posCashCuts = [cut, ...this.posCashCuts];
+    return of({
+      cut,
+      control: this.buildPosCashControl(payload.stockId, actorId) ?? {
+        stockId: payload.stockId,
+        attendantUserId: actorId,
+        currentTotal: 0,
+        salesCount: 0
+      }
+    }).pipe(delay(120));
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
@@ -1203,6 +1339,78 @@ export class MockApiService {
       return '';
     }
     return raw;
+  }
+
+  private currentActorId(): number | null {
+    const raw = localStorage.getItem('auth-user');
+    if (!raw) {
+      return null;
+    }
+    try {
+      const user = JSON.parse(raw) as { userId?: string | number };
+      const parsed = Number(user.userId);
+      return Number.isFinite(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private monthKeyNow(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private monthStateKey(associateId: number | string, monthKey: string): string {
+    return `${associateId}#${monthKey}`;
+  }
+
+  private calculateDiscountRate(volume: number): number {
+    for (const tier of this.businessConfig.rewards.discountTiers) {
+      const min = Number(tier.min ?? 0);
+      const max = tier.max == null ? null : Number(tier.max);
+      const rate = Number(tier.rate ?? 0);
+      if (volume >= min && (max == null || volume <= max)) {
+        return Number.isFinite(rate) ? rate : 0;
+      }
+    }
+    return 0;
+  }
+
+  private parseDiscountRate(label: string | undefined): number {
+    const match = String(label ?? '').match(/(\d+(?:\.\d+)?)\s*%/);
+    if (!match) {
+      return 0;
+    }
+    const value = Number(match[1]);
+    return Number.isFinite(value) ? value / 100 : 0;
+  }
+
+  private buildPosCashControl(stockId: string | undefined, actorId: number): PosCashControl | null {
+    const linkedStocks = this.stocks.filter((entry) => entry.linkedUserIds.includes(actorId));
+    const selectedStock = linkedStocks.find((entry) => entry.id === stockId) ?? linkedStocks[0];
+    if (!selectedStock) {
+      return null;
+    }
+    const lastCut = this.posCashCuts.find((entry) => entry.stockId === selectedStock.id && entry.attendantUserId === actorId);
+    const relevantSales = this.posSales
+      .filter(
+        (entry) =>
+          entry.stockId === selectedStock.id &&
+          entry.attendantUserId === actorId &&
+          (!lastCut?.createdAt || String(entry.createdAt ?? '') > String(lastCut.createdAt))
+      )
+      .sort((a, b) => String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
+    return {
+      stockId: selectedStock.id,
+      attendantUserId: actorId,
+      currentTotal: relevantSales.reduce((acc, entry) => acc + entry.total, 0),
+      salesCount: relevantSales.length,
+      startedAt: relevantSales[0]?.createdAt ?? lastCut?.createdAt,
+      lastCutAt: lastCut?.createdAt,
+      lastCutTotal: lastCut?.total ?? 0,
+      lastCutSalesCount: lastCut?.salesCount ?? 0,
+      lastSaleAt: relevantSales.at(-1)?.createdAt
+    };
   }
 
   private buildActiveNotifications(customerKey: string): PortalNotification[] {
