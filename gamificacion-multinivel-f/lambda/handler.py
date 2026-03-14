@@ -493,7 +493,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: List[dict], cfg
     goals.insert(2, {
         "key": "invite",
         "title": "Agregar un nuevo miembro a la red este mes",
-        "subtitle": "Invita a 1 persona y actÃ­vala",
+        "subtitle": "Invita a 1 persona y actí­vala",
         "target": 1,
         "base": int(new_direct),
         "achieved": bool(new_direct >= 1),
@@ -522,7 +522,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: List[dict], cfg
     goals.insert(6, {
         "key": "direct_all_active",
         "title": "Lograr que todos los miembros del nivel inmediato inferior logren su meta mensual",
-        "subtitle": ("AÃºn no tienes miembros directos" if not_applicable else f"Directos: {direct_count}"),
+        "subtitle": ("Aún no tienes miembros directos" if not_applicable else f"Directos: {direct_count}"),
         "target": direct_count if direct_count else 1,
         "base": direct_count if all_direct_ok and direct_count else 0,
         "achieved": bool(all_direct_ok and direct_count > 0),
@@ -2199,7 +2199,7 @@ def _confirm_order_commissions(order_item: dict) -> List[dict]:
     if buyer_id is not None:
         beneficiaries = _upline_chain(buyer_id, max_levels=MAX_COMMISSION_LEVELS)
 
-    # Si es guest, tambiÃ©n incluye referrer (si existe)
+    # Si es guest, también incluye referrer (si existe)
     
     print("_confirm_order_commissions called - buyer_type:", buyer_type)
     if buyer_type == "guest":
@@ -3040,9 +3040,9 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
     """
     NUEVO COMPORTAMIENTO (paid):
     - Por cada beneficiario, crea o actualiza el item COMMISSION_MONTH (PK fijo, SK por beneficiary+month).
-    - Inserta/reemplaza (idempotente) la fila del ledger que corresponde a esta orden (rowId determinÃ­stico).
+    - Inserta/reemplaza (idempotente) la fila del ledger que corresponde a esta orden (rowId determiní­stico).
     - Recalcula totalPending/totalConfirmed SIEMPRE a partir del ledger (no incrementos).
-    - NO confirma pagos aquÃ­ (siguen como 'pending'); eso pasa en delivered.
+    - NO confirma pagos aquí­ (siguen como 'pending'); eso pasa en delivered.
     """
 
     def _row_id(order_id: str, level: int) -> str:
@@ -3074,7 +3074,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
                 delta = (new_amt - old_amt)
                 return existing_ledger, delta
 
-        # No existÃ­a, agrega
+        # No existí­a, agrega
         existing_ledger.append(new_row)
         delta = new_amt
         return existing_ledger, delta
@@ -3117,7 +3117,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
         {":g": gross, ":dr": discount_rate, ":da": discount_amount, ":n": net, ":mk": month_key, ":u": _now_iso()},
     )
 
-    # Si es guest + referrer: comisiÃ³n one-shot (solo referrer)
+    # Si es guest + referrer: comisión one-shot (solo referrer)
     if buyer_type == "guest" and referrer_id:
         rate = Decimal("0.10")
         amount = (net * rate).quantize(D_CENT)
@@ -3304,7 +3304,7 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
         "uplineChain": chain,
         "cut": bool(blocked_by),
         "commissionsCreated": trail,
-        "commissionsPaid": [],  # ya no "pagas" aquÃ­, solo generas ledger en pending
+        "commissionsPaid": [],  # ya no "pagas" aquí­, solo generas ledger en pending
         "mode": "multilevel",
     }
 
@@ -3691,7 +3691,7 @@ def _create_account(payload: dict) -> dict:
     if not name or not email or not password:
         return _json_response(200, {"message": "name, email y password son obligatorios", "Error": "BadRequest"})
     if password != confirm:
-        return _json_response(200, {"message": "Las contraseÃ±as no coinciden", "Error": "BadRequest"})
+        return _json_response(200, {"message": "Las contraseñas no coinciden", "Error": "BadRequest"})
 
     email_norm = _normalize_email(email)
     if not email_norm:
@@ -3772,8 +3772,9 @@ def _update_customer_privileges(customer_id: str, payload: dict, headers: Option
     updated = _update_by_id(
         "CUSTOMER",
         cid,
-        "SET canAccessAdmin = :ca, privileges = :pr, updatedAt = :u",
+        "SET canAccessAdmin = :ca, #pr = :pr, updatedAt = :u",
         {":ca": can_access_admin, ":pr": privileges, ":u": _now_iso()},
+        ean={"#pr": "privileges"},
     )
     auth = _get_auth_by_email(_normalize_email(customer.get("email")))
     if auth:

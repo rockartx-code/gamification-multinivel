@@ -44,7 +44,7 @@
             class="pointer-events-none absolute inset-0 bg-olive-10">
           </div>
           <div class="relative">
-            <div class="text-xs text-gray-600">NavegaciÃ³n</div>
+            <div class="text-xs text-gray-600">Navegación</div>
             <ui-sidebar-nav [links]="adminNavLinksStable" [activeId]="currentView" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
           </div>
         </div>
@@ -59,7 +59,7 @@
             <div class="mt-1 text-xs text-gray-600">Pedidos: {{ ordersCount }}</div>
             <div class="mt-1 text-xs text-gray-600">Pendientes: {{ pendingCount }}</div>
             <div class="mt-1 text-xs text-gray-600">Pagados: {{ paidCount }}</div>
-            <div class="mt-1 text-xs text-gray-600">Pendientes envÃ­o: {{ pendingShippingCount }}</div>
+            <div class="mt-1 text-xs text-gray-600">Pendientes enví­o: {{ pendingShippingCount }}</div>
           </div>
         </div>
       </aside>
@@ -144,7 +144,7 @@
 
                     <ng-template #desktopHeader>
                       <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                        <div>Fecha de creaciÃ³n</div><div>Cliente</div><div>Total</div><div>Estado</div><div>GuÃ­a / Entrega</div><div>AcciÃ³n</div>
+                        <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guí­a / Entrega</div><div>Acción</div>
                       </div>
                     </ng-template>
 
@@ -216,7 +216,7 @@
                 <div class="hidden md:block overflow-auto">
                   <div class="table-soft text-sm">
                     <div class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>AcciÃ³n</div>
+                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
                     </div>
                     <div *ngFor="let customer of customers" class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ customer.name }}</div>
@@ -267,7 +267,7 @@
                     </div>
                   </div>
                   <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                    <div class="text-xs text-gray-600">AcciÃ³n sugerida</div>
+                    <div class="text-xs text-gray-600">Acción sugerida</div>
                     <div class="mt-1 text-sm text-muted">
                       {{
                       (customer?.commissions ?? 0) > 0
@@ -400,7 +400,7 @@
                   <div class="mt-3 flex gap-2">
                     <ui-button size="sm" variant="ghost">
                       <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                      CÃ³mo agregar
+                      Cómo agregar
                     </ui-button>
 
                     <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('customer_add')" (pressed)="openAddStructureModal()">
@@ -409,7 +409,7 @@
                     </ui-button>
                   </div>
 
-                  <div class="mt-1 text-xs text-gray-600">Mock. En producciÃ³n: pintar con datos reales.</div>
+                  <div class="mt-1 text-xs text-gray-600">Mock. En producción: pintar con datos reales.</div>
                   <ui-networkgraph class="block w-full mt-3 h-[220px]" [nodes]="structureGraphStable.nodes"
                     [links]="structureGraphStable.links" [viewBoxWidth]="700" [viewBoxHeight]="220" linkStyle="straight"
                     labelMode="short">
@@ -438,7 +438,7 @@
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
                 <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
-                  <span>CatÃ¡logo</span>
+                  <span>Catálogo</span>
                   <span class="text-xs text-gray-600">{{ productsCount }} productos</span>
                 </div>
 
@@ -469,7 +469,7 @@
                 <div class="hidden md:block overflow-auto">
                   <div class="table-soft text-sm">
                     <div class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                      <div>Producto</div><div>Precio</div><div>Estado</div><div>AcciÃ³n</div>
+                      <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
                     </div>
                     <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ product.name }}</div>
@@ -489,7 +489,7 @@
                   <div>
                     <div class="text-sm font-semibold text-main">Agregar / editar producto</div>
                     <div class="mt-1 text-xs text-gray-600">
-                      Incluye todas las imÃ¡genes requeridas para marketing.
+                      Incluye todas las imágenes requeridas para marketing.
                     </div>
                   </div>
                   <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" *ngIf="hasPermission(productForm.id ? 'product_update' : 'product_add')" [disabled]="!isProductFormValid || isSavingProduct" (click)="saveProduct()">
@@ -503,7 +503,7 @@
                 <div class="mt-4 grid gap-2 md:grid-cols-2">
                   <ui-form-field
                     label="Nombre"
-                    placeholder="COLÃGENO..."
+                    placeholder="COLÁGENO..."
                     [ngModel]="productForm.name"
                     (ngModelChange)="updateProductField('name', $event)"
                     wrapperClass="block md:col-span-2"
@@ -529,8 +529,8 @@
                   </ui-form-field>
 
                   <ui-form-field
-                    label="DescripciÃ³n corta (hook)"
-                    placeholder="Beneficio principal en 1 lÃ­nea..."
+                    label="Descripción corta (hook)"
+                    placeholder="Beneficio principal en 1 lí­nea..."
                     [ngModel]="productForm.hook"
                     (ngModelChange)="updateProductField('hook', $event)"
                     wrapperClass="block md:col-span-2"
@@ -539,7 +539,7 @@
                   <ui-form-field
                     kind="textarea"
                     [rows]="4"
-                    label="DescripciÃ³n"
+                    label="Descripción"
                     placeholder="Describe el producto, beneficios, modo de uso..."
                     [ngModel]="productForm.description"
                     (ngModelChange)="updateProductField('description', $event)"
@@ -586,9 +586,9 @@
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-sm font-semibold text-main">ImÃ¡genes / Assets</div>
+                  <div class="text-sm font-semibold text-main">Imágenes / Assets</div>
                   <div class="mt-1 text-xs text-gray-600">
-                    Sube las imÃ¡genes necesarias para: CTA, links de redes, miniatura de carrito y Producto del Mes.
+                    Sube las imágenes necesarias para: CTA, links de redes, miniatura de carrito y Producto del Mes.
                   </div>
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -929,7 +929,7 @@
                 <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(ordersTotal) }}</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">ConversiÃ³n</div>
+                <div class="text-[11px] text-gray-600">Conversión</div>
                 <div class="mt-1 text-2xl font-extrabold">{{ conversionRate | number: '1.1-1' }}%</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -970,7 +970,7 @@
                     <circle cx="540" cy="30" r="6" fill="rgba(245,185,66,.92)" />
                   </svg>
                   <div class="mt-3 text-xs text-gray-500">
-                    En producciÃ³n: alimenta con ventas por dÃ­a, cohortes, y funnel del checkout.
+                    En producción: alimenta con ventas por dí­a, cohortes, y funnel del checkout.
                   </div>
                 </div>
               </div>
@@ -1219,7 +1219,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Acciones urgentes</div>
-          <div class="mt-1 text-sm text-gray-600">ResolvÃ© pendientes crÃ­ticos desde aquÃ­.</div>
+          <div class="mt-1 text-sm text-gray-600">Resolvé pendientes crí­ticos desde aquí­.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -1243,7 +1243,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Nuevo pedido</div>
-          <div class="mt-1 text-sm text-gray-600">RegistrÃ¡ un pedido manual.</div>
+          <div class="mt-1 text-sm text-gray-600">Registrá un pedido manual.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -1340,7 +1340,7 @@
           <div class="mt-3 flex flex-wrap gap-2 text-sm text-main">
             <ui-button size="sm" [variant]="shippingType === 'carrier' ? 'primary' : 'ghost'" (pressed)="shippingType = 'carrier'">
               <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
-              PaqueterÃ­a (GuÃ­a)
+              Paqueterí­a (Guí­a)
             </ui-button>
             <ui-button size="sm" [variant]="shippingType === 'personal' ? 'primary' : 'ghost'" (pressed)="shippingType = 'personal'">
               <i class="fa-solid fa-handshake" aria-hidden="true"></i>
@@ -1452,7 +1452,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Agregar a estructura</div>
-          <div class="mt-1 text-sm text-gray-600">CompletÃ¡ los datos para crear el alta en la red.</div>
+          <div class="mt-1 text-sm text-gray-600">Completá los datos para crear el alta en la red.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -1470,7 +1470,7 @@
           (ngModelChange)="updateStructureField('name', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block"
-          label="TelÃ©fono"
+          label="Teléfono"
           iconClass="fa-solid fa-phone"
           placeholder="+54 9 11 0000 0000"
           [ngModel]="structureForm.phone"
@@ -1485,9 +1485,9 @@
           (ngModelChange)="updateStructureField('email', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block sm:col-span-2"
-          label="DirecciÃ³n (opcional)"
+          label="Dirección (opcional)"
           iconClass="fa-solid fa-map-location-dot"
-          placeholder="Calle y nÃºmero"
+          placeholder="Calle y número"
           [ngModel]="structureForm.address"
           (ngModelChange)="updateStructureField('address', $event)"></ui-form-field>
         <ui-form-field
@@ -1502,7 +1502,7 @@
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <ui-form-field
           wrapperClass="block"
-          label="LÃ­der asignado"
+          label="Lí­der asignado"
           [readonly]="true"
           [disabled]="true"
           [ngModel]="structureLeaderLabel"
@@ -1516,7 +1516,7 @@
           inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-sand-200 px-3 py-2 text-sm text-muted"></ui-form-field>
       </div>
       <div *ngIf="!structureLeader" class="mt-2 text-xs text-gray-500">
-        Sin cliente seleccionado: se crea sin lÃ­der.
+        Sin cliente seleccionado: se crea sin lí­der.
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">

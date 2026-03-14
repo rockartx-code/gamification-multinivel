@@ -152,7 +152,7 @@ export class MockApiService {
   private customers: AdminCustomer[] = [
     {
       id: 1,
-      name: 'Ana LÃ³pez',
+      name: 'Ana López',
       email: 'ana@mail.com',
       canAccessAdmin: true,
       privileges: Object.fromEntries(ALL_PRIVILEGES.map((privilege) => [privilege, true])),
@@ -188,7 +188,7 @@ export class MockApiService {
     },
     {
       id: 3,
-      name: 'MarÃ­a PÃ©rez',
+      name: 'Marí­a Pérez',
       email: 'maria@mail.com',
       canAccessAdmin: false,
       privileges: {},
@@ -282,7 +282,7 @@ export class MockApiService {
       password: 'cliente123',
       profile: {
         userId: '1',
-        name: 'Ana LÃ³pez',
+        name: 'Ana López',
         role: 'cliente' as const,
         canAccessAdmin: true,
         privileges: Object.fromEntries(

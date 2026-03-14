@@ -462,7 +462,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
             (order as { orderId?: string | number } | null)?.orderId ??
             '';
           if (!resolvedId) {
-            this.showToast('Orden creada, pero no se recibiÃ³ el ID.');
+            this.showToast('Orden creada, pero no se recibió el ID.');
             return;
           }
           const orderId = String(resolvedId);

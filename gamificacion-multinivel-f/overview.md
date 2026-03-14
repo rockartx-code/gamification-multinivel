@@ -57,9 +57,9 @@ Es el centro operativo del asociado. Incluye:
 - **Meta principal del mes** con barra de progreso.
 - **Metas secundarias** (opcionalmente visibles).
 - **Notificaciones del portal**:
-  - aparecen al iniciar sesiÃ³n,
+  - aparecen al iniciar sesión,
   - aceptan link opcional para capacitaciones o recordatorios,
-  - se marcan como leÃ­das para no repetirse.
+  - se marcan como leí­das para no repetirse.
 - **Tienda** con producto del mes, productos destacados y sugeridos.
 - **Carrito** rápido y acceso a checkout.
 - **Red** (estructura de miembros y su estado).

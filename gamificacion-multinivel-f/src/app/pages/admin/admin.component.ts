@@ -855,7 +855,7 @@ export class AdminComponent implements OnInit {
 
   get structureLeaderLabel(): string {
     if (!this.structureLeader) {
-      return 'Sin lÃ­der asignado';
+      return 'Sin lí­der asignado';
     }
     return this.structureLeader.name;
   }
@@ -1502,7 +1502,7 @@ export class AdminComponent implements OnInit {
       return;
     }
     if (this.shippingType === 'carrier' && !this.shippingTrackingNumber.trim()) {
-      this.shippingError = 'Ingresa el nÃƒÂºmero de guÃƒÂ­a.';
+      this.shippingError = 'Ingresa el níƒÂºmero de guíƒÂ­a.';
       return;
     }
     if (
@@ -1689,7 +1689,7 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.structureLeader = null;
-    this.structureLevel = 'RaÃ­z';
+    this.structureLevel = 'Raí­z';
   }
 
   updateStructureField(
