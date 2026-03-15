@@ -345,10 +345,12 @@ export class AdminComponent implements OnInit {
   productImageFiles = new Map<CreateProductAssetPayload['section'], File>();
   productMessage = '';
   private productMessageTimeout?: number;
+  private readonly updatingProductStatusIds = new Set<number>();
   productForm = {
     id: null as number | null,
     name: '',
     price: '',
+    active: true,
     sku: '',
     hook: '',
     description: '',
@@ -2215,6 +2217,7 @@ export class AdminComponent implements OnInit {
       id: product.id,
       name: product.name,
       price: String(product.price),
+      active: product.active !== false,
       sku: product.sku ?? '',
       hook: product.hook ?? '',
       description: product.description ?? '',
@@ -2237,6 +2240,63 @@ export class AdminComponent implements OnInit {
       ...this.productForm,
       [field]: value
     };
+  }
+
+  updateProductActive(active: boolean): void {
+    this.productForm = {
+      ...this.productForm,
+      active
+    };
+  }
+
+  toggleProductActive(product: AdminProduct): void {
+    if (!this.hasPermission('product_update')) {
+      return;
+    }
+    if (this.updatingProductStatusIds.has(product.id)) {
+      return;
+    }
+
+    const nextActive = !product.active;
+    this.updatingProductStatusIds.add(product.id);
+    this.adminControl
+      .saveProduct({
+        id: product.id,
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        active: nextActive,
+        sku: product.sku,
+        hook: product.hook,
+        description: product.description,
+        copyFacebook: product.copyFacebook,
+        copyInstagram: product.copyInstagram,
+        copyWhatsapp: product.copyWhatsapp,
+        tags: product.tags,
+        images: product.images
+      })
+      .pipe(
+        finalize(() => {
+          this.updatingProductStatusIds.delete(product.id);
+        })
+      )
+      .subscribe({
+        next: (updatedProduct) => {
+          if (this.productForm.id === updatedProduct.id) {
+            this.updateProductActive(updatedProduct.active !== false);
+          }
+          this.announceProductMessage(
+            updatedProduct.active ? `Producto reactivado: ${updatedProduct.name}.` : `Producto retirado: ${updatedProduct.name}.`
+          );
+        },
+        error: () => {
+          this.announceProductMessage('No se pudo actualizar el estado del producto.');
+        }
+      });
+  }
+
+  isUpdatingProductStatus(productId: number): boolean {
+    return this.updatingProductStatusIds.has(productId);
   }
 
   setProductOfMonth(product: AdminProduct): void {
@@ -2285,7 +2345,7 @@ export class AdminComponent implements OnInit {
             productId: this.productForm.id ?? undefined,
             name: this.productForm.name.trim(),
             price: Number(this.productForm.price),
-            active: true,
+            active: this.productForm.active,
             sku: this.productForm.sku.trim() || undefined,
             hook: this.productForm.hook.trim() || undefined,
             description: this.productForm.description || undefined,
@@ -2395,6 +2455,7 @@ export class AdminComponent implements OnInit {
       id: null,
       name: '',
       price: '',
+      active: true,
       sku: '',
       hook: '',
       description: '',

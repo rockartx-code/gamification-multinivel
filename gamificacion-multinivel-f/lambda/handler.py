@@ -578,13 +578,18 @@ def _compute_buy_again_ids_and_maybe_update(customer: Optional[dict], products: 
 
     counts = customer.get("productCounts")
     existing = customer.get("buyAgainIds")
+    active_product_ids = {
+        str(item.get("productId"))
+        for item in products
+        if isinstance(item, dict) and bool(item.get("active", True))
+    }
 
     if not isinstance(counts, dict) or not counts:
         should_persist = (isinstance(existing, list) and len(existing) > 0)
         return ([], should_persist)
 
     ordered = sorted(counts.items(), key=lambda kv: int(kv[1] or 0), reverse=True)
-    top = [str(pid) for pid, _ in ordered[:3]]
+    top = [str(pid) for pid, _ in ordered if str(pid) in active_product_ids][:3]
 
     existing_norm = [str(x) for x in existing] if isinstance(existing, list) else []
     should_persist = (existing_norm[:3] != top)
@@ -5358,6 +5363,11 @@ def _pick_product_image(images: Optional[list], preferred_sections: List[str]) -
 def _get_product_of_month_item() -> Optional[dict]:
     return _get_by_id("PRODUCT_OF_MONTH", "current")
 
+def _is_product_active(item: Optional[dict]) -> bool:
+    if not item or not isinstance(item, dict):
+        return False
+    return _truthy_flag(item.get("active"), default=True)
+
 def _get_product_summary(item: dict) -> dict:
     images = item.get("images") or []
     tags = item.get("tags") or []
@@ -5378,8 +5388,11 @@ def _set_product_of_month(payload: dict, headers: Optional[dict] = None) -> dict
     if not pid:
         return _json_response(200, {"message": "productId es obligatorio", "Error": "BadRequest"})
 
-    if not _get_by_id("PRODUCT", int(pid)):
+    product = _get_by_id("PRODUCT", int(pid))
+    if not product:
         return _json_response(200, {"message": "Producto no encontrado", "Error": "NoEncontrado"})
+    if not _is_product_active(product):
+        return _json_response(200, {"message": "El producto retirado no puede ser producto del mes", "Error": "BadRequest"})
 
     now = _now_iso()
     if _get_product_of_month_item():
@@ -5407,6 +5420,8 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
     campaigns = []
     
     for item in products_raw:
+        if not _is_product_active(item):
+            continue
         s = _get_product_summary(item)
         products.append({
             "id": s["id"], "name": s["name"], "price": s["price"],
@@ -5432,7 +5447,8 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
     product_of_month = None
     if pom_item:
         p = _get_by_id("PRODUCT", int(pom_item.get("productId")))
-        if p: product_of_month = _get_product_summary(p)
+        if _is_product_active(p):
+            product_of_month = _get_product_summary(p)
 
     cfg = _load_rewards_config()
     month_key = _month_key()

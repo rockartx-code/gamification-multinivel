@@ -451,7 +451,7 @@
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ product.name }}</div>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs">
-                        {{ product.active ? 'Activo' : 'Inactivo' }}
+                        {{ product.active ? 'Activo' : 'Retirado' }}
                       </span>
                     </div>
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
@@ -462,7 +462,11 @@
                         <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                         Editar
                       </ui-button>
-                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)">
+                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (pressed)="toggleProductActive(product)">
+                        <i class="fa-solid" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
+                        {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
+                      </ui-button>
+                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)">
                         <i class="fa-solid fa-star" aria-hidden="true"></i>
                         Producto del mes
                       </ui-button>
@@ -478,10 +482,14 @@
                     <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ product.name }}</div>
                       <div>{{ formatMoney(product.price) }}</div>
-                      <div>{{ product.active ? 'Activo' : 'Inactivo' }}</div>
+                      <div>{{ product.active ? 'Activo' : 'Retirado' }}</div>
                       <div class="flex flex-wrap gap-2">
                         <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
-                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
+                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (pressed)="toggleProductActive(product)">
+                          <i class="fa-solid" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
+                          {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
+                        </ui-button>
+                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
                       </div>
                     </div>
                   </div>
@@ -531,6 +539,15 @@
                     wrapperClass="block"
                     inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
+                  <div class="block md:col-span-2 rounded-2xl border border-olive-30 bg-white/70 px-4 py-3">
+                    <label class="flex items-center justify-between gap-3 text-sm text-main">
+                      <div>
+                        <div class="font-semibold">{{ productForm.active ? 'Producto visible' : 'Producto retirado' }}</div>
+                        <div class="mt-1 text-xs text-gray-600">Si lo retiras, desaparece de compra, gancho y producto del mes.</div>
+                      </div>
+                      <input type="checkbox" [checked]="productForm.active" (change)="updateProductActive($any($event.target).checked)" />
+                    </label>
+                  </div>
 
                   <ui-form-field
                     label="Descripción corta (hook)"
