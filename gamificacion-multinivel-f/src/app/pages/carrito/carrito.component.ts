@@ -17,6 +17,13 @@ import { UserDashboardControlService } from '../../services/user-dashboard-contr
 import { UiProductCardComponent } from '../../components/ui-product-card/ui-product-card.component';
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
+import { BrowserDomService } from '../../services/browser/browser-dom.service';
+import { BrowserLocationService } from '../../services/browser/browser-location.service';
+import { BrowserStorageService } from '../../services/browser/browser-storage.service';
+import { BrowserTimerService } from '../../services/browser/browser-timer.service';
+import { BrowserViewportService } from '../../services/browser/browser-viewport.service';
+import { BusinessConfigService } from '../../services/business-config.service';
+import { NotificationService, UiNotificationState } from '../../services/notification.service';
 
 @Component({
   selector: 'app-carrito',
@@ -33,11 +40,17 @@ export class CarritoComponent implements OnInit, OnDestroy {
     private readonly dashboardControl: UserDashboardControlService,
     private readonly api: ApiService,
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly dom: BrowserDomService,
+    private readonly storage: BrowserStorageService,
+    private readonly location: BrowserLocationService,
+    private readonly timer: BrowserTimerService,
+    private readonly viewport: BrowserViewportService,
+    private readonly businessConfig: BusinessConfigService,
+    private readonly notifications: NotificationService
   ) {}
 
-  isToastVisible = false;
-  toastMessage = 'Actualizado.';
+  private readonly toast: UiNotificationState = { message: '', tone: 'info', visible: false };
   isSummaryOpen = false;
   isPlacingOrder = false;
   deliveryName = '';
@@ -78,13 +91,21 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private discountTiers: Array<{ min: number; max: number | null; rate: number }> = [];
   private monthNetVolume = 0;
 
+  get isToastVisible(): boolean {
+    return this.toast.visible;
+  }
+
+  get toastMessage(): string {
+    return this.toast.message || 'Actualizado.';
+  }
+
   ngOnInit(): void {
     this.cartControl.load().subscribe();
     this.dataSub = this.cartControl.data$.subscribe(() => this.cdr.markForCheck());
     this.goalControl.load().subscribe();
     this.goalsSub = this.goalControl.goals$.subscribe(() => this.cdr.markForCheck());
     this.updateCountdown();
-    this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
+    this.countdownInterval = this.timer.setInterval(() => this.updateCountdown(), 60000);
     this.prefillCustomerAddress();
     this.loadDiscountProjectionContext();
   }
@@ -93,16 +114,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.dataSub?.unsubscribe();
     this.goalsSub?.unsubscribe();
     if (this.countdownInterval) {
-      window.clearInterval(this.countdownInterval);
+      this.timer.clearInterval(this.countdownInterval);
     }
     if (this.toastTimeout) {
-      window.clearTimeout(this.toastTimeout);
+      this.timer.clearTimeout(this.toastTimeout);
     }
     if (this.addFadeTimeout) {
-      window.clearTimeout(this.addFadeTimeout);
+      this.timer.clearTimeout(this.addFadeTimeout);
     }
     if (this.addFadeRestartTimeout) {
-      window.clearTimeout(this.addFadeRestartTimeout);
+      this.timer.clearTimeout(this.addFadeRestartTimeout);
     }
     this.customerSub?.unsubscribe();
   }
@@ -477,7 +498,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   showSummary(): void {
-    if (window.matchMedia('(min-width: 1024px)').matches) {
+    if (this.viewport.matches('(min-width: 1024px)')) {
       this.scrollToSection('resumen-carrito');
       return;
     }
@@ -511,7 +532,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const userId = String(user.userId);
     this.api.getBusinessConfig().subscribe({
       next: (cfg: AppBusinessConfig) => {
-        this.discountTiers = Array.isArray(cfg?.rewards?.discountTiers) ? cfg.rewards.discountTiers : [];
+        this.discountTiers = this.businessConfig.normalizeForDraft(cfg).rewards.discountTiers;
         this.cdr.markForCheck();
       },
       error: () => {}
@@ -572,14 +593,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private showToast(message: string): void {
-    this.toastMessage = message;
-    this.isToastVisible = true;
-    if (this.toastTimeout) {
-      window.clearTimeout(this.toastTimeout);
-    }
-    this.toastTimeout = window.setTimeout(() => {
-      this.isToastVisible = false;
-    }, 2200);
+    this.toastTimeout = this.notifications.showFor(this.toast, message, 2200, this.toastTimeout);
   }
 
   private triggerAddedFade(itemId: string): void {
@@ -587,16 +601,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.addFadeRestartTimeout) {
-      window.clearTimeout(this.addFadeRestartTimeout);
+      this.timer.clearTimeout(this.addFadeRestartTimeout);
     }
     if (this.addFadeTimeout) {
-      window.clearTimeout(this.addFadeTimeout);
+      this.timer.clearTimeout(this.addFadeTimeout);
     }
     this.lastAddedItemId = '';
-    this.addFadeRestartTimeout = window.setTimeout(() => {
+    this.addFadeRestartTimeout = this.timer.setTimeout(() => {
       this.lastAddedItemId = itemId;
       this.cdr.markForCheck();
-      this.addFadeTimeout = window.setTimeout(() => {
+      this.addFadeTimeout = this.timer.setTimeout(() => {
         if (this.lastAddedItemId === itemId) {
           this.lastAddedItemId = '';
           this.cdr.markForCheck();
@@ -606,11 +620,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private scrollToSection(id: string): void {
-    const section = document.getElementById(id);
+    const section = this.dom.getElementById(id);
     if (!section) {
       return;
     }
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.dom.scrollIntoView(section, { behavior: 'smooth', block: 'start' });
   }
 
   private focusFirstMissingDeliveryField(): void {
@@ -625,14 +639,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
 
-    window.setTimeout(() => {
+    this.timer.setTimeout(() => {
       const selector = `[name="${missingField.name}"]`;
-      const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
+      const field = this.dom.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
       if (!field) {
         return;
       }
-      field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      field.focus();
+      this.dom.scrollIntoView(field, { behavior: 'smooth', block: 'center' });
+      this.dom.focus(field);
     }, 180);
   }
 
@@ -775,7 +789,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       phone: this.guestRegisterForm.phone.trim() || undefined,
       password: this.guestRegisterForm.password,
       confirmPassword: this.guestRegisterForm.confirmPassword,
-      referralToken: localStorage.getItem('leaderId') || undefined
+      referralToken: this.storage.getItem('leaderId') || undefined
     };
 
     this.isGuestRegisterSubmitting = true;
@@ -800,7 +814,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
           };
           this.showGuestRegisterModal = false;
           this.showToast('Cuenta creada. Bienvenido.');
-          window.location.reload();
+          this.location.reload();
         },
         error: (error: any) => {
           const apiMessage =

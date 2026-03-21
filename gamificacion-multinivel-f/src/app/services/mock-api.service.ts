@@ -44,6 +44,9 @@ import {
   ResetPasswordResponse
 } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
+import { ApiFacade } from './api-facade.contract';
+import { BrowserStorageService } from './browser/browser-storage.service';
+import { BusinessConfigService } from './business-config.service';
 import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
@@ -56,45 +59,8 @@ import { ALL_PRIVILEGES, normalizePrivileges } from '../models/privileges.model'
 @Injectable({
   providedIn: 'root'
 })
-export class MockApiService {
-  private businessConfig: AppBusinessConfig = {
-    version: 'app-v1',
-    rewards: {
-      version: 'v1',
-      activationNetMin: 2500,
-      discountTiers: [
-        { min: 3600, max: 8000, rate: 0.3 },
-        { min: 8001, max: 12000, rate: 0.4 },
-        { min: 12001, max: null, rate: 0.5 }
-      ],
-      commissionByDepth: { '1': 0.1, '2': 0.05, '3': 0.03 },
-      payoutDay: 10,
-      cutRule: 'hard_cut_no_pass'
-    },
-    orders: {
-      requireStockOnShipped: true,
-      requireDispatchLinesOnShipped: true
-    },
-    pos: {
-      defaultCustomerName: 'Publico en General',
-      defaultPaymentStatus: 'paid_branch',
-      defaultDeliveryStatus: 'delivered_branch',
-      orderStatusByDeliveryStatus: {
-        delivered_branch: 'delivered',
-        paid_branch: 'paid'
-      }
-    },
-    stocks: {
-      requireLinkedUserForTransferReceive: true
-    },
-    adminWarnings: {
-      showCommissions: true,
-      showShipping: true,
-      showPendingPayments: true,
-      showPendingTransfers: true,
-      showPosSalesToday: true
-    }
-  };
+export class MockApiService implements ApiFacade {
+  private businessConfig: AppBusinessConfig;
   private stocks: AdminStock[] = [];
   private stockTransfers: StockTransfer[] = [];
   private inventoryMovements: InventoryMovement[] = [];
@@ -346,6 +312,13 @@ export class MockApiService {
   ];
   private productOfMonthId = 1;
 
+  constructor(
+    private readonly storage: BrowserStorageService,
+    private readonly businessConfigService: BusinessConfigService
+  ) {
+    this.businessConfig = this.businessConfigService.createDefaultConfig();
+  }
+
   login(username: string, password: string): Observable<AuthUser> {
     const match = this.loginUsers.find((user) => user.username === username && user.password === password);
     if (!match) {
@@ -444,7 +417,7 @@ export class MockApiService {
       products: [...this.products],
       campaigns: [...this.campaigns],
       notifications: this.notifications.map((notification) => this.normalizeNotification(notification)),
-      businessConfig: structuredClone(this.businessConfig),
+      businessConfig: this.businessConfigService.normalizeForDraft(this.businessConfig),
       warnings: [
         { type: 'commissions', text: '3 comisiones pendientes por depositar', severity: 'high' },
         { type: 'shipping', text: '2 pedidos pagados sin envío', severity: 'high' },
@@ -1342,17 +1315,12 @@ export class MockApiService {
   }
 
   private currentActorId(): number | null {
-    const raw = localStorage.getItem('auth-user');
-    if (!raw) {
+    const user = this.storage.getJson<{ userId?: string | number }>('auth-user');
+    if (!user) {
       return null;
     }
-    try {
-      const user = JSON.parse(raw) as { userId?: string | number };
-      const parsed = Number(user.userId);
-      return Number.isFinite(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
+    const parsed = Number(user.userId);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private monthKeyNow(): string {
@@ -1516,11 +1484,11 @@ export class MockApiService {
   }
 
   getBusinessConfig(): Observable<AppBusinessConfig> {
-    return of(structuredClone(this.businessConfig)).pipe(delay(120));
+    return of(this.businessConfigService.normalizeForDraft(this.businessConfig)).pipe(delay(120));
   }
 
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
-    this.businessConfig = structuredClone(payload.config);
-    return of(structuredClone(this.businessConfig)).pipe(delay(120));
+    this.businessConfig = this.businessConfigService.normalizeForSave(payload.config);
+    return of(this.businessConfigService.normalizeForDraft(this.businessConfig)).pipe(delay(120));
   }
 }

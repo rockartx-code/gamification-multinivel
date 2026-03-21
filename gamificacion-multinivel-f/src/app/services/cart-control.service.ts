@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 
 import { CartData, CartItem } from '../models/cart.model';
+import { BrowserStorageService } from './browser/browser-storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ export class CartControlService {
   private payMethod: 'card' | 'spei' | 'cash' = 'card';
   private readonly localCartKey = 'cart-items';
 
-  constructor() {}
+  constructor(private readonly storage: BrowserStorageService) {}
 
   load(): Observable<CartData> {
     const localItems = this.readLocalCartItems();
@@ -180,11 +181,7 @@ export class CartControlService {
   clearCart(): void {
     const current = this.ensureData();
     this.dataSubject.next({ ...current, items: [] });
-    try {
-      localStorage.removeItem(this.localCartKey);
-    } catch {
-      // ignore storage errors
-    }
+    this.storage.removeItem(this.localCartKey);
   }
 
   selectPay(method: 'card' | 'spei' | 'cash'): void {
@@ -210,19 +207,11 @@ export class CartControlService {
   }
 
   private readLocalCartItems(): CartItem[] {
-    try {
-      const raw = localStorage.getItem(this.localCartKey);
-      if (!raw) {
-        return [];
-      }
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.filter((item) => item && typeof item.id === 'string' && typeof item.qty === 'number');
-    } catch {
+    const parsed = this.storage.getJson<unknown>(this.localCartKey);
+    if (!Array.isArray(parsed)) {
       return [];
     }
+    return parsed.filter((item): item is CartItem => Boolean(item) && typeof item.id === 'string' && typeof item.qty === 'number');
   }
 
   private buildLocalCartData(items: CartItem[]): CartData {
@@ -244,10 +233,6 @@ export class CartControlService {
   }
 
   private persistLocalCartItems(items: CartItem[]): void {
-    try {
-      localStorage.setItem(this.localCartKey, JSON.stringify(items));
-    } catch {
-      // ignore storage errors
-    }
+    this.storage.setJson(this.localCartKey, items);
   }
 }

@@ -22,6 +22,7 @@ import {
   CreateProductAssetPayload,
   CreateStructureCustomerPayload
 } from '../../models/admin.model';
+import { BusinessConfigDiscountTier } from '../../models/business-config.model';
 import { PortalNotification } from '../../models/portal-notification.model';
 import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
@@ -35,6 +36,11 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { AdminControlService } from '../../services/admin-control.service';
+import { BrowserDomService } from '../../services/browser/browser-dom.service';
+import { BrowserLocationService } from '../../services/browser/browser-location.service';
+import { BusinessConfigService } from '../../services/business-config.service';
+import { NotificationService, UiNotificationState } from '../../services/notification.service';
+import { BrowserTimerService } from '../../services/browser/browser-timer.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 
 type StructureNode = {
@@ -152,7 +158,7 @@ type PosCustomerRecommendation = {
   label: string;
 };
 
-type DiscountTierDraft = AppBusinessConfig['rewards']['discountTiers'][number];
+type DiscountTierDraft = BusinessConfigDiscountTier;
 
 @Component({
   selector: 'app-admin',
@@ -276,9 +282,15 @@ export class AdminComponent implements OnInit {
     private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly dom: BrowserDomService,
+    private readonly location: BrowserLocationService,
+    private readonly timer: BrowserTimerService,
+    private readonly businessConfigService: BusinessConfigService,
+    private readonly notifier: NotificationService
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
+    this.businessConfigDraft = this.businessConfigService.createDefaultConfig();
   }
 
   currentView: AdminViewId = 'orders';
@@ -328,9 +340,9 @@ export class AdminComponent implements OnInit {
     { key: 'user_manage_privileges', label: 'Registrar privilegios' },
     { key: 'config_manage', label: 'Gestionar configuracion de negocio' }
   ];
-  businessConfigDraft: AppBusinessConfig = this.getDefaultBusinessConfig();
+  businessConfigDraft!: AppBusinessConfig;
   isSavingBusinessConfig = false;
-  businessConfigMessage = '';
+  private readonly businessConfigNotice: UiNotificationState = { message: '', tone: 'info', visible: false };
   structureForm = {
     name: '',
     phone: '',
@@ -343,7 +355,7 @@ export class AdminComponent implements OnInit {
   productImagePreviews = new Map<CreateProductAssetPayload['section'], string>();
   productImageUploads = new Map<CreateProductAssetPayload['section'], boolean>();
   productImageFiles = new Map<CreateProductAssetPayload['section'], File>();
-  productMessage = '';
+  private readonly productNotice: UiNotificationState = { message: '', tone: 'info', visible: false };
   private productMessageTimeout?: number;
   private readonly updatingProductStatusIds = new Set<number>();
   productForm = {
@@ -360,7 +372,19 @@ export class AdminComponent implements OnInit {
     tags: ''
   };
   productExistingImages: AdminProduct['images'] = [];
-  notificationMessage = '';
+  private readonly notificationNotice: UiNotificationState = { message: '', tone: 'info', visible: false };
+
+  get businessConfigMessage(): string {
+    return this.businessConfigNotice.message;
+  }
+
+  get productMessage(): string {
+    return this.productNotice.message;
+  }
+
+  get notificationMessage(): string {
+    return this.notificationNotice.message;
+  }
   isSavingNotification = false;
   notificationForm = this.getDefaultNotificationForm();
   productImageSlots = [
@@ -1470,7 +1494,7 @@ export class AdminComponent implements OnInit {
     if (!url) {
       return;
     }
-    window.open(url, '_blank', 'noopener');
+    this.location.open(url, '_blank', 'noopener');
   }
 
 
@@ -1589,9 +1613,9 @@ export class AdminComponent implements OnInit {
     }
     this.currentView = 'stats';
     this.isActionsModalOpen = true;
-    setTimeout(() => {
-      const actionsPanel = document.getElementById('admin-actions');
-      actionsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.timer.setTimeout(() => {
+      const actionsPanel = this.dom.getElementById('admin-actions');
+      this.dom.scrollIntoView(actionsPanel, { behavior: 'smooth', block: 'start' });
     }, 0);
   }
 
@@ -2398,7 +2422,7 @@ export class AdminComponent implements OnInit {
       endAt: this.toDateTimeLocalInput(notification.endAt),
       active: notification.active !== false
     };
-    this.notificationMessage = `Editando notificacion: ${notification.title}.`;
+    this.notifier.show(this.notificationNotice, `Editando notificacion: ${notification.title}.`);
   }
 
   updateNotificationField(
@@ -2435,13 +2459,15 @@ export class AdminComponent implements OnInit {
       )
       .subscribe({
         next: (notification) => {
-          this.notificationMessage = this.notificationForm.id
-            ? `Notificacion actualizada: ${notification.title}.`
-            : `Notificacion creada: ${notification.title}.`;
+          this.notifier.show(
+            this.notificationNotice,
+            this.notificationForm.id ? `Notificacion actualizada: ${notification.title}.` : `Notificacion creada: ${notification.title}.`,
+            'success'
+          );
           this.resetNotificationForm();
         },
         error: () => {
-          this.notificationMessage = 'No se pudo guardar la notificacion.';
+          this.notifier.show(this.notificationNotice, 'No se pudo guardar la notificacion.', 'error');
         }
       });
   }
@@ -2469,13 +2495,7 @@ export class AdminComponent implements OnInit {
   }
 
   private announceProductMessage(message: string): void {
-    this.productMessage = message;
-    if (this.productMessageTimeout) {
-      window.clearTimeout(this.productMessageTimeout);
-    }
-    this.productMessageTimeout = window.setTimeout(() => {
-      this.productMessage = '';
-    }, 2800);
+    this.productMessageTimeout = this.notifier.showFor(this.productNotice, message, 2800, this.productMessageTimeout, 'success');
   }
 
   notificationStatusLabel(status?: PortalNotification['status']): string {
@@ -3369,19 +3389,19 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.isSavingBusinessConfig = true;
-    this.businessConfigMessage = '';
-    const configToSave = this.normalizeBusinessConfigForSave(this.businessConfigDraft);
+    this.notifier.clear(this.businessConfigNotice);
+    const configToSave = this.businessConfigService.normalizeForSave(this.businessConfigDraft);
     this.businessConfigDraft = structuredClone(configToSave);
     this.adminControl
       .saveBusinessConfig({ config: structuredClone(configToSave) })
       .pipe(finalize(() => (this.isSavingBusinessConfig = false)))
       .subscribe({
         next: (config) => {
-          this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
-          this.businessConfigMessage = 'Configuracion guardada.';
+          this.businessConfigDraft = this.businessConfigService.normalizeForDraft(config);
+          this.notifier.show(this.businessConfigNotice, 'Configuracion guardada.', 'success');
         },
         error: () => {
-          this.businessConfigMessage = 'No se pudo guardar la configuracion.';
+          this.notifier.show(this.businessConfigNotice, 'No se pudo guardar la configuracion.', 'error');
         }
       });
   }
@@ -3390,88 +3410,25 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('config_manage')) {
       return;
     }
-    this.businessConfigDraft = this.normalizeBusinessConfigDraft(this.getDefaultBusinessConfig());
-    this.businessConfigMessage = 'Se cargaron valores por defecto locales. Guarda para aplicar.';
+    this.businessConfigDraft = this.businessConfigService.createDefaultConfig();
+    this.notifier.show(this.businessConfigNotice, 'Se cargaron valores por defecto locales. Guarda para aplicar.');
   }
 
   private syncBusinessConfigDraft(): void {
     const inlineConfig = this.businessConfig;
     if (inlineConfig) {
-      this.businessConfigDraft = this.normalizeBusinessConfigDraft(inlineConfig);
+      this.businessConfigDraft = this.businessConfigService.normalizeForDraft(inlineConfig);
       return;
     }
     this.adminControl.getBusinessConfig().subscribe({
       next: (config) => {
-        this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
+        this.businessConfigDraft = this.businessConfigService.normalizeForDraft(config);
       }
     });
   }
 
-  private normalizeBusinessConfigDraft(config: AppBusinessConfig): AppBusinessConfig {
-    const draft = structuredClone(config);
-    draft.rewards.discountTiers = this.normalizeDiscountTiers(draft.rewards.discountTiers, false);
-    this.normalizeBusinessConfigSelectValues(draft);
-    return draft;
-  }
-
-  private normalizeBusinessConfigForSave(config: AppBusinessConfig): AppBusinessConfig {
-    const next = structuredClone(config);
-    next.rewards.discountTiers = this.normalizeDiscountTiers(next.rewards.discountTiers, true);
-    this.normalizeBusinessConfigSelectValues(next);
-    return next;
-  }
-
-  private normalizeBusinessConfigSelectValues(config: AppBusinessConfig): void {
-    config.rewards.cutRule = this.ensureAllowedConfigValue(
-      config.rewards.cutRule,
-      this.rewardCutRuleOptions,
-      'hard_cut_no_pass'
-    );
-    config.pos.defaultPaymentStatus = this.ensureAllowedConfigValue(
-      config.pos.defaultPaymentStatus,
-      this.posPaymentStatusConfigOptions,
-      'paid_branch'
-    );
-    config.pos.defaultDeliveryStatus = this.ensureAllowedConfigValue(
-      config.pos.defaultDeliveryStatus,
-      this.posDeliveryStatusConfigOptions,
-      'delivered_branch'
-    );
-    config.pos.orderStatusByDeliveryStatus.delivered_branch = this.ensureAllowedConfigValue(
-      config.pos.orderStatusByDeliveryStatus.delivered_branch,
-      this.posOrderStatusMappingConfigOptions,
-      'delivered'
-    );
-    config.pos.orderStatusByDeliveryStatus.paid_branch = this.ensureAllowedConfigValue(
-      config.pos.orderStatusByDeliveryStatus.paid_branch,
-      this.posOrderStatusMappingConfigOptions,
-      'paid'
-    );
-  }
-
-  private normalizeDiscountTiers(tiers: DiscountTierDraft[], sortByMin: boolean): DiscountTierDraft[] {
-    const fallback = this.getDefaultBusinessConfig().rewards.discountTiers;
-    const source = Array.isArray(tiers) && tiers.length ? tiers : fallback;
-    const normalized = source.map((tier) => ({
-      min: this.parseNonNegativeNumber(tier?.min),
-      max: null,
-      rate: this.normalizeDiscountRateValue(tier?.rate)
-    }));
-    const ordered = sortByMin ? [...normalized].sort((left, right) => left.min - right.min) : normalized;
-    return ordered.map((tier, index) => {
-      const nextMin = ordered[index + 1]?.min;
-      return {
-        ...tier,
-        max: Number.isFinite(nextMin) && nextMin > tier.min ? nextMin - 1 : null
-      };
-    });
-  }
-
   private refreshDiscountTierThresholds(): void {
-    this.businessConfigDraft.rewards.discountTiers = this.normalizeDiscountTiers(
-      this.businessConfigDraft.rewards.discountTiers ?? [],
-      false
-    );
+    this.businessConfigDraft = this.businessConfigService.normalizeForDraft(this.businessConfigDraft);
   }
 
   private parseNonNegativeNumber(value: unknown): number {
@@ -3488,58 +3445,8 @@ export class AdminComponent implements OnInit {
     return Math.min(1, this.roundMoney(normalized));
   }
 
-  private ensureAllowedConfigValue<T extends string | number>(
-    value: unknown,
-    options: Array<ExplainedSelectOption<T>>,
-    fallback: T
-  ): T {
-    const matched = options.find((option) => String(option.value) === String(value));
-    return matched?.value ?? fallback;
-  }
-
   private buildSelectTooltip(options: Array<ExplainedSelectOption<string>>): string {
     return options.map((option) => `${option.label}: ${option.description}`).join('\n');
-  }
-
-  private getDefaultBusinessConfig(): AppBusinessConfig {
-    return {
-      version: 'app-v1',
-      rewards: {
-        version: 'v1',
-        activationNetMin: 2500,
-        discountTiers: [
-          { min: 3600, max: 8000, rate: 0.3 },
-          { min: 8001, max: 12000, rate: 0.4 },
-          { min: 12001, max: null, rate: 0.5 }
-        ],
-        commissionByDepth: { '1': 0.1, '2': 0.05, '3': 0.03 },
-        payoutDay: 10,
-        cutRule: 'hard_cut_no_pass'
-      },
-      orders: {
-        requireStockOnShipped: true,
-        requireDispatchLinesOnShipped: true
-      },
-      pos: {
-        defaultCustomerName: 'Publico en General',
-        defaultPaymentStatus: 'paid_branch',
-        defaultDeliveryStatus: 'delivered_branch',
-        orderStatusByDeliveryStatus: {
-          delivered_branch: 'delivered',
-          paid_branch: 'paid'
-        }
-      },
-      stocks: {
-        requireLinkedUserForTransferReceive: true
-      },
-      adminWarnings: {
-        showCommissions: true,
-        showShipping: true,
-        showPendingPayments: true,
-        showPendingTransfers: true,
-        showPosSalesToday: true
-      }
-    };
   }
 
   private resolveDispatchLines(order: AdminOrder): AdminOrderItem[] {

@@ -12,6 +12,10 @@ import { FeatureBadgeComponent } from '../../components/feature-badge/feature-ba
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { BrowserDomService } from '../../services/browser/browser-dom.service';
+import { BrowserLocationService } from '../../services/browser/browser-location.service';
+import { BrowserStorageService } from '../../services/browser/browser-storage.service';
+import { NotificationService, UiNotificationState } from '../../services/notification.service';
 
 @Component({
   selector: 'app-landing',
@@ -47,8 +51,7 @@ export class LandingComponent implements OnInit {
   referralToken = '';
   productId = '';
   isSubmitting = false;
-  feedbackMessage = '';
-  feedbackType: 'error' | 'success' | '' = '';
+  private readonly feedback: UiNotificationState = { message: '', tone: 'info', visible: false };
   featuredProduct: {
     id: string;
     name: string;
@@ -70,8 +73,23 @@ export class LandingComponent implements OnInit {
     private readonly cdr: ChangeDetectorRef,
     private readonly destroyRef: DestroyRef,
     private readonly router: Router,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly dom: BrowserDomService,
+    private readonly storage: BrowserStorageService,
+    private readonly location: BrowserLocationService,
+    private readonly notifications: NotificationService
   ) {}
+
+  get feedbackMessage(): string {
+    return this.feedback.message;
+  }
+
+  get feedbackType(): 'error' | 'success' | '' {
+    if (!this.feedback.visible) {
+      return '';
+    }
+    return this.feedback.tone === 'error' ? 'error' : 'success';
+  }
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('refToken') ?? '';
@@ -79,7 +97,7 @@ export class LandingComponent implements OnInit {
     this.referralToken = token.trim();
     this.productId = product.trim();
     if (this.referralToken) {
-      localStorage.setItem('leaderId', this.referralToken);
+      this.storage.setItem('leaderId', this.referralToken);
     }
     this.loadFeaturedProduct(this.productId);
   }
@@ -134,7 +152,7 @@ export class LandingComponent implements OnInit {
 
   scrollTo(sectionId: string, event?: Event): void {
     event?.preventDefault();
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.dom.scrollIntoView(this.dom.getElementById(sectionId), { behavior: 'smooth', block: 'start' });
   }
 
   createAccount(): void {
@@ -186,8 +204,11 @@ export class LandingComponent implements OnInit {
   }
 
   private setFeedback(message: string, type: 'error' | 'success'): void {
-    this.feedbackMessage = message;
-    this.feedbackType = type;
+    if (!message) {
+      this.notifications.clear(this.feedback);
+      return;
+    }
+    this.notifications.show(this.feedback, message, type);
   }
 
   private loadFeaturedProduct(queryProductId: string): void {
@@ -215,11 +236,8 @@ export class LandingComponent implements OnInit {
   }
 
   private getHashQueryParam(param: string): string {
-    if (typeof window === 'undefined') {
-      return '';
-    }
     try {
-      const hash = window.location.hash ?? '';
+      const hash = this.location.hash;
       const queryIndex = hash.indexOf('?');
       if (queryIndex === -1) {
         return '';

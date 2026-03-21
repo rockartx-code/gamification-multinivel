@@ -34,6 +34,7 @@ import {
 import { PortalNotification } from '../models/portal-notification.model';
 import { CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
+import { BusinessConfigService } from './business-config.service';
 
 @Injectable({
   providedIn: 'root'
@@ -42,7 +43,10 @@ export class AdminControlService {
   private readonly dataSubject = new BehaviorSubject<AdminData | null>(null);
   readonly data$ = this.dataSubject.asObservable();
 
-  constructor(private readonly api: ApiService) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly businessConfig: BusinessConfigService
+  ) {}
 
   load(): Observable<AdminData> {
     return this.api.getAdminData().pipe(
@@ -54,7 +58,7 @@ export class AdminControlService {
           products: data.products ?? [],
           campaigns: data.campaigns ?? [],
           notifications: data.notifications ?? [],
-          businessConfig: data.businessConfig,
+          businessConfig: data.businessConfig ? this.businessConfig.normalizeForDraft(data.businessConfig) : undefined,
           warnings: data.warnings ?? [],
           assetSlots: data.assetSlots ?? []
         };
@@ -251,7 +255,7 @@ export class AdminControlService {
         if (!current) {
           return;
         }
-        this.dataSubject.next({ ...current, businessConfig: config });
+        this.dataSubject.next({ ...current, businessConfig: this.businessConfig.normalizeForDraft(config) });
       })
     );
   }

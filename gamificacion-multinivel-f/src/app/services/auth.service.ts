@@ -9,6 +9,7 @@ import {
 } from '../models/auth.model';
 import { AdminViewId, AppPrivilege, normalizePrivileges, SCREEN_PRIVILEGE_BY_VIEW, UserPrivileges } from '../models/privileges.model';
 import { ApiService } from './api.service';
+import { BrowserStorageService } from './browser/browser-storage.service';
 
 export type UserRole = 'admin' | 'cliente';
 
@@ -33,7 +34,10 @@ export class AuthService {
 
   readonly user$ = this.userSubject.asObservable();
 
-  constructor(private readonly api: ApiService) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly storage: BrowserStorageService
+  ) {}
 
   get currentUser(): AuthUser | null {
     return this.userSubject.value;
@@ -80,7 +84,7 @@ export class AuthService {
 
   logout(): void {
     this.userSubject.next(null);
-    localStorage.removeItem(this.storageKey);
+    this.storage.removeItem(this.storageKey);
   }
 
   setUserFromCreateAccount(customer: CreateAccountCustomer): void {
@@ -102,7 +106,7 @@ export class AuthService {
       privileges: normalizePrivileges(user.privileges)
     };
     this.userSubject.next(normalized);
-    localStorage.setItem(this.storageKey, JSON.stringify(normalized));
+    this.storage.setJson(this.storageKey, normalized);
   }
 
   isSuperUser(user: AuthUser | null | undefined = this.currentUser): boolean {
@@ -164,7 +168,7 @@ export class AuthService {
   }
 
   private loadUser(): AuthUser | null {
-    const raw = localStorage.getItem(this.storageKey);
+    const raw = this.storage.getItem(this.storageKey);
     if (!raw) {
       return null;
     }
@@ -177,7 +181,7 @@ export class AuthService {
         privileges: normalizePrivileges(parsed.privileges)
       };
     } catch {
-      localStorage.removeItem(this.storageKey);
+      this.storage.removeItem(this.storageKey);
       return null;
     }
   }

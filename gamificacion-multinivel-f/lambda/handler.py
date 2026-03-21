@@ -13,7 +13,15 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
+from app.admin import AdminDashboardService
+from app.campaigns import CampaignService
+from app.config import ConfigService
+from app.notifications import NotificationService
+from app.user_dashboard import UserDashboardService
 from boto3.dynamodb.conditions import Attr, Key
+from helpers.auth import generate_otp_code, hash_otp, hash_password
+from helpers.http import get_path, get_query_params, parse_body, path_segments
+from helpers.responses import json_default, json_response
 
 # ---------------------------------------------------------------------------
 # Configuration & Constants
@@ -61,29 +69,10 @@ MAX_NOTIFICATION_DESCRIPTION_LENGTH = 300
 # JSON / HTTP helpers
 # ---------------------------------------------------------------------------
 def _json_default(value):
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, set):
-        return list(value)
-    raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
+    return json_default(value)
 
 def _json_response(status_code: int, payload: dict) -> dict:
-    return {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-            "Access-Control-Allow-Headers": (
-                "Content-Type,Authorization,"
-                "X-User-Id,X-User-Name,X-User-Role,"
-                "x-user-id,x-user-name,x-user-role,"
-                "X-Webhook-Secret,x-webhook-secret,"
-                "X-MercadoLibre-Signature,x-mercadolibre-signature"
-            ),
-        },
-        "body": json.dumps(payload, default=_json_default),
-    }
+    return json_response(status_code, payload)
 
 def _debug_json(value: Any) -> str:
     try:
@@ -166,13 +155,13 @@ def _to_decimal(n: Any) -> Decimal:
         return D_ZERO
 
 def _hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hash_password(password)
 
 def _hash_otp(otp: str) -> str:
-    return hashlib.sha256(otp.encode("utf-8")).hexdigest()
+    return hash_otp(otp)
 
 def _generate_otp_code(length: int = 6) -> str:
-    return "".join(random.choices("0123456789", k=length))
+    return generate_otp_code(length)
 
 def _parse_int_or_str(value: Any) -> Any:
     if value is None or value == "":
@@ -183,44 +172,16 @@ def _parse_int_or_str(value: Any) -> Any:
         return value
 
 def _parse_body(event: dict) -> dict:
-    body = event.get("body")
-    if not body:
-        return {}
-    if event.get("isBase64Encoded"):
-        try:
-            body = base64.b64decode(body).decode("utf-8")
-        except Exception:
-            return {}
-    try:
-        return json.loads(body)
-    except Exception:
-        return {}
+    return parse_body(event)
 
 def _get_query_params(event: dict) -> dict:
-    return event.get("queryStringParameters") or {}
+    return get_query_params(event)
 
 def _get_path(event: dict) -> str:
-    # Normalized path extraction
-    path_params = event.get("pathParameters") or {}
-    proxy = path_params.get("proxy")
-    
-    if proxy:
-        path = f"/{proxy}"
-    else:
-        path = event.get("path", "/") or "/"
-
-    stage = (event.get("requestContext") or {}).get("stage")
-    if stage and path.startswith(f"/{stage}/"):
-        path = path[len(stage) + 1:]
-
-    if path.startswith("/Multinivel/"):
-        path = path[11:] # len("/Multinivel")
-
-    return path if path.startswith("/") else f"/{path}"
+    return get_path(event)
 
 def _path_segments(event: dict) -> List[str]:
-    path = _get_path(event).strip("/")
-    return [seg for seg in path.split("/") if seg]
+    return path_segments(event)
 
 def _month_start_end(dt: Optional[datetime] = None) -> Tuple[datetime, datetime]:
     d = dt or datetime.now(timezone.utc)
@@ -1044,26 +1005,10 @@ def _send_network_join_email(sponsor: dict, member: dict) -> None:
     _send_email_via_ses(sponsor_email, subject, text_body, html_body)
 
 def _sponsor_contact_payload(customer: Optional[dict]) -> dict:
-    if customer and isinstance(customer, dict):
-        return {
-            "name": (customer.get("name") or DEFAULT_SPONSOR_NAME).strip() or DEFAULT_SPONSOR_NAME,
-            "email": (_normalize_email(customer.get("email")) or DEFAULT_SPONSOR_EMAIL),
-            "phone": (str(customer.get("phone") or "").strip() or DEFAULT_SPONSOR_PHONE),
-            "isDefault": False,
-        }
-    return {
-        "name": DEFAULT_SPONSOR_NAME,
-        "email": DEFAULT_SPONSOR_EMAIL,
-        "phone": DEFAULT_SPONSOR_PHONE,
-        "isDefault": True,
-    }
+    return _user_dashboard_service.sponsor_contact_payload(customer)
 
 def _find_effective_sponsor(customer: Optional[dict]) -> dict:
-    if not customer or not isinstance(customer, dict):
-        return _sponsor_contact_payload(None)
-    sponsor_id = customer.get("leaderId")
-    sponsor = _get_by_id("CUSTOMER", int(sponsor_id)) if sponsor_id not in (None, "") else None
-    return _sponsor_contact_payload(sponsor)
+    return _user_dashboard_service.build_sponsor_payload(customer)
 
 def _would_create_leader_cycle(customers_raw: List[dict], customer_id: Any, leader_id: Any) -> bool:
     if customer_id in (None, "") or leader_id in (None, ""):
@@ -1277,252 +1222,64 @@ def _ensure_commission_by_depth(cfg: dict) -> dict:
         },
     }
 
+_config_service = ConfigService(
+    default_commission_by_depth=DEFAULT_COMMISSION_BY_DEPTH,
+    json_response=_json_response,
+    audit_event=_audit_event,
+    get_by_id=_get_by_id,
+    put_entity=_put_entity,
+    update_by_id=_update_by_id,
+    now_iso=_now_iso,
+    to_decimal=_to_decimal,
+)
+
+
 def _default_rewards_config() -> dict:
-    return {
-        "version": "v1",
-        "activationNetMin": Decimal("2500"),
-        "discountTiers": [
-            {"min": Decimal("3600"), "max": Decimal("8000"), "rate": Decimal("0.30")},
-            {"min": Decimal("8001"), "max": Decimal("12000"), "rate": Decimal("0.40")},
-            {"min": Decimal("12001"), "max": None,           "rate": Decimal("0.50")},
-        ],
-        "commissionByDepth": {
-            "1": Decimal("0.10"),
-            "2": Decimal("0.05"),
-            "3": Decimal("0.03"),
-        },
-        "payoutDay": Decimal("10"),
-        "cutRule": "hard_cut_no_pass",
-    }
+    return _config_service.default_rewards_config()
+
 
 def _default_app_config() -> dict:
-    return {
-        "version": "app-v1",
-        "rewards": _default_rewards_config(),
-        "orders": {
-            "requireStockOnShipped": True,
-            "requireDispatchLinesOnShipped": True,
-        },
-        "pos": {
-            "defaultCustomerName": "Publico en General",
-            "defaultPaymentStatus": "paid_branch",
-            "defaultDeliveryStatus": "delivered_branch",
-            "orderStatusByDeliveryStatus": {
-                "delivered_branch": "delivered",
-                "paid_branch": "paid",
-            },
-        },
-        "stocks": {
-            "requireLinkedUserForTransferReceive": True,
-        },
-        "payments": {
-            "mercadoLibre": {
-                "enabled": False,
-                "accessToken": "",
-                "checkoutPreferencesUrl": "https://api.mercadopago.com/checkout/preferences",
-                "paymentInfoUrlTemplate": "https://api.mercadopago.com/v1/payments/{payment_id}",
-                "notificationUrl": "https://m85v7secp8.execute-api.us-east-1.amazonaws.com/default/Multinivel/webhooks/mercadolibre",
-                "successUrl": "https://www.findingu.com.mx/#/orden/{payment_id}?status=success",
-                "failureUrl": "https://www.findingu.com.mx/#/orden/{payment_id}?status=failure",
-                "pendingUrl": "https://www.findingu.com.mx/#/orden/{payment_id}?status=pending",
-                "currencyId": "MXN",
-                "webhookSecret": "",
-            },
-        },
-        "adminWarnings": {
-            "showCommissions": True,
-            "showShipping": True,
-            "showPendingPayments": True,
-            "showPendingTransfers": True,
-            "showPosSalesToday": True,
-        },
-    }
+    return _config_service.default_app_config()
+
 
 def _legacy_rewards_config_entity_id() -> str:
-    return "rewards-v1"
+    return _config_service.legacy_rewards_config_entity_id()
+
 
 def _app_config_entity_id() -> str:
-    return "app-v1"
+    return _config_service.app_config_entity_id()
+
 
 def _merge_dict(base: Any, override: Any) -> Any:
-    if isinstance(base, dict) and isinstance(override, dict):
-        merged = dict(base)
-        for key, value in override.items():
-            merged[key] = _merge_dict(merged.get(key), value)
-        return merged
-    return override if override is not None else base
+    return _config_service.merge_dict(base, override)
+
 
 def _normalize_rewards_config(raw: Any) -> dict:
-    base = _default_rewards_config()
-    merged = _merge_dict(base, raw if isinstance(raw, dict) else {})
-    cfg = _ensure_commission_by_depth(merged)
-    tiers_raw = cfg.get("discountTiers") or []
-    tiers: List[dict] = []
-    for tier in tiers_raw:
-        if not isinstance(tier, dict):
-            continue
-        min_value = _to_decimal(tier.get("min"))
-        max_raw = tier.get("max")
-        max_value = _to_decimal(max_raw) if max_raw not in (None, "") else None
-        rate = _to_decimal(tier.get("rate"))
-        tiers.append({"min": min_value, "max": max_value, "rate": rate})
-    if not tiers:
-        tiers = base.get("discountTiers") or []
-    cbd = cfg.get("commissionByDepth") or {}
-    return {
-        "version": "v1",
-        "activationNetMin": _to_decimal(cfg.get("activationNetMin", base.get("activationNetMin"))),
-        "discountTiers": tiers,
-        "commissionByDepth": {
-            "1": _to_decimal(cbd.get("1", DEFAULT_COMMISSION_BY_DEPTH[1])),
-            "2": _to_decimal(cbd.get("2", DEFAULT_COMMISSION_BY_DEPTH[2])),
-            "3": _to_decimal(cbd.get("3", DEFAULT_COMMISSION_BY_DEPTH[3])),
-        },
-        "payoutDay": _to_decimal(cfg.get("payoutDay", base.get("payoutDay"))),
-        "cutRule": str(cfg.get("cutRule") or base.get("cutRule") or "hard_cut_no_pass"),
-    }
+    return _config_service.normalize_rewards_config(raw)
+
 
 def _normalize_app_config(raw: Any) -> dict:
-    merged = _merge_dict(_default_app_config(), raw if isinstance(raw, dict) else {})
-    rewards = _normalize_rewards_config(merged.get("rewards"))
-    orders_raw = merged.get("orders") if isinstance(merged.get("orders"), dict) else {}
-    pos_raw = merged.get("pos") if isinstance(merged.get("pos"), dict) else {}
-    stocks_raw = merged.get("stocks") if isinstance(merged.get("stocks"), dict) else {}
-    payments_raw = merged.get("payments") if isinstance(merged.get("payments"), dict) else {}
-    ml_raw = payments_raw.get("mercadoLibre") if isinstance(payments_raw.get("mercadoLibre"), dict) else {}
-    warnings_raw = merged.get("adminWarnings") if isinstance(merged.get("adminWarnings"), dict) else {}
-    order_status_map = pos_raw.get("orderStatusByDeliveryStatus") if isinstance(pos_raw.get("orderStatusByDeliveryStatus"), dict) else {}
+    return _config_service.normalize_app_config(raw)
 
-    return {
-        "version": str(merged.get("version") or "app-v1"),
-        "rewards": rewards,
-        "orders": {
-            "requireStockOnShipped": bool(orders_raw.get("requireStockOnShipped", True)),
-            "requireDispatchLinesOnShipped": bool(orders_raw.get("requireDispatchLinesOnShipped", True)),
-        },
-        "pos": {
-            "defaultCustomerName": str(pos_raw.get("defaultCustomerName") or "Publico en General"),
-            "defaultPaymentStatus": str(pos_raw.get("defaultPaymentStatus") or "paid_branch"),
-            "defaultDeliveryStatus": str(pos_raw.get("defaultDeliveryStatus") or "delivered_branch"),
-            "orderStatusByDeliveryStatus": {
-                "delivered_branch": str(order_status_map.get("delivered_branch") or "delivered"),
-                "paid_branch": str(order_status_map.get("paid_branch") or "paid"),
-            },
-        },
-        "stocks": {
-            "requireLinkedUserForTransferReceive": bool(stocks_raw.get("requireLinkedUserForTransferReceive", True)),
-        },
-        "payments": {
-            "mercadoLibre": {
-                "enabled": bool(ml_raw.get("enabled", False)),
-                "accessToken": str(ml_raw.get("accessToken") or ""),
-                "checkoutPreferencesUrl": str(ml_raw.get("checkoutPreferencesUrl") or "https://api.mercadopago.com/checkout/preferences"),
-                "paymentInfoUrlTemplate": str(ml_raw.get("paymentInfoUrlTemplate") or "https://api.mercadopago.com/v1/payments/{payment_id}"),
-                "notificationUrl": str(ml_raw.get("notificationUrl") or ""),
-                "successUrl": str(ml_raw.get("successUrl") or ""),
-                "failureUrl": str(ml_raw.get("failureUrl") or ""),
-                "pendingUrl": str(ml_raw.get("pendingUrl") or ""),
-                "currencyId": str(ml_raw.get("currencyId") or "MXN"),
-                "webhookSecret": str(ml_raw.get("webhookSecret") or ""),
-            },
-        },
-        "adminWarnings": {
-            "showCommissions": bool(warnings_raw.get("showCommissions", True)),
-            "showShipping": bool(warnings_raw.get("showShipping", True)),
-            "showPendingPayments": bool(warnings_raw.get("showPendingPayments", True)),
-            "showPendingTransfers": bool(warnings_raw.get("showPendingTransfers", True)),
-            "showPosSalesToday": bool(warnings_raw.get("showPosSalesToday", True)),
-        },
-    }
-
-@functools.lru_cache(maxsize=1)
-def _load_app_config_cached() -> dict:
-    cfg = _get_by_id("CONFIG", _app_config_entity_id())
-    if cfg and isinstance(cfg, dict):
-        return _normalize_app_config(cfg.get("config"))
-    # Backward-compatible bootstrap from legacy rewards config.
-    legacy_rewards_item = _get_by_id("CONFIG", _legacy_rewards_config_entity_id())
-    if legacy_rewards_item and isinstance(legacy_rewards_item.get("config"), dict):
-        base = _default_app_config()
-        base["rewards"] = legacy_rewards_item.get("config") or _default_rewards_config()
-        return _normalize_app_config(base)
-    return _normalize_app_config(_default_app_config())
 
 def _load_app_config() -> dict:
-    cfg = _load_app_config_cached()
-    if not _get_by_id("CONFIG", _app_config_entity_id()):
-        now = _now_iso()
-        item = {
-            "entityType": "config",
-            "name": "app",
-            "configId": _app_config_entity_id(),
-            "config": cfg,
-            "createdAt": now,
-            "updatedAt": now,
-        }
-        _put_entity("CONFIG", _app_config_entity_id(), item, created_at_iso=now)
-    return cfg
+    return _config_service.load_app_config()
+
 
 def _save_legacy_rewards_config(cfg: dict) -> None:
-    now = _now_iso()
-    existing = _get_by_id("CONFIG", _legacy_rewards_config_entity_id())
-    normalized_rewards = _normalize_rewards_config(cfg)
-    if not existing:
-        item = {
-            "entityType": "config",
-            "name": "rewards",
-            "configId": _legacy_rewards_config_entity_id(),
-            "config": normalized_rewards,
-            "createdAt": now,
-            "updatedAt": now,
-        }
-        _put_entity("CONFIG", _legacy_rewards_config_entity_id(), item, created_at_iso=now)
-        return
+    _config_service.save_legacy_rewards_config(cfg)
 
-    _update_by_id(
-        "CONFIG",
-        _legacy_rewards_config_entity_id(),
-        "SET #c = :c, updatedAt = :u",
-        {":c": normalized_rewards, ":u": now},
-        ean={"#c": "config"},
-    )
 
 def _save_app_config(cfg: dict) -> dict:
-    now = _now_iso()
-    normalized = _normalize_app_config(cfg)
-    existing = _get_by_id("CONFIG", _app_config_entity_id())
-    if not existing:
-        item = {
-            "entityType": "config",
-            "name": "app",
-            "configId": _app_config_entity_id(),
-            "config": normalized,
-            "createdAt": now,
-            "updatedAt": now,
-        }
-        _put_entity("CONFIG", _app_config_entity_id(), item, created_at_iso=now)
-    else:
-        _update_by_id(
-            "CONFIG",
-            _app_config_entity_id(),
-            "SET #c = :c, updatedAt = :u",
-            {":c": normalized, ":u": now},
-            ean={"#c": "config"},
-        )
-    _save_legacy_rewards_config(normalized.get("rewards") or _default_rewards_config())
-    _load_app_config_cached.cache_clear()
-    return normalized
+    return _config_service.save_app_config(cfg)
+
 
 def _load_rewards_config() -> dict:
-    cfg = _load_app_config()
-    rewards = cfg.get("rewards") if isinstance(cfg, dict) else None
-    return _normalize_rewards_config(rewards)
+    return _config_service.load_rewards_config()
+
 
 def _save_rewards_config(cfg: dict) -> dict:
-    app_cfg = _load_app_config()
-    app_cfg["rewards"] = _normalize_rewards_config(cfg)
-    saved = _save_app_config(app_cfg)
-    return saved.get("rewards") or _default_rewards_config()
+    return _config_service.save_rewards_config(cfg)
 
 def _calc_discount_rate(gross_subtotal: Decimal, tiers: List[dict]) -> Decimal:
     g = gross_subtotal
@@ -3506,94 +3263,19 @@ def _save_product(payload: dict, headers: Optional[dict] = None) -> dict:
     return _json_response(201, {"product": main})
 
 def _campaign_payload(item: dict) -> dict:
-    return {
-        "id": item.get("campaignId"),
-        "name": item.get("name") or "",
-        "active": bool(item.get("active", True)),
-        "hook": item.get("hook") or "",
-        "description": item.get("description") or "",
-        "story": item.get("story") or "",
-        "feed": item.get("feed") or "",
-        "banner": item.get("banner") or "",
-        "heroImage": item.get("heroImage") or "",
-        "heroBadge": item.get("heroBadge") or "",
-        "heroTitle": item.get("heroTitle") or "",
-        "heroAccent": item.get("heroAccent") or "",
-        "heroTail": item.get("heroTail") or "",
-        "heroDescription": item.get("heroDescription") or "",
-        "ctaPrimaryText": item.get("ctaPrimaryText") or "",
-        "ctaSecondaryText": item.get("ctaSecondaryText") or "",
-        "benefits": item.get("benefits") or [],
-        "createdAt": item.get("createdAt"),
-        "updatedAt": item.get("updatedAt"),
-    }
+    return _campaign_service.campaign_payload(item)
+
 
 def _save_campaign(payload: dict, headers: Optional[dict] = None) -> dict:
-    name = (payload.get("name") or "").strip()
-    hook = (payload.get("hook") or "").strip()
-    story = (payload.get("story") or "").strip()
-    feed = (payload.get("feed") or "").strip()
-    banner = (payload.get("banner") or "").strip()
-    if not name or not hook or not story or not feed or not banner:
-        return _json_response(200, {"message": "name, hook, story, feed y banner son obligatorios", "Error": "BadRequest"})
+    return _campaign_service.save_campaign(payload, headers=headers)
 
-    campaign_id = (payload.get("id") or payload.get("campaignId") or "").strip()
-    now = _now_iso()
-    if campaign_id and _get_by_id("CAMPAIGN", campaign_id):
-        updated = _update_by_id(
-            "CAMPAIGN",
-            campaign_id,
-            "SET #n = :n, active = :a, hook = :h, description = :d, story = :s, feed = :f, banner = :b, heroImage = :hi, heroBadge = :hb, heroTitle = :ht, heroAccent = :ha, heroTail = :htl, heroDescription = :hd, ctaPrimaryText = :cp, ctaSecondaryText = :cs, benefits = :be, updatedAt = :u",
-            {
-                ":n": name,
-                ":a": bool(payload.get("active", True)),
-                ":h": hook,
-                ":d": (payload.get("description") or "").strip(),
-                ":s": story,
-                ":f": feed,
-                ":b": banner,
-                ":hi": (payload.get("heroImage") or "").strip(),
-                ":hb": (payload.get("heroBadge") or "").strip(),
-                ":ht": (payload.get("heroTitle") or "").strip(),
-                ":ha": (payload.get("heroAccent") or "").strip(),
-                ":htl": (payload.get("heroTail") or "").strip(),
-                ":hd": (payload.get("heroDescription") or "").strip(),
-                ":cp": (payload.get("ctaPrimaryText") or "").strip(),
-                ":cs": (payload.get("ctaSecondaryText") or "").strip(),
-                ":be": payload.get("benefits") if isinstance(payload.get("benefits"), list) else [],
-                ":u": now,
-            },
-            ean={"#n": "name"},
-        )
-        _audit_event("campaign.update", headers, payload, {"campaignId": campaign_id})
-        return _json_response(200, {"campaign": _campaign_payload(updated)})
 
-    campaign_id = campaign_id or f"CMP-{uuid.uuid4().hex[:10].upper()}"
-    item = {
-        "entityType": "campaign",
-        "campaignId": campaign_id,
-        "name": name,
-        "active": bool(payload.get("active", True)),
-        "hook": hook,
-        "description": (payload.get("description") or "").strip(),
-        "story": story,
-        "feed": feed,
-        "banner": banner,
-        "heroImage": (payload.get("heroImage") or "").strip(),
-        "heroBadge": (payload.get("heroBadge") or "").strip(),
-        "heroTitle": (payload.get("heroTitle") or "").strip(),
-        "heroAccent": (payload.get("heroAccent") or "").strip(),
-        "heroTail": (payload.get("heroTail") or "").strip(),
-        "heroDescription": (payload.get("heroDescription") or "").strip(),
-        "ctaPrimaryText": (payload.get("ctaPrimaryText") or "").strip(),
-        "ctaSecondaryText": (payload.get("ctaSecondaryText") or "").strip(),
-        "benefits": payload.get("benefits") if isinstance(payload.get("benefits"), list) else [],
-        "createdAt": now,
-        "updatedAt": now,
-    }
-    main = _put_entity("CAMPAIGN", campaign_id, item, created_at_iso=now)
-    _audit_event("campaign.create", headers, payload, {"campaignId": campaign_id})
-    return _json_response(201, {"campaign": _campaign_payload(main)})
+def _list_campaigns() -> List[dict]:
+    return _campaign_service.list_campaigns()
+
+
+def _list_active_campaigns() -> List[dict]:
+    return _campaign_service.list_active_campaigns()
 
 def _get_product(product_id: Any) -> dict:
     item = _get_by_id("PRODUCT", int(product_id))
@@ -4685,29 +4367,19 @@ def _list_pos_sales(query: dict) -> dict:
 # Rewards API
 # ---------------------------------------------------------------------------
 def _get_rewards_config_handler() -> dict:
-    return _json_response(200, {"config": _load_rewards_config()})
+    return _config_service.get_rewards_config_handler()
+
 
 def _put_rewards_config(payload: dict, headers: Optional[dict] = None) -> dict:
-    if not isinstance(payload, dict) or not payload:
-        return _json_response(200, {"message": "config invalida", "Error": "BadRequest"})
-    candidate = payload.get("config") if isinstance(payload.get("config"), dict) else payload
-    cfg = _normalize_rewards_config(candidate)
-    saved = _save_rewards_config(cfg)
-    _audit_event("config.rewards.update", headers, payload, {"scope": "rewards"})
-    return _json_response(200, {"config": saved})
+    return _config_service.put_rewards_config(payload, headers=headers)
+
 
 def _get_app_config_handler() -> dict:
-    return _json_response(200, {"config": _load_app_config()})
+    return _config_service.get_app_config_handler()
+
 
 def _put_app_config(payload: dict, headers: Optional[dict] = None) -> dict:
-    if not isinstance(payload, dict) or not payload:
-        return _json_response(200, {"message": "config invalida", "Error": "BadRequest"})
-    current = _load_app_config()
-    incoming = payload.get("config") if isinstance(payload.get("config"), dict) else payload
-    merged = _merge_dict(current, incoming)
-    saved = _save_app_config(merged)
-    _audit_event("config.app.update", headers, payload, {"scope": "app"})
-    return _json_response(200, {"config": saved})
+    return _config_service.put_app_config(payload, headers=headers)
 
 def _get_associate_month(associate_id: str, month_key: str) -> dict:
     item = _get_month_state(associate_id, month_key)
@@ -4874,24 +4546,57 @@ def _upload_admin_commission_receipt(payload: dict, headers: Optional[dict] = No
 # ---------------------------------------------------------------------------
 # Notifications
 # ---------------------------------------------------------------------------
+_notification_service = NotificationService(
+    default_link_text=NOTIFICATION_LINK_TEXT_DEFAULT,
+    max_description_length=MAX_NOTIFICATION_DESCRIPTION_LENGTH,
+    utc_now=_utc_now,
+    iso_to_dt=_iso_to_dt,
+    now_iso=_now_iso,
+    json_response=_json_response,
+    query_bucket=_query_bucket,
+    query_exact_pk=_query_exact_pk,
+    resolve_actor=_resolve_actor,
+    get_by_id=_get_by_id,
+    put_entity=_put_entity,
+    audit_event=_audit_event,
+    parse_int_or_str=_parse_int_or_str,
+    table=_table,
+)
+
+_campaign_service = CampaignService(
+    now_iso=_now_iso,
+    json_response=_json_response,
+    query_bucket=_query_bucket,
+    get_by_id=_get_by_id,
+    put_entity=_put_entity,
+    update_by_id=_update_by_id,
+    audit_event=_audit_event,
+)
+
+_user_dashboard_service = UserDashboardService(
+    to_decimal=_to_decimal,
+    decimal_one=D_ONE,
+    default_sponsor_name=DEFAULT_SPONSOR_NAME,
+    default_sponsor_email=DEFAULT_SPONSOR_EMAIL,
+    default_sponsor_phone=DEFAULT_SPONSOR_PHONE,
+    get_by_id=_get_by_id,
+    normalize_email=_normalize_email,
+    normalize_asset_url=_normalize_asset_url,
+    truthy_flag=_truthy_flag,
+)
+
+_admin_dashboard_service = AdminDashboardService(
+    load_app_config=_load_app_config,
+)
+
+
 def _notification_reads_pk(customer_id: Any) -> str:
-    return f"NOTIFICATION_READ#{customer_id}"
+    return _notification_service.notification_reads_pk(customer_id)
+
 
 def _notification_status(item: Optional[dict], now_dt: Optional[datetime] = None) -> str:
-    if not item or not isinstance(item, dict):
-        return "inactive"
-    if not bool(item.get("active", True)):
-        return "inactive"
+    return _notification_service.notification_status(item, now_dt=now_dt)
 
-    now = now_dt or _utc_now()
-    start_at = _iso_to_dt(item.get("startAt"))
-    end_at = _iso_to_dt(item.get("endAt"))
-
-    if start_at and start_at > now:
-        return "scheduled"
-    if end_at and end_at < now:
-        return "expired"
-    return "active"
 
 def _notification_payload(
     item: dict,
@@ -4899,225 +4604,27 @@ def _notification_payload(
     read_at: Optional[str] = None,
     now_dt: Optional[datetime] = None,
 ) -> dict:
-    link_url = str(item.get("linkUrl") or "").strip()
-    link_text = str(item.get("linkText") or "").strip()
-    if link_url and not link_text:
-        link_text = NOTIFICATION_LINK_TEXT_DEFAULT
+    return _notification_service.notification_payload(item, read_at=read_at, now_dt=now_dt)
 
-    return {
-        "id": str(item.get("notificationId") or ""),
-        "title": str(item.get("title") or "").strip(),
-        "description": str(item.get("description") or "").strip(),
-        "linkUrl": link_url,
-        "linkText": link_text,
-        "startAt": item.get("startAt"),
-        "endAt": item.get("endAt"),
-        "active": bool(item.get("active", True)),
-        "status": _notification_status(item, now_dt=now_dt),
-        "isRead": bool(read_at),
-        "readAt": read_at or "",
-        "createdAt": item.get("createdAt"),
-        "updatedAt": item.get("updatedAt"),
-    }
 
 def _list_notifications_for_admin() -> List[dict]:
-    now_dt = _utc_now()
-    notifications = [
-        _notification_payload(item, now_dt=now_dt)
-        for item in _query_bucket("NOTIFICATION")
-        if isinstance(item, dict)
-    ]
-    notifications.sort(
-        key=lambda item: (
-            item.get("startAt") or "",
-            item.get("createdAt") or "",
-            item.get("id") or "",
-        ),
-        reverse=True,
-    )
-    return notifications
+    return _notification_service.list_notifications_for_admin()
+
 
 def _notification_reads_for_customer(customer_id: Any) -> Dict[str, str]:
-    if customer_id in (None, ""):
-        return {}
+    return _notification_service.notification_reads_for_customer(customer_id)
 
-    items = _query_exact_pk(_notification_reads_pk(customer_id))
-    reads: Dict[str, str] = {}
-    for item in items:
-        notification_id = str(item.get("notificationId") or item.get("SK") or "").strip()
-        if not notification_id:
-            continue
-        reads[notification_id] = str(item.get("readAt") or item.get("createdAt") or "").strip()
-    return reads
 
 def _active_notifications_for_customer(customer_id: Any) -> List[dict]:
-    if customer_id in (None, ""):
-        return []
+    return _notification_service.active_notifications_for_customer(customer_id)
 
-    now_dt = _utc_now()
-    reads = _notification_reads_for_customer(customer_id)
-    notifications: List[dict] = []
-
-    for item in _query_bucket("NOTIFICATION"):
-        if not isinstance(item, dict):
-            continue
-        notification_id = str(item.get("notificationId") or "").strip()
-        if not notification_id:
-            continue
-        payload = _notification_payload(item, read_at=reads.get(notification_id), now_dt=now_dt)
-        if payload.get("status") != "active":
-            continue
-        notifications.append(payload)
-
-    notifications.sort(
-        key=lambda item: (
-            item.get("startAt") or "",
-            item.get("createdAt") or "",
-            item.get("id") or "",
-        ),
-        reverse=True,
-    )
-    return notifications
 
 def _save_notification(payload: dict, headers: Optional[dict] = None) -> dict:
-    notification_id = str(payload.get("id") or payload.get("notificationId") or "").strip()
-    title = str(payload.get("title") or "").strip()
-    description = str(payload.get("description") or "").strip()
-    link_url = str(payload.get("linkUrl") or payload.get("link") or payload.get("url") or "").strip()
-    link_text = str(payload.get("linkText") or "").strip()
-    start_at = str(payload.get("startAt") or "").strip()
-    end_at = str(payload.get("endAt") or "").strip()
-    active = bool(payload.get("active", True))
+    return _notification_service.save_notification(payload, headers=headers)
 
-    if not title:
-        return _json_response(200, {"message": "title es obligatorio", "Error": "BadRequest"})
-    if not description:
-        return _json_response(200, {"message": "description es obligatoria", "Error": "BadRequest"})
-    if len(description) > MAX_NOTIFICATION_DESCRIPTION_LENGTH:
-        return _json_response(
-            200,
-            {
-                "message": f"description no puede exceder {MAX_NOTIFICATION_DESCRIPTION_LENGTH} caracteres",
-                "Error": "BadRequest",
-            },
-        )
-    if not start_at or not end_at:
-        return _json_response(200, {"message": "startAt y endAt son obligatorios", "Error": "BadRequest"})
-
-    start_dt = _iso_to_dt(start_at)
-    end_dt = _iso_to_dt(end_at)
-    if not start_dt or not end_dt:
-        return _json_response(200, {"message": "startAt o endAt tienen formato invalido", "Error": "BadRequest"})
-    if end_dt < start_dt:
-        return _json_response(200, {"message": "endAt debe ser mayor o igual a startAt", "Error": "BadRequest"})
-
-    if link_url and not link_text:
-        link_text = NOTIFICATION_LINK_TEXT_DEFAULT
-    if not link_url:
-        link_text = ""
-
-    actor_user_id, actor_name, _ = _resolve_actor(headers, payload)
-    now = _now_iso()
-    existing = _get_by_id("NOTIFICATION", notification_id) if notification_id else None
-
-    if notification_id and not existing:
-        return _json_response(200, {"message": "Notificacion no encontrada", "Error": "NoEncontrado"})
-
-    if existing:
-        item = dict(existing)
-        item.update(
-            {
-                "title": title,
-                "description": description,
-                "linkUrl": link_url,
-                "linkText": link_text,
-                "startAt": start_at,
-                "endAt": end_at,
-                "active": active,
-                "updatedAt": now,
-                "updatedByUserId": actor_user_id,
-                "updatedByName": actor_name,
-            }
-        )
-        _table.put_item(Item=item)
-        status_code = 200
-        audit_action = "notification.update"
-        saved = item
-    else:
-        notification_id = notification_id or f"NTF-{uuid.uuid4().hex[:12].upper()}"
-        item = {
-            "entityType": "notification",
-            "notificationId": notification_id,
-            "title": title,
-            "description": description,
-            "linkUrl": link_url,
-            "linkText": link_text,
-            "startAt": start_at,
-            "endAt": end_at,
-            "active": active,
-            "createdByUserId": actor_user_id,
-            "createdByName": actor_name,
-            "updatedByUserId": actor_user_id,
-            "updatedByName": actor_name,
-            "createdAt": now,
-            "updatedAt": now,
-        }
-        saved = _put_entity("NOTIFICATION", notification_id, item, created_at_iso=now)
-        status_code = 201
-        audit_action = "notification.create"
-
-    _audit_event(audit_action, headers, payload, {"notificationId": notification_id})
-    return _json_response(status_code, {"notification": _notification_payload(saved, now_dt=_utc_now())})
 
 def _mark_notification_read(notification_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
-    notification_id = str(notification_id or "").strip()
-    if not notification_id:
-        return _json_response(200, {"message": "notificationId es obligatorio", "Error": "BadRequest"})
-
-    notification = _get_by_id("NOTIFICATION", notification_id)
-    if not notification:
-        return _json_response(200, {"message": "Notificacion no encontrada", "Error": "NoEncontrado"})
-
-    customer_id = _parse_int_or_str(
-        payload.get("customerId")
-        or payload.get("userId")
-        or (headers or {}).get("x-user-id")
-        or (headers or {}).get("X-User-Id")
-    )
-    if customer_id in (None, ""):
-        return _json_response(200, {"message": "customerId es obligatorio", "Error": "BadRequest"})
-
-    customer = _get_by_id("CUSTOMER", int(customer_id)) if isinstance(customer_id, int) else _get_by_id("CUSTOMER", customer_id)
-    if not customer:
-        return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
-
-    pk = _notification_reads_pk(customer_id)
-    existing = _table.get_item(Key={"PK": pk, "SK": notification_id}).get("Item")
-    if existing:
-        return _json_response(
-            200,
-            {
-                "ok": True,
-                "notificationId": notification_id,
-                "customerId": customer_id,
-                "readAt": existing.get("readAt") or existing.get("createdAt") or "",
-            },
-        )
-
-    now = _now_iso()
-    item = {
-        "PK": pk,
-        "SK": notification_id,
-        "entityType": "notificationRead",
-        "notificationId": notification_id,
-        "customerId": customer_id,
-        "readAt": now,
-        "createdAt": now,
-        "updatedAt": now,
-    }
-    _table.put_item(Item=item)
-    _audit_event("notification.read", headers, payload, {"notificationId": notification_id, "customerId": customer_id})
-    return _json_response(200, {"ok": True, "notificationId": notification_id, "customerId": customer_id, "readAt": now})
+    return _notification_service.mark_notification_read(notification_id, payload, headers=headers)
 
 # ---------------------------------------------------------------------------
 # Admin Dashboard
@@ -5129,20 +4636,13 @@ def _build_admin_warnings(
     pending_transfers_count: int = 0,
     pos_sales_today_count: int = 0,
 ) -> list:
-    app_cfg = _load_app_config()
-    warning_cfg = app_cfg.get("adminWarnings") if isinstance(app_cfg.get("adminWarnings"), dict) else {}
-    warnings = []
-    if bool(warning_cfg.get("showCommissions", True)) and commissions_count:
-        warnings.append({"type": "commissions", "text": f"{commissions_count} comisiones pendientes por depositar", "severity": "high"})
-    if bool(warning_cfg.get("showShipping", True)) and paid_count:
-        warnings.append({"type": "shipping", "text": f"{paid_count} pedidos pagados sin envio", "severity": "medium"})
-    if bool(warning_cfg.get("showPendingPayments", True)) and pending_count:
-        warnings.append({"type": "payments", "text": f"{pending_count} pedidos pendientes de pago", "severity": "low"})
-    if bool(warning_cfg.get("showPendingTransfers", True)) and pending_transfers_count:
-        warnings.append({"type": "stocks", "text": f"{pending_transfers_count} transferencias pendientes por recibir", "severity": "medium"})
-    if bool(warning_cfg.get("showPosSalesToday", True)) and pos_sales_today_count:
-        warnings.append({"type": "pos", "text": f"{pos_sales_today_count} ventas POS registradas hoy", "severity": "low"})
-    return warnings
+    return _admin_dashboard_service.build_admin_warnings(
+        paid_count,
+        pending_count,
+        commissions_count,
+        pending_transfers_count,
+        pos_sales_today_count,
+    )
 
 def _commission_summary_for_beneficiary(beneficiary_id: Any, month_key: str) -> dict:
     if beneficiary_id is None:
@@ -5193,16 +4693,11 @@ def _get_admin_dashboard() -> dict:
     customers_raw = _query_bucket("CUSTOMER")
     orders_raw = _query_bucket("ORDER")
     products_raw = _query_bucket("PRODUCT")
-    campaigns_raw = _query_bucket("CAMPAIGN")
     receipts_raw = _query_bucket("COMMISSION_RECEIPT")
     commission_month_items = _query_exact_pk("COMMISSION_MONTH")
     pom_item = _get_product_of_month_item()
     product_of_month_id = int(pom_item.get("productId")) if pom_item and pom_item.get("productId") is not None else None
 
-    customers = []
-    customers_by_level = {}
-    commissions_count = 0
-    commissions_total = 0.0
     prev_month_key = _prev_month_key()
     current_month_key = _month_key()
 
@@ -5225,118 +4720,44 @@ def _get_admin_dashboard() -> dict:
             continue
         commission_month_by_customer_month[f"{beneficiary_id}#{month_key}"] = item
 
-    for item in customers_raw:
-        comm = float(item.get("commissions") or 0)
-        cid = item.get("customerId")
-        current_comm_key = f"{cid}#{current_month_key}" if cid is not None else ""
-        prev_comm_key = f"{cid}#{prev_month_key}" if cid is not None else ""
-        comm_item = commission_month_by_customer_month.get(current_comm_key)
-        current_pending = float(_to_decimal(comm_item.get("totalPending")) if comm_item else D_ZERO)
-        current_confirmed = float(_to_decimal(comm_item.get("totalConfirmed")) if comm_item else D_ZERO)
+    customers, customers_by_level, commissions_count, commissions_total = (
+        _admin_dashboard_service.transform_customers_for_admin(
+            customers_raw,
+            commission_month_by_customer_month,
+            receipt_by_customer_month,
+            prev_month_key,
+            current_month_key,
+            {},  # commissions_by_id not used in this path
+        )
+    )
 
-        prev_comm_item = commission_month_by_customer_month.get(prev_comm_key)
-        prev_confirmed = float(_to_decimal(prev_comm_item.get("totalConfirmed")) if prev_comm_item else D_ZERO)
+    status_counts, sales_total, orders = (
+        _admin_dashboard_service.transform_orders_for_admin(orders_raw)
+    )
 
-        receipt_key = f"{cid}#{prev_month_key}" if cid is not None else ""
-        prev_receipt_url = receipt_by_customer_month.get(receipt_key, "")
-        if prev_confirmed <= 0:
-            prev_status = "no_moves"
-        elif prev_receipt_url:
-            prev_status = "paid"
-        else:
-            prev_status = "pending"
+    active_products, products = (
+        _admin_dashboard_service.transform_products_for_admin(products_raw)
+    )
 
-        clabe_interbancaria = (item.get("clabeInterbancaria") or item.get("clabe") or "").strip()
-        customers.append({
-            "id": item.get("customerId"), "name": item.get("name"), "email": item.get("email"),
-            "leaderId": item.get("leaderId"), "level": item.get("level"), "discount": item.get("discount"),
-            "canAccessAdmin": bool(item.get("canAccessAdmin")),
-            "privileges": _normalize_privileges(item.get("privileges")),
-            "commissions": comm,
-            "commissionsPrevMonthKey": prev_month_key,
-            "commissionsPrevMonth": prev_confirmed,
-            "commissionsCurrentPending": current_pending,
-            "commissionsCurrentConfirmed": current_confirmed,
-            "commissionsPrevStatus": prev_status,
-            "commissionsPrevReceiptUrl": prev_receipt_url,
-            "clabeInterbancaria": clabe_interbancaria,
-        })
-        level = item.get("level") or "Sin nivel"
-        customers_by_level[level] = customers_by_level.get(level, 0) + 1
-        if comm > 0:
-            commissions_count += 1
-            commissions_total += comm
-
-    status_counts = {"pending": 0, "paid": 0, "delivered": 0, "shipped": 0, "canceled": 0, "refunded": 0}
-    sales_total = 0.0
-    orders = []
-    
-    for item in orders_raw:
-        st = (item.get("status") or "").lower()
-        if st in status_counts:
-            status_counts[st] += 1
-        tot = float(item.get("netTotal") or item.get("total") or 0)
-        sales_total += tot
-        orders.append({
-            "id": item.get("orderId"), "createdAt": item.get("createdAt"),
-            "customer": item.get("customerName"), "total": tot, "status": item.get("status"),
-            "items": item.get("items") or [],
-            "stockId": item.get("stockId"),
-            "attendantUserId": item.get("attendantUserId"),
-            "paymentStatus": item.get("paymentStatus"),
-            "deliveryStatus": item.get("deliveryStatus"),
-            "shippingType": item.get("shippingType"),
-            "trackingNumber": item.get("trackingNumber"),
-            "deliveryPlace": item.get("deliveryPlace"),
-            "deliveryDate": item.get("deliveryDate"),
-        })
-
-    active_products = 0
-    products = []
-    for item in products_raw:
-        if item.get("active"): active_products += 1
-        products.append({
-            "id": int(item.get("productId")), "name": item.get("name"),
-            "price": float(item.get("price") or 0), "active": bool(item.get("active")),
-            "sku": item.get("sku"), "hook": item.get("hook"),
-            "description": item.get("description"),
-            "copyFacebook": item.get("copyFacebook"),
-            "copyInstagram": item.get("copyInstagram"),
-            "copyWhatsapp": item.get("copyWhatsapp"),
-            "tags": item.get("tags"), "images": item.get("images"),
-        })
-
-    campaigns = [_campaign_payload(item) for item in campaigns_raw]
+    campaigns = _list_campaigns()
     notifications = _list_notifications_for_admin()
 
     stock_transfers_raw = _query_bucket("STOCK_TRANSFER")
-    pending_transfers_count = 0
-    for transfer in stock_transfers_raw:
-        if (transfer.get("status") or "").strip().lower() == "pending":
-            pending_transfers_count += 1
-
     pos_sales_raw = _query_bucket("POS_SALE")
-    today_prefix = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    pos_sales_today_count = 0
-    for sale in pos_sales_raw:
-        created_at = str(sale.get("createdAt") or "")
-        if created_at.startswith(today_prefix):
-            pos_sales_today_count += 1
-
-    average_ticket = sales_total / len(orders) if orders else 0
-    warnings = _build_admin_warnings(
-        status_counts["paid"],
-        status_counts["pending"],
-        commissions_count,
-        pending_transfers_count,
-        pos_sales_today_count,
+    alerts_payload = _admin_dashboard_service.dashboard_alerts_payload(
+        paid_count=status_counts["paid"],
+        pending_count=status_counts["pending"],
+        commissions_count=commissions_count,
+        transfers_raw=stock_transfers_raw,
+        pos_sales_raw=pos_sales_raw,
     )
 
+    warnings = alerts_payload.get("warnings") or []
+
     return _json_response(200, {
-        "kpis": {
-            "salesTotal": sales_total, "averageTicket": average_ticket, "activeProducts": active_products,
-            "customersTotal": len(customers), "commissionsTotalPending": commissions_total,
-        },
+        "kpis": _admin_dashboard_service.aggregate_kpis(
+            customers, orders, active_products, commissions_total, sales_total
+        ),
         "statusCounts": status_counts, "customersByLevel": customers_by_level,
         "warnings": warnings,
         "customers": customers, "orders": orders, "products": products, "campaigns": campaigns,
@@ -5349,39 +4770,16 @@ def _get_admin_dashboard() -> dict:
 # User Dashboard
 # ---------------------------------------------------------------------------
 def _pick_product_image(images: Optional[list], preferred_sections: List[str]) -> str:
-    if not images or not isinstance(images, list):
-        return ""
-    for section in preferred_sections:
-        for img in images:
-            if img.get("section") == section and img.get("url"):
-                return _normalize_asset_url(img.get("url"))
-    for img in images:
-        if img.get("url"):
-            return _normalize_asset_url(img.get("url"))
-    return ""
+    return _user_dashboard_service.pick_product_image(images, preferred_sections)
 
 def _get_product_of_month_item() -> Optional[dict]:
     return _get_by_id("PRODUCT_OF_MONTH", "current")
 
 def _is_product_active(item: Optional[dict]) -> bool:
-    if not item or not isinstance(item, dict):
-        return False
-    return _truthy_flag(item.get("active"), default=True)
+    return _user_dashboard_service.is_product_active(item)
 
 def _get_product_summary(item: dict) -> dict:
-    images = item.get("images") or []
-    tags = item.get("tags") or []
-    badge = str(tags[0]) if tags else ""
-    img = _pick_product_image(images, ["miniatura", "landing", "redes"])
-    return {
-        "id": str(item.get("productId")), "name": item.get("name"),
-        "price": float(item.get("price") or 0), "badge": badge, "img": img,
-        "hook": item.get("hook") or "", "description": item.get("description") or "",
-        "copyFacebook": item.get("copyFacebook") or "",
-        "copyInstagram": item.get("copyInstagram") or "",
-        "copyWhatsapp": item.get("copyWhatsapp") or "",
-        "images": images, "tags": tags,
-    }
+    return _user_dashboard_service.product_summary(item)
 
 def _set_product_of_month(payload: dict, headers: Optional[dict] = None) -> dict:
     pid = payload.get("productId") or payload.get("id")
@@ -5412,43 +4810,12 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
     user_id, is_guest = _resolve_user_context(query or {}, headers or {})
     customer = _get_by_id("CUSTOMER", int(user_id)) if user_id is not None else None
 
-    # Optimized Fetch
     products_raw = _query_bucket("PRODUCT")
-    campaigns_raw = _query_bucket("CAMPAIGN")
-    products = []
-    featured = []
-    campaigns = []
-    
-    for item in products_raw:
-        if not _is_product_active(item):
-            continue
-        s = _get_product_summary(item)
-        products.append({
-            "id": s["id"], "name": s["name"], "price": s["price"],
-            "badge": s["badge"], "img": s["img"], "description": s["description"],
-            "copyFacebook": s["copyFacebook"], "copyInstagram": s["copyInstagram"], "copyWhatsapp": s["copyWhatsapp"],
-        })
-        if len(featured) < 4:
-            imgs = item.get("images") or []
-            featured.append({
-                "id": s["id"], "label": s["name"], "hook": s["hook"],
-                "story": _pick_product_image(imgs, ["redes"]) or s["img"],
-                "feed": _pick_product_image(imgs, ["miniatura", "redes"]) or s["img"],
-                "banner": _pick_product_image(imgs, ["landing"]) or s["img"],
-            })
-
-    for item in campaigns_raw:
-        campaign = _campaign_payload(item)
-        if not campaign.get("active", True):
-            continue
-        campaigns.append(campaign)
+    products, featured = _user_dashboard_service.build_products_payload(products_raw)
+    campaigns = _list_active_campaigns()
 
     pom_item = _get_product_of_month_item()
-    product_of_month = None
-    if pom_item:
-        p = _get_by_id("PRODUCT", int(pom_item.get("productId")))
-        if _is_product_active(p):
-            product_of_month = _get_product_summary(p)
+    product_of_month = _user_dashboard_service.build_product_of_month_payload(pom_item)
 
     cfg = _load_rewards_config()
     month_key = _month_key()
@@ -5521,21 +4888,12 @@ def _get_user_dashboard(query: dict, headers: dict) -> dict:
         # Defaults for guests
         buy_again_ids = [str(p["id"]) for p in products[:3]]
 
-    user_payload = None
-    sponsor_payload = _find_effective_sponsor(customer)
-    if customer and isinstance(customer, dict):
-        dr = _to_decimal(customer.get("discountRate"))
-        user_payload = {
-            "discountPercent": int((dr * 100).quantize(D_ONE)) if dr else 0,
-            "discountActive": bool(customer.get("activeBuyer") or dr > 0),
-        }
+    sponsor_payload = _user_dashboard_service.build_sponsor_payload(customer)
+    user_payload = _user_dashboard_service.build_user_payload(customer)
 
     payload = {
         "isGuest": bool(is_guest),
-        "settings": {
-            "cutoffDay": 25, "cutoffHour": 23, "cutoffMinute": 59,
-            "userCode": "" if is_guest else str(user_id), "networkGoal": 300,
-        },
+        "settings": _user_dashboard_service.build_settings_payload(user_id, bool(is_guest)),
         "user": user_payload,
         "sponsor": sponsor_payload,
         "goals": computed_goals,
@@ -5656,7 +5014,7 @@ def lambda_handler(event, context):
     if route_key == (1, "customers", "POST"): return _create_customer(_parse_body(event), headers)
     if route_key == (1, "stocks", "GET"): return _list_stocks()
     if route_key == (1, "stocks", "POST"): return _create_stock(_parse_body(event), headers)
-    if route_key == (1, "campaigns", "GET"): return _json_response(200, {"campaigns": [_campaign_payload(item) for item in _query_bucket("CAMPAIGN")]})
+    if route_key == (1, "campaigns", "GET"): return _json_response(200, {"campaigns": _list_campaigns()})
     if route_key == (1, "notifications", "GET"): return _json_response(200, {"notifications": _list_notifications_for_admin()})
     if route_key == (1, "user-dashboard", "GET"): return _get_user_dashboard(query, headers)
     

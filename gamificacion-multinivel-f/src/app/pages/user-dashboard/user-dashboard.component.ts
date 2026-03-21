@@ -35,6 +35,12 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
+import { BrowserClipboardService } from '../../services/browser/browser-clipboard.service';
+import { BrowserDomService } from '../../services/browser/browser-dom.service';
+import { BrowserLocationService } from '../../services/browser/browser-location.service';
+import { BrowserStorageService } from '../../services/browser/browser-storage.service';
+import { BrowserTimerService } from '../../services/browser/browser-timer.service';
+import { NotificationService, UiNotificationState } from '../../services/notification.service';
 
 type GraphNode = {
   id: string;
@@ -68,7 +74,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly goalControl: GoalControlService,
     private readonly router: Router,
     private readonly api: ApiService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly clipboard: BrowserClipboardService,
+    private readonly dom: BrowserDomService,
+    private readonly storage: BrowserStorageService,
+    private readonly location: BrowserLocationService,
+    private readonly timer: BrowserTimerService,
+    private readonly notifications: NotificationService
   ) {}
 
   readonly countdownLabel = signal('');
@@ -78,8 +90,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   featuredPage = 0;
   readonly featuredPageSize = 4;
   secondaryGoalsVisible = false;
-  toastMessage = 'Actualizado.';
-  isToastVisible = false;
+  private readonly toast: UiNotificationState = { message: '', tone: 'info', visible: false };
   captionText = '';
   hasCopiedLink = false;
   hasCopiedCopy = false;
@@ -154,6 +165,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private graphMembersRef: NetworkMember[] | null = null;
   private graphRootNameCache = '';
   private notificationQueue: PortalNotification[] = [];
+
+  get toastMessage(): string {
+    return this.toast.message || 'Actualizado.';
+  }
+
+  get isToastVisible(): boolean {
+    return this.toast.visible;
+  }
 
 
   
@@ -470,7 +489,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return '';
     }
     const productId = this.activeFeatured.id ?? '';
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const baseUrl = this.location.origin;
     const query = productId ? `?p=${productId}` : '';
     return `${baseUrl}/#/${userCode}${query}`;
   }
@@ -642,7 +661,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isNotificationModalOpen = false;
     this.activeNotification = null;
     if (this.notificationQueue.length) {
-      window.setTimeout(() => this.openNextNotification(), 0);
+      this.timer.setTimeout(() => this.openNextNotification(), 0);
     }
   }
 
@@ -673,7 +692,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!url) {
       return;
     }
-    window.open(url, '_blank', 'noopener');
+    this.location.open(url, '_blank', 'noopener');
   }
 
   getCountdownState(): 'calm' | 'focus' | 'urgent' | 'critical' {
@@ -945,31 +964,31 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           this.cdr.markForCheck();
         }
       });
-    this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
+    this.countdownInterval = this.timer.setInterval(() => this.updateCountdown(), 1000);
   }
 
   ngAfterViewInit(): void {
     if (!this.activeGoal?.key) {
       return;
     }
-    setTimeout(() => {
-      const node = document.getElementById(`goal-${this.activeGoal.key}`);
-      node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.timer.setTimeout(() => {
+      const node = this.dom.getElementById(`goal-${this.activeGoal.key}`);
+      this.dom.scrollIntoView(node, { behavior: 'smooth', block: 'center' });
     }, 0);
   }
 
   ngOnDestroy(): void {
     if (this.countdownInterval) {
-      window.clearInterval(this.countdownInterval);
+      this.timer.clearInterval(this.countdownInterval);
     }
     if (this.toastTimeout) {
-      window.clearTimeout(this.toastTimeout);
+      this.timer.clearTimeout(this.toastTimeout);
     }
     if (this.goalsAnimTimeout) {
-      window.clearTimeout(this.goalsAnimTimeout);
+      this.timer.clearTimeout(this.goalsAnimTimeout);
     }
     if (this.goalFillTimeout) {
-      window.clearTimeout(this.goalFillTimeout);
+      this.timer.clearTimeout(this.goalFillTimeout);
     }
     this.goalsSub?.unsubscribe();
   }
@@ -995,7 +1014,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       });
       return acc;
     }, []);
-    localStorage.setItem('cart-items', JSON.stringify(items));
+    this.storage.setJson('cart-items', items);
     this.router.navigate(['/carrito']);
   }
 
@@ -1028,7 +1047,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       phone: this.guestRegisterForm.phone.trim() || undefined,
       password: this.guestRegisterForm.password,
       confirmPassword: this.guestRegisterForm.confirmPassword,
-      referralToken: localStorage.getItem('leaderId') || undefined
+      referralToken: this.storage.getItem('leaderId') || undefined
     };
 
     this.isGuestRegisterSubmitting = true;
@@ -1055,7 +1074,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           this.guestRegisterFeedbackType = '';
           this.showGuestRegisterModal = false;
           this.showToast('Cuenta creada. Bienvenido.');
-          window.location.reload();
+          this.location.reload();
         },
         error: (error: any) => {
           const apiMessage =
@@ -1333,7 +1352,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.showToast('No hay link disponible.');
       return;
     }
-    window.open(this.referralLink, '_blank', 'noopener');
+    this.location.open(this.referralLink, '_blank', 'noopener');
   }
 
   updateCart(productId: string, qty: number): void {
@@ -1434,7 +1453,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.showToast('No hay comprobante disponible.');
       return;
     }
-    window.open(url, '_blank', 'noopener');
+    this.location.open(url, '_blank', 'noopener');
   }
 
   formatLedgerDate(value?: string): string {
@@ -1611,21 +1630,21 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   scrollToGoal(goalId: string): void {
-    const node = document.getElementById(goalId);
+    const node = this.dom.getElementById(goalId);
     if (!node) {
       return;
     }
-    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.dom.scrollIntoView(node, { behavior: 'smooth', block: 'center' });
     node.classList.add('ring-2', 'ring-yellow-400/60');
-    window.setTimeout(() => node.classList.remove('ring-2', 'ring-yellow-400/60'), 1200);
+    this.timer.setTimeout(() => node.classList.remove('ring-2', 'ring-yellow-400/60'), 1200);
   }
 
   scrollToSection(sectionId: string): void {
-    const node = document.getElementById(sectionId);
+    const node = this.dom.getElementById(sectionId);
     if (!node) {
       return;
     }
-    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.dom.scrollIntoView(node, { behavior: 'smooth', block: 'start' });
   }
 
   notifyAction(message: string): void {
@@ -1701,10 +1720,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private triggerGoalsAnimation(): void {
     if (this.goalsAnimTimeout) {
-      window.clearTimeout(this.goalsAnimTimeout);
+      this.timer.clearTimeout(this.goalsAnimTimeout);
     }
     this.isGoalsHighlight = false;
-    this.goalsAnimTimeout = window.setTimeout(() => {
+    this.goalsAnimTimeout = this.timer.setTimeout(() => {
       this.isGoalsHighlight = true;
     }, 80);
   }
@@ -1716,14 +1735,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.visualActiveWidth = 0;
     this.visualCartWidth = 0;
     if (this.goalFillTimeout) {
-      window.clearTimeout(this.goalFillTimeout);
+      this.timer.clearTimeout(this.goalFillTimeout);
     }
-    requestAnimationFrame(() => {
+    this.timer.requestAnimationFrame(() => {
       this.isGoalFilling = true;
-      requestAnimationFrame(() => {
+      this.timer.requestAnimationFrame(() => {
         this.visualActiveWidth = targetActive;
         this.visualCartWidth = targetCart;
-        this.goalFillTimeout = window.setTimeout(() => {
+        this.goalFillTimeout = this.timer.setTimeout(() => {
           this.isGoalFilling = false;
         }, 1100);
       });
@@ -1737,35 +1756,19 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private readAchievedGoalsStorage(): { month: string; goals: string[] } | null {
-    try {
-      const raw = localStorage.getItem(this.achievedGoalsStorageKey);
-      if (!raw) {
-        return null;
-      }
-      const parsed = JSON.parse(raw) as { month?: string; goals?: string[] };
-      if (!parsed?.month || !Array.isArray(parsed?.goals)) {
-        return null;
-      }
-      return { month: parsed.month, goals: parsed.goals.filter((key) => typeof key === 'string') };
-    } catch {
+    const parsed = this.storage.getJson<{ month?: string; goals?: string[] }>(this.achievedGoalsStorageKey);
+    if (!parsed?.month || !Array.isArray(parsed.goals)) {
       return null;
     }
+    return { month: parsed.month, goals: parsed.goals.filter((key) => typeof key === 'string') };
   }
 
   private saveAchievedGoalsStorage(month: string, goals: string[]): void {
-    try {
-      localStorage.setItem(this.achievedGoalsStorageKey, JSON.stringify({ month, goals }));
-    } catch {
-      // ignore storage errors
-    }
+    this.storage.setJson(this.achievedGoalsStorageKey, { month, goals });
   }
 
   private clearAchievedGoalsStorage(): void {
-    try {
-      localStorage.removeItem(this.achievedGoalsStorageKey);
-    } catch {
-      // ignore storage errors
-    }
+    this.storage.removeItem(this.achievedGoalsStorageKey);
   }
 
   remainingForGoal(goal: any): string {
@@ -1849,7 +1852,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.showToast('No hay imagen disponible.');
       return;
     }
-    if (!('ClipboardItem' in window) || !navigator.clipboard?.write) {
+    if (typeof ClipboardItem === 'undefined' || !this.clipboard.canWrite) {
       this.copyToClipboard(url, 'No se pudo copiar la imagen. Copie la ruta.');
       return;
     }
@@ -1857,7 +1860,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       .then((response) => response.blob())
       .then((blob) => {
         const item = new ClipboardItem({ [blob.type || 'image/png']: blob });
-        return navigator.clipboard.write([item]);
+        return this.clipboard.write([item]);
       })
       .then(() => this.showToast(toastMessage))
       .catch((error) => {
@@ -1868,14 +1871,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private showToast(message: string): void {
-    this.toastMessage = message;
-    this.isToastVisible = true;
-    if (this.toastTimeout) {
-      window.clearTimeout(this.toastTimeout);
-    }
-    this.toastTimeout = window.setTimeout(() => {
-      this.isToastVisible = false;
-    }, 2200);
+    this.toastTimeout = this.notifications.showFor(this.toast, message, 2200, this.toastTimeout);
   }
 
   private loadOrders(): void {
@@ -1897,18 +1893,18 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private copyToClipboard(text: string, toastMessage: string): void {
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => this.showToast(toastMessage))
-        .catch((error) => {
-          this.lastClipboardError = this.formatClipboardError(error);
-          console.log('Clipboard text error:', this.lastClipboardError);
-          this.showToast('No se pudo copiar.');
-        });
+    if (!this.clipboard.canWriteText) {
+      this.showToast('No se pudo copiar.');
       return;
     }
-    this.showToast('No se pudo copiar.');
+    this.clipboard
+      .writeText(text)
+      .then(() => this.showToast(toastMessage))
+      .catch((error) => {
+        this.lastClipboardError = this.formatClipboardError(error);
+        console.log('Clipboard text error:', this.lastClipboardError);
+        this.showToast('No se pudo copiar.');
+      });
   }
 
   private formatClipboardError(error: unknown): string {

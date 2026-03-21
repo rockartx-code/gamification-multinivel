@@ -52,15 +52,22 @@ import {
   CustomerClabePayload,
   UserDashboardData
 } from '../models/user-dashboard.model';
+import { ApiFacade } from './api-facade.contract';
 import type { AuthUser } from './auth.service';
+import { BrowserStorageService } from './browser/browser-storage.service';
+import { BusinessConfigService } from './business-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
-export class RealApiService {
+export class RealApiService implements ApiFacade {
   private readonly baseUrl = environment.apiBaseUrl;
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly storage: BrowserStorageService,
+    private readonly businessConfigService: BusinessConfigService
+  ) {}
 
   private requireBusinessValue<T>(
     response: { message?: string; Error?: string },
@@ -498,34 +505,33 @@ export class RealApiService {
   getBusinessConfig(): Observable<AppBusinessConfig> {
     return this.http
       .get<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.config));
+      .pipe(map((response) => this.businessConfigService.normalizeForDraft(response.config)));
   }
 
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.http
-      .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, payload, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.config));
+      .put<{ config: AppBusinessConfig }>(
+        `${this.baseUrl}/config/app`,
+        { config: this.businessConfigService.normalizeForSave(payload.config) },
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((response) => this.businessConfigService.normalizeForDraft(response.config)));
   }
 
   private actorHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    const raw = localStorage.getItem('auth-user');
-    if (!raw) {
+    const user = this.storage.getJson<{ userId?: string; name?: string; role?: string }>('auth-user');
+    if (!user) {
       return headers;
     }
-    try {
-      const user = JSON.parse(raw) as { userId?: string; name?: string; role?: string };
-      if (user.userId) {
-        headers = headers.set('x-user-id', String(user.userId));
-      }
-      if (user.name) {
-        headers = headers.set('x-user-name', String(user.name));
-      }
-      if (user.role) {
-        headers = headers.set('x-user-role', String(user.role));
-      }
-    } catch {
-      return headers;
+    if (user.userId) {
+      headers = headers.set('x-user-id', String(user.userId));
+    }
+    if (user.name) {
+      headers = headers.set('x-user-name', String(user.name));
+    }
+    if (user.role) {
+      headers = headers.set('x-user-role', String(user.role));
     }
     return headers;
   }

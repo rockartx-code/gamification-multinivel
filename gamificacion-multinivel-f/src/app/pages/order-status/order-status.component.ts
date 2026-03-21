@@ -6,6 +6,8 @@ import { AdminOrder } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
 import { ApiService } from '../../services/api.service';
+import { BrowserClipboardService } from '../../services/browser/browser-clipboard.service';
+import { BrowserLocationService } from '../../services/browser/browser-location.service';
 
 @Component({
   selector: 'app-order-status',
@@ -31,10 +33,17 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly api: ApiService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly clipboard: BrowserClipboardService,
+    private readonly location: BrowserLocationService
   ) { }
 
-  copyToClipboard(txt?: string) { if (txt) navigator.clipboard.writeText(txt); }
+  copyToClipboard(txt?: string): void {
+    if (!txt) {
+      return;
+    }
+    this.clipboard.writeText(txt).catch(() => {});
+  }
 
   ngOnInit(): void {
     const routeOrderId = this.normalizeLookupValue(this.route.snapshot.paramMap.get('idOrden'));
@@ -270,7 +279,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
           this.cdr.markForCheck();
           return;
         }
-        window.location.href = initPoint;
+        this.location.assign(initPoint);
       },
       error: () => {
         this.checkoutError = 'No se pudo iniciar el pago en MercadoPago.';

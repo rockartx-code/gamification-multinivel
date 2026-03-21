@@ -44,6 +44,7 @@ import {
   ResetPasswordResponse
 } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
+import { ApiFacade } from './api-facade.contract';
 import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
@@ -57,7 +58,7 @@ import { RealApiService } from './real-api.service';
 @Injectable({
   providedIn: 'root'
 })
-export class ApiService {
+export class ApiService implements ApiFacade {
   constructor(
     private readonly mockApi: MockApiService,
     private readonly realApi: RealApiService
@@ -269,7 +270,7 @@ export class ApiService {
     return this.resolveApi().saveBusinessConfig(payload);
   }
 
-  private resolveApi(): MockApiService | RealApiService {
+  private resolveApi(): ApiFacade {
     return environment.useMockApi ? this.mockApi : this.realApi;
   }
 }
