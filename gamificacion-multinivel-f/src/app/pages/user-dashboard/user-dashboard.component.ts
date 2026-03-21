@@ -41,23 +41,21 @@ import { BrowserLocationService } from '../../services/browser/browser-location.
 import { BrowserStorageService } from '../../services/browser/browser-storage.service';
 import { BrowserTimerService } from '../../services/browser/browser-timer.service';
 import { NotificationService, UiNotificationState } from '../../services/notification.service';
-
-type GraphNode = {
-  id: string;
-  level: string;
-  x: number;
-  y: number;
-  label: string;
-  name: string;
-  status?: NetworkMember['status'];
-  leaderId?: string;
-  meta?: Record<string, unknown>;
-};
-
-type GraphLayout = {
-  nodes: GraphNode[];
-  links: Array<{ x1: number; y1: number; x2: number; y2: number }>;
-};
+import {
+  UserDashboardAchievedGoalsService,
+  UserDashboardGoalBarState
+} from '../../services/user-dashboard-achieved-goals.service';
+import { UserDashboardNotificationsService } from '../../services/user-dashboard-notifications.service';
+import {
+  UserDashboardGraphLayout,
+  UserDashboardNetworkGraphService
+} from '../../services/user-dashboard-network-graph.service';
+import { UserDashboardReferralService } from '../../services/user-dashboard-referral.service';
+import {
+  UserDashboardShareService,
+  UserDashboardSocialChannel,
+  UserDashboardSocialFormat
+} from '../../services/user-dashboard-share.service';
 
 @Component({
   selector: 'app-user-dashboard',
@@ -80,13 +78,18 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly storage: BrowserStorageService,
     private readonly location: BrowserLocationService,
     private readonly timer: BrowserTimerService,
-    private readonly notifications: NotificationService
+    private readonly notifications: NotificationService,
+    private readonly achievedGoalsCoordinator: UserDashboardAchievedGoalsService,
+    private readonly referralContent: UserDashboardReferralService,
+    private readonly notificationFlow: UserDashboardNotificationsService,
+    private readonly networkGraph: UserDashboardNetworkGraphService,
+    private readonly shareContent: UserDashboardShareService
   ) {}
 
   readonly countdownLabel = signal('');
   activeFeaturedId = '';
-  socialFormat: 'story' | 'feed' | 'banner' = 'story';
-  socialChannel: 'whatsapp' | 'instagram' | 'facebook' = 'whatsapp';
+  socialFormat: UserDashboardSocialFormat = 'story';
+  socialChannel: UserDashboardSocialChannel = 'whatsapp';
   featuredPage = 0;
   readonly featuredPageSize = 4;
   secondaryGoalsVisible = false;
@@ -124,7 +127,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   isGoalsHighlight = false;
   achievedGoalsPage = 0;
   readonly achievedGoalsPageSize = 3;
-  private readonly achievedGoalsStorageKey = 'dashboard-achieved-goals';
   private newAchievedGoalKeys = new Set<string>();
   private newAchievedGoalOrder = new Map<string, number>();
   private goalsAnimTimeout?: number;
@@ -154,13 +156,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private countdownInterval?: number;
   private toastTimeout?: number;
   private goalsSub?: Subscription;
+  private notificationModalTimeout?: number;
   private dashboardNavLinksCache: SidebarLink[] = [];
   private dashboardNavLinksKey = '';
   private featuredCarouselCache: FeaturedItem[] = [];
   private featuredCarouselProductsRef: DashboardProduct[] | null = null;
   private featuredCarouselFeaturedRef: FeaturedItem[] | null = null;
   private featuredCarouselCampaignsRef: DashboardCampaign[] | null = null;
-  private graphLayoutCache: GraphLayout = { nodes: [], links: [] };
+  private graphLayoutCache: UserDashboardGraphLayout = { nodes: [], links: [] };
   private graphSizeCache = { width: 860, height: 260 };
   private graphMembersRef: NetworkMember[] | null = null;
   private graphRootNameCache = '';
@@ -289,51 +292,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return this.featuredCarouselCache;
     }
 
-    const fixed: FeaturedItem[] = [
-      {
-        id: 'fixed-familia',
-        label: 'Familia',
-        hook: 'Programa familiar',
-        story: 'images/L-Programa3.png',
-        feed: 'images/L-Programa3.png',
-        banner: 'images/L-Programa3.png'
-      },
-      {
-        id: 'fixed-entrenador',
-        label: 'Entrenador',
-        hook: 'Programa entrenador',
-        story: 'images/L-Programa2.png',
-        feed: 'images/L-Programa2.png',
-        banner: 'images/L-Programa2.png'
-      }
-    ];
-
-    const featuredIds = new Set(featured.map((item) => item.id));
-    const campaignItems: FeaturedItem[] = campaigns
-      .filter((campaign) => campaign.active !== false)
-      .map((campaign) => ({
-        id: `campaign:${campaign.id}`,
-        label: campaign.name,
-        hook: campaign.hook || campaign.heroDescription || 'Campana especial',
-        story: campaign.story || campaign.heroImage || '',
-        feed: campaign.feed || campaign.heroImage || '',
-        banner: campaign.banner || campaign.heroImage || ''
-      }));
-    const productItems: FeaturedItem[] = products
-      .filter((product) => !featuredIds.has(product.id))
-      .map((product) => ({
-        id: product.id,
-        label: product.name,
-        hook: product.badge || 'Producto destacado',
-        story: product.img || '',
-        feed: product.img || '',
-        banner: product.img || ''
-      }));
-
     this.featuredCarouselFeaturedRef = featured;
     this.featuredCarouselProductsRef = products;
     this.featuredCarouselCampaignsRef = campaigns;
-    this.featuredCarouselCache = [...fixed, ...featured, ...campaignItems, ...productItems];
+    this.featuredCarouselCache = this.shareContent.buildFeaturedCarousel(featured, products, campaigns);
     return this.featuredCarouselCache;
   }
 
@@ -375,18 +337,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get sponsorEmailHref(): string {
-    const email = (this.sponsor?.email ?? '').trim();
-    if (!email) {
-      return 'mailto:coach@findingu.com.mx';
-    }
-    return `mailto:${encodeURIComponent(email)}`;
+    return this.referralContent.getSponsorEmailHref(this.sponsor);
   }
 
   get sponsorWhatsappHref(): string {
-    const rawPhone = this.sponsor?.phone ?? '+52 1 55 1498 2351';
-    const digits = rawPhone.replace(/\D/g, '');
-    const text = encodeURIComponent('Hola, necesito ayuda con mi red de FindingU.');
-    return `whatsapp://send?phone=${digits}&text=${text}`;
+    return this.referralContent.getSponsorWhatsappHref(this.sponsor);
   }
 
   get hasCommissionPending(): boolean {
@@ -481,17 +436,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get referralLink(): string {
-    if (this.isGuest) {
-      return '';
-    }
-    const userCode = this.dashboardControl.data?.settings.userCode ?? '';
-    if (!userCode) {
-      return '';
-    }
-    const productId = this.activeFeatured.id ?? '';
-    const baseUrl = this.location.origin;
-    const query = productId ? `?p=${productId}` : '';
-    return `${baseUrl}/#/${userCode}${query}`;
+    return this.referralContent.buildReferralLink({
+      isGuest: this.isGuest,
+      userCode: this.dashboardControl.data?.settings.userCode,
+      activeFeaturedId: this.activeFeatured.id,
+      origin: this.location.origin
+    });
   }
 
   get networkProgress(): number {
@@ -548,33 +498,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get socialFormatLabel(): string {
-    if (this.socialFormat === 'feed') {
-      return 'Feed (1:1)';
-    }
-    if (this.socialFormat === 'banner') {
-      return 'Banner (16:9)';
-    }
-    return 'Story (9:16)';
+    return this.shareContent.getSocialFormatLabel(this.socialFormat);
   }
 
   get socialAspectRatio(): string {
-    if (this.socialFormat === 'feed') {
-      return '1/1';
-    }
-    if (this.socialFormat === 'banner') {
-      return '16/9';
-    }
-    return '9/16';
+    return this.shareContent.getSocialAspectRatio(this.socialFormat);
   }
 
   get activeSocialAsset(): string {
-    if (this.socialFormat === 'feed') {
-      return this.activeFeatured.feed || '';
-    }
-    if (this.socialFormat === 'banner') {
-      return this.activeFeatured.banner || '';
-    }
-    return this.activeFeatured.story || '';
+    return this.shareContent.getActiveSocialAsset(this.socialFormat, this.activeFeatured);
   }
 
   discountBadgeText(): string {
@@ -658,10 +590,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   closeNotificationModal(): void {
-    this.isNotificationModalOpen = false;
-    this.activeNotification = null;
-    if (this.notificationQueue.length) {
-      this.timer.setTimeout(() => this.openNextNotification(), 0);
+    const modalState = this.notificationFlow.closeModal(this.notificationQueue);
+    this.isNotificationModalOpen = modalState.isNotificationModalOpen;
+    this.activeNotification = modalState.activeNotification;
+    this.isNotificationsCenterOpen = modalState.isNotificationsCenterOpen;
+    this.timer.clearTimeout(this.notificationModalTimeout);
+    if (modalState.shouldOpenNext) {
+      this.notificationModalTimeout = this.timer.setTimeout(() => this.openNextNotification(), 0);
     }
   }
 
@@ -677,13 +612,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   openNotification(notification: PortalNotification): void {
-    if (!notification) {
-      return;
-    }
-    this.isNotificationsCenterOpen = false;
-    this.activeNotification = notification;
-    this.isNotificationModalOpen = true;
-    if (!notification.isRead) {
+    const modalState = this.notificationFlow.openNotification(notification);
+    this.isNotificationsCenterOpen = modalState.isNotificationsCenterOpen;
+    this.activeNotification = modalState.activeNotification;
+    this.isNotificationModalOpen = modalState.isNotificationModalOpen;
+    if (modalState.shouldMarkAsRead && notification) {
       this.markNotificationAsRead(notification);
     }
   }
@@ -741,116 +674,19 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
 
-  get graphLayout(): GraphLayout {
+  get graphLayout(): UserDashboardGraphLayout {
     const members = this.networkMembers;
     const rootName = this.currentUser?.name || 'Tu';
     if (this.graphMembersRef === members && this.graphRootNameCache === rootName) {
       return this.graphLayoutCache;
     }
 
-    const l1Members = members.filter((member) => member.level === 'L1');
-    const l2Members = members.filter((member) => member.level === 'L2');
-    const l3Members = members.filter((member) => member.level === 'L3');
-    const metrics = this.getGraphMetrics(l1Members.length, l2Members.length, l3Members.length);
-    const rootX = 120;
-    const l1X = 320;
-    const l2X = 540;
-    const l3X = 760;
-
-    const l1Positions = this.buildColumnPositions(l1Members.length, l1X, metrics.top, metrics.spacing);
-    const l2Positions = this.buildColumnPositions(l2Members.length, l2X, metrics.top, metrics.spacing);
-    const l3Positions = this.buildColumnPositions(l3Members.length, l3X, metrics.top, metrics.spacing);
-    const rootY =
-      l1Positions.length > 0
-        ? (l1Positions[0].y + l1Positions[l1Positions.length - 1].y) / 2
-        : l2Positions.length > 0
-          ? (l2Positions[0].y + l2Positions[l2Positions.length - 1].y) / 2
-          : l3Positions.length > 0
-            ? (l3Positions[0].y + l3Positions[l3Positions.length - 1].y) / 2
-            : metrics.height / 2;
-
-    const root = {
-      id: 'root',
-      level: 'root',
-      x: rootX,
-      y: rootY,
-      label: this.nodeLabel(rootName),
-      name: rootName,
-      meta: { spend: 0 }
-    };
-
-    const l1Nodes = l1Members.map((member, idx) => ({
-      id: member.id ? `l1-${member.id}` : `l1-${idx}`,
-      level: 'L1',
-      x: l1Positions[idx]?.x ?? l1X,
-      y: l1Positions[idx]?.y ?? rootY,
-      label: this.nodeLabel(member.name),
-      name: member.name || 'Miembro',
-      status: member.status,
-      meta: { spend: member.spend ?? 0 }
-    }));
-
-    const l1ByMemberId = new Map<string, (typeof l1Nodes)[number]>();
-    l1Members.forEach((member, idx) => {
-      const memberId = member.id ? String(member.id) : `idx-${idx}`;
-      l1ByMemberId.set(memberId, l1Nodes[idx]);
-    });
-
-    const l2Nodes = l2Members.map((member, idx) => {
-      const memberId = member.id ? `l2-${member.id}` : `l2-${idx}`;
-      return {
-        id: memberId,
-        level: 'L2',
-        x: l2Positions[idx]?.x ?? l2X,
-        y: l2Positions[idx]?.y ?? rootY,
-        label: this.nodeLabel(member.name),
-        name: member.name || 'Miembro',
-        status: member.status,
-        leaderId: member.leaderId ? String(member.leaderId) : undefined,
-        meta: { spend: member.spend ?? 0 }
-      };
-    });
-
-    const l2ByMemberId = new Map<string, (typeof l2Nodes)[number]>();
-    l2Members.forEach((member, idx) => {
-      const memberId = member.id ? String(member.id) : `idx-${idx}`;
-      l2ByMemberId.set(memberId, l2Nodes[idx]);
-    });
-
-    const l3Nodes = l3Members.map((member, idx) => {
-      const memberId = member.id ? `l3-${member.id}` : `l3-${idx}`;
-      return {
-        id: memberId,
-        level: 'L3',
-        x: l3Positions[idx]?.x ?? l3X,
-        y: l3Positions[idx]?.y ?? rootY,
-        label: this.nodeLabel(member.name),
-        name: member.name || 'Miembro',
-        status: member.status,
-        leaderId: member.leaderId ? String(member.leaderId) : undefined,
-        meta: { spend: member.spend ?? 0 }
-      };
-    });
-
-    const links: GraphLayout['links'] = [];
-    for (const node of l1Nodes) {
-      links.push({ x1: root.x, y1: root.y, x2: node.x, y2: node.y });
-    }
-    for (const node of l2Nodes) {
-      const parentId = node.leaderId ?? '';
-      const parent = l1ByMemberId.get(parentId) ?? (l1Nodes.length ? l1Nodes[0] : root);
-      links.push({ x1: parent.x, y1: parent.y, x2: node.x, y2: node.y });
-    }
-    for (const node of l3Nodes) {
-      const parentId = node.leaderId ?? '';
-      const parent = l2ByMemberId.get(parentId) ?? (l2Nodes.length ? l2Nodes[0] : root);
-      links.push({ x1: parent.x, y1: parent.y, x2: node.x, y2: node.y });
-    }
+    const graphSnapshot = this.networkGraph.buildSnapshot(members, rootName);
 
     this.graphMembersRef = members;
     this.graphRootNameCache = rootName;
-    this.graphLayoutCache = { nodes: [root, ...l1Nodes, ...l2Nodes, ...l3Nodes], links };
-    this.graphSizeCache = { width: metrics.width, height: metrics.height };
+    this.graphLayoutCache = graphSnapshot.layout;
+    this.graphSizeCache = graphSnapshot.size;
     return this.graphLayoutCache;
   }
 
@@ -880,45 +716,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   get graphSize(): { width: number; height: number } {
     this.graphLayout;
     return this.graphSizeCache;
-  }
-
-  private getGraphMetrics(
-    l1Count: number,
-    l2Count: number,
-    l3Count: number
-  ): { width: number; height: number; top: number; spacing: number } {
-    const maxCount = Math.max(l1Count, l2Count, l3Count, 1);
-    const top = 40;
-    const spacing = 64;
-    const height = Math.max(260, top * 2 + spacing * (maxCount - 1));
-    return { width: 860, height, top, spacing };
-  }
-
-  private buildColumnPositions(
-    count: number,
-    x: number,
-    top: number,
-    spacing: number
-  ): { x: number; y: number }[] {
-    if (count <= 0) {
-      return [];
-    }
-    if (count === 1) {
-      return [{ x, y: top }];
-    }
-    return Array.from({ length: count }, (_, index) => ({
-      x,
-      y: top + spacing * index
-    }));
-  }
-
-  private nodeLabel(name?: string): string {
-    const value = (name ?? '').trim();
-    if (!value) {
-      return 'Cliente';
-    }
-    const first = value.split(' ')[0] ?? value;
-    return first.slice(0, 6);
   }
 
   curvePath(link: { x1: number; y1: number; x2: number; y2: number }, offset: number): string {
@@ -989,6 +786,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     if (this.goalFillTimeout) {
       this.timer.clearTimeout(this.goalFillTimeout);
+    }
+    if (this.notificationModalTimeout) {
+      this.timer.clearTimeout(this.notificationModalTimeout);
     }
     this.goalsSub?.unsubscribe();
   }
@@ -1122,7 +922,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
-  setSocialFormat(format: 'story' | 'feed' | 'banner'): void {
+  setSocialFormat(format: UserDashboardSocialFormat): void {
     this.socialFormat = format;
   }
 
@@ -1244,7 +1044,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return cutoff;
   }
 
-  setChannel(channel: 'whatsapp' | 'instagram' | 'facebook'): void {
+  setChannel(channel: UserDashboardSocialChannel): void {
     this.socialChannel = channel;
     switch (channel) {
       case 'facebook':
@@ -1281,53 +1081,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.copyImageToClipboard(url, 'Imagen copiada.');
   }
 
-  generateTemplate(channel: 'whatsapp' | 'instagram' | 'facebook' = this.socialChannel): void {
-    const label = this.activeFeatured.label;
-    const hook = this.activeFeatured.hook;
-    const productCopy = this.getActiveProductCopy(channel);
-    let cta = `Pidelo aqui: ${this.referralLink}`;
-    let opener = 'Te comparto esto:';
-    let howTo = productCopy || 'Como lo uso: ...';
-
-    switch (channel) {
-      case 'whatsapp':
-        opener = 'Te lo paso por WhatsApp:';
-        howTo = productCopy || 'Resumen rapido: ...';
-        cta = `Si te interesa, responde y te paso el link: ${this.referralLink}`;
-        break;
-      case 'instagram':
-        opener = 'Tip rapido para Instagram:';
-        howTo = productCopy || 'Como lo uso: ...';
-        cta = `Pide el link por DM o en bio: ${this.referralLink}`;
-        break;
-      case 'facebook':
-        opener = 'Comparte esto en Facebook:';
-        howTo = productCopy || 'Mi experiencia: ...';
-        cta = `Escribeme por inbox y te paso el link: ${this.referralLink}`;
-        break;
-      default:
-        break;
-    }
-
-    const template = `${opener}\n\n${label}: ${hook}\n\n${howTo}\n\n${cta}`;
-    this.captionText = template;
+  generateTemplate(channel: UserDashboardSocialChannel = this.socialChannel): void {
+    this.captionText = this.shareContent.buildChannelTemplate({
+      channel,
+      activeFeatured: this.activeFeatured,
+      referralLink: this.referralLink,
+      products: this.products
+    });
     this.showToast('Template generado.');
     this.lastAutoCaption = true;
-  }
-
-  private getActiveProductCopy(channel: 'whatsapp' | 'instagram' | 'facebook'): string {
-    const featuredId = this.activeFeatured?.id;
-    const product = featuredId ? this.products.find((item) => item.id === featuredId) : null;
-    if (!product) {
-      return '';
-    }
-    if (channel === 'facebook') {
-      return (product.copyFacebook || '').trim();
-    }
-    if (channel === 'instagram') {
-      return (product.copyInstagram || '').trim();
-    }
-    return (product.copyWhatsapp || '').trim();
   }
 
   copyCaption(): void {
@@ -1506,11 +1268,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   newGoalDelay(goal: DashboardGoal): string {
-    if (!this.isNewAchievedGoal(goal) || !this.isGoalsHighlight) {
-      return '0ms';
-    }
-    const order = this.newAchievedGoalOrder.get(goal.key) ?? 0;
-    return `${order * 180}ms`;
+    return this.achievedGoalsCoordinator.newGoalDelay(
+      goal,
+      this.newAchievedGoalKeys,
+      this.newAchievedGoalOrder,
+      this.isGoalsHighlight
+    );
   }
 
   openProductDetails(product: DashboardProduct): void {
@@ -1677,98 +1440,36 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private loadAchievedGoals(goals: DashboardGoal[]): void {
-    if (this.isGuest) {
-      this.achievedGoals = [];
-      this.isGoalsModalOpen = false;
-      return;
-    }
-    const completed = (goals ?? []).filter((goal) => Boolean(goal?.achieved) && !goal?.locked);
-
-    const monthKey = this.getCurrentMonthKey();
-    const stored = this.readAchievedGoalsStorage();
-    const storedMonth = stored?.month ?? '';
-    const storedKeys = storedMonth === monthKey ? stored?.goals ?? [] : [];
-
-    if (storedMonth && storedMonth !== monthKey) {
-      this.clearAchievedGoalsStorage();
-    }
-
-    const completedKeys = completed.map((goal) => goal.key).filter((key) => Boolean(key));
-    const newKeys = completedKeys.filter((key) => !storedKeys.includes(key));
-    this.newAchievedGoalKeys = new Set(newKeys);
-    const newGoals = completed.filter((goal) => this.newAchievedGoalKeys.has(goal.key));
-    const oldGoals = completed.filter((goal) => !this.newAchievedGoalKeys.has(goal.key));
-    this.achievedGoals = [...newGoals, ...oldGoals];
-    this.newAchievedGoalOrder = new Map(
-      this.achievedGoals
-        .filter((goal) => this.newAchievedGoalKeys.has(goal.key))
-        .map((goal, index) => [goal.key, index])
-    );
-    this.achievedGoalsPage = 0;
-    this.isGoalsModalOpen = newKeys.length > 0;
-    if (newKeys.length > 0) {
+    const state = this.achievedGoalsCoordinator.resolveState(goals, this.isGuest);
+    this.achievedGoals = state.achievedGoals;
+    this.newAchievedGoalKeys = state.newGoalKeys;
+    this.newAchievedGoalOrder = state.newGoalOrder;
+    this.achievedGoalsPage = state.achievedGoalsPage;
+    this.isGoalsModalOpen = state.isGoalsModalOpen;
+    this.isGoalsHighlight = state.isGoalsHighlight;
+    if (state.shouldAnimateHighlight) {
       this.triggerGoalsAnimation();
-    } else {
-      this.isGoalsHighlight = false;
-    }
-
-    if (newKeys.length > 0) {
-      const merged = Array.from(new Set([...storedKeys, ...newKeys]));
-      this.saveAchievedGoalsStorage(monthKey, merged);
     }
   }
 
   private triggerGoalsAnimation(): void {
-    if (this.goalsAnimTimeout) {
-      this.timer.clearTimeout(this.goalsAnimTimeout);
-    }
-    this.isGoalsHighlight = false;
-    this.goalsAnimTimeout = this.timer.setTimeout(() => {
-      this.isGoalsHighlight = true;
-    }, 80);
-  }
-
-  private animateGoalBar(goal: DashboardGoal): void {
-    const targetActive = this.goalBasePercent(goal);
-    const targetCart = this.goalCartPercent(goal);
-    this.isGoalFilling = false;
-    this.visualActiveWidth = 0;
-    this.visualCartWidth = 0;
-    if (this.goalFillTimeout) {
-      this.timer.clearTimeout(this.goalFillTimeout);
-    }
-    this.timer.requestAnimationFrame(() => {
-      this.isGoalFilling = true;
-      this.timer.requestAnimationFrame(() => {
-        this.visualActiveWidth = targetActive;
-        this.visualCartWidth = targetCart;
-        this.goalFillTimeout = this.timer.setTimeout(() => {
-          this.isGoalFilling = false;
-        }, 1100);
-      });
+    this.goalsAnimTimeout = this.achievedGoalsCoordinator.scheduleHighlight(this.goalsAnimTimeout, (value) => {
+      this.isGoalsHighlight = value;
     });
   }
 
-  private getCurrentMonthKey(): string {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${now.getFullYear()}-${month}`;
-  }
-
-  private readAchievedGoalsStorage(): { month: string; goals: string[] } | null {
-    const parsed = this.storage.getJson<{ month?: string; goals?: string[] }>(this.achievedGoalsStorageKey);
-    if (!parsed?.month || !Array.isArray(parsed.goals)) {
-      return null;
-    }
-    return { month: parsed.month, goals: parsed.goals.filter((key) => typeof key === 'string') };
-  }
-
-  private saveAchievedGoalsStorage(month: string, goals: string[]): void {
-    this.storage.setJson(this.achievedGoalsStorageKey, { month, goals });
-  }
-
-  private clearAchievedGoalsStorage(): void {
-    this.storage.removeItem(this.achievedGoalsStorageKey);
+  private animateGoalBar(goal: DashboardGoal): void {
+    this.goalFillTimeout = this.achievedGoalsCoordinator.animateGoalBar(
+      goal,
+      this.goalFillTimeout,
+      (currentGoal) => this.goalBasePercent(currentGoal),
+      (currentGoal) => this.goalCartPercent(currentGoal),
+      (state: UserDashboardGoalBarState) => {
+        this.isGoalFilling = state.isGoalFilling;
+        this.visualActiveWidth = state.visualActiveWidth;
+        this.visualCartWidth = state.visualCartWidth;
+      }
+    );
   }
 
   remainingForGoal(goal: any): string {
@@ -1805,24 +1506,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private prepareNotifications(notifications: PortalNotification[]): void {
-    if (this.isGuest || !notifications.length) {
-      this.notificationQueue = [];
-      return;
-    }
-    this.notificationQueue = notifications.filter((notification) => !notification.isRead);
+    this.notificationQueue = this.notificationFlow.prepareQueue(notifications, this.isGuest);
     if (!this.isNotificationModalOpen && this.notificationQueue.length) {
       this.openNextNotification();
+      return;
+    }
+    if (!this.notificationQueue.length) {
+      this.activeNotification = null;
+      this.isNotificationModalOpen = false;
     }
   }
 
   private openNextNotification(): void {
-    const next = this.notificationQueue.shift() ?? null;
-    if (!next) {
+    const queueState = this.notificationFlow.takeNext(this.notificationQueue);
+    this.notificationQueue = queueState.queue;
+    if (!queueState.activeNotification) {
       this.activeNotification = null;
-      this.isNotificationModalOpen = false;
+      this.isNotificationModalOpen = queueState.isNotificationModalOpen;
       return;
     }
-    this.openNotification(next);
+    this.openNotification(queueState.activeNotification);
   }
 
   private markNotificationAsRead(notification: PortalNotification): void {
@@ -1837,14 +1540,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private buildAutoCaption(): string {
-    const label = this.activeFeatured.label || 'Producto destacado';
-    const hook = this.activeFeatured.hook || 'Descubre por qué a todos les funciona.';
-    const productCopy = this.getActiveProductCopy(this.socialChannel);
-    const cta = `Pídelo aquí: ${this.referralLink}`;
-    if (productCopy) {
-      return `${productCopy}\n\n${cta}`;
-    }
-    return `${label}: ${hook}\n\nCómo lo uso: ...\n\n${cta}`;
+    return this.shareContent.buildAutoCaption({
+      channel: this.socialChannel,
+      activeFeatured: this.activeFeatured,
+      referralLink: this.referralLink,
+      products: this.products
+    });
   }
 
   private copyImageToClipboard(url: string, toastMessage: string): void {

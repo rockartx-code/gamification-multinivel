@@ -284,6 +284,21 @@ export interface RewardsConfig {
   cutRule: string;
 }
 
+export interface BusinessConfigPaymentsConfig {
+  mercadoLibre: {
+    enabled: boolean;
+    accessToken: string;
+    checkoutPreferencesUrl: string;
+    paymentInfoUrlTemplate: string;
+    notificationUrl: string;
+    successUrl: string;
+    failureUrl: string;
+    pendingUrl: string;
+    currencyId: string;
+    webhookSecret: string;
+  };
+}
+
 export interface AppBusinessConfig {
   version: string;
   rewards: RewardsConfig;
@@ -303,6 +318,7 @@ export interface AppBusinessConfig {
   stocks: {
     requireLinkedUserForTransferReceive: boolean;
   };
+  payments: BusinessConfigPaymentsConfig;
   adminWarnings: {
     showCommissions: boolean;
     showShipping: boolean;

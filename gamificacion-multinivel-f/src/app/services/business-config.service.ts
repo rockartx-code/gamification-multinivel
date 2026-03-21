@@ -26,8 +26,126 @@ export class BusinessConfigService {
   }
 
   private normalizeConfig(config: AppBusinessConfig | null | undefined, sortDiscountTiers: boolean): AppBusinessConfig {
-    const next = structuredClone(config ?? DEFAULT_BUSINESS_CONFIG);
-    next.rewards.discountTiers = this.normalizeDiscountTiers(next.rewards.discountTiers, sortDiscountTiers);
+    const source = config ?? DEFAULT_BUSINESS_CONFIG;
+    const next: AppBusinessConfig = {
+      version: this.normalizeRequiredString(source.version, DEFAULT_BUSINESS_CONFIG.version),
+      rewards: {
+        version: this.normalizeRequiredString(source.rewards?.version, DEFAULT_BUSINESS_CONFIG.rewards.version),
+        activationNetMin: this.parseNonNegativeNumber(source.rewards?.activationNetMin),
+        discountTiers: this.normalizeDiscountTiers(source.rewards?.discountTiers, sortDiscountTiers),
+        commissionByDepth: {
+          '1': this.normalizeDiscountRateValue(source.rewards?.commissionByDepth?.['1']),
+          '2': this.normalizeDiscountRateValue(source.rewards?.commissionByDepth?.['2']),
+          '3': this.normalizeDiscountRateValue(source.rewards?.commissionByDepth?.['3'])
+        },
+        payoutDay: this.normalizePositiveInteger(source.rewards?.payoutDay, DEFAULT_BUSINESS_CONFIG.rewards.payoutDay),
+        cutRule: this.normalizeRequiredString(source.rewards?.cutRule, DEFAULT_BUSINESS_CONFIG.rewards.cutRule)
+      },
+      orders: {
+        requireStockOnShipped: this.normalizeBoolean(
+          source.orders?.requireStockOnShipped,
+          DEFAULT_BUSINESS_CONFIG.orders.requireStockOnShipped
+        ),
+        requireDispatchLinesOnShipped: this.normalizeBoolean(
+          source.orders?.requireDispatchLinesOnShipped,
+          DEFAULT_BUSINESS_CONFIG.orders.requireDispatchLinesOnShipped
+        )
+      },
+      pos: {
+        defaultCustomerName: this.normalizeRequiredString(
+          source.pos?.defaultCustomerName,
+          DEFAULT_BUSINESS_CONFIG.pos.defaultCustomerName
+        ),
+        defaultPaymentStatus: this.normalizeRequiredString(
+          source.pos?.defaultPaymentStatus,
+          DEFAULT_BUSINESS_CONFIG.pos.defaultPaymentStatus
+        ),
+        defaultDeliveryStatus: this.normalizeRequiredString(
+          source.pos?.defaultDeliveryStatus,
+          DEFAULT_BUSINESS_CONFIG.pos.defaultDeliveryStatus
+        ),
+        orderStatusByDeliveryStatus: {
+          delivered_branch: this.normalizeRequiredString(
+            source.pos?.orderStatusByDeliveryStatus?.delivered_branch,
+            DEFAULT_BUSINESS_CONFIG.pos.orderStatusByDeliveryStatus.delivered_branch
+          ),
+          paid_branch: this.normalizeRequiredString(
+            source.pos?.orderStatusByDeliveryStatus?.paid_branch,
+            DEFAULT_BUSINESS_CONFIG.pos.orderStatusByDeliveryStatus.paid_branch
+          )
+        }
+      },
+      stocks: {
+        requireLinkedUserForTransferReceive: this.normalizeBoolean(
+          source.stocks?.requireLinkedUserForTransferReceive,
+          DEFAULT_BUSINESS_CONFIG.stocks.requireLinkedUserForTransferReceive
+        )
+      },
+      payments: {
+        mercadoLibre: {
+          enabled: this.normalizeBoolean(
+            source.payments?.mercadoLibre?.enabled,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.enabled
+          ),
+          accessToken: this.normalizeOptionalString(
+            source.payments?.mercadoLibre?.accessToken,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.accessToken
+          ),
+          checkoutPreferencesUrl: this.normalizeRequiredString(
+            source.payments?.mercadoLibre?.checkoutPreferencesUrl,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.checkoutPreferencesUrl
+          ),
+          paymentInfoUrlTemplate: this.normalizeRequiredString(
+            source.payments?.mercadoLibre?.paymentInfoUrlTemplate,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.paymentInfoUrlTemplate
+          ),
+          notificationUrl: this.normalizeOptionalString(
+            source.payments?.mercadoLibre?.notificationUrl,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.notificationUrl
+          ),
+          successUrl: this.normalizeOptionalString(
+            source.payments?.mercadoLibre?.successUrl,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.successUrl
+          ),
+          failureUrl: this.normalizeOptionalString(
+            source.payments?.mercadoLibre?.failureUrl,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.failureUrl
+          ),
+          pendingUrl: this.normalizeOptionalString(
+            source.payments?.mercadoLibre?.pendingUrl,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.pendingUrl
+          ),
+          currencyId: this.normalizeRequiredString(
+            source.payments?.mercadoLibre?.currencyId,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.currencyId
+          ),
+          webhookSecret: this.normalizeOptionalString(
+            source.payments?.mercadoLibre?.webhookSecret,
+            DEFAULT_BUSINESS_CONFIG.payments.mercadoLibre.webhookSecret
+          )
+        }
+      },
+      adminWarnings: {
+        showCommissions: this.normalizeBoolean(
+          source.adminWarnings?.showCommissions,
+          DEFAULT_BUSINESS_CONFIG.adminWarnings.showCommissions
+        ),
+        showShipping: this.normalizeBoolean(source.adminWarnings?.showShipping, DEFAULT_BUSINESS_CONFIG.adminWarnings.showShipping),
+        showPendingPayments: this.normalizeBoolean(
+          source.adminWarnings?.showPendingPayments,
+          DEFAULT_BUSINESS_CONFIG.adminWarnings.showPendingPayments
+        ),
+        showPendingTransfers: this.normalizeBoolean(
+          source.adminWarnings?.showPendingTransfers,
+          DEFAULT_BUSINESS_CONFIG.adminWarnings.showPendingTransfers
+        ),
+        showPosSalesToday: this.normalizeBoolean(
+          source.adminWarnings?.showPosSalesToday,
+          DEFAULT_BUSINESS_CONFIG.adminWarnings.showPosSalesToday
+        )
+      }
+    };
+
     this.normalizeSelectValues(next);
     return next;
   }
@@ -81,6 +199,29 @@ export class BusinessConfigService {
     const parsed = this.parseNonNegativeNumber(value);
     const normalized = parsed > 1 ? parsed / 100 : parsed;
     return Math.min(1, this.roundMoney(normalized));
+  }
+
+  private normalizePositiveInteger(value: unknown, fallback: number): number {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return fallback;
+    }
+    return parsed;
+  }
+
+  private normalizeBoolean(value: unknown, fallback: boolean): boolean {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    return fallback;
+  }
+
+  private normalizeRequiredString(value: unknown, fallback: string): string {
+    return typeof value === 'string' && value.trim() ? value : fallback;
+  }
+
+  private normalizeOptionalString(value: unknown, fallback: string): string {
+    return typeof value === 'string' ? value : fallback;
   }
 
   private ensureAllowedValue<T extends string>(value: unknown, options: readonly T[], fallback: T): T {

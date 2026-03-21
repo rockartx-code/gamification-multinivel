@@ -36,6 +36,10 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { AdminControlService } from '../../services/admin-control.service';
+import {
+  AdminNotificationForm,
+  AdminNotificationFormService
+} from '../../services/admin-notification-form.service';
 import { BrowserDomService } from '../../services/browser/browser-dom.service';
 import { BrowserLocationService } from '../../services/browser/browser-location.service';
 import { BusinessConfigService } from '../../services/business-config.service';
@@ -287,10 +291,13 @@ export class AdminComponent implements OnInit {
     private readonly location: BrowserLocationService,
     private readonly timer: BrowserTimerService,
     private readonly businessConfigService: BusinessConfigService,
-    private readonly notifier: NotificationService
+    private readonly notifier: NotificationService,
+    private readonly adminNotificationFormService: AdminNotificationFormService
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
     this.businessConfigDraft = this.businessConfigService.createDefaultConfig();
+    this.notificationNotice = this.adminNotificationFormService.createNotice();
+    this.notificationForm = this.adminNotificationFormService.createDefaultForm();
   }
 
   currentView: AdminViewId = 'orders';
@@ -372,7 +379,7 @@ export class AdminComponent implements OnInit {
     tags: ''
   };
   productExistingImages: AdminProduct['images'] = [];
-  private readonly notificationNotice: UiNotificationState = { message: '', tone: 'info', visible: false };
+  private readonly notificationNotice: UiNotificationState;
 
   get businessConfigMessage(): string {
     return this.businessConfigNotice.message;
@@ -386,7 +393,7 @@ export class AdminComponent implements OnInit {
     return this.notificationNotice.message;
   }
   isSavingNotification = false;
-  notificationForm = this.getDefaultNotificationForm();
+  notificationForm!: AdminNotificationForm;
   productImageSlots = [
     { key: 'redes', label: 'Redes', hint: 'Story / Feed' },
     { key: 'landing', label: 'Landing', hint: 'Hero 16:9' },
@@ -1061,18 +1068,11 @@ export class AdminComponent implements OnInit {
   }
 
   get notificationDescriptionLength(): number {
-    return this.notificationForm.description.length;
+    return this.adminNotificationFormService.descriptionLength(this.notificationForm);
   }
 
   get isNotificationFormValid(): boolean {
-    return Boolean(
-      this.notificationForm.title.trim() &&
-        this.notificationForm.description.trim() &&
-        this.notificationForm.startAt &&
-        this.notificationForm.endAt &&
-        this.notificationDescriptionLength <= 300 &&
-        new Date(this.notificationForm.endAt).getTime() >= new Date(this.notificationForm.startAt).getTime()
-    );
+    return this.adminNotificationFormService.isValid(this.notificationForm);
   }
 
   canAccessView(view: AdminViewId): boolean {
@@ -2412,27 +2412,15 @@ export class AdminComponent implements OnInit {
   }
 
   editNotification(notification: PortalNotification): void {
-    this.notificationForm = {
-      id: notification.id,
-      title: notification.title,
-      description: notification.description,
-      linkUrl: notification.linkUrl || '',
-      linkText: notification.linkText || 'Ver',
-      startAt: this.toDateTimeLocalInput(notification.startAt),
-      endAt: this.toDateTimeLocalInput(notification.endAt),
-      active: notification.active !== false
-    };
-    this.notifier.show(this.notificationNotice, `Editando notificacion: ${notification.title}.`);
+    this.notificationForm = this.adminNotificationFormService.createEditForm(notification);
+    this.adminNotificationFormService.announceEditing(this.notificationNotice, notification);
   }
 
   updateNotificationField(
     field: 'title' | 'description' | 'linkUrl' | 'linkText' | 'startAt' | 'endAt',
     value: string
   ): void {
-    this.notificationForm = {
-      ...this.notificationForm,
-      [field]: value
-    };
+    this.notificationForm = this.adminNotificationFormService.updateField(this.notificationForm, field, value);
   }
 
   saveNotification(): void {
@@ -2440,18 +2428,9 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.isSavingNotification = true;
-    const linkUrl = this.notificationForm.linkUrl.trim();
+    const editingNotificationId = this.notificationForm.id;
     this.adminControl
-      .saveNotification({
-        id: this.notificationForm.id || undefined,
-        title: this.notificationForm.title.trim(),
-        description: this.notificationForm.description.trim(),
-        linkUrl: linkUrl || undefined,
-        linkText: linkUrl ? this.notificationForm.linkText.trim() || 'Ver' : undefined,
-        startAt: this.fromDateTimeLocalInput(this.notificationForm.startAt),
-        endAt: this.fromDateTimeLocalInput(this.notificationForm.endAt),
-        active: this.notificationForm.active
-      })
+      .saveNotification(this.adminNotificationFormService.buildPayload(this.notificationForm))
       .pipe(
         finalize(() => {
           this.isSavingNotification = false;
@@ -2459,21 +2438,17 @@ export class AdminComponent implements OnInit {
       )
       .subscribe({
         next: (notification) => {
-          this.notifier.show(
-            this.notificationNotice,
-            this.notificationForm.id ? `Notificacion actualizada: ${notification.title}.` : `Notificacion creada: ${notification.title}.`,
-            'success'
-          );
+          this.adminNotificationFormService.announceSaveSuccess(this.notificationNotice, editingNotificationId, notification.title);
           this.resetNotificationForm();
         },
         error: () => {
-          this.notifier.show(this.notificationNotice, 'No se pudo guardar la notificacion.', 'error');
+          this.adminNotificationFormService.announceSaveError(this.notificationNotice);
         }
       });
   }
 
   resetNotificationForm(): void {
-    this.notificationForm = this.getDefaultNotificationForm();
+    this.notificationForm = this.adminNotificationFormService.createDefaultForm();
   }
 
   private resetProductForm(): void {
@@ -2545,47 +2520,6 @@ export class AdminComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
-  }
-
-  private getDefaultNotificationForm(): {
-    id: string;
-    title: string;
-    description: string;
-    linkUrl: string;
-    linkText: string;
-    startAt: string;
-    endAt: string;
-    active: boolean;
-  } {
-    const now = new Date();
-    const end = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7);
-    return {
-      id: '',
-      title: '',
-      description: '',
-      linkUrl: '',
-      linkText: 'Ver',
-      startAt: this.toDateTimeLocalInput(now.toISOString()),
-      endAt: this.toDateTimeLocalInput(end.toISOString()),
-      active: true
-    };
-  }
-
-  private toDateTimeLocalInput(value?: string): string {
-    if (!value) {
-      return '';
-    }
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return '';
-    }
-    const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 16);
-  }
-
-  private fromDateTimeLocalInput(value: string): string {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
   }
 
   uploadProductImage(event: Event, section: CreateProductAssetPayload['section']): void {

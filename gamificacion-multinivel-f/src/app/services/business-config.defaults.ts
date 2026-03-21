@@ -30,6 +30,20 @@ export const DEFAULT_BUSINESS_CONFIG: AppBusinessConfig = {
   stocks: {
     requireLinkedUserForTransferReceive: true
   },
+  payments: {
+    mercadoLibre: {
+      enabled: false,
+      accessToken: '',
+      checkoutPreferencesUrl: 'https://api.mercadopago.com/checkout/preferences',
+      paymentInfoUrlTemplate: 'https://api.mercadopago.com/v1/payments/{payment_id}',
+      notificationUrl: 'https://m85v7secp8.execute-api.us-east-1.amazonaws.com/default/Multinivel/webhooks/mercadolibre',
+      successUrl: 'https://www.findingu.com.mx/#/orden/{payment_id}?status=success',
+      failureUrl: 'https://www.findingu.com.mx/#/orden/{payment_id}?status=failure',
+      pendingUrl: 'https://www.findingu.com.mx/#/orden/{payment_id}?status=pending',
+      currencyId: 'MXN',
+      webhookSecret: ''
+    }
+  },
   adminWarnings: {
     showCommissions: true,
     showShipping: true,
