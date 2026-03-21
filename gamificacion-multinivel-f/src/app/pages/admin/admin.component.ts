@@ -42,7 +42,7 @@ import {
 } from '../../services/admin-notification-form.service';
 import { BrowserDomService } from '../../services/browser/browser-dom.service';
 import { BrowserLocationService } from '../../services/browser/browser-location.service';
-import { BusinessConfigService } from '../../services/business-config.service';
+import { AdminBusinessConfigDraftService } from '../../services/admin-business-config-draft.service';
 import { NotificationService, UiNotificationState } from '../../services/notification.service';
 import { BrowserTimerService } from '../../services/browser/browser-timer.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
@@ -290,12 +290,12 @@ export class AdminComponent implements OnInit {
     private readonly dom: BrowserDomService,
     private readonly location: BrowserLocationService,
     private readonly timer: BrowserTimerService,
-    private readonly businessConfigService: BusinessConfigService,
+    private readonly businessConfigDraftService: AdminBusinessConfigDraftService,
     private readonly notifier: NotificationService,
     private readonly adminNotificationFormService: AdminNotificationFormService
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
-    this.businessConfigDraft = this.businessConfigService.createDefaultConfig();
+    this.businessConfigDraft = this.businessConfigDraftService.createDefaultDraft();
     this.notificationNotice = this.adminNotificationFormService.createNotice();
     this.notificationForm = this.adminNotificationFormService.createDefaultForm();
   }
@@ -1398,34 +1398,19 @@ export class AdminComponent implements OnInit {
   }
 
   discountTierPercentValue(tier: DiscountTierDraft): number {
-    return this.roundMoney(this.normalizeDiscountRateValue(tier?.rate) * 100);
+    return this.businessConfigDraftService.discountTierPercentValue(tier);
   }
 
   discountTierRangeLabel(tier: DiscountTierDraft): string {
-    const min = this.parseNonNegativeNumber(tier?.min);
-    const max = tier?.max == null ? null : this.parseNonNegativeNumber(tier.max);
-    if (max == null || max < min) {
-      return `Desde ${this.formatMoney(min)}`;
-    }
-    return `${this.formatMoney(min)} a ${this.formatMoney(max)}`;
+    return this.businessConfigDraftService.discountTierRangeLabel(tier, (value) => this.formatMoney(value));
   }
 
   updateDiscountTierMin(index: number, value: unknown): void {
-    const tiers = this.businessConfigDraft.rewards.discountTiers ?? [];
-    if (!tiers[index]) {
-      return;
-    }
-    tiers[index].min = this.parseNonNegativeNumber(value);
-    this.refreshDiscountTierThresholds();
+    this.businessConfigDraft = this.businessConfigDraftService.updateDiscountTierMin(this.businessConfigDraft, index, value);
   }
 
   updateDiscountTierRate(index: number, value: unknown): void {
-    const tiers = this.businessConfigDraft.rewards.discountTiers ?? [];
-    if (!tiers[index]) {
-      return;
-    }
-    const percent = Math.min(100, this.parseNonNegativeNumber(value));
-    tiers[index].rate = this.roundMoney(percent / 100);
+    this.businessConfigDraft = this.businessConfigDraftService.updateDiscountTierRate(this.businessConfigDraft, index, value);
   }
 
   configOptionDescription(value: string, options: Array<ExplainedSelectOption<string>>): string {
@@ -3324,14 +3309,14 @@ export class AdminComponent implements OnInit {
     }
     this.isSavingBusinessConfig = true;
     this.notifier.clear(this.businessConfigNotice);
-    const configToSave = this.businessConfigService.normalizeForSave(this.businessConfigDraft);
+    const configToSave = this.businessConfigDraftService.prepareDraftForSave(this.businessConfigDraft);
     this.businessConfigDraft = structuredClone(configToSave);
     this.adminControl
       .saveBusinessConfig({ config: structuredClone(configToSave) })
       .pipe(finalize(() => (this.isSavingBusinessConfig = false)))
       .subscribe({
         next: (config) => {
-          this.businessConfigDraft = this.businessConfigService.normalizeForDraft(config);
+          this.businessConfigDraft = this.businessConfigDraftService.normalizeDraft(config);
           this.notifier.show(this.businessConfigNotice, 'Configuracion guardada.', 'success');
         },
         error: () => {
@@ -3344,39 +3329,21 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('config_manage')) {
       return;
     }
-    this.businessConfigDraft = this.businessConfigService.createDefaultConfig();
+    this.businessConfigDraft = this.businessConfigDraftService.restoreDefaults();
     this.notifier.show(this.businessConfigNotice, 'Se cargaron valores por defecto locales. Guarda para aplicar.');
   }
 
   private syncBusinessConfigDraft(): void {
     const inlineConfig = this.businessConfig;
     if (inlineConfig) {
-      this.businessConfigDraft = this.businessConfigService.normalizeForDraft(inlineConfig);
+      this.businessConfigDraft = this.businessConfigDraftService.normalizeDraft(inlineConfig);
       return;
     }
     this.adminControl.getBusinessConfig().subscribe({
       next: (config) => {
-        this.businessConfigDraft = this.businessConfigService.normalizeForDraft(config);
+        this.businessConfigDraft = this.businessConfigDraftService.normalizeDraft(config);
       }
     });
-  }
-
-  private refreshDiscountTierThresholds(): void {
-    this.businessConfigDraft = this.businessConfigService.normalizeForDraft(this.businessConfigDraft);
-  }
-
-  private parseNonNegativeNumber(value: unknown): number {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      return 0;
-    }
-    return this.roundMoney(parsed);
-  }
-
-  private normalizeDiscountRateValue(value: unknown): number {
-    const parsed = this.parseNonNegativeNumber(value);
-    const normalized = parsed > 1 ? parsed / 100 : parsed;
-    return Math.min(1, this.roundMoney(normalized));
   }
 
   private buildSelectTooltip(options: Array<ExplainedSelectOption<string>>): string {

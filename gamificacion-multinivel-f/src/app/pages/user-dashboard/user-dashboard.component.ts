@@ -56,6 +56,10 @@ import {
   UserDashboardSocialChannel,
   UserDashboardSocialFormat
 } from '../../services/user-dashboard-share.service';
+import {
+  UserDashboardProfileBadgeService,
+  UserDashboardProfileBadgeState
+} from '../../services/user-dashboard-profile-badge.service';
 
 @Component({
   selector: 'app-user-dashboard',
@@ -83,7 +87,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly referralContent: UserDashboardReferralService,
     private readonly notificationFlow: UserDashboardNotificationsService,
     private readonly networkGraph: UserDashboardNetworkGraphService,
-    private readonly shareContent: UserDashboardShareService
+    private readonly shareContent: UserDashboardShareService,
+    private readonly profileBadge: UserDashboardProfileBadgeService
   ) {}
 
   readonly countdownLabel = signal('');
@@ -544,6 +549,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return `${Math.round(this.discountPercentValue)}%`;
   }
 
+  get profileBadgeState(): UserDashboardProfileBadgeState {
+    return this.profileBadge.buildState({
+      isClient: this.isClient,
+      discountActive: this.discountActiveValue,
+      discountPercent: this.discountPercent
+    });
+  }
+
   discountAppliedLabel(): string {
     return this.hasDiscount ? `Dto ${this.discountPercentValue}%` : 'Sin descuento';
   }
@@ -924,56 +937,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   setSocialFormat(format: UserDashboardSocialFormat): void {
     this.socialFormat = format;
-  }
-
-  // Color del icono del usuario: gris inactivo, azul activo.
-  levelIconClass(): string {
-    if (!this.isClient || !this.discountActiveValue) {
-      return 'icon-status-inactive';
-    }
-    return 'icon-status-active';
-  }
-
-  // Borde / anillo principal: estado + nivel.
-  discountRingClass(): string {
-    if (!this.isClient || !this.discountActiveValue) {
-      return 'ring ring-status-inactive level-5';
-    }
-    return `ring ring-status-active ${this.discountLevelClass()}`;
-  }
-
-  discountBadgeMiniClass(): string {
-    if (!this.isClient || !this.discountActiveValue) {
-      return 'badge badge-compact status-inactive';
-    }
-    return `badge badge-compact status-active ${this.discountLevelClass()}`;
-  }
-
-  private discountPercentNumber(): number {
-    const raw = (this.discountPercent ?? '').toString().trim();
-    const n = Number(raw.replace('%', ''));
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  private discountLevelNumber(): number {
-    const pct = this.discountPercentNumber();
-    if (pct >= 50) {
-      return 1;
-    }
-    if (pct >= 40) {
-      return 2;
-    }
-    if (pct >= 30) {
-      return 3;
-    }
-    if (pct >= 20) {
-      return 4;
-    }
-    return 5;
-  }
-
-  discountLevelClass(): string {
-    return `level-${this.discountLevelNumber()}`;
   }
 
   commissionLedgerStatusClass(status?: string): string {

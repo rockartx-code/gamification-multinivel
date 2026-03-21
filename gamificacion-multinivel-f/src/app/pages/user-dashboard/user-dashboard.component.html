@@ -38,12 +38,12 @@
       <div *ngIf="currentUser" class="relative shrink-0">
         <ui-button size="sm" variant="ghost" type="button" (pressed)="toggleUserDetails()" aria-label="Usuario">
           <span id="user-circle-control" class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80"
-            [ngClass]="discountRingClass()">
-            <i class="fa-solid fa-user text-[13px]" [ngClass]="levelIconClass()" aria-hidden="true"></i>
+            [ngClass]="profileBadgeState.ringClass">
+            <i class="fa-solid fa-user text-[13px]" [ngClass]="profileBadgeState.iconClass" aria-hidden="true"></i>
 
             <span *ngIf="isClient"
               class="absolute -right-1 -bottom-1 inline-flex items-center gap-1 rounded-full border border-olive-30 bg-sand-200-90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm backdrop-blur"
-              [ngClass]="discountBadgeMiniClass()">
+              [ngClass]="profileBadgeState.miniBadgeClass">
               <i class="fa-solid fa-tag text-[9px]" aria-hidden="true"></i>
               <span>{{ discountPercent }}%</span>
             </span>
