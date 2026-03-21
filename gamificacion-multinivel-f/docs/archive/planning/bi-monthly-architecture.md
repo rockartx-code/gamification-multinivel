@@ -11,7 +11,7 @@ Automatizar un pipeline mensual que:
 
 ## Artefacto IaC
 - Template CloudFormation incluido en:
-  - `idasparaimplementar/arquitecturaBI-cloudformation.yaml`
+  - `gamificacion-multinivel-f/docs/archive/planning/bi-monthly-cloudformation.yaml`
 - El template crea:
   - S3 bucket de data lake.
   - Glue database/table para Athena.

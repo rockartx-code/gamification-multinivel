@@ -20,7 +20,8 @@ Este README está orientado a onboarding técnico para mantener el proyecto con 
 - `src/styles.css`: tokens, utilidades semánticas y estilos base.
 - `src/environments`: switch entre API real/mock.
 - `lambda/handler.py`: router HTTP + lógica de negocio backend.
-- `docs/`: documentación interna (catálogo UI, guía de estilos, inventarios).
+- `docs/`: documentación interna vigente.
+- `docs/archive/`: histórico técnico, planning suelto y migraciones cerradas.
 
 ## 3. Arquitectura frontend (patrón usado)
 

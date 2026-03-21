@@ -1,44 +1,46 @@
 # Plan de almacenamiento en DynamoDB + S3
 
 ## Objetivo
-Centralizar los datos de gamificación (panel del usuario, metas, productos, red y activos multimedia) en una sola tabla de DynamoDB para optimizar consultas por índice, y usar S3 para archivos pesados (imágenes, banners, adjuntos).
 
-## Diseño de tabla (single-table)
-**Tabla:** `Gamificacion` (nombre configurable por ambiente).
+Centralizar datos de gamificación en una tabla single-table de DynamoDB y usar S3 para archivos pesados.
 
-| Atributo | Descripción |
-| --- | --- |
-| `PK` | Partition key principal (`USER#<userId>` o `ASSET#<assetId>`). |
-| `SK` | Sort key (`PROFILE`, `DASHBOARD`, `GOAL#<goalId>`, `PRODUCT#<productId>`, `FEATURED#<id>`, `NETWORK#<memberId>`). |
-| `entityType` | Tipo lógico del item (`profile`, `dashboard`, `goal`, `product`, `featured`, `network`, `asset`). |
-| `createdAt` / `updatedAt` | Timestamps ISO-8601 para auditoría. |
-| Campos del dominio | Datos propios de cada entidad (ej. `userCode`, `level`, `badge`, etc.). |
+## Tabla
 
-### Índices globales (GSI)
-| Índice | Uso | Claves |
-| --- | --- | --- |
-| `GSI1` | Buscar por `userCode` para recuperar perfil/dashboard. | `GSI1PK = USERCODE#<userCode>`, `GSI1SK = USER#<userId>` |
-| `GSI2` | Consultar miembros de red por nivel. | `GSI2PK = LEVEL#<level>`, `GSI2SK = USER#<userId>#MEMBER#<memberId>` |
-| `GSI3` | Consultar miembros de red por estado. | `GSI3PK = STATUS#<status>`, `GSI3SK = USER#<userId>#MEMBER#<memberId>` |
+- Nombre lógico: `Gamificacion` (configurable por ambiente).
+- Claves principales:
+  - `PK`: `USER#<userId>` o `ASSET#<assetId>`.
+  - `SK`: `PROFILE`, `DASHBOARD`, `GOAL#<goalId>`, `PRODUCT#<productId>`, `FEATURED#<id>`, `NETWORK#<memberId>`, `METADATA`.
+- Campos comunes: `entityType`, `createdAt`, `updatedAt` y atributos de dominio.
 
-> Nota: Si se requiere listar productos por badge, se puede añadir otro GSI (`BADGE#<badge>`).
+## GSIs
 
-## Accesos principales (access patterns)
-1. **Obtener dashboard completo por usuario:**
-   - `PK = USER#<userId>` y `SK` prefix (`PROFILE`, `DASHBOARD`, `GOAL#`, `PRODUCT#`, `FEATURED#`, `NETWORK#`).
-2. **Buscar usuario por código (`userCode`):**
-   - Consulta en `GSI1` con `GSI1PK = USERCODE#<code>`.
-3. **Filtrar red por nivel o estado:**
-   - Consulta en `GSI2` (`LEVEL#<level>`) o `GSI3` (`STATUS#<status>`).
-4. **Guardar/leer assets:**
-   - Metadata en DynamoDB (`PK = ASSET#<assetId>`, `SK = METADATA`) y archivo en S3.
+- `GSI1`: búsqueda por `userCode`.
+  - `GSI1PK = USERCODE#<userCode>`
+  - `GSI1SK = USER#<userId>`
+- `GSI2`: miembros de red por nivel.
+  - `GSI2PK = LEVEL#<level>`
+  - `GSI2SK = USER#<userId>#MEMBER#<memberId>`
+- `GSI3`: miembros de red por estado.
+  - `GSI3PK = STATUS#<status>`
+  - `GSI3SK = USER#<userId>#MEMBER#<memberId>`
+
+Si hiciera falta listar productos por badge, sumar un GSI específico.
+
+## Access patterns principales
+
+1. Dashboard completo por usuario: consultar `PK = USER#<userId>` y prefijos de `SK`.
+2. Usuario por código: consultar `GSI1`.
+3. Red por nivel o estado: consultar `GSI2` o `GSI3`.
+4. Assets: metadata en DynamoDB y archivo en S3.
 
 ## Uso de S3
-- **Bucket**: configurable por ambiente.
-- **Estrategia**: los clientes suben/descargan con URLs pre-firmadas.
-- **Metadata**: se guarda en DynamoDB para relacionar el archivo con entidades (`userId`, `productId`, `featuredId`, etc.).
+
+- Bucket configurable por ambiente.
+- Subida y descarga mediante URLs prefirmadas.
+- Metadata relacionada en DynamoDB (`userId`, `productId`, `featuredId`, etc.).
 
 ## Consideraciones
-- Se recomienda habilitar **TTL** si hay objetos temporales (ej. uploads expirados).
-- Para tamaños grandes (p. ej. redes extensas), se sugiere paginación con `LastEvaluatedKey`.
-- Usar **TransactWrite** si se necesita consistencia fuerte entre items relacionados.
+
+- Habilitar TTL para objetos temporales si aplica.
+- Paginar con `LastEvaluatedKey` en colecciones grandes.
+- Usar `TransactWrite` cuando se necesite consistencia fuerte entre items relacionados.
