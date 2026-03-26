@@ -129,7 +129,7 @@ export class AuthService {
     if (!user) {
       return false;
     }
-    return !this.isSuperUser(user);
+    return !this.hasAdminPanelAccess(user);
   }
 
   hasAdminAndUserAccess(user: AuthUser | null | undefined = this.currentUser): boolean {
@@ -137,9 +137,6 @@ export class AuthService {
   }
 
   defaultRoute(user: AuthUser | null | undefined = this.currentUser): string {
-    if (this.hasUserDashboardAccess(user)) {
-      return '/dashboard';
-    }
     if (this.hasAdminPanelAccess(user)) {
       return '/admin';
     }

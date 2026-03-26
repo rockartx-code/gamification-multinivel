@@ -25,10 +25,6 @@
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Acciones
         </ui-button>
-        <ui-button size="sm" variant="ghost" *ngIf="canOpenUserDashboard" (pressed)="openUserDashboard()">
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-          Panel Usuario
-        </ui-button>
         <ui-button size="sm" variant="ghost" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           Logout
@@ -112,23 +108,30 @@
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
-              <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
-                <div class="flex items-center gap-3">
+              <div class="flex flex-col gap-2 bg-ivory-80 px-4 py-3">
+                <div class="flex items-center justify-between text-sm font-semibold text-main">
                   <span class="inline-flex items-center gap-2">
                     <i class="fa-solid fa-list-check text-accent" aria-hidden="true"></i>
                     Lista de pedidos
                   </span>
-                  <span class="text-xs text-gray-600">{{ filteredOrdersStable.length }} pedidos</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-600">{{ filteredOrdersStable.length }} pedidos</span>
+                    <ui-button variant="primary" size="sm" iconClass="fa-solid fa-plus" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
+                      Nuevo pedido
+                    </ui-button>
+                  </div>
                 </div>
-
-                <ui-button variant="primary" size="sm" iconClass="fa-solid fa-plus" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
-                  Nuevo pedido
-                </ui-button>
+                <div class="relative">
+                  <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
+                  <input type="text" placeholder="Buscar por cliente, guía, teléfono, dirección..."
+                    [ngModel]="orderSearch" (ngModelChange)="onTableSearch('orders', $event)"
+                    class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
+                </div>
               </div>
 
               <div class="overflow-auto">
                 <div class="table-soft text-sm">
-                  <ui-data-table [rows]="filteredOrdersStable" mobileDividerClass="divide-olive-20" desktopDividerClass="divide-olive-20">
+                  <ui-data-table [rows]="pagedOrders" mobileDividerClass="divide-olive-20" desktopDividerClass="divide-olive-20">
                     <ng-template #mobileRow let-order>
                       <div class="p-4">
                         <div class="flex items-center justify-between">
@@ -140,33 +143,138 @@
                           <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
                           <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
                         </div>
-                        <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" extraClass="mt-3" (click)="advanceOrder(order)">
-                          {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
-                        </ui-button>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
+                            {{ expandedOrderDetailId === order.id ? 'Ocultar detalle' : 'Ver detalle' }}
+                          </ui-button>
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (click)="advanceOrder(order)">
+                            {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
+                          </ui-button>
+                        </div>
+                        <div *ngIf="expandedOrderDetailId === order.id" class="mt-3 space-y-3 rounded-2xl border border-olive-30 bg-ivory-80 p-3">
+                          <div *ngIf="order.items?.length" class="space-y-2">
+                            <div class="text-xs font-semibold text-gray-600">Productos</div>
+                            <div *ngFor="let item of order.items" class="flex items-center justify-between rounded-xl border border-olive-30 surface-soft px-3 py-2 text-xs">
+                              <span class="font-semibold text-main">{{ item.name }}</span>
+                              <span class="text-gray-600">x{{ item.quantity }} · {{ formatMoney(item.price * item.quantity) }}</span>
+                            </div>
+                          </div>
+                          <div *ngIf="!order.items?.length" class="text-xs text-gray-500">Sin detalle de productos.</div>
+                          <div class="space-y-1 text-xs text-gray-600">
+                            <div class="font-semibold text-gray-600">
+                              <i class="fa-solid fa-location-dot text-accent mr-1" aria-hidden="true"></i>
+                              Dirección de envío
+                            </div>
+                            <ng-container *ngIf="order.address">
+                              <div *ngIf="order.recipientName"><span class="text-gray-500">Destinatario:</span> <span class="text-main">{{ order.recipientName }}</span></div>
+                              <div><span class="text-gray-500">Dirección:</span> <span class="text-main">{{ order.address }}</span></div>
+                              <div *ngIf="order.betweenStreets"><span class="text-gray-500">Entre calles:</span> <span class="text-main">{{ order.betweenStreets }}</span></div>
+                              <div *ngIf="order.references"><span class="text-gray-500">Referencias:</span> <span class="text-main">{{ order.references }}</span></div>
+                              <div *ngIf="order.postalCode || order.state"><span class="text-gray-500">CP:</span> <span class="text-main">{{ order.postalCode }}</span><span *ngIf="order.state"> · <span class="text-gray-500">Estado:</span> <span class="text-main">{{ order.state }}</span></span></div>
+                              <div *ngIf="order.phone"><span class="text-gray-500">Tel:</span> <span class="text-main">{{ order.phone }}</span></div>
+                            </ng-container>
+                            <div *ngIf="!order.address && order.shippingType === 'personal' && order.deliveryPlace">
+                              <span class="text-gray-500">Entrega personal en:</span> <span class="text-main">{{ order.deliveryPlace }}</span>
+                            </div>
+                            <div *ngIf="!order.address && order.shippingType === 'personal' && !order.deliveryPlace">
+                              <span class="text-main">Entrega personal (sin lugar especificado)</span>
+                            </div>
+                            <div *ngIf="!order.address && order.shippingType !== 'personal'" class="text-gray-400 italic">
+                              Sin dirección de envío registrada.
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </ng-template>
 
                     <ng-template #desktopHeader>
-                      <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                        <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guí­a / Entrega</div><div>Acción</div>
+                      <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.6fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                        <div>Fecha de creación</div><div>Cliente</div><div>Total</div><div>Estado</div><div>Guía / Entrega</div><div>Detalle</div><div>Acción</div>
                       </div>
                     </ng-template>
 
                     <ng-template #desktopRow let-order>
-                      <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.8fr] items-center px-4 py-3">
+                      <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.6fr_.8fr] items-center px-4 py-3">
                         <div>{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}</div>
                         <div>{{ order.customer }}</div>
                         <div class="font-semibold">{{ formatMoney(order.total) }}</div>
                         <div class="capitalize"><ui-status-badge [status]="order.status"></ui-status-badge></div>
                         <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
                         <div>
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" (pressed)="toggleOrderDetail(order.id)">
+                            {{ expandedOrderDetailId === order.id ? 'Ocultar' : 'Ver' }}
+                          </ui-button>
+                        </div>
+                        <div>
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
                           </ui-button>
                         </div>
                       </div>
+                      <div *ngIf="expandedOrderDetailId === order.id" class="border-t border-olive-20 bg-ivory-80 px-4 py-4">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <div class="text-xs font-semibold text-gray-600">
+                              <i class="fa-solid fa-box-open text-accent mr-1" aria-hidden="true"></i>
+                              Productos del pedido
+                            </div>
+                            <div *ngIf="order.items?.length; else noItemsAdmin" class="mt-2 space-y-2">
+                              <div *ngFor="let item of order.items" class="flex items-center justify-between rounded-xl border border-olive-30 surface-soft px-3 py-2 text-xs">
+                                <span class="font-semibold text-main">{{ item.name }}</span>
+                                <span class="text-gray-600">x{{ item.quantity }} · {{ formatMoney(item.price * item.quantity) }}</span>
+                              </div>
+                              <div class="flex items-center justify-between px-3 pt-1 text-xs font-semibold text-main">
+                                <span>Total</span>
+                                <span>{{ formatMoney(order.total) }}</span>
+                              </div>
+                            </div>
+                            <ng-template #noItemsAdmin>
+                              <p class="mt-2 text-xs text-gray-500">Sin detalle de productos disponible.</p>
+                            </ng-template>
+                          </div>
+                          <div>
+                            <div class="text-xs font-semibold text-gray-600">
+                              <i class="fa-solid fa-location-dot text-accent mr-1" aria-hidden="true"></i>
+                              Dirección de envío
+                            </div>
+                            <div class="mt-2 space-y-1 text-xs text-gray-700">
+                              <ng-container *ngIf="order.address">
+                                <div *ngIf="order.recipientName" class="font-semibold text-main">{{ order.recipientName }}</div>
+                                <div>{{ order.address }}</div>
+                                <div *ngIf="order.betweenStreets" class="text-gray-600">Entre: {{ order.betweenStreets }}</div>
+                                <div *ngIf="order.references" class="text-gray-600">Ref: {{ order.references }}</div>
+                                <div *ngIf="order.postalCode || order.state">CP {{ order.postalCode }}<span *ngIf="order.state"> · {{ order.state }}</span></div>
+                                <div *ngIf="order.phone">Tel: {{ order.phone }}</div>
+                              </ng-container>
+                              <div *ngIf="!order.address && order.shippingType === 'personal' && order.deliveryPlace">
+                                Entrega personal en: <span class="font-semibold text-main">{{ order.deliveryPlace }}</span>
+                              </div>
+                              <div *ngIf="!order.address && order.shippingType === 'personal' && !order.deliveryPlace">
+                                Entrega personal (sin lugar especificado)
+                              </div>
+                              <div *ngIf="!order.address && order.shippingType !== 'personal'" class="text-gray-400 italic">
+                                Sin dirección de envío registrada.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </ng-template>
                   </ui-data-table>
+                </div>
+              </div>
+              <!-- Pagination: orders -->
+              <div *ngIf="ordersTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
+                <span>Pág. {{ orderPage + 1 }} de {{ ordersTotalPages }}</span>
+                <div class="flex gap-1">
+                  <button [disabled]="orderPage === 0" (click)="setPage('orders', orderPage - 1)"
+                    class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
+                  <button *ngFor="let p of pageRange(ordersTotalPages, orderPage)"
+                    (click)="setPage('orders', p)"
+                    class="rounded-lg border px-2.5 py-1"
+                    [class]="p === orderPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
+                  <button [disabled]="orderPage >= ordersTotalPages - 1" (click)="setPage('orders', orderPage + 1)"
+                    class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
                 </div>
               </div>
             </div>
@@ -179,8 +287,15 @@
                 <div class="mt-1 text-2xl font-extrabold">{{ customersCount }}</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Comisiones por depositar</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissionsTotal) }}</div>
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="text-[11px] text-gray-600">Comisiones por depositar</div>
+                    <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissionsTotal) }}</div>
+                  </div>
+                  <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-excel" (pressed)="downloadCommissionsReport()" title="Descargar reporte Excel">
+                    Exportar
+                  </ui-button>
+                </div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-[11px] text-gray-600">Prom. descuento</div>
@@ -190,13 +305,27 @@
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
-                <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
-                  <span>Clientes (todos los niveles)</span>
-                  <span class="text-xs text-gray-600">{{ customersCount }} clientes</span>
+                <div class="flex flex-col gap-2 bg-ivory-80 px-4 py-3">
+                  <div class="flex items-center justify-between text-sm font-semibold text-main">
+                    <span>Clientes (todos los niveles)</span>
+                    <span class="text-xs text-gray-600">
+                      {{ filteredCustomers.length }}{{ customerSearch ? ' de ' + customersCount : '' }} clientes
+                    </span>
+                  </div>
+                  <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o correo..."
+                      [(ngModel)]="customerSearch"
+                      class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"
+                    />
+                  </div>
                 </div>
 
                 <div class="md:hidden divide-y divide-olive-20">
-                  <div *ngFor="let customer of customers" class="p-4">
+                  <div *ngIf="!filteredCustomers.length" class="p-4 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
+                  <div *ngFor="let customer of pagedCustomers" class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ customer.name }}</div>
                       <span [class]="customerLevelClass(customer)">
@@ -222,13 +351,28 @@
                     <div class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                       <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
                     </div>
-                    <div *ngFor="let customer of customers" class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                    <div *ngIf="!filteredCustomers.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
+                    <div *ngFor="let customer of pagedCustomers" class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ customer.name }}</div>
                       <div><span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span></div>
                       <div><span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
                       <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
                       <div><ui-button size="sm" variant="ghost" (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver</ui-button></div>
                     </div>
+                  </div>
+                </div>
+                <!-- Pagination: customers -->
+                <div *ngIf="customersTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
+                  <span>Pág. {{ customerPage + 1 }} de {{ customersTotalPages }}</span>
+                  <div class="flex gap-1">
+                    <button [disabled]="customerPage === 0" (click)="setPage('customers', customerPage - 1)"
+                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
+                    <button *ngFor="let p of pageRange(customersTotalPages, customerPage)"
+                      (click)="setPage('customers', p)"
+                      class="rounded-lg border px-2.5 py-1"
+                      [class]="p === customerPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
+                    <button [disabled]="customerPage >= customersTotalPages - 1" (click)="setPage('customers', customerPage + 1)"
+                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
                   </div>
                 </div>
               </div>
@@ -309,95 +453,78 @@
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedCustomer as customer">
-                  <div class="text-sm font-semibold text-main">Acceso y privilegios</div>
-                  <div class="mt-1 text-xs text-gray-600">Controla acceso admin y permisos por accion para este usuario.</div>
-
-                  <div class="mt-3 flex items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">
-                    <div class="text-sm text-main">Acceso a panel admin</div>
-                    <label class="inline-flex items-center gap-2 text-xs text-gray-600">
-                      <input type="checkbox" [checked]="selectedCustomerAdminAccess" [disabled]="!hasPermission('user_mark_admin')" (change)="updateSelectedCustomerAdminAccess($any($event.target).checked)" />
-                      Habilitado
-                    </label>
-                  </div>
-
-                  <div class="mt-3 max-h-56 overflow-auto rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div *ngFor="let option of customerPrivilegeOptions" class="flex items-center justify-between border-b border-olive-20 py-2 text-xs last:border-b-0">
-                      <span class="text-main">{{ option.label }}</span>
-                      <input type="checkbox" [checked]="customerHasPrivilege(option.key)" [disabled]="!hasPermission('user_manage_privileges')" (change)="updateSelectedCustomerPrivilege(option.key, $any($event.target).checked)" />
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-semibold text-main">Posicion en la red</div>
+                      <div class="mt-1 text-xs text-gray-600">Reasigna libremente el patrocinador del usuario seleccionado.</div>
                     </div>
-                  </div>
-
-                  <div class="mt-3 flex justify-end">
-                    <ui-button size="sm" variant="primary" *ngIf="hasPermission('user_manage_privileges')" [disabled]="isSavingCustomerPrivileges" (pressed)="saveSelectedCustomerAccess()">
-                      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                      {{ isSavingCustomerPrivileges ? 'Guardando...' : 'Guardar privilegios' }}
+                    <ui-button *ngIf="!isChangingSponsor" size="sm" variant="ghost" (pressed)="startChangingSponsor()">
+                      <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+                      Cambiar patrocinador
                     </ui-button>
                   </div>
-                </div>
-
-                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedCustomer as customer">
-                  <div class="text-sm font-semibold text-main">Posicion en la red</div>
-                  <div class="mt-1 text-xs text-gray-600">Reasigna libremente el patrocinador del usuario seleccionado.</div>
 
                   <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                     <div class="text-[11px] text-gray-600">Patrocinador actual</div>
                     <div class="mt-1 text-sm font-semibold text-main">{{ selectedCustomerSponsorName }}</div>
                   </div>
 
-                  <div class="mt-3">
-                    <ui-form-field
-                      label="Nuevo patrocinador"
-                      placeholder="Buscar por nombre o correo"
-                      [ngModel]="selectedCustomerSponsorSearch"
-                      (ngModelChange)="updateSelectedCustomerSponsorSearch($event)">
-                    </ui-form-field>
-                  </div>
+                  <ng-container *ngIf="isChangingSponsor">
+                    <div class="mt-3">
+                      <ui-form-field
+                        label="Nuevo patrocinador"
+                        placeholder="Buscar por nombre o correo"
+                        [ngModel]="selectedCustomerSponsorSearch"
+                        (ngModelChange)="updateSelectedCustomerSponsorSearch($event)">
+                      </ui-form-field>
+                    </div>
 
-                  <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div class="flex items-center justify-between gap-3">
-                      <div>
-                        <div class="text-[11px] text-gray-600">Patrocinador seleccionado</div>
-                        <div class="mt-1 text-sm font-semibold text-main">{{ selectedSponsorLabel }}</div>
-                      </div>
-                      <div class="text-right">
-                        <div class="text-[11px] text-gray-600">Id oculto</div>
-                        <div class="mt-1 text-sm font-semibold text-main">{{ selectedCustomerLeaderId || 'FindingU' }}</div>
+                    <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <div>
+                          <div class="text-[11px] text-gray-600">Patrocinador seleccionado</div>
+                          <div class="mt-1 text-sm font-semibold text-main">{{ selectedSponsorLabel }}</div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-[11px] text-gray-600">Id oculto</div>
+                          <div class="mt-1 text-sm font-semibold text-main">{{ selectedCustomerLeaderId || 'FindingU' }}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div class="mt-3 space-y-2">
-                    <button type="button"
-                      class="flex w-full items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-left transition hover:border-gold-35 hover:bg-gold-12"
-                      (click)="selectFindingUSponsor()">
-                      <span>
-                        <span class="block text-sm font-semibold text-main">FindingU</span>
-                        <span class="block text-xs text-gray-600">Sin patrocinador asignado</span>
-                      </span>
-                      <span class="text-xs text-gray-500">coach@findingu.com.mx</span>
-                    </button>
+                    <div class="mt-3 space-y-2">
+                      <button type="button"
+                        class="flex w-full items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-left transition hover:border-gold-35 hover:bg-gold-12"
+                        (click)="selectFindingUSponsor()">
+                        <span>
+                          <span class="block text-sm font-semibold text-main">FindingU</span>
+                          <span class="block text-xs text-gray-600">Sin patrocinador asignado</span>
+                        </span>
+                        <span class="text-xs text-gray-500">coach@findingu.com.mx</span>
+                      </button>
 
-                    <button *ngFor="let recommendation of selectedCustomerSponsorRecommendations" type="button"
-                      class="flex w-full items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-left transition hover:border-gold-35 hover:bg-gold-12"
-                      (click)="selectSponsorRecommendation(recommendation.id)">
-                      <span>
-                        <span class="block text-sm font-semibold text-main">{{ recommendation.name }}</span>
-                        <span class="block text-xs text-gray-600">{{ recommendation.email }}</span>
-                      </span>
-                      <span class="text-xs text-gray-500">ID {{ recommendation.id }}</span>
-                    </button>
-                  </div>
+                      <button *ngFor="let recommendation of selectedCustomerSponsorRecommendations" type="button"
+                        class="flex w-full items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-left transition hover:border-gold-35 hover:bg-gold-12"
+                        (click)="selectSponsorRecommendation(recommendation.id)">
+                        <span>
+                          <span class="block text-sm font-semibold text-main">{{ recommendation.name }}</span>
+                          <span class="block text-xs text-gray-600">{{ recommendation.email }}</span>
+                        </span>
+                        <span class="text-xs text-gray-500">ID {{ recommendation.id }}</span>
+                      </button>
+                    </div>
 
-                  <div *ngIf="!hasValidSelectedSponsorId" class="mt-3 text-xs text-red-600">
-                    Selecciona un patrocinador valido desde las recomendaciones para habilitar el guardado.
-                  </div>
+                    <div *ngIf="!hasValidSelectedSponsorId" class="mt-3 text-xs text-red-600">
+                      Selecciona un patrocinador valido desde las recomendaciones para habilitar el guardado.
+                    </div>
 
-                  <div class="mt-3 flex justify-end">
-                    <ui-button size="sm" variant="primary" [disabled]="!canSaveSelectedCustomerPosition" (pressed)="saveSelectedCustomerPosition()">
-                      <i class="fa-solid fa-right-left" aria-hidden="true"></i>
-                      {{ isSavingCustomerPosition ? 'Guardando...' : 'Guardar posicion' }}
-                    </ui-button>
-                  </div>
+                    <div class="mt-3 flex justify-end">
+                      <ui-button size="sm" variant="primary" [disabled]="!canSaveSelectedCustomerPosition" (pressed)="saveSelectedCustomerPosition()">
+                        <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+                        {{ isSavingCustomerPosition ? 'Guardando...' : 'Guardar posicion' }}
+                      </ui-button>
+                    </div>
+                  </ng-container>
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4 overflow-hidden">
@@ -423,6 +550,136 @@
             </div>
           </div>
 
+          <!-- ============================================================ -->
+          <!-- EMPLOYEES VIEW -->
+          <!-- ============================================================ -->
+          <div class="space-y-4" *ngIf="currentView === 'employees' && canAccessView('employees')">
+            <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+
+              <!-- Employee list + create form -->
+              <div class="space-y-4">
+                <!-- Create employee -->
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('employee_add')">
+                  <div class="text-sm font-semibold text-main">Nuevo empleado</div>
+                  <div class="mt-1 text-xs text-gray-600">Se genera una contraseña de un solo uso al crear el empleado.</div>
+
+                  <div class="mt-3 space-y-3">
+                    <ui-form-field label="Nombre" placeholder="Nombre completo" [(ngModel)]="employeeForm.name"></ui-form-field>
+                    <ui-form-field label="Correo" placeholder="correo@empresa.com" [(ngModel)]="employeeForm.email"></ui-form-field>
+                    <ui-form-field label="Telefono" placeholder="+52 55 1234 5678" [(ngModel)]="employeeForm.phone"></ui-form-field>
+                  </div>
+
+                  <div class="mt-3 flex justify-end">
+                    <ui-button size="sm" variant="primary" [disabled]="isSavingEmployee || !employeeForm.name.trim() || !employeeForm.email.trim()" (pressed)="saveEmployee()">
+                      <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                      {{ isSavingEmployee ? 'Creando...' : 'Crear empleado' }}
+                    </ui-button>
+                  </div>
+
+                  <div *ngIf="employeeTempPassword" class="mt-3 rounded-2xl border border-green-200 bg-green-50 p-3 text-xs">
+                    <div class="font-semibold text-green-800">Contraseña temporal (solo visible ahora):</div>
+                    <div class="mt-1 font-mono text-lg font-bold text-green-900">{{ employeeTempPassword }}</div>
+                    <div class="mt-1 text-green-700">Comparte esta contraseña con el empleado. Deberá cambiarla en su primer inicio de sesión.</div>
+                  </div>
+
+                  <div *ngIf="employeeMessage" class="mt-2 text-xs" [class.text-red-600]="employeeMessageIsError" [class.text-green-700]="!employeeMessageIsError">
+                    {{ employeeMessage }}
+                  </div>
+                </div>
+
+                <!-- Employees table -->
+                <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
+                  <div class="flex flex-col gap-2 bg-ivory-80 px-4 py-3">
+                    <div class="flex items-center justify-between text-sm font-semibold text-main">
+                      <span>Empleados</span>
+                      <span class="text-xs text-gray-600">{{ filteredEmployees.length }} empleados</span>
+                    </div>
+                    <div class="relative">
+                      <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
+                      <input type="text" placeholder="Buscar por nombre, correo..."
+                        [ngModel]="employeeSearch" (ngModelChange)="onTableSearch('employees', $event)"
+                        class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
+                    </div>
+                  </div>
+
+                  <div *ngIf="filteredEmployees.length === 0" class="p-6 text-center text-xs text-gray-500">
+                    {{ employeeSearch ? 'Sin resultados para "' + employeeSearch + '".' : 'Sin empleados registrados.' }}
+                  </div>
+
+                  <div class="divide-y divide-olive-20">
+                    <div *ngFor="let emp of pagedEmployees" class="flex items-center justify-between p-4">
+                      <div>
+                        <div class="text-sm font-semibold text-main">{{ emp.name }}</div>
+                        <div class="text-xs text-gray-500">{{ emp.email }}</div>
+                        <div class="mt-1">
+                          <span class="badge badge-compact" [class.status-active]="emp.active" [class.status-inactive]="!emp.active">
+                            {{ emp.active ? 'Activo' : 'Inactivo' }}
+                          </span>
+                        </div>
+                      </div>
+                      <ui-button size="sm" variant="ghost" (pressed)="selectEmployee(emp.id)">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        Ver
+                      </ui-button>
+                    </div>
+                  </div>
+                  <!-- Pagination: employees -->
+                  <div *ngIf="employeesTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
+                    <span>Pág. {{ employeePage + 1 }} de {{ employeesTotalPages }}</span>
+                    <div class="flex gap-1">
+                      <button [disabled]="employeePage === 0" (click)="setPage('employees', employeePage - 1)"
+                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
+                      <button *ngFor="let p of pageRange(employeesTotalPages, employeePage)"
+                        (click)="setPage('employees', p)"
+                        class="rounded-lg border px-2.5 py-1"
+                        [class]="p === employeePage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
+                      <button [disabled]="employeePage >= employeesTotalPages - 1" (click)="setPage('employees', employeePage + 1)"
+                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Employee detail + privileges -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedEmployee as emp">
+                <div class="text-sm font-semibold text-main">{{ emp.name }}</div>
+                <div class="mt-1 text-xs text-gray-500">{{ emp.email }}</div>
+                <div *ngIf="emp.phone" class="mt-1 text-xs text-gray-500">{{ emp.phone }}</div>
+
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('employee_manage_privileges')">
+                  <div class="text-sm font-semibold text-main">Acceso y privilegios</div>
+                  <div class="mt-1 text-xs text-gray-600">Controla acceso admin y permisos por accion.</div>
+
+                  <div class="mt-3 flex items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">
+                    <div class="text-sm text-main">Acceso a panel admin</div>
+                    <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                      <input type="checkbox" [checked]="selectedEmployeeAdminAccess" (change)="updateSelectedEmployeeAdminAccess($any($event.target).checked)" />
+                      Habilitado
+                    </label>
+                  </div>
+
+                  <div class="mt-3 max-h-64 overflow-auto rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                    <div *ngFor="let option of customerPrivilegeOptions" class="flex items-center justify-between border-b border-olive-20 py-2 text-xs last:border-b-0">
+                      <span class="text-main">{{ option.label }}</span>
+                      <input type="checkbox" [checked]="employeeHasPrivilege(option.key)" (change)="updateSelectedEmployeePrivilege(option.key, $any($event.target).checked)" />
+                    </div>
+                  </div>
+
+                  <div class="mt-3 flex justify-end">
+                    <ui-button size="sm" variant="primary" [disabled]="isSavingEmployeePrivileges" (pressed)="saveSelectedEmployeePrivileges()">
+                      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                      {{ isSavingEmployeePrivileges ? 'Guardando...' : 'Guardar privilegios' }}
+                    </ui-button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-6 text-center text-xs text-gray-500" *ngIf="!selectedEmployee && employees.length > 0">
+                Selecciona un empleado para ver su detalle.
+              </div>
+            </div>
+          </div>
+
           <div class="space-y-4" *ngIf="currentView === 'products' && canAccessView('products')">
             <div class="grid gap-3 md:grid-cols-3">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -441,13 +698,22 @@
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
-                <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
-                  <span>Catálogo</span>
-                  <span class="text-xs text-gray-600">{{ productsCount }} productos</span>
+                <div class="flex flex-col gap-2 bg-ivory-80 px-4 py-3">
+                  <div class="flex items-center justify-between text-sm font-semibold text-main">
+                    <span>Catálogo</span>
+                    <span class="text-xs text-gray-600">{{ filteredProducts.length }} productos</span>
+                  </div>
+                  <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
+                    <input type="text" placeholder="Buscar por nombre, SKU, estado..."
+                      [ngModel]="productSearch" (ngModelChange)="onTableSearch('products', $event)"
+                      class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
+                  </div>
                 </div>
 
                 <div class="md:hidden divide-y divide-olive-20">
-                  <div *ngFor="let product of products" class="p-4">
+                  <div *ngIf="!filteredProducts.length" class="p-4 text-xs text-gray-500">Sin resultados.</div>
+                  <div *ngFor="let product of pagedProducts" class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ product.name }}</div>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs">
@@ -479,7 +745,8 @@
                     <div class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                       <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
                     </div>
-                    <div *ngFor="let product of products" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                    <div *ngIf="!filteredProducts.length" class="hidden md:block px-4 py-3 text-xs text-gray-500">Sin resultados.</div>
+                    <div *ngFor="let product of pagedProducts" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
                       <div>{{ product.name }}</div>
                       <div>{{ formatMoney(product.price) }}</div>
                       <div>{{ product.active ? 'Activo' : 'Retirado' }}</div>
@@ -492,6 +759,20 @@
                         <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
                       </div>
                     </div>
+                  </div>
+                </div>
+                <!-- Pagination: products -->
+                <div *ngIf="productsTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
+                  <span>Pág. {{ productPage + 1 }} de {{ productsTotalPages }}</span>
+                  <div class="flex gap-1">
+                    <button [disabled]="productPage === 0" (click)="setPage('products', productPage - 1)"
+                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
+                    <button *ngFor="let p of pageRange(productsTotalPages, productPage)"
+                      (click)="setPage('products', p)"
+                      class="rounded-lg border px-2.5 py-1"
+                      [class]="p === productPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
+                    <button [disabled]="productPage >= productsTotalPages - 1" (click)="setPage('products', productPage + 1)"
+                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
                   </div>
                 </div>
               </div>
@@ -606,6 +887,119 @@
                   <span class="-mt-1 block text-[10px] text-gray-500">Separados por coma.</span>
                 </div>
 
+                <!-- VARIANTS -->
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-semibold text-main">Tipos / Variantes</div>
+                      <div class="mt-0.5 text-xs text-gray-600">Ej: Sabor Coco, Talla Grande. Cada tipo puede tener precio diferente.</div>
+                    </div>
+                    <ui-button size="sm" variant="ghost" (pressed)="addProductVariant()">
+                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                      Agregar tipo
+                    </ui-button>
+                  </div>
+                  <div class="mt-3 space-y-2">
+                    <div *ngFor="let v of productForm.variants; let vi = index"
+                      class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+                      <ui-form-field
+                        label="Nombre"
+                        [placeholder]="'Sabor Coco'"
+                        [ngModel]="v.name"
+                        (ngModelChange)="updateProductVariant(vi, 'name', $event)"
+                        wrapperClass="block"
+                        inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                      </ui-form-field>
+                      <ui-form-field
+                        kind="input" type="number"
+                        label="Precio (dejar vacío = precio base)"
+                        placeholder="0"
+                        [ngModel]="v.price"
+                        (ngModelChange)="updateProductVariant(vi, 'price', $event)"
+                        wrapperClass="block"
+                        inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                      </ui-form-field>
+                      <ui-form-field
+                        label="SKU"
+                        placeholder="SKU-VAR"
+                        [ngModel]="v.sku"
+                        (ngModelChange)="updateProductVariant(vi, 'sku', $event)"
+                        wrapperClass="block"
+                        inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                      </ui-form-field>
+                      <ui-button size="sm" variant="ghost" (pressed)="removeProductVariant(vi)" class="mb-0.5">
+                        <i class="fa-solid fa-trash text-red-400 text-xs" aria-hidden="true"></i>
+                      </ui-button>
+                    </div>
+                    <div *ngIf="productForm.variants.length === 0" class="text-xs text-gray-400">
+                      Sin tipos configurados. El producto se vende en presentación única.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PESO Y DIMENSIONES -->
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-sm font-semibold text-main">Peso y dimensiones (para cotización de envío)</div>
+                  <div class="mt-3 grid gap-3 sm:grid-cols-4">
+                    <ui-form-field
+                      kind="input" type="number"
+                      label="Peso (kg)"
+                      placeholder="0.500"
+                      [ngModel]="productForm.weightKg"
+                      (ngModelChange)="productForm.weightKg = $event"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                    </ui-form-field>
+                    <ui-form-field
+                      kind="input" type="number"
+                      label="Largo (cm)"
+                      placeholder="20"
+                      [ngModel]="productForm.lengthCm"
+                      (ngModelChange)="productForm.lengthCm = $event"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                    </ui-form-field>
+                    <ui-form-field
+                      kind="input" type="number"
+                      label="Ancho (cm)"
+                      placeholder="15"
+                      [ngModel]="productForm.widthCm"
+                      (ngModelChange)="productForm.widthCm = $event"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                    </ui-form-field>
+                    <ui-form-field
+                      kind="input" type="number"
+                      label="Alto (cm)"
+                      placeholder="10"
+                      [ngModel]="productForm.heightCm"
+                      (ngModelChange)="productForm.heightCm = $event"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                    </ui-form-field>
+                  </div>
+                </div>
+
+                <!-- CATEGORIES -->
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-sm font-semibold text-main">Categorías</div>
+                  <div class="mt-1 text-xs text-gray-600">Selecciona una o más categorías para este producto.</div>
+                  <div class="mt-3 grid gap-1 sm:grid-cols-2">
+                    <label *ngFor="let cat of categoriesTree"
+                      class="flex items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-sm text-main hover:bg-olive-10 cursor-pointer"
+                      [style.paddingLeft.px]="8 + cat.depth * 16">
+                      <input type="checkbox"
+                        [checked]="productForm.categoryIds.includes(cat.id)"
+                        (change)="toggleProductCategoryId(cat.id)"
+                        class="rounded" />
+                      <span>{{ cat.name }}</span>
+                    </label>
+                    <div *ngIf="categoriesTree.length === 0" class="col-span-2 text-xs text-gray-400">
+                      No hay categorías. Agrégalas en el árbol de categorías de abajo.
+                    </div>
+                  </div>
+                </div>
+
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
                   <div class="text-sm font-semibold text-main">Imágenes / Assets</div>
                   <div class="mt-1 text-xs text-gray-600">
@@ -643,6 +1037,11 @@
             </div>
           </div>
 
+          <!-- Categories tree -->
+          <div *ngIf="currentView === 'products' && canAccessView('products')">
+            <app-admin-categories [initialCategories]="flatCategories"></app-admin-categories>
+          </div>
+
           <div class="space-y-4" *ngIf="currentView === 'stocks' && canAccessView('stocks')">
             <div class="grid gap-3 md:grid-cols-4">
               <ui-kpi-card label="Stocks" [value]="stocks.length"></ui-kpi-card>
@@ -672,6 +1071,17 @@
                     [ngModel]="stockForm.location"
                     (ngModelChange)="stockForm.location = $event"></ui-form-field>
                 </div>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <ui-form-field
+                    label="Código postal de origen"
+                    placeholder="64000"
+                    [ngModel]="stockForm.postalCode"
+                    (ngModelChange)="stockForm.postalCode = $event"></ui-form-field>
+                  <div class="flex items-center gap-2 rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2.5">
+                    <input type="checkbox" [checked]="stockForm.isMainWarehouse" (change)="stockForm.isMainWarehouse = $any($event.target).checked" class="rounded" />
+                    <span class="text-sm text-main">Bodega principal (origen de envíos)</span>
+                  </div>
+                </div>
                 <ui-button variant="primary" size="sm" class="mt-3" *ngIf="hasPermission('stock_create')" (pressed)="createStock()">
                   <i class="fa-solid fa-plus" aria-hidden="true"></i>
                   Crear stock
@@ -693,14 +1103,14 @@
                 <div *ngIf="selectedStock as stock" class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                   <div class="text-sm font-semibold text-main">{{ stock.name }}</div>
                   <div class="text-xs text-gray-600">{{ stock.location }}</div>
-                  <div class="mt-3 text-xs font-semibold text-main">Usuarios vinculados</div>
+                  <div class="mt-3 text-xs font-semibold text-main">Empleados vinculados</div>
                   <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                    <label *ngFor="let customer of customers" class="flex items-center gap-2 text-xs text-main">
+                    <label *ngFor="let emp of employees" class="flex items-center gap-2 text-xs text-main">
                       <input
                         type="checkbox"
-                        [checked]="isStockUserLinked(customer.id)"
-                        (change)="toggleStockUserLink(customer.id, $any($event.target).checked)" />
-                      {{ customer.name }}
+                        [checked]="isStockUserLinked(emp.id)"
+                        (change)="toggleStockUserLink(emp.id, $any($event.target).checked)" />
+                      {{ emp.name }}
                     </label>
                   </div>
                   <ui-button size="sm" variant="primary" class="mt-3" (pressed)="saveStockLinks()">
@@ -712,8 +1122,35 @@
             </div>
 
             <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedStock">
-              <div class="text-sm font-semibold text-main">Inventario por producto</div>
-              <div class="mt-1 text-xs text-gray-600">Solo se registran entradas; las salidas quedan en bitacora.</div>
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold text-main">Inventario por producto</div>
+                  <div class="mt-1 text-xs text-gray-600">Solo se registran entradas; las salidas quedan en bitacora.</div>
+                </div>
+                <div class="flex flex-wrap gap-2" *ngIf="hasPermission('stock_add_inventory')">
+                  <ui-button size="sm" variant="ghost" (pressed)="downloadInventoryTemplate()">
+                    <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
+                    Descargar plantilla
+                  </ui-button>
+                  <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-olive-30 bg-ivory-70 px-3 py-1.5 text-xs text-main transition hover:border-olive-50 hover:bg-olive-10">
+                    <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+                    {{ isImportingInventory ? 'Importando...' : 'Cargar desde Excel' }}
+                    <input type="file" accept=".xlsx,.xls,.csv" class="hidden" [disabled]="isImportingInventory" (change)="importInventoryFromExcel($event)" />
+                  </label>
+                </div>
+              </div>
+
+              <div *ngIf="inventoryImportResults.length" class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                <div class="mb-2 text-xs font-semibold text-main">Resultado de importación</div>
+                <div class="max-h-40 overflow-auto space-y-1">
+                  <div *ngFor="let r of inventoryImportResults" class="flex items-center gap-2 text-xs"
+                    [ngClass]="r.ok ? 'text-emerald-700' : 'text-red-600'">
+                    <i [class]="r.ok ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'" aria-hidden="true"></i>
+                    <span>{{ r.productName }} — {{ r.qty }} uds{{ r.ok ? '' : ': ' + r.message }}</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
                 <div class="grid grid-cols-[1.2fr_.8fr_1fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                   <div>Producto</div><div>Existencia</div><div>Acciones</div>
@@ -742,7 +1179,7 @@
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                   <ui-form-field kind="select" label="Stock origen" [options]="stockOptionsStable" [ngModel]="stockTransferForm.sourceStockId" (ngModelChange)="stockTransferForm.sourceStockId = $event"></ui-form-field>
                   <ui-form-field kind="select" label="Stock destino" [options]="stockOptionsStable" [ngModel]="stockTransferForm.destinationStockId" (ngModelChange)="stockTransferForm.destinationStockId = $event"></ui-form-field>
-                  <ui-form-field wrapperClass="block sm:col-span-2" kind="select" label="Solicitado por" [options]="customerOptionsStable" [ngModel]="stockTransferForm.createdByUserId" (ngModelChange)="stockTransferForm.createdByUserId = +$event"></ui-form-field>
+                  <ui-form-field wrapperClass="block sm:col-span-2" kind="select" label="Solicitado por" [options]="employeeOptionsStable" [ngModel]="stockTransferForm.createdByUserId" (ngModelChange)="stockTransferForm.createdByUserId = +$event"></ui-form-field>
                 </div>
                 <div class="mt-3 space-y-2">
                   <div *ngFor="let line of stockTransferForm.lines; let i = index" class="grid gap-2 sm:grid-cols-[1fr_.5fr_auto]">
@@ -770,7 +1207,7 @@
                   wrapperClass="mt-3 block"
                   kind="select"
                   label="Usuario que recibe"
-                  [options]="customerOptionsStable"
+                  [options]="employeeOptionsStable"
                   [ngModel]="transferReceiverUserId"
                   (ngModelChange)="transferReceiverUserId = +$event"></ui-form-field>
                 <div class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
@@ -1289,15 +1726,22 @@
                     <div class="text-sm font-semibold text-main">Notificaciones registradas</div>
                     <div class="mt-1 text-xs text-gray-600">Listado completo con su ventana de publicacion.</div>
                   </div>
-                  <div class="text-xs text-gray-600">{{ notifications.length }} registradas</div>
+                  <div class="text-xs text-gray-600">{{ filteredNotifications.length }} registradas</div>
                 </div>
 
-                <div *ngIf="!notifications.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 px-4 py-6 text-sm text-gray-600">
-                  Aun no hay notificaciones programadas.
+                <div class="mt-3 relative">
+                  <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
+                  <input type="text" placeholder="Buscar por título, descripción, estado..."
+                    [ngModel]="notificationSearch" (ngModelChange)="onTableSearch('notifications', $event)"
+                    class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
                 </div>
 
-                <div class="mt-4 space-y-3 max-h-[620px] overflow-auto" *ngIf="notifications.length">
-                  <div *ngFor="let notification of notifications" class="rounded-2xl border border-olive-30 bg-ivory-70 p-4">
+                <div *ngIf="!filteredNotifications.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 px-4 py-6 text-sm text-gray-600">
+                  {{ notificationSearch ? 'Sin resultados.' : 'Aun no hay notificaciones programadas.' }}
+                </div>
+
+                <div class="mt-4 space-y-3" *ngIf="filteredNotifications.length">
+                  <div *ngFor="let notification of pagedNotifications" class="rounded-2xl border border-olive-30 bg-ivory-70 p-4">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
@@ -1328,6 +1772,20 @@
                         <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
                         Abrir link
                       </ui-button>
+                    </div>
+                  </div>
+                  <!-- Pagination: notifications -->
+                  <div *ngIf="notificationsTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-70 px-4 py-2 text-xs text-gray-600">
+                    <span>Pág. {{ notificationPage + 1 }} de {{ notificationsTotalPages }}</span>
+                    <div class="flex gap-1">
+                      <button [disabled]="notificationPage === 0" (click)="setPage('notifications', notificationPage - 1)"
+                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
+                      <button *ngFor="let p of pageRange(notificationsTotalPages, notificationPage)"
+                        (click)="setPage('notifications', p)"
+                        class="rounded-lg border px-2.5 py-1"
+                        [class]="p === notificationPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
+                      <button [disabled]="notificationPage >= notificationsTotalPages - 1" (click)="setPage('notifications', notificationPage + 1)"
+                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
                     </div>
                   </div>
                 </div>
@@ -1447,7 +1905,12 @@
                     <div *ngFor="let tier of businessConfigDraft.rewards.discountTiers; let index = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
                       <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="text-sm font-semibold text-main">Nivel {{ index + 1 }}</div>
-                        <div class="text-xs text-gray-600">{{ discountTierRangeLabel(tier) }}</div>
+                        <div class="flex items-center gap-2">
+                          <div class="text-xs text-gray-600">{{ discountTierRangeLabel(tier) }}</div>
+                          <ui-button size="sm" variant="ghost" type="button" (pressed)="removeDiscountTier(index)" [disabled]="businessConfigDraft.rewards.discountTiers.length <= 1">
+                            <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                          </ui-button>
+                        </div>
                       </div>
                       <div class="mt-3 grid gap-3 md:grid-cols-2">
                         <ui-form-field type="number" [min]="0" [step]="1" label="Monto minimo" [ngModel]="tier.min" (ngModelChange)="updateDiscountTierMin(index, $event)"></ui-form-field>
@@ -1457,6 +1920,10 @@
                         {{ tier.max == null ? 'Sin tope maximo en este nivel.' : 'Tope automatico: ' + formatMoney(tier.max) }}
                       </div>
                     </div>
+                    <ui-button size="sm" variant="ghost" type="button" class="w-full" (pressed)="addDiscountTier()">
+                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                      Agregar nivel de descuento
+                    </ui-button>
                   </div>
                 </div>
                 <ui-form-field
@@ -1468,11 +1935,59 @@
                   [helpText]="configOptionDescription(businessConfigDraft.rewards.cutRule, rewardCutRuleOptions)"
                   [ngModel]="businessConfigDraft.rewards.cutRule"
                   (ngModelChange)="businessConfigDraft.rewards.cutRule = $event"></ui-form-field>
-                <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 1" [ngModel]="businessConfigDraft.rewards.commissionByDepth['1']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['1'] = +$event || 0"></ui-form-field>
-                <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 2" [ngModel]="businessConfigDraft.rewards.commissionByDepth['2']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['2'] = +$event || 0"></ui-form-field>
-                <ui-form-field type="number" [min]="0" [step]="0.01" label="Comision nivel 3" [ngModel]="businessConfigDraft.rewards.commissionByDepth['3']" (ngModelChange)="businessConfigDraft.rewards.commissionByDepth['3'] = +$event || 0"></ui-form-field>
               </div>
             </div>
+
+            <!-- Niveles de comision unificados -->
+            <div class="rounded-2xl border border-olive-30 surface-soft p-5 md:col-span-2">
+              <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <div class="text-base font-bold text-main">Niveles de comision</div>
+                  <div class="mt-0.5 text-sm text-gray-500">Cada nivel aplica al patrocinador en esa profundidad de la red. Las condiciones son requisitos minimos para cobrar. Cada nivel debe ser &ge; al anterior.</div>
+                </div>
+                <div class="text-xs text-gray-600 shrink-0">{{ businessConfigDraft.rewards.commissionLevels.length }} niveles</div>
+              </div>
+              @if (commissionLevelsErrors.length) {
+                <div class="mb-4 rounded-xl bg-red-50 border border-red-200 p-3 space-y-1">
+                  @for (err of commissionLevelsErrors; track err) {
+                    <div class="text-sm text-red-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ err }}</div>
+                  }
+                </div>
+              }
+              <div class="grid gap-3">
+                <div *ngFor="let lvl of businessConfigDraft.rewards.commissionLevels; let i = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="text-sm font-semibold text-main">Nivel {{ i + 1 }}</div>
+                    <ui-button size="sm" variant="ghost" type="button" (pressed)="removeCommissionLevel(i)" [disabled]="businessConfigDraft.rewards.commissionLevels.length <= 1">
+                      <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                    </ui-button>
+                  </div>
+                  <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <ui-form-field type="number" [min]="0" [max]="100" [step]="0.1" label="Comision (%)"
+                      [ngModel]="commissionLevelPercentValue(lvl)"
+                      (ngModelChange)="updateCommissionLevelRate(i, $event)">
+                    </ui-form-field>
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Usuarios activos min."
+                      [ngModel]="lvl.minActiveUsers"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minActiveUsers = +$event || 0">
+                    </ui-form-field>
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra individual min. ($)"
+                      [ngModel]="lvl.minIndividualPurchase"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minIndividualPurchase = +$event || 0">
+                    </ui-form-field>
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra grupal min. ($)"
+                      [ngModel]="lvl.minGroupPurchase"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minGroupPurchase = +$event || 0">
+                    </ui-form-field>
+                  </div>
+                </div>
+                <ui-button size="sm" variant="ghost" type="button" class="w-full" (pressed)="addCommissionLevel()">
+                  <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                  Agregar nivel de comision
+                </ui-button>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -1493,12 +2008,28 @@
 
       <div class="mt-4 space-y-3">
         <div *ngFor="let warning of warningsStable" class="rounded-2xl border border-olive-30 surface-soft p-4">
-          <div class="text-sm font-semibold text-main">{{ warning.text }}</div>
-          <div class="mt-1 text-xs text-gray-600">Severidad: {{ warning.severity }}</div>
-          <ui-button size="sm" variant="primary" class="mt-3 w-full">
-            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-            Resolver ahora
+          <div class="flex items-start gap-3">
+            <i class="fa-solid mt-0.5 text-sm"
+              [ngClass]="{
+                'fa-triangle-exclamation text-red-500': warning.severity === 'high',
+                'fa-circle-exclamation text-gold': warning.severity === 'medium',
+                'fa-circle-info text-gray-500': warning.severity === 'low'
+              }"
+              aria-hidden="true"></i>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-semibold text-main">{{ warning.text }}</div>
+              <div class="mt-1 text-xs text-gray-500 capitalize">{{ warning.severity === 'high' ? 'Urgente' : warning.severity === 'medium' ? 'Importante' : 'Informativo' }}</div>
+            </div>
+          </div>
+          <ui-button size="sm" variant="primary" class="mt-3 w-full" (pressed)="resolveWarning(warning)">
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            Ir a resolver
           </ui-button>
+        </div>
+        <div *ngIf="!warningsStable.length" class="rounded-2xl border border-olive-30 surface-soft p-6 text-center">
+          <i class="fa-solid fa-circle-check text-2xl text-accent" aria-hidden="true"></i>
+          <div class="mt-2 text-sm font-semibold text-main">Todo en orden</div>
+          <div class="mt-1 text-xs text-gray-600">No hay acciones urgentes pendientes.</div>
         </div>
       </div>
   </ui-modal>
@@ -1813,7 +2344,7 @@
       <ui-form-field kind="select" label="Stock" [options]="stockOptionsStable" [ngModel]="stockEntryForm.stockId" (ngModelChange)="stockEntryForm.stockId = $event"></ui-form-field>
       <ui-form-field kind="select" label="Producto" [options]="productOptionsStable" [ngModel]="stockEntryForm.productId" (ngModelChange)="stockEntryForm.productId = +$event"></ui-form-field>
       <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockEntryForm.qty" (ngModelChange)="stockEntryForm.qty = +$event || 1"></ui-form-field>
-      <ui-form-field kind="select" label="Registrado por" [options]="customerOptionsStable" [ngModel]="stockEntryForm.createdByUserId" (ngModelChange)="stockEntryForm.createdByUserId = +$event"></ui-form-field>
+      <ui-form-field kind="select" label="Registrado por" [options]="employeeOptionsStable" [ngModel]="stockEntryForm.createdByUserId" (ngModelChange)="stockEntryForm.createdByUserId = +$event"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" label="Nota (opcional)" [ngModel]="stockEntryForm.note" (ngModelChange)="stockEntryForm.note = $event"></ui-form-field>
     </div>
 
@@ -1850,7 +2381,7 @@
       <ui-form-field kind="select" label="Stock" [options]="stockOptionsStable" [ngModel]="stockDamageForm.stockId" (ngModelChange)="stockDamageForm.stockId = $event"></ui-form-field>
       <ui-form-field kind="select" label="Producto" [options]="productOptionsStable" [ngModel]="stockDamageForm.productId" (ngModelChange)="stockDamageForm.productId = +$event"></ui-form-field>
       <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockDamageForm.qty" (ngModelChange)="stockDamageForm.qty = +$event || 1"></ui-form-field>
-      <ui-form-field kind="select" label="Reportado por" [options]="customerOptionsStable" [ngModel]="stockDamageForm.reportedByUserId" (ngModelChange)="stockDamageForm.reportedByUserId = +$event"></ui-form-field>
+      <ui-form-field kind="select" label="Reportado por" [options]="employeeOptionsStable" [ngModel]="stockDamageForm.reportedByUserId" (ngModelChange)="stockDamageForm.reportedByUserId = +$event"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" label="Motivo" [ngModel]="stockDamageForm.reason" (ngModelChange)="stockDamageForm.reason = $event"></ui-form-field>
     </div>
 

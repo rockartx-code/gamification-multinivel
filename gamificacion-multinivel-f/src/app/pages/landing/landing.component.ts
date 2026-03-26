@@ -49,6 +49,14 @@ export class LandingComponent implements OnInit {
   isSubmitting = false;
   feedbackMessage = '';
   feedbackType: 'error' | 'success' | '' = '';
+  registrationState: 'form' | 'pending' = 'form';
+  registeredEmail = '';
+  fieldErrors: { name: string; email: string; password: string; confirmPassword: string } = {
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  };
   featuredProduct: {
     id: string;
     name: string;
@@ -141,12 +149,17 @@ export class LandingComponent implements OnInit {
     if (this.isSubmitting) {
       return;
     }
-    if (!this.form.name || !this.form.email || !this.form.password) {
-      this.setFeedback('Completa los campos obligatorios.', 'error');
+    this.fieldErrors = {
+      name: this.form.name.trim() ? '' : 'El nombre completo es obligatorio.',
+      email: this.form.email.trim() ? '' : 'El correo electrónico es obligatorio.',
+      password: this.form.password ? '' : 'La contraseña es obligatoria.',
+      confirmPassword: ''
+    };
+    if (this.fieldErrors.name || this.fieldErrors.email || this.fieldErrors.password) {
       return;
     }
     if (this.form.password !== this.form.confirmPassword) {
-      this.setFeedback('Las contraseñas no coinciden.', 'error');
+      this.fieldErrors.confirmPassword = 'Las contraseñas no coinciden.';
       return;
     }
 
@@ -167,10 +180,19 @@ export class LandingComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.isSubmitting = false;
+          if (response?.requiresEmailVerification) {
+            this.registeredEmail = this.form.email.trim();
+            this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
+            this.fieldErrors = { name: '', email: '', password: '', confirmPassword: '' };
+            this.registrationState = 'pending';
+            this.cdr.detectChanges();
+            return;
+          }
           if (response?.customer) {
             this.authService.setUserFromCreateAccount(response.customer);
           }
           this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
+          this.fieldErrors = { name: '', email: '', password: '', confirmPassword: '' };
           this.setFeedback('', 'success');
           this.cdr.detectChanges();
           this.router.navigate(['/dashboard']);
@@ -238,38 +260,6 @@ export class LandingComponent implements OnInit {
       if (campaign) {
         return this.mapCampaign(campaign);
       }
-    }
-    if (queryId === 'fixed-familia' ) {
-      return {
-        id: queryId,
-        name: '',
-        hook: '',
-        title: 'Cuida tu cuerpo.',
-        accent: 'Potencia tu energia.',
-        tail: 'Compartelo.',
-        description: this.defaultHero.description,
-        badge: this.defaultHero.badge,
-        ctaPrimaryText: this.defaultHero.ctaPrimaryText,
-        ctaSecondaryText: this.defaultHero.ctaSecondaryText,
-        img: 'images/L-Programa3.png',
-        tags: []
-      };
-    }
-    if ( queryId === 'fixed-entrenador') {
-      return {
-        id: queryId,
-        name: '',
-        hook: '',
-        title: 'Cuida tu cuerpo.',
-        accent: 'Potencia tu energia.',
-        tail: 'Compartelo.',
-        description: this.defaultHero.description,
-        badge: this.defaultHero.badge,
-        ctaPrimaryText: this.defaultHero.ctaPrimaryText,
-        ctaSecondaryText: this.defaultHero.ctaSecondaryText,
-        img: 'images/L-Programa2.png',
-        tags: []
-      };
     }
     const featuredMatch = data.featured?.find((item) => item.id === queryId);
     if (featuredMatch) {

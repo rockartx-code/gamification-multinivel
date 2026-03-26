@@ -9,6 +9,7 @@ export type ProductCardModel = {
   id: string;
   name: string;
   badge?: string;
+  description?: string;
   img: string;
   price: number;
 };

@@ -31,6 +31,7 @@ import {
   UpdateCustomerPayload,
   UpdateCustomerPrivilegesPayload
 } from '../models/admin.model';
+import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { PortalNotification } from '../models/portal-notification.model';
 import { CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
@@ -51,6 +52,7 @@ export class AdminControlService {
           ...data,
           orders: data.orders ?? [],
           customers: data.customers ?? [],
+          employees: data.employees ?? [],
           products: data.products ?? [],
           campaigns: data.campaigns ?? [],
           notifications: data.notifications ?? [],
@@ -260,7 +262,7 @@ export class AdminControlService {
     return this.api.listStocks();
   }
 
-  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.api.createStock(payload);
   }
 
@@ -346,6 +348,44 @@ export class AdminControlService {
         }
         const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...customer } : entry));
         this.dataSubject.next({ ...current, customers });
+      })
+    );
+  }
+
+  createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
+    return this.api.createEmployee(payload).pipe(
+      tap((emp) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        this.dataSubject.next({ ...current, employees: [emp, ...(current.employees ?? [])] });
+      })
+    );
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+    return this.api.updateEmployee(employeeId, payload).pipe(
+      tap((emp) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const employees = (current.employees ?? []).map((e) => (e.id === employeeId ? { ...e, ...emp } : e));
+        this.dataSubject.next({ ...current, employees });
+      })
+    );
+  }
+
+  updateEmployeePrivileges(employeeId: number, payload: UpdateEmployeePrivilegesPayload): Observable<AdminEmployee> {
+    return this.api.updateEmployeePrivileges(employeeId, payload).pipe(
+      tap((emp) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const employees = (current.employees ?? []).map((e) => (e.id === employeeId ? { ...e, ...emp } : e));
+        this.dataSubject.next({ ...current, employees });
       })
     );
   }

@@ -206,20 +206,51 @@
 </div>
 
 
-      <div
+      <!-- ── VERIFICACIÓN PENDIENTE ───────────────────────────────────── -->
+      <div *ngIf="registrationState === 'pending'"
+        class="grain relative mt-8 overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-8 sm:p-10 text-center">
+        <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
+        <div class="relative">
+          <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-olive-30 bg-ivory-80">
+            <i class="fa-solid fa-envelope-circle-check text-2xl text-accent" aria-hidden="true"></i>
+          </div>
+          <h2 class="text-xl font-extrabold tracking-tight text-main">Revisa tu correo</h2>
+          <p class="mt-3 text-sm text-gray-600">
+            Enviamos un enlace de confirmación a<br>
+            <span class="mt-1 inline-block font-semibold text-main">{{ registeredEmail }}</span>
+          </p>
+          <p class="mt-4 text-xs text-gray-500">
+            Haz clic en el enlace del correo para activar tu cuenta.<br>
+            Si no lo ves, revisa la carpeta de spam.
+          </p>
+          <div class="mt-6">
+            <ui-button variant="ghost" size="sm" (pressed)="registrationState = 'form'">
+              <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+              Usar otro correo
+            </ui-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FORMULARIO DE REGISTRO ───────────────────────────────────── -->
+      <div *ngIf="registrationState === 'form'"
         class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-5 sm:p-8">
         <div class="pointer-events-none absolute inset-0 bg-olive-10">
         </div>
 
-        <ui-form-field [(ngModel)]="form.name" name="name" label="Nombre completo" placeholder="Tu nombre"
+        <ui-form-field [(ngModel)]="form.name" name="name" label="Nombre completo *" placeholder="Tu nombre completo"
           iconClass="fa-solid fa-id-card" wrapperClass="relative block"
+          (ngModelChange)="fieldErrors.name = ''"
+          [errorText]="fieldErrors.name"
           inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
         </ui-form-field>
 
         <!-- Correo + Teléfono -->
         <div class="grid gap-4 md:grid-cols-2">
-          <ui-form-field kind="input" type="email" [(ngModel)]="form.email" name="email" label="Correo electrónico"
+          <ui-form-field kind="input" type="email" [(ngModel)]="form.email" name="email" label="Correo electrónico *"
             placeholder="tucorreo@ejemplo.com" iconClass="fa-solid fa-envelope" wrapperClass="relative block"
+            (ngModelChange)="fieldErrors.email = ''"
+            [errorText]="fieldErrors.email"
             inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
           </ui-form-field>
 
@@ -231,14 +262,18 @@
 
         <!-- Contraseña + Confirmación -->
         <div class="grid gap-4 md:grid-cols-2">
-          <ui-form-field kind="input" type="password" [(ngModel)]="form.password" name="password" label="Contraseña"
+          <ui-form-field kind="input" type="password" [(ngModel)]="form.password" name="password" label="Contraseña *"
             placeholder="Mínimo 8 caracteres" iconClass="fa-solid fa-lock" wrapperClass="relative block"
+            (ngModelChange)="fieldErrors.password = ''"
+            [errorText]="fieldErrors.password"
             inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
           </ui-form-field>
 
           <ui-form-field kind="input" type="password" [(ngModel)]="form.confirmPassword" name="confirmPassword"
-            label="Confirmar contraseña" placeholder="Repite tu contraseña" iconClass="fa-solid fa-lock"
+            label="Confirmar contraseña *" placeholder="Repite tu contraseña" iconClass="fa-solid fa-lock"
             wrapperClass="relative block"
+            (ngModelChange)="fieldErrors.confirmPassword = ''"
+            [errorText]="fieldErrors.confirmPassword"
             inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
           </ui-form-field>
         </div>

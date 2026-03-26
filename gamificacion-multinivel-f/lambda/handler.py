@@ -842,6 +842,7 @@ _ALL_PRIVILEGES = [
     "access_screen_pos",
     "access_screen_stats",
     "access_screen_settings",
+    "access_screen_employees",
     "order_mark_paid",
     "order_mark_shipped",
     "order_mark_delivered",
@@ -859,6 +860,8 @@ _ALL_PRIVILEGES = [
     "pos_register_sale",
     "user_mark_admin",
     "user_manage_privileges",
+    "employee_add",
+    "employee_manage_privileges",
     "config_manage",
 ]
 
@@ -1286,11 +1289,11 @@ def _default_rewards_config() -> dict:
             {"min": Decimal("8001"), "max": Decimal("12000"), "rate": Decimal("0.40")},
             {"min": Decimal("12001"), "max": None,           "rate": Decimal("0.50")},
         ],
-        "commissionByDepth": {
-            "1": Decimal("0.10"),
-            "2": Decimal("0.05"),
-            "3": Decimal("0.03"),
-        },
+        "commissionLevels": [
+            {"rate": Decimal("0.10"), "minActiveUsers": 0, "minIndividualPurchase": 0, "minGroupPurchase": 0},
+            {"rate": Decimal("0.05"), "minActiveUsers": 0, "minIndividualPurchase": 0, "minGroupPurchase": 0},
+            {"rate": Decimal("0.03"), "minActiveUsers": 0, "minIndividualPurchase": 0, "minGroupPurchase": 0},
+        ],
         "payoutDay": Decimal("10"),
         "cutRule": "hard_cut_no_pass",
     }
@@ -1355,8 +1358,7 @@ def _merge_dict(base: Any, override: Any) -> Any:
 def _normalize_rewards_config(raw: Any) -> dict:
     base = _default_rewards_config()
     merged = _merge_dict(base, raw if isinstance(raw, dict) else {})
-    cfg = _ensure_commission_by_depth(merged)
-    tiers_raw = cfg.get("discountTiers") or []
+    tiers_raw = merged.get("discountTiers") or []
     tiers: List[dict] = []
     for tier in tiers_raw:
         if not isinstance(tier, dict):
@@ -1368,18 +1370,43 @@ def _normalize_rewards_config(raw: Any) -> dict:
         tiers.append({"min": min_value, "max": max_value, "rate": rate})
     if not tiers:
         tiers = base.get("discountTiers") or []
-    cbd = cfg.get("commissionByDepth") or {}
+
+    # normalize commissionLevels — support new array format and old commissionByDepth dict
+    raw_levels = merged.get("commissionLevels")
+    if isinstance(raw_levels, list) and raw_levels:
+        commission_levels = []
+        for lvl in raw_levels:
+            if not isinstance(lvl, dict):
+                continue
+            commission_levels.append({
+                "rate": _to_decimal(lvl.get("rate", 0)),
+                "minActiveUsers": int(_to_decimal(lvl.get("minActiveUsers", 0))),
+                "minIndividualPurchase": int(_to_decimal(lvl.get("minIndividualPurchase", 0))),
+                "minGroupPurchase": int(_to_decimal(lvl.get("minGroupPurchase", 0))),
+            })
+    else:
+        # fall back to old commissionByDepth dict for backward compat
+        cbd = merged.get("commissionByDepth") or {}
+        def_levels = base.get("commissionLevels") or []
+        commission_levels = []
+        for i, def_lvl in enumerate(def_levels):
+            key = str(i + 1)
+            commission_levels.append({
+                "rate": _to_decimal(cbd.get(key, def_lvl.get("rate", 0))),
+                "minActiveUsers": 0,
+                "minIndividualPurchase": 0,
+                "minGroupPurchase": 0,
+            })
+    if not commission_levels:
+        commission_levels = list(base.get("commissionLevels") or [])
+
     return {
         "version": "v1",
-        "activationNetMin": _to_decimal(cfg.get("activationNetMin", base.get("activationNetMin"))),
+        "activationNetMin": _to_decimal(merged.get("activationNetMin", base.get("activationNetMin"))),
         "discountTiers": tiers,
-        "commissionByDepth": {
-            "1": _to_decimal(cbd.get("1", DEFAULT_COMMISSION_BY_DEPTH[1])),
-            "2": _to_decimal(cbd.get("2", DEFAULT_COMMISSION_BY_DEPTH[2])),
-            "3": _to_decimal(cbd.get("3", DEFAULT_COMMISSION_BY_DEPTH[3])),
-        },
-        "payoutDay": _to_decimal(cfg.get("payoutDay", base.get("payoutDay"))),
-        "cutRule": str(cfg.get("cutRule") or base.get("cutRule") or "hard_cut_no_pass"),
+        "commissionLevels": commission_levels,
+        "payoutDay": _to_decimal(merged.get("payoutDay", base.get("payoutDay"))),
+        "cutRule": str(merged.get("cutRule") or base.get("cutRule") or "hard_cut_no_pass"),
     }
 
 def _normalize_app_config(raw: Any) -> dict:
@@ -2020,14 +2047,18 @@ def _commission_rate_for_depth(depth: int, cfg: dict) -> Decimal:
     if depth_int <= 0:
         return D_ZERO
 
-    raw = cfg.get("commissionByDepth") if isinstance(cfg, dict) else None
-    if isinstance(raw, list):
+    levels = cfg.get("commissionLevels") if isinstance(cfg, dict) else None
+    if isinstance(levels, list):
         idx = depth_int - 1
-        if 0 <= idx < len(raw):
-            return _to_decimal(raw[idx])
+        if 0 <= idx < len(levels):
+            lvl = levels[idx]
+            if isinstance(lvl, dict):
+                return _to_decimal(lvl.get("rate", 0))
+            return _to_decimal(lvl)
+
+    # backward compat: old commissionByDepth dict
+    raw = cfg.get("commissionByDepth") if isinstance(cfg, dict) else None
     if isinstance(raw, dict):
-        if depth_int in raw:
-            return _to_decimal(raw.get(depth_int))
         key = str(depth_int)
         if key in raw:
             return _to_decimal(raw.get(key))
@@ -3041,6 +3072,64 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
 def _find_order(order_id: str) -> Optional[dict]:
     return _get_by_id("ORDER", order_id)
 
+def _check_commission_requirements(
+    beneficiary_id: Any,
+    level: int,
+    month_key: str,
+    cfg: dict,
+    customers_raw: List[dict],
+) -> bool:
+    """
+    Verifica que el beneficiario cumpla las condiciones configuradas para cobrar
+    comision en este nivel. Retorna True si cumple, False si no.
+    """
+    levels = cfg.get("commissionLevels") if isinstance(cfg, dict) else None
+    if not isinstance(levels, list):
+        return True
+    idx = int(level) - 1
+    if idx < 0 or idx >= len(levels):
+        return True
+    level_cfg = levels[idx]
+    if not isinstance(level_cfg, dict):
+        return True
+    min_active = int(_to_decimal(level_cfg.get("minActiveUsers") or 0))
+    min_individual = _to_decimal(level_cfg.get("minIndividualPurchase") or 0)
+    min_group = _to_decimal(level_cfg.get("minGroupPurchase") or 0)
+
+    # Si no hay condiciones configuradas, siempre pasa
+    if min_active == 0 and min_individual == 0 and min_group == 0:
+        return True
+
+    # Volumen individual del beneficiario este mes
+    if min_individual > 0:
+        benef_state = _get_month_state(beneficiary_id, month_key)
+        benef_volume = _to_decimal(benef_state.get("netVolume"))
+        if benef_volume < min_individual:
+            return False
+
+    # Usuarios activos directos y volumen grupal (requieren recorrer lista de clientes)
+    if min_active > 0 or min_group > 0:
+        bid_str = str(beneficiary_id)
+        direct_ids = [
+            c.get("customerId") or c.get("id")
+            for c in customers_raw
+            if str(c.get("leaderId") or "") == bid_str
+        ]
+        active_count = 0
+        group_volume = D_ZERO
+        for did in direct_ids:
+            st = _get_month_state(did, month_key)
+            dv = _to_decimal(st.get("netVolume"))
+            group_volume += dv
+            if bool(st.get("isActive")):
+                active_count += 1
+        if min_active > 0 and active_count < min_active:
+            return False
+        if min_group > 0 and group_volume < min_group:
+            return False
+
+    return True
+
 def _apply_rewards_on_paid_order(order_item: dict) -> dict:
     """
     NUEVO COMPORTAMIENTO (paid):
@@ -3208,10 +3297,19 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
             _unlock_blocked_commissions_for_customer(buyer_id, month_key)
 
     # Multinivel: beneficiarios = upline
-    chain = _upline_chain(buyer_id, max_levels=MAX_COMMISSION_LEVELS)
+    _comm_levels = cfg.get("commissionLevels") or []
+    max_levels = len(_comm_levels) if _comm_levels else MAX_COMMISSION_LEVELS
+    chain = _upline_chain(buyer_id, max_levels=max_levels)
     trail = []
     blocked_by = None
     active_cache: Dict[Any, bool] = {}
+
+    # Pre-carga de clientes para condiciones de comision (solo si hay requisitos configurados)
+    _needs_customers = any(
+        int(r.get("minActiveUsers") or 0) > 0 or _to_decimal(r.get("minGroupPurchase") or 0) > 0
+        for r in _comm_levels if isinstance(r, dict)
+    )
+    customers_raw_for_req: List[dict] = _query_bucket("CUSTOMER") if _needs_customers else []
 
     for idx, beneficiary_id in enumerate(chain):
         level = idx + 1
@@ -3221,6 +3319,9 @@ def _apply_rewards_on_paid_order(order_item: dict) -> dict:
         rate = _commission_rate_for_depth(level, cfg)
         amount = (net * rate).quantize(D_CENT) if rate > 0 else D_ZERO
         if amount <= 0:
+            continue
+        if not _check_commission_requirements(beneficiary_id, level, month_key, cfg, customers_raw_for_req):
+            print(f"Skipping commission for beneficiary_id: {beneficiary_id} at level {level}: requirements not met")
             continue
         print(f"Calculated commission for beneficiary_id: {beneficiary_id} at level {level} is amount: {amount} with rate: {rate}")
         now = _now_iso()
@@ -5332,6 +5433,9 @@ def _get_admin_dashboard() -> dict:
         pos_sales_today_count,
     )
 
+    employees_raw = _query_bucket("EMPLOYEE")
+    employees = [_employee_payload(e) for e in employees_raw]
+
     return _json_response(200, {
         "kpis": {
             "salesTotal": sales_total, "averageTicket": average_ticket, "activeProducts": active_products,
@@ -5343,6 +5447,7 @@ def _get_admin_dashboard() -> dict:
         "notifications": notifications,
         "productOfMonthId": product_of_month_id,
         "businessConfig": app_cfg,
+        "employees": employees,
     })
 
 # ---------------------------------------------------------------------------
@@ -5567,16 +5672,142 @@ def _update_customer_product_stats(customer_id: Any, order_item: dict) -> None:
     except Exception:
         pass
 
+# ---------------------------------------------------------------------------
+# Employees
+# ---------------------------------------------------------------------------
+def _generate_temp_password(length: int = 10) -> str:
+    chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+    return "".join(random.choice(chars) for _ in range(length))
+
+def _employee_payload(emp: dict) -> dict:
+    return {
+        "id": emp.get("employeeId"),
+        "name": emp.get("name"),
+        "email": emp.get("email"),
+        "phone": emp.get("phone"),
+        "canAccessAdmin": bool(emp.get("canAccessAdmin")),
+        "privileges": _normalize_privileges(emp.get("privileges")),
+        "active": bool(emp.get("active", True)),
+        "createdAt": emp.get("createdAt"),
+    }
+
+def _create_employee(payload: dict, headers: Optional[dict] = None) -> dict:
+    name = payload.get("name")
+    email = payload.get("email")
+    if not name or not email:
+        return _json_response(400, {"message": "name y email son obligatorios", "Error": "BadRequest"})
+
+    email_norm = _normalize_email(email)
+    if not email_norm:
+        return _json_response(400, {"message": "email invalido", "Error": "BadRequest"})
+    if _get_auth_by_email(email_norm):
+        return _json_response(409, {"message": "El correo ya esta registrado", "Error": "Conflict"})
+
+    employee_id = int(datetime.now(timezone.utc).timestamp() * 1000)
+    temp_password = _generate_temp_password()
+    password_hash = _hash_password(temp_password)
+    now = _now_iso()
+
+    item = {
+        "entityType": "employee",
+        "employeeId": employee_id,
+        "name": name,
+        "email": email_norm,
+        "phone": payload.get("phone"),
+        "canAccessAdmin": bool(payload.get("canAccessAdmin", True)),
+        "privileges": _normalize_privileges(payload.get("privileges")),
+        "mustChangePassword": True,
+        "active": True,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    _put_entity("EMPLOYEE", employee_id, item, created_at_iso=now)
+
+    auth_item = {
+        "entityType": "auth",
+        "authId": email_norm,
+        "email": email_norm,
+        "employeeId": employee_id,
+        "entityType_ref": "employee",
+        "role": "admin",
+        "passwordHash": password_hash,
+        "mustChangePassword": True,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    _put_entity("AUTH", email_norm, auth_item, created_at_iso=now)
+
+    _audit_event("employee.create", headers, payload, {"employeeId": employee_id})
+    response = _employee_payload(item)
+    response["tempPassword"] = temp_password
+    return _json_response(201, {"employee": response})
+
+def _list_employees() -> dict:
+    employees_raw = _query_bucket("EMPLOYEE")
+    return _json_response(200, {"employees": [_employee_payload(e) for e in employees_raw]})
+
+def _update_employee(employee_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
+    eid = int(employee_id)
+    employee = _get_by_id("EMPLOYEE", eid)
+    if not employee:
+        return _json_response(404, {"message": "Empleado no encontrado", "Error": "NotFound"})
+
+    updates = ["updatedAt = :u"]
+    eav: dict = {":u": _now_iso()}
+    ean: dict = {}
+
+    if "name" in payload:
+        updates.append("#nm = :nm")
+        eav[":nm"] = payload["name"]
+        ean["#nm"] = "name"
+    if "phone" in payload:
+        updates.append("phone = :ph")
+        eav[":ph"] = payload["phone"]
+    if "active" in payload:
+        updates.append("active = :ac")
+        eav[":ac"] = bool(payload["active"])
+
+    updated = _update_by_id("EMPLOYEE", eid, "SET " + ", ".join(updates), eav, ean=ean if ean else None)
+    _audit_event("employee.update", headers, payload, {"employeeId": eid})
+    return _json_response(200, {"employee": _employee_payload(updated)})
+
+def _update_employee_privileges(employee_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
+    eid = int(employee_id)
+    employee = _get_by_id("EMPLOYEE", eid)
+    if not employee:
+        return _json_response(404, {"message": "Empleado no encontrado", "Error": "NotFound"})
+
+    can_access_admin = bool(payload.get("canAccessAdmin", employee.get("canAccessAdmin", True)))
+    privileges = _normalize_privileges(payload.get("privileges", employee.get("privileges")))
+    updated = _update_by_id(
+        "EMPLOYEE",
+        eid,
+        "SET canAccessAdmin = :ca, #pr = :pr, updatedAt = :u",
+        {":ca": can_access_admin, ":pr": privileges, ":u": _now_iso()},
+        ean={"#pr": "privileges"},
+    )
+    auth = _get_auth_by_email(_normalize_email(employee.get("email")))
+    if auth:
+        next_role = "admin" if can_access_admin else "employee"
+        try:
+            _update_by_id("AUTH", auth.get("authId"), "SET #r = :r, updatedAt = :u", {":r": next_role, ":u": _now_iso()}, ean={"#r": "role"})
+        except Exception:
+            pass
+
+    _audit_event("employee.privileges.update", headers, payload, {"employeeId": eid})
+    return _json_response(200, {"employee": _employee_payload(updated)})
+
+
 def _login(payload: dict) -> dict:
     username = payload.get("username")
     email = payload.get("email") or username
     password = payload.get("password")
-    
+
     if not email or not password:
         return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
 
     identifier = (email or "").strip()
-    
+
     # Check demo users
     for user in _LOGIN_USERS:
         if identifier in {user.get("username"), user.get("email")} and user["password"] == password:
@@ -5596,6 +5827,26 @@ def _login(payload: dict) -> dict:
     if auth.get("passwordHash") != password_hash:
         return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
 
+    # Employee login
+    if auth.get("entityType_ref") == "employee" and auth.get("employeeId") is not None:
+        employee = _get_by_id("EMPLOYEE", int(auth["employeeId"]))
+        if not employee:
+            return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
+        privileges = _normalize_privileges(employee.get("privileges"))
+        can_access_admin = bool(employee.get("canAccessAdmin", True))
+        user = {
+            "userId": str(auth["employeeId"]),
+            "name": employee.get("name"),
+            "role": auth.get("role") or "admin",
+            "canAccessAdmin": can_access_admin,
+            "privileges": privileges,
+            "isSuperUser": False,
+            "isEmployee": True,
+            "mustChangePassword": bool(auth.get("mustChangePassword")),
+        }
+        return _json_response(200, {"token": "demo-token", "user": user})
+
+    # Customer login
     customer = _get_by_id("CUSTOMER", int(auth["customerId"]))
     if not customer:
         return _json_response(401, {"message": "Credenciales invalidas", "Error": "Unauthorized"})
@@ -5654,6 +5905,8 @@ def lambda_handler(event, context):
     if route_key == (1, "orders", "POST"): return _create_order(_parse_body(event), headers)
     if route_key == (1, "orders", "GET") and query.get("customerId"): return _list_orders_for_customer(query.get("customerId"))
     if route_key == (1, "customers", "POST"): return _create_customer(_parse_body(event), headers)
+    if route_key == (1, "employees", "GET"): return _list_employees()
+    if route_key == (1, "employees", "POST"): return _create_employee(_parse_body(event), headers)
     if route_key == (1, "stocks", "GET"): return _list_stocks()
     if route_key == (1, "stocks", "POST"): return _create_stock(_parse_body(event), headers)
     if route_key == (1, "campaigns", "GET"): return _json_response(200, {"campaigns": [_campaign_payload(item) for item in _query_bucket("CAMPAIGN")]})
@@ -5701,6 +5954,8 @@ def lambda_handler(event, context):
     if route_key == (3, "stocks", "POST") and segments[2] == "entries": return _register_stock_entry(segments[1], _parse_body(event), headers)
     if route_key == (3, "stocks", "POST") and segments[2] == "damages": return _register_stock_damage(segments[1], _parse_body(event), headers)
     if route_key == (3, "customers", "PATCH") and segments[2] == "privileges": return _update_customer_privileges(segments[1], _parse_body(event), headers)
+    if route_key == (2, "employees", "PATCH"): return _update_employee(segments[1], _parse_body(event), headers)
+    if route_key == (3, "employees", "PATCH") and segments[2] == "privileges": return _update_employee_privileges(segments[1], _parse_body(event), headers)
     if route_key == (3, "notifications", "POST") and segments[2] == "read": return _mark_notification_read(segments[1], _parse_body(event), headers)
 
     # 4 segments

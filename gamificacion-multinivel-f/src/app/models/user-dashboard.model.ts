@@ -1,4 +1,5 @@
 import { PortalNotification } from './portal-notification.model';
+import { ProductVariant } from './admin.model';
 
 export interface DashboardGoal {
   key: string;
@@ -25,6 +26,12 @@ export interface DashboardProduct {
   copyInstagram?: string;
   copyWhatsapp?: string;
   tags?: string[];
+  weightKg?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  variants?: ProductVariant[];
+  categoryIds?: string[];
 }
 
 export interface NetworkMember {
@@ -50,12 +57,14 @@ export interface FeaturedItem {
   story: string;
   feed: string;
   banner: string;
+  campaignType?: 'multinivel' | 'producto';
 }
 
 export interface DashboardCampaign {
   id: string;
   name: string;
   active?: boolean;
+  type?: 'multinivel' | 'producto';
   hook: string;
   description?: string;
   story: string;

@@ -103,6 +103,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   showGuestRegisterModal = false;
   orders: AdminOrder[] = [];
   isOrdersLoading = false;
+  expandedOrderId: string | null = null;
   isCommissionModalOpen = false;
   isCommissionSubmitting = false;
   isCommissionUploading = false;
@@ -195,13 +196,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return !this.currentUser;
   }
 
-  get canOpenAdminPanel(): boolean {
-    return this.authService.hasAdminAndUserAccess(this.currentUser);
-  }
-
   get dashboardNavLinks(): SidebarLink[] {
-    const adminAccess = this.canOpenAdminPanel ? 'admin' : 'no-admin';
-    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|${adminAccess}`;
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
     }
@@ -216,9 +212,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
-      if (this.canOpenAdminPanel) {
-        links.push({ id: 'admin-panel', icon: 'fa-shield-halved', label: 'Administracion' });
-      }
+      links.push({ id: 'perfil', icon: 'fa-circle-user', label: 'Mi perfil' });
     }
 
     this.dashboardNavLinksKey = key;
@@ -227,19 +221,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   handleDashboardNavSelect(sectionId: string): void {
-    if (sectionId === 'admin-panel') {
-      void this.router.navigate(['/admin']);
+    if (sectionId === 'perfil') {
+      void this.router.navigate(['/perfil']);
       this.closeMobileNav();
       return;
     }
     this.scrollToSection(sectionId);
     this.closeMobileNav();
-  }
-
-  openAdminPanel(): void {
-    this.isUserDetailsOpen = false;
-    this.closeMobileNav();
-    void this.router.navigate(['/admin']);
   }
 
   get goals(): DashboardGoal[] {
@@ -270,25 +258,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return this.featuredCarouselCache;
     }
 
-    const fixed: FeaturedItem[] = [
-      {
-        id: 'fixed-familia',
-        label: 'Familia',
-        hook: 'Programa familiar',
-        story: 'images/L-Programa3.png',
-        feed: 'images/L-Programa3.png',
-        banner: 'images/L-Programa3.png'
-      },
-      {
-        id: 'fixed-entrenador',
-        label: 'Entrenador',
-        hook: 'Programa entrenador',
-        story: 'images/L-Programa2.png',
-        feed: 'images/L-Programa2.png',
-        banner: 'images/L-Programa2.png'
-      }
-    ];
-
     const featuredIds = new Set(featured.map((item) => item.id));
     const campaignItems: FeaturedItem[] = campaigns
       .filter((campaign) => campaign.active !== false)
@@ -298,7 +267,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         hook: campaign.hook || campaign.heroDescription || 'Campana especial',
         story: campaign.story || campaign.heroImage || '',
         feed: campaign.feed || campaign.heroImage || '',
-        banner: campaign.banner || campaign.heroImage || ''
+        banner: campaign.banner || campaign.heroImage || '',
+        campaignType: campaign.type ?? 'multinivel'
       }));
     const productItems: FeaturedItem[] = products
       .filter((product) => !featuredIds.has(product.id))
@@ -314,7 +284,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.featuredCarouselFeaturedRef = featured;
     this.featuredCarouselProductsRef = products;
     this.featuredCarouselCampaignsRef = campaigns;
-    this.featuredCarouselCache = [...fixed, ...featured, ...campaignItems, ...productItems];
+    this.featuredCarouselCache = [...campaignItems, ...featured, ...productItems];
     return this.featuredCarouselCache;
   }
 
@@ -469,10 +439,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!userCode) {
       return '';
     }
-    const productId = this.activeFeatured.id ?? '';
+    const featured = this.activeFeatured;
+    const featuredId = featured.id ?? '';
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const query = productId ? `?p=${productId}` : '';
-    return `${baseUrl}/#/${userCode}${query}`;
+    const query = featuredId ? `?p=${featuredId}` : '';
+    // Campaigns with type 'multinivel' (or no type) go to the MLM info landing.
+    // Products and 'producto' campaigns go to the store landing (/tienda).
+    const isMultinivel = featuredId.startsWith('campaign:') && featured.campaignType !== 'producto';
+    if (isMultinivel) {
+      return `${baseUrl}/#/${userCode}${query}`;
+    }
+    return `${baseUrl}/#/tienda/${userCode}${query}`;
   }
 
   get networkProgress(): number {
@@ -1245,7 +1222,33 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   copyLink(): void {
     this.hasCopiedLink = true;
-    this.copyToClipboard(this.referralLink, 'Link copiado.');
+    const { content, toast } = this.buildShareContent(this.socialChannel);
+    this.copyToClipboard(content, toast);
+  }
+
+  private buildShareContent(channel: 'whatsapp' | 'instagram' | 'facebook'): { content: string; toast: string } {
+    const link = this.referralLink;
+    const label = this.activeFeatured.label || 'Producto';
+    const caption = (this.captionText.trim() || this.buildAutoCaption()).replace(`Pídelo aquí: ${link}`, '').replace(`Pidelo aqui: ${link}`, '').trim();
+
+    switch (channel) {
+      case 'whatsapp': {
+        // WhatsApp Web API: wa.me/?text= with pre-filled message
+        const text = `*${label}*\n\n${caption}\n\n${link}`.trim();
+        return { content: `https://wa.me/?text=${encodeURIComponent(text)}`, toast: 'Link de WhatsApp copiado. Pégalo en tu chat o abre el link.' };
+      }
+      case 'facebook': {
+        // Facebook Sharer URL
+        const sharerUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}&quote=${encodeURIComponent(caption)}`;
+        return { content: sharerUrl, toast: 'Link de Facebook copiado. Ábrelo en el navegador para compartir.' };
+      }
+      case 'instagram':
+      default: {
+        // Instagram: caption with link (manual paste — no API)
+        const igText = `${caption}\n.\n.\n.\n🔗 ${link}`.trim();
+        return { content: igText, toast: 'Descripción y link copiados. Pégalos en tu publicación de Instagram.' };
+      }
+    }
   }
 
   copyAssetPath(): void {
@@ -1427,6 +1430,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   toggleOrdersHelp(): void {
     this.showOrdersHelp = !this.showOrdersHelp;
+  }
+
+  toggleOrderDetail(orderId: string): void {
+    this.expandedOrderId = this.expandedOrderId === orderId ? null : orderId;
   }
 
   openCommissionReceipt(url?: string): void {

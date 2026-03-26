@@ -6,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
-import { AdminOrderItem, AppBusinessConfig, CustomerShippingAddress } from '../../models/admin.model';
+import { AdminOrderItem, AppBusinessConfig, CustomerShippingAddress, ShippingRate } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
@@ -40,11 +40,17 @@ export class CarritoComponent implements OnInit, OnDestroy {
   toastMessage = 'Actualizado.';
   isSummaryOpen = false;
   isPlacingOrder = false;
+  shippingRates: ShippingRate[] = [];
+  isLoadingShippingRates = false;
+  selectedShippingRate: ShippingRate | null = null;
+  shippingQuoteError = '';
   deliveryName = '';
   deliveryPhone = '';
   deliveryAddress = '';
   deliveryPostalCode = '';
   deliveryState = '';
+  deliveryBetweenStreets = '';
+  deliveryReferences = '';
   shippingAddresses: CustomerShippingAddress[] = [];
   selectedShippingAddressId = '';
   shippingAddressLabel = '';
@@ -73,6 +79,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private dataSub?: Subscription;
   private goalsSub?: Subscription;
   private customerSub?: Subscription;
+  private shippingQuoteSub?: Subscription;
   private addFadeTimeout?: number;
   private addFadeRestartTimeout?: number;
   private discountTiers: Array<{ min: number; max: number | null; rate: number }> = [];
@@ -105,6 +112,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       window.clearTimeout(this.addFadeRestartTimeout);
     }
     this.customerSub?.unsubscribe();
+    this.shippingQuoteSub?.unsubscribe();
   }
 
   get countdownLabel(): string {
@@ -290,7 +298,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   get total(): number {
-    return Math.max(0, this.subtotal + this.shipping - this.discount);
+    const shippingCost = this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping;
+    return Math.max(0, this.subtotal + shippingCost - this.discount);
+  }
+
+  get shippingLabel(): string {
+    if (this.selectedShippingRate) {
+      return this.formatMoney(this.selectedShippingRate.displayPrice);
+    }
+    return this.shipping === 0 ? 'Gratis' : this.formatMoney(this.shipping);
   }
 
   get itemsCount(): number {
@@ -430,7 +446,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
       phone: this.deliveryPhone.trim() || undefined,
       address: address || undefined,
       postalCode: postalCode || undefined,
-      state: state || undefined
+      state: state || undefined,
+      betweenStreets: this.deliveryBetweenStreets.trim() || undefined,
+      references: this.deliveryReferences.trim() || undefined
     };
     const payload = {
       customerId: this.resolveOrderCustomerId(),
@@ -443,9 +461,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
       address,
       postalCode,
       state,
+      betweenStreets: this.deliveryBetweenStreets.trim() || undefined,
+      references: this.deliveryReferences.trim() || undefined,
       shippingAddressId: this.selectedShippingAddressId || undefined,
       shippingAddressLabel: this.resolveShippingAddressLabel() || undefined,
-      saveShippingAddress: Boolean(user?.userId && this.saveShippingAddress)
+      saveShippingAddress: Boolean(user?.userId && this.saveShippingAddress),
+      shippingCarrier: this.selectedShippingRate?.carrier || undefined,
+      shippingService: this.selectedShippingRate?.service || undefined,
+      shippingCost: this.selectedShippingRate?.displayPrice ?? undefined
     };
     this.isPlacingOrder = true;
     this.api
@@ -474,6 +497,62 @@ export class CarritoComponent implements OnInit, OnDestroy {
           this.showToast('No se pudo crear la orden.');
         }
       });
+  }
+
+  fetchShippingRates(): void {
+    const zipTo = this.deliveryPostalCode.trim();
+    if (zipTo.length < 5) {
+      this.shippingRates = [];
+      this.selectedShippingRate = null;
+      this.shippingQuoteError = '';
+      return;
+    }
+    const pkg = this.calculateShippingPackage();
+    this.isLoadingShippingRates = true;
+    this.shippingQuoteError = '';
+    this.shippingQuoteSub?.unsubscribe();
+    this.shippingQuoteSub = this.api
+      .getShippingQuote({ zipTo, ...pkg })
+      .pipe(finalize(() => {
+        this.isLoadingShippingRates = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (rates) => {
+          this.shippingRates = rates;
+          this.selectedShippingRate = rates.length > 0 ? rates[0] : null;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.shippingRates = [];
+          this.shippingQuoteError = 'No se pudo calcular el envío.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private calculateShippingPackage(): { weightKg: number; lengthCm: number; widthCm: number; heightCm: number } {
+    const products = this.dashboardControl.products ?? [];
+    let totalWeight = 0;
+    let maxLength = 0;
+    let maxWidth = 0;
+    let maxHeight = 0;
+    for (const item of this.cartItems) {
+      const product = products.find((p) => p.id === item.id);
+      if (!product) {
+        continue;
+      }
+      totalWeight += (Number(product.weightKg) || 0) * item.qty;
+      maxLength = Math.max(maxLength, Number(product.lengthCm) || 0);
+      maxWidth = Math.max(maxWidth, Number(product.widthCm) || 0);
+      maxHeight = Math.max(maxHeight, Number(product.heightCm) || 0);
+    }
+    return {
+      weightKg: totalWeight || 0.5,
+      lengthCm: maxLength || 20,
+      widthCm: maxWidth || 15,
+      heightCm: maxHeight || 10
+    };
   }
 
   showSummary(): void {
@@ -638,6 +717,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   onDeliveryFieldChange(field: 'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', value: string): void {
     this.deliveryFieldErrors[field] = !String(value ?? '').trim();
+    if (field === 'deliveryPostalCode') {
+      this.fetchShippingRates();
+    }
   }
 
   selectShippingAddress(addressId: string): void {
@@ -658,11 +740,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.deliveryAddress = '';
     this.deliveryPostalCode = '';
     this.deliveryState = '';
+    this.deliveryBetweenStreets = '';
+    this.deliveryReferences = '';
     this.deliveryFieldErrors = {
       deliveryAddress: false,
       deliveryPostalCode: false,
       deliveryState: false
     };
+    this.shippingRates = [];
+    this.selectedShippingRate = null;
+    this.shippingQuoteError = '';
   }
 
   private setDeliveryFieldErrors(
@@ -817,11 +904,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.deliveryAddress = address.address?.trim() || '';
     this.deliveryPostalCode = address.postalCode?.trim() || '';
     this.deliveryState = address.state?.trim() || '';
+    this.deliveryBetweenStreets = address.betweenStreets?.trim() || '';
+    this.deliveryReferences = address.references?.trim() || '';
     this.setDeliveryFieldErrors({
       deliveryAddress: this.deliveryAddress,
       deliveryPostalCode: this.deliveryPostalCode,
       deliveryState: this.deliveryState
     });
+    this.fetchShippingRates();
   }
 
   private resolveShippingAddressLabel(): string {

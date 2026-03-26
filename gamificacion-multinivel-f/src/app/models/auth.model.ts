@@ -23,6 +23,12 @@ export interface CreateAccountCustomer {
 
 export interface CreateAccountResponse {
   customer: CreateAccountCustomer;
+  requiresEmailVerification?: boolean;
+}
+
+export interface VerifyEmailResponse {
+  ok: boolean;
+  message?: string;
 }
 
 export interface PasswordRecoveryRequestPayload {

@@ -8,19 +8,27 @@
 
   <div class="grid gap-4 xl:grid-cols-[.9fr_1.1fr]">
     <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
-      <div class="flex items-center justify-between gap-3 bg-ivory-80 px-4 py-3">
-        <div>
-          <div class="text-sm font-semibold text-main">Catalogo de campanas</div>
-          <div class="mt-1 text-xs text-gray-600">Administra campañas activas, assets y copy principal.</div>
+      <div class="flex flex-col gap-2 bg-ivory-80 px-4 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold text-main">Catalogo de campanas</div>
+            <div class="mt-0.5 text-xs text-gray-600">{{ filteredCampaigns.length }} campañas</div>
+          </div>
+          <ui-button size="sm" variant="ghost" (pressed)="resetCampaignForm()">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            Nueva
+          </ui-button>
         </div>
-        <ui-button size="sm" variant="ghost" (pressed)="resetCampaignForm()">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          Nueva
-        </ui-button>
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
+          <input type="text" placeholder="Buscar por nombre, tipo, estado..."
+            [ngModel]="campaignSearch" (ngModelChange)="onSearch($event)"
+            class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
+        </div>
       </div>
 
-      <div *ngIf="campaigns.length; else emptyCampaigns" class="divide-y divide-olive-20">
-        <div *ngFor="let campaign of campaigns" class="p-4">
+      <div *ngIf="filteredCampaigns.length; else emptyCampaigns" class="divide-y divide-olive-20">
+        <div *ngFor="let campaign of pagedCampaigns" class="p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="text-sm font-semibold text-main">{{ campaign.name }}</div>
@@ -32,6 +40,9 @@
           </div>
 
           <div class="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-500">
+            <span class="rounded-full border px-2 py-1" [class]="campaign.type === 'producto' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-olive-20 bg-olive-10 text-gray-600'">
+              {{ campaign.type === 'producto' ? 'Tienda' : 'Multinivel' }}
+            </span>
             <span class="rounded-full border border-olive-20 px-2 py-1">Story {{ campaign.story ? 'OK' : 'Pendiente' }}</span>
             <span class="rounded-full border border-olive-20 px-2 py-1">Feed {{ campaign.feed ? 'OK' : 'Pendiente' }}</span>
             <span class="rounded-full border border-olive-20 px-2 py-1">Banner {{ campaign.banner ? 'OK' : 'Pendiente' }}</span>
@@ -49,6 +60,20 @@
               Editar campana
             </ui-button>
           </div>
+        </div>
+      </div>
+      <!-- Pagination: campaigns -->
+      <div *ngIf="campaignsTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
+        <span>Pág. {{ campaignPage + 1 }} de {{ campaignsTotalPages }}</span>
+        <div class="flex gap-1">
+          <button [disabled]="campaignPage === 0" (click)="campaignPage = campaignPage - 1"
+            class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
+          <button *ngFor="let p of pageRange(campaignsTotalPages, campaignPage)"
+            (click)="campaignPage = p"
+            class="rounded-lg border px-2.5 py-1"
+            [class]="p === campaignPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
+          <button [disabled]="campaignPage >= campaignsTotalPages - 1" (click)="campaignPage = campaignPage + 1"
+            class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
         </div>
       </div>
     </div>
@@ -111,6 +136,31 @@
 
         <div class="mt-4 grid gap-2 md:grid-cols-2">
           <ui-form-field label="Nombre" [ngModel]="campaignForm.name" (ngModelChange)="updateCampaignField('name', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+
+          <!-- Campaign type -->
+          <div class="block md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-gray-600">Tipo de campana</label>
+            <div class="flex gap-3">
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors"
+                [class]="campaignForm.type === 'multinivel' ? 'border-olive-50 bg-olive-10 font-semibold text-main' : 'border-olive-20 text-gray-500'">
+                <input type="radio" name="campaignType" value="multinivel" [checked]="campaignForm.type === 'multinivel'"
+                  (change)="campaignForm.type = 'multinivel'" class="hidden" />
+                <i class="fa-solid fa-users text-xs" aria-hidden="true"></i>
+                Multinivel
+              </label>
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors"
+                [class]="campaignForm.type === 'producto' ? 'border-blue-300 bg-blue-50 font-semibold text-blue-700' : 'border-olive-20 text-gray-500'">
+                <input type="radio" name="campaignType" value="producto" [checked]="campaignForm.type === 'producto'"
+                  (change)="campaignForm.type = 'producto'" class="hidden" />
+                <i class="fa-solid fa-store text-xs" aria-hidden="true"></i>
+                Tienda (producto)
+              </label>
+            </div>
+            <p class="mt-1 text-[11px] text-gray-400">
+              {{ campaignForm.type === 'producto' ? 'El link del gancho apuntara a la tienda.' : 'El link del gancho apuntara al landing de informacion del multinivel.' }}
+            </p>
+          </div>
+
           <ui-form-field label="Hook corto" [ngModel]="campaignForm.hook" (ngModelChange)="updateCampaignField('hook', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
           <ui-form-field kind="textarea" [rows]="3" label="Descripcion" [ngModel]="campaignForm.description" (ngModelChange)="updateCampaignField('description', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
           <ui-form-field label="Hero badge" [ngModel]="campaignForm.heroBadge" (ngModelChange)="updateCampaignField('heroBadge', $event)"></ui-form-field>
@@ -125,10 +175,97 @@
           <ui-form-field label="CTA primario" [ngModel]="campaignForm.ctaPrimaryText" (ngModelChange)="updateCampaignField('ctaPrimaryText', $event)"></ui-form-field>
           <ui-form-field label="CTA secundario" [ngModel]="campaignForm.ctaSecondaryText" (ngModelChange)="updateCampaignField('ctaSecondaryText', $event)"></ui-form-field>
           <ui-form-field wrapperClass="block md:col-span-2" label="Beneficios (4 max, separados por coma)" [ngModel]="campaignForm.benefits" (ngModelChange)="updateCampaignField('benefits', $event)"></ui-form-field>
-          <ui-form-field label="Asset Story (9:16)" [ngModel]="campaignForm.story" (ngModelChange)="updateCampaignField('story', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-          <ui-form-field label="Asset Feed (1:1)" [ngModel]="campaignForm.feed" (ngModelChange)="updateCampaignField('feed', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-          <ui-form-field label="Asset Banner (16:9)" [ngModel]="campaignForm.banner" (ngModelChange)="updateCampaignField('banner', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
-          <ui-form-field label="Hero imagen (opcional)" [ngModel]="campaignForm.heroImage" (ngModelChange)="updateCampaignField('heroImage', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
+          <!-- Asset Story -->
+          <div class="block md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-gray-600">Asset Story (9:16)</label>
+            <div class="flex items-start gap-3">
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-olive-30 bg-ivory-70 px-4 py-2 text-xs text-main transition hover:border-olive-50 hover:bg-olive-10">
+                <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                {{ campaignAssetUploading.get('story') ? 'Subiendo...' : 'Cargar imagen' }}
+                <input type="file" accept="image/*" class="hidden" (change)="uploadCampaignAsset($event, 'story')" />
+              </label>
+              @if (campaignAssetPreviews.get('story'); as preview) {
+                <div class="relative">
+                  <img [src]="preview" alt="Story preview" class="h-16 w-9 rounded-lg object-cover border border-olive-20" />
+                  <button type="button" (click)="clearCampaignAsset('story')"
+                    class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] hover:bg-red-600">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </div>
+              } @else {
+                <span class="self-center text-xs text-gray-400">Sin imagen</span>
+              }
+            </div>
+          </div>
+
+          <!-- Asset Feed -->
+          <div class="block md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-gray-600">Asset Feed (1:1)</label>
+            <div class="flex items-start gap-3">
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-olive-30 bg-ivory-70 px-4 py-2 text-xs text-main transition hover:border-olive-50 hover:bg-olive-10">
+                <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                {{ campaignAssetUploading.get('feed') ? 'Subiendo...' : 'Cargar imagen' }}
+                <input type="file" accept="image/*" class="hidden" (change)="uploadCampaignAsset($event, 'feed')" />
+              </label>
+              @if (campaignAssetPreviews.get('feed'); as preview) {
+                <div class="relative">
+                  <img [src]="preview" alt="Feed preview" class="h-12 w-12 rounded-lg object-cover border border-olive-20" />
+                  <button type="button" (click)="clearCampaignAsset('feed')"
+                    class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] hover:bg-red-600">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </div>
+              } @else {
+                <span class="self-center text-xs text-gray-400">Sin imagen</span>
+              }
+            </div>
+          </div>
+
+          <!-- Asset Banner -->
+          <div class="block md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-gray-600">Asset Banner (16:9)</label>
+            <div class="flex items-start gap-3">
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-olive-30 bg-ivory-70 px-4 py-2 text-xs text-main transition hover:border-olive-50 hover:bg-olive-10">
+                <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                {{ campaignAssetUploading.get('banner') ? 'Subiendo...' : 'Cargar imagen' }}
+                <input type="file" accept="image/*" class="hidden" (change)="uploadCampaignAsset($event, 'banner')" />
+              </label>
+              @if (campaignAssetPreviews.get('banner'); as preview) {
+                <div class="relative">
+                  <img [src]="preview" alt="Banner preview" class="h-10 rounded-lg object-cover border border-olive-20" style="width:6rem;" />
+                  <button type="button" (click)="clearCampaignAsset('banner')"
+                    class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] hover:bg-red-600">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </div>
+              } @else {
+                <span class="self-center text-xs text-gray-400">Sin imagen</span>
+              }
+            </div>
+          </div>
+
+          <!-- Hero imagen -->
+          <div class="block md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-gray-600">Hero imagen (opcional)</label>
+            <div class="flex items-start gap-3">
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-olive-30 bg-ivory-70 px-4 py-2 text-xs text-main transition hover:border-olive-50 hover:bg-olive-10">
+                <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                {{ campaignAssetUploading.get('heroImage') ? 'Subiendo...' : 'Cargar imagen' }}
+                <input type="file" accept="image/*" class="hidden" (change)="uploadCampaignAsset($event, 'heroImage')" />
+              </label>
+              @if (campaignAssetPreviews.get('heroImage'); as preview) {
+                <div class="relative">
+                  <img [src]="preview" alt="Hero preview" class="h-12 w-20 rounded-lg object-cover border border-olive-20" />
+                  <button type="button" (click)="clearCampaignAsset('heroImage')"
+                    class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] hover:bg-red-600">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </div>
+              } @else {
+                <span class="self-center text-xs text-gray-400">Sin imagen</span>
+              }
+            </div>
+          </div>
         </div>
       </div>
     </div>

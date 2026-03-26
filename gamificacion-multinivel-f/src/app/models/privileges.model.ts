@@ -7,7 +7,8 @@ export type AdminViewId =
   | 'pos'
   | 'stats'
   | 'notifications'
-  | 'settings';
+  | 'settings'
+  | 'employees';
 
 export type AppPrivilege =
   | 'access_screen_orders'
@@ -34,6 +35,9 @@ export type AppPrivilege =
   | 'pos_register_sale'
   | 'user_mark_admin'
   | 'user_manage_privileges'
+  | 'employee_add'
+  | 'employee_manage_privileges'
+  | 'access_screen_employees'
   | 'config_manage';
 
 export type UserPrivileges = Partial<Record<AppPrivilege, boolean>>;
@@ -63,6 +67,9 @@ export const ALL_PRIVILEGES: AppPrivilege[] = [
   'pos_register_sale',
   'user_mark_admin',
   'user_manage_privileges',
+  'employee_add',
+  'employee_manage_privileges',
+  'access_screen_employees',
   'config_manage'
 ];
 
@@ -76,7 +83,8 @@ export const SCREEN_PRIVILEGE_BY_VIEW: Record<AdminViewId, AppPrivilege> = {
   pos: 'access_screen_pos',
   stats: 'access_screen_stats',
   notifications: 'config_manage',
-  settings: 'access_screen_settings'
+  settings: 'access_screen_settings',
+  employees: 'access_screen_employees'
 };
 
 export function normalizePrivileges(raw: unknown): UserPrivileges {

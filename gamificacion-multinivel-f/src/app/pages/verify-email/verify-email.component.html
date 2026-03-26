@@ -1,0 +1,65 @@
+<section class="antialiased min-h-screen bg-sand-200 flex items-center justify-center px-4 py-12">
+  <div class="grain w-full max-w-md overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-8 text-center shadow-sm">
+    <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
+    <div class="relative">
+
+      <!-- Cargando -->
+      <ng-container *ngIf="state === 'loading'">
+        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-olive-30 bg-ivory-80">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl text-gray-400" aria-hidden="true"></i>
+        </div>
+        <h1 class="text-xl font-extrabold text-main">Verificando correo…</h1>
+        <p class="mt-2 text-sm text-gray-500">Un momento por favor.</p>
+      </ng-container>
+
+      <!-- Éxito -->
+      <ng-container *ngIf="state === 'success'">
+        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-olive-30 bg-ivory-80">
+          <i class="fa-solid fa-circle-check text-2xl text-accent" aria-hidden="true"></i>
+        </div>
+        <h1 class="text-xl font-extrabold text-main">¡Correo verificado!</h1>
+        <p class="mt-3 text-sm text-gray-600">Tu cuenta ha sido activada correctamente.<br>Ya puedes iniciar sesión.</p>
+        <div class="mt-6">
+          <ui-button variant="primary" size="lg" [routerLink]="['/login']">
+            <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i>
+            Iniciar sesión
+          </ui-button>
+        </div>
+      </ng-container>
+
+      <!-- Error -->
+      <ng-container *ngIf="state === 'error'">
+        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-red-200 bg-red-50">
+          <i class="fa-solid fa-circle-xmark text-2xl text-red-500" aria-hidden="true"></i>
+        </div>
+        <h1 class="text-xl font-extrabold text-main">Enlace inválido</h1>
+        <p class="mt-3 text-sm text-gray-600">{{ message }}</p>
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <ui-button variant="ghost" size="md" [routerLink]="['/']">
+            <i class="fa-solid fa-house" aria-hidden="true"></i>
+            Volver al inicio
+          </ui-button>
+          <ui-button variant="primary" size="md" [routerLink]="['/login']">
+            Iniciar sesión
+          </ui-button>
+        </div>
+      </ng-container>
+
+      <!-- Sin token -->
+      <ng-container *ngIf="state === 'no-token'">
+        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-olive-30 bg-ivory-80">
+          <i class="fa-solid fa-envelope text-2xl text-gray-400" aria-hidden="true"></i>
+        </div>
+        <h1 class="text-xl font-extrabold text-main">Verifica tu correo</h1>
+        <p class="mt-3 text-sm text-gray-600">Revisa tu bandeja de entrada y haz clic en el enlace que te enviamos al registrarte.</p>
+        <div class="mt-6">
+          <ui-button variant="ghost" size="md" [routerLink]="['/']">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            Volver al inicio
+          </ui-button>
+        </div>
+      </ng-container>
+
+    </div>
+  </div>
+</section>

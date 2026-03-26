@@ -32,8 +32,14 @@ import {
   AssociateMonth,
   UpdateBusinessConfigPayload,
   UpdateCustomerPayload,
-  UpdateCustomerPrivilegesPayload
+  UpdateCustomerPrivilegesPayload,
+  UpdateProfilePayload,
+  ProductCategory,
+  SaveProductCategoryPayload,
+  ShippingRate,
+  ShippingQuoteRequest
 } from '../models/admin.model';
+import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import {
   CreateAccountPayload,
@@ -41,7 +47,8 @@ import {
   PasswordRecoveryRequestPayload,
   PasswordRecoveryRequestResponse,
   ResetPasswordPayload,
-  ResetPasswordResponse
+  ResetPasswordResponse,
+  VerifyEmailResponse
 } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
@@ -69,6 +76,10 @@ export class ApiService {
 
   createAccount(payload: CreateAccountPayload): Observable<CreateAccountResponse> {
     return this.resolveApi().createAccount(payload);
+  }
+
+  verifyEmail(token: string): Observable<VerifyEmailResponse> {
+    return this.resolveApi().verifyEmail(token);
   }
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
@@ -173,6 +184,18 @@ export class ApiService {
     return this.resolveApi().saveProduct(payload);
   }
 
+  listCategories(): Observable<ProductCategory[]> {
+    return this.resolveApi().listCategories();
+  }
+
+  saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
+    return this.resolveApi().saveCategory(payload);
+  }
+
+  deleteCategory(id: string): Observable<{ ok: boolean }> {
+    return this.resolveApi().deleteCategory(id);
+  }
+
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
     return this.resolveApi().updateOrderStatus(orderId, payload);
   }
@@ -181,7 +204,7 @@ export class ApiService {
     return this.resolveApi().listStocks();
   }
 
-  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.resolveApi().createStock(payload);
   }
 
@@ -249,6 +272,14 @@ export class ApiService {
     return this.resolveApi().updateCustomer(customerId, payload);
   }
 
+  changePassword(userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
+    return this.resolveApi().changePassword(userId, payload);
+  }
+
+  updateProfile(userId: string, payload: UpdateProfilePayload): Observable<CustomerProfile> {
+    return this.resolveApi().updateProfile(userId, payload);
+  }
+
   saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
     return this.resolveApi().saveCampaign(payload);
   }
@@ -267,6 +298,26 @@ export class ApiService {
 
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.resolveApi().saveBusinessConfig(payload);
+  }
+
+  listEmployees(): Observable<AdminEmployee[]> {
+    return this.resolveApi().listEmployees();
+  }
+
+  createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
+    return this.resolveApi().createEmployee(payload);
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+    return this.resolveApi().updateEmployee(employeeId, payload);
+  }
+
+  updateEmployeePrivileges(employeeId: number, payload: UpdateEmployeePrivilegesPayload): Observable<AdminEmployee> {
+    return this.resolveApi().updateEmployeePrivileges(employeeId, payload);
+  }
+
+  getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
+    return this.resolveApi().getShippingQuote(payload);
   }
 
   private resolveApi(): MockApiService | RealApiService {

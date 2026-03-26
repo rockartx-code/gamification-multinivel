@@ -32,8 +32,15 @@ import {
   AssociateMonth,
   UpdateBusinessConfigPayload,
   UpdateCustomerPayload,
-  UpdateCustomerPrivilegesPayload
+  UpdateCustomerPrivilegesPayload,
+  UpdateProfilePayload,
+  ProductCategory,
+  ProductVariant,
+  SaveProductCategoryPayload,
+  ShippingRate,
+  ShippingQuoteRequest
 } from '../models/admin.model';
+import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import {
   CreateAccountPayload,
@@ -67,7 +74,11 @@ export class MockApiService {
         { min: 8001, max: 12000, rate: 0.4 },
         { min: 12001, max: null, rate: 0.5 }
       ],
-      commissionByDepth: { '1': 0.1, '2': 0.05, '3': 0.03 },
+      commissionLevels: [
+        { rate: 0.1, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
+        { rate: 0.05, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
+        { rate: 0.03, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 }
+      ],
       payoutDay: 10,
       cutRule: 'hard_cut_no_pass'
     },
@@ -103,9 +114,54 @@ export class MockApiService {
   private associateMonths: Record<string, AssociateMonth> = {};
   private campaigns: AdminCampaign[] = [
     {
+      id: 'CMP-PROGRAMA-FAMILIA',
+      name: 'Programa Familia',
+      active: true,
+      type: 'multinivel',
+      hook: 'Cuida a tu familia con bienestar que se comparte.',
+      description: 'Campana de reclutamiento para el programa familiar de bienestar.',
+      story: 'images/L-Programa3.png',
+      feed: 'images/L-Programa3.png',
+      banner: 'images/L-Programa3.png',
+      heroImage: 'images/L-Programa3.png',
+      heroBadge: 'Programa familiar',
+      heroTitle: 'Cuida tu cuerpo.',
+      heroAccent: 'Potencia tu energia.',
+      heroTail: 'Compartelo.',
+      heroDescription: 'Un sistema de bienestar con recompensas: mejoras tu y ayudas a otros a mejorar.',
+      ctaPrimaryText: 'Obtenerlo ahora',
+      ctaSecondaryText: 'Ver recompensas',
+      benefits: ['Bienestar familiar', 'Descuentos por compra', 'Red activa', 'Bonos mensuales'],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'CMP-PROGRAMA-ENTRENADOR',
+      name: 'Programa Entrenador',
+      active: true,
+      type: 'multinivel',
+      hook: 'Potencia tu entrenamiento y comparte los resultados.',
+      description: 'Campana de reclutamiento para entrenadores y deportistas.',
+      story: 'images/L-Programa2.png',
+      feed: 'images/L-Programa2.png',
+      banner: 'images/L-Programa2.png',
+      heroImage: 'images/L-Programa2.png',
+      heroBadge: 'Programa entrenador',
+      heroTitle: 'Cuida tu cuerpo.',
+      heroAccent: 'Potencia tu energia.',
+      heroTail: 'Compartelo.',
+      heroDescription: 'Un sistema de bienestar con recompensas: mejoras tu y ayudas a otros a mejorar.',
+      ctaPrimaryText: 'Obtenerlo ahora',
+      ctaSecondaryText: 'Ver recompensas',
+      benefits: ['Recuperacion activa', 'Energia sostenida', 'Red deportiva', 'Bonos mensuales'],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
       id: 'CMP-LANZAMIENTO-ENERGIA',
       name: 'Lanzamiento Energia',
       active: true,
+      type: 'producto',
       hook: 'Campana especial de energia diaria.',
       description: 'Push de conversion para nuevos registros con foco en energia.',
       story: 'images/L-Programa3.png',
@@ -123,6 +179,14 @@ export class MockApiService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
+  ];
+  private categories: ProductCategory[] = [
+    { id: 'suplementos', name: 'Suplementos', parentId: null, position: 0, active: true },
+    { id: 'proteinas', name: 'Proteínas', parentId: 'suplementos', position: 0, active: true },
+    { id: 'vitaminas', name: 'Vitaminas', parentId: 'suplementos', position: 1, active: true },
+    { id: 'bienestar', name: 'Bienestar', parentId: null, position: 1, active: true },
+    { id: 'articulaciones', name: 'Articulaciones', parentId: 'bienestar', position: 0, active: true },
+    { id: 'energia', name: 'Energía', parentId: null, position: 2, active: true }
   ];
   private notifications: PortalNotification[] = [
     {
@@ -158,8 +222,6 @@ export class MockApiService {
       id: 1,
       name: 'Ana López',
       email: 'ana@mail.com',
-      canAccessAdmin: true,
-      privileges: Object.fromEntries(ALL_PRIVILEGES.map((privilege) => [privilege, true])),
       leaderId: null,
       level: 'L1',
       discount: '15%',
@@ -176,8 +238,6 @@ export class MockApiService {
       id: 2,
       name: 'Carlos Ruiz',
       email: 'carlos@mail.com',
-      canAccessAdmin: false,
-      privileges: {},
       leaderId: 1,
       level: 'L2',
       discount: '10%',
@@ -192,10 +252,8 @@ export class MockApiService {
     },
     {
       id: 3,
-      name: 'Marí­a Pérez',
+      name: 'María Pérez',
       email: 'maria@mail.com',
-      canAccessAdmin: false,
-      privileges: {},
       leaderId: 2,
       level: 'L3',
       discount: '5%',
@@ -207,6 +265,16 @@ export class MockApiService {
       commissionsPrevStatus: 'paid',
       commissionsPrevReceiptUrl: 'https://example.com/recibo.pdf',
       clabeInterbancaria: '987654321098765432'
+    }
+  ];
+  private employees: AdminEmployee[] = [
+    {
+      id: 10001,
+      name: 'Admin Demo',
+      email: 'admin@mail.com',
+      canAccessAdmin: true,
+      privileges: Object.fromEntries(ALL_PRIVILEGES.map((p) => [p, true])) as AdminEmployee['privileges'],
+      active: true
     }
   ];
   private customerProfiles: Record<string, CustomerProfile> = {
@@ -315,7 +383,9 @@ export class MockApiService {
       copyWhatsapp: 'Col?geno diario para piel y articulaciones. ?Te comparto el link?',
       copyInstagram: 'Col?geno diario ? Piel y articulaciones fuertes. #bienestar',
       copyFacebook: 'Col?geno diario para piel y articulaciones. Escr?beme y te paso el link.',
-      tags: ['bienestar']
+      tags: ['bienestar'],
+      variants: [{ id: 'natural', name: 'Natural', price: 35 }, { id: 'coco', name: 'Sabor Coco', price: 38 }, { id: 'vainilla', name: 'Sabor Vainilla', price: 38 }],
+      categoryIds: ['suplementos', 'articulaciones']
     },
     {
       id: 2,
@@ -328,7 +398,9 @@ export class MockApiService {
       copyWhatsapp: 'Omega-3 para mente y coraz?n. ?Quieres el link?',
       copyInstagram: 'Omega-3 para mente y coraz?n. #salud',
       copyFacebook: 'Omega-3 para mente y coraz?n. Escr?beme y te paso el link.',
-      tags: ['salud', 'mente']
+      tags: ['salud', 'mente'],
+      variants: [{ id: 'estandar', name: 'Estándar', price: 29 }, { id: 'triple', name: 'Triple Fuerza', price: 45 }],
+      categoryIds: ['suplementos', 'bienestar']
     },
     {
       id: 3,
@@ -341,7 +413,9 @@ export class MockApiService {
       copyWhatsapp: 'Complejo B para energ?a diaria. ?Te paso el link?',
       copyInstagram: 'Complejo B para energ?a diaria. #energia',
       copyFacebook: 'Complejo B para energ?a diaria. Escr?beme y te paso el link.',
-      tags: ['energia']
+      tags: ['energia'],
+      variants: [{ id: 'normal', name: 'Normal', price: 24 }, { id: 'extra', name: 'Extra Potencia', price: 32 }],
+      categoryIds: ['energia']
     }
   ];
   private productOfMonthId = 1;
@@ -378,7 +452,11 @@ export class MockApiService {
       discountRate: 0,
       commissions: 0
     };
-    return of({ customer }).pipe(delay(160));
+    return of({ customer, requiresEmailVerification: true }).pipe(delay(160));
+  }
+
+  verifyEmail(_token: string): Observable<{ ok: boolean; message?: string }> {
+    return of({ ok: true, message: 'Correo verificado correctamente.' }).pipe(delay(300));
   }
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
@@ -413,36 +491,65 @@ export class MockApiService {
           createdAt: '2026-01-16T09:35:00.000Z',
           customer: 'Ana Lopez',
           total: 120,
-          status: 'pending'
+          status: 'pending',
+          recipientName: 'Ana Lopez',
+          phone: '5512345678',
+          address: 'Av. Insurgentes Sur 1234, Col. Del Valle',
+          postalCode: '03100',
+          state: 'CDMX',
+          betweenStreets: 'Entre Mier y Pesado y Gabriel Mancera',
+          references: 'Edificio azul, departamento 302',
+          items: [
+            { productId: 1, name: 'Producto Alpha', price: 80, quantity: 1 },
+            { productId: 2, name: 'Producto Beta', price: 40, quantity: 1 }
+          ]
         },
         {
           id: '#1002',
           createdAt: '2026-01-16T11:20:00.000Z',
           customer: 'Carlos Ruiz',
           total: 89,
-          status: 'paid'
+          status: 'paid',
+          recipientName: 'Carlos Ruiz',
+          address: 'Calle Morelos 45, Col. Centro',
+          postalCode: '06010',
+          state: 'CDMX',
+          items: [
+            { productId: 3, name: 'Producto Gamma', price: 89, quantity: 1 }
+          ]
         },
         {
           id: '#1003',
           createdAt: '2026-01-15T17:05:00.000Z',
           customer: 'Maria Perez',
           total: 210,
-          status: 'paid'
+          status: 'paid',
+          recipientName: 'Maria Perez',
+          address: 'Blvd. Adolfo Lopez Mateos 800, Col. San Pedro',
+          postalCode: '72150',
+          state: 'Puebla',
+          betweenStreets: 'Entre Calle 5 de Mayo y Calle 16 de Septiembre',
+          items: [
+            { productId: 1, name: 'Producto Alpha', price: 80, quantity: 2 },
+            { productId: 4, name: 'Producto Delta', price: 50, quantity: 1 }
+          ]
         },
         {
           id: '#1004',
           createdAt: '2026-01-14T14:50:00.000Z',
           customer: 'Luis Gomez',
           total: 60,
-          status: 'delivered'
+          status: 'delivered',
+          items: [
+            { productId: 2, name: 'Producto Beta', price: 60, quantity: 1 }
+          ]
         }
       ],
-      customers: this.customers.map((customer) => ({
-        ...customer,
-        privileges: normalizePrivileges(customer.privileges)
-      })),
+      customers: [...this.customers],
+      employees: [...this.employees],
       products: [...this.products],
       campaigns: [...this.campaigns],
+      categories: [...this.categories],
       notifications: this.notifications.map((notification) => this.normalizeNotification(notification)),
       businessConfig: structuredClone(this.businessConfig),
       warnings: [
@@ -465,6 +572,7 @@ export class MockApiService {
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
     const nextId = this.products.reduce((max, product) => Math.max(max, product.id), 0) + 1;
+    const existing = payload.id != null ? this.products.find((p) => p.id === payload.id) : undefined;
     const product: AdminProduct = {
       id: payload.id ?? nextId,
       name: payload.name,
@@ -477,7 +585,9 @@ export class MockApiService {
       copyInstagram: payload.copyInstagram,
       copyWhatsapp: payload.copyWhatsapp,
       tags: payload.tags,
-      images: payload.images
+      images: payload.images,
+      variants: payload.variants ?? existing?.variants ?? [],
+      categoryIds: payload.categoryIds ?? existing?.categoryIds ?? []
     };
     const existingIndex = this.products.findIndex((entry) => entry.id === payload.id);
     if (existingIndex >= 0) {
@@ -612,7 +722,9 @@ export class MockApiService {
           price: 35,
           badge: 'Regeneración',
           img: 'images/L-Colageno.png',
-          tags: ['bienestar']
+          tags: ['bienestar'],
+          variants: this.products.find((p) => p.id === 1)?.variants,
+          categoryIds: this.products.find((p) => p.id === 1)?.categoryIds
         },
         {
           id: 'omega3',
@@ -620,7 +732,9 @@ export class MockApiService {
           price: 29,
           badge: 'Cuerpo & mente',
           img: 'images/L-Omega3.png',
-          tags: ['salud', 'mente']
+          tags: ['salud', 'mente'],
+          variants: this.products.find((p) => p.id === 2)?.variants,
+          categoryIds: this.products.find((p) => p.id === 2)?.categoryIds
         },
         {
           id: 'creatina',
@@ -640,7 +754,9 @@ export class MockApiService {
           price: 24,
           badge: 'Energía',
           img: 'images/L-ComplejoB.png',
-          tags: ['energia']
+          tags: ['energia'],
+          variants: this.products.find((p) => p.id === 3)?.variants,
+          categoryIds: this.products.find((p) => p.id === 3)?.categoryIds
         },
         {
           id: 'antioxidante',
@@ -694,6 +810,7 @@ export class MockApiService {
         .map((campaign) => ({
           id: campaign.id,
           name: campaign.name,
+          type: campaign.type,
           hook: campaign.hook,
           description: campaign.description,
           story: campaign.story,
@@ -837,8 +954,11 @@ export class MockApiService {
       address: payload.address,
       postalCode: payload.postalCode,
       state: payload.state,
+      betweenStreets: payload.betweenStreets,
+      references: payload.references,
       shippingAddressId: payload.shippingAddressId,
-      shippingAddressLabel: payload.shippingAddressLabel
+      shippingAddressLabel: payload.shippingAddressLabel,
+      items: payload.items
     };
     return of(order).pipe(delay(120));
   }
@@ -942,8 +1062,6 @@ export class MockApiService {
       id: Math.floor(100000 + Math.random() * 900000),
       name: payload.name,
       email: payload.email,
-      canAccessAdmin: false,
-      privileges: {},
       leaderId: payload.leaderId ?? null,
       level: 'L1',
       discount: '0%',
@@ -1001,7 +1119,7 @@ export class MockApiService {
     return of([...this.stocks]).pipe(delay(120));
   }
 
-  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     const stock: AdminStock = {
       id: `STK-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       name: payload.name,
@@ -1288,13 +1406,74 @@ export class MockApiService {
     if (!customer) {
       return throwError(() => new Error('Cliente no encontrado'));
     }
-    const updated: AdminCustomer = {
-      ...customer,
-      canAccessAdmin: payload.canAccessAdmin ?? customer.canAccessAdmin ?? false,
-      privileges: normalizePrivileges(payload.privileges ?? customer.privileges)
+    return of({ ...customer }).pipe(delay(120));
+  }
+
+  listEmployees(): Observable<AdminEmployee[]> {
+    return of([...this.employees]).pipe(delay(100));
+  }
+
+  createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
+    const emp: AdminEmployee = {
+      id: Math.floor(100000 + Math.random() * 900000),
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+      canAccessAdmin: payload.canAccessAdmin ?? true,
+      privileges: normalizePrivileges(payload.privileges),
+      active: true,
+      tempPassword: 'TempPass123'
     };
-    this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
+    this.employees = [emp, ...this.employees];
+    return of({ ...emp }).pipe(delay(120));
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+    const emp = this.employees.find((e) => e.id === employeeId);
+    if (!emp) {
+      return throwError(() => new Error('Empleado no encontrado'));
+    }
+    const updated: AdminEmployee = { ...emp, ...payload };
+    this.employees = this.employees.map((e) => (e.id === employeeId ? updated : e));
     return of(updated).pipe(delay(120));
+  }
+
+  updateEmployeePrivileges(employeeId: number, payload: UpdateEmployeePrivilegesPayload): Observable<AdminEmployee> {
+    const emp = this.employees.find((e) => e.id === employeeId);
+    if (!emp) {
+      return throwError(() => new Error('Empleado no encontrado'));
+    }
+    const updated: AdminEmployee = {
+      ...emp,
+      canAccessAdmin: payload.canAccessAdmin ?? emp.canAccessAdmin,
+      privileges: normalizePrivileges(payload.privileges ?? emp.privileges)
+    };
+    this.employees = this.employees.map((e) => (e.id === employeeId ? updated : e));
+    return of(updated).pipe(delay(120));
+  }
+
+  changePassword(_userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
+    if (!payload.currentPassword) {
+      return throwError(() => ({ error: { message: 'La contraseña actual es requerida.' } }));
+    }
+    if (!payload.newPassword || payload.newPassword.length < 8) {
+      return throwError(() => ({ error: { message: 'La nueva contraseña debe tener al menos 8 caracteres.' } }));
+    }
+    return of(undefined as void).pipe(delay(300));
+  }
+
+  updateProfile(userId: string, payload: UpdateProfilePayload): Observable<CustomerProfile> {
+    const key = this.normalizeCustomerKey(userId) || '1';
+    const profile = this.ensureCustomerProfile(key);
+    const updated: CustomerProfile = {
+      ...profile,
+      name: payload.name ?? profile.name,
+      phone: payload.phone ?? profile.phone,
+      rfc: payload.rfc ?? profile.rfc,
+      curp: payload.curp ?? profile.curp
+    };
+    this.customerProfiles[key] = updated;
+    return of({ ...updated }).pipe(delay(120));
   }
 
   updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
@@ -1326,6 +1505,11 @@ export class MockApiService {
       id: Number.isFinite(numericCustomerId) ? numericCustomerId : key,
       name: customerName,
       email: `${key}@mail.com`,
+      phone: '',
+      rfc: '',
+      curp: '',
+      clabeInterbancaria: '',
+      documents: [],
       addresses: [],
       shippingAddresses: []
     };
@@ -1456,6 +1640,7 @@ export class MockApiService {
       id: payload.id || `CMP-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       name: payload.name,
       active: payload.active,
+      type: payload.type ?? 'multinivel',
       hook: payload.hook,
       description: payload.description,
       story: payload.story,
@@ -1522,5 +1707,45 @@ export class MockApiService {
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     this.businessConfig = structuredClone(payload.config);
     return of(structuredClone(this.businessConfig)).pipe(delay(120));
+  }
+
+  listCategories(): Observable<ProductCategory[]> {
+    return of([...this.categories]).pipe(delay(80));
+  }
+
+  saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
+    const now = new Date().toISOString();
+    const existing = payload.id ? this.categories.find((c) => c.id === payload.id) : null;
+    const category: ProductCategory = {
+      id: payload.id || `cat-${Math.random().toString(36).slice(2, 9)}`,
+      name: payload.name,
+      parentId: payload.parentId ?? null,
+      position: payload.position ?? 0,
+      active: payload.active ?? true,
+      createdAt: existing?.createdAt ?? now
+    };
+    this.categories = existing
+      ? this.categories.map((c) => (c.id === category.id ? category : c))
+      : [...this.categories, category];
+    return of(category).pipe(delay(100));
+  }
+
+  deleteCategory(id: string): Observable<{ ok: boolean }> {
+    this.categories = this.categories.filter((c) => c.id !== id && c.parentId !== id);
+    return of({ ok: true }).pipe(delay(80));
+  }
+
+  getShippingQuote(_payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
+    const mockRates: ShippingRate[] = [
+      { carrier: 'FedEx', service: 'FedEx Express', price: 145, displayPrice: this.applyShippingMarkup(145), currency: 'MXN', transitDays: 1 },
+      { carrier: 'DHL', service: 'DHL Express', price: 132, displayPrice: this.applyShippingMarkup(132), currency: 'MXN', transitDays: 2 },
+      { carrier: 'Estafeta', service: 'Estafeta Dia Siguiente', price: 98, displayPrice: this.applyShippingMarkup(98), currency: 'MXN', transitDays: 2 },
+      { carrier: 'Redpack', service: 'Redpack Express', price: 87, displayPrice: this.applyShippingMarkup(87), currency: 'MXN', transitDays: 3 },
+    ];
+    return of(mockRates);
+  }
+
+  private applyShippingMarkup(price: number): number {
+    return Math.ceil((price * 1.15) / 50) * 50;
   }
 }

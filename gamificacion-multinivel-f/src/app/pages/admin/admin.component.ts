@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, type Signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -20,8 +21,11 @@ import {
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
-  CreateStructureCustomerPayload
+  CreateStructureCustomerPayload,
+  ProductCategory,
+  ProductVariant
 } from '../../models/admin.model';
+import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
 import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
@@ -36,6 +40,7 @@ import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-tab
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { AdminControlService } from '../../services/admin-control.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
+import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
 
 type StructureNode = {
   id: string;
@@ -153,11 +158,12 @@ type PosCustomerRecommendation = {
 };
 
 type DiscountTierDraft = AppBusinessConfig['rewards']['discountTiers'][number];
+type CommissionLevelDraft = AppBusinessConfig['rewards']['commissionLevels'][number];
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -165,9 +171,9 @@ export class AdminComponent implements OnInit {
   private readonly adminData: Signal<AdminData | null>;
   private adminNavLinksCache: { user: AuthUser | null; links: SidebarLink[] } | null = null;
   private customerOptionsCache: { customersRef: AdminCustomer[]; options: Array<SelectOption<number>> } | null = null;
+  private employeeOptionsCache: { employeesRef: AdminEmployee[]; options: Array<SelectOption<number>> } | null = null;
   private stockOptionsCache: { stocksRef: AdminStock[]; options: Array<SelectOption<string>> } | null = null;
   private productOptionsCache: { productsRef: AdminProduct[]; options: Array<SelectOption<number>> } | null = null;
-  private filteredOrdersCache: { ordersRef: AdminOrder[]; status: AdminOrder['status']; rows: AdminOrder[] } | null = null;
   private structureGraphCache:
     | {
         selectedCustomerId: number | null;
@@ -197,6 +203,7 @@ export class AdminComponent implements OnInit {
         stocksRef: AdminStock[];
         productsRef: AdminProduct[];
         customersRef: AdminCustomer[];
+        employeesRef: AdminEmployee[];
         rows: Array<
           InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
         >;
@@ -283,12 +290,26 @@ export class AdminComponent implements OnInit {
 
   currentView: AdminViewId = 'orders';
   currentOrderStatus: AdminOrder['status'] = 'pending';
+  expandedOrderDetailId: string | null = null;
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
   isAddStructureModalOpen = false;
   isShippingModalOpen = false;
   isReceiptModalOpen = false;
   isUploadingReceipt = false;
+
+  readonly PAGE_SIZE = 15;
+
+  orderSearch = '';
+  orderPage = 0;
+  customerSearch = '';
+  customerPage = 0;
+  productSearch = '';
+  productPage = 0;
+  employeeSearch = '';
+  employeePage = 0;
+  notificationSearch = '';
+  notificationPage = 0;
 
   selectedCustomer: AdminCustomer | null = null;
   selectedCustomerAdminAccess = false;
@@ -299,6 +320,7 @@ export class AdminComponent implements OnInit {
   selectedSponsorLabel = 'FindingU (sin patrocinador)';
   hasValidSelectedSponsorId = true;
   canSaveSelectedCustomerPosition = false;
+  isChangingSponsor = false;
   isSavingCustomerPrivileges = false;
   isSavingCustomerPosition = false;
   readonly customerPrivilegeOptions: CustomerPrivilegeOption[] = [
@@ -357,7 +379,13 @@ export class AdminComponent implements OnInit {
     copyFacebook: '',
     copyInstagram: '',
     copyWhatsapp: '',
-    tags: ''
+    tags: '',
+    variants: [] as Array<{ id: string; name: string; price: string; sku: string; active: boolean }>,
+    categoryIds: [] as string[],
+    weightKg: '' as string | number,
+    lengthCm: '' as string | number,
+    widthCm: '' as string | number,
+    heightCm: '' as string | number,
   };
   productExistingImages: AdminProduct['images'] = [];
   notificationMessage = '';
@@ -390,7 +418,9 @@ export class AdminComponent implements OnInit {
   selectedStockId = '';
   stockForm = {
     name: '',
-    location: ''
+    location: '',
+    postalCode: '',
+    isMainWarehouse: false
   };
   stockUserLinkDraft = new Set<number>();
   isStockEntryModalOpen = false;
@@ -421,6 +451,8 @@ export class AdminComponent implements OnInit {
   inventoryMovements: InventoryMovement[] = [];
   stockFeedbackMessage = '';
   stockFeedbackTone: 'error' | 'success' | '' = '';
+  isImportingInventory = false;
+  inventoryImportResults: Array<{ productName: string; qty: number; ok: boolean; message?: string }> = [];
 
   shippingStockId = '';
   shippingFallbackProductId: number | null = null;
@@ -443,21 +475,39 @@ export class AdminComponent implements OnInit {
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
 
+  selectedEmployee: AdminEmployee | null = null;
+  selectedEmployeePrivilegeDraft: UserPrivileges = {};
+  selectedEmployeeAdminAccess = true;
+  isSavingEmployeePrivileges = false;
+  isSavingEmployee = false;
+  employeeMessage = '';
+  employeeMessageIsError = false;
+  employeeTempPassword = '';
+  employeeForm = {
+    name: '',
+    email: '',
+    phone: ''
+  };
+
   ngOnInit(): void {
     this.currentView = this.getFirstAllowedView();
     this.adminControl.load().subscribe(() => {
       if (!this.selectedCustomer) {
         this.selectedCustomer = this.customers[0] ?? null;
       }
+      if (!this.selectedEmployee) {
+        this.selectedEmployee = this.employees[0] ?? null;
+        this.syncSelectedEmployeePrivilegeDraft();
+      }
       this.syncSelectedCustomerAccessDraft();
       this.ensureCurrentViewAllowed();
       if (!this.newOrderCustomerId) {
         this.newOrderCustomerId = this.customers[0]?.id ?? null;
       }
-      this.stockEntryForm.createdByUserId = this.stockEntryForm.createdByUserId ?? this.customers[0]?.id ?? null;
-      this.stockTransferForm.createdByUserId = this.stockTransferForm.createdByUserId ?? this.customers[0]?.id ?? null;
-      this.stockDamageForm.reportedByUserId = this.stockDamageForm.reportedByUserId ?? this.customers[0]?.id ?? null;
-      this.transferReceiverUserId = this.transferReceiverUserId ?? this.customers[0]?.id ?? null;
+      this.stockEntryForm.createdByUserId = this.stockEntryForm.createdByUserId ?? this.employees[0]?.id ?? null;
+      this.stockTransferForm.createdByUserId = this.stockTransferForm.createdByUserId ?? this.employees[0]?.id ?? null;
+      this.stockDamageForm.reportedByUserId = this.stockDamageForm.reportedByUserId ?? this.employees[0]?.id ?? null;
+      this.transferReceiverUserId = this.transferReceiverUserId ?? this.employees[0]?.id ?? null;
       this.selectPublicGeneralCustomer();
       this.syncBusinessConfigDraft();
       this.loadStocksAndPosState();
@@ -470,6 +520,89 @@ export class AdminComponent implements OnInit {
 
   get customers(): AdminCustomer[] {
     return this.adminData()?.customers ?? [];
+  }
+
+  get filteredCustomers(): AdminCustomer[] {
+    const q = this.customerSearch.trim().toLowerCase();
+    if (!q) return this.customers;
+    return this.customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q) ||
+        (c.level || '').toLowerCase().includes(q) ||
+        (c.discount || '').toLowerCase().includes(q)
+    );
+  }
+
+  get pagedCustomers(): AdminCustomer[] {
+    return this.filteredCustomers.slice(this.customerPage * this.PAGE_SIZE, (this.customerPage + 1) * this.PAGE_SIZE);
+  }
+
+  get customersTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredCustomers.length / this.PAGE_SIZE));
+  }
+
+  get filteredProducts(): AdminProduct[] {
+    const q = this.productSearch.trim().toLowerCase();
+    if (!q) return this.products;
+    return this.products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q) ||
+        (p.hook || '').toLowerCase().includes(q) ||
+        (p.active ? 'activo' : 'retirado').includes(q)
+    );
+  }
+
+  get pagedProducts(): AdminProduct[] {
+    return this.filteredProducts.slice(this.productPage * this.PAGE_SIZE, (this.productPage + 1) * this.PAGE_SIZE);
+  }
+
+  get productsTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredProducts.length / this.PAGE_SIZE));
+  }
+
+  get filteredEmployees(): AdminEmployee[] {
+    const q = this.employeeSearch.trim().toLowerCase();
+    const list = this.adminData()?.employees ?? [];
+    if (!q) return list;
+    return list.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.email.toLowerCase().includes(q) ||
+        (e.active ? 'activo' : 'inactivo').includes(q)
+    );
+  }
+
+  get pagedEmployees(): AdminEmployee[] {
+    return this.filteredEmployees.slice(this.employeePage * this.PAGE_SIZE, (this.employeePage + 1) * this.PAGE_SIZE);
+  }
+
+  get employeesTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredEmployees.length / this.PAGE_SIZE));
+  }
+
+  get filteredNotifications(): PortalNotification[] {
+    const q = this.notificationSearch.trim().toLowerCase();
+    if (!q) return this.notifications;
+    return this.notifications.filter(
+      (n) =>
+        (n.title || '').toLowerCase().includes(q) ||
+        (n.description || '').toLowerCase().includes(q) ||
+        (n.status || '').toLowerCase().includes(q)
+    );
+  }
+
+  get pagedNotifications(): PortalNotification[] {
+    return this.filteredNotifications.slice(this.notificationPage * this.PAGE_SIZE, (this.notificationPage + 1) * this.PAGE_SIZE);
+  }
+
+  get notificationsTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredNotifications.length / this.PAGE_SIZE));
+  }
+
+  get employees(): AdminEmployee[] {
+    return this.adminData()?.employees ?? [];
   }
 
   get products(): AdminProduct[] {
@@ -539,11 +672,32 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.businessConfig ?? null;
   }
 
+  get commissionLevelsErrors(): string[] {
+    const errors: string[] = [];
+    const levels = this.businessConfigDraft?.rewards?.commissionLevels ?? [];
+    for (let i = 1; i < levels.length; i++) {
+      const prev = levels[i - 1];
+      const curr = levels[i];
+      const label = `Nivel ${i} → Nivel ${i + 1}`;
+      if (curr.minActiveUsers < prev.minActiveUsers) {
+        errors.push(`${label}: usuarios activos debe ser ≥ ${prev.minActiveUsers}`);
+      }
+      if (curr.minIndividualPurchase < prev.minIndividualPurchase) {
+        errors.push(`${label}: compra individual debe ser ≥ ${prev.minIndividualPurchase}`);
+      }
+      if (curr.minGroupPurchase < prev.minGroupPurchase) {
+        errors.push(`${label}: compra grupal debe ser ≥ ${prev.minGroupPurchase}`);
+      }
+    }
+    return errors;
+  }
+
 
   get adminNavLinks(): SidebarLink[] {
     const links: Array<SidebarLink & { view: AdminViewId }> = [
       { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
       { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
+      { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' },
       { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
       { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
       { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
@@ -567,6 +721,18 @@ export class AdminComponent implements OnInit {
     return options;
   }
 
+  get employeeOptionsStable(): Array<SelectOption<number>> {
+    if (this.employeeOptionsCache?.employeesRef === this.employees) {
+      return this.employeeOptionsCache.options;
+    }
+    const options = this.employees.map((emp) => ({
+      value: emp.id,
+      label: `${emp.name} · ${emp.email}`
+    }));
+    this.employeeOptionsCache = { employeesRef: this.employees, options };
+    return options;
+  }
+
   get orderStatusOptionsStable(): Array<SelectOption<AdminOrder['status']>> {
     return this.orderStatusOptionsValue;
   }
@@ -587,6 +753,7 @@ export class AdminComponent implements OnInit {
     const links: Array<SidebarLink & { view: AdminViewId }> = [
       { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
       { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
+      { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' },
       { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
       { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
       { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
@@ -603,6 +770,9 @@ export class AdminComponent implements OnInit {
   get viewTitle(): string {
     if (this.currentView === 'customers') {
       return 'Clientes';
+    }
+    if (this.currentView === 'employees') {
+      return 'Empleados';
     }
     if (this.currentView === 'products') {
       return 'Productos';
@@ -631,6 +801,9 @@ export class AdminComponent implements OnInit {
   get viewSubtitle(): string {
     if (this.currentView === 'customers') {
       return 'Niveles, estructura y comisiones.';
+    }
+    if (this.currentView === 'employees') {
+      return 'Alta, acceso y privilegios de operadores.';
     }
     if (this.currentView === 'products') {
       return 'Altas, imagenes y CTA.';
@@ -747,7 +920,8 @@ export class AdminComponent implements OnInit {
       this.inventoryMovementRowsCache?.movementsRef === this.inventoryMovements &&
       this.inventoryMovementRowsCache.stocksRef === this.stocks &&
       this.inventoryMovementRowsCache.productsRef === this.products &&
-      this.inventoryMovementRowsCache.customersRef === this.customers
+      this.inventoryMovementRowsCache.customersRef === this.customers &&
+      this.inventoryMovementRowsCache.employeesRef === this.employees
     ) {
       return this.inventoryMovementRowsCache.rows;
     }
@@ -755,7 +929,7 @@ export class AdminComponent implements OnInit {
       ...movement,
       stockName: this.stockName(movement.stockId),
       productName: this.productName(movement.productId),
-      userName: this.customerName(movement.userId),
+      userName: this.employeeName(movement.userId),
       typeLabel: this.movementTypeLabel(movement.type),
       signedQty: this.movementSignedQty(movement)
     }));
@@ -764,21 +938,32 @@ export class AdminComponent implements OnInit {
       stocksRef: this.stocks,
       productsRef: this.products,
       customersRef: this.customers,
+      employeesRef: this.employees,
       rows
     };
     return rows;
   }
 
   get filteredOrdersStable(): AdminOrder[] {
-    if (
-      this.filteredOrdersCache?.ordersRef === this.orders &&
-      this.filteredOrdersCache.status === this.currentOrderStatus
-    ) {
-      return this.filteredOrdersCache.rows;
-    }
-    const rows = this.orders.filter((order) => order.status === this.currentOrderStatus);
-    this.filteredOrdersCache = { ordersRef: this.orders, status: this.currentOrderStatus, rows };
-    return rows;
+    const byStatus = this.orders.filter((o) => o.status === this.currentOrderStatus);
+    const q = this.orderSearch.trim().toLowerCase();
+    if (!q) return byStatus;
+    return byStatus.filter((o) =>
+      (o.customer || '').toLowerCase().includes(q) ||
+      (o.id || '').toLowerCase().includes(q) ||
+      (o.trackingNumber || '').toLowerCase().includes(q) ||
+      (o.address || '').toLowerCase().includes(q) ||
+      (o.phone || '').toLowerCase().includes(q) ||
+      (o.recipientName || '').toLowerCase().includes(q)
+    );
+  }
+
+  get pagedOrders(): AdminOrder[] {
+    return this.filteredOrdersStable.slice(this.orderPage * this.PAGE_SIZE, (this.orderPage + 1) * this.PAGE_SIZE);
+  }
+
+  get ordersTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredOrdersStable.length / this.PAGE_SIZE));
   }
 
   get productOptions(): { value: number; label: string }[] {
@@ -816,7 +1001,7 @@ export class AdminComponent implements OnInit {
       ...movement,
       stockName: this.stockName(movement.stockId),
       productName: this.productName(movement.productId),
-      userName: this.customerName(movement.userId),
+      userName: this.employeeName(movement.userId),
       typeLabel: this.movementTypeLabel(movement.type),
       signedQty: this.movementSignedQty(movement)
     }));
@@ -828,7 +1013,7 @@ export class AdminComponent implements OnInit {
   }
 
   get currentOperatorName(): string {
-    return this.currentUser?.name?.trim() || this.customerName(this.currentOperatorId);
+    return this.currentUser?.name?.trim() || this.employeeName(this.currentOperatorId);
   }
 
   get linkedPosStocks(): AdminStock[] {
@@ -1032,9 +1217,6 @@ export class AdminComponent implements OnInit {
     return this.authService.currentUser;
   }
 
-  get canOpenUserDashboard(): boolean {
-    return this.authService.hasAdminAndUserAccess(this.currentUser);
-  }
 
   get notificationDescriptionLength(): number {
     return this.notificationForm.description.length;
@@ -1064,7 +1246,7 @@ export class AdminComponent implements OnInit {
   }
 
   private getFirstAllowedView(): AdminViewId {
-    const ordered: AdminViewId[] = ['orders', 'customers', 'products', 'stocks', 'campaigns', 'pos', 'stats', 'notifications', 'settings'];
+    const ordered: AdminViewId[] = ['orders', 'customers', 'employees', 'products', 'stocks', 'campaigns', 'pos', 'stats', 'notifications', 'settings'];
     return ordered.find((view) => this.canAccessView(view)) ?? 'orders';
   }
 
@@ -1404,6 +1586,45 @@ export class AdminComponent implements OnInit {
     tiers[index].rate = this.roundMoney(percent / 100);
   }
 
+  addDiscountTier(): void {
+    const tiers = this.businessConfigDraft.rewards.discountTiers ?? [];
+    const lastMin = tiers.length ? (tiers[tiers.length - 1].min ?? 0) : 0;
+    tiers.push({ min: lastMin + 1000, max: null, rate: 0 });
+    this.businessConfigDraft.rewards.discountTiers = tiers;
+    this.refreshDiscountTierThresholds();
+  }
+
+  removeDiscountTier(index: number): void {
+    const tiers = this.businessConfigDraft.rewards.discountTiers ?? [];
+    tiers.splice(index, 1);
+    this.businessConfigDraft.rewards.discountTiers = [...tiers];
+    this.refreshDiscountTierThresholds();
+  }
+
+  addCommissionLevel(): void {
+    const levels = this.businessConfigDraft.rewards.commissionLevels ?? [];
+    levels.push({ rate: 0, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 });
+    this.businessConfigDraft.rewards.commissionLevels = [...levels];
+  }
+
+  removeCommissionLevel(index: number): void {
+    const levels = this.businessConfigDraft.rewards.commissionLevels ?? [];
+    if (levels.length <= 1) return;
+    levels.splice(index, 1);
+    this.businessConfigDraft.rewards.commissionLevels = [...levels];
+  }
+
+  commissionLevelPercentValue(level: CommissionLevelDraft): number {
+    return this.roundMoney(this.normalizeDiscountRateValue(level?.rate) * 100);
+  }
+
+  updateCommissionLevelRate(index: number, value: unknown): void {
+    const levels = this.businessConfigDraft.rewards.commissionLevels ?? [];
+    if (!levels[index]) return;
+    const percent = Math.min(100, this.parseNonNegativeNumber(value));
+    levels[index].rate = this.roundMoney(percent / 100);
+  }
+
   configOptionDescription(value: string, options: Array<ExplainedSelectOption<string>>): string {
     return options.find((option) => String(option.value) === String(value))?.description ?? '';
   }
@@ -1441,6 +1662,39 @@ export class AdminComponent implements OnInit {
       return 'Pendiente de pago';
     }
     return 'Sin movimientos';
+  }
+
+  downloadCommissionsReport(): void {
+    const prevMonthKey = this.getPrevMonthKey();
+    const rows = this.customers
+      .filter((c) => (c.commissionsPrevMonth ?? 0) > 0 || c.commissionsPrevStatus === 'pending')
+      .sort((a, b) => {
+        if (a.commissionsPrevStatus === 'pending' && b.commissionsPrevStatus !== 'pending') return -1;
+        if (b.commissionsPrevStatus === 'pending' && a.commissionsPrevStatus !== 'pending') return 1;
+        return (b.commissionsPrevMonth ?? 0) - (a.commissionsPrevMonth ?? 0);
+      })
+      .map((c) => ({
+        'Nombre': c.name,
+        'Email': c.email,
+        'Nivel': c.level,
+        'Descuento': c.discount,
+        'Período': c.commissionsPrevMonthKey || prevMonthKey,
+        'Comisión a pagar': c.commissionsPrevMonth ?? 0,
+        'Estado': this.commissionStatusLabel(c.commissionsPrevStatus),
+        'CLABE': c.clabeInterbancaria || ''
+      }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 28 }, { wch: 30 }, { wch: 8 }, { wch: 12 },
+      { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 22 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Comisiones');
+    XLSX.writeFile(wb, `comisiones-${prevMonthKey}.xlsx`);
   }
 
   private isCustomerActive(customer: AdminCustomer): boolean {
@@ -1483,6 +1737,11 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.currentView = view;
+    this.orderPage = 0; this.orderSearch = '';
+    this.customerPage = 0; this.customerSearch = '';
+    this.productPage = 0; this.productSearch = '';
+    this.employeePage = 0; this.employeeSearch = '';
+    this.notificationPage = 0; this.notificationSearch = '';
     if (view === 'stocks' || view === 'pos') {
       this.loadStocksAndPosState();
       return;
@@ -1563,6 +1822,7 @@ export class AdminComponent implements OnInit {
         }
         this.syncPosOperatorContext();
         this.refreshPosCashControl();
+        this.cdr.detectChanges();
       }
     });
   }
@@ -1581,18 +1841,54 @@ export class AdminComponent implements OnInit {
 
   setOrderStatus(status: AdminOrder['status']): void {
     this.currentOrderStatus = status;
+    this.orderPage = 0;
+    this.orderSearch = '';
+  }
+
+  pageRange(totalPages: number, current: number): number[] {
+    const delta = 2;
+    const start = Math.max(0, current - delta);
+    const end = Math.min(totalPages - 1, current + delta);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }
+
+  setPage(table: 'orders' | 'customers' | 'products' | 'employees' | 'notifications', page: number): void {
+    if (table === 'orders') this.orderPage = page;
+    else if (table === 'customers') this.customerPage = page;
+    else if (table === 'products') this.productPage = page;
+    else if (table === 'employees') this.employeePage = page;
+    else if (table === 'notifications') this.notificationPage = page;
+  }
+
+  onTableSearch(table: 'orders' | 'customers' | 'products' | 'employees' | 'notifications', value: string): void {
+    if (table === 'orders') { this.orderSearch = value; this.orderPage = 0; }
+    else if (table === 'customers') { this.customerSearch = value; this.customerPage = 0; }
+    else if (table === 'products') { this.productSearch = value; this.productPage = 0; }
+    else if (table === 'employees') { this.employeeSearch = value; this.employeePage = 0; }
+    else if (table === 'notifications') { this.notificationSearch = value; this.notificationPage = 0; }
   }
 
   showActions(): void {
-    if (!this.canAccessView('stats')) {
-      return;
-    }
-    this.currentView = 'stats';
     this.isActionsModalOpen = true;
-    setTimeout(() => {
-      const actionsPanel = document.getElementById('admin-actions');
-      actionsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
+  }
+
+  resolveWarning(warning: { type: string }): void {
+    this.isActionsModalOpen = false;
+    const map: Record<string, AdminViewId> = {
+      commissions: 'customers',
+      shipping: 'orders',
+      assets: 'products',
+      stocks: 'stocks',
+      pos: 'pos',
+      payments: 'orders'
+    };
+    const target: AdminViewId = map[warning.type] ?? 'stats';
+    if (warning.type === 'shipping') {
+      this.currentOrderStatus = 'paid';
+    } else if (warning.type === 'payments') {
+      this.currentOrderStatus = 'pending';
+    }
+    this.setView(target);
   }
 
   openNewOrderModal(): void {
@@ -1703,8 +1999,8 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  openUserDashboard(): void {
-    void this.router.navigate(['/dashboard']);
+  toggleOrderDetail(orderId: string): void {
+    this.expandedOrderDetailId = this.expandedOrderDetailId === orderId ? null : orderId;
   }
 
   advanceOrder(order: AdminOrder): void {
@@ -2065,6 +2361,7 @@ export class AdminComponent implements OnInit {
   selectCustomer(customerId: number): void {
     const selected = this.customers.find((customer) => customer.id === customerId) ?? null;
     this.selectedCustomer = selected;
+    this.isChangingSponsor = false;
     this.syncSelectedCustomerAccessDraft();
   }
 
@@ -2123,6 +2420,7 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: (updated) => {
           this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+          this.isChangingSponsor = false;
           this.syncSelectedCustomerAccessDraft();
         }
       });
@@ -2157,10 +2455,90 @@ export class AdminComponent implements OnInit {
       });
   }
 
+  selectEmployee(employeeId: number): void {
+    this.selectedEmployee = this.employees.find((emp) => emp.id === employeeId) ?? null;
+    this.syncSelectedEmployeePrivilegeDraft();
+  }
+
+  updateSelectedEmployeeAdminAccess(enabled: boolean): void {
+    this.selectedEmployeeAdminAccess = enabled;
+  }
+
+  updateSelectedEmployeePrivilege(privilege: AppPrivilege, enabled: boolean): void {
+    this.selectedEmployeePrivilegeDraft = {
+      ...this.selectedEmployeePrivilegeDraft,
+      [privilege]: enabled
+    };
+  }
+
+  saveSelectedEmployeePrivileges(): void {
+    if (!this.selectedEmployee || this.isSavingEmployeePrivileges) {
+      return;
+    }
+    if (!this.hasPermission('employee_manage_privileges')) {
+      return;
+    }
+    this.isSavingEmployeePrivileges = true;
+    this.adminControl
+      .updateEmployeePrivileges(this.selectedEmployee.id, {
+        canAccessAdmin: this.selectedEmployeeAdminAccess,
+        privileges: normalizePrivileges(this.selectedEmployeePrivilegeDraft)
+      })
+      .pipe(finalize(() => { this.isSavingEmployeePrivileges = false; }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedEmployee = { ...this.selectedEmployee!, ...updated };
+          this.syncSelectedEmployeePrivilegeDraft();
+        }
+      });
+  }
+
+  saveEmployee(): void {
+    if (!this.hasPermission('employee_add')) {
+      return;
+    }
+    if (this.isSavingEmployee || !this.employeeForm.name.trim() || !this.employeeForm.email.trim()) {
+      return;
+    }
+    this.isSavingEmployee = true;
+    this.employeeTempPassword = '';
+    this.adminControl
+      .createEmployee({
+        name: this.employeeForm.name.trim(),
+        email: this.employeeForm.email.trim(),
+        phone: this.employeeForm.phone.trim() || undefined,
+        canAccessAdmin: true,
+        privileges: normalizePrivileges(null)
+      })
+      .pipe(finalize(() => { this.isSavingEmployee = false; }))
+      .subscribe({
+        next: (emp) => {
+          this.employeeTempPassword = emp.tempPassword ?? '';
+          this.employeeMessage = `Empleado creado: ${emp.name}.`;
+          this.employeeMessageIsError = false;
+          this.employeeForm = { name: '', email: '', phone: '' };
+          this.selectedEmployee = emp;
+          this.syncSelectedEmployeePrivilegeDraft();
+        },
+        error: (err) => {
+          const serverMsg = err?.error?.message || err?.error?.Error;
+          this.employeeMessage = serverMsg ? serverMsg : 'No se pudo crear el empleado.';
+          this.employeeMessageIsError = true;
+        }
+      });
+  }
+
+  employeeHasPrivilege(privilege: AppPrivilege): boolean {
+    return this.selectedEmployeePrivilegeDraft?.[privilege] === true;
+  }
+
+  startChangingSponsor(): void {
+    this.isChangingSponsor = true;
+    this.syncSelectedCustomerAccessDraft();
+  }
+
   private syncSelectedCustomerAccessDraft(): void {
     const selected = this.selectedCustomer;
-    this.selectedCustomerAdminAccess = Boolean(selected?.canAccessAdmin);
-    this.selectedCustomerPrivilegeDraft = normalizePrivileges(selected?.privileges);
     this.selectedCustomerLeaderId = selected?.leaderId != null ? String(selected.leaderId) : '';
     if (selected?.leaderId != null) {
       const sponsor = this.customers.find((customer) => customer.id === selected.leaderId);
@@ -2169,6 +2547,12 @@ export class AdminComponent implements OnInit {
       this.selectedCustomerSponsorSearch = 'FindingU';
     }
     this.refreshSelectedCustomerSponsorState();
+  }
+
+  syncSelectedEmployeePrivilegeDraft(): void {
+    const selected = this.selectedEmployee;
+    this.selectedEmployeeAdminAccess = Boolean(selected?.canAccessAdmin);
+    this.selectedEmployeePrivilegeDraft = normalizePrivileges(selected?.privileges);
   }
 
   private normalizeSponsorSearch(value: string): string {
@@ -2224,7 +2608,19 @@ export class AdminComponent implements OnInit {
       copyFacebook: product.copyFacebook ?? '',
       copyInstagram: product.copyInstagram ?? '',
       copyWhatsapp: product.copyWhatsapp ?? '',
-      tags: (product.tags ?? []).join(', ')
+      tags: (product.tags ?? []).join(', '),
+      variants: (product.variants ?? []).map((v) => ({
+        id: v.id,
+        name: v.name,
+        price: v.price != null ? String(v.price) : '',
+        sku: v.sku ?? '',
+        active: v.active !== false
+      })),
+      categoryIds: product.categoryIds ?? [],
+      weightKg: product.weightKg ?? '',
+      lengthCm: product.lengthCm ?? '',
+      widthCm: product.widthCm ?? '',
+      heightCm: product.heightCm ?? ''
     };
     this.resetProductAssets();
     this.productExistingImages = product.images ?? [];
@@ -2247,6 +2643,50 @@ export class AdminComponent implements OnInit {
       ...this.productForm,
       active
     };
+  }
+
+  addProductVariant(): void {
+    this.productForm = {
+      ...this.productForm,
+      variants: [
+        ...this.productForm.variants,
+        { id: `v-${Date.now()}`, name: '', price: '', sku: '', active: true }
+      ]
+    };
+  }
+
+  removeProductVariant(index: number): void {
+    const variants = [...this.productForm.variants];
+    variants.splice(index, 1);
+    this.productForm = { ...this.productForm, variants };
+  }
+
+  updateProductVariant(index: number, field: 'name' | 'price' | 'sku', value: string): void {
+    const variants = this.productForm.variants.map((v, i) =>
+      i === index ? { ...v, [field]: value } : v
+    );
+    this.productForm = { ...this.productForm, variants };
+  }
+
+  toggleProductCategoryId(catId: string): void {
+    const ids = this.productForm.categoryIds;
+    this.productForm = {
+      ...this.productForm,
+      categoryIds: ids.includes(catId) ? ids.filter((id) => id !== catId) : [...ids, catId]
+    };
+  }
+
+  get flatCategories(): ProductCategory[] {
+    return this.adminData()?.categories ?? [];
+  }
+
+  get categoriesTree(): Array<ProductCategory & { depth: number }> {
+    const build = (parentId: string | null, depth: number): Array<ProductCategory & { depth: number }> =>
+      this.flatCategories
+        .filter((c) => (c.parentId ?? null) === parentId && c.active !== false)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .flatMap((c) => [{ ...c, depth }, ...build(c.id, depth + 1)]);
+    return build(null, 0);
   }
 
   toggleProductActive(product: AdminProduct): void {
@@ -2273,7 +2713,13 @@ export class AdminComponent implements OnInit {
         copyInstagram: product.copyInstagram,
         copyWhatsapp: product.copyWhatsapp,
         tags: product.tags,
-        images: product.images
+        images: product.images,
+        variants: product.variants,
+        categoryIds: product.categoryIds,
+        weightKg: product.weightKg,
+        lengthCm: product.lengthCm,
+        widthCm: product.widthCm,
+        heightCm: product.heightCm,
       })
       .pipe(
         finalize(() => {
@@ -2353,7 +2799,21 @@ export class AdminComponent implements OnInit {
             copyInstagram: this.productForm.copyInstagram || undefined,
             copyWhatsapp: this.productForm.copyWhatsapp || undefined,
             tags: this.normalizeTags(this.productForm.tags),
-            images: this.mergeProductImages(uploads)
+            images: this.mergeProductImages(uploads),
+            variants: this.productForm.variants
+              .filter((v) => v.name.trim())
+              .map((v) => ({
+                id: v.id,
+                name: v.name.trim(),
+                price: v.price ? Number(v.price) : undefined,
+                sku: v.sku.trim() || undefined,
+                active: v.active
+              })),
+            categoryIds: this.productForm.categoryIds,
+            weightKg: this.productForm.weightKg !== '' ? Number(this.productForm.weightKg) : undefined,
+            lengthCm: this.productForm.lengthCm !== '' ? Number(this.productForm.lengthCm) : undefined,
+            widthCm: this.productForm.widthCm !== '' ? Number(this.productForm.widthCm) : undefined,
+            heightCm: this.productForm.heightCm !== '' ? Number(this.productForm.heightCm) : undefined,
           };
           return this.adminControl.saveProduct(payload).pipe(
             map((product) => ({
@@ -2462,7 +2922,13 @@ export class AdminComponent implements OnInit {
       copyFacebook: '',
       copyInstagram: '',
       copyWhatsapp: '',
-      tags: ''
+      tags: '',
+      variants: [],
+      categoryIds: [],
+      weightKg: '',
+      lengthCm: '',
+      widthCm: '',
+      heightCm: ''
     };
     this.resetProductAssets();
     this.productExistingImages = [];
@@ -2718,9 +3184,11 @@ export class AdminComponent implements OnInit {
     if (!name || !location) {
       return;
     }
-    this.adminControl.createStock({ name, location }).subscribe({
+    const postalCode = this.stockForm.postalCode.trim();
+    const isMainWarehouse = this.stockForm.isMainWarehouse;
+    this.adminControl.createStock({ name, location, postalCode: postalCode || undefined, isMainWarehouse }).subscribe({
       next: (stock) => {
-        this.stockForm = { name: '', location: '' };
+        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false };
         this.selectedStockId = stock.id;
         this.loadStocksAndPosState();
       }
@@ -2800,6 +3268,102 @@ export class AdminComponent implements OnInit {
         );
       }
     });
+  }
+
+  downloadInventoryTemplate(): void {
+    const rows: Array<Record<string, string | number>> = [
+      { productId: 'ID', producto: 'Nombre del producto', cantidad_a_agregar: 'Cantidad (número)' }
+    ];
+    for (const product of this.products) {
+      const stock = this.selectedStock;
+      rows.push({
+        productId: product.id,
+        producto: product.name,
+        cantidad_a_agregar: stock ? (stock.inventory[product.id] ?? 0) : 0
+      });
+    }
+    const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+    const stockName = (this.selectedStock?.name || 'stock').replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(wb, `plantilla_inventario_${stockName}.xlsx`);
+  }
+
+  importInventoryFromExcel(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const stockId = this.selectedStockId;
+    if (!stockId) {
+      this.setStockFeedback('Selecciona un stock antes de importar.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: Array<Record<string, unknown>> = XLSX.utils.sheet_to_json(ws);
+
+      const validRows: Array<{ productId: number; productName: string; qty: number }> = [];
+      for (const row of rows) {
+        const rawId = row['productId'] ?? row['ProductId'] ?? row['producto_id'];
+        const rawQty = row['cantidad_a_agregar'] ?? row['cantidad'] ?? row['qty'] ?? row['Cantidad'];
+        const pid = rawId !== undefined && rawId !== '' ? Number(rawId) : NaN;
+        const qty = rawQty !== undefined && rawQty !== '' ? Number(rawQty) : NaN;
+        if (isNaN(pid) || isNaN(qty) || qty <= 0) {
+          continue;
+        }
+        const product = this.products.find((p) => p.id === pid);
+        if (!product) {
+          continue;
+        }
+        validRows.push({ productId: pid, productName: product.name, qty: Math.floor(qty) });
+      }
+
+      if (!validRows.length) {
+        this.setStockFeedback('El archivo no contiene filas validas. Verifica el formato de la plantilla.', 'error');
+        target.value = '';
+        return;
+      }
+
+      this.isImportingInventory = true;
+      this.inventoryImportResults = [];
+      this.setStockFeedback('', '');
+
+      const requests = validRows.map((row) =>
+        this.adminControl.registerStockEntry(stockId, { productId: row.productId, qty: row.qty }).pipe(
+          map(() => ({ productName: row.productName, qty: row.qty, ok: true })),
+          catchError((err: { error?: { message?: string }; message?: string }) => of({
+            productName: row.productName,
+            qty: row.qty,
+            ok: false,
+            message: err?.error?.message || err?.message || 'Error al registrar'
+          }))
+        )
+      );
+
+      forkJoin(requests)
+        .pipe(finalize(() => {
+          this.isImportingInventory = false;
+          target.value = '';
+          this.loadStocksAndPosState();
+        }))
+        .subscribe((results) => {
+          this.inventoryImportResults = results;
+          const ok = results.filter((r) => r.ok).length;
+          const fail = results.filter((r) => !r.ok).length;
+          this.setStockFeedback(
+            fail === 0
+              ? `Importación completada: ${ok} entradas registradas.`
+              : `Importación: ${ok} exitosas, ${fail} fallidas.`,
+            fail === 0 ? 'success' : 'error'
+          );
+        });
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   addTransferLine(): void {
@@ -2978,6 +3542,13 @@ export class AdminComponent implements OnInit {
       return '-';
     }
     return this.customers.find((customer) => customer.id === customerId)?.name ?? `Usuario ${customerId}`;
+  }
+
+  employeeName(employeeId: number | null | undefined): string {
+    if (!employeeId) {
+      return '-';
+    }
+    return this.employees.find((emp) => emp.id === employeeId)?.name ?? `Empleado ${employeeId}`;
   }
 
   productName(productId: number): string {
@@ -3410,6 +3981,7 @@ export class AdminComponent implements OnInit {
   private normalizeBusinessConfigDraft(config: AppBusinessConfig): AppBusinessConfig {
     const draft = structuredClone(config);
     draft.rewards.discountTiers = this.normalizeDiscountTiers(draft.rewards.discountTiers, false);
+    draft.rewards.commissionLevels = this.normalizeCommissionLevels(draft.rewards.commissionLevels);
     this.normalizeBusinessConfigSelectValues(draft);
     return draft;
   }
@@ -3417,6 +3989,7 @@ export class AdminComponent implements OnInit {
   private normalizeBusinessConfigForSave(config: AppBusinessConfig): AppBusinessConfig {
     const next = structuredClone(config);
     next.rewards.discountTiers = this.normalizeDiscountTiers(next.rewards.discountTiers, true);
+    next.rewards.commissionLevels = this.normalizeCommissionLevels(next.rewards.commissionLevels);
     this.normalizeBusinessConfigSelectValues(next);
     return next;
   }
@@ -3447,6 +4020,19 @@ export class AdminComponent implements OnInit {
       this.posOrderStatusMappingConfigOptions,
       'paid'
     );
+  }
+
+  private normalizeCommissionLevels(raw: unknown): CommissionLevelDraft[] {
+    const def: CommissionLevelDraft = { rate: 0, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 };
+    if (Array.isArray(raw) && raw.length) {
+      return raw.map((lvl) => ({ ...def, ...lvl }));
+    }
+    // backward compat: if old format with commissionByDepth dict exists on the raw object
+    return [
+      { ...def, rate: 0.1 },
+      { ...def, rate: 0.05 },
+      { ...def, rate: 0.03 }
+    ];
   }
 
   private normalizeDiscountTiers(tiers: DiscountTierDraft[], sortByMin: boolean): DiscountTierDraft[] {
@@ -3512,7 +4098,11 @@ export class AdminComponent implements OnInit {
           { min: 8001, max: 12000, rate: 0.4 },
           { min: 12001, max: null, rate: 0.5 }
         ],
-        commissionByDepth: { '1': 0.1, '2': 0.05, '3': 0.03 },
+        commissionLevels: [
+          { rate: 0.1, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
+          { rate: 0.05, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
+          { rate: 0.03, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 }
+        ],
         payoutDay: 10,
         cutRule: 'hard_cut_no_pass'
       },

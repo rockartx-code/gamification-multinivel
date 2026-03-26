@@ -1,4 +1,5 @@
 import { UserPrivileges } from './privileges.model';
+import { AdminEmployee } from './employee.model';
 import { PortalNotification, SavePortalNotificationPayload } from './portal-notification.model';
 
 export interface AdminOrder {
@@ -20,6 +21,8 @@ export interface AdminOrder {
   address?: string;
   postalCode?: string;
   state?: string;
+  betweenStreets?: string;
+  references?: string;
   items?: AdminOrderItem[];
   stockId?: string;
   attendantUserId?: number | null;
@@ -70,6 +73,8 @@ export interface CustomerShippingAddress {
   address: string;
   postalCode: string;
   state: string;
+  betweenStreets?: string;
+  references?: string;
   isDefault?: boolean;
 }
 
@@ -82,6 +87,8 @@ export interface OrderShippingAddressPayload {
   address?: string;
   postalCode?: string;
   state?: string;
+  betweenStreets?: string;
+  references?: string;
   isDefault?: boolean;
 }
 
@@ -96,6 +103,8 @@ export interface CreateAdminOrderPayload {
   address?: string;
   postalCode?: string;
   state?: string;
+  betweenStreets?: string;
+  references?: string;
   shippingAddressId?: string;
   shippingAddressLabel?: string;
   saveShippingAddress?: boolean;
@@ -111,19 +120,39 @@ export interface UpdateOrderStatusPayload {
   dispatchLines?: Array<{ productId: number; quantity: number }>;
 }
 
+export interface CustomerDocument {
+  id: string;
+  name: string;
+  type: string;
+  url?: string;
+  uploadedAt?: string;
+}
+
 export interface CustomerProfile {
   id: number | string;
   name: string;
   email: string;
   phone?: string;
+  rfc?: string;
+  curp?: string;
   address?: string;
   city?: string;
   state?: string;
   postalCode?: string;
+  clabeInterbancaria?: string;
+  clabeLast4?: string;
+  documents?: CustomerDocument[];
   addresses?: CustomerShippingAddress[];
   defaultAddressId?: string;
   shippingAddresses?: CustomerShippingAddress[];
   defaultShippingAddressId?: string;
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  phone?: string;
+  rfc?: string;
+  curp?: string;
 }
 
 export interface CreateStructureCustomerPayload {
@@ -157,6 +186,12 @@ export interface SaveAdminProductPayload {
   copyInstagram?: string;
   copyWhatsapp?: string;
   tags?: string[];
+  weightKg?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  variants?: ProductVariant[];
+  categoryIds?: string[];
   images?: Array<{
     section: CreateProductAssetPayload['section'];
     url: string;
@@ -212,8 +247,6 @@ export interface AdminCustomer {
   id: number;
   name: string;
   email: string;
-  canAccessAdmin?: boolean;
-  privileges?: UserPrivileges;
   isSuperUser?: boolean;
   leaderId?: number | null;
   level: string;
@@ -228,6 +261,23 @@ export interface AdminCustomer {
   clabeInterbancaria?: string;
 }
 
+export interface ProductVariant {
+  id: string;
+  name: string;
+  price?: number;
+  sku?: string;
+  active?: boolean;
+}
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  position?: number;
+  active?: boolean;
+  createdAt?: string;
+}
+
 export interface AdminProduct {
   id: number;
   name: string;
@@ -240,6 +290,12 @@ export interface AdminProduct {
   copyInstagram?: string;
   copyWhatsapp?: string;
   tags?: string[];
+  weightKg?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  variants?: ProductVariant[];
+  categoryIds?: string[];
   images?: Array<{
     section: CreateProductAssetPayload['section'];
     url: string;
@@ -251,6 +307,7 @@ export interface AdminCampaign {
   id: string;
   name: string;
   active: boolean;
+  type?: 'multinivel' | 'producto';
   hook: string;
   description?: string;
   story: string;
@@ -275,11 +332,18 @@ export interface AdminWarning {
   severity: 'high' | 'medium' | 'low';
 }
 
+export interface CommissionLevel {
+  rate: number;
+  minActiveUsers: number;
+  minIndividualPurchase: number;
+  minGroupPurchase: number;
+}
+
 export interface RewardsConfig {
   version: string;
   activationNetMin: number;
   discountTiers: Array<{ min: number; max: number | null; rate: number }>;
-  commissionByDepth: { '1': number; '2': number; '3': number };
+  commissionLevels: CommissionLevel[];
   payoutDay: number;
   cutRule: string;
 }
@@ -320,6 +384,7 @@ export interface AdminAssetSlot {
 export interface AdminData {
   orders: AdminOrder[];
   customers: AdminCustomer[];
+  employees?: AdminEmployee[];
   products: AdminProduct[];
   campaigns?: AdminCampaign[];
   notifications?: PortalNotification[];
@@ -327,6 +392,7 @@ export interface AdminData {
   warnings: AdminWarning[];
   assetSlots: AdminAssetSlot[];
   productOfMonthId?: number | null;
+  categories?: ProductCategory[];
 }
 
 export interface UpdateCustomerPrivilegesPayload {
@@ -343,6 +409,7 @@ export interface SaveAdminCampaignPayload {
   id?: string;
   name: string;
   active: boolean;
+  type?: 'multinivel' | 'producto';
   hook: string;
   description?: string;
   story: string;
@@ -363,6 +430,8 @@ export interface AdminStock {
   id: string;
   name: string;
   location: string;
+  postalCode?: string;
+  isMainWarehouse?: boolean;
   linkedUserIds: number[];
   inventory: Record<number, number> | Record<string, number>;
   createdAt?: string;
@@ -443,3 +512,28 @@ export interface UpdateBusinessConfigPayload {
 }
 
 export type SaveAdminNotificationPayload = SavePortalNotificationPayload;
+
+export interface SaveProductCategoryPayload {
+  id?: string;
+  name: string;
+  parentId?: string | null;
+  position?: number;
+  active?: boolean;
+}
+
+export interface ShippingQuoteRequest {
+  zipTo: string;
+  weightKg: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+}
+
+export interface ShippingRate {
+  carrier: string | null;
+  service: string | null;
+  price: number | null;
+  displayPrice: number;
+  currency: string | null;
+  transitDays: number | null;
+}

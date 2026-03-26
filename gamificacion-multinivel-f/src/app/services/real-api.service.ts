@@ -34,8 +34,14 @@ import {
   AssociateMonth,
   UpdateBusinessConfigPayload,
   UpdateCustomerPayload,
-  UpdateCustomerPrivilegesPayload
+  UpdateCustomerPrivilegesPayload,
+  UpdateProfilePayload,
+  ProductCategory,
+  SaveProductCategoryPayload,
+  ShippingRate,
+  ShippingQuoteRequest
 } from '../models/admin.model';
+import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import {
   CreateAccountPayload,
@@ -43,7 +49,8 @@ import {
   PasswordRecoveryRequestPayload,
   PasswordRecoveryRequestResponse,
   ResetPasswordPayload,
-  ResetPasswordResponse
+  ResetPasswordResponse,
+  VerifyEmailResponse
 } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
@@ -91,18 +98,22 @@ export class RealApiService {
 
   createAccount(payload: CreateAccountPayload): Observable<CreateAccountResponse> {
     return this.http
-      .post<{ customer?: CreateAccountResponse['customer']; message?: string; Error?: string }>(
+      .post<{ customer?: CreateAccountResponse['customer']; requiresEmailVerification?: boolean; message?: string; Error?: string }>(
         `${this.baseUrl}/crearcuenta`,
         payload
       )
       .pipe(
         map((response) => {
           if (response.customer) {
-            return { customer: response.customer };
+            return { customer: response.customer, requiresEmailVerification: response.requiresEmailVerification ?? true };
           }
           throw new Error(response.message ?? 'No se pudo crear la cuenta.');
         })
       );
+  }
+
+  verifyEmail(token: string): Observable<VerifyEmailResponse> {
+    return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/auth/verify-email`, { token });
   }
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
@@ -331,7 +342,7 @@ export class RealApiService {
       .pipe(map((response) => response.stocks ?? []));
   }
 
-  createStock(payload: { name: string; location: string; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.http
       .post<{ stock: AdminStock }>(`${this.baseUrl}/stocks`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stock));
@@ -465,6 +476,38 @@ export class RealApiService {
       .pipe(map((response) => response.customer));
   }
 
+  listEmployees(): Observable<AdminEmployee[]> {
+    return this.http
+      .get<{ employees: AdminEmployee[] }>(`${this.baseUrl}/employees`, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.employees ?? []));
+  }
+
+  createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
+    return this.http
+      .post<{ employee: AdminEmployee }>(`${this.baseUrl}/employees`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => response.employee));
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+    return this.http
+      .patch<{ employee: AdminEmployee }>(
+        `${this.baseUrl}/employees/${encodeURIComponent(String(employeeId))}`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((response) => response.employee));
+  }
+
+  updateEmployeePrivileges(employeeId: number, payload: UpdateEmployeePrivilegesPayload): Observable<AdminEmployee> {
+    return this.http
+      .patch<{ employee: AdminEmployee }>(
+        `${this.baseUrl}/employees/${encodeURIComponent(String(employeeId))}/privileges`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((response) => response.employee));
+  }
+
   updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
     return this.http
       .patch<{ customer: AdminCustomer }>(
@@ -475,10 +518,46 @@ export class RealApiService {
       .pipe(map((response) => response.customer));
   }
 
+  changePassword(userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
+    return this.http
+      .post<void>(
+        `${this.baseUrl}/customers/${encodeURIComponent(userId)}/password`,
+        payload,
+        { headers: this.actorHeaders() }
+      );
+  }
+
+  updateProfile(userId: string, payload: UpdateProfilePayload): Observable<CustomerProfile> {
+    return this.http
+      .patch<{ customer: CustomerProfile }>(
+        `${this.baseUrl}/customers/${encodeURIComponent(userId)}/profile`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((response) => response.customer));
+  }
+
   saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
     return this.http
       .post<{ campaign: AdminCampaign }>(`${this.baseUrl}/campaigns`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.campaign));
+  }
+
+  listCategories(): Observable<ProductCategory[]> {
+    return this.http
+      .get<{ categories: ProductCategory[] }>(`${this.baseUrl}/product-categories`, { headers: this.actorHeaders() })
+      .pipe(map((r) => r.categories));
+  }
+
+  saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
+    return this.http
+      .post<{ category: ProductCategory }>(`${this.baseUrl}/product-categories`, payload, { headers: this.actorHeaders() })
+      .pipe(map((r) => r.category));
+  }
+
+  deleteCategory(id: string): Observable<{ ok: boolean }> {
+    return this.http
+      .delete<{ ok: boolean }>(`${this.baseUrl}/product-categories/${id}`, { headers: this.actorHeaders() });
   }
 
   saveNotification(payload: SaveAdminNotificationPayload): Observable<PortalNotification> {
@@ -505,6 +584,10 @@ export class RealApiService {
     return this.http
       .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.config));
+  }
+
+  getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
+    return this.http.post<ShippingRate[]>(`${this.baseUrl}/shipping/quote`, payload);
   }
 
   private actorHeaders(): HttpHeaders {

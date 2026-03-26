@@ -1,0 +1,97 @@
+<div class="rounded-2xl border border-olive-30 surface-soft overflow-hidden">
+  <div class="flex items-center justify-between bg-ivory-80 px-4 py-3">
+    <div>
+      <div class="text-sm font-semibold text-main">Árbol de categorías</div>
+      <div class="mt-0.5 text-xs text-gray-500">Organiza productos en categorías y subcategorías dinámicas.</div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="startAdd(null)">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+      Nueva raíz
+    </ui-button>
+  </div>
+
+  <div *ngIf="message" class="px-4 py-2 text-xs font-semibold"
+    [class]="messageTone === 'success' ? 'text-accent' : 'text-red-600'">
+    {{ message }}
+  </div>
+
+  <!-- Add root form -->
+  <div *ngIf="addingParentId === null" class="border-b border-olive-20 bg-ivory-80/60 px-4 py-3">
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-gray-400">Raíz /</span>
+      <input [(ngModel)]="draftName" placeholder="Nombre de categoría"
+        class="flex-1 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
+        (keydown.enter)="save()" />
+      <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
+        {{ isSaving ? '...' : 'Agregar' }}
+      </ui-button>
+      <ui-button size="sm" variant="ghost" (pressed)="cancelEdit()">Cancelar</ui-button>
+    </div>
+  </div>
+
+  <div class="divide-y divide-olive-20">
+    <ng-container *ngFor="let node of tree">
+      <ng-container *ngTemplateOutlet="categoryRow; context: { node: node }"></ng-container>
+    </ng-container>
+  </div>
+
+  <div *ngIf="tree.length === 0 && addingParentId !== null" class="px-4 py-6 text-xs text-gray-500 text-center">
+    Sin categorías. Haz clic en "Nueva raíz" para crear la primera.
+  </div>
+</div>
+
+<ng-template #categoryRow let-node="node">
+  <!-- The row -->
+  <div class="flex items-center gap-2 px-4 py-2.5 hover:bg-olive-10/30 transition-colors"
+    [style.paddingLeft.px]="16 + node.depth * 20">
+
+    <i class="fa-solid text-[10px] text-gray-400" [class]="node.children.length ? 'fa-folder' : 'fa-tag'" aria-hidden="true"></i>
+
+    <!-- Editing inline -->
+    <ng-container *ngIf="editingId === node.id">
+      <input [(ngModel)]="draftName"
+        class="flex-1 rounded-xl border border-olive-30 bg-white/70 px-3 py-1 text-sm text-main outline-none focus:border-olive-70"
+        (keydown.enter)="save()" />
+      <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
+        {{ isSaving ? '...' : 'Guardar' }}
+      </ui-button>
+      <ui-button size="sm" variant="ghost" (pressed)="cancelEdit()">Cancelar</ui-button>
+    </ng-container>
+
+    <!-- Normal display -->
+    <ng-container *ngIf="editingId !== node.id">
+      <span class="flex-1 text-sm text-main">{{ node.name }}</span>
+      <span class="text-[11px] text-gray-400">{{ node.children.length ? node.children.length + ' sub' : '' }}</span>
+
+      <!-- Add subcategory inline form trigger -->
+      <ui-button size="sm" variant="ghost" (pressed)="startAdd(node.id)" title="Agregar subcategoría">
+        <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+      </ui-button>
+      <ui-button size="sm" variant="ghost" (pressed)="startEdit(node)" title="Renombrar">
+        <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+      </ui-button>
+      <ui-button size="sm" variant="ghost" (pressed)="delete(node.id)" [disabled]="isDeleting" title="Eliminar">
+        <i class="fa-solid fa-trash text-[10px] text-red-400" aria-hidden="true"></i>
+      </ui-button>
+    </ng-container>
+  </div>
+
+  <!-- Add subcategory form -->
+  <div *ngIf="addingParentId === node.id"
+    class="flex items-center gap-2 border-b border-olive-20 bg-ivory-80/60 py-2"
+    [style.paddingLeft.px]="16 + (node.depth + 1) * 20">
+    <i class="fa-solid fa-corner-down-right text-[10px] text-gray-300" aria-hidden="true"></i>
+    <input [(ngModel)]="draftName" placeholder="Nombre de subcategoría"
+      class="flex-1 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
+      (keydown.enter)="save()" />
+    <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
+      {{ isSaving ? '...' : 'Agregar' }}
+    </ui-button>
+    <ui-button size="sm" variant="ghost" (pressed)="cancelEdit()">Cancelar</ui-button>
+  </div>
+
+  <!-- Recurse children -->
+  <ng-container *ngFor="let child of node.children">
+    <ng-container *ngTemplateOutlet="categoryRow; context: { node: child }"></ng-container>
+  </ng-container>
+</ng-template>
