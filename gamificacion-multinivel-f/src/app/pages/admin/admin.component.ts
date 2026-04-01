@@ -64,6 +64,7 @@ type AdminStock = {
   location: string;
   linkedUserIds: number[];
   inventory: Record<number, number>;
+  allowPickup?: boolean;
 };
 
 type StockTransferLine = {
@@ -421,7 +422,8 @@ export class AdminComponent implements OnInit {
     name: '',
     location: '',
     postalCode: '',
-    isMainWarehouse: false
+    isMainWarehouse: false,
+    allowPickup: false
   };
   stockUserLinkDraft = new Set<number>();
   isStockEntryModalOpen = false;
@@ -1760,7 +1762,8 @@ export class AdminComponent implements OnInit {
           name: stock.name,
           location: stock.location,
           linkedUserIds: stock.linkedUserIds ?? [],
-          inventory: this.normalizeInventoryRecord(stock.inventory as Record<number, number> | Record<string, number>)
+          inventory: this.normalizeInventoryRecord(stock.inventory as Record<number, number> | Record<string, number>),
+          allowPickup: Boolean((stock as { allowPickup?: boolean }).allowPickup)
         }));
 
         this.transfers = (state.transfers ?? []).map((transfer) => ({
@@ -2191,6 +2194,40 @@ export class AdminComponent implements OnInit {
       return this.hasPermission('order_mark_delivered');
     }
     return false;
+  }
+
+  canMarkBranchDelivered(order: AdminOrder): boolean {
+    if (order.status !== 'paid' && order.status !== 'shipped') {
+      return false;
+    }
+    if (order.deliveryType !== 'pickup' || !order.pickupStockId) {
+      return false;
+    }
+    const operatorId = this.currentOperatorId;
+    if (operatorId == null) {
+      return false;
+    }
+    const stock = this.stocks.find((s) => s.id === order.pickupStockId);
+    return Boolean(stock?.linkedUserIds?.includes(operatorId));
+  }
+
+  markBranchDelivered(order: AdminOrder): void {
+    if (!this.canMarkBranchDelivered(order)) {
+      return;
+    }
+    if (this.updatingOrderIds.has(order.id)) {
+      return;
+    }
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .updateOrderStatus(order.id, { status: 'delivered' })
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe();
   }
 
   updateNewOrderCustomer(customerId: number): void {
@@ -3195,9 +3232,10 @@ export class AdminComponent implements OnInit {
     }
     const postalCode = this.stockForm.postalCode.trim();
     const isMainWarehouse = this.stockForm.isMainWarehouse;
-    this.adminControl.createStock({ name, location, postalCode: postalCode || undefined, isMainWarehouse }).subscribe({
+    const allowPickup = this.stockForm.allowPickup;
+    this.adminControl.createStock({ name, location, postalCode: postalCode || undefined, isMainWarehouse, allowPickup }).subscribe({
       next: (stock) => {
-        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false };
+        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false, allowPickup: false };
         this.selectedStockId = stock.id;
         this.loadStocksAndPosState();
       }
@@ -3224,6 +3262,12 @@ export class AdminComponent implements OnInit {
     }
     this.adminControl
       .updateStock(stock.id, { linkedUserIds: [...this.stockUserLinkDraft] })
+      .subscribe({ next: () => this.loadStocksAndPosState() });
+  }
+
+  saveStockAllowPickup(stockId: string, value: boolean): void {
+    this.adminControl
+      .updateStock(stockId, { allowPickup: value })
       .subscribe({ next: () => this.loadStocksAndPosState() });
   }
 
@@ -3944,6 +3988,13 @@ export class AdminComponent implements OnInit {
     return fallback;
   }
 
+  onShippingCarriersChange(value: string): void {
+    this.businessConfigDraft.shipping.carriers = value
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
   saveBusinessConfig(): void {
     if (!this.hasPermission('config_manage')) {
       return;
@@ -4137,6 +4188,11 @@ export class AdminComponent implements OnInit {
         showPendingPayments: true,
         showPendingTransfers: true,
         showPosSalesToday: true
+      },
+      shipping: {
+        enabled: true,
+        markup: 0,
+        carriers: ['dhl', 'fedex']
       }
     };
   }

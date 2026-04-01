@@ -343,13 +343,19 @@ export class RealApiService {
       .pipe(map((response) => response.stocks ?? []));
   }
 
-  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  listPickupStocks(): Observable<Array<{ id: string; name: string; location: string }>> {
+    return this.http
+      .get<{ stocks: Array<{ id: string; name: string; location: string }> }>(`${this.baseUrl}/pickup-stocks`)
+      .pipe(map((response) => response.stocks ?? []));
+  }
+
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.http
       .post<{ stock: AdminStock }>(`${this.baseUrl}/stocks`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stock));
   }
 
-  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
     return this.http
       .patch<{ stock: AdminStock }>(`${this.baseUrl}/stocks/${encodeURIComponent(stockId)}`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stock));
@@ -594,7 +600,9 @@ export class RealApiService {
   }
 
   getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
-    return this.http.post<ShippingRate[]>(`${this.baseUrl}/shipping/quote`, payload);
+    return this.http
+      .post<{ rates: ShippingRate[] }>(`${this.baseUrl}/shipping/quote`, payload)
+      .pipe(map((res) => res.rates ?? []));
   }
 
   private actorHeaders(): HttpHeaders {

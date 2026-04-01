@@ -269,11 +269,11 @@ export class AdminControlService {
     return this.api.listStocks();
   }
 
-  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.api.createStock(payload);
   }
 
-  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
     return this.api.updateStock(stockId, payload);
   }
 

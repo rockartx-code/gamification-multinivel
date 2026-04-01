@@ -209,11 +209,15 @@ export class ApiService {
     return this.resolveApi().listStocks();
   }
 
-  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  listPickupStocks(): Observable<Array<{ id: string; name: string; location: string }>> {
+    return this.resolveApi().listPickupStocks();
+  }
+
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.resolveApi().createStock(payload);
   }
 
-  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
     return this.resolveApi().updateStock(stockId, payload);
   }
 

@@ -105,6 +105,11 @@ export class MockApiService {
       showPendingPayments: true,
       showPendingTransfers: true,
       showPosSalesToday: true
+    },
+    shipping: {
+      enabled: true,
+      markup: 0,
+      carriers: ['dhl', 'fedex']
     }
   };
   private stocks: AdminStock[] = [];
@@ -1120,13 +1125,21 @@ export class MockApiService {
     return of([...this.stocks]).pipe(delay(120));
   }
 
-  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
+  listPickupStocks(): Observable<Array<{ id: string; name: string; location: string }>> {
+    const rows = this.stocks
+      .filter((stock) => stock.allowPickup)
+      .map((stock) => ({ id: stock.id, name: stock.name, location: stock.location }));
+    return of(rows).pipe(delay(120));
+  }
+
+  createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     const stock: AdminStock = {
       id: `STK-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       name: payload.name,
       location: payload.location,
       linkedUserIds: payload.linkedUserIds ?? [],
       inventory: payload.inventory ?? {},
+      allowPickup: payload.allowPickup ?? false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1134,7 +1147,7 @@ export class MockApiService {
     return of(stock).pipe(delay(120));
   }
 
-  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory'>>): Observable<AdminStock> {
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
     const current = this.stocks.find((stock) => stock.id === stockId);
     if (!current) {
       throw new Error('Stock no encontrado');
@@ -1747,10 +1760,10 @@ export class MockApiService {
 
   getShippingQuote(_payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
     const mockRates: ShippingRate[] = [
-      { carrier: 'FedEx', service: 'FedEx Express', price: 145, displayPrice: this.applyShippingMarkup(145), currency: 'MXN', transitDays: 1 },
-      { carrier: 'DHL', service: 'DHL Express', price: 132, displayPrice: this.applyShippingMarkup(132), currency: 'MXN', transitDays: 2 },
-      { carrier: 'Estafeta', service: 'Estafeta Dia Siguiente', price: 98, displayPrice: this.applyShippingMarkup(98), currency: 'MXN', transitDays: 2 },
-      { carrier: 'Redpack', service: 'Redpack Express', price: 87, displayPrice: this.applyShippingMarkup(87), currency: 'MXN', transitDays: 3 },
+      { carrier: 'FedEx', service: 'FedEx Express', price: 145, displayPrice: this.applyShippingMarkup(145), currency: 'MXN', transitDays: 1, deliveryEstimate: 'Día siguiente' },
+      { carrier: 'DHL', service: 'DHL Express', price: 132, displayPrice: this.applyShippingMarkup(132), currency: 'MXN', transitDays: 2, deliveryEstimate: '2-3 días' },
+      { carrier: 'Estafeta', service: 'Estafeta Dia Siguiente', price: 98, displayPrice: this.applyShippingMarkup(98), currency: 'MXN', transitDays: 2, deliveryEstimate: '2-3 días' },
+      { carrier: 'Redpack', service: 'Redpack Express', price: 87, displayPrice: this.applyShippingMarkup(87), currency: 'MXN', transitDays: 3, deliveryEstimate: '3-5 días' },
     ];
     return of(mockRates);
   }

@@ -38,6 +38,28 @@ MERCADOLIBRE_ENABLED_ENV: Optional[bool] = (
     None if _MERCADOLIBRE_ENABLED_RAW == "" else _MERCADOLIBRE_ENABLED_RAW in {"1", "true", "yes", "on"}
 )
 
+
+# ---------------------------------------------------------------------------
+# Shipping (Envia.com) — origin configured via environment variables
+# ---------------------------------------------------------------------------
+_ENVIA_API_URL = "https://api-test.envia.com/ship/rate/"
+_ENVIA_API_KEY = (os.getenv("ENVIA_API_KEY") or "").strip()
+_SHIPPING_ORIGIN_NAME = (os.getenv("SHIPPING_ORIGIN_NAME") or "Warehouse MX").strip()
+_SHIPPING_ORIGIN_PHONE = (os.getenv("SHIPPING_ORIGIN_PHONE") or "8180000000").strip()
+_SHIPPING_ORIGIN_STREET = (os.getenv("SHIPPING_ORIGIN_STREET") or "Av. Principal").strip()
+_SHIPPING_ORIGIN_NUMBER = (os.getenv("SHIPPING_ORIGIN_NUMBER") or "1").strip()
+_SHIPPING_ORIGIN_CITY = (os.getenv("SHIPPING_ORIGIN_CITY") or "Monterrey").strip()
+_SHIPPING_ORIGIN_STATE = (os.getenv("SHIPPING_ORIGIN_STATE") or "NL").strip()
+_SHIPPING_ORIGIN_POSTAL_CODE = (os.getenv("SHIPPING_ORIGIN_POSTAL_CODE") or "64060").strip()
+_SHIPPING_DESTINATION_COUNTRY = (os.getenv("SHIPPING_DESTINATION_COUNTRY") or "MX").strip()
+
+# Standard box sizes (L, W, H) in cm — sorted by volume ascending
+_STANDARD_BOXES: List[Tuple[float, float, float]] = [
+    (25.0, 17.0, 28.0),   # 11,900 cm³
+    (40.0, 29.0, 20.0),   # 23,200 cm³
+    (35.0, 23.0, 30.0),   # 24,150 cm³
+]
+
 _dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 _table = _dynamodb.Table(TABLE_NAME)
 _s3 = boto3.client("s3", region_name=AWS_REGION)
@@ -1347,6 +1369,11 @@ def _default_app_config() -> dict:
             "showPendingTransfers": True,
             "showPosSalesToday": True,
         },
+        "shipping": {
+            "enabled": True,
+            "markup": 0.0,
+            "carriers": ["dhl", "fedex"],
+        },
     }
 
 def _legacy_rewards_config_entity_id() -> str:
@@ -1427,6 +1454,9 @@ def _normalize_app_config(raw: Any) -> dict:
     ml_raw = payments_raw.get("mercadoLibre") if isinstance(payments_raw.get("mercadoLibre"), dict) else {}
     warnings_raw = merged.get("adminWarnings") if isinstance(merged.get("adminWarnings"), dict) else {}
     order_status_map = pos_raw.get("orderStatusByDeliveryStatus") if isinstance(pos_raw.get("orderStatusByDeliveryStatus"), dict) else {}
+    shipping_raw = merged.get("shipping") if isinstance(merged.get("shipping"), dict) else {}
+    carriers_raw = shipping_raw.get("carriers")
+    carriers_list: List[str] = [str(c) for c in carriers_raw if c] if isinstance(carriers_raw, list) and carriers_raw else ["dhl", "fedex"]
 
     return {
         "version": str(merged.get("version") or "app-v1"),
@@ -1467,6 +1497,11 @@ def _normalize_app_config(raw: Any) -> dict:
             "showPendingPayments": bool(warnings_raw.get("showPendingPayments", True)),
             "showPendingTransfers": bool(warnings_raw.get("showPendingTransfers", True)),
             "showPosSalesToday": bool(warnings_raw.get("showPosSalesToday", True)),
+        },
+        "shipping": {
+            "enabled": bool(shipping_raw.get("enabled", True)),
+            "markup": float(shipping_raw.get("markup") or 0),
+            "carriers": carriers_list,
         },
     }
 
@@ -2920,6 +2955,11 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         shippingAddressLabel=shipping_address_label,
     )
 
+    delivery_type = _clean_str(payload.get("deliveryType")) or "delivery"
+    if delivery_type not in ("pickup", "delivery"):
+        delivery_type = "delivery"
+    pickup_stock_id = _clean_str(payload.get("pickupStockId")) if delivery_type == "pickup" else None
+
     order_item = {
         "entityType": "order",
         "orderId": order_id,
@@ -2935,9 +2975,12 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         "netTotal": net_total,
         "total": net_total,
         "monthKey": month_key,
+        "deliveryType": delivery_type,
         "createdAt": now,
         "updatedAt": now,
     }
+    if pickup_stock_id:
+        order_item["pickupStockId"] = pickup_stock_id
 
     if shipping_snapshot:
         order_item["shippingAddress"] = shipping_snapshot
@@ -3535,6 +3578,8 @@ def _update_order_status(order_id: str, payload: dict, headers: Optional[dict] =
         "deliveryStatus": updated.get("deliveryStatus"),
         "shippingAddressId": updated.get("shippingAddressId"),
         "shippingAddressLabel": updated.get("shippingAddressLabel"),
+        "deliveryType": updated.get("deliveryType") or "delivery",
+        "pickupStockId": updated.get("pickupStockId"),
     }
     if rewards_result is not None:
         _audit_event("order.status.update", headers, payload, {"orderId": order_id, "status": status})
@@ -4109,6 +4154,8 @@ def _get_order(order_id: str) -> dict:
         "deliveryStatus": item.get("deliveryStatus"),
         "shippingAddressId": item.get("shippingAddressId"),
         "shippingAddressLabel": item.get("shippingAddressLabel"),
+        "deliveryType": item.get("deliveryType") or "delivery",
+        "pickupStockId": item.get("pickupStockId"),
     }})
 
 def _list_orders_for_customer(customer_id: str) -> dict:
@@ -4199,6 +4246,7 @@ def _stock_payload(item: dict) -> dict:
         "location": item.get("location") or "",
         "linkedUserIds": _normalize_user_ids(item.get("linkedUserIds")),
         "inventory": _normalize_inventory(item.get("inventory")),
+        "allowPickup": bool(item.get("allowPickup", False)),
         "createdAt": item.get("createdAt"),
         "updatedAt": item.get("updatedAt"),
     }
@@ -4293,6 +4341,213 @@ def _list_stocks() -> dict:
     rows = [_stock_payload(item) for item in items]
     return _json_response(200, {"stocks": rows})
 
+def _pack_items_for_shipping(raw_items: List[dict]) -> List[dict]:
+    """
+    Receives a list of cart items with dimensions and returns Envia API package descriptors.
+    Single product (qty=1): uses the product's own dimensions.
+    Multiple items: bin-packs into the smallest standard box that fits, greedy by volume.
+    """
+    # Expand items by quantity into a flat list of (L, W, H, weight)
+    expanded: List[Tuple[float, float, float, float]] = []
+    for item in raw_items:
+        qty = max(1, int(item.get("quantity") or 1))
+        l = max(0.1, float(item.get("lengthCm") or 10))
+        w = max(0.1, float(item.get("widthCm") or 10))
+        h = max(0.1, float(item.get("heightCm") or 10))
+        wt = max(0.05, float(item.get("weightKg") or 0.5))
+        for _ in range(qty):
+            expanded.append((l, w, h, wt))
+
+    if not expanded:
+        # Fallback: one small box
+        return [{
+            "type": "box", "content": "Productos", "amount": 1, "declaredValue": 100,
+            "weight": 0.5,
+            "dimensions": {"length": 25.0, "width": 17.0, "height": 28.0},
+        }]
+
+    # Single unit: use product's own dimensions (no standard box forced)
+    if len(expanded) == 1:
+        l, w, h, wt = expanded[0]
+        sd = sorted([l, w, h], reverse=True)
+        return [{
+            "type": "box", "content": "Producto", "amount": 1, "declaredValue": 100,
+            "weight": wt,
+            "dimensions": {"length": sd[0], "width": sd[1], "height": sd[2]},
+        }]
+
+    # Sort boxes by volume ascending (try smallest first)
+    boxes_by_vol = sorted(_STANDARD_BOXES, key=lambda b: b[0] * b[1] * b[2])
+
+    remaining = list(range(len(expanded)))
+    packages: List[dict] = []
+
+    while remaining:
+        packed_indices: List[int] = []
+        chosen_box: Optional[Tuple[float, float, float]] = None
+
+        for box in boxes_by_vol:
+            box_sd = sorted(box, reverse=True)
+            box_vol = box[0] * box[1] * box[2]
+            # Items whose sorted dims all fit within sorted box dims
+            fitting = [
+                idx for idx in remaining
+                if all(
+                    sorted([expanded[idx][0], expanded[idx][1], expanded[idx][2]], reverse=True)[dim] <= box_sd[dim]
+                    for dim in range(3)
+                )
+            ]
+            if not fitting:
+                continue
+            # Greedy fill: largest items first
+            in_box: List[int] = []
+            used_vol = 0.0
+            for idx in sorted(fitting, key=lambda i: expanded[i][0] * expanded[i][1] * expanded[i][2], reverse=True):
+                item_vol = expanded[idx][0] * expanded[idx][1] * expanded[idx][2]
+                if used_vol + item_vol <= box_vol:
+                    in_box.append(idx)
+                    used_vol += item_vol
+            if in_box:
+                packed_indices = in_box
+                chosen_box = tuple(sorted(box, reverse=True))  # type: ignore[assignment]
+                break
+
+        if chosen_box and packed_indices:
+            total_wt = max(0.1, sum(expanded[i][3] for i in packed_indices))
+            packages.append({
+                "type": "box", "content": "Productos",
+                "amount": 1, "declaredValue": 100 * len(packed_indices),
+                "weight": total_wt,
+                "dimensions": {"length": chosen_box[0], "width": chosen_box[1], "height": chosen_box[2]},
+            })
+            for idx in packed_indices:
+                remaining.remove(idx)
+        else:
+            # Item doesn't fit any box — use largest box with its weight
+            idx = remaining.pop(0)
+            largest = sorted(boxes_by_vol, key=lambda b: b[0] * b[1] * b[2])[-1]
+            lb_sd = sorted(largest, reverse=True)
+            packages.append({
+                "type": "box", "content": "Producto", "amount": 1, "declaredValue": 100,
+                "weight": max(0.1, expanded[idx][3]),
+                "dimensions": {"length": lb_sd[0], "width": lb_sd[1], "height": lb_sd[2]},
+            })
+
+    return packages
+
+
+def _get_shipping_quote(payload: dict) -> dict:
+    """POST /shipping/quote"""
+    api_key = _ENVIA_API_KEY
+    if not api_key:
+        return _json_response(200, {"rates": [], "error": "Servicio de envío no configurado."})
+
+    zip_to = _clean_str(payload.get("zipTo") or payload.get("postalCode"))
+    if not zip_to or len(zip_to) < 4:
+        return _json_response(400, {"message": "zipTo es obligatorio", "Error": "BadRequest"})
+
+    # Destination — only postalCode is strictly needed for rate queries; rest defaults for the API call
+    dest_name = _clean_str(payload.get("recipientName") or payload.get("name")) or "Cliente"
+    dest_phone = _clean_str(payload.get("phone")) or "0000000000"
+    dest_street = _clean_str(payload.get("address") or payload.get("street")) or "Calle Principal"
+    dest_number = _clean_str(payload.get("number")) or "1"
+    dest_city = _clean_str(payload.get("city")) or "Ciudad"
+    dest_state = _clean_str(payload.get("state")) or "CDMX"
+
+    # Build item list for packing algorithm
+    raw_items: List[dict] = []
+    if isinstance(payload.get("items"), list):
+        raw_items = [item for item in payload["items"] if isinstance(item, dict)]
+    elif payload.get("weightKg") is not None:
+        # Backward-compat: single aggregate dims
+        raw_items = [{
+            "weightKg": payload.get("weightKg"),
+            "lengthCm": payload.get("lengthCm"),
+            "widthCm": payload.get("widthCm"),
+            "heightCm": payload.get("heightCm"),
+            "quantity": 1,
+        }]
+
+    packages = _pack_items_for_shipping(raw_items)
+
+    cfg = _load_app_config()
+    shipping_cfg = cfg.get("shipping") if isinstance(cfg.get("shipping"), dict) else {}
+    if not bool(shipping_cfg.get("enabled", True)):
+        return _json_response(200, {"rates": []})
+
+    carriers: List[str] = shipping_cfg.get("carriers") or ["dhl", "fedex"]
+    if not isinstance(carriers, list) or not carriers:
+        carriers = ["dhl", "fedex"]
+    markup = float(shipping_cfg.get("markup") or 0)
+
+    origin = {
+        "name": _SHIPPING_ORIGIN_NAME,
+        "phone": _SHIPPING_ORIGIN_PHONE,
+        "street": _SHIPPING_ORIGIN_STREET,
+        "number": _SHIPPING_ORIGIN_NUMBER,
+        "city": _SHIPPING_ORIGIN_CITY,
+        "state": _SHIPPING_ORIGIN_STATE,
+        "country": "MX",
+        "postalCode": _SHIPPING_ORIGIN_POSTAL_CODE,
+    }
+    destination = {
+        "name": dest_name,
+        "phone": dest_phone,
+        "street": dest_street,
+        "number": dest_number,
+        "city": dest_city,
+        "state": dest_state,
+        "country": _SHIPPING_DESTINATION_COUNTRY,
+        "postalCode": zip_to,
+    }
+
+    all_rates: List[dict] = []
+    for carrier in carriers:
+        body = {
+            "origin": origin,
+            "destination": destination,
+            "packages": packages,
+            "shipment": {"type": 1, "carrier": carrier},
+        }
+        json_bytes = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(_ENVIA_API_URL, data=json_bytes)
+        req.add_header("Authorization", f"Bearer {api_key}")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("accept", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                for rate_item in result.get("data") or []:
+                    base_price = float(rate_item.get("totalPrice") or 0)
+                    display_price = round(base_price * (1 + markup), 2)
+                    delivery_date = rate_item.get("deliveryDate") or {}
+                    transit_days = delivery_date.get("dateDifference") if isinstance(delivery_date, dict) else None
+                    all_rates.append({
+                        "carrier": str(rate_item.get("carrierDescription") or rate_item.get("carrier") or carrier),
+                        "service": str(rate_item.get("serviceDescription") or rate_item.get("service") or ""),
+                        "price": base_price,
+                        "displayPrice": display_price,
+                        "currency": str(rate_item.get("currency") or "MXN"),
+                        "transitDays": int(transit_days) if transit_days is not None else None,
+                        "deliveryEstimate": str(rate_item.get("deliveryEstimate") or ""),
+                    })
+        except urllib.error.HTTPError as exc:
+            print(f"[shipping_quote] HTTPError carrier={carrier}: {exc.code}")
+        except Exception as exc:
+            print(f"[shipping_quote] Error carrier={carrier}: {exc}")
+
+    all_rates.sort(key=lambda r: r.get("displayPrice") or 9999999)
+    return _json_response(200, {"rates": all_rates})
+
+
+def _list_pickup_stocks() -> dict:
+    items = _query_bucket("STOCK")
+    rows = [
+        {"id": item.get("stockId"), "name": item.get("name") or "", "location": item.get("location") or ""}
+        for item in items if bool(item.get("allowPickup", False))
+    ]
+    return _json_response(200, {"stocks": rows})
+
 def _create_stock(payload: dict, headers: Optional[dict] = None) -> dict:
     name = (payload.get("name") or "").strip()
     location = (payload.get("location") or "").strip()
@@ -4311,6 +4566,7 @@ def _create_stock(payload: dict, headers: Optional[dict] = None) -> dict:
         "location": location,
         "linkedUserIds": _normalize_user_ids(payload.get("linkedUserIds")),
         "inventory": _normalize_inventory(payload.get("inventory")),
+        "allowPickup": bool(payload.get("allowPickup", False)),
         "createdAt": now,
         "updatedAt": now,
     }
@@ -4343,6 +4599,9 @@ def _update_stock(stock_id: str, payload: dict, headers: Optional[dict] = None) 
     if "inventory" in payload:
         updates.append("inventory = :inv")
         eav[":inv"] = _normalize_inventory(payload.get("inventory"))
+    if "allowPickup" in payload:
+        updates.append("allowPickup = :ap")
+        eav[":ap"] = bool(payload.get("allowPickup"))
 
     if len(updates) <= 1:
         return _json_response(200, {"message": "Sin cambios para actualizar", "Error": "BadRequest"})
@@ -5475,6 +5734,8 @@ def _get_admin_dashboard() -> dict:
             "trackingNumber": item.get("trackingNumber"),
             "deliveryPlace": item.get("deliveryPlace"),
             "deliveryDate": item.get("deliveryDate"),
+            "deliveryType": item.get("deliveryType") or "delivery",
+            "pickupStockId": item.get("pickupStockId"),
         })
 
     active_products = 0
@@ -6000,12 +6261,15 @@ def lambda_handler(event, context):
     if route_key == (1, "campaigns", "POST"): return _save_campaign(_parse_body(event), headers)
     if route_key == (1, "notifications", "POST"): return _save_notification(_parse_body(event), headers)
     if route_key == (1, "orders", "POST"): return _create_order(_parse_body(event), headers)
+    if route_key == (2, "shipping", "POST") and segments[1] == "quote": return _get_shipping_quote(_parse_body(event))
     if route_key == (1, "orders", "GET") and query.get("customerId"): return _list_orders_for_customer(query.get("customerId"))
     if route_key == (1, "customers", "POST"): return _create_customer(_parse_body(event), headers)
     if route_key == (1, "employees", "GET"): return _list_employees()
     if route_key == (1, "employees", "POST"): return _create_employee(_parse_body(event), headers)
     if route_key == (1, "stocks", "GET"): return _list_stocks()
     if route_key == (1, "stocks", "POST"): return _create_stock(_parse_body(event), headers)
+    if route_key == (2, "pickup-stocks", "GET") and segments[1] == "list": return _list_pickup_stocks()
+    if route_key == (1, "pickup-stocks", "GET"): return _list_pickup_stocks()
     if route_key == (1, "campaigns", "GET"): return _json_response(200, {"campaigns": [_campaign_payload(item) for item in _query_bucket("CAMPAIGN")]})
     if route_key == (1, "notifications", "GET"): return _json_response(200, {"notifications": _list_notifications_for_admin()})
     if route_key == (1, "user-dashboard", "GET"): return _get_user_dashboard(query, headers)

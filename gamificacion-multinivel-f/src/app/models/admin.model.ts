@@ -36,6 +36,8 @@ export interface AdminOrder {
   deliveryStatus?: string;
   shippingAddressId?: string;
   shippingAddressLabel?: string;
+  deliveryType?: 'pickup' | 'delivery';
+  pickupStockId?: string;
 }
 
 export interface OrderStatusLookup {
@@ -108,6 +110,8 @@ export interface CreateAdminOrderPayload {
   shippingAddressId?: string;
   shippingAddressLabel?: string;
   saveShippingAddress?: boolean;
+  deliveryType?: 'pickup' | 'delivery';
+  pickupStockId?: string;
 }
 
 export interface UpdateOrderStatusPayload {
@@ -374,6 +378,11 @@ export interface AppBusinessConfig {
     showPendingTransfers: boolean;
     showPosSalesToday: boolean;
   };
+  shipping: {
+    enabled: boolean;
+    markup: number;
+    carriers: string[];
+  };
 }
 
 export interface AdminAssetSlot {
@@ -432,6 +441,7 @@ export interface AdminStock {
   location: string;
   postalCode?: string;
   isMainWarehouse?: boolean;
+  allowPickup?: boolean;
   linkedUserIds: number[];
   inventory: Record<number, number> | Record<string, number>;
   createdAt?: string;
@@ -521,12 +531,25 @@ export interface SaveProductCategoryPayload {
   active?: boolean;
 }
 
-export interface ShippingQuoteRequest {
-  zipTo: string;
+export interface ShippingQuoteItem {
   weightKg: number;
   lengthCm: number;
   widthCm: number;
   heightCm: number;
+  quantity: number;
+}
+
+export interface ShippingQuoteRequest {
+  zipTo: string;
+  items?: ShippingQuoteItem[];
+  /** @deprecated — kept for backward compat; prefer items[] */
+  weightKg?: number;
+  /** @deprecated */
+  lengthCm?: number;
+  /** @deprecated */
+  widthCm?: number;
+  /** @deprecated */
+  heightCm?: number;
 }
 
 export interface ShippingRate {
@@ -536,4 +559,5 @@ export interface ShippingRate {
   displayPrice: number;
   currency: string | null;
   transitDays: number | null;
+  deliveryEstimate?: string | null;
 }
