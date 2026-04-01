@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
@@ -20,6 +20,7 @@ interface CategoryNode extends ProductCategory {
 })
 export class AdminCategoriesComponent implements OnInit {
   @Input() initialCategories: ProductCategory[] = [];
+  @Output() categoriesChanged = new EventEmitter<ProductCategory[]>();
 
   categories: ProductCategory[] = [];
   isLoading = false;
@@ -36,6 +37,7 @@ export class AdminCategoriesComponent implements OnInit {
 
   ngOnInit(): void {
     this.categories = [...this.initialCategories];
+    this.refreshCategories();
   }
 
   get tree(): CategoryNode[] {
@@ -67,6 +69,10 @@ export class AdminCategoriesComponent implements OnInit {
     this.draftName = '';
   }
 
+  trackById(_index: number, node: CategoryNode): string {
+    return node.id;
+  }
+
   save(): void {
     const name = this.draftName.trim();
     if (!name || this.isSaving) return;
@@ -80,11 +86,9 @@ export class AdminCategoriesComponent implements OnInit {
       .pipe(finalize(() => { this.isSaving = false; }))
       .subscribe({
         next: (cat) => {
-          const idx = this.categories.findIndex((c) => c.id === cat.id);
-          if (idx >= 0) { this.categories = this.categories.map((c) => c.id === cat.id ? cat : c); }
-          else { this.categories = [...this.categories, cat]; }
           this.cancelEdit();
           this.showMessage(`Categoría guardada: ${cat.name}`, 'success');
+          this.refreshCategories();
         },
         error: () => this.showMessage('No se pudo guardar.', 'error')
       });
@@ -99,11 +103,21 @@ export class AdminCategoriesComponent implements OnInit {
       .pipe(finalize(() => { this.isDeleting = false; }))
       .subscribe({
         next: () => {
-          this.categories = this.categories.filter((c) => c.id !== id);
           this.showMessage('Categoría eliminada.', 'success');
+          this.refreshCategories();
         },
         error: () => this.showMessage('No se pudo eliminar.', 'error')
       });
+  }
+
+  private refreshCategories(): void {
+    this.api.listCategories().subscribe({
+      next: (cats) => {
+        this.categories = cats ?? [];
+        this.categoriesChanged.emit(this.categories);
+      },
+      error: () => {}
+    });
   }
 
   private showMessage(msg: string, tone: 'success' | 'error'): void {

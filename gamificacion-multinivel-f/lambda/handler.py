@@ -1068,6 +1068,14 @@ def _find_effective_sponsor(customer: Optional[dict]) -> dict:
     sponsor = _get_by_id("CUSTOMER", int(sponsor_id)) if sponsor_id not in (None, "") else None
     return _sponsor_contact_payload(sponsor)
 
+def _get_referrer_contact(referrer_id: str) -> dict:
+    try:
+        customer = _get_by_id("CUSTOMER", int(referrer_id)) if referrer_id else None
+    except (ValueError, TypeError):
+        customer = None
+    contact = _sponsor_contact_payload(customer)
+    return _json_response(200, {"referrer": contact})
+
 def _would_create_leader_cycle(customers_raw: List[dict], customer_id: Any, leader_id: Any) -> bool:
     if customer_id in (None, "") or leader_id in (None, ""):
         return False
@@ -3553,6 +3561,71 @@ def _cancel_order(order_id: str, payload: dict) -> dict:
     return _json_response(200, {"orderId": order_id, "status": "canceled", "commissionActions": actions})
 
 # ---------------------------------------------------------------------------
+# Product Category Logic
+# ---------------------------------------------------------------------------
+def _category_payload(item: dict) -> dict:
+    return {
+        "id": item.get("categoryId"),
+        "name": item.get("name") or "",
+        "parentId": item.get("parentId"),
+        "position": item.get("position") or 0,
+        "active": bool(item.get("active", True)),
+        "createdAt": item.get("createdAt"),
+    }
+
+def _list_product_categories() -> dict:
+    items = _query_bucket("PRODUCT_CATEGORY")
+    categories = [_category_payload(i) for i in items if i.get("active", True) is not False]
+    return _json_response(200, {"categories": categories})
+
+def _save_product_category(payload: dict, headers: Optional[dict] = None) -> dict:
+    cat_id = payload.get("id")
+    name = (payload.get("name") or "").strip()
+    if not name:
+        return _json_response(400, {"message": "name es obligatorio", "Error": "BadRequest"})
+    now = _now_iso()
+    if cat_id:
+        existing = _get_by_id("PRODUCT_CATEGORY", cat_id)
+        if existing:
+            eav = {":u": now, ":n": name}
+            ean = {"#n": "name"}
+            updates = ["#n = :n", "updatedAt = :u"]
+            if "parentId" in payload:
+                updates.append("parentId = :pid")
+                eav[":pid"] = payload.get("parentId")
+            if "position" in payload:
+                updates.append("#pos = :pos")
+                eav[":pos"] = int(payload.get("position") or 0)
+                ean["#pos"] = "position"
+            if "active" in payload:
+                updates.append("active = :a")
+                eav[":a"] = bool(payload.get("active", True))
+            updated = _update_by_id("PRODUCT_CATEGORY", cat_id, "SET " + ", ".join(updates), eav, ean)
+            return _json_response(200, {"category": _category_payload(updated)})
+    new_id = cat_id or str(uuid.uuid4())
+    item = {
+        "entityType": "productCategory",
+        "categoryId": new_id,
+        "name": name,
+        "parentId": payload.get("parentId"),
+        "position": int(payload.get("position") or 0),
+        "active": bool(payload.get("active", True)),
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    item = {k: v for k, v in item.items() if v is not None}
+    saved = _put_entity("PRODUCT_CATEGORY", new_id, item, created_at_iso=now)
+    return _json_response(201, {"category": _category_payload(saved)})
+
+def _delete_product_category(cat_id: str, headers: Optional[dict] = None) -> dict:
+    existing = _get_by_id("PRODUCT_CATEGORY", cat_id)
+    if not existing:
+        return _json_response(404, {"message": "Categoría no encontrada", "Error": "NotFound"})
+    eav = {":u": _now_iso(), ":a": False}
+    _update_by_id("PRODUCT_CATEGORY", cat_id, "SET active = :a, updatedAt = :u", eav, None)
+    return _json_response(200, {"ok": True})
+
+# ---------------------------------------------------------------------------
 # Product Logic
 # ---------------------------------------------------------------------------
 def _save_product(payload: dict, headers: Optional[dict] = None) -> dict:
@@ -3581,6 +3654,12 @@ def _save_product(payload: dict, headers: Optional[dict] = None) -> dict:
             if "copyWhatsapp" in payload: updates.append("copyWhatsapp = :cw"); eav[":cw"] = payload.get("copyWhatsapp")
             if "tags" in payload: updates.append("tags = :t"); eav[":t"] = payload.get("tags")
             if "images" in payload: updates.append("images = :im"); eav[":im"] = payload.get("images")
+            if "variants" in payload: updates.append("variants = :v"); eav[":v"] = payload.get("variants") or []
+            if "weightKg" in payload: updates.append("weightKg = :wk"); eav[":wk"] = _to_decimal(payload.get("weightKg")) if payload.get("weightKg") is not None else None
+            if "lengthCm" in payload: updates.append("lengthCm = :lc"); eav[":lc"] = _to_decimal(payload.get("lengthCm")) if payload.get("lengthCm") is not None else None
+            if "widthCm" in payload: updates.append("widthCm = :wc"); eav[":wc"] = _to_decimal(payload.get("widthCm")) if payload.get("widthCm") is not None else None
+            if "heightCm" in payload: updates.append("heightCm = :hc"); eav[":hc"] = _to_decimal(payload.get("heightCm")) if payload.get("heightCm") is not None else None
+            if "categoryIds" in payload: updates.append("categoryIds = :cat"); eav[":cat"] = payload.get("categoryIds") or []
             
             updates.append("updatedAt = :u")
             updated = _update_by_id("PRODUCT", int(product_id), "SET " + ", ".join(updates), eav, ean or None)
@@ -3597,6 +3676,12 @@ def _save_product(payload: dict, headers: Optional[dict] = None) -> dict:
         "copyInstagram": payload.get("copyInstagram"),
         "copyWhatsapp": payload.get("copyWhatsapp"),
         "tags": payload.get("tags"), "images": payload.get("images"),
+        "variants": payload.get("variants") or [],
+        "weightKg": _to_decimal(payload.get("weightKg")) if payload.get("weightKg") is not None else None,
+        "lengthCm": _to_decimal(payload.get("lengthCm")) if payload.get("lengthCm") is not None else None,
+        "widthCm": _to_decimal(payload.get("widthCm")) if payload.get("widthCm") is not None else None,
+        "heightCm": _to_decimal(payload.get("heightCm")) if payload.get("heightCm") is not None else None,
+        "categoryIds": payload.get("categoryIds") or [],
         "createdAt": now, "updatedAt": now
     }
     # Clean None
@@ -5405,6 +5490,12 @@ def _get_admin_dashboard() -> dict:
             "copyInstagram": item.get("copyInstagram"),
             "copyWhatsapp": item.get("copyWhatsapp"),
             "tags": item.get("tags"), "images": item.get("images"),
+            "variants": item.get("variants") or [],
+            "weightKg": float(item.get("weightKg")) if item.get("weightKg") is not None else None,
+            "lengthCm": float(item.get("lengthCm")) if item.get("lengthCm") is not None else None,
+            "widthCm": float(item.get("widthCm")) if item.get("widthCm") is not None else None,
+            "heightCm": float(item.get("heightCm")) if item.get("heightCm") is not None else None,
+            "categoryIds": item.get("categoryIds") or [],
         })
 
     campaigns = [_campaign_payload(item) for item in campaigns_raw]
@@ -5436,6 +5527,9 @@ def _get_admin_dashboard() -> dict:
     employees_raw = _query_bucket("EMPLOYEE")
     employees = [_employee_payload(e) for e in employees_raw]
 
+    categories_raw = _query_bucket("PRODUCT_CATEGORY")
+    categories = [_category_payload(i) for i in categories_raw if i.get("active", True) is not False]
+
     return _json_response(200, {
         "kpis": {
             "salesTotal": sales_total, "averageTicket": average_ticket, "activeProducts": active_products,
@@ -5448,6 +5542,7 @@ def _get_admin_dashboard() -> dict:
         "productOfMonthId": product_of_month_id,
         "businessConfig": app_cfg,
         "employees": employees,
+        "categories": categories,
     })
 
 # ---------------------------------------------------------------------------
@@ -5900,6 +5995,8 @@ def lambda_handler(event, context):
     if route_key == (1, "crearcuenta", "POST"): return _create_account(_parse_body(event))
     if route_key == (1, "assets", "POST"): return _create_asset(_parse_body(event))
     if route_key == (1, "products", "POST"): return _save_product(_parse_body(event), headers)
+    if route_key == (1, "product-categories", "GET"): return _list_product_categories()
+    if route_key == (1, "product-categories", "POST"): return _save_product_category(_parse_body(event), headers)
     if route_key == (1, "campaigns", "POST"): return _save_campaign(_parse_body(event), headers)
     if route_key == (1, "notifications", "POST"): return _save_notification(_parse_body(event), headers)
     if route_key == (1, "orders", "POST"): return _create_order(_parse_body(event), headers)
@@ -5922,6 +6019,8 @@ def lambda_handler(event, context):
     if route_key == (2, "config", "PUT") and segments[1] == "app": return _put_app_config(_parse_body(event), headers)
     if route_key == (2, "network", "GET"): return _get_network(segments[1], query)
     if route_key == (2, "assets", "GET"): return _get_asset(segments[1])
+    if route_key == (2, "product-categories", "DELETE"): return _delete_product_category(segments[1], headers)
+    if route_key == (2, "referrer", "GET"): return _get_referrer_contact(segments[1])
     if route_key == (2, "products", "GET") and segments[1] == "product-of-month": return _get_product_of_month()
     if route_key == (2, "products", "POST") and segments[1] == "product-of-month": return _set_product_of_month(_parse_body(event), headers)
     if route_key == (2, "products", "GET"): return _get_product(segments[1])

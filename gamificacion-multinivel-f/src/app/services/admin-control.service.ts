@@ -7,6 +7,7 @@ import {
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
+  ProductCategory,
   AdminOrderItem,
   AssociateMonth,
   AdminProduct,
@@ -67,6 +68,12 @@ export class AdminControlService {
 
   get data(): AdminData | null {
     return this.dataSubject.value;
+  }
+
+  updateCategories(categories: ProductCategory[]): void {
+    const current = this.dataSubject.value;
+    if (!current) return;
+    this.dataSubject.next({ ...current, categories });
   }
 
   get orders(): AdminOrder[] {

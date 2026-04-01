@@ -6,7 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
-import { UserDashboardData, FeaturedItem, DashboardCampaign } from '../../models/user-dashboard.model';
+import { UserDashboardData, FeaturedItem, DashboardCampaign, SponsorContact } from '../../models/user-dashboard.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { FeatureBadgeComponent } from '../../components/feature-badge/feature-badge.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -16,7 +16,7 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent,  UiHeaderComponent, UiFooterComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -46,6 +46,7 @@ export class LandingComponent implements OnInit {
 
   referralToken = '';
   productId = '';
+  sponsor: SponsorContact | null = null;
   isSubmitting = false;
   feedbackMessage = '';
   feedbackType: 'error' | 'success' | '' = '';
@@ -88,6 +89,7 @@ export class LandingComponent implements OnInit {
     this.productId = product.trim();
     if (this.referralToken) {
       localStorage.setItem('leaderId', this.referralToken);
+      this.loadReferrerContact(this.referralToken);
     }
     this.loadFeaturedProduct(this.productId);
   }
@@ -127,6 +129,24 @@ export class LandingComponent implements OnInit {
   get heroTags(): string[] {
     const tags = this.featuredProduct?.tags ?? [];
     return tags.length ? tags : this.defaultHero.tags;
+  }
+
+  get sponsorName(): string {
+    return this.sponsor?.name || 'tu promotor';
+  }
+
+  get sponsorFirstName(): string {
+    return this.sponsorName.split(' ')[0];
+  }
+
+  get whatsappHref(): string {
+    const raw = (this.sponsor?.phone ?? '').replace(/\D/g, '');
+    if (!raw) return 'https://wa.me/';
+    return `https://wa.me/${raw}?text=${encodeURIComponent('Hola, me llegó tu invitación y me interesa saber más.')}`;
+  }
+
+  get hasRealSponsor(): boolean {
+    return !!this.sponsor && !this.sponsor.isDefault;
   }
 
   getTagClass(index: number): string {
@@ -210,6 +230,19 @@ export class LandingComponent implements OnInit {
   private setFeedback(message: string, type: 'error' | 'success'): void {
     this.feedbackMessage = message;
     this.feedbackType = type;
+  }
+
+  private loadReferrerContact(referrerId: string): void {
+    this.api
+      .getReferrerContact(referrerId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (contact) => {
+          this.sponsor = contact ?? null;
+          this.cdr.detectChanges();
+        },
+        error: () => { this.sponsor = null; }
+      });
   }
 
   private loadFeaturedProduct(queryProductId: string): void {

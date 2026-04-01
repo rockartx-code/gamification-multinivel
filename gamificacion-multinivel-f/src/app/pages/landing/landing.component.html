@@ -1,406 +1,242 @@
 <section class="min-h-screen overflow-x-hidden bg-sand-200 text-charcoal antialiased">
-  <!-- HEADER -->
 
+  <!-- HEADER mínimo -->
   <ui-header variant="landing"
-    containerClass="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-
-    <!-- Actions: MOBILE (icons only) -->
-    <div class="flex items-center gap-2 md:hidden">
-      <ui-button size="lg" variant="ghost" [routerLink]="['/login']" aria-label="Entrar">
-        <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
-      </ui-button>
-
-      <ui-button size="lg" variant="ghost" aria-label="Cómo funciona" (pressed)="scrollTo('recompensas')">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-      </ui-button>
-
-      <ui-button size="lg" variant="primary" aria-label="Obtenerlo ahora" (pressed)="scrollTo('registro')">
-        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-      </ui-button>
-    </div>
-
-    <!-- Actions: DESKTOP (text + icons) -->
-    <div class="hidden items-center gap-3 md:flex">
+    containerClass="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <div class="flex items-center gap-2">
       <ui-button size="sm" variant="ghost" [routerLink]="['/login']">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
-        Entrar
+        <span class="hidden sm:inline">Ya tengo cuenta</span>
       </ui-button>
-
-      <ui-button size="sm" variant="ghost" (pressed)="scrollTo('recompensas')">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-        Cómo funciona
-      </ui-button>
-
-      <ui-button size="sm" variant="primary" (pressed)="scrollTo('registro')">
-        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-              {{ heroPrimaryCta }}
-            </ui-button>
     </div>
   </ui-header>
 
 
-  <!-- HERO -->
-  <section class="relative bg-ambient">
-    <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-8">
-      <!-- Mobile: stack | Desktop: 2 cols -->
-      <div class="grid gap-8 md:grid-cols-2 md:items-center md:gap-12">
-        <!-- TOP (mobile): Image first -->
-        <div class="order-1 md:order-2">
-          <!-- OUTER FRAME: mismo lenguaje que el resto -->
-          <div
-            class="relative overflow-hidden rounded-3xl border border-olive-20 bg-ivory-70 shadow-[0_28px_80px_rgba(17,24,39,0.10)]">
+  <!-- CUERPO PRINCIPAL: una sola página -->
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
 
-            <!-- SOFT LIGHT: para que no se sienta plano -->
-            <div class="pointer-events-none absolute inset-0
-      bg-[radial-gradient(60%_60%_at_70%_20%,rgba(200,166,90,0.22)_0%,rgba(244,241,234,0)_55%)]
-      "></div>
-            <div class="pointer-events-none absolute inset-0
-      bg-[radial-gradient(55%_55%_at_25%_85%,rgba(122,142,102,0.16)_0%,rgba(244,241,234,0)_60%)]
-      "></div>
+    <!-- Título de la invitación -->
 
-            <!-- MAT (passepartout) -->
-            <div
-              class="relative mx-auto flex h-[360px] items-center justify-center p-8 sm:h-[430px] md:h-[560px] md:p-12">
-              <div class="relative rounded-2xl bg-ivory-90/80 ring-1 ring-black/5 backdrop-blur-[2px]
-                  shadow-[0_18px_50px_rgba(17,24,39,0.10)] px-6 py-7 sm:px-8 sm:py-9">
+    <!-- GRID: imagen + beneficios | formulario -->
+    <div class="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
 
-                <!-- IMAGE: contenida + con micro-ajuste de color para que combine -->
-                <img [src]="heroImage" [alt]="heroTitle" class="block max-h-[300px] sm:max-h-[350px] md:max-h-[460px] w-auto object-contain
-                 drop-shadow-[0_18px_40px_rgba(0,0,0,0.14)]
-                 saturate-[0.98] contrast-[0.98]" />
-              </div>
+      <!-- COLUMNA IZQUIERDA: imagen + beneficios -->
+      <div class="space-y-6">
+
+
+
+        <!-- Mensaje de apoyo del promotor -->
+        <div *ngIf="hasRealSponsor" class="grain relative overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80 p-5">
+          <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
+          <div class="relative flex gap-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-sm font-bold text-accent">
+              {{ sponsorFirstName[0] | uppercase }}
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-main">{{ sponsorName }}</p>
+              <p class="mt-1 text-sm text-gray-600 leading-relaxed">
+                "Estoy aquí para acompañarte desde el primer paso. Si tienes cualquier duda, escríbeme con confianza."
+              </p>
+              <a [href]="whatsappHref" target="_blank" rel="noopener"
+                class="mt-3 inline-flex items-center gap-2 rounded-full border border-olive-30 bg-white/60 px-3 py-1.5 text-xs font-semibold text-main transition hover:bg-olive-10">
+                <i class="fa-brands fa-whatsapp text-[#25D366] text-sm" aria-hidden="true"></i>
+                Escribir a {{ sponsorFirstName }} por WhatsApp
+              </a>
             </div>
           </div>
         </div>
 
+        <!-- Beneficios -->
+        <div class="grain relative overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80 p-5 sm:p-6">
+          <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
+          <div class="relative">
+            <h3 class="flex items-center gap-2 text-base font-bold text-main">
+              <i class="fa-solid fa-medal text-gold" aria-hidden="true"></i>
+              Lo que obtienes al unirte
+            </h3>
 
+            <ul class="mt-4 space-y-3">
+              <li class="flex items-start gap-3">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-olive-10">
+                  <i class="fa-solid fa-tag text-accent text-sm" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-main">Descuentos en cada compra</p>
+                  <p class="text-xs text-gray-500">Se aplican automáticamente en tu pedido.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-olive-10">
+                  <i class="fa-solid fa-hand-holding-dollar text-gold text-sm" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-main">Bonos por compartir</p>
+                  <p class="text-xs text-gray-500">Recomienda y gana cuando tu referido compra.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-olive-10">
+                  <i class="fa-solid fa-layer-group text-stone text-sm" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-main">Red de niveles que crece contigo</p>
+                  <p class="text-xs text-gray-500">Acumulas recompensas de toda tu red.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-olive-10">
+                  <i class="fa-solid fa-calendar-check text-accent text-sm" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-main">Pagos puntuales y transparentes</p>
+                  <p class="text-xs text-gray-500">Corte mensual con reporte detallado.</p>
+                </div>
+              </li>
+            </ul>
 
-
-        <!-- BOTTOM (mobile): Copy second -->
-        <div class="order-2 md:order-1">
-          <p
-            class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-xs text-gray-700">
-            <span class="h-2 w-2 rounded-full bg-olive shadow-[0_0_18px_rgba(124,140,114,.55)]"></span>
-            {{ heroBadge }}
-          </p>
-
-          <h1 class="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:mt-6 md:text-6xl">
-            {{ heroTitle }}<br />
-            <span class="text-accent">{{ heroAccent }}</span><br />
-            {{ heroTail }}
-          </h1>
-
-          <p class="mt-4 max-w-xl text-base text-gray-600 sm:text-lg">
-            {{ heroDescription }}
-          </p>
-
-          <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-            <ui-button size="lg" variant="primary" class="w-full sm:w-auto" (pressed)="scrollTo('registro')">
-              <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-              {{ heroPrimaryCta }}
-            </ui-button>
-
-            <ui-button size="lg" variant="ghost" class="w-full sm:w-auto" (pressed)="scrollTo('recompensas')">
-              <i class="fa-solid fa-gift" aria-hidden="true"></i>
-              {{ heroSecondaryCta }}
-            </ui-button>
-          </div>
-
-          <div class="mt-8 grid grid-cols-2 gap-3 text-sm text-on-gold md:mt-10 ">
-            <feature-badge
-              *ngFor="let tag of heroTags; let i = index"
-              [icon]="i % 4 === 0 ? 'fa-solid fa-bolt text-accent' : i % 4 === 1 ? 'fa-solid fa-heart-pulse text-rose-200' : i % 4 === 2 ? 'fa-solid fa-leaf text-accent' : 'fa-solid fa-trophy text-gold'"
-              [label]="tag">
-            </feature-badge>
+            <div class="mt-5 flex items-center gap-2 rounded-full border border-gold-35 bg-gold-20 px-4 py-2.5 text-sm font-bold text-on-gold">
+              <i class="fa-solid fa-star text-gold" aria-hidden="true"></i>
+              Solo regístrate y empieza
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
 
-
-  <!-- REGISTRO -->
-  <section id="registro" class="relative mt-2 bg-sand-200 pt-8 md:pt-8">
-    <div class="relative mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-16">
-      <div class="text-center">
-        <h2 class="text-3xl font-extrabold md:text-4xl">Empieza hoy</h2>
-        <p class="mt-3 text-gray-600">
-          Regístrate en 30 segundos. Luego eliges el producto y desbloqueas recompensas.
-        </p>
       </div>
 
-      <div class="mt-8 sm:mt-10">
-  <!-- “Promise bar” -->
-  <div class="grid grid-cols-3 gap-2 sm:gap-4 md:grid-cols-3">
-    <!-- 1 -->
-    <div
-      class="group rounded-2xl border border-olive-30 bg-ivory-80 p-3 sm:p-5 text-center
-             shadow-[0_1px_0_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-             transition-shadow">
-      <div class="mx-auto flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-olive-10">
-        <i class="fa-solid fa-coins text-accent text-base sm:text-lg" aria-hidden="true"></i>
-      </div>
+      <!-- COLUMNA DERECHA: formulario de registro -->
+      <div class="lg:sticky lg:top-6">
 
-      <!-- Mobile: corto y legible -->
-      <div class="mt-2 text-[11px] leading-tight font-semibold text-main sm:hidden">
-        Descuentos
-      </div>
+        <!-- VERIFICACIÓN PENDIENTE -->
+        <div *ngIf="registrationState === 'pending'"
+          class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-8 sm:p-10 text-center">
+          <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
+          <div class="relative">
+            <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-olive-30 bg-ivory-80">
+              <i class="fa-solid fa-envelope-circle-check text-2xl text-accent" aria-hidden="true"></i>
+            </div>
+            <h2 class="text-xl font-extrabold tracking-tight text-main">¡Ya casi estás dentro!</h2>
+            <p class="mt-3 text-sm text-gray-600">
+              Enviamos un enlace de confirmación a<br>
+              <span class="mt-1 inline-block font-semibold text-main">{{ registeredEmail }}</span>
+            </p>
+            <p class="mt-4 text-xs text-gray-500">
+              Haz clic en el enlace del correo para activar tu cuenta.<br>
+              Si no lo ves, revisa la carpeta de spam.
+            </p>
+            <div *ngIf="hasRealSponsor" class="mt-5 rounded-2xl border border-olive-20 bg-ivory-70 p-4 text-sm text-gray-600">
+              <i class="fa-brands fa-whatsapp text-[#25D366] mr-1" aria-hidden="true"></i>
+              ¿Tienes dudas? <a [href]="whatsappHref" target="_blank" rel="noopener" class="font-semibold text-main underline underline-offset-2">Escríbele a {{ sponsorFirstName }}</a>
+            </div>
+            <div class="mt-6">
+              <ui-button variant="ghost" size="sm" (pressed)="registrationState = 'form'">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                Usar otro correo
+              </ui-button>
+            </div>
+          </div>
+        </div>
 
-      <!-- sm+: tu frase completa -->
-      <div class="mt-2 hidden sm:block text-sm font-semibold text-accent">
-        Obtén descuentos por tus compras
-      </div>
+        <!-- FORMULARIO -->
+        <div *ngIf="registrationState === 'form'"
+          class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80">
+          <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
 
-      <!-- Descripción solo en md+ para no saturar -->
-      <div class="mt-2 hidden md:block text-sm text-gray-700">
-        Se aplican automáticamente cuando eliges tu producto.
-      </div>
-    </div>
+          <div class="relative p-5 sm:p-7">
+            <h2 class="text-xl font-extrabold text-main">Crea tu cuenta gratis</h2>
+            <p class="mt-1 text-sm text-gray-500">30 segundos y ya eres parte de la comunidad.</p>
 
-    <!-- 2 -->
-    <div
-      class="group rounded-2xl border border-olive-30 bg-ivory-80 p-3 sm:p-5 text-center
-             shadow-[0_1px_0_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-             transition-shadow">
-      <div class="mx-auto flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-olive-10">
-        <i class="fa-solid fa-user-plus text-gold text-base sm:text-lg" aria-hidden="true"></i>
-      </div>
+            <div class="mt-5 space-y-4">
+              <ui-form-field
+                [(ngModel)]="form.name" name="name"
+                label="Nombre completo *" placeholder="Tu nombre completo"
+                iconClass="fa-solid fa-id-card" wrapperClass="relative block"
+                (ngModelChange)="fieldErrors.name = ''"
+                [errorText]="fieldErrors.name"
+                inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
+              </ui-form-field>
 
-      <div class="mt-2 text-[11px] leading-tight font-semibold text-main sm:hidden">
-        Comisiones
-      </div>
+              <ui-form-field
+                kind="input" type="email"
+                [(ngModel)]="form.email" name="email"
+                label="Correo electrónico *" placeholder="tucorreo@ejemplo.com"
+                iconClass="fa-solid fa-envelope" wrapperClass="relative block"
+                (ngModelChange)="fieldErrors.email = ''"
+                [errorText]="fieldErrors.email"
+                inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
+              </ui-form-field>
 
-      <div class="mt-2 hidden sm:block text-sm font-semibold text-gold">
-        Obtén comisiones por compartir
-      </div>
+              <ui-form-field
+                kind="input" type="tel"
+                [(ngModel)]="form.phone" name="phone"
+                label="Teléfono (opcional)" placeholder="+52 ..."
+                iconClass="fa-solid fa-phone" wrapperClass="relative block"
+                inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
+              </ui-form-field>
 
-      <div class="mt-2 hidden md:block text-sm text-gray-700">
-        Comparte tu enlace y gana cuando tu recomendado compra.
-      </div>
-    </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <ui-form-field
+                  kind="input" type="password"
+                  [(ngModel)]="form.password" name="password"
+                  label="Contraseña *" placeholder="Mínimo 8 caracteres"
+                  iconClass="fa-solid fa-lock" wrapperClass="relative block"
+                  (ngModelChange)="fieldErrors.password = ''"
+                  [errorText]="fieldErrors.password"
+                  inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
+                </ui-form-field>
 
-    <!-- 3 -->
-    <div
-      class="group rounded-2xl border border-olive-30 bg-ivory-80 p-3 sm:p-5 text-center
-             shadow-[0_1px_0_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-             transition-shadow">
-      <div class="mx-auto flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-olive-10">
-        <i class="fa-solid fa-scale-balanced text-stone text-base sm:text-lg" aria-hidden="true"></i>
-      </div>
+                <ui-form-field
+                  kind="input" type="password"
+                  [(ngModel)]="form.confirmPassword" name="confirmPassword"
+                  label="Confirmar contraseña *" placeholder="Repite tu contraseña"
+                  iconClass="fa-solid fa-lock" wrapperClass="relative block"
+                  (ngModelChange)="fieldErrors.confirmPassword = ''"
+                  [errorText]="fieldErrors.confirmPassword"
+                  inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
+                </ui-form-field>
+              </div>
+            </div>
 
-      <div class="mt-2 text-[11px] leading-tight font-semibold text-main sm:hidden">
-        Claridad
-      </div>
+            <div class="mt-5">
+              <ui-button type="button" variant="primary" [disabled]="isSubmitting" size="lg"
+                iconClass="fa-solid fa-user-check" [fullWidth]="true" (pressed)="createAccount()">
+                {{ isSubmitting ? 'Creando cuenta...' : 'Unirme ahora' }}
+              </ui-button>
 
-      <div class="mt-2 hidden sm:block text-sm font-semibold text-stone">
-        Pagos claros
-      </div>
+              <p *ngIf="feedbackMessage" class="mt-3 text-center text-xs"
+                [ngClass]="feedbackType === 'error' ? 'text-alert-soft' : 'text-accent'">
+                {{ feedbackMessage }}
+              </p>
 
-      <div class="mt-2 hidden md:block text-sm text-gray-700">
-        Transparencia total en acumulación, cortes y pagos.
+              <p class="mt-3 text-center text-xs text-gray-400">
+                Al registrarte aceptas los términos del programa de recompensas.
+              </p>
+            </div>
+
+
+          </div>
+        </div>
+
+        <!-- Confianza -->
+        <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-gray-500">
+          <div class="rounded-xl border border-olive-20 bg-ivory-80 px-2 py-3">
+            <i class="fa-solid fa-shield-halved mb-1 block text-accent" aria-hidden="true"></i>
+            Sin riesgo
+          </div>
+          <div class="rounded-xl border border-olive-20 bg-ivory-80 px-2 py-3">
+            <i class="fa-solid fa-bolt mb-1 block text-gold" aria-hidden="true"></i>
+            Gratis
+          </div>
+          <div class="rounded-xl border border-olive-20 bg-ivory-80 px-2 py-3">
+            <i class="fa-solid fa-heart mb-1 block text-rose-400" aria-hidden="true"></i>
+            Con apoyo
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-
-</div>
-
-
-      <!-- ── VERIFICACIÓN PENDIENTE ───────────────────────────────────── -->
-      <div *ngIf="registrationState === 'pending'"
-        class="grain relative mt-8 overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-8 sm:p-10 text-center">
-        <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
-        <div class="relative">
-          <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-olive-30 bg-ivory-80">
-            <i class="fa-solid fa-envelope-circle-check text-2xl text-accent" aria-hidden="true"></i>
-          </div>
-          <h2 class="text-xl font-extrabold tracking-tight text-main">Revisa tu correo</h2>
-          <p class="mt-3 text-sm text-gray-600">
-            Enviamos un enlace de confirmación a<br>
-            <span class="mt-1 inline-block font-semibold text-main">{{ registeredEmail }}</span>
-          </p>
-          <p class="mt-4 text-xs text-gray-500">
-            Haz clic en el enlace del correo para activar tu cuenta.<br>
-            Si no lo ves, revisa la carpeta de spam.
-          </p>
-          <div class="mt-6">
-            <ui-button variant="ghost" size="sm" (pressed)="registrationState = 'form'">
-              <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-              Usar otro correo
-            </ui-button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── FORMULARIO DE REGISTRO ───────────────────────────────────── -->
-      <div *ngIf="registrationState === 'form'"
-        class="grain relative mt-8 grid gap-4 overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-5 sm:p-8">
-        <div class="pointer-events-none absolute inset-0 bg-olive-10">
-        </div>
-
-        <ui-form-field [(ngModel)]="form.name" name="name" label="Nombre completo *" placeholder="Tu nombre completo"
-          iconClass="fa-solid fa-id-card" wrapperClass="relative block"
-          (ngModelChange)="fieldErrors.name = ''"
-          [errorText]="fieldErrors.name"
-          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
-        </ui-form-field>
-
-        <!-- Correo + Teléfono -->
-        <div class="grid gap-4 md:grid-cols-2">
-          <ui-form-field kind="input" type="email" [(ngModel)]="form.email" name="email" label="Correo electrónico *"
-            placeholder="tucorreo@ejemplo.com" iconClass="fa-solid fa-envelope" wrapperClass="relative block"
-            (ngModelChange)="fieldErrors.email = ''"
-            [errorText]="fieldErrors.email"
-            inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
-          </ui-form-field>
-
-          <ui-form-field kind="input" type="tel" [(ngModel)]="form.phone" name="phone" label="Teléfono"
-            placeholder="+52 ..." iconClass="fa-solid fa-phone" wrapperClass="relative block"
-            inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
-          </ui-form-field>
-        </div>
-
-        <!-- Contraseña + Confirmación -->
-        <div class="grid gap-4 md:grid-cols-2">
-          <ui-form-field kind="input" type="password" [(ngModel)]="form.password" name="password" label="Contraseña *"
-            placeholder="Mínimo 8 caracteres" iconClass="fa-solid fa-lock" wrapperClass="relative block"
-            (ngModelChange)="fieldErrors.password = ''"
-            [errorText]="fieldErrors.password"
-            inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
-          </ui-form-field>
-
-          <ui-form-field kind="input" type="password" [(ngModel)]="form.confirmPassword" name="confirmPassword"
-            label="Confirmar contraseña *" placeholder="Repite tu contraseña" iconClass="fa-solid fa-lock"
-            wrapperClass="relative block"
-            (ngModelChange)="fieldErrors.confirmPassword = ''"
-            [errorText]="fieldErrors.confirmPassword"
-            inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
-          </ui-form-field>
-        </div>
-
-
-        <div class="pt-2">
-          <ui-button type="button" variant="primary" [disabled]="isSubmitting"  size="lg"
-            iconClass="fa-solid fa-user-check" [fullWidth]="true" (pressed)="createAccount()">
-            {{ isSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
-          </ui-button>
-
-          <p *ngIf="feedbackMessage" class="mt-3 text-center text-xs"
-            [ngClass]="feedbackType === 'error' ? 'text-alert-soft' : 'text-accent'">
-            {{ feedbackMessage }}
-          </p>
-
-          <p class="mt-3 text-center text-xs text-gray-500">
-            Al registrarte aceptas los términos del programa de recompensas.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- RECOMPENSAS -->
-  <section id="recompensas" class="relative bg-ambient py-14 sm:py-20">
-    <div class="mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-2 md:gap-12">
-      <div>
-        <h2 class="text-3xl font-extrabold tracking-tight md:text-4xl">
-          Bienestar que se comparte,<br />
-          <span class="text-gold">se recompensa</span>
-        </h2>
-
-        <p class="mt-4 max-w-xl text-gray-600">
-          Recomienda productos que usas y recibe beneficios reales. Sin inversiones. Sin promesas irreales.
-        </p>
-
-        <div class="mt-8 space-y-4">
-          <div class="flex items-start gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-ink shadow-[0_0_22px_rgba(124,140,114,0.35)]">
-              1
-            </div>
-            <p class="text-on-gold">
-              <i class="fa-solid fa-link text-accent" aria-hidden="true"></i>
-              Te registras y obtienes tu enlace personal.
-            </p>
-          </div>
-
-          <div class="flex items-start gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-ink shadow-[0_0_22px_rgba(124,140,114,0.35)]">
-              2
-            </div>
-            <p class="text-on-gold">
-              <i class="fa-solid fa-user-group text-accent" aria-hidden="true"></i>
-              Invitas a alguien a probar los productos.
-            </p>
-          </div>
-
-          <div class="flex items-start gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-olive font-bold text-ink shadow-[0_0_22px_rgba(124,140,114,0.35)]">
-              3
-            </div>
-            <p class="text-on-gold">
-              <i class="fa-solid fa-gift text-accent" aria-hidden="true"></i>
-              Ambos reciben recompensas acumulables.
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
-          <ui-button size="lg" variant="primary" class="w-full sm:w-auto" (pressed)="scrollTo('registro')">
-            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-              {{ heroPrimaryCta }}
-            </ui-button>
-
-          <ui-button size="lg" variant="ghost" [routerLink]="['/dashboard']" class="w-full sm:w-auto">
-            <i class="fa-solid fa-store" aria-hidden="true"></i>
-            Ir a tienda
-          </ui-button>
-        </div>
-      </div>
-
-      <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 sm:p-8">
-        <div class="pointer-events-none absolute inset-0 bg-olive-10">
-        </div>
-
-        <div class="relative">
-          <h3 class="flex items-center gap-2 text-xl font-bold">
-            <i class="fa-solid fa-medal text-gold" aria-hidden="true"></i>
-            Beneficios del programa
-          </h3>
-          <p class="mt-2 text-sm text-gray-600">Diseñado para ser simple y transparente.</p>
-
-          <ul class="mt-6 space-y-3 text-gray-700">
-            <li class="flex items-center gap-2">
-              <i class="fa-solid fa-tag text-accent" aria-hidden="true"></i>
-              Descuentos por compra
-            </li>
-            <li class="flex items-center gap-2">
-              <i class="fa-solid fa-hand-holding-dollar text-gold" aria-hidden="true"></i>
-              Bonos por recomendación
-            </li>
-            <li class="flex items-center gap-2">
-              <i class="fa-solid fa-layer-group text-stone" aria-hidden="true"></i>
-              Estructura de niveles
-            </li>
-            <li class="flex items-center gap-2">
-              <i class="fa-solid fa-calendar-check text-accent" aria-hidden="true"></i>
-              Corte mensual y reportes
-            </li>
-          </ul>
-
-          <div
-            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full border border-gold-35 bg-gold-20 px-4 py-3 text-center font-bold text-on-gold">
-            <i class="fa-solid fa-star" aria-hidden="true"></i>
-            Bonos y puntos acumulables
-          </div>
-          
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- FOOTER -->
   <ui-footer logoMode="compact"
-    containerClass="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center"></ui-footer>
+    containerClass="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center">
+  </ui-footer>
 </section>

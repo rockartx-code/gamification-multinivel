@@ -64,12 +64,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   constructor(
     private readonly authService: AuthService,
     private readonly dashboardControl: UserDashboardControlService,
-    private readonly cartControl: CartControlService,
+    readonly cartControl: CartControlService,
     private readonly goalControl: GoalControlService,
     private readonly router: Router,
     private readonly api: ApiService,
     private readonly cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   readonly countdownLabel = signal('');
   activeFeaturedId = '';
@@ -104,6 +104,16 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   orders: AdminOrder[] = [];
   isOrdersLoading = false;
   expandedOrderId: string | null = null;
+  ordersPage = 0;
+  readonly ORDERS_PAGE_SIZE = 10;
+
+  get pagedOrders(): AdminOrder[] {
+    return this.orders.slice(this.ordersPage * this.ORDERS_PAGE_SIZE, (this.ordersPage + 1) * this.ORDERS_PAGE_SIZE);
+  }
+
+  get ordersTotalPages(): number {
+    return Math.max(1, Math.ceil(this.orders.length / this.ORDERS_PAGE_SIZE));
+  }
   isCommissionModalOpen = false;
   isCommissionSubmitting = false;
   isCommissionUploading = false;
@@ -157,7 +167,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private notificationQueue: PortalNotification[] = [];
 
 
-  
+
 
   get currentUser(): AuthUser | null {
     return this.authService.currentUser;
@@ -446,11 +456,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     // Campaigns with type 'multinivel' (or no type) go to the MLM info landing.
     // Products and 'producto' campaigns go to the store landing (/tienda).
     const isMultinivel = featuredId.startsWith('campaign:') && featured.campaignType !== 'producto';
-    if (isMultinivel) {
-      return `${baseUrl}/#/${userCode}${query}`;
-    }
-    return `${baseUrl}/#/tienda/${userCode}${query}`;
+    //if (isMultinivel) {
+    return `${baseUrl}/#/${userCode}`;
+    //}
+    //return `${baseUrl}/#/tienda/${userCode}${query}`;
   }
+
+
 
   get networkProgress(): number {
     return this.networkMembers.reduce((acc, member) => acc + member.spend, 0);
@@ -918,7 +930,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           this.cdr.markForCheck();
         },
         error: () => {
-          this.showToast('No se pudo cargar el dashboard.');
+          //this.showToast('No se pudo cargar el dashboard.');
           this.cdr.markForCheck();
         }
       });
@@ -1057,6 +1069,42 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   goalProgressLabel(goal: DashboardGoal): string {
     return this.dashboardControl.goalProgressLabel(goal);
+  }
+
+  get gaugeStyle(): string {
+
+    const result = this.goals
+      .filter((g): g is DashboardGoal =>
+        !g.isCountGoal &&
+        g.cart !== undefined &&
+        (g.base + g.cart) / g.target < 1
+      )
+      .reduce<DashboardGoal | null>((max, curr) => {
+        const currRatio = (curr.base + curr.cart!) / curr.target;
+
+        if (!max) return curr;
+
+        const maxRatio = (max.base + max.cart!) / max.target;
+
+        return currRatio > maxRatio ? curr : max;
+      }, null);
+
+
+    if (!result) {
+      return 'background: conic-gradient(rgba(0,0,0,0.10) 0deg, rgba(0,0,0,0.10) 360deg)';
+    }
+    const basePct = this.goalBasePercent(result);
+    const cartPct = this.goalCartPercent(result);
+    
+    const baseDeg = Math.round((basePct / 100) * 360);
+    const cartDeg = Math.round((cartPct / 100) * 360);
+    const totalDeg = baseDeg + cartDeg;
+    const empty = 'rgba(0,0,0,0.10)';
+    // base: color accent, cart: gold
+    if (cartDeg > 0) {
+      return `conic-gradient(var(--color-accent, #7a8e66) 0deg, var(--color-accent, #7a8e66) ${baseDeg}deg, var(--color-gold, #c8a65a) ${baseDeg}deg, var(--color-gold, #c8a65a) ${totalDeg}deg, ${empty} ${totalDeg}deg, ${empty} 360deg)`;
+    }
+    return `conic-gradient(var(--color-accent, #7a8e66) 0deg, var(--color-accent, #7a8e66) ${baseDeg}deg, ${empty} ${baseDeg}deg, ${empty} 360deg)`;
   }
 
 
@@ -1230,10 +1278,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const link = this.referralLink;
     const label = this.activeFeatured.label || 'Producto';
     const caption = (this.captionText.trim() || this.buildAutoCaption()).replace(`Pídelo aquí: ${link}`, '').replace(`Pidelo aqui: ${link}`, '').trim();
-
-    switch (channel) {
+    return { content: `${link}`, toast: 'Link y copy copiados. Pega en WhatsApp/Instagram.' };
+    /*switch (channel) {
       case 'whatsapp': {
-        // WhatsApp Web API: wa.me/?text= with pre-filled message
         const text = `*${label}*\n\n${caption}\n\n${link}`.trim();
         return { content: `https://wa.me/?text=${encodeURIComponent(text)}`, toast: 'Link de WhatsApp copiado. Pégalo en tu chat o abre el link.' };
       }
@@ -1248,7 +1295,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         const igText = `${caption}\n.\n.\n.\n🔗 ${link}`.trim();
         return { content: igText, toast: 'Descripción y link copiados. Pégalos en tu publicación de Instagram.' };
       }
-    }
+    }*/
   }
 
   copyAssetPath(): void {
@@ -1893,6 +1940,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.api.getOrders(String(this.currentUser.userId)).subscribe({
       next: (orders) => {
         this.orders = orders ?? [];
+        this.ordersPage = 0;
         this.isOrdersLoading = false;
         this.cdr.markForCheck();
       },
@@ -1930,14 +1978,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private logGoalProgress(): void {
-    console.log(
+    /*console.log(
       'Goal progress (%):',
       (this.goals || []).map((goal) => ({
         key: goal.key,
         base: this.goalBasePercent(goal),
         cart: this.goalCartPercent(goal)
       }))
-    );
+    );*/
     this.processGoals(this.goals);
   }
 

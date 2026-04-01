@@ -299,6 +299,7 @@ export class AdminComponent implements OnInit {
   isUploadingReceipt = false;
 
   readonly PAGE_SIZE = 15;
+  readonly ORDER_PAGE_SIZE = 10;
 
   orderSearch = '';
   orderPage = 0;
@@ -959,11 +960,11 @@ export class AdminComponent implements OnInit {
   }
 
   get pagedOrders(): AdminOrder[] {
-    return this.filteredOrdersStable.slice(this.orderPage * this.PAGE_SIZE, (this.orderPage + 1) * this.PAGE_SIZE);
+    return this.filteredOrdersStable.slice(this.orderPage * this.ORDER_PAGE_SIZE, (this.orderPage + 1) * this.ORDER_PAGE_SIZE);
   }
 
   get ordersTotalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredOrdersStable.length / this.PAGE_SIZE));
+    return Math.max(1, Math.ceil(this.filteredOrdersStable.length / this.ORDER_PAGE_SIZE));
   }
 
   get productOptions(): { value: number; label: string }[] {
@@ -2668,6 +2669,10 @@ export class AdminComponent implements OnInit {
     this.productForm = { ...this.productForm, variants };
   }
 
+  trackByVariantId(index: number, v: any): string {
+    return v.id;
+  }
+
   toggleProductCategoryId(catId: string): void {
     const ids = this.productForm.categoryIds;
     this.productForm = {
@@ -2678,6 +2683,10 @@ export class AdminComponent implements OnInit {
 
   get flatCategories(): ProductCategory[] {
     return this.adminData()?.categories ?? [];
+  }
+
+  onCategoriesChanged(cats: ProductCategory[]): void {
+    this.adminControl.updateCategories(cats);
   }
 
   get categoriesTree(): Array<ProductCategory & { depth: number }> {

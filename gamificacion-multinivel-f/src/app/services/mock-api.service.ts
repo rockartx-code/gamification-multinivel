@@ -55,6 +55,7 @@ import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  SponsorContact,
   UserDashboardData
 } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -1711,6 +1712,15 @@ export class MockApiService {
 
   listCategories(): Observable<ProductCategory[]> {
     return of([...this.categories]).pipe(delay(80));
+  }
+
+  getReferrerContact(_referrerId: string): Observable<SponsorContact> {
+    return of({
+      name: 'Ana Promotora',
+      email: 'ana@ejemplo.com',
+      phone: '+525512345678',
+      isDefault: false
+    }).pipe(delay(80));
   }
 
   saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {

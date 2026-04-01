@@ -30,7 +30,7 @@
   </div>
 
   <div class="divide-y divide-olive-20">
-    <ng-container *ngFor="let node of tree">
+    <ng-container *ngFor="let node of tree; trackBy: trackById">
       <ng-container *ngTemplateOutlet="categoryRow; context: { node: node }"></ng-container>
     </ng-container>
   </div>
@@ -91,7 +91,7 @@
   </div>
 
   <!-- Recurse children -->
-  <ng-container *ngFor="let child of node.children">
+  <ng-container *ngFor="let child of node.children; trackBy: trackById">
     <ng-container *ngTemplateOutlet="categoryRow; context: { node: child }"></ng-container>
   </ng-container>
 </ng-template>

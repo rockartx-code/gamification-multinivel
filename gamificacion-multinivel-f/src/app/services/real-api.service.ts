@@ -57,6 +57,7 @@ import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  SponsorContact,
   UserDashboardData
 } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -547,6 +548,12 @@ export class RealApiService {
     return this.http
       .get<{ categories: ProductCategory[] }>(`${this.baseUrl}/product-categories`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.categories));
+  }
+
+  getReferrerContact(referrerId: string): Observable<SponsorContact> {
+    return this.http
+      .get<{ referrer: SponsorContact }>(`${this.baseUrl}/referrer/${encodeURIComponent(referrerId)}`)
+      .pipe(map((r) => r.referrer));
   }
 
   saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {

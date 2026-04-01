@@ -55,6 +55,7 @@ import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  SponsorContact,
   UserDashboardData
 } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
@@ -186,6 +187,10 @@ export class ApiService {
 
   listCategories(): Observable<ProductCategory[]> {
     return this.resolveApi().listCategories();
+  }
+
+  getReferrerContact(referrerId: string): Observable<SponsorContact> {
+    return this.resolveApi().getReferrerContact(referrerId);
   }
 
   saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
