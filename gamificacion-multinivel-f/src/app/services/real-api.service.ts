@@ -380,7 +380,7 @@ export class RealApiService {
 
   getCustomer(customerId: string): Observable<CustomerProfile> {
     return this.http
-      .get<{ customer: Record<string, unknown> }>(`${this.baseUrl}/customers/${encodeURIComponent(customerId)}`)
+      .get<{ customer: Record<string, unknown> }>(`${this.baseUrl}/customers/${encodeURIComponent(customerId)}`, { headers: this.actorHeaders() })
       .pipe(map((response) => this.mapCustomerProfile(response.customer ?? {})));
   }
 
@@ -696,7 +696,7 @@ export class RealApiService {
 
   getBusinessConfig(): Observable<AppBusinessConfig> {
     return this.http
-      .get<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, { headers: this.actorHeaders() })
+      .get<{ config: AppBusinessConfig }>(`${this.baseUrl}/catalog/config/app`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.config));
   }
 
@@ -708,7 +708,7 @@ export class RealApiService {
 
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.http
-      .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/config/app`, payload, { headers: this.actorHeaders() })
+      .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/catalog/config/app`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.config));
   }
 

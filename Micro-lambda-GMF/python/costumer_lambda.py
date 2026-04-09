@@ -406,11 +406,14 @@ def _load_month_states(associate_ids, month_key: str) -> dict:
     entity_ids = []
     seen = set()
     for associate_id in associate_ids or []:
-        cid = str(associate_id or "").strip()
+        cid = utils._customer_id_str(associate_id)
         if not cid or cid in seen:
             continue
         seen.add(cid)
-        entity_ids.append(f"{cid}#{month_key}")
+        entity_id = utils._associate_month_entity_id(cid, month_key)
+        if not entity_id:
+            continue
+        entity_ids.append(entity_id)
 
     states = utils._batch_get_entities("ASSOCIATE_MONTH", entity_ids)
     return {
@@ -422,10 +425,10 @@ def _load_month_states(associate_ids, month_key: str) -> dict:
 
 def _get_month_state(associate_id, month_key: str, states_by_associate=None) -> dict:
     if isinstance(states_by_associate, dict):
-        cached = states_by_associate.get(str(associate_id or ""))
+        cached = states_by_associate.get(utils._customer_id_str(associate_id))
         if cached:
             return cached
-    state = utils._get_by_id("ASSOCIATE_MONTH", f"{associate_id}#{month_key}")
+    state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(associate_id, month_key))
     if state:
         return state
     now = utils._now_iso()

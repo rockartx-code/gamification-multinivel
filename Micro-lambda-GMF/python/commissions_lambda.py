@@ -55,7 +55,7 @@ def _mxn_to_vp(net_mxn: float, mxn_per_vp: float) -> float:
 
 def _calc_vp(customer_id: str, month_key: str, mxn_per_vp: float) -> float:
     """Volumen Personal: compras propias del mes expresadas en VP."""
-    state = utils._get_by_id("ASSOCIATE_MONTH", f"{customer_id}#{month_key}")
+    state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key))
     net_mxn = float(utils._to_decimal(state.get("netVolume", 0)) if state else 0)
     return _mxn_to_vp(net_mxn, mxn_per_vp)
 
@@ -109,7 +109,7 @@ def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: in
         if cid in visited or depth > max_levels:
             continue
         visited.add(cid)
-        state = utils._get_by_id("ASSOCIATE_MONTH", f"{cid}#{month_key}")
+        state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, month_key))
         total_mxn += float(utils._to_decimal(state.get("netVolume", 0)) if state else 0)
         if depth < max_levels:
             for sid, c in id_map.items():
@@ -495,10 +495,7 @@ def handle_apply_rewards(order_id):
     # 1. Actualizar volumen personal del comprador (solo monto comisionable)
     buyer_id = order.get("customerId")
     if order.get("buyerType") in ["associate", "registered"] and buyer_id:
-        mid = f"{buyer_id}#{month_key}"
-        utils._update_by_id("ASSOCIATE_MONTH", mid,
-                           "SET netVolume = if_not_exists(netVolume, :z) + :v",
-                           {":z": utils.D_ZERO, ":v": commissionable_net})
+        utils._increment_associate_month_net_volume(buyer_id, month_key, commissionable_net)
 
     # 2. Repartir comisiones al upline
     chain = _get_upline_chain(order['customerId'])
@@ -519,7 +516,7 @@ def handle_apply_rewards(order_id):
         amount = (commissionable_net * rate).quantize(utils.D_CENT)
 
         # Verificar activación (ahora en VP)
-        m_state = utils._get_by_id("ASSOCIATE_MONTH", f"{b_id}#{month_key}")
+        m_state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(b_id, month_key))
         beneficiary_vp = _mxn_to_vp(float(utils._to_decimal(m_state.get("netVolume", 0)) if m_state else 0), mxn_per_vp)
         is_active = beneficiary_vp >= activation_vp
 
@@ -648,7 +645,7 @@ def handle_upload_receipt(body) -> dict:
 
 def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
     """GET /associates/{id}/month/{monthKey}"""
-    item = utils._get_by_id("ASSOCIATE_MONTH", f"{associate_id}#{month_key}")
+    item = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(associate_id, month_key))
     if not item:
         item = {
             "entityType": "associateMonth", "associateId": associate_id,
@@ -795,9 +792,9 @@ def lambda_handler(event, context):
                 if err: return err
                 return handle_admin_receipt(body)
 
-        # /config/rewards  y  /config/app
-        if root == "config" and len(segments) > 1:
-            sub = segments[1]
+        # /catalog/config/rewards  y  /catalog/config/app
+        if root == "catalog" and len(segments) > 2 and segments[1] == "config":
+            sub = segments[2]
             if sub == "rewards":
                 if method == "GET":
                     err = utils._require_admin(headers, "access_screen_settings")

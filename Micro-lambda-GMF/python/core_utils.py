@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import time
 import uuid
 import functools
 from datetime import datetime, timezone
@@ -19,8 +20,8 @@ from botocore.exceptions import ClientError
 TABLE_NAME = os.getenv("TABLE_NAME", "multinivel")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 BUCKET_NAME = os.getenv("BUCKET_NAME", "findingu-ventas")
-
 _dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+
 _table = _dynamodb.Table(TABLE_NAME)
 _ddb_client = _table.meta.client
 _ddb_serializer = TypeSerializer()
@@ -33,6 +34,7 @@ D_CENT = Decimal("0.01")
 MAX_NETWORK_DEPTH = 3
 NETWORK_TREE_ID = "customers"
 NETWORK_TREE_ROOT_KEY = "__ROOT__"
+NETWORK_TREE_SK = "TREE"
 
 # ---------------------------------------------------------------------------
 # Helpers de Tipos y JSON
@@ -132,6 +134,8 @@ def _put_entity(entity: str, entity_id: Any, item: dict, created_at_iso: Optiona
     return main_item
 
 def _get_by_id(entity: str, entity_id: Any) -> Optional[dict]:
+    if str(entity or "").upper() == "ASSOCIATE_MONTH":
+        return _get_associate_month_by_id(entity_id)
     resp_ref = _table.get_item(Key={"PK": _ref_pk(entity, entity_id), "SK": "REF"})
     ref = resp_ref.get("Item")
     if not ref: return None
@@ -168,11 +172,26 @@ def _query_bucket(entity: str, limit: Optional[int] = None, forward: bool = Fals
         query_kwargs["ExclusiveStartKey"] = lek
     return items
 
-def _ddb_serialize_item(item: dict) -> dict:
-    return {key: _ddb_serializer.serialize(value) for key, value in item.items()}
+def _log_get_item_failure(event: str, key: dict, error: Exception, **extra) -> None:
+    payload = {
+        "event": event,
+        "table": TABLE_NAME,
+        "key": _normalize_ddb_key(key) or key,
+        "errorType": error.__class__.__name__,
+        "message": str(error),
+    }
+    if extra:
+        payload.update(extra)
+    print(json.dumps(payload, default=_json_default))
 
-def _ddb_deserialize_item(item: dict) -> dict:
-    return {key: _ddb_deserializer.deserialize(value) for key, value in item.items()}
+def _safe_get_item(key: dict, log_event: Optional[str] = None, **extra) -> Optional[dict]:
+    try:
+        resp = _table.get_item(Key=key)
+    except Exception as ex:
+        if log_event:
+            _log_get_item_failure(log_event, key, ex, **extra)
+        raise
+    return resp.get("Item")
 
 def _normalize_ddb_key(key: dict) -> Optional[dict]:
     if not isinstance(key, dict):
@@ -204,59 +223,91 @@ def _dedupe_ddb_keys(keys: List[dict]) -> List[dict]:
 
     return normalized
 
-def _get_items_individually(keys: List[dict]) -> List[dict]:
-    items: List[dict] = []
-    for key in keys:
-        resp = _table.get_item(Key=key)
-        item = resp.get("Item")
-        if item:
-            items.append(item)
-    return items
+def _get_item_by_key(key: dict) -> Optional[dict]:
+    normalized_key = _normalize_ddb_key(key)
+    if not normalized_key:
+        return None
+    item = _safe_get_item(normalized_key, "ddb_parallel_get_item_failed")
+    if not item:
+        return None
+    return item
+
+def _ddb_serialize_key(key: dict) -> dict:
+    return {key_name: _ddb_serializer.serialize(value) for key_name, value in key.items()}
+
+def _ddb_deserialize_item(item: dict) -> dict:
+    return {key_name: _ddb_deserializer.deserialize(value) for key_name, value in item.items()}
+
+def _ddb_key_request_shape(keys: List[dict]) -> str:
+    if not keys:
+        return "empty"
+    sample = keys[0]
+    if not isinstance(sample, dict):
+        return "invalid"
+    if all(isinstance(value, dict) and len(value) == 1 for value in sample.values()):
+        return "attribute_value"
+    return "plain"
 
 def _batch_get_items(keys: List[dict]) -> List[dict]:
     normalized_keys = _dedupe_ddb_keys(keys)
     if not normalized_keys:
         return []
 
-    items: List[dict] = []
+    loaded_items: List[dict] = []
     pending = list(normalized_keys)
 
     while pending:
         chunk = pending[:100]
         pending = pending[100:]
-        request = {TABLE_NAME: {"Keys": [_ddb_serialize_item(key) for key in chunk]}}
+        
+        # 1. ¡CAMBIO AQUÍ! Pasamos el chunk directo, SIN llamar a _ddb_serialize_key
+        request = {
+            TABLE_NAME: {
+                "Keys": chunk,
+            }
+        }
 
+        retries = 0
         while True:
             try:
-                resp = _ddb_client.batch_get_item(RequestItems=request)
+                # 2. ¡CAMBIO AQUÍ! Usamos _dynamodb (Resource) en vez de _ddb_client
+                resp = _dynamodb.batch_get_item(RequestItems=request)
             except ClientError as ex:
                 error = ex.response.get("Error", {}) if isinstance(ex.response, dict) else {}
-                if error.get("Code") != "ValidationException":
-                    raise
                 print(json.dumps({
-                    "event": "batch_get_validation_fallback",
+                    "event": "ddb_batch_get_failed",
                     "table": TABLE_NAME,
+                    "errorType": error.get("Code") or ex.__class__.__name__,
                     "message": error.get("Message") or str(ex),
+                    "requestKeyShape": _ddb_key_request_shape(request.get(TABLE_NAME, {}).get("Keys", [])),
                     "keys": chunk,
                 }, default=_json_default))
-                items.extend(_get_items_individually(chunk))
-                break
+                raise
 
+            # 3. ¡CAMBIO AQUÍ! _dynamodb ya devuelve diccionarios normales, NO usamos _ddb_deserialize_item
             raw_items = resp.get("Responses", {}).get(TABLE_NAME, [])
-            items.extend(_ddb_deserialize_item(item) for item in raw_items)
+            loaded_items.extend(raw_items)
 
-            unprocessed = resp.get("UnprocessedKeys", {}).get(TABLE_NAME, {}).get("Keys", [])
-            if not unprocessed:
+            unprocessed = resp.get("UnprocessedKeys", {}).get(TABLE_NAME, {})
+            unprocessed_keys = unprocessed.get("Keys", [])
+            if not unprocessed_keys:
                 break
-            request = {TABLE_NAME: {"Keys": unprocessed}}
 
-    return items
+            retries += 1
+            time.sleep(min(0.05 * (2 ** (retries - 1)), 1.0))
+            request = {
+                TABLE_NAME: {
+                    "Keys": unprocessed_keys,
+                }
+            }
 
+    return loaded_items
 def _batch_get_entities(entity: str, entity_ids: List[Any]) -> List[dict]:
+    entity = str(entity or "").upper()
     normalized_ids: List[Any] = []
     seen = set()
     for raw_id in entity_ids or []:
-        entity_id = _customer_entity_id(raw_id) if entity.upper() == "CUSTOMER" else raw_id
+        entity_id = _normalize_batch_entity_id(entity, raw_id)
         dedupe_key = json.dumps(entity_id, default=str)
         if entity_id in (None, "") or dedupe_key in seen:
             continue
@@ -265,6 +316,42 @@ def _batch_get_entities(entity: str, entity_ids: List[Any]) -> List[dict]:
 
     if not normalized_ids:
         return []
+
+    if entity == "ASSOCIATE_MONTH":
+        direct_items = _batch_get_items([
+            _associate_month_key(entity_id)
+            for entity_id in normalized_ids
+        ])
+        loaded_ids = {
+            _associate_month_entity_id(item.get("associateId"), str(item.get("monthKey") or ""))
+            for item in direct_items
+            if isinstance(item, dict)
+        }
+        missing_ids = [entity_id for entity_id in normalized_ids if entity_id not in loaded_ids]
+        if not missing_ids:
+            return direct_items
+
+        legacy_items = _batch_get_items([
+            {"PK": _ref_pk(entity, entity_id), "SK": "REF"}
+            for entity_id in missing_ids
+        ])
+        if not legacy_items:
+            return direct_items
+
+        main_items = _batch_get_items([
+            {"PK": ref_item["refPK"], "SK": ref_item["refSK"]}
+            for ref_item in legacy_items
+            if ref_item.get("refPK") and ref_item.get("refSK")
+        ])
+        migrated_main_items = [
+            _migrate_associate_month_item(
+                _associate_month_entity_id(item.get("associateId"), str(item.get("monthKey") or "")),
+                item,
+            )
+            for item in main_items
+            if isinstance(item, dict)
+        ]
+        return direct_items + [item for item in migrated_main_items if item]
 
     ref_items = _batch_get_items([
         {"PK": _ref_pk(entity, entity_id), "SK": "REF"}
@@ -350,6 +437,117 @@ def _customer_id_str(raw_id: Any) -> str:
         return ""
     return str(value)
 
+def _associate_month_entity_id(associate_id: Any, month_key: str) -> str:
+    customer_id = _customer_id_str(associate_id)
+    normalized_month_key = str(month_key or "").strip()
+    if not customer_id or not normalized_month_key:
+        return ""
+    return f"{customer_id}#{normalized_month_key}"
+
+def _associate_month_key(entity_id: str) -> dict:
+    normalized_entity_id = str(entity_id or "").strip()
+    return {
+        "PK": "ASSOCIATE_MONTH",
+        "SK": normalized_entity_id,
+    }
+
+def _migrate_associate_month_item(entity_id: str, item: Optional[dict]) -> Optional[dict]:
+    if not item or not isinstance(item, dict):
+        return None
+
+    key = _associate_month_key(entity_id)
+    if item.get("PK") == key["PK"] and item.get("SK") == key["SK"]:
+        return item
+
+    associate_id, _, month_key = str(entity_id).partition("#")
+    migrated_item = dict(item)
+    migrated_item.update(key)
+    migrated_item["entityType"] = migrated_item.get("entityType") or "associateMonth"
+    migrated_item["associateId"] = migrated_item.get("associateId") or associate_id
+    migrated_item["monthKey"] = migrated_item.get("monthKey") or month_key
+    migrated_item["createdAt"] = migrated_item.get("createdAt") or _now_iso()
+    migrated_item["updatedAt"] = migrated_item.get("updatedAt") or migrated_item["createdAt"]
+    _table.put_item(Item=migrated_item)
+    _put_associate_month_ref(entity_id, str(migrated_item.get("updatedAt") or _now_iso()))
+    return migrated_item
+
+def _get_associate_month_by_id(entity_id: Any) -> Optional[dict]:
+    normalized_entity_id = _normalize_batch_entity_id("ASSOCIATE_MONTH", entity_id)
+    if not normalized_entity_id:
+        return None
+
+    direct_item = _safe_get_item(
+        _associate_month_key(normalized_entity_id),
+        "associate_month_get_item_failed",
+        entityId=normalized_entity_id,
+    )
+    if direct_item:
+        return direct_item
+
+    resp_ref = _table.get_item(Key={"PK": _ref_pk("ASSOCIATE_MONTH", normalized_entity_id), "SK": "REF"})
+    ref = resp_ref.get("Item")
+    if not ref:
+        return None
+    resp_main = _table.get_item(Key={"PK": ref["refPK"], "SK": ref["refSK"]})
+    return _migrate_associate_month_item(normalized_entity_id, resp_main.get("Item"))
+
+def _put_associate_month_ref(entity_id: str, updated_at: str) -> None:
+    _table.put_item(Item={
+        "PK": _ref_pk("ASSOCIATE_MONTH", entity_id),
+        "SK": "REF",
+        "entityId": entity_id,
+        "refPK": "ASSOCIATE_MONTH",
+        "refSK": entity_id,
+        "updatedAt": updated_at,
+    })
+
+def _increment_associate_month_net_volume(associate_id: Any, month_key: str, delta: Any) -> dict:
+    entity_id = _associate_month_entity_id(associate_id, month_key)
+    if not entity_id:
+        raise ValueError("ASSOCIATE_MONTH_INVALID_ID")
+
+    normalized_associate_id = _customer_id_str(associate_id)
+    now = _now_iso()
+    resp = _table.update_item(
+        Key=_associate_month_key(entity_id),
+        UpdateExpression=(
+            "SET entityType = if_not_exists(entityType, :entity_type), "
+            "associateId = if_not_exists(associateId, :associate_id), "
+            "monthKey = if_not_exists(monthKey, :month_key), "
+            "createdAt = if_not_exists(createdAt, :created_at), "
+            "updatedAt = :updated_at, "
+            "netVolume = if_not_exists(netVolume, :zero) + :delta, "
+            "isActive = if_not_exists(isActive, :inactive)"
+        ),
+        ExpressionAttributeValues={
+            ":entity_type": "associateMonth",
+            ":associate_id": normalized_associate_id,
+            ":month_key": str(month_key or "").strip(),
+            ":created_at": now,
+            ":updated_at": now,
+            ":zero": D_ZERO,
+            ":delta": _to_decimal(delta),
+            ":inactive": False,
+        },
+        ReturnValues="ALL_NEW",
+    )
+    _put_associate_month_ref(entity_id, now)
+    return resp.get("Attributes") or {}
+
+def _normalize_batch_entity_id(entity: str, raw_id: Any) -> Any:
+    entity = str(entity or "").upper()
+    if entity == "CUSTOMER":
+        return _customer_entity_id(raw_id)
+    if entity == "ASSOCIATE_MONTH":
+        raw_value = str(raw_id or "").strip()
+        if not raw_value:
+            return ""
+        associate_id, separator, month_key = raw_value.partition("#")
+        if not separator:
+            return raw_value
+        return _associate_month_entity_id(associate_id, month_key)
+    return raw_id
+
 def _customer_id_list(raw_ids: Any) -> List[str]:
     if not isinstance(raw_ids, list):
         return []
@@ -422,22 +620,67 @@ def _build_network_tree_payload(customers: List[dict]) -> dict:
         "parentByChild": parent_by_child,
     }
 
-def _put_network_tree(tree_payload: dict, updated_at: Optional[str] = None) -> dict:
-    timestamp = updated_at or _now_iso()
-    payload = dict(tree_payload or {})
-    payload["updatedAt"] = timestamp
-    payload["customerCount"] = len(payload.get("customerIds") or [])
-    return _put_entity("NETWORK_TREE", NETWORK_TREE_ID, payload, created_at_iso=timestamp)
+def _network_tree_key(tree_id: str = NETWORK_TREE_ID) -> dict:
+    normalized_tree_id = str(tree_id or NETWORK_TREE_ID).strip() or NETWORK_TREE_ID
+    return {
+        "PK": f"NETWORK_TREE#{normalized_tree_id}",
+        "SK": NETWORK_TREE_SK,
+    }
 
-def _get_network_tree(tree_id: str = NETWORK_TREE_ID) -> Optional[dict]:
-    tree = _get_by_id("NETWORK_TREE", tree_id)
-    if not tree:
+def _normalize_network_tree_item(tree: Optional[dict]) -> Optional[dict]:
+    if not tree or not isinstance(tree, dict):
         return None
     tree.setdefault("childrenByParent", {NETWORK_TREE_ROOT_KEY: []})
     tree.setdefault("parentByChild", {})
     tree.setdefault("customerIds", [])
     tree.setdefault("rootIds", list(tree["childrenByParent"].get(NETWORK_TREE_ROOT_KEY, [])))
     return tree
+
+def _get_network_tree_legacy(tree_id: str = NETWORK_TREE_ID) -> Optional[dict]:
+    ref_key = {"PK": _ref_pk("NETWORK_TREE", tree_id), "SK": "REF"}
+    ref = _safe_get_item(ref_key, "network_tree_legacy_ref_get_item_failed", treeId=tree_id)
+    if not ref:
+        return None
+
+    main_key = {"PK": ref.get("refPK"), "SK": ref.get("refSK")}
+    tree = _safe_get_item(main_key, "network_tree_legacy_main_get_item_failed", treeId=tree_id)
+    return _normalize_network_tree_item(tree)
+
+def _put_network_tree(tree_payload: dict, updated_at: Optional[str] = None) -> dict:
+    timestamp = updated_at or _now_iso()
+    payload = dict(tree_payload or {})
+    payload.update(_network_tree_key(payload.get("treeId") or NETWORK_TREE_ID))
+    payload["createdAt"] = payload.get("createdAt") or timestamp
+    payload["updatedAt"] = timestamp
+    payload["customerCount"] = len(payload.get("customerIds") or [])
+    _table.put_item(Item=payload)
+    return payload
+
+def _get_network_tree(tree_id: str = NETWORK_TREE_ID) -> Optional[dict]:
+    key = _network_tree_key(tree_id)
+    tree = _safe_get_item(
+        key,
+        "network_tree_get_item_failed",
+        treeId=tree_id,
+        keyPattern="PK=NETWORK_TREE#{treeId}, SK=TREE",
+    )
+    if tree:
+        return _normalize_network_tree_item(tree)
+
+    legacy_tree = _get_network_tree_legacy(tree_id)
+    if not legacy_tree:
+        return None
+
+    migrated_tree = _put_network_tree(
+        legacy_tree,
+        updated_at=legacy_tree.get("updatedAt") or legacy_tree.get("createdAt") or _now_iso(),
+    )
+    print(json.dumps({
+        "event": "network_tree_migrated_to_singleton_key",
+        "treeId": tree_id,
+        "key": key,
+    }, default=_json_default))
+    return _normalize_network_tree_item(migrated_tree)
 
 def _network_tree_descendant_ids(tree: Optional[dict], customer_id: Any, max_depth: Optional[int] = None) -> List[str]:
     if not tree or not isinstance(tree, dict):
