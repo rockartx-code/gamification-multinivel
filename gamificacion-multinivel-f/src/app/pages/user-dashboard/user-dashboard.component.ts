@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -115,6 +115,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   expandedOrderId: string | null = null;
   ordersPage = 0;
   readonly ORDERS_PAGE_SIZE = 10;
+  private readonly INITIAL_ORDERS_PREFETCH_LAST_PAGE = 2;
+  private readonly ordersCache = new Map<number, AdminOrder[]>();
+  private readonly ordersPageTokens = new Map<number, string | null>([[0, null]]);
+  private readonly ordersPageRequests = new Map<number, Promise<boolean>>();
+  private ordersLastPageIndex: number | null = null;
 
   // El backend ya devuelve la página correcta; mostramos el set completo recibido
   get pagedOrders(): AdminOrder[] {
@@ -122,8 +127,22 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get ordersTotalPages(): number {
-    // Sin total del backend, usamos indicador simple
-    return this.orders.length === this.ORDERS_PAGE_SIZE ? this.ordersPage + 2 : this.ordersPage + 1;
+    if (this.ordersCache.size === 0) {
+      return 1;
+    }
+    if (this.ordersLastPageIndex !== null) {
+      return this.ordersLastPageIndex + 1;
+    }
+    const loadedPages = Array.from(this.ordersCache.keys());
+    const highestLoadedPage = loadedPages.length > 0 ? Math.max(...loadedPages) : 0;
+    return highestLoadedPage + 2;
+  }
+
+  get canNextOrdersPage(): boolean {
+    if (this.ordersLastPageIndex !== null) {
+      return this.ordersPage < this.ordersLastPageIndex;
+    }
+    return this.ordersCache.has(this.ordersPage + 1) || this.ordersPageTokens.has(this.ordersPage + 1);
   }
   isCommissionModalOpen = false;
   isCommissionSubmitting = false;
@@ -247,10 +266,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       void this.router.navigate(['/perfil']);
       this.closeMobileNav();
       return;
-    }
-    // Carga lazy de órdenes solo cuando el usuario abre esa sección
-    if (sectionId === 'ordenes' && this.orders.length === 0 && !this.isOrdersLoading) {
-      this.loadOrders();
     }
     this.scrollToSection(sectionId);
     this.closeMobileNav();
@@ -1066,6 +1081,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         }
       });
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
+    if (!this.isGuest && this.currentUser?.userId) {
+      void this.loadOrders();
+    }
   }
 
   ngAfterViewInit(): void {
@@ -2110,26 +2128,154 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   loadOrders(page = 0): void {
-    if (!this.currentUser?.userId) {
-      return;
-    }
-    this.isOrdersLoading = true;
-    this.ordersPage = page;
-    this.api.getOrders(String(this.currentUser.userId), { limit: this.ORDERS_PAGE_SIZE, page }).subscribe({
-      next: (orders) => {
-        this.orders = orders ?? [];
-        this.isOrdersLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.isOrdersLoading = false;
-        this.cdr.markForCheck();
-      }
-    });
+    void this.showOrdersPage(page);
   }
 
   loadOrdersPage(page: number): void {
+    if (page < 0) {
+      return;
+    }
+    if (this.ordersLastPageIndex !== null && page > this.ordersLastPageIndex) {
+      return;
+    }
     this.loadOrders(page);
+  }
+
+  private async showOrdersPage(page: number): Promise<void> {
+    if (!this.currentUser?.userId || page < 0) {
+      return;
+    }
+    if (this.ordersLastPageIndex !== null && page > this.ordersLastPageIndex) {
+      return;
+    }
+
+    this.ordersPage = page;
+    this.expandedOrderId = null;
+
+    if (this.ordersCache.has(page)) {
+      this.applyOrdersPage(page);
+      void this.prefetchOrdersThrough(page + 2);
+      return;
+    }
+
+    this.isOrdersLoading = true;
+    this.cdr.markForCheck();
+    const loaded = await this.ensureOrdersPage(page, true);
+    if (loaded) {
+      void this.prefetchOrdersThrough(Math.max(page + 2, this.INITIAL_ORDERS_PREFETCH_LAST_PAGE));
+      return;
+    }
+
+    this.isOrdersLoading = false;
+    this.cdr.markForCheck();
+  }
+
+  private async prefetchOrdersThrough(targetPage: number): Promise<void> {
+    if (!this.currentUser?.userId) {
+      return;
+    }
+
+    const finalTarget = this.ordersLastPageIndex !== null
+      ? Math.min(targetPage, this.ordersLastPageIndex)
+      : targetPage;
+
+    for (let page = 0; page <= finalTarget; page += 1) {
+      const loaded = await this.ensureOrdersPage(page, false);
+      if (!loaded && this.ordersLastPageIndex !== null && page > this.ordersLastPageIndex) {
+        break;
+      }
+    }
+  }
+
+  private async ensureOrdersPage(page: number, interactive: boolean): Promise<boolean> {
+    if (page < 0) {
+      return false;
+    }
+    if (this.ordersCache.has(page)) {
+      if (interactive) {
+        this.applyOrdersPage(page);
+      }
+      return true;
+    }
+    if (this.ordersLastPageIndex !== null && page > this.ordersLastPageIndex) {
+      return false;
+    }
+    if (!this.ordersPageTokens.has(page) && page > 0) {
+      const previousLoaded = await this.ensureOrdersPage(page - 1, false);
+      if (!previousLoaded && !this.ordersPageTokens.has(page)) {
+        return false;
+      }
+    }
+    if (!this.ordersPageTokens.has(page)) {
+      return false;
+    }
+    return this.fetchOrdersPage(page, interactive);
+  }
+
+  private async fetchOrdersPage(page: number, interactive: boolean): Promise<boolean> {
+    const currentUserId = this.currentUser?.userId;
+    if (!currentUserId) {
+      return false;
+    }
+
+    const existingRequest = this.ordersPageRequests.get(page);
+    if (existingRequest) {
+      const loaded = await existingRequest;
+      if (interactive && loaded) {
+        this.applyOrdersPage(page);
+      }
+      return loaded;
+    }
+
+    const nextToken = this.ordersPageTokens.get(page) ?? undefined;
+    const request = firstValueFrom(
+      this.api.getOrders(String(currentUserId), {
+        limit: this.ORDERS_PAGE_SIZE,
+        nextToken
+      })
+    )
+      .then((response) => {
+        const orders = response.orders ?? [];
+        this.ordersCache.set(page, orders);
+
+        const responseNextToken = typeof response.nextToken === 'string' && response.nextToken.trim().length > 0
+          ? response.nextToken.trim()
+          : null;
+
+        if (responseNextToken) {
+          this.ordersPageTokens.set(page + 1, responseNextToken);
+          if (this.ordersLastPageIndex === page) {
+            this.ordersLastPageIndex = null;
+          }
+        } else {
+          this.ordersPageTokens.delete(page + 1);
+          this.ordersLastPageIndex = page;
+        }
+
+        if (interactive) {
+          this.applyOrdersPage(page);
+        }
+
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        this.ordersPageRequests.delete(page);
+        if (interactive) {
+          this.isOrdersLoading = false;
+          this.cdr.markForCheck();
+        }
+      });
+
+    this.ordersPageRequests.set(page, request);
+    return request;
+  }
+
+  private applyOrdersPage(page: number): void {
+    this.ordersPage = page;
+    this.orders = this.ordersCache.get(page) ?? [];
+    this.isOrdersLoading = false;
+    this.cdr.markForCheck();
   }
 
   private copyToClipboard(text: string, toastMessage: string): void {

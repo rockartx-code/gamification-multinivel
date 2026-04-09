@@ -8,6 +8,11 @@ from datetime import datetime, timezone
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 _s3 = boto3.client("s3", region_name=utils.AWS_REGION)
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
+DEFAULT_SPONSOR = {
+    "name": "FindingU",
+    "email": "coach@findingu.com.mx",
+    "phone": "+52 1 55 1498 2351",
+}
 
 _GOAL_EMAIL_BASE_CSS = """
 body { margin:0; padding:0; background-color:#F9F7F2; font-family:'Segoe UI',Arial,sans-serif; }
@@ -712,19 +717,22 @@ def _active_notifications_for_customer(customer_id) -> list:
 
 
 def _find_effective_sponsor(customer) -> dict:
+    default_sponsor = {**DEFAULT_SPONSOR, "isDefault": True}
     if not customer or not isinstance(customer, dict):
-        return {"name": None, "phone": None, "whatsapp": None}
+        return {**default_sponsor, "whatsapp": "https://wa.me/5215514982351"}
     leader_id = customer.get("leaderId")
     if leader_id in (None, ""):
-        return {"name": None, "phone": None, "whatsapp": None}
+        return {**default_sponsor, "whatsapp": "https://wa.me/5215514982351"}
     sponsor = utils._get_by_id("CUSTOMER", int(leader_id))
     if not sponsor:
-        return {"name": None, "phone": None, "whatsapp": None}
-    phone = sponsor.get("phone") or ""
+        return {**default_sponsor, "whatsapp": "https://wa.me/5215514982351"}
+    phone = sponsor.get("phone") or DEFAULT_SPONSOR["phone"]
     return {
-        "name": sponsor.get("name"),
+        "name": sponsor.get("name") or DEFAULT_SPONSOR["name"],
+        "email": sponsor.get("email") or DEFAULT_SPONSOR["email"],
         "phone": phone,
-        "whatsapp": f"https://wa.me/52{phone}" if phone else None,
+        "whatsapp": f"https://wa.me/52{phone}" if phone else "https://wa.me/5215514982351",
+        "isDefault": False,
     }
 
 
@@ -742,13 +750,19 @@ def handle_get_public_sponsor(sponsor_id):
             sponsor = None
 
     if not sponsor:
-        return utils._json_response(404, {"message": "Sponsor no encontrado"})
+        return utils._json_response(200, {
+            "sponsor": {
+                **DEFAULT_SPONSOR,
+                "isDefault": True,
+            }
+        })
 
     return utils._json_response(200, {
         "sponsor": {
-            "name": sponsor.get("name") or "",
-            "email": sponsor.get("email") or "",
-            "phone": sponsor.get("phone") or "",
+            "name": sponsor.get("name") or DEFAULT_SPONSOR["name"],
+            "email": sponsor.get("email") or DEFAULT_SPONSOR["email"],
+            "phone": sponsor.get("phone") or DEFAULT_SPONSOR["phone"],
+            "isDefault": False,
         }
     })
 

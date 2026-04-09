@@ -108,16 +108,10 @@
         <div class="lg:sticky lg:top-6">
           <ng-container *ngTemplateOutlet="formBlock"></ng-container>
           <!-- Sellos de confianza -->
-          <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-gray-500">
-            <div class="rounded-xl border border-olive-20 bg-ivory-80 px-2 py-3">
-              <i class="fa-solid fa-shield-halved mb-1 block text-accent" aria-hidden="true"></i>Sin riesgo
-            </div>
-            <div class="rounded-xl border border-olive-20 bg-ivory-80 px-2 py-3">
-              <i class="fa-solid fa-bolt mb-1 block text-gold" aria-hidden="true"></i>Gratis
-            </div>
-            <div class="rounded-xl border border-olive-20 bg-ivory-80 px-2 py-3">
-              <i class="fa-solid fa-heart mb-1 block text-rose-400" aria-hidden="true"></i>Con apoyo
-            </div>
+          <div class="mt-4 grid grid-cols-3 gap-2">
+            <feature-badge icon="fa-solid fa-shield-halved text-accent" label="Sin riesgo"></feature-badge>
+            <feature-badge icon="fa-solid fa-bolt text-gold" label="Gratis"></feature-badge>
+            <feature-badge icon="fa-solid fa-heart text-rose-400" label="Con apoyo"></feature-badge>
           </div>
         </div>
       </div>
@@ -148,15 +142,12 @@
             encuentra claridad mental y construye la paz financiera que tu familia merece.
           </p>
           <div class="flex flex-wrap gap-4">
-            <a (click)="scrollTo('registro', $event)" href="#registro"
-              class="inline-flex items-center gap-2 rounded-xl bg-gold px-7 py-3.5 text-sm font-bold text-white shadow-lg transition hover:opacity-90">
-              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+            <ui-button variant="primary" size="lg" iconClass="fa-solid fa-user-plus" (pressed)="scrollTo('registro', $event)">
               Unirme ahora
-            </a>
-            <a (click)="scrollTo('plan', $event)" href="#plan"
-              class="inline-flex items-center gap-2 rounded-xl border border-gold px-7 py-3.5 text-sm font-bold text-accent transition hover:bg-gold-20">
+            </ui-button>
+            <ui-button variant="secondary" size="lg" (pressed)="scrollTo('plan', $event)">
               Ver Plan de Recompensas
-            </a>
+            </ui-button>
           </div>
         </div>
 
@@ -216,33 +207,15 @@
             </h3>
             <p class="mb-5 text-sm text-gray-500">Entre más compras en el mes, más ahorras. El descuento aumenta automáticamente.</p>
 
-            <div *ngIf="discountTiers.length > 0" class="space-y-3">
+            <div class="space-y-3">
               <div *ngFor="let tier of discountTiers; let last = last"
                 class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm"
-                [ngClass]="last ? 'border-gold bg-gold text-white' : 'border-olive-20 bg-white/60'">
+                [ngClass]="last ? 'bg-gold-20 border-gold-35 text-on-gold' : 'border-olive-20 bg-white/60'">
                 <span [ngClass]="last ? '' : 'text-gray-700'">{{ discountRangeLabel(tier) }}</span>
-                <span class="font-bold" [ngClass]="last ? '' : 'text-accent'">{{ discountRateLabel(tier.rate) }}</span>
+                <span class="font-bold" [ngClass]="last ? 'text-on-gold' : 'text-accent'">{{ discountRateLabel(tier.rate) }}</span>
               </div>
             </div>
 
-            <div *ngIf="discountTiers.length === 0" class="space-y-3">
-              <div class="flex items-center justify-between rounded-xl border border-olive-20 bg-white/60 px-4 py-3 text-sm">
-                <span class="text-gray-700">Primer nivel</span>
-                <span class="font-bold text-accent">20% OFF</span>
-              </div>
-              <div class="flex items-center justify-between rounded-xl border border-olive-20 bg-white/60 px-4 py-3 text-sm">
-                <span class="text-gray-700">Segundo nivel</span>
-                <span class="font-bold text-accent">30% OFF</span>
-              </div>
-              <div class="flex items-center justify-between rounded-xl border border-olive-20 bg-white/60 px-4 py-3 text-sm">
-                <span class="text-gray-700">Tercer nivel</span>
-                <span class="font-bold text-accent">40% OFF</span>
-              </div>
-              <div class="flex items-center justify-between rounded-xl border border-gold bg-gold px-4 py-3 text-sm text-white">
-                <span>Máximo nivel</span>
-                <span class="font-bold">50% OFF</span>
-              </div>
-            </div>
           </div>
 
           <!-- Comisiones de Red -->
@@ -263,7 +236,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <ng-container *ngIf="commissionLevels.length > 0">
+                  <ng-container>
                     <tr *ngFor="let lvl of commissionLevels; let i = index"
                       class="border-b border-olive-10 last:border-none">
                       <td class="py-2.5 text-gray-700">Nivel {{ i + 1 }}</td>
@@ -271,11 +244,6 @@
                       <td class="py-2.5 text-gray-600">{{ lvl.minIndividualPurchase > 0 ? (lvl.minIndividualPurchase + ' VP') : 'Activo' }}</td>
                       <td class="py-2.5 text-gray-600">{{ lvl.minGroupPurchase > 0 ? (lvl.minGroupPurchase + ' VP') : '—' }}</td>
                     </tr>
-                  </ng-container>
-                  <ng-container *ngIf="commissionLevels.length === 0">
-                    <tr class="border-b border-olive-10"><td class="py-2.5 text-gray-700">Nivel 1</td><td class="py-2.5 font-bold text-accent">10%</td><td class="py-2.5 text-gray-600">Activo</td><td class="py-2.5 text-gray-600">—</td></tr>
-                    <tr class="border-b border-olive-10"><td class="py-2.5 text-gray-700">Nivel 2</td><td class="py-2.5 font-bold text-gray-700">5%</td><td class="py-2.5 text-gray-600">Activo</td><td class="py-2.5 text-gray-600">—</td></tr>
-                    <tr><td class="py-2.5 text-gray-700">Nivel 3</td><td class="py-2.5 font-bold text-gray-700">3%</td><td class="py-2.5 text-gray-600">Activo</td><td class="py-2.5 text-gray-600">—</td></tr>
                   </ng-container>
                 </tbody>
               </table>

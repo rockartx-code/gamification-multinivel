@@ -903,7 +903,7 @@
           <div class="flex gap-1">
             <button [disabled]="ordersPage === 0 || isOrdersLoading" (click)="loadOrdersPage(ordersPage - 1)"
               class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-            <button [disabled]="isOrdersLoading" (click)="loadOrdersPage(ordersPage + 1)"
+            <button [disabled]="isOrdersLoading || !canNextOrdersPage" (click)="loadOrdersPage(ordersPage + 1)"
               class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
           </div>
         </div>

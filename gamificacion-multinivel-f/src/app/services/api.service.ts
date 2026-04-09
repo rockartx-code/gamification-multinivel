@@ -8,6 +8,7 @@ import {
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
+  CustomerOrdersPage,
   AdminOrderItem,
   AdminProduct,
   AdminStock,
@@ -204,7 +205,7 @@ export class ApiService {
     return this.resolveApi().getAssociateMonth(associateId, monthKey);
   }
 
-  getOrders(customerId: string, params: { limit?: number; page?: number } = {}): Observable<AdminOrder[]> {
+  getOrders(customerId: string, params: { limit?: number; nextToken?: string } = {}): Observable<CustomerOrdersPage> {
     return this.resolveApi().getOrders(customerId, params);
   }
 

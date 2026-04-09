@@ -150,6 +150,7 @@ def handle_pos_sale(body, headers):
         "monthKey": utils._month_key(), "createdAt": now
     }
     utils._put_entity("ORDER", order_id, order_item)
+    utils._upsert_order_customer_history(order_item)
 
     # 3. Crear registro de venta POS (para contabilidad de sucursal)
     sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"

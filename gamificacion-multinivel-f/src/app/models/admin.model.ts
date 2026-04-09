@@ -51,6 +51,15 @@ export interface AdminOrder {
   pickupPaymentMethod?: 'online' | 'at_store';
 }
 
+export interface CustomerOrdersPage {
+  orders: AdminOrder[];
+  pageSize: number;
+  count: number;
+  nextToken?: string | null;
+  hasMore: boolean;
+  source?: string;
+}
+
 export interface OrderStatusLookup {
   orderId: string;
   status: string;

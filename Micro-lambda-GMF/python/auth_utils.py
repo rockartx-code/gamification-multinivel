@@ -404,7 +404,12 @@ def handle_get_referrer(referrer_id):
 
     customer = utils._get_by_id("CUSTOMER", rid)
     if not customer:
-        return utils._json_response(200, {"referrer": {"name": "FindingU", "isDefault": True}})
+        return utils._json_response(200, {"referrer": {
+            "name": "FindingU",
+            "email": "coach@findingu.com.mx",
+            "phone": "+52 1 55 1498 2351",
+            "isDefault": True,
+        }})
 
     return utils._json_response(200, {"referrer": {
         "name": customer.get("name"), "phone": customer.get("phone"), 

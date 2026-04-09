@@ -9,6 +9,7 @@ import {
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
+  CustomerOrdersPage,
   AdminOrderItem,
   AdminProduct,
   AdminStock,
@@ -211,7 +212,14 @@ export class RealApiService {
     if (params.status) q.set('status', params.status);
     if (params.limit) q.set('limit', String(params.limit));
     const qs = q.toString() ? `?${q.toString()}` : '';
-    return this.http.get<{ orders: AdminOrder[]; total: number }>(`${this.baseUrl}/admin/orders${qs}`, { headers: this.actorHeaders() });
+    return this.http
+      .get<{ orders: unknown[]; total?: number }>(`${this.baseUrl}/admin/orders${qs}`, { headers: this.actorHeaders() })
+      .pipe(
+        map((response) => ({
+          orders: this.normalizeOrders(response.orders),
+          total: Number(response.total ?? (Array.isArray(response.orders) ? response.orders.length : 0))
+        }))
+      );
   }
 
   getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
@@ -239,13 +247,20 @@ export class RealApiService {
       .pipe(map((r) => r.notifications ?? []));
   }
 
-  getOrders(customerId: string, params: { limit?: number; page?: number } = {}): Observable<AdminOrder[]> {
+  getOrders(customerId: string, params: { limit?: number; nextToken?: string } = {}): Observable<CustomerOrdersPage> {
     const q = new URLSearchParams({ customerId });
     if (params.limit) q.set('limit', String(params.limit));
-    if (params.page) q.set('offset', String((params.page) * (params.limit ?? 10)));
+    if (params.nextToken) q.set('nextToken', params.nextToken);
     return this.http
-      .get<{ orders: AdminOrder[]; total?: number }>(`${this.baseUrl}/orders?${q.toString()}`)
-      .pipe(map((response) => response.orders));
+      .get<{
+        orders?: unknown[];
+        pageSize?: number;
+        count?: number;
+        nextToken?: string | null;
+        hasMore?: boolean;
+        source?: string;
+      }>(`${this.baseUrl}/orders/find?${q.toString()}`, { headers: this.actorHeaders() })
+      .pipe(map((response) => this.normalizeCustomerOrdersPage(response, params.limit ?? 10)));
   }
 
   getCartData(): Observable<CartData> {
@@ -293,7 +308,7 @@ export class RealApiService {
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
     return this.http
       .post<{ order: AdminOrder }>(`${this.baseUrl}/orders/create`, payload, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.order));
+      .pipe(map((response) => this.normalizeAdminOrder(response.order)));
   }
 
   createOrderCheckout(
@@ -332,7 +347,7 @@ export class RealApiService {
   getOrder(orderId: string): Observable<AdminOrder> {
     return this.http
       .get<{ order: AdminOrder }>(`${this.baseUrl}/orders/${encodeURIComponent(orderId)}`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.order));
+      .pipe(map((response) => this.normalizeAdminOrder(response.order)));
   }
 
   getOrderStatus(orderOrPaymentId: string): Observable<OrderStatusLookup> {
@@ -410,7 +425,7 @@ export class RealApiService {
         headers: this.actorHeaders()
       })
       .pipe(
-        map((response) => this.requireBusinessValue(response, response.order, 'No se pudo actualizar el pedido.'))
+        map((response) => this.normalizeAdminOrder(this.requireBusinessValue(response, response.order, 'No se pudo actualizar el pedido.')))
       );
   }
 
@@ -735,6 +750,159 @@ export class RealApiService {
       return headers;
     }
     return headers;
+  }
+
+  private normalizeCustomerOrdersPage(response: {
+    orders?: unknown[];
+    pageSize?: number;
+    count?: number;
+    nextToken?: string | null;
+    hasMore?: boolean;
+    source?: string;
+  }, fallbackPageSize: number): CustomerOrdersPage {
+    const orders = this.normalizeOrders(response.orders);
+    const nextToken = typeof response.nextToken === 'string' && response.nextToken.trim().length > 0
+      ? response.nextToken.trim()
+      : null;
+
+    return {
+      orders,
+      pageSize: Number(response.pageSize ?? fallbackPageSize) || fallbackPageSize,
+      count: Number(response.count ?? orders.length) || 0,
+      nextToken,
+      hasMore: typeof response.hasMore === 'boolean' ? response.hasMore : Boolean(nextToken),
+      source: response.source
+    };
+  }
+
+  private normalizeOrders(rawOrders: unknown): AdminOrder[] {
+    if (!Array.isArray(rawOrders)) {
+      return [];
+    }
+
+    return rawOrders.map((order) => this.normalizeAdminOrder(order));
+  }
+
+  private normalizeAdminOrder(rawOrder: unknown): AdminOrder {
+    const order = this.asRecord(rawOrder) ?? {};
+    const total = this.readNumber(order, ['total', 'netTotal', 'grossSubtotal']);
+    const status = this.normalizeOrderStatus(this.readString(order, ['status']));
+    const rawItems = Array.isArray(order['items']) ? order['items'] : [];
+
+    return {
+      id: this.readString(order, ['id', 'orderId']) || '',
+      createdAt: this.readString(order, ['createdAt', 'updatedAt']) || undefined,
+      customer: this.readString(order, ['customer', 'customerName']) || 'Cliente',
+      grossSubtotal: this.readNumber(order, ['grossSubtotal']) || 0,
+      discountRate: this.readNumber(order, ['discountRate']) || 0,
+      discountAmount: this.readNumber(order, ['discountAmount']) || 0,
+      netTotal: this.readNumber(order, ['netTotal']) || total,
+      total,
+      status,
+      shippingType: this.readString(order, ['shippingType']) as AdminOrder['shippingType'] | undefined,
+      trackingNumber: this.readString(order, ['trackingNumber']) || undefined,
+      deliveryPlace: this.readString(order, ['deliveryPlace']) || undefined,
+      deliveryDate: this.readString(order, ['deliveryDate']) || undefined,
+      recipientName: this.readString(order, ['recipientName']) || undefined,
+      phone: this.readString(order, ['phone']) || undefined,
+      street: this.readString(order, ['street']) || undefined,
+      number: this.readString(order, ['number']) || undefined,
+      address: this.readString(order, ['address']) || undefined,
+      city: this.readString(order, ['city']) || undefined,
+      postalCode: this.readString(order, ['postalCode']) || undefined,
+      state: this.readString(order, ['state']) || undefined,
+      country: this.readString(order, ['country']) || undefined,
+      betweenStreets: this.readString(order, ['betweenStreets']) || undefined,
+      references: this.readString(order, ['references']) || undefined,
+      deliveryNotes: this.readString(order, ['deliveryNotes']) || undefined,
+      items: rawItems.map((item) => this.normalizeAdminOrderItem(item)),
+      stockId: this.readString(order, ['stockId']) || undefined,
+      attendantUserId: this.readNullableNumber(order, ['attendantUserId']),
+      paymentStatus: this.readString(order, ['paymentStatus']) || undefined,
+      paymentTransactionId: this.readString(order, ['paymentTransactionId', 'paymentId']) || undefined,
+      paymentRawStatus: this.readString(order, ['paymentRawStatus']) || undefined,
+      paymentWebhookAt: this.readString(order, ['paymentWebhookAt']) || undefined,
+      paymentProvider: this.readString(order, ['paymentProvider']) || undefined,
+      paymentPreferenceId: this.readString(order, ['paymentPreferenceId']) || undefined,
+      paymentInitPoint: this.readString(order, ['paymentInitPoint']) || undefined,
+      paymentSandboxInitPoint: this.readString(order, ['paymentSandboxInitPoint']) || undefined,
+      markedByWebhook: Boolean(order['markedByWebhook']),
+      discountCutoffWindow: Boolean(order['discountCutoffWindow']),
+      discountCutoffCountdown: this.readString(order, ['discountCutoffCountdown']) || undefined,
+      discountCutoffMessage: this.readString(order, ['discountCutoffMessage']) || undefined,
+      deliveryStatus: this.readString(order, ['deliveryStatus']) || undefined,
+      shippingAddressId: this.readString(order, ['shippingAddressId']) || undefined,
+      shippingAddressLabel: this.readString(order, ['shippingAddressLabel']) || undefined,
+      deliveryType: this.readString(order, ['deliveryType']) as AdminOrder['deliveryType'] | undefined,
+      pickupStockId: this.readString(order, ['pickupStockId']) || undefined,
+      pickupPaymentMethod: this.readString(order, ['pickupPaymentMethod']) as AdminOrder['pickupPaymentMethod'] | undefined,
+    };
+  }
+
+  private normalizeAdminOrderItem(rawItem: unknown): AdminOrderItem {
+    const item = this.asRecord(rawItem) ?? {};
+    return {
+      productId: Number(item['productId'] ?? 0) || 0,
+      name: this.readString(item, ['name']) || 'Producto',
+      price: this.readNumber(item, ['price']) || 0,
+      quantity: Math.max(1, Math.trunc(this.readNumber(item, ['quantity']) || 1))
+    };
+  }
+
+  private normalizeOrderStatus(rawStatus: string): AdminOrder['status'] {
+    const status = rawStatus.trim().toLowerCase();
+    if (status === 'canceled') {
+      return 'cancelled';
+    }
+    if (
+      status === 'pending' ||
+      status === 'paid' ||
+      status === 'shipped' ||
+      status === 'delivered' ||
+      status === 'cancelled' ||
+      status === 'en_devolucion' ||
+      status === 'devuelto_validado' ||
+      status === 'devolucion_rechazada'
+    ) {
+      return status;
+    }
+    return 'pending';
+  }
+
+  private readString(record: Record<string, unknown>, keys: string[]): string {
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return String(value);
+      }
+    }
+    return '';
+  }
+
+  private readNumber(record: Record<string, unknown>, keys: string[]): number {
+    for (const key of keys) {
+      const value = Number(record[key]);
+      if (Number.isFinite(value)) {
+        return value;
+      }
+    }
+    return 0;
+  }
+
+  private readNullableNumber(record: Record<string, unknown>, keys: string[]): number | null {
+    for (const key of keys) {
+      if (record[key] == null || record[key] === '') {
+        continue;
+      }
+      const value = Number(record[key]);
+      if (Number.isFinite(value)) {
+        return value;
+      }
+    }
+    return null;
   }
 
   private mapCustomerProfile(customer: Record<string, unknown>): CustomerProfile {

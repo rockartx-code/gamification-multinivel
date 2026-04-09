@@ -17,6 +17,8 @@ ML_TOKEN = utils.os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 
 MAX_COMMISSION_LEVELS = 3
+DEFAULT_ORDER_HISTORY_PAGE_SIZE = 10
+MAX_ORDER_HISTORY_PAGE_SIZE = 50
 
 # ---------------------------------------------------------------------------
 # HELPERS DE LÓGICA DE NEGOCIO
@@ -60,6 +62,134 @@ def _calculate_totals(items, customer_id, buyer_type):
         "discountAmount": discount_amount,
         "netTotal": (gross - discount_amount).quantize(utils.D_CENT),
     }
+
+
+def _parse_orders_page_size(raw_limit) -> int:
+    try:
+        limit = int(raw_limit)
+    except (TypeError, ValueError):
+        return DEFAULT_ORDER_HISTORY_PAGE_SIZE
+    return max(1, min(limit, MAX_ORDER_HISTORY_PAGE_SIZE))
+
+
+def _encode_orders_next_token(last_evaluated_key: dict) -> str:
+    if not last_evaluated_key:
+        return ""
+    payload = {"sk": str(last_evaluated_key.get("SK") or "").strip()}
+    token = json.dumps(payload).encode("utf-8")
+    return base64.urlsafe_b64encode(token).decode("utf-8").rstrip("=")
+
+
+def _decode_orders_next_token(token, customer_id):
+    token_value = str(token or "").strip()
+    if not token_value:
+        return None
+
+    try:
+        padded = token_value + ("=" * (-len(token_value) % 4))
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode("utf-8")).decode("utf-8"))
+    except Exception:
+        raise ValueError("invalid_next_token")
+
+    start_sk = str((payload or {}).get("sk") or "").strip()
+    if not start_sk:
+        raise ValueError("invalid_next_token")
+
+    return {
+        "PK": utils._order_customer_history_pk(customer_id),
+        "SK": start_sk,
+    }
+
+
+def _serialize_order_list_item(item: dict) -> dict:
+    total = item.get("total")
+    if total in (None, ""):
+        total = item.get("netTotal")
+    if total in (None, ""):
+        total = item.get("grossSubtotal", utils.D_ZERO)
+
+    return {
+        "orderId": item.get("orderId"),
+        "customerId": item.get("customerId"),
+        "customerName": item.get("customerName") or "Cliente",
+        "status": item.get("status") or "pending",
+        "items": item.get("items") or [],
+        "grossSubtotal": item.get("grossSubtotal", utils.D_ZERO),
+        "discountRate": item.get("discountRate", utils.D_ZERO),
+        "discountAmount": item.get("discountAmount", utils.D_ZERO),
+        "netTotal": item.get("netTotal", total),
+        "total": total,
+        "deliveryType": item.get("deliveryType"),
+        "deliveryNotes": item.get("deliveryNotes"),
+        "shippingAddressLabel": item.get("shippingAddressLabel"),
+        "createdAt": item.get("createdAt"),
+        "updatedAt": item.get("updatedAt"),
+    }
+
+
+def _query_customer_order_history(customer_id, limit: int, next_token=None):
+    query_kwargs = {
+        "KeyConditionExpression": utils.Key("PK").eq(utils._order_customer_history_pk(customer_id)),
+        "ScanIndexForward": False,
+        "Limit": limit,
+    }
+    start_key = _decode_orders_next_token(next_token, customer_id)
+    if start_key:
+        query_kwargs["ExclusiveStartKey"] = start_key
+    response = utils._table.query(**query_kwargs)
+    items = response.get("Items", [])
+    return items, _encode_orders_next_token(response.get("LastEvaluatedKey"))
+
+
+def _backfill_customer_order_history(customer_id) -> int:
+    normalized_customer_id = utils._customer_entity_id(customer_id)
+    matches = [
+        order for order in utils._query_bucket("ORDER")
+        if str(utils._customer_entity_id(order.get("customerId"))) == str(normalized_customer_id)
+    ]
+    matches.sort(
+        key=lambda order: (
+            str(order.get("createdAt") or ""),
+            str(order.get("orderId") or ""),
+        ),
+        reverse=True,
+    )
+    for order in matches:
+        utils._upsert_order_customer_history(order)
+    return len(matches)
+
+
+def handle_list_orders(customer_id, query, headers):
+    
+    if not customer_id:
+        return utils._json_response(400, {"message": "customerId requerido"})
+
+    err = utils._require_self_or_admin(headers, customer_id)
+    if err:
+        return err
+
+    limit = _parse_orders_page_size(query.get("limit"))
+    next_token = query.get("nextToken")
+
+    try:
+        items, response_next_token = _query_customer_order_history(customer_id, limit, next_token)
+    except ValueError:
+        return utils._json_response(400, {"message": "nextToken invalido"})
+
+    source = "customer-history"
+    if not items and not next_token:
+        if _backfill_customer_order_history(customer_id):
+            items, response_next_token = _query_customer_order_history(customer_id, limit)
+            source = "customer-history-backfilled"
+
+    return utils._json_response(200, {
+        "orders": [_serialize_order_list_item(item) for item in items],
+        "pageSize": limit,
+        "count": len(items),
+        "nextToken": response_next_token or None,
+        "hasMore": bool(response_next_token),
+        "source": source,
+    })
 
 
 def _upload_evidence_s3(name: str, content_b64: str, content_type: str, prefix: str) -> dict:
@@ -215,6 +345,7 @@ def handle_create_order(body, headers):
         order_item["pickupPaymentMethod"] = pickup_payment
 
     utils._put_entity("ORDER", order_id, order_item)
+    utils._upsert_order_customer_history(order_item)
     utils._audit_event("order.create", headers, body, {"orderId": order_id})
     return utils._json_response(201, {"order": order_item})
 
@@ -261,6 +392,7 @@ def handle_update_status(order_id, body, headers):
         eav[f":{k}"] = v
 
     updated = utils._update_by_id("ORDER", order_id, update_expr, eav, {"#s": "status"})
+    utils._upsert_order_customer_history(updated)
     return utils._json_response(200, {"order": updated})
 
 
@@ -400,12 +532,13 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
     reason = body.get("reason") or "customer_request"
     now = utils._now_iso()
 
-    utils._update_by_id(
+    updated_order = utils._update_by_id(
         "ORDER", order_id,
         "SET #s = :s, cancelReason = :r, pendingRefund = :pr, cancelledAt = :ca, updatedAt = :u",
         {":s": "cancelled", ":r": reason, ":pr": True, ":ca": now, ":u": now},
         {"#s": "status"},
     )
+    utils._upsert_order_customer_history(updated_order)
 
     # Void commissions
     commission_actions = _void_commissions_for_order(order_id, reason="cancel")
@@ -562,12 +695,13 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     utils._put_entity("RETURN_REQUEST", request_id, return_item, created_at_iso=now)
 
     # Actualizar orden → EN_DEVOLUCION
-    utils._update_by_id(
+    updated_order = utils._update_by_id(
         "ORDER", order_id,
         "SET #s = :s, returnRequestId = :rid, updatedAt = :u",
         {":s": "en_devolucion", ":rid": request_id, ":u": now},
         {"#s": "status"},
     )
+    utils._upsert_order_customer_history(updated_order)
 
     utils._audit_event("order.return_request", headers, body,
                        {"orderId": order_id, "requestId": request_id, "motivo": motivo})
@@ -643,12 +777,13 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
         {":s": new_return_status, ":i": inspection, ":ia": now, ":ib": actor, ":u": now},
         {"#s": "status"},
     )
-    utils._update_by_id(
+    updated_order = utils._update_by_id(
         "ORDER", order_id,
         "SET #s = :s, updatedAt = :u",
         {":s": new_order_status, ":u": now},
         {"#s": "status"},
     )
+    utils._upsert_order_customer_history(updated_order)
 
     commission_actions = []
     if approved:
@@ -678,12 +813,13 @@ def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
     if not utils._get_by_id("ORDER", order_id):
         return utils._json_response(404, {"message": "Pedido no encontrado"})
     now = utils._now_iso()
-    utils._update_by_id(
+    updated_order = utils._update_by_id(
         "ORDER", order_id,
         "SET #s = :s, refundReason = :r, updatedAt = :u",
         {":s": "refunded", ":r": body.get("reason") or "refund", ":u": now},
         {"#s": "status"},
     )
+    utils._upsert_order_customer_history(updated_order)
     actions = _void_commissions_for_order(order_id, reason="refund")
     utils._audit_event("order.refund", headers, body, {"orderId": order_id})
     return utils._json_response(200, {"orderId": order_id, "status": "refunded", "commissionActions": actions})
@@ -728,7 +864,15 @@ def lambda_handler(event, context):
             return handle_mp_webhook(query, body)
 
         if "orders" in segments:
-            # /orders
+            # /orders (legacy alias) and /orders/find
+            
+
+            if len(segments) == 2 and segments[1] == "find" and method == "GET":
+                print("headers:", headers  )
+                actor = utils._extract_actor(headers)
+                print("actor:", actor  )
+                return handle_list_orders(actor.get("user_id"), query, headers)
+            
             if len(segments) == 1:
                 if method == "POST":
                     actor = utils._extract_actor(headers)
@@ -737,12 +881,8 @@ def lambda_handler(event, context):
                         if err: return err
                     return handle_create_order(body, headers)
                 if method == "GET":
-                    cid = query.get("customerId")
-                    # Customer puede ver solo sus propias órdenes; admin puede filtrar por cualquier ID
-                    err = utils._require_self_or_admin(headers, cid)
-                    if err: return err
-                    items = [o for o in utils._query_bucket("ORDER") if str(o.get("customerId")) == str(cid)]
-                    return utils._json_response(200, {"orders": items})
+                    actor = utils._extract_actor(headers)
+                    return handle_list_orders(actor.get("user_id"), query, headers)
 
             if len(segments) == 2 and segments[1] == "create" and method == "POST":
                 actor = utils._extract_actor(headers)

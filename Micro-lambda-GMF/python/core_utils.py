@@ -161,6 +161,54 @@ def _query_bucket(entity: str, limit: int = None, forward: bool = False) -> List
         query_kwargs["ExclusiveStartKey"] = lek
     return items
 
+def _order_customer_history_pk(customer_id: Any) -> str:
+    return f"ORDER_BY_CUSTOMER#{_customer_entity_id(customer_id)}"
+
+def _order_customer_history_sk(created_at_iso: str, order_id: Any) -> str:
+    created_at = str(created_at_iso or _now_iso()).strip() or _now_iso()
+    return f"{created_at}#{order_id}"
+
+def _build_order_customer_history_item(order: dict) -> Optional[dict]:
+    customer_id = order.get("customerId")
+    order_id = str(order.get("orderId") or "").strip()
+    if customer_id in (None, "") or not order_id:
+        return None
+
+    created_at = str(order.get("createdAt") or _now_iso()).strip() or _now_iso()
+    total = order.get("total")
+    if total in (None, ""):
+        total = order.get("netTotal")
+    if total in (None, ""):
+        total = order.get("grossSubtotal", D_ZERO)
+
+    return {
+        "PK": _order_customer_history_pk(customer_id),
+        "SK": _order_customer_history_sk(created_at, order_id),
+        "entityType": "orderCustomerHistory",
+        "customerId": _customer_entity_id(customer_id),
+        "orderId": order_id,
+        "customerName": order.get("customerName") or order.get("customer") or "Cliente",
+        "status": order.get("status") or "pending",
+        "items": order.get("items") or [],
+        "grossSubtotal": order.get("grossSubtotal", D_ZERO),
+        "discountRate": order.get("discountRate", D_ZERO),
+        "discountAmount": order.get("discountAmount", D_ZERO),
+        "netTotal": order.get("netTotal", total),
+        "total": total,
+        "deliveryType": order.get("deliveryType"),
+        "deliveryNotes": order.get("deliveryNotes"),
+        "shippingAddressLabel": order.get("shippingAddressLabel"),
+        "createdAt": created_at,
+        "updatedAt": order.get("updatedAt") or _now_iso(),
+    }
+
+def _upsert_order_customer_history(order: dict) -> Optional[dict]:
+    item = _build_order_customer_history_item(order)
+    if not item:
+        return None
+    _table.put_item(Item=item)
+    return item
+
 # ---------------------------------------------------------------------------
 # Seguridad y Privilegios
 # ---------------------------------------------------------------------------

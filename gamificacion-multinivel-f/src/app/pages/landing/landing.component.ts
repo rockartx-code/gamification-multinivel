@@ -17,7 +17,7 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent,  UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -98,6 +98,7 @@ export class LandingComponent implements OnInit {
       localStorage.setItem('leaderId', this.referralToken);
       this.loadSponsorContact(this.referralToken);
     }
+    this.loadFeaturedProduct(this.productId);
     this.loadBusinessConfig();
   }
 
@@ -197,11 +198,6 @@ export class LandingComponent implements OnInit {
     return this.featuredProduct?.img || this.defaultHero.img;
   }
 
-  get heroTags(): string[] {
-    const tags = this.featuredProduct?.tags ?? [];
-    return tags.length ? tags : this.defaultHero.tags;
-  }
-
   get sponsorName(): string {
     return this.sponsor?.name || 'tu promotor';
   }
@@ -218,17 +214,6 @@ export class LandingComponent implements OnInit {
 
   get hasRealSponsor(): boolean {
     return !!this.sponsor && !this.sponsor.isDefault;
-  }
-
-  getTagClass(index: number): string {
-    if (index % 2 === 0) {
-      return 'inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/15 px-3 py-1 text-xs text-sand-200';
-    }
-    return 'inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/15 px-3 py-1 text-xs text-sand-200';
-  }
-
-  getTagIcon(index: number): string {
-    return index % 2 === 0 ? 'fa-weight-hanging' : 'fa-seedling';
   }
 
   scrollTo(sectionId: string, event?: Event): void {

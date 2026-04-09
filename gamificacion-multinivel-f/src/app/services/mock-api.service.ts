@@ -7,6 +7,7 @@ import {
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
+  CustomerOrdersPage,
   AdminOrderItem,
   AdminProduct,
   AdminStock,
@@ -1223,7 +1224,9 @@ export class MockApiService {
     return of(this.notifications ?? []).pipe(delay(120));
   }
 
-  getOrders(customerId: string, params: { limit?: number; page?: number } = {}): Observable<AdminOrder[]> {
+  getOrders(customerId: string, params: { limit?: number; nextToken?: string } = {}): Observable<CustomerOrdersPage> {
+    const pageSize = Math.max(1, Number(params.limit) || 10);
+    const page = Math.max(0, Number(params.nextToken ?? 0) || 0);
     const orders: AdminOrder[] = [
       {
         id: `#${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1237,7 +1240,13 @@ export class MockApiService {
         status: 'pending'
       }
     ];
-    return of(orders).pipe(delay(120));
+    return of({
+      orders,
+      pageSize,
+      count: orders.length,
+      nextToken: page < 2 ? String(page + 1) : null,
+      hasMore: page < 2
+    }).pipe(delay(120));
   }
 
   getCustomer(customerId: string): Observable<CustomerProfile> {
