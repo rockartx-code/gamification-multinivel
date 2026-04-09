@@ -1619,6 +1619,37 @@ paths:
     options:
       <<: *cors-options
 
+  /customers/network-tree/rebuild:
+    post:
+      summary: "Reconstruye el arbol persistido de red"
+      description: |
+        Reconstruye el `NETWORK_TREE` persistido a partir de los registros de clientes.
+        Uso administrativo para recuperacion, mantenimiento o resincronizacion manual.
+      operationId: rebuildCustomerNetworkTree
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Arbol de red reconstruido"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  networkTree:
+                    type: object
+                    additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
   /cart:
     get:
       summary: "Carrito activo del usuario"

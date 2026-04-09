@@ -16,15 +16,7 @@ _s3 = boto3.client("s3", region_name=utils.AWS_REGION)
 
 def _get_upline_chain(buyer_id):
     """Busca los patrocinadores hacia arriba en la red."""
-    chain = []
-    curr = buyer_id
-    for _ in range(MAX_COMMISSION_LEVELS):
-        profile = utils._get_by_id("CUSTOMER", curr)
-        if not profile or not profile.get("leaderId"): break
-        leader_id = profile.get("leaderId")
-        chain.append(str(leader_id))
-        curr = leader_id
-    return chain
+    return utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
 
 def _get_ledger_month(beneficiary_id, month_key):
     """Obtiene o inicializa el registro contable mensual del socio."""
@@ -69,6 +61,10 @@ def _calc_vp(customer_id: str, month_key: str, mxn_per_vp: float) -> float:
 
 def _get_direct_reports(customer_id: str) -> list:
     """IDs de los referidos directos (nivel 1)."""
+    customer = utils._get_by_id("CUSTOMER", customer_id)
+    if customer and "directReferralIds" in customer:
+        return utils._customer_id_list(customer.get("directReferralIds"))
+
     all_customers = utils._query_bucket("CUSTOMER")
     return [
         str(c.get("customerId") or c.get("id", ""))
@@ -76,9 +72,32 @@ def _get_direct_reports(customer_id: str) -> list:
         if str(c.get("leaderId", "")) == str(customer_id)
     ]
 
+
+def _load_network_customers(customer_id: str) -> list:
+    customer = utils._get_by_id("CUSTOMER", customer_id)
+    if not customer:
+        return []
+
+    has_persisted_descendants = "networkDescendantIds" in customer
+    descendant_ids = utils._customer_id_list(customer.get("networkDescendantIds"))
+    if not has_persisted_descendants:
+        return utils._query_bucket("CUSTOMER")
+
+    scoped = [customer]
+    seen = {str(customer.get("customerId") or "")}
+    for descendant_id in descendant_ids:
+        if descendant_id in seen:
+            continue
+        item = utils._get_by_id("CUSTOMER", utils._customer_entity_id(descendant_id))
+        if not item:
+            continue
+        scoped.append(item)
+        seen.add(descendant_id)
+    return scoped
+
 def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: int = 5) -> float:
     """Volumen de Grupo: VP propio + VP de toda la red hasta max_levels niveles."""
-    all_customers = utils._query_bucket("CUSTOMER")
+    all_customers = _load_network_customers(customer_id)
     id_map = {str(c.get("customerId") or c.get("id", "")): c for c in all_customers}
 
     visited: set = set()
@@ -662,15 +681,7 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
         return {"skipped": True, "reason": "no_buyer"}
 
     # Construir cadena de beneficiarios (upline hasta MAX_COMMISSION_LEVELS)
-    beneficiaries = []
-    curr = buyer_id
-    for _ in range(MAX_COMMISSION_LEVELS):
-        profile = utils._get_by_id("CUSTOMER", curr)
-        if not profile or not profile.get("leaderId"):
-            break
-        leader_id = profile.get("leaderId")
-        beneficiaries.append(str(leader_id))
-        curr = leader_id
+    beneficiaries = utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
 
     if (order.get("buyerType") or "").lower() == "guest":
         referrer_id = order.get("referrerAssociateId")

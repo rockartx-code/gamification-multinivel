@@ -1,5 +1,6 @@
 import base64
 import json
+import time
 import boto3
 import core_utils as utils  # Importado desde la Lambda Layer
 from datetime import datetime, timezone
@@ -129,6 +130,10 @@ def _check_leader_cycle(customer_id, new_leader_id):
     if str(customer_id) == str(new_leader_id):
         return True
 
+    leader_profile = utils._get_by_id("CUSTOMER", new_leader_id)
+    if leader_profile and str(customer_id) in utils._get_customer_upline_ids(leader_profile):
+        return True
+
     current_leader = new_leader_id
     visited = set()
 
@@ -142,6 +147,74 @@ def _check_leader_cycle(customer_id, new_leader_id):
         current_leader = leader_profile.get("leaderId") if leader_profile else None
 
     return False
+
+
+class _DashboardTimer:
+    def __init__(self, customer_id):
+        self.customer_id = str(customer_id or "")
+        self.request_id = utils.uuid.uuid4().hex[:12]
+        self.started_at = time.perf_counter()
+        self.last_at = self.started_at
+
+    def mark(self, stage: str, **extra):
+        now = time.perf_counter()
+        payload = {
+            "event": "customer_dashboard_timing",
+            "requestId": self.request_id,
+            "customerId": self.customer_id,
+            "stage": stage,
+            "elapsedMs": round((now - self.last_at) * 1000, 2),
+            "totalMs": round((now - self.started_at) * 1000, 2),
+        }
+        if extra:
+            payload.update(extra)
+        print(json.dumps(payload, default=utils._json_default))
+        self.last_at = now
+
+
+def _load_customer_network_scope(customer: dict) -> tuple:
+    if not customer or not isinstance(customer, dict):
+        return [], {"source": "empty"}
+
+    customer_id = utils._customer_id_str(customer.get("customerId"))
+    source = "network_tree_batch_get"
+
+    def _load_from_tree(tree_payload):
+        descendant_ids = utils._network_tree_descendant_ids(tree_payload, customer_id)
+        batch_ids = [customer_id, *descendant_ids]
+        loaded = utils._batch_get_entities("CUSTOMER", batch_ids)
+
+        by_id = {
+            utils._customer_id_str(item.get("customerId")): item
+            for item in loaded
+            if isinstance(item, dict) and item.get("customerId") not in (None, "")
+        }
+        by_id[customer_id] = customer
+
+        scoped = []
+        for cid in batch_ids:
+            item = by_id.get(cid)
+            if item:
+                scoped.append(item)
+        return descendant_ids, scoped
+
+    tree = utils._ensure_network_tree()
+    descendant_ids, scoped = _load_from_tree(tree)
+    missing = max(0, 1 + len(descendant_ids) - len(scoped))
+
+    if missing and descendant_ids:
+        utils._sync_customer_network_metadata()
+        tree = utils._ensure_network_tree()
+        descendant_ids, scoped = _load_from_tree(tree)
+        missing = max(0, 1 + len(descendant_ids) - len(scoped))
+        source = "network_tree_batch_get_rebuilt"
+
+    return scoped, {
+        "source": source,
+        "requestedCount": len(descendant_ids),
+        "loadedCount": len(scoped),
+        "missingCount": missing,
+    }
 
 
 # --- HELPERS S3 ---
@@ -329,7 +402,29 @@ def _campaign_payload(item: dict) -> dict:
     }
 
 
-def _get_month_state(associate_id, month_key: str) -> dict:
+def _load_month_states(associate_ids, month_key: str) -> dict:
+    entity_ids = []
+    seen = set()
+    for associate_id in associate_ids or []:
+        cid = str(associate_id or "").strip()
+        if not cid or cid in seen:
+            continue
+        seen.add(cid)
+        entity_ids.append(f"{cid}#{month_key}")
+
+    states = utils._batch_get_entities("ASSOCIATE_MONTH", entity_ids)
+    return {
+        str(item.get("associateId") or ""): item
+        for item in states
+        if isinstance(item, dict) and item.get("associateId") not in (None, "")
+    }
+
+
+def _get_month_state(associate_id, month_key: str, states_by_associate=None) -> dict:
+    if isinstance(states_by_associate, dict):
+        cached = states_by_associate.get(str(associate_id or ""))
+        if cached:
+            return cached
     state = utils._get_by_id("ASSOCIATE_MONTH", f"{associate_id}#{month_key}")
     if state:
         return state
@@ -355,7 +450,7 @@ def _flatten_tree(root: dict) -> list:
     return out
 
 
-def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict, max_depth=3) -> dict:
+def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict, max_depth=3, month_states=None) -> dict:
     activation_min = utils._to_decimal(cfg.get("activationNetMin", 2500))
     nodes = {}
     children_by_leader = {}
@@ -379,7 +474,7 @@ def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list,
             children_by_leader.setdefault(leader_id, []).append(cid)
 
     for cid, node in nodes.items():
-        state = _get_month_state(cid, month_key)
+        state = _get_month_state(cid, month_key, month_states)
         net_volume = utils._to_decimal(state.get("netVolume"))
         node["monthSpend"] = float(net_volume)
         node["isActive"] = bool(net_volume >= activation_min)
@@ -442,16 +537,16 @@ def _get_rank_dash(vg: float, rank_thresholds: list) -> str:
     return rank
 
 
-def _get_direct_vg_dash(cid: str, month_key: str, customers_raw: list, mxn_per_vp: float) -> float:
+def _get_direct_vg_dash(cid: str, month_key: str, customers_raw: list, mxn_per_vp: float, month_states=None) -> float:
     total = 0.0
     for customer in customers_raw:
         if str(customer.get("leaderId", "")) == str(cid):
-            state = _get_month_state(str(customer.get("customerId", "")), month_key)
+            state = _get_month_state(str(customer.get("customerId", "")), month_key, month_states)
             total += float(utils._to_decimal(state.get("netVolume", 0)))
     return _mxn_to_vp_dash(total, mxn_per_vp)
 
 
-def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict, bonus_cfg=None) -> list:
+def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict, bonus_cfg=None, month_states=None) -> list:
     bonus_cfg = bonus_cfg or {}
     vp_cfg = bonus_cfg.get("vpConfig") or {}
     mxn_per_vp = float(vp_cfg.get("mxnPerVp", 50))
@@ -465,7 +560,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
 
     cid = str(customer.get("customerId"))
     month_key = utils._month_key()
-    state = _get_month_state(cid, month_key)
+    state = _get_month_state(cid, month_key, month_states)
     my_net = utils._to_decimal(state.get("netVolume", 0))
     my_vp = _mxn_to_vp_dash(float(my_net), mxn_per_vp)
     my_vg = _calc_vg_from_tree(root_tree, mxn_per_vp)
@@ -633,7 +728,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
             base_val = round(my_vp, 2)
         elif cond_type == "direct_vg_min":
             if direct_vg is None:
-                direct_vg = _get_direct_vg_dash(cid, month_key, customers_raw, mxn_per_vp)
+                direct_vg = _get_direct_vg_dash(cid, month_key, customers_raw, mxn_per_vp, month_states)
             base_val = round(direct_vg, 2)
         else:
             continue
@@ -918,10 +1013,12 @@ def handle_update_customer(customer_id, body, headers):
     ean = {}
 
     # 1. Cambio de Patrocinador (Lógica Crítica)
+    leader_changed = False
     if "leaderId" in body:
         new_leader = body["leaderId"]
         if new_leader and _check_leader_cycle(cid, new_leader):
             return utils._json_response(400, {"message": "El cambio generaría un ciclo inválido en la red"})
+        leader_changed = existing.get("leaderId") != new_leader
         updates.append("leaderId = :lid")
         eav[":lid"] = new_leader
 
@@ -940,6 +1037,14 @@ def handle_update_customer(customer_id, body, headers):
             eav[":addr"] = body["addresses"]
 
     updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean)
+
+    if leader_changed:
+        try:
+            utils._sync_customer_network_metadata()
+            updated = utils._get_by_id("CUSTOMER", cid) or updated
+        except Exception as ex:
+            print(f"[CUSTOMER_NETWORK_SYNC_ERROR] action=update_customer customerId={cid} error={ex}")
+
     return utils._json_response(200, {"customer": _format_customer_output(updated)})
 
 
@@ -1064,77 +1169,77 @@ def handle_upload_own_document(body, headers):
 def handle_get_network(customer_id, query):
     """GET /network/{id} - Construye el árbol de profundidad N"""
     depth = int(query.get("depth", 3))
-    all_customers = utils._query_bucket("CUSTOMER")
-
-    # Mapeo rápido para construcción de árbol O(N)
-    nodes = {
-        str(c["customerId"]): {
-            "id": str(c["customerId"]),
-            "name": c.get("name"),
-            "level": c.get("level"),
-            "leaderId": str(c.get("leaderId")) if c.get("leaderId") else None,
-            "children": [],
-        }
-        for c in all_customers
-    }
-
-    root_id = str(customer_id)
-    if root_id not in nodes:
+    root_customer = utils._get_by_id("CUSTOMER", customer_id)
+    if not root_customer:
         return utils._json_response(404, {"message": "Usuario no encontrado en la red"})
 
-    # Construir jerarquía
-    for cid, node in nodes.items():
-        lid = node["leaderId"]
-        if lid and lid in nodes:
-            nodes[lid]["children"].append(node)
+    all_customers, _ = _load_customer_network_scope(root_customer)
+    month_key = utils._month_key()
+    month_states = _load_month_states([item.get("customerId") for item in all_customers], month_key)
+    tree = _build_network_tree_with_month(
+        str(root_customer.get("customerId")),
+        month_key,
+        all_customers,
+        {},
+        max_depth=depth,
+        month_states=month_states,
+    )
+    return utils._json_response(200, {"network": tree})
 
-    def trim(n, d):
-        if d <= 0:
-            return {**n, "children": []}
-        return {**n, "children": [trim(ch, d - 1) for ch in n["children"]]}
 
-    return utils._json_response(200, {"network": trim(nodes[root_id], depth)})
+def handle_rebuild_network_tree(headers):
+    """POST /customers/network-tree/rebuild - Reconstuye el arbol persistido de red."""
+    err = utils._require_admin(headers or {}, "access_screen_customers")
+    if err:
+        return err
+    result = utils._sync_customer_network_metadata()
+    return utils._json_response(200, {"ok": True, "networkTree": result})
 
 
 def handle_customer_dashboard(headers):
     """GET /customers/dashboard - Dashboard autenticado derivado del dashboard legacy."""
+    timer = _DashboardTimer("unknown")
     actor = utils._extract_actor_from_bearer(headers or {})
     actor_user_id = actor.get("user_id")
     if not actor_user_id:
+        timer.mark("auth_missing")
         return utils._json_response(401, {"message": "No autenticado"})
 
     customer_id = utils._customer_entity_id(actor_user_id)
-    print(f"Dashboard request for {customer_id}")
+    timer = _DashboardTimer(customer_id)
     customer = utils._get_by_id("CUSTOMER", customer_id)
-    print(f"Customer found: {customer.get('name')}")
     if not customer or not isinstance(customer, dict):
+        timer.mark("customer_missing")
         return utils._json_response(404, {"message": "Cliente no encontrado"})
+    timer.mark("load_customer")
 
     products_raw = utils._query_bucket("PRODUCT")
-    campaigns_raw = utils._query_bucket("CAMPAIGN")
-    featured = []
-    for item in products_raw:
-        if not _is_product_active(item):
-            continue
-        if not bool(item.get("inOnlineStore", True)):
-            continue
-        summary = _get_product_summary(item)
-        if len(featured) < 4:
-            images = item.get("images") or []
-            featured.append({
-                "id": summary["id"],
-                "label": summary["name"],
-                "hook": summary.get("hook") or "",
-                "story": _pick_product_image(images, ["redes"]) or summary["img"],
-                "feed": _pick_product_image(images, ["miniatura", "redes"]) or summary["img"],
-                "banner": _pick_product_image(images, ["landing"]) or summary["img"],
-            })
+    #campaigns_raw = utils._query_bucket("CAMPAIGN")
+    #featured = []
+    #for item in products_raw:
+    #    if not _is_product_active(item):
+    #        continue
+    #    if not bool(item.get("inOnlineStore", True)):
+    #        continue
+    #    summary = _get_product_summary(item)
+    #    if len(featured) < 4:
+    #        images = item.get("images") or []
+    #        featured.append({
+    #            "id": summary["id"],
+    #            "label": summary["name"],
+    #            "hook": summary.get("hook") or "",
+    #            "story": _pick_product_image(images, ["redes"]) or summary["img"],
+    #            "feed": _pick_product_image(images, ["miniatura", "redes"]) or summary["img"],
+    #            "banner": _pick_product_image(images, ["landing"]) or summary["img"],
+    #        })
+    #timer.mark("load_catalog", products=len(products_raw), campaigns=len(campaigns_raw), featured=len(featured))
 
-    campaigns = [
-        _campaign_payload(item)
-        for item in campaigns_raw
-        if bool(item.get("active", True))
-    ]
+    #campaigns = [
+    #    _campaign_payload(item)
+    #    for item in campaigns_raw
+    #    if bool(item.get("active", True))
+    #]
+    #timer.mark("prepare_campaigns", activeCampaigns=len(campaigns))
 
     app_cfg = utils._load_app_config()
     cfg = app_cfg.get("rewards") or {}
@@ -1144,28 +1249,44 @@ def handle_customer_dashboard(headers):
     rank_thresh = bonus_cfg.get("rankThresholds") or []
     month_key = utils._month_key()
     prev_month_key = _prev_month_key()
+    timer.mark("load_config", monthKey=month_key, prevMonthKey=prev_month_key)
 
-    customers_raw = utils._query_bucket("CUSTOMER")
+    customers_raw, network_scope_meta = _load_customer_network_scope(customer)
+    timer.mark("load_network_scope", **network_scope_meta)
+    month_states = _load_month_states([item.get("customerId") for item in customers_raw], month_key)
+    timer.mark("load_month_states", states=len(month_states))
+
     tree = _build_network_tree_with_month(
-        str(customer.get("customerId")), month_key, customers_raw, cfg, max_depth=5
+        str(customer.get("customerId")), month_key, customers_raw, cfg, max_depth=5, month_states=month_states
     )
+    timer.mark("build_network_tree", scopeCustomers=len(customers_raw))
+
     computed_network = _network_members_from_tree(tree, max_rows=30)
-    computed_goals = _build_goals(customer, tree, customers_raw, cfg, bonus_cfg=bonus_cfg)
+    computed_goals = _build_goals(customer, tree, customers_raw, cfg, bonus_cfg=bonus_cfg, month_states=month_states)
     buy_again_ids = _compute_buy_again_ids(customer, products_raw)
     active_notifications = _active_notifications_for_customer(customer.get("customerId"))
+    timer.mark(
+        "compute_dashboard_data",
+        networkMembers=len(computed_network),
+        goals=len(computed_goals),
+        buyAgain=len(buy_again_ids),
+        notifications=len(active_notifications),
+    )
 
     cid = str(customer.get("customerId", ""))
-    st = _get_month_state(cid, month_key)
+    st = _get_month_state(cid, month_key, month_states)
     my_net = float(utils._to_decimal(st.get("netVolume", 0)))
     vp_val = _mxn_to_vp_dash(my_net, mxn_per_vp)
     vg_val = _calc_vg_from_tree(tree, mxn_per_vp)
     rank_val = _get_rank_dash(vg_val, rank_thresh)
+    timer.mark("compute_rank_metrics", vp=round(vp_val, 2), vg=round(vg_val, 2), rank=rank_val)
 
     all_awards = utils._query_bucket("BONUS_AWARD")
     bonus_awards = [
         award for award in all_awards
         if str(award.get("customerId", "")) == cid and award.get("monthKey") == month_key
     ]
+    timer.mark("load_bonus_awards", awards=len(bonus_awards), scannedAwards=len(all_awards))
 
     #_notify_goal_achievements(customer, computed_goals, bonus_cfg)
 
@@ -1175,8 +1296,9 @@ def handle_customer_dashboard(headers):
             "SET goals = :g, networkMembers = :n, buyAgainIds = :b, updatedAt = :u",
             {":g": computed_goals, ":n": computed_network, ":b": buy_again_ids, ":u": utils._now_iso()},
         )
+        timer.mark("persist_dashboard_cache")
     except Exception:
-        pass
+        timer.mark("persist_dashboard_cache_failed")
 
     customer_numeric_id = utils._customer_entity_id(customer.get("customerId"))
     sk_curr = f"#BENEFICIARY#{customer_numeric_id}#MONTH#{month_key}"
@@ -1184,13 +1306,16 @@ def handle_customer_dashboard(headers):
     pend = utils._to_decimal(comm_item.get("totalPending"))
     conf = utils._to_decimal(comm_item.get("totalConfirmed"))
     blocked = utils._to_decimal(comm_item.get("totalBlocked"))
+    timer.mark("load_current_commissions")
 
     sk_prev = f"#BENEFICIARY#{customer_numeric_id}#MONTH#{prev_month_key}"
     prev_comm = utils._table.get_item(Key={"PK": "COMMISSION_MONTH", "SK": sk_prev}).get("Item") or {}
     prev_confirmed = utils._to_decimal(prev_comm.get("totalConfirmed"))
+    timer.mark("load_previous_commissions")
 
     receipt_url = ""
-    for receipt in utils._query_bucket("COMMISSION_RECEIPT"):
+    receipts_raw = utils._query_bucket("COMMISSION_RECEIPT")
+    for receipt in receipts_raw:
         if utils._customer_entity_id(receipt.get("customerId")) != customer_numeric_id:
             continue
         if str(receipt.get("monthKey")) != str(prev_month_key):
@@ -1198,6 +1323,7 @@ def handle_customer_dashboard(headers):
         if receipt.get("assetUrl"):
             receipt_url = receipt.get("assetUrl")
             break
+    timer.mark("load_receipts", scannedReceipts=len(receipts_raw), hasReceipt=bool(receipt_url))
 
     clabe = (customer.get("clabeInterbancaria") or customer.get("clabe") or "").strip()
     if prev_confirmed <= 0:
@@ -1229,8 +1355,9 @@ def handle_customer_dashboard(headers):
         "discountPercent": int((discount_rate * 100).quantize(utils.D_ONE)) if discount_rate else 0,
         "discountActive": bool(customer.get("activeBuyer") or discount_rate > 0),
     }
+    timer.mark("assemble_response")
 
-    return utils._json_response(200, {
+    response = utils._json_response(200, {
         "isGuest": False,
         "settings": {
             "cutoffDay": 25,
@@ -1243,8 +1370,8 @@ def handle_customer_dashboard(headers):
         "user": user_payload,
         "sponsor": _find_effective_sponsor(customer),
         "goals": computed_goals,
-        "featured": featured,
-        "campaigns": campaigns,
+        "featured": [],
+        "campaigns": [],
         "notifications": active_notifications,
         "networkMembers": computed_network,
         "buyAgainIds": buy_again_ids,
@@ -1254,6 +1381,8 @@ def handle_customer_dashboard(headers):
         "rank": rank_val,
         "bonuses": bonus_awards,
     })
+    timer.mark("complete", status="ok")
+    return response
 
 
 # --- LAMBDA HANDLER ---
@@ -1284,6 +1413,9 @@ def lambda_handler(event, context):
         # ── /customers/... ─────────────────────────────────────────────
         if root == "customers" and len(segments) > 1:
             target_id = segments[1]
+
+            if target_id == "network-tree" and len(segments) == 3 and segments[2] == "rebuild" and method == "POST":
+                return handle_rebuild_network_tree(headers)
             
             if method == "GET":
                 if segments[1] == "dashboard":

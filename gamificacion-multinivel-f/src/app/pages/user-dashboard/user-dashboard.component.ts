@@ -1136,6 +1136,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   logout(): void {
+    this.dashboardControl.reset();
     this.authService.logout();
     this.router.navigate(['/login']);
   }

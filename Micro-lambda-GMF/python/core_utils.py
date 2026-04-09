@@ -9,7 +9,9 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from boto3.dynamodb.conditions import Attr, Key
+from botocore.exceptions import ClientError
 
 # ---------------------------------------------------------------------------
 # Configuración Global (Extraída de Variables de Entorno)
@@ -20,12 +22,17 @@ BUCKET_NAME = os.getenv("BUCKET_NAME", "findingu-ventas")
 
 _dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 _table = _dynamodb.Table(TABLE_NAME)
+_ddb_client = _table.meta.client
+_ddb_serializer = TypeSerializer()
+_ddb_deserializer = TypeDeserializer()
 
 # Constantes de Negocio
 D_ZERO = Decimal("0")
 D_ONE = Decimal("1")
 D_CENT = Decimal("0.01")
 MAX_NETWORK_DEPTH = 3
+NETWORK_TREE_ID = "customers"
+NETWORK_TREE_ROOT_KEY = "__ROOT__"
 
 # ---------------------------------------------------------------------------
 # Helpers de Tipos y JSON
@@ -131,7 +138,7 @@ def _get_by_id(entity: str, entity_id: Any) -> Optional[dict]:
     resp_main = _table.get_item(Key={"PK": ref["refPK"], "SK": ref["refSK"]})
     return resp_main.get("Item")
 
-def _update_by_id(entity: str, entity_id: Any, expression: str, values: dict, names: dict = None) -> dict:
+def _update_by_id(entity: str, entity_id: Any, expression: str, values: dict, names: Optional[dict] = None) -> dict:
     resp_ref = _table.get_item(Key={"PK": _ref_pk(entity, entity_id), "SK": "REF"})
     ref = resp_ref.get("Item")
     if not ref: raise KeyError(f"{entity}_NOT_FOUND")
@@ -147,7 +154,7 @@ def _update_by_id(entity: str, entity_id: Any, expression: str, values: dict, na
     resp = _table.update_item(**kwargs)
     return resp.get("Attributes")
 
-def _query_bucket(entity: str, limit: int = None, forward: bool = False) -> List[dict]:
+def _query_bucket(entity: str, limit: Optional[int] = None, forward: bool = False) -> List[dict]:
     pk = _bucket_pk(entity)
     query_kwargs = {"KeyConditionExpression": Key("PK").eq(pk), "ScanIndexForward": forward}
     if limit: query_kwargs["Limit"] = limit
@@ -160,6 +167,118 @@ def _query_bucket(entity: str, limit: int = None, forward: bool = False) -> List
         if not lek or (limit and len(items) >= limit): break
         query_kwargs["ExclusiveStartKey"] = lek
     return items
+
+def _ddb_serialize_item(item: dict) -> dict:
+    return {key: _ddb_serializer.serialize(value) for key, value in item.items()}
+
+def _ddb_deserialize_item(item: dict) -> dict:
+    return {key: _ddb_deserializer.deserialize(value) for key, value in item.items()}
+
+def _normalize_ddb_key(key: dict) -> Optional[dict]:
+    if not isinstance(key, dict):
+        return None
+
+    pk = key.get("PK")
+    sk = key.get("SK")
+    if pk in (None, "") or sk in (None, ""):
+        return None
+
+    return {
+        "PK": str(pk),
+        "SK": str(sk),
+    }
+
+def _dedupe_ddb_keys(keys: List[dict]) -> List[dict]:
+    normalized: List[dict] = []
+    seen = set()
+
+    for raw_key in keys or []:
+        key = _normalize_ddb_key(raw_key)
+        if not key:
+            continue
+        dedupe_key = (key["PK"], key["SK"])
+        if dedupe_key in seen:
+            continue
+        normalized.append(key)
+        seen.add(dedupe_key)
+
+    return normalized
+
+def _get_items_individually(keys: List[dict]) -> List[dict]:
+    items: List[dict] = []
+    for key in keys:
+        resp = _table.get_item(Key=key)
+        item = resp.get("Item")
+        if item:
+            items.append(item)
+    return items
+
+def _batch_get_items(keys: List[dict]) -> List[dict]:
+    normalized_keys = _dedupe_ddb_keys(keys)
+    if not normalized_keys:
+        return []
+
+    items: List[dict] = []
+    pending = list(normalized_keys)
+
+    while pending:
+        chunk = pending[:100]
+        pending = pending[100:]
+        request = {TABLE_NAME: {"Keys": [_ddb_serialize_item(key) for key in chunk]}}
+
+        while True:
+            try:
+                resp = _ddb_client.batch_get_item(RequestItems=request)
+            except ClientError as ex:
+                error = ex.response.get("Error", {}) if isinstance(ex.response, dict) else {}
+                if error.get("Code") != "ValidationException":
+                    raise
+                print(json.dumps({
+                    "event": "batch_get_validation_fallback",
+                    "table": TABLE_NAME,
+                    "message": error.get("Message") or str(ex),
+                    "keys": chunk,
+                }, default=_json_default))
+                items.extend(_get_items_individually(chunk))
+                break
+
+            raw_items = resp.get("Responses", {}).get(TABLE_NAME, [])
+            items.extend(_ddb_deserialize_item(item) for item in raw_items)
+
+            unprocessed = resp.get("UnprocessedKeys", {}).get(TABLE_NAME, {}).get("Keys", [])
+            if not unprocessed:
+                break
+            request = {TABLE_NAME: {"Keys": unprocessed}}
+
+    return items
+
+def _batch_get_entities(entity: str, entity_ids: List[Any]) -> List[dict]:
+    normalized_ids: List[Any] = []
+    seen = set()
+    for raw_id in entity_ids or []:
+        entity_id = _customer_entity_id(raw_id) if entity.upper() == "CUSTOMER" else raw_id
+        dedupe_key = json.dumps(entity_id, default=str)
+        if entity_id in (None, "") or dedupe_key in seen:
+            continue
+        normalized_ids.append(entity_id)
+        seen.add(dedupe_key)
+
+    if not normalized_ids:
+        return []
+
+    ref_items = _batch_get_items([
+        {"PK": _ref_pk(entity, entity_id), "SK": "REF"}
+        for entity_id in normalized_ids
+    ])
+    if not ref_items:
+        return []
+
+    main_items = _batch_get_items([
+        {"PK": ref_item["refPK"], "SK": ref_item["refSK"]}
+        for ref_item in ref_items
+        if ref_item.get("refPK") and ref_item.get("refSK")
+    ])
+    return main_items
 
 def _order_customer_history_pk(customer_id: Any) -> str:
     return f"ORDER_BY_CUSTOMER#{_customer_entity_id(customer_id)}"
@@ -224,6 +343,247 @@ def _customer_entity_id(raw_id: Any) -> Any:
         return int(raw_id)
     except (ValueError, TypeError):
         return raw_id
+
+def _customer_id_str(raw_id: Any) -> str:
+    value = _customer_entity_id(raw_id)
+    if value in (None, ""):
+        return ""
+    return str(value)
+
+def _customer_id_list(raw_ids: Any) -> List[str]:
+    if not isinstance(raw_ids, list):
+        return []
+    out: List[str] = []
+    seen = set()
+    for raw_id in raw_ids:
+        cid = _customer_id_str(raw_id)
+        if not cid or cid in seen:
+            continue
+        out.append(cid)
+        seen.add(cid)
+    return out
+
+def _get_customer_upline_ids(customer_or_id: Any, max_levels: Optional[int] = None) -> List[str]:
+    customer = customer_or_id if isinstance(customer_or_id, dict) else _get_by_id("CUSTOMER", customer_or_id)
+    if not customer:
+        return []
+
+    stored = _customer_id_list(customer.get("uplineIds"))
+    if stored:
+        return stored[:max_levels] if max_levels is not None else stored
+
+    chain: List[str] = []
+    current = customer.get("leaderId")
+    visited = { _customer_id_str(customer.get("customerId")) }
+
+    while current:
+        cid = _customer_id_str(current)
+        if not cid or cid in visited:
+            break
+        chain.append(cid)
+        if max_levels and len(chain) >= max_levels:
+            break
+        visited.add(cid)
+        profile = _get_by_id("CUSTOMER", current)
+        current = profile.get("leaderId") if profile else None
+
+    return chain
+
+def _build_network_tree_payload(customers: List[dict]) -> dict:
+    children_by_parent: Dict[str, List[str]] = {NETWORK_TREE_ROOT_KEY: []}
+    parent_by_child: Dict[str, Optional[str]] = {}
+    customer_ids: List[str] = []
+    seen_ids = set()
+
+    for customer in customers:
+        cid = _customer_id_str(customer.get("customerId"))
+        if not cid or cid in seen_ids:
+            continue
+        seen_ids.add(cid)
+        customer_ids.append(cid)
+
+        leader_id = _customer_id_str(customer.get("leaderId")) or None
+        parent_by_child[cid] = leader_id
+
+        parent_key = leader_id or NETWORK_TREE_ROOT_KEY
+        children_by_parent.setdefault(parent_key, []).append(cid)
+        children_by_parent.setdefault(cid, [])
+
+    for parent_key, child_ids in list(children_by_parent.items()):
+        children_by_parent[parent_key] = sorted(set(child_ids), key=lambda value: str(value))
+
+    return {
+        "entityType": "networkTree",
+        "treeId": NETWORK_TREE_ID,
+        "schemaVersion": 1,
+        "customerIds": sorted(customer_ids, key=lambda value: str(value)),
+        "rootIds": list(children_by_parent.get(NETWORK_TREE_ROOT_KEY, [])),
+        "childrenByParent": children_by_parent,
+        "parentByChild": parent_by_child,
+    }
+
+def _put_network_tree(tree_payload: dict, updated_at: Optional[str] = None) -> dict:
+    timestamp = updated_at or _now_iso()
+    payload = dict(tree_payload or {})
+    payload["updatedAt"] = timestamp
+    payload["customerCount"] = len(payload.get("customerIds") or [])
+    return _put_entity("NETWORK_TREE", NETWORK_TREE_ID, payload, created_at_iso=timestamp)
+
+def _get_network_tree(tree_id: str = NETWORK_TREE_ID) -> Optional[dict]:
+    tree = _get_by_id("NETWORK_TREE", tree_id)
+    if not tree:
+        return None
+    tree.setdefault("childrenByParent", {NETWORK_TREE_ROOT_KEY: []})
+    tree.setdefault("parentByChild", {})
+    tree.setdefault("customerIds", [])
+    tree.setdefault("rootIds", list(tree["childrenByParent"].get(NETWORK_TREE_ROOT_KEY, [])))
+    return tree
+
+def _network_tree_descendant_ids(tree: Optional[dict], customer_id: Any, max_depth: Optional[int] = None) -> List[str]:
+    if not tree or not isinstance(tree, dict):
+        return []
+
+    root_id = _customer_id_str(customer_id)
+    if not root_id:
+        return []
+
+    children_by_parent = tree.get("childrenByParent") or {}
+    descendants: List[str] = []
+    queue: List[Tuple[str, int]] = [(root_id, 0)]
+    visited = {root_id}
+
+    while queue:
+        current_id, depth = queue.pop(0)
+        if max_depth is not None and depth >= max_depth:
+            continue
+        for child_id in children_by_parent.get(current_id, []) or []:
+            normalized_child_id = _customer_id_str(child_id)
+            if not normalized_child_id or normalized_child_id in visited:
+                continue
+            visited.add(normalized_child_id)
+            descendants.append(normalized_child_id)
+            queue.append((normalized_child_id, depth + 1))
+
+    return descendants
+
+def _ensure_network_tree() -> dict:
+    tree = _get_network_tree()
+    if tree:
+        return tree
+    _sync_customer_network_metadata()
+    return _get_network_tree() or {
+        "treeId": NETWORK_TREE_ID,
+        "childrenByParent": {NETWORK_TREE_ROOT_KEY: []},
+        "parentByChild": {},
+        "customerIds": [],
+        "rootIds": [],
+    }
+
+def _sync_customer_network_metadata() -> dict:
+    customers = _query_bucket("CUSTOMER")
+    tree_payload = _build_network_tree_payload(customers)
+    nodes = {}
+    children_by_leader = {
+        parent_id: [child_id for child_id in child_ids if parent_id != NETWORK_TREE_ROOT_KEY]
+        for parent_id, child_ids in (tree_payload.get("childrenByParent") or {}).items()
+        if parent_id != NETWORK_TREE_ROOT_KEY
+    }
+
+    for customer in customers:
+        cid = _customer_id_str(customer.get("customerId"))
+        if not cid:
+            continue
+        leader_id = (tree_payload.get("parentByChild") or {}).get(cid)
+        nodes[cid] = {
+            "customer": customer,
+            "leaderId": leader_id,
+        }
+
+    upline_cache: Dict[str, List[str]] = {}
+    descendant_cache: Dict[str, List[str]] = {}
+
+    def _compute_upline(cid: str) -> List[str]:
+        if cid in upline_cache:
+            return list(upline_cache[cid])
+        chain: List[str] = []
+        visited = {cid}
+        current = (nodes.get(cid) or {}).get("leaderId")
+        while current:
+            if current in visited:
+                break
+            chain.append(current)
+            visited.add(current)
+            current = (nodes.get(current) or {}).get("leaderId")
+        upline_cache[cid] = list(chain)
+        return list(chain)
+
+    def _compute_descendants(cid: str, trail=None) -> List[str]:
+        if cid in descendant_cache:
+            return list(descendant_cache[cid])
+        trail = set(trail or set())
+        if cid in trail:
+            return []
+        trail.add(cid)
+
+        descendants: List[str] = []
+        seen = set()
+        for child_id in children_by_leader.get(cid, []):
+            if child_id in trail or child_id in seen:
+                continue
+            descendants.append(child_id)
+            seen.add(child_id)
+            for nested_id in _compute_descendants(child_id, trail):
+                if nested_id in seen:
+                    continue
+                descendants.append(nested_id)
+                seen.add(nested_id)
+
+        descendant_cache[cid] = list(descendants)
+        return list(descendants)
+
+    updated = 0
+    timestamp = _now_iso()
+
+    for cid, node in nodes.items():
+        customer = dict(node["customer"])
+        upline_ids = _compute_upline(cid)
+        descendant_ids = _compute_descendants(cid)
+        direct_ids = list(children_by_leader.get(cid, []))
+        desired = {
+            "uplineIds": upline_ids,
+            "networkPath": "/".join(list(reversed(upline_ids)) + [cid]),
+            "networkDepth": len(upline_ids),
+            "rootLeaderId": upline_ids[-1] if upline_ids else None,
+            "directReferralIds": direct_ids,
+            "networkDescendantIds": descendant_ids,
+            "networkDescendantCount": len(descendant_ids),
+        }
+
+        changed = False
+        for field, value in desired.items():
+            if customer.get(field) != value:
+                customer[field] = value
+                changed = True
+
+        if not changed:
+            continue
+
+        customer["updatedAt"] = timestamp
+        customer["networkMetadataUpdatedAt"] = timestamp
+        _table.put_item(Item=customer)
+        updated += 1
+
+    _put_network_tree(tree_payload, updated_at=timestamp)
+
+    result = {
+        "customers": len(nodes),
+        "updated": updated,
+        "treeId": NETWORK_TREE_ID,
+        "treeCustomerCount": len(tree_payload.get("customerIds") or []),
+        "updatedAt": timestamp,
+    }
+    print(json.dumps({"event": "customer_network_sync", **result}))
+    return result
 
 _ALL_PRIVILEGES = [
     "access_screen_orders",

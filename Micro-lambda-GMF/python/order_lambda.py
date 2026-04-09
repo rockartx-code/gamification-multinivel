@@ -217,15 +217,7 @@ def _void_commissions_for_order(order_id: str, reason: str) -> list:
     month_key = order.get("monthKey") or utils._month_key()
     buyer_id = order.get("customerId")
 
-    beneficiaries = []
-    curr = buyer_id
-    for _ in range(MAX_COMMISSION_LEVELS):
-        profile = utils._get_by_id("CUSTOMER", curr)
-        if not profile or not profile.get("leaderId"):
-            break
-        leader_id = profile.get("leaderId")
-        beneficiaries.append(str(leader_id))
-        curr = leader_id
+    beneficiaries = utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
 
     if (order.get("buyerType") or "").lower() == "guest":
         referrer_id = order.get("referrerAssociateId")

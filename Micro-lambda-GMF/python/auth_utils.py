@@ -268,6 +268,11 @@ def handle_create_account(body):
     }
     utils._put_entity("CUSTOMER", customer_id, customer_item)
 
+    try:
+        utils._sync_customer_network_metadata()
+    except Exception as ex:
+        print(f"[CUSTOMER_NETWORK_SYNC_ERROR] action=create_account customerId={customer_id} error={ex}")
+
     utils._put_entity("AUTH", email, {
         "entityType": "auth", "authId": email, "email": email,
         "customerId": customer_id, "passwordHash": pass_hash, "role": "cliente", "emailVerified": False

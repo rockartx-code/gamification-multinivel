@@ -41,9 +41,26 @@ export class UserDashboardControlService {
     private readonly authService: AuthService
   ) {}
 
+  reset(): void {
+    this.dataSubject.next(null);
+    this.loadRequest = undefined;
+    this.networkMembersCache = [];
+    this.buyAgainIdsCache = new Set();
+    this.cart = {};
+    this.heroQty = 0;
+    this.heroProductId = '';
+  }
+
   load(options: { force?: boolean } = {}): Observable<UserDashboardData> {
-    if (!options.force && this.dataSubject.value) {
-      return of(this.cloneDashboardData(this.dataSubject.value));
+    const cached = this.dataSubject.value;
+    // Si el estado de autenticación cambió respecto al cache, ignorar el cache
+    const authChanged = cached !== null && cached.isGuest !== !this.authService.hasSession;
+    if (authChanged) {
+      this.reset();
+    }
+
+    if (!options.force && !authChanged && cached) {
+      return of(this.cloneDashboardData(cached));
     }
 
     if (!options.force && this.loadRequest) {
