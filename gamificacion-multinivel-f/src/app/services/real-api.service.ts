@@ -69,6 +69,7 @@ import {
   CommissionRequestPayload,
   CustomerClabePayload,
   DashboardData,
+  DashboardProduct,
   HonorBoard,
   SponsorContact,
   UserDashboardData
@@ -325,7 +326,39 @@ export class RealApiService {
   }
 
   getCatalogData(): Observable<CatalogData> {
-    return this.http.get<CatalogData>(`${this.baseUrl}/catalog/catalog`);
+    return this.http.get<{ products: Record<string, unknown>[]; productOfMonth?: Record<string, unknown> | null }>(
+      `${this.baseUrl}/catalog/catalog`
+    ).pipe(
+      map((raw) => ({
+        products: (raw.products ?? []).map((p) => this.normalizeDashboardProduct(p)),
+        productOfMonth: raw.productOfMonth ? this.normalizeDashboardProduct(raw.productOfMonth) : null,
+      } as CatalogData))
+    );
+  }
+
+  private normalizeDashboardProduct(p: Record<string, unknown>): DashboardProduct {
+    const images = Array.isArray(p['images']) ? (p['images'] as Array<{ section: string; url: string; assetId?: string }>) : [];
+    const miniatura = images.find((im) => im.section === 'miniatura')?.url ?? '';
+    const landing = images.find((im) => im.section === 'landing')?.url ?? '';
+    const fallback = images[0]?.url ?? '';
+    const tags = Array.isArray(p['tags']) ? (p['tags'] as string[]) : [];
+    return {
+      id: String(p['productId'] ?? p['id'] ?? ''),
+      name: String(p['name'] ?? ''),
+      price: Number(p['price'] ?? 0),
+      badge: String(tags[0] ?? p['badge'] ?? ''),
+      img: miniatura || landing || fallback,
+      images,
+      hook: String(p['hook'] ?? ''),
+      description: p['description'] != null ? String(p['description']) : undefined,
+      copyFacebook: p['copyFacebook'] != null ? String(p['copyFacebook']) : undefined,
+      copyInstagram: p['copyInstagram'] != null ? String(p['copyInstagram']) : undefined,
+      copyWhatsapp: p['copyWhatsapp'] != null ? String(p['copyWhatsapp']) : undefined,
+      tags: tags.length ? tags : undefined,
+      inOnlineStore: p['inOnlineStore'] != null ? Boolean(p['inOnlineStore']) : undefined,
+      inPOS: p['inPOS'] != null ? Boolean(p['inPOS']) : undefined,
+      commissionable: p['commissionable'] != null ? Boolean(p['commissionable']) : undefined,
+    };
   }
 
   getDashboardData(): Observable<DashboardData> {

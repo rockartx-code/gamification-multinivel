@@ -313,14 +313,18 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }));
     const productItems: FeaturedItem[] = products
       .filter((product) => !featuredIds.has(product.id))
-      .map((product) => ({
-        id: product.id,
-        label: product.name,
-        hook: product.badge || 'Producto destacado',
-        story: product.img || '',
-        feed: product.img || '',
-        banner: product.img || ''
-      }));
+      .map((product) => {
+        const imgs = product.images ?? [];
+        const pickImg = (sections: string[]) => sections.map(s => imgs.find(im => im.section === s)?.url).find(Boolean) ?? product.img ?? '';
+        return {
+          id: product.id,
+          label: product.name,
+          hook: product.hook || product.badge || 'Producto destacado',
+          story: pickImg(['redes']) || product.img || '',
+          feed: pickImg(['miniatura', 'redes']) || product.img || '',
+          banner: pickImg(['landing']) || product.img || '',
+        };
+      });
 
     this.featuredCarouselFeaturedRef = featured;
     this.featuredCarouselProductsRef = products;

@@ -57,11 +57,13 @@ export interface DashboardProduct {
   price: number;
   badge: string;
   img: string;
+  images?: Array<{ section: string; url: string; assetId?: string }>;
   description?: string;
   copyFacebook?: string;
   copyInstagram?: string;
   copyWhatsapp?: string;
   tags?: string[];
+  hook?: string;
   weightKg?: number;
   lengthCm?: number;
   widthCm?: number;

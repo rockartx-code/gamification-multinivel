@@ -117,6 +117,20 @@ def _upload_to_s3(name, content_base64, content_type):
 
 # --- HANDLERS DE PRODUCTOS ---
 
+def _get_catalog_product_of_month():
+    """Devuelve el producto del mes completo para el catálogo, o None."""
+    pom_item = utils._get_by_id("PRODUCT_OF_MONTH", "current")
+    if not pom_item or pom_item.get("productId") is None:
+        return None
+    try:
+        product = utils._get_by_id("PRODUCT", int(pom_item.get("productId")))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(product, dict) or not _is_product_active(product):
+        return None
+    return product
+
+
 def handle_products(method, body, product_id=None):
     """GET /products, GET /products/{id}, POST /products"""
     if method == "GET":
@@ -125,14 +139,26 @@ def handle_products(method, body, product_id=None):
             if product_id == "product-of-month":
                 pom = utils._get_by_id("PRODUCT_OF_MONTH", "current")
                 return utils._json_response(200, {"productOfMonth": pom})
-            
+
             # /products/{id}
             p = utils._get_by_id("PRODUCT", int(product_id))
             return utils._json_response(200, {"product": p}) if p else utils._json_response(404, {"message": "No encontrado"})
-        
-        # Listado general
-        items = utils._query_bucket("PRODUCT")
-        return utils._json_response(200, {"products": items})
+
+        # /catalog/catalog — catálogo completo para el frontend (activos + en tienda + productOfMonth)
+        products = []
+        for item in utils._query_bucket("PRODUCT"):
+            if not _is_product_active(item):
+                continue
+            if not bool(item.get("inOnlineStore", True)):
+                continue
+            products.append(item)
+
+        pom_product = _get_catalog_product_of_month()
+
+        return utils._json_response(200, {
+            "products": products,
+            "productOfMonth": pom_product,
+        })
 
     if method == "POST":
         if product_id == "product-of-month":
