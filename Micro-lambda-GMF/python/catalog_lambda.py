@@ -368,6 +368,14 @@ def lambda_handler(event, context):
         if root == "catalog" and len(segments) == 1:
             return handle_catalog(method)
 
+        # /catalog/catalog  → alias para GET/POST productos con auth de admin
+        if root == "catalog" and len(segments) == 2 and segments[1] == "catalog":
+            p_id = None
+            if method == "POST":
+                err = utils._require_admin(headers, "product_add")
+                if err: return err
+            return handle_products(method, body, p_id)
+
         if root == "catalog" and len(segments) > 2 and segments[1] == "config" and segments[2] == "public" and method == "GET":
             return handle_public_config()
 
@@ -380,8 +388,8 @@ def lambda_handler(event, context):
                 if err: return err
             return handle_products(method, body, p_id)
 
-        if root == "product-categories":
-            c_id = segments[1] if len(segments) > 1 else None
+        if root == "product-categories" or (root == "catalog" and len(segments) > 1 and segments[1] == "categories"):
+            c_id = segments[2] if root == "catalog" and len(segments) > 2 else (segments[1] if root == "product-categories" and len(segments) > 1 else None)
             if method in ("POST", "DELETE"):
                 err = utils._require_admin(headers, "access_screen_products")
                 if err: return err
@@ -402,7 +410,6 @@ def lambda_handler(event, context):
 
         if root == "notifications":
             if method == "POST" and not (len(segments) == 3 and segments[2] == "read"):
-                # Crear/editar notificación: solo admin con config_manage
                 err = utils._require_admin(headers, "config_manage")
                 if err: return err
             return handle_notifications(method, body, segments)

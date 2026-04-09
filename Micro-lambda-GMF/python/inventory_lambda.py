@@ -254,14 +254,16 @@ def lambda_handler(event, context):
     body = utils._parse_body(event)
     query = event.get("queryStringParameters") or {}
     headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
+    raw_segments = [s for s in path.strip("/").split("/") if s]
+    # Strip "inventory" prefix: API Gateway sends /inventory/{proxy+}
+    segments = raw_segments[1:] if raw_segments and raw_segments[0] == "inventory" else raw_segments
 
     try:
         if not segments: return utils._json_response(200, {"service": "inventory-pos"})
 
         root = segments[0]
 
-        # /stocks
+        # /inventory/stocks  →  root == "stocks"
         if root == "stocks":
             if len(segments) == 1:
                 if method in ("POST", "PATCH"):
@@ -313,6 +315,12 @@ def lambda_handler(event, context):
             if segments[1] == "sales":
                 err = utils._require_admin(headers, "pos_register_sale")
                 if err: return err
+                if method == "GET":
+                    sid = query.get("stockId")
+                    sales = utils._query_bucket("POS_SALE")
+                    if sid:
+                        sales = [s for s in sales if str(s.get("stockId") or "") == str(sid)]
+                    return utils._json_response(200, {"sales": sales})
                 return handle_pos_sale(body, headers)
             if segments[1] == "cash-cut":
                 err = utils._require_admin(headers, "pos_register_sale")

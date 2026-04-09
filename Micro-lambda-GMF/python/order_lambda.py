@@ -18,7 +18,8 @@ BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 
 MAX_COMMISSION_LEVELS = 3
 DEFAULT_ORDER_HISTORY_PAGE_SIZE = 10
-MAX_ORDER_HISTORY_PAGE_SIZE = 50
+MAX_ORDER_HISTORY_PAGE_SIZE = 50        # clientes
+MAX_ADMIN_ORDER_PAGE_SIZE = 500         # admins
 
 # ---------------------------------------------------------------------------
 # HELPERS DE LÓGICA DE NEGOCIO
@@ -160,16 +161,53 @@ def _backfill_customer_order_history(customer_id) -> int:
 
 
 def handle_list_orders(customer_id, query, headers):
-    
+    next_token = query.get("nextToken")
+    status_filter = (query.get("status") or "").lower().strip()
+
+    # Admin: devuelve todas las órdenes sin filtrar por customerId
+    admin_actor = utils._extract_admin_actor(headers)
+    bearer_actor = utils._extract_actor_from_bearer(headers)
+    is_admin = admin_actor.get("role") in ("admin", "employee") or bearer_actor.get("role") in ("admin", "employee")
+
+    if is_admin:
+        # Para admins usamos un límite de página mayor
+        raw_limit = query.get("limit")
+        try:
+            limit = max(1, min(int(raw_limit), MAX_ADMIN_ORDER_PAGE_SIZE)) if raw_limit else MAX_ADMIN_ORDER_PAGE_SIZE
+        except (TypeError, ValueError):
+            limit = MAX_ADMIN_ORDER_PAGE_SIZE
+
+        items = utils._query_bucket("ORDER", forward=False)
+        if status_filter:
+            items = [o for o in items if (o.get("status") or "").lower() == status_filter]
+        total = len(items)
+        # Paginación manual sobre la lista filtrada
+        try:
+            offset = int(next_token) if next_token and str(next_token).isdigit() else 0
+        except (ValueError, TypeError):
+            offset = 0
+        page = items[offset: offset + limit]
+        next_offset = offset + limit
+        has_more = next_offset < total
+        return utils._json_response(200, {
+            "orders": [_serialize_order_list_item(o) for o in page],
+            "total": total,
+            "count": len(page),
+            "pageSize": limit,
+            "nextToken": str(next_offset) if has_more else None,
+            "hasMore": has_more,
+            "source": "admin-scan",
+        })
+
+    limit = _parse_orders_page_size(query.get("limit"))
+
+    # Cliente: requiere customerId y solo ve sus propias órdenes
     if not customer_id:
         return utils._json_response(400, {"message": "customerId requerido"})
 
     err = utils._require_self_or_admin(headers, customer_id)
     if err:
         return err
-
-    limit = _parse_orders_page_size(query.get("limit"))
-    next_token = query.get("nextToken")
 
     try:
         items, response_next_token = _query_customer_order_history(customer_id, limit, next_token)
@@ -181,6 +219,9 @@ def handle_list_orders(customer_id, query, headers):
         if _backfill_customer_order_history(customer_id):
             items, response_next_token = _query_customer_order_history(customer_id, limit)
             source = "customer-history-backfilled"
+
+    if status_filter:
+        items = [o for o in items if (o.get("status") or "").lower() == status_filter]
 
     return utils._json_response(200, {
         "orders": [_serialize_order_list_item(item) for item in items],
@@ -860,9 +901,7 @@ def lambda_handler(event, context):
             
 
             if len(segments) == 2 and segments[1] == "find" and method == "GET":
-                print("headers:", headers  )
                 actor = utils._extract_actor(headers)
-                print("actor:", actor  )
                 return handle_list_orders(actor.get("user_id"), query, headers)
             
             if len(segments) == 1:

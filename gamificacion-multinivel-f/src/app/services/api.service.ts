@@ -125,6 +125,10 @@ export class ApiService {
     return this.resolveApi().listCustomers();
   }
 
+  listCustomersPaged(params: { limit?: number; nextToken?: string; search?: string } = {}): Observable<{ customers: AdminCustomer[]; nextToken?: string; hasMore?: boolean; total?: number }> {
+    return this.realApi.listCustomersPaged(params);
+  }
+
   listProducts(): Observable<AdminProduct[]> {
     return this.resolveApi().listProducts();
   }

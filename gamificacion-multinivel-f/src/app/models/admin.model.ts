@@ -161,6 +161,7 @@ export interface UpdateOrderStatusPayload {
 export interface CustomerDocument {
   id: string;
   assetId?: string;
+  docType?: string;
   name: string;
   type: string;
   url?: string;

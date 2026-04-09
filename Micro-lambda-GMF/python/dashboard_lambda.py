@@ -1105,6 +1105,51 @@ def get_honor_board() -> dict:
     })
 
 
+def _handle_campaigns(method, body):
+    """GET /campaigns  |  POST /campaigns — también resuelve /dashboard/campaigns"""
+    if method == "GET":
+        items = utils._query_bucket("CAMPAIGN")
+        return utils._json_response(200, {"campaigns": items})
+    if method == "POST":
+        cid = body.get("id") or f"CMP-{utils.uuid.uuid4().hex[:8].upper()}"
+        campaign = {
+            "entityType": "campaign", "campaignId": cid,
+            "name": body.get("name"), "active": bool(body.get("active", True)),
+            "banner": body.get("banner"), "story": body.get("story"), "feed": body.get("feed"),
+            "ctaPrimaryText": body.get("ctaPrimaryText"), "updatedAt": utils._now_iso()
+        }
+        saved = utils._put_entity("CAMPAIGN", cid, campaign)
+        return utils._json_response(201, {"campaign": saved})
+    return utils._json_response(405, {"message": "Método no permitido"})
+
+
+def _handle_notifications(method, body, segments):
+    """GET /notifications  |  POST /notifications  |  POST /notifications/{id}/read
+    También resuelve /dashboard/notifications/* tras strip del prefijo."""
+    if method == "GET":
+        items = utils._query_bucket("NOTIFICATION")
+        return utils._json_response(200, {"notifications": items})
+    if method == "POST":
+        if len(segments) == 3 and segments[2] == "read":
+            ntf_id = segments[1]
+            user_id = body.get("userId") or body.get("customerId")
+            pk = f"NOTIFICATION_READ#{user_id}"
+            utils._table.put_item(Item={
+                "PK": pk, "SK": ntf_id, "readAt": utils._now_iso(), "entityType": "notificationRead"
+            })
+            return utils._json_response(200, {"ok": True})
+        nid = body.get("id") or f"NTF-{utils.uuid.uuid4().hex[:8].upper()}"
+        ntf = {
+            "entityType": "notification", "notificationId": nid,
+            "title": body.get("title"), "description": body.get("description"),
+            "linkUrl": body.get("linkUrl"), "startAt": body.get("startAt"),
+            "endAt": body.get("endAt"), "active": True, "createdAt": utils._now_iso()
+        }
+        saved = utils._put_entity("NOTIFICATION", nid, ntf)
+        return utils._json_response(201, {"notification": saved})
+    return utils._json_response(405, {"message": "Método no permitido"})
+
+
 # --- LAMBDA HANDLER PRINCIPAL ---
 
 def lambda_handler(event, context):
@@ -1117,13 +1162,17 @@ def lambda_handler(event, context):
     method = event.get("httpMethod", "")
     if method == "OPTIONS":
         return utils._cors_preflight_response()
+    body = utils._parse_body(event)
     query = event.get("queryStringParameters") or {}
     headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
+    raw_segments = [s for s in path.strip("/").split("/") if s]
+    # Strip "dashboard" prefix: API Gateway sends /dashboard/{proxy+}
+    segments = raw_segments[1:] if raw_segments and raw_segments[0] == "dashboard" else raw_segments
 
     try:
         root = segments[0] if segments else ""
 
+        # ── /admin/*  (también resuelve /dashboard/admin/* tras strip del prefijo) ─
         if root == "admin":
             err = utils._require_admin(headers, "access_screen_stats")
             if err: return err
@@ -1132,21 +1181,40 @@ def lambda_handler(event, context):
             if sub == "orders": return get_admin_orders(query)
             if sub == "warnings": return get_admin_warnings()
 
+        # ── /user/* ─────────────────────────────────────────────────────────────
         if root == "user":
             uid = headers.get("x-user-id") or query.get("userId")
             if not uid: return utils._json_response(400, {"message": "userId missing"})
-            # Customer solo puede ver su propio dashboard
             err = utils._require_self_or_admin(headers, uid)
             if err: return err
             sub = segments[1] if len(segments) > 1 else ""
             if sub == "performance": return get_user_performance(uid)
             if sub == "commissions": return get_user_commissions(uid)
 
+        # ── /user-dashboard  ────────────────────────────────────────────────────
         if root == "user-dashboard":
             uid = headers.get("x-user-id") or query.get("userId")
             err = utils._require_self_or_admin(headers, uid)
             if err: return err
             return get_user_dashboard(query, headers)
+
+        # ── /honor-board  (también /dashboard/honor-board) ──────────────────────
+        if root == "honor-board" and method == "GET":
+            return get_honor_board()
+
+        # ── /campaigns  (también /dashboard/campaigns) ───────────────────────────
+        if root == "campaigns":
+            if method == "POST":
+                err = utils._require_admin(headers, "access_screen_stocks")
+                if err: return err
+            return _handle_campaigns(method, body)
+
+        # ── /notifications  (también /dashboard/notifications) ───────────────────
+        if root == "notifications":
+            if method == "POST" and not (len(segments) == 3 and segments[2] == "read"):
+                err = utils._require_admin(headers, "config_manage")
+                if err: return err
+            return _handle_notifications(method, body, segments)
 
         return utils._json_response(404, {"message": "Dashboard endpoint not found"})
 

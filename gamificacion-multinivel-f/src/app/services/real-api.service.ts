@@ -222,43 +222,85 @@ export class RealApiService {
     return this.http.get<AdminData>(`${this.baseUrl}/admin/dashboard`);
   }
 
-  getAdminOrders(params: { status?: AdminOrder['status']; limit?: number } = {}): Observable<{ orders: AdminOrder[]; total: number }> {
+  getAdminOrders(params: { status?: AdminOrder['status']; limit?: number; nextToken?: string } = {}): Observable<{ orders: AdminOrder[]; total: number; nextToken?: string; hasMore?: boolean }> {
     const q = new URLSearchParams();
     if (params.status) q.set('status', params.status);
     if (params.limit) q.set('limit', String(params.limit));
+    if (params.nextToken) q.set('nextToken', params.nextToken);
     const qs = q.toString() ? `?${q.toString()}` : '';
     return this.http
-      .get<{ orders: unknown[]; total?: number }>(`${this.baseUrl}/admin/orders${qs}`, { headers: this.actorHeaders() })
+      .get<{ orders: unknown[]; total?: number; count?: number; nextToken?: string; hasMore?: boolean }>(`${this.baseUrl}/orders/find${qs}`, { headers: this.actorHeaders() })
       .pipe(
         map((response) => ({
           orders: this.normalizeOrders(response.orders),
-          total: Number(response.total ?? (Array.isArray(response.orders) ? response.orders.length : 0))
+          total: Number(response.total ?? response.count ?? (Array.isArray(response.orders) ? response.orders.length : 0)),
+          nextToken: response.nextToken ?? undefined,
+          hasMore: response.hasMore ?? false
         }))
       );
   }
 
   getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
-    return this.http.get<{ warnings: { type: string; text: string; severity: string }[] }>(`${this.baseUrl}/admin/warnings`, { headers: this.actorHeaders() })
+    return this.http.get<{ warnings: { type: string; text: string; severity: string }[] }>(`${this.baseUrl}/dashboard/admin/warnings`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.warnings ?? []));
   }
 
+  private normalizeAdminCustomer(raw: Record<string, unknown>): AdminCustomer {
+    return {
+      id: Number(raw['customerId'] ?? raw['id'] ?? 0),
+      name: String(raw['name'] ?? ''),
+      email: String(raw['email'] ?? ''),
+      isSuperUser: Boolean(raw['isSuperUser'] ?? false),
+      leaderId: raw['leaderId'] != null ? Number(raw['leaderId']) : null,
+      level: String(raw['level'] ?? ''),
+      discount: String(raw['discount'] ?? '0%'),
+      commissions: Number(raw['commissions'] ?? 0),
+      commissionsPrevMonth: raw['commissionsPrevMonth'] != null ? Number(raw['commissionsPrevMonth']) : undefined,
+      commissionsPrevMonthKey: raw['commissionsPrevMonthKey'] != null ? String(raw['commissionsPrevMonthKey']) : undefined,
+      commissionsCurrentPending: raw['commissionsCurrentPending'] != null ? Number(raw['commissionsCurrentPending']) : undefined,
+      commissionsCurrentConfirmed: raw['commissionsCurrentConfirmed'] != null ? Number(raw['commissionsCurrentConfirmed']) : undefined,
+      commissionsPrevStatus: raw['commissionsPrevStatus'] as AdminCustomer['commissionsPrevStatus'],
+      commissionsPrevReceiptUrl: raw['commissionsPrevReceiptUrl'] != null ? String(raw['commissionsPrevReceiptUrl']) : undefined,
+      clabeInterbancaria: raw['clabeInterbancaria'] != null ? String(raw['clabeInterbancaria']) : undefined,
+      bankInstitution: raw['bankInstitution'] != null ? String(raw['bankInstitution']) : undefined,
+      documents: raw['documents'] as AdminCustomer['documents'],
+    };
+  }
+
   listCustomers(): Observable<AdminCustomer[]> {
-    return this.http.get<{ customers: AdminCustomer[] }>(`${this.baseUrl}/customers`, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.customers ?? []));
+    return this.http.get<{ customers: Record<string, unknown>[] }>(
+      `${this.baseUrl}/customers/getall?limit=200`, { headers: this.actorHeaders() }
+    ).pipe(map((r) => (r.customers ?? []).map((c) => this.normalizeAdminCustomer(c))));
+  }
+
+  listCustomersPaged(params: { limit?: number; nextToken?: string; search?: string } = {}): Observable<{ customers: AdminCustomer[]; nextToken?: string; hasMore?: boolean; total?: number }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.nextToken) q.set('nextToken', params.nextToken);
+    if (params.search) q.set('search', params.search);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return this.http.get<{ customers: Record<string, unknown>[]; nextToken?: string; hasMore?: boolean; total?: number }>(
+      `${this.baseUrl}/customers/getall${qs}`, { headers: this.actorHeaders() }
+    ).pipe(map((r) => ({
+      customers: (r.customers ?? []).map((c) => this.normalizeAdminCustomer(c)),
+      nextToken: r.nextToken,
+      hasMore: r.hasMore,
+      total: r.total,
+    })));
   }
 
   listProducts(): Observable<AdminProduct[]> {
-    return this.http.get<{ products: AdminProduct[] }>(`${this.baseUrl}/products`, { headers: this.actorHeaders() })
+    return this.http.get<{ products: AdminProduct[] }>(`${this.baseUrl}/catalog/catalog`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.products ?? []));
   }
 
   listCampaigns(): Observable<AdminCampaign[]> {
-    return this.http.get<{ campaigns: AdminCampaign[] }>(`${this.baseUrl}/campaigns`, { headers: this.actorHeaders() })
+    return this.http.get<{ campaigns: AdminCampaign[] }>(`${this.baseUrl}/dashboard/campaigns`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.campaigns ?? []));
   }
 
   listAdminNotifications(): Observable<PortalNotification[]> {
-    return this.http.get<{ notifications: PortalNotification[] }>(`${this.baseUrl}/notifications`, { headers: this.actorHeaders() })
+    return this.http.get<{ notifications: PortalNotification[] }>(`${this.baseUrl}/dashboard/notifications`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.notifications ?? []));
   }
 
@@ -297,7 +339,7 @@ export class RealApiService {
   }
 
   getHonorBoard(): Observable<HonorBoard> {
-    return this.http.get<HonorBoard>(`${this.baseUrl}/honor-board`, { headers: this.actorHeaders() });
+    return this.http.get<HonorBoard>(`${this.baseUrl}/dashboard/honor-board`, { headers: this.actorHeaders() });
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -309,7 +351,7 @@ export class RealApiService {
   }
 
   uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {
-    return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/admin/commissions/receipt`, payload, {
+    return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/commissions/admin/receipt`, payload, {
       headers: this.actorHeaders()
     });
   }
@@ -373,7 +415,7 @@ export class RealApiService {
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
     return this.http
-      .get<{ month: AssociateMonth }>(`${this.baseUrl}/associates/${encodeURIComponent(associateId)}/month/${encodeURIComponent(monthKey)}`)
+      .get<{ month: AssociateMonth }>(`${this.baseUrl}/commissions/associates/${encodeURIComponent(associateId)}/month/${encodeURIComponent(monthKey)}`)
       .pipe(map((response) => response.month));
   }
 
@@ -410,7 +452,7 @@ export class RealApiService {
   uploadCustomerOwnDocument(payload: CustomerOwnDocumentPayload): Observable<CustomerProfile> {
     return this.http
       .post<{ customer?: Record<string, unknown>; message?: string; Error?: string }>(
-        `${this.baseUrl}/profile/documents`,
+        `${this.baseUrl}/customers/documents`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -446,7 +488,7 @@ export class RealApiService {
 
   listStocks(): Observable<AdminStock[]> {
     return this.http
-      .get<{ stocks: AdminStock[] }>(`${this.baseUrl}/stocks`)
+      .get<{ stocks: AdminStock[] }>(`${this.baseUrl}/inventory/stocks`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stocks ?? []));
   }
 
@@ -458,20 +500,20 @@ export class RealApiService {
 
   createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.http
-      .post<{ stock: AdminStock }>(`${this.baseUrl}/stocks`, payload, { headers: this.actorHeaders() })
+      .post<{ stock: AdminStock }>(`${this.baseUrl}/inventory/stocks`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stock));
   }
 
   updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
     return this.http
-      .patch<{ stock: AdminStock }>(`${this.baseUrl}/stocks/${encodeURIComponent(stockId)}`, payload, { headers: this.actorHeaders() })
+      .patch<{ stock: AdminStock }>(`${this.baseUrl}/inventory/stocks/${encodeURIComponent(stockId)}`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stock));
   }
 
   registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
     return this.http
       .post<{ stock?: AdminStock; message?: string; Error?: string }>(
-        `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/entries`,
+        `${this.baseUrl}/inventory/stocks/${encodeURIComponent(stockId)}/entries`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -485,7 +527,7 @@ export class RealApiService {
   registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
     return this.http
       .post<{ stock?: AdminStock; message?: string; Error?: string }>(
-        `${this.baseUrl}/stocks/${encodeURIComponent(stockId)}/damages`,
+        `${this.baseUrl}/inventory/stocks/${encodeURIComponent(stockId)}/damages`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -499,7 +541,7 @@ export class RealApiService {
   listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ transfers: StockTransfer[] }>(`${this.baseUrl}/stocks/transfers${query}`)
+      .get<{ transfers: StockTransfer[] }>(`${this.baseUrl}/inventory/stocks/transfers${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.transfers ?? []));
   }
 
@@ -510,7 +552,7 @@ export class RealApiService {
     createdByUserId?: number | null;
   }): Observable<{ transfer: StockTransfer }> {
     return this.http
-      .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(`${this.baseUrl}/stocks/transfers`, payload, {
+      .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(`${this.baseUrl}/inventory/stocks/transfers`, payload, {
         headers: this.actorHeaders()
       })
       .pipe(
@@ -523,7 +565,7 @@ export class RealApiService {
   receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
     return this.http
       .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(
-        `${this.baseUrl}/stocks/transfers/${encodeURIComponent(transferId)}/receive`,
+        `${this.baseUrl}/inventory/stocks/transfers/${encodeURIComponent(transferId)}/receive`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -537,14 +579,14 @@ export class RealApiService {
   listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ movements: InventoryMovement[] }>(`${this.baseUrl}/stocks/movements${query}`)
+      .get<{ movements: InventoryMovement[] }>(`${this.baseUrl}/inventory/stocks/movements${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.movements ?? []));
   }
 
   listPosSales(stockId?: string): Observable<PosSale[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ sales: PosSale[] }>(`${this.baseUrl}/pos/sales${query}`)
+      .get<{ sales: PosSale[] }>(`${this.baseUrl}/inventory/pos/sales${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.sales ?? []));
   }
 
@@ -557,7 +599,7 @@ export class RealApiService {
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
   }): Observable<{ sale: PosSale }> {
     return this.http
-      .post<{ sale?: PosSale; message?: string; Error?: string }>(`${this.baseUrl}/pos/sales`, payload, {
+      .post<{ sale?: PosSale; message?: string; Error?: string }>(`${this.baseUrl}/inventory/pos/sales`, payload, {
         headers: this.actorHeaders()
       })
       .pipe(
@@ -570,12 +612,12 @@ export class RealApiService {
   getPosCashControl(stockId?: string): Observable<PosCashControl> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ control: PosCashControl }>(`${this.baseUrl}/pos/cash-control${query}`, { headers: this.actorHeaders() })
+      .get<{ control: PosCashControl }>(`${this.baseUrl}/inventory/pos/cash-control${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.control));
   }
 
   createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
-    return this.http.post<{ cut: PosCashCut; control: PosCashControl }>(`${this.baseUrl}/pos/cash-cut`, payload, {
+    return this.http.post<{ cut: PosCashCut; control: PosCashControl }>(`${this.baseUrl}/inventory/pos/cash-cut`, payload, {
       headers: this.actorHeaders()
     });
   }
@@ -592,20 +634,20 @@ export class RealApiService {
 
   listEmployees(): Observable<AdminEmployee[]> {
     return this.http
-      .get<{ employees: AdminEmployee[] }>(`${this.baseUrl}/employees`, { headers: this.actorHeaders() })
+      .get<{ employees: AdminEmployee[] }>(`${this.baseUrl}/auth/employees`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.employees ?? []));
   }
 
   createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
     return this.http
-      .post<{ employee: AdminEmployee }>(`${this.baseUrl}/employees`, payload, { headers: this.actorHeaders() })
+      .post<{ employee: AdminEmployee }>(`${this.baseUrl}/auth/employees`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.employee));
   }
 
   updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
     return this.http
       .patch<{ employee: AdminEmployee }>(
-        `${this.baseUrl}/employees/${encodeURIComponent(String(employeeId))}`,
+        `${this.baseUrl}/auth/employees/${encodeURIComponent(String(employeeId))}`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -615,7 +657,7 @@ export class RealApiService {
   updateEmployeePrivileges(employeeId: number, payload: UpdateEmployeePrivilegesPayload): Observable<AdminEmployee> {
     return this.http
       .patch<{ employee: AdminEmployee }>(
-        `${this.baseUrl}/employees/${encodeURIComponent(String(employeeId))}/privileges`,
+        `${this.baseUrl}/auth/employees/${encodeURIComponent(String(employeeId))}/privileges`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -632,19 +674,19 @@ export class RealApiService {
       .pipe(map((response) => response.customer));
   }
 
-  changePassword(userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
+  changePassword(_userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
     return this.http
       .post<void>(
-        `${this.baseUrl}/customers/${encodeURIComponent(userId)}/password`,
+        `${this.baseUrl}/auth/changepassword`,
         payload,
         { headers: this.actorHeaders() }
       );
   }
 
-  updateProfile(userId: string, payload: UpdateProfilePayload): Observable<CustomerProfile> {
+  updateProfile(_userId: string, payload: UpdateProfilePayload): Observable<CustomerProfile> {
     return this.http
       .patch<{ customer: CustomerProfile }>(
-        `${this.baseUrl}/customers/${encodeURIComponent(userId)}/profile`,
+        `${this.baseUrl}/customers/profile`,
         payload,
         { headers: this.actorHeaders() }
       )
@@ -653,13 +695,13 @@ export class RealApiService {
 
   saveCampaign(payload: SaveAdminCampaignPayload): Observable<AdminCampaign> {
     return this.http
-      .post<{ campaign: AdminCampaign }>(`${this.baseUrl}/campaigns`, payload, { headers: this.actorHeaders() })
+      .post<{ campaign: AdminCampaign }>(`${this.baseUrl}/dashboard/campaigns`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.campaign));
   }
 
   listCategories(): Observable<ProductCategory[]> {
     return this.http
-      .get<{ categories: ProductCategory[] }>(`${this.baseUrl}/product-categories`, { headers: this.actorHeaders() })
+      .get<{ categories: ProductCategory[] }>(`${this.baseUrl}/catalog/categories`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.categories));
   }
 
@@ -671,24 +713,24 @@ export class RealApiService {
 
   saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
     return this.http
-      .post<{ category: ProductCategory }>(`${this.baseUrl}/product-categories`, payload, { headers: this.actorHeaders() })
+      .post<{ category: ProductCategory }>(`${this.baseUrl}/catalog/categories`, payload, { headers: this.actorHeaders() })
       .pipe(map((r) => r.category));
   }
 
   deleteCategory(id: string): Observable<{ ok: boolean }> {
     return this.http
-      .delete<{ ok: boolean }>(`${this.baseUrl}/product-categories/${id}`, { headers: this.actorHeaders() });
+      .delete<{ ok: boolean }>(`${this.baseUrl}/catalog/categories/${id}`, { headers: this.actorHeaders() });
   }
 
   saveNotification(payload: SaveAdminNotificationPayload): Observable<PortalNotification> {
     return this.http
-      .post<{ notification: PortalNotification }>(`${this.baseUrl}/notifications`, payload, { headers: this.actorHeaders() })
+      .post<{ notification: PortalNotification }>(`${this.baseUrl}/dashboard/notifications`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.notification));
   }
 
   markNotificationRead(notificationId: string, payload: { customerId?: number | string } = {}): Observable<NotificationReadResponse> {
     return this.http.post<NotificationReadResponse>(
-      `${this.baseUrl}/notifications/${encodeURIComponent(notificationId)}/read`,
+      `${this.baseUrl}/dashboard/notifications/${encodeURIComponent(notificationId)}/read`,
       payload,
       { headers: this.actorHeaders() }
     );
@@ -696,7 +738,7 @@ export class RealApiService {
 
   getBusinessConfig(): Observable<AppBusinessConfig> {
     return this.http
-      .get<{ config: AppBusinessConfig }>(`${this.baseUrl}/catalog/config/app`, { headers: this.actorHeaders() })
+      .get<{ config: AppBusinessConfig }>(`${this.baseUrl}/commissions/config/app`, { headers: this.actorHeaders() })
       .pipe(map((response) => response.config));
   }
 
@@ -708,7 +750,7 @@ export class RealApiService {
 
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.http
-      .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/catalog/config/app`, payload, { headers: this.actorHeaders() })
+      .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/commissions/config/app`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.config));
   }
 
@@ -1000,6 +1042,7 @@ export class RealApiService {
       const raw = entry as Record<string, unknown>;
       const id = String(raw['documentId'] ?? raw['id'] ?? '').trim();
       const assetId = String(raw['assetId'] ?? '').trim();
+      const docType = String(raw['docType'] ?? '').trim();
       const name = String(raw['name'] ?? '').trim();
       const type = String(raw['contentType'] ?? raw['type'] ?? '').trim();
       const url = String(raw['url'] ?? '').trim();
@@ -1009,6 +1052,7 @@ export class RealApiService {
       documents.push({
         id,
         ...(assetId ? { assetId } : {}),
+        ...(docType ? { docType } : {}),
         name,
         type,
         ...(url ? { url } : {}),

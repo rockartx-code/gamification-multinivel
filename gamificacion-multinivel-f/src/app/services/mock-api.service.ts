@@ -1224,6 +1224,20 @@ export class MockApiService {
     return of(this.customers ?? []).pipe(delay(120));
   }
 
+  listCustomersPaged(params: { limit?: number; nextToken?: string; search?: string } = {}): Observable<{ customers: AdminCustomer[]; nextToken?: string; hasMore?: boolean; total?: number }> {
+    let customers = this.customers ?? [];
+    if (params.search) {
+      const s = params.search.toLowerCase();
+      customers = customers.filter((c) => (c.name || '').toLowerCase().includes(s) || (c.email || '').toLowerCase().includes(s));
+    }
+    const limit = params.limit ?? 50;
+    const offset = Number(params.nextToken ?? 0);
+    const page = customers.slice(offset, offset + limit);
+    const nextOffset = offset + limit;
+    const hasMore = nextOffset < customers.length;
+    return of({ customers: page, total: customers.length, hasMore, nextToken: hasMore ? String(nextOffset) : undefined }).pipe(delay(120));
+  }
+
   listProducts(): Observable<AdminProduct[]> {
     return of(this.products ?? []).pipe(delay(120));
   }

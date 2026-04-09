@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { finalize } from 'rxjs';
 
 import { CustomerDocumentTypeConfig, CustomerProfile } from '../../models/admin.model';
@@ -23,11 +24,15 @@ interface OwnDocUploadState {
   templateUrl: './user-profile.component.html'
 })
 export class UserProfileComponent implements OnInit {
+  previewDoc: { name: string; url?: string; type?: string; uploadedAt?: string } | null = null;
+  previewSafeUrl: SafeResourceUrl | null = null;
+
   constructor(
     private readonly api: ApiService,
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly sanitizer: DomSanitizer
   ) {}
 
   isLoading = true;
@@ -229,9 +234,36 @@ export class UserProfileComponent implements OnInit {
     reader.readAsDataURL(state.file);
   }
 
-  getOwnDocForType(docKey: string): { name: string; uploadedAt?: string; url?: string } | null {
-    return (this.profile?.ownDocuments as Array<{ docType?: string; name: string; uploadedAt?: string; url?: string }> ?? [])
-      .find((d) => d.docType === docKey) ?? null;
+  getOwnDocForType(docKey: string): { name: string; uploadedAt?: string; url?: string; type?: string } | null {
+    return (this.profile?.ownDocuments ?? []).find((d) => d.docType === docKey) ?? null;
+  }
+
+  isPdf(doc: { type?: string; url?: string }): boolean {
+    const ct = (doc.type || '').toLowerCase();
+    if (ct === 'application/pdf') return true;
+    return (doc.url || '').toLowerCase().split('?')[0].endsWith('.pdf');
+  }
+
+  isImage(doc: { type?: string; url?: string }): boolean {
+    const ct = (doc.type || '').toLowerCase();
+    if (ct.startsWith('image/')) return true;
+    return /\.(jpe?g|png|gif|webp|svg)(\?|$)/i.test(doc.url || '');
+  }
+
+  isPreviewable(doc: { type?: string; url?: string }): boolean {
+    return this.isPdf(doc) || this.isImage(doc);
+  }
+
+  openPreview(doc: { name: string; url?: string; type?: string; uploadedAt?: string }): void {
+    this.previewDoc = doc;
+    this.previewSafeUrl = doc.url
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(doc.url)
+      : null;
+  }
+
+  closePreview(): void {
+    this.previewDoc = null;
+    this.previewSafeUrl = null;
   }
 
   changePassword(): void {

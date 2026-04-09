@@ -268,6 +268,20 @@ def handle_create_account(body):
     }
     utils._put_entity("CUSTOMER", customer_id, customer_item)
 
+    # Índice por nombre para búsqueda rápida paginada: PK="REF#NOMBRE#{letra}" SK="{createdAt}#{customerId}"
+    try:
+        name_letter = (name[0] if name else "?").upper()
+        utils._table.put_item(Item={
+            "PK": f"REF#NOMBRE#{name_letter}",
+            "SK": f"{now}#{customer_id}",
+            "customerId": customer_id,
+            "nameLower": name.lower(),
+            "email": email,
+            "createdAt": now,
+        })
+    except Exception as ex:
+        print(f"[CUSTOMER_NAME_INDEX_ERROR] customerId={customer_id} error={ex}")
+
     try:
         utils._sync_customer_network_metadata()
     except Exception as ex:
@@ -426,6 +440,41 @@ def handle_password_reset(body):
 
     return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
 
+def handle_change_password(body, headers):
+    """POST /auth/changepassword — Requiere Bearer token; obtiene customerId desde la sesión."""
+    actor = utils._extract_actor_from_bearer(headers)
+    if not actor.get("user_id"):
+        return utils._json_response(401, {"message": "No autenticado"})
+
+    customer_id = str(actor["user_id"])
+    current_password = body.get("currentPassword")
+    new_password = body.get("newPassword")
+
+    if not current_password or not new_password:
+        return utils._json_response(400, {"message": "currentPassword y newPassword son requeridos"})
+    if len(str(new_password)) < 8:
+        return utils._json_response(400, {"message": "La nueva contraseña debe tener al menos 8 caracteres"})
+
+    # Buscar registro AUTH por customerId
+    auth_records = utils._query_bucket("AUTH")
+    auth = next((r for r in auth_records if str(r.get("customerId")) == customer_id), None)
+    if not auth:
+        return utils._json_response(404, {"message": "Cuenta no encontrada"})
+
+    # Validar contraseña actual
+    if auth.get("passwordHash") != utils._hash_password(str(current_password)):
+        return utils._json_response(401, {"message": "La contraseña actual es incorrecta"})
+
+    # Actualizar contraseña
+    email = auth.get("email") or auth.get("authId")
+    utils._update_by_id("AUTH", email, "SET passwordHash = :p, updatedAt = :u", {
+        ":p": utils._hash_password(str(new_password)),
+        ":u": utils._now_iso()
+    })
+
+    return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
+
+
 def handle_get_referrer(referrer_id):
     """GET /referrer/{id}"""
     # Intentar lookup por ID numérico o string
@@ -533,6 +582,9 @@ def lambda_handler(event, context):
 
         if root == "resend-email-confirmation" and method == "POST":
             return handle_resend_email_confirmation(body)
+
+        if root == "changepassword" and method == "POST":
+            return handle_change_password(body, headers)
 
         if root == "password":
             sub = segments[1] if len(segments) > 1 else ""

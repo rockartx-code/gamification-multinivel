@@ -1025,11 +1025,16 @@ def handle_update_customer(customer_id, body, headers):
         updates.append("leaderId = :lid")
         eav[":lid"] = new_leader
 
-    # 2. Campos básicos
+    # 2. Campos básicos (name es reservada en DynamoDB → alias #name)
+    _reserved = {"name"}
     fields = ["name", "phone", "address", "city", "level", "isAssociate"]
     for f in fields:
         if f in body:
-            updates.append(f"{f} = :{f}")
+            if f in _reserved:
+                ean[f"#{f}"] = f
+                updates.append(f"#{f} = :{f}")
+            else:
+                updates.append(f"{f} = :{f}")
             eav[f":{f}"] = body[f]
 
     # 3. Direcciones (Upsert en lista)
@@ -1039,7 +1044,7 @@ def handle_update_customer(customer_id, body, headers):
             updates.append("shippingAddresses = :addr")
             eav[":addr"] = body["addresses"]
 
-    updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean)
+    updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean or None)
 
     if leader_changed:
         try:
@@ -1048,6 +1053,36 @@ def handle_update_customer(customer_id, body, headers):
         except Exception as ex:
             print(f"[CUSTOMER_NETWORK_SYNC_ERROR] action=update_customer customerId={cid} error={ex}")
 
+    return utils._json_response(200, {"customer": _format_customer_output(updated)})
+
+
+def handle_update_profile(body, headers):
+    """PATCH /customers/profile — el customerId se obtiene del token Bearer"""
+    actor = utils._extract_actor_from_bearer(headers)
+    if not actor.get("user_id"):
+        return utils._json_response(401, {"message": "No autenticado"})
+    cid = utils._customer_entity_id(actor["user_id"])
+    existing = utils._get_by_id("CUSTOMER", cid)
+    if not existing:
+        return utils._json_response(404, {"message": "Cliente no encontrado"})
+
+    # DynamoDB reserved keywords must be aliased via ExpressionAttributeNames
+    _reserved = {"name"}
+    updates = ["updatedAt = :u"]
+    eav = {":u": utils._now_iso()}
+    ean = {}
+
+    for field in ("name", "phone", "rfc", "curp"):
+        if field in body:
+            if field in _reserved:
+                alias = f"#{field}"
+                ean[alias] = field
+                updates.append(f"{alias} = :{field}")
+            else:
+                updates.append(f"{field} = :{field}")
+            eav[f":{field}"] = str(body[field]).strip()
+
+    updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean or None)
     return utils._json_response(200, {"customer": _format_customer_output(updated)})
 
 
@@ -1406,12 +1441,62 @@ def lambda_handler(event, context):
     try:
         root = segments[0]
 
-        # ── GET /customers  (lista completa para admin) ────────────────
-        if root == "customers" and len(segments) == 1 and method == "GET":
+        # ── GET /customers/getall  (lista paginada para admin) ─────────
+        if root == "customers" and len(segments) == 2 and segments[1] == "getall" and method == "GET":
             err = utils._require_admin(headers, "access_screen_customers")
             if err: return err
-            items = utils._query_bucket("CUSTOMER")
-            return utils._json_response(200, {"customers": items})
+            search = (query.get("search") or "").strip().lower()
+            try:
+                limit = max(1, min(int(query.get("limit", 50)), 200))
+            except (TypeError, ValueError):
+                limit = 50
+            try:
+                offset = int(query.get("nextToken", 0))
+            except (TypeError, ValueError):
+                offset = 0
+
+            if search:
+                # Busca por índice de nombre si la primera letra coincide
+                letter = search[0].upper()
+                try:
+                    resp = utils._table.query(
+                        KeyConditionExpression=utils.Key("PK").eq(f"REF#NOMBRE#{letter}"),
+                        ScanIndexForward=True,
+                    )
+                    name_refs = resp.get("Items", [])
+                    # Filtro adicional por término completo
+                    matched_ids = [
+                        r["customerId"] for r in name_refs
+                        if search in str(r.get("nameLower") or "").lower()
+                    ]
+                except Exception:
+                    matched_ids = []
+
+                if matched_ids:
+                    items = [utils._get_by_id("CUSTOMER", cid) for cid in matched_ids]
+                    items = [i for i in items if i]
+                else:
+                    # Fallback: scan completo con filtro en memoria
+                    all_items = utils._query_bucket("CUSTOMER")
+                    items = [
+                        c for c in all_items
+                        if search in str(c.get("name") or "").lower()
+                        or search in str(c.get("email") or "").lower()
+                    ]
+            else:
+                items = utils._query_bucket("CUSTOMER", forward=False)
+
+            total = len(items)
+            page = items[offset: offset + limit]
+            next_offset = offset + limit
+            has_more = next_offset < total
+            return utils._json_response(200, {
+                "customers": [_format_customer_output(c) for c in page],
+                "total": total,
+                "count": len(page),
+                "nextToken": str(next_offset) if has_more else None,
+                "hasMore": has_more,
+            })
 
         # ── /customers/... ─────────────────────────────────────────────
         if root == "customers" and len(segments) > 1:
@@ -1426,6 +1511,14 @@ def lambda_handler(event, context):
 
             if target_id == "sponsor" and len(segments) == 3 and method == "GET":
                 return handle_get_public_sponsor(segments[2])
+
+            # POST /customers/documents  (cliente sube su propio doc desde su sesión)
+            if target_id == "documents" and len(segments) == 2 and method == "POST":
+                return handle_upload_own_document(body, headers)
+
+            # PATCH /customers/profile  (customerId desde el token Bearer)
+            if target_id == "profile" and len(segments) == 2 and method == "PATCH":
+                return handle_update_profile(body, headers)
 
             # POST /customers/clabe  (customerId en el body)
             if target_id == "clabe" and method == "POST":
@@ -1450,12 +1543,6 @@ def lambda_handler(event, context):
                     return handle_update_customer(
                         target_id, {"privileges": body.get("privileges")}, headers
                     )
-
-        # ── POST /profile/documents  (cliente sube su propio doc) ──────
-        if root == "profile" and len(segments) == 2 and segments[1] == "documents":
-            if method == "POST":
-                return handle_upload_own_document(body, headers)
-
 
         # ── /network/{id} ──────────────────────────────────────────────
         if root == "network" and len(segments) > 1:

@@ -74,24 +74,31 @@ export class AdminControlService {
     );
   }
 
-  /** Órdenes filtradas por status desde el backend */
-  loadOrders(status: AdminOrder['status'], limit = 100): Observable<AdminOrder[]> {
+  /** Carga órdenes desde el backend. Sin status carga todas (admin). */
+  loadOrders(status?: AdminOrder['status'], limit = 500): Observable<AdminOrder[]> {
     this.setLoading('orders', true);
     return this.api.getAdminOrders({ status, limit }).pipe(
       tap(({ orders }) => {
         const current = this.dataSubject.value;
-        // Fusionar: reemplazar las del status dado, conservar el resto
-        const existing = (current?.orders ?? []).filter((o) => o.status !== status);
-        this.patchData({ orders: [...orders, ...existing] });
-        this.loadedSections.add(`orders:${status}`);
+        if (status) {
+          // Reemplazar las del status dado, conservar el resto
+          const existing = (current?.orders ?? []).filter((o) => o.status !== status);
+          this.patchData({ orders: [...orders, ...existing] });
+          this.loadedSections.add(`orders:${status}`);
+        } else {
+          // Sin filtro: reemplazar todo el lote inicial
+          this.patchData({ orders });
+          this.loadedSections.add('orders:all');
+        }
         this.setLoading('orders', false);
       }),
       map(({ orders }) => orders)
     );
   }
 
-  hasLoadedOrders(status: AdminOrder['status']): boolean {
-    return this.loadedSections.has(`orders:${status}`);
+  hasLoadedOrders(status?: AdminOrder['status']): boolean {
+    if (!status) return this.loadedSections.has('orders:all');
+    return this.loadedSections.has(`orders:${status}`) || this.loadedSections.has('orders:all');
   }
 
   /** Clientes — carga única */

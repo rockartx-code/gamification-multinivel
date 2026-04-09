@@ -1487,6 +1487,25 @@ paths:
     options:
       <<: *cors-options
 
+  /catalog/{proxy+}:
+    x-amazon-apigateway-any-method:
+      summary: "Catalog proxy — resuelve /catalog/catalog, /catalog/categories, /catalog/config/public"
+      operationId: catalogProxy
+      tags: [Catalog]
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
   /catalog/config/public:
     get:
       summary: "Configuración pública para landing"
@@ -1721,10 +1740,28 @@ paths:
     options:
       <<: *cors-options
 
+  /dashboard/{proxy+}:
+    x-amazon-apigateway-any-method:
+      summary: "Dashboard proxy — resuelve /dashboard/admin/*, /dashboard/honor-board, /dashboard/notifications, /dashboard/campaigns"
+      operationId: dashboardProxy
+      tags: [Dashboard]
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
   /honor-board:
     get:
       summary: "Tablero de honor — ranking de distribuidores"
-      description: "⚠️ Pendiente implementar en el backend"
       operationId: getHonorBoard
       tags: [Dashboard]
       responses:
@@ -1923,6 +1960,25 @@ paths:
         - $ref: '#/components/parameters/xUserRole'
         - name: stockId
           in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /inventory/{proxy+}:
+    x-amazon-apigateway-any-method:
+      summary: "Inventory proxy — resuelve /inventory/stocks/*, /inventory/pos/*"
+      operationId: inventoryProxy
+      tags: [Inventory]
+      parameters:
+        - name: proxy
+          in: path
+          required: true
           schema:
             type: string
       responses:

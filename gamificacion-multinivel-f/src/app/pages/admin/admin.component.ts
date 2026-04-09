@@ -539,8 +539,9 @@ export class AdminComponent implements OnInit {
   private loadViewData(view: AdminViewId): void {
     switch (view) {
       case 'orders':
-        if (!this.adminControl.hasLoadedOrders(this.currentOrderStatus)) {
-          this.adminControl.loadOrders(this.currentOrderStatus).subscribe(() => {
+        if (!this.adminControl.hasLoadedOrders()) {
+          // Carga inicial sin filtro de status para ver todos los pedidos
+          this.adminControl.loadOrders().subscribe(() => {
             this.syncInitialOrderDeps();
           });
         }
@@ -1492,7 +1493,8 @@ export class AdminComponent implements OnInit {
       return { nodes: [], links: [] };
     }
     if (
-      this.structureGraphCache?.selectedCustomerId === this.selectedCustomer.id &&
+      this.structureGraphCache !== null &&
+      this.structureGraphCache.selectedCustomerId === this.selectedCustomer.id &&
       this.structureGraphCache.customersRef === this.customers
     ) {
       return this.structureGraphCache.graph;
@@ -2127,7 +2129,8 @@ export class AdminComponent implements OnInit {
     this.currentOrderStatus = status;
     this.orderPage = 0;
     this.orderSearch = '';
-    if (!this.adminControl.hasLoadedOrders(status)) {
+    // Si no hay carga inicial completa, cargar el status específico
+    if (!this.adminControl.hasLoadedOrders()) {
       this.adminControl.loadOrders(status).subscribe();
     }
   }

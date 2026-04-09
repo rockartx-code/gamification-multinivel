@@ -764,7 +764,9 @@ def lambda_handler(event, context):
         return utils._cors_preflight_response()
     body = utils._parse_body(event)
     headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
+    # API GW está configurado como ANY /commissions/{proxy+}; el path llega con el prefijo
+    raw_segments = [s for s in path.strip("/").split("/") if s]
+    segments = raw_segments[1:] if raw_segments and raw_segments[0] == "commissions" else raw_segments
 
     try:
         if not segments:
@@ -772,33 +774,30 @@ def lambda_handler(event, context):
 
         root = segments[0]
 
-        # /commissions/...  — acciones del propio cliente autenticado
-        if root == "commissions":
-            sub = segments[1] if len(segments) > 1 else ""
-            if sub == "request" and method == "POST":
-                # El customer solo puede solicitar pago para sí mismo
-                err = utils._require_self_or_admin(headers, body.get("customerId"))
-                if err: return err
-                return handle_payout_request(body)
-            if sub == "receipt" and method == "POST":
-                err = utils._require_self_or_admin(headers, body.get("customerId"))
-                if err: return err
-                return handle_upload_receipt(body)
+        # POST /commissions/request
+        if root == "request" and method == "POST":
+            err = utils._require_self_or_admin(headers, body.get("customerId"))
+            if err: return err
+            return handle_payout_request(body)
 
-        # /admin/commissions/receipt  — solo admin con privilegio
-        if root == "admin" and len(segments) >= 3 and segments[1] == "commissions" and segments[2] == "receipt":
+        # POST /commissions/receipt
+        if root == "receipt" and method == "POST":
+            err = utils._require_self_or_admin(headers, body.get("customerId"))
+            if err: return err
+            return handle_upload_receipt(body)
+
+        # POST /commissions/admin/receipt
+        if root == "admin" and len(segments) >= 2 and segments[1] == "receipt":
             if method == "POST":
                 err = utils._require_admin(headers, "commissions_register_payment")
                 if err: return err
                 return handle_admin_receipt(body)
 
-        # /catalog/config/rewards  y  /catalog/config/app
-        if root == "catalog" and len(segments) > 2 and segments[1] == "config":
-            sub = segments[2]
+        # /commissions/config/rewards  y  /commissions/config/app
+        if root == "config" and len(segments) > 1:
+            sub = segments[1]
             if sub == "rewards":
                 if method == "GET":
-                    err = utils._require_admin(headers, "access_screen_settings")
-                    if err: return err
                     return utils._json_response(200, {"config": utils._load_app_config().get("rewards")})
                 if method == "PUT":
                     err = utils._require_admin(headers, "config_manage")
@@ -827,12 +826,11 @@ def lambda_handler(event, context):
                     utils._audit_event("config.app.update", headers, body, {"scope": "app"})
                     return utils._json_response(200, {"config": saved})
 
-        # /associates/{id}/commissions  y  /associates/{id}/month/{monthKey}
+        # /commissions/associates/{id}/commissions  y  /commissions/associates/{id}/month/{monthKey}
         if root == "associates" and len(segments) >= 3:
             aid = segments[1]
             sub = segments[2]
             if sub == "commissions":
-                # El cliente solo puede ver sus propias comisiones
                 err = utils._require_self_or_admin(headers, aid)
                 if err: return err
                 month = (event.get("queryStringParameters") or {}).get("month", utils._month_key())
@@ -842,7 +840,7 @@ def lambda_handler(event, context):
                 if err: return err
                 return handle_get_associate_month(aid, segments[3])
 
-        # /bonuses/{customerId}  — lista de awards del cliente
+        # /commissions/bonuses/{customerId}  — lista de awards del cliente
         if root == "bonuses" and len(segments) == 2:
             cid = segments[1]
             if method == "GET":

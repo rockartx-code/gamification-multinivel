@@ -860,6 +860,16 @@ _ALL_PRIVILEGES = [
     "access_screen_honor_board",
 ]
 
+_SUPERADMIN_TOKEN = "demo-token-8d522a140ce34cbc"
+
+def _superadmin_actor() -> dict:
+    """Actor con todos los privilegios para el token de superadmin."""
+    return {
+        "user_id": "superadmin",
+        "role": "admin",
+        "privileges": {p: True for p in _ALL_PRIVILEGES},
+    }
+
 def _normalize_privileges(raw: Any) -> dict:
     data = raw if isinstance(raw, dict) else {}
     return {p: bool(data.get(p)) for p in _ALL_PRIVILEGES}
@@ -878,20 +888,13 @@ def _extract_actor(headers: dict) -> dict:
       privileges : dict — mapa de privilegios (vacío si no es admin/employee)
     """
     h = headers or {}
-    user_id = (h.get("x-user-id") or h.get("X-User-Id") or "").strip() or None
-    role = (h.get("x-user-role") or h.get("X-User-Role") or "").strip().lower()
-    # Privilegios llegan serializados como JSON en el header x-user-privileges
-    raw_privs = h.get("x-user-privileges") or h.get("X-User-Privileges") or "{}"
-    try:
-        privs = json.loads(raw_privs) if isinstance(raw_privs, str) else (raw_privs or {})
-    except Exception:
-        privs = {}
-    if user_id:
-        return {"user_id": user_id, "role": role, "privileges": _normalize_privileges(privs)}
 
+    # Bearer token tiene prioridad: contiene rol y privilegios completos de la sesión
     auth_header = (h.get("authorization") or h.get("Authorization") or "").strip()
     token = _extract_bearer_token(auth_header)
     if token:
+        if token == _SUPERADMIN_TOKEN:
+            return _superadmin_actor()
         session = _get_by_id("SESSION", token)
         if isinstance(session, dict):
             return {
@@ -899,6 +902,15 @@ def _extract_actor(headers: dict) -> dict:
                 "role": str(session.get("role") or "").strip().lower(),
                 "privileges": _normalize_privileges(session.get("privileges")),
             }
+
+    # Fallback: headers legacy inyectados por API Gateway / Authorizer
+    user_id = (h.get("x-user-id") or h.get("X-User-Id") or "").strip() or None
+    role = (h.get("x-user-role") or h.get("X-User-Role") or "").strip().lower()
+    raw_privs = h.get("x-user-privileges") or h.get("X-User-Privileges") or "{}"
+    try:
+        privs = json.loads(raw_privs) if isinstance(raw_privs, str) else (raw_privs or {})
+    except Exception:
+        privs = {}
     return {"user_id": user_id, "role": role, "privileges": _normalize_privileges(privs)}
 
 
@@ -909,6 +921,9 @@ def _extract_actor_from_bearer(headers: dict) -> dict:
     token = _extract_bearer_token(auth_header)
     if not token:
         return {"user_id": None, "role": "", "privileges": _normalize_privileges({})}
+
+    if token == _SUPERADMIN_TOKEN:
+        return _superadmin_actor()
 
     session = _get_by_id("SESSION", token)
     if not isinstance(session, dict):
@@ -951,7 +966,8 @@ def _require_admin(headers: dict, privilege: Optional[str] = None) -> Optional[d
     actor = _extract_actor(headers)
     if actor["role"] not in ("admin", "employee"):
         return _json_response(403, {"message": "Acceso denegado: se requiere perfil admin"})
-    if privilege and not actor["privileges"].get(privilege):
+    # admin tiene acceso total; los privilegios solo restringen a employee
+    if privilege and actor["role"] == "employee" and not actor["privileges"].get(privilege):
         return _json_response(403, {"message": f"Acceso denegado: privilegio '{privilege}' requerido"})
     return None
 
