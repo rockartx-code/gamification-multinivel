@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { finalize, Subscription } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 
+import { ESTADOS_MX_CODES, ESTADOS_MX_OPTIONS } from '../../constants/states-mx';
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
-import { AdminOrderItem, AppBusinessConfig, CustomerShippingAddress, ShippingRate, ShippingQuoteItem } from '../../models/admin.model';
+import { AdminOrderItem, CustomerShippingAddress, ShippingRate, ShippingQuoteItem } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
@@ -26,6 +27,10 @@ import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
   styleUrl: './carrito.component.css'
 })
 export class CarritoComponent implements OnInit, OnDestroy {
+  readonly dashboardLink = ['/dashboard'];
+  readonly stateOptions = ESTADOS_MX_OPTIONS;
+  readonly countryOptions = [{ value: 'MX', label: 'Mexico' }];
+
   constructor(
     private readonly cartControl: CartControlService,
     private readonly cdr: ChangeDetectorRef,
@@ -41,6 +46,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   isSummaryOpen = false;
   isPlacingOrder = false;
   deliveryType: 'delivery' | 'pickup' = 'delivery';
+  pickupPaymentMethod: 'online' | 'at_store' = 'online';
   pickupStocks: Array<{ id: string; name: string; location: string }> = [];
   selectedPickupStockId = '';
   isLoadingPickupStocks = false;
@@ -50,26 +56,36 @@ export class CarritoComponent implements OnInit, OnDestroy {
   shippingQuoteError = '';
   deliveryName = '';
   deliveryPhone = '';
+  deliveryStreet = '';
+  deliveryNumber = '';
   deliveryAddress = '';
+  deliveryCity = '';
   deliveryPostalCode = '';
   deliveryState = '';
+  deliveryCountry = 'MX';
   deliveryBetweenStreets = '';
   deliveryReferences = '';
+  deliveryNotes = '';
   shippingAddresses: CustomerShippingAddress[] = [];
   selectedShippingAddressId = '';
   shippingAddressLabel = '';
   saveShippingAddress = false;
-  deliveryFieldErrors: Record<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', boolean> = {
-    deliveryAddress: false,
+  deliveryFieldErrors: Record<'deliveryStreet' | 'deliveryNumber' | 'deliveryCity' | 'deliveryPostalCode' | 'deliveryState' | 'deliveryCountry', boolean> = {
+    deliveryStreet: false,
+    deliveryNumber: false,
+    deliveryCity: false,
     deliveryPostalCode: false,
-    deliveryState: false
+    deliveryState: false,
+    deliveryCountry: false
   };
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
   lastAddedItemId = '';
   showGuestRegisterModal = false;
   guestRegisterForm = {
-    name: '',
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     email: '',
     phone: '',
     password: '',
@@ -82,22 +98,31 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private countdownInterval?: number;
   private dataSub?: Subscription;
   private goalsSub?: Subscription;
-  private customerSub?: Subscription;
+  private dashboardSub?: Subscription;
   private shippingQuoteSub?: Subscription;
   private addFadeTimeout?: number;
   private addFadeRestartTimeout?: number;
-  private discountTiers: Array<{ min: number; max: number | null; rate: number }> = [];
-  private monthNetVolume = 0;
+  private hasPrefilledDashboardAddress = false;
+  suggestedProducts: DashboardProduct[] = [];
 
   ngOnInit(): void {
     this.cartControl.load().subscribe();
-    this.dataSub = this.cartControl.data$.subscribe(() => this.cdr.markForCheck());
+    this.refreshSuggestedProducts();
+    this.dataSub = this.cartControl.data$.subscribe(() => {
+      this.refreshSuggestedProducts();
+      this.cdr.markForCheck();
+    });
     this.goalControl.load().subscribe();
     this.goalsSub = this.goalControl.goals$.subscribe(() => this.cdr.markForCheck());
+    this.dashboardSub = this.dashboardControl.data$.subscribe((data) => {
+      this.refreshSuggestedProducts();
+      if (!data || this.hasPrefilledDashboardAddress) {
+        return;
+      }
+      this.prefillCustomerAddressFromDashboard();
+    });
     this.updateCountdown();
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
-    this.prefillCustomerAddress();
-    this.loadDiscountProjectionContext();
     this.loadPickupStocks();
   }
 
@@ -116,7 +141,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.addFadeRestartTimeout) {
       window.clearTimeout(this.addFadeRestartTimeout);
     }
-    this.customerSub?.unsubscribe();
+    this.dashboardSub?.unsubscribe();
     this.shippingQuoteSub?.unsubscribe();
   }
 
@@ -128,7 +153,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return this.cartControl.cartItems;
   }
 
-  get suggestedProducts(): DashboardProduct[] {
+  private computeSuggestedProducts(): DashboardProduct[] {
     const products = this.dashboardControl.products ?? [];
     if (!products.length) {
       return [];
@@ -162,6 +187,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return [...ordered, ...fill].slice(0, 3);
   }
 
+  private refreshSuggestedProducts(): void {
+    this.suggestedProducts = this.computeSuggestedProducts();
+  }
+
   get shipping(): number {
     return this.cartControl.shipping;
   }
@@ -176,6 +205,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   get hasSavedShippingAddresses(): boolean {
     return this.shippingAddresses.length > 0;
+  }
+
+  get isShippingQuoteReady(): boolean {
+    return this.hasValidShippingQuoteFormData();
   }
 
   get goalTitle(): string {
@@ -226,13 +259,13 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private get currentDiscountPercentValue(): number {
-    const raw = this.authService.currentUser?.discountPercent;
+    const raw = this.dashboardControl.data?.user?.discountPercent ?? this.authService.currentUser?.discountPercent;
     const value = typeof raw === 'string' ? Number(raw) : Number(raw ?? 0);
     return Number.isFinite(value) ? value : 0;
   }
 
   private get discountActiveValue(): boolean {
-    return Boolean(this.authService.currentUser?.discountActive) || this.discountPercentValue > 0;
+    return Boolean(this.dashboardControl.data?.user?.discountActive ?? this.authService.currentUser?.discountActive) || this.discountPercentValue > 0;
   }
 
   get discountLevelLabel(): string {
@@ -427,9 +460,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.isPlacingOrder) {
       return;
     }
+    const pickupStockId = this.resolveSelectedPickupStockId(this.pickupStocks, this.selectedPickupStockId);
     if (this.deliveryType === 'pickup') {
-      if (!this.selectedPickupStockId) {
+      if (!pickupStockId) {
+        this.selectedPickupStockId = '';
         this.showToast('Selecciona una sucursal para recoger tu pedido.');
+        return;
+      }
+      if (!this.pickupPaymentMethod) {
+        this.showToast('Selecciona un método de pago para continuar.');
         return;
       }
     }
@@ -448,20 +487,30 @@ export class CarritoComponent implements OnInit, OnDestroy {
         status: 'pending' as const,
         items,
         deliveryType: 'pickup',
-        pickupStockId: this.selectedPickupStockId
+        pickupStockId,
+        pickupPaymentMethod: this.pickupPaymentMethod
       };
     } else {
-      const address = this.deliveryAddress.trim();
+      const recipientName = this.resolveDeliveryName();
+      const phone = this.resolveDeliveryPhone();
+      const street = this.deliveryStreet.trim();
+      const number = this.deliveryNumber.trim();
+      const city = this.deliveryCity.trim();
       const postalCode = this.deliveryPostalCode.trim();
       const state = this.deliveryState.trim();
+      const country = this.deliveryCountry.trim().toUpperCase();
+      const address = this.buildDeliveryAddressLine();
       if (
         !this.setDeliveryFieldErrors({
-          deliveryAddress: address,
+          deliveryStreet: street,
+          deliveryNumber: number,
+          deliveryCity: city,
           deliveryPostalCode: postalCode,
-          deliveryState: state
+          deliveryState: state,
+          deliveryCountry: country
         })
       ) {
-        this.showToast('Completa dirección, CP y estado para continuar.');
+        this.showToast('Completa calle, numero, ciudad, CP, estado y pais para continuar.');
         this.scrollToSection('detalle-carrito');
         this.focusFirstMissingDeliveryField();
         return;
@@ -470,27 +519,36 @@ export class CarritoComponent implements OnInit, OnDestroy {
         id: this.selectedShippingAddressId || undefined,
         addressId: this.selectedShippingAddressId || undefined,
         label: this.resolveShippingAddressLabel() || undefined,
-        recipientName: this.deliveryName.trim() || user?.name || undefined,
-        phone: this.deliveryPhone.trim() || undefined,
+        recipientName: recipientName || user?.name || undefined,
+        phone: phone || undefined,
+        street: street || undefined,
+        number: number || undefined,
         address: address || undefined,
+        city: city || undefined,
         postalCode: postalCode || undefined,
         state: state || undefined,
+        country: country || undefined,
         betweenStreets: this.deliveryBetweenStreets.trim() || undefined,
         references: this.deliveryReferences.trim() || undefined
       };
       payload = {
         customerId: this.resolveOrderCustomerId(),
-        customerName: user?.name || this.deliveryName.trim() || 'Cliente',
+        customerName: user?.name || recipientName || 'Cliente',
         status: 'pending' as const,
         items,
         shippingAddress,
-        recipientName: this.deliveryName.trim() || user?.name,
-        phone: this.deliveryPhone.trim() || undefined,
+        recipientName: recipientName || user?.name,
+        phone: phone || undefined,
+        street,
+        number,
         address,
+        city,
         postalCode,
         state,
+        country,
         betweenStreets: this.deliveryBetweenStreets.trim() || undefined,
         references: this.deliveryReferences.trim() || undefined,
+        deliveryNotes: this.deliveryNotes.trim() || undefined,
         shippingAddressId: this.selectedShippingAddressId || undefined,
         shippingAddressLabel: this.resolveShippingAddressLabel() || undefined,
         saveShippingAddress: Boolean(user?.userId && this.saveShippingAddress),
@@ -530,19 +588,32 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   fetchShippingRates(): void {
-    const zipTo = this.deliveryPostalCode.trim();
-    if (zipTo.length < 5) {
+    if (!this.hasValidShippingQuoteFormData()) {
       this.shippingRates = [];
       this.selectedShippingRate = null;
       this.shippingQuoteError = '';
       return;
     }
+    const zipTo = this.deliveryPostalCode.trim();
     const items = this.buildShippingItems();
     this.isLoadingShippingRates = true;
     this.shippingQuoteError = '';
     this.shippingQuoteSub?.unsubscribe();
     this.shippingQuoteSub = this.api
-      .getShippingQuote({ zipTo, items })
+      .getShippingQuote({
+        zipTo,
+        postalCode: zipTo,
+        name: this.resolveDeliveryName(),
+        recipientName: this.resolveDeliveryName(),
+        phone: this.resolveDeliveryPhone(),
+        street: this.deliveryStreet.trim(),
+        number: this.deliveryNumber.trim(),
+        address: this.buildDeliveryAddressLine(),
+        city: this.deliveryCity.trim(),
+        state: this.deliveryState.trim(),
+        country: this.deliveryCountry.trim().toUpperCase(),
+        items
+      })
       .pipe(finalize(() => {
         this.isLoadingShippingRates = false;
         this.cdr.markForCheck();
@@ -605,59 +676,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.cartControl.updateCountdown(`${d}d ${h}h`);
   }
 
-  private loadDiscountProjectionContext(): void {
-    const user = this.authService.currentUser;
-    if (!user?.userId || user.role !== 'cliente') {
-      return;
-    }
-    const userId = String(user.userId);
-    this.api.getBusinessConfig().subscribe({
-      next: (cfg: AppBusinessConfig) => {
-        this.discountTiers = Array.isArray(cfg?.rewards?.discountTiers) ? cfg.rewards.discountTiers : [];
-        this.cdr.markForCheck();
-      },
-      error: () => {}
-    });
-
-    this.api.getAssociateMonth(userId, this.monthKeyNow()).subscribe({
-      next: (month) => {
-        const value = Number(month?.netVolume ?? 0);
-        this.monthNetVolume = Number.isFinite(value) ? value : 0;
-        this.cdr.markForCheck();
-      },
-      error: () => {}
-    });
-  }
-
   private get projectedDiscountPercentValue(): number {
-    if (!this.discountTiers.length) {
-      return 0;
-    }
-    const projectedNet = this.monthNetVolume + this.subtotal;
-    const rate = this.calculateTierRate(projectedNet);
-    return Math.round(rate * 100);
-  }
-
-  private calculateTierRate(volume: number): number {
-    if (!Number.isFinite(volume) || volume <= 0) {
-      return 0;
-    }
-    for (const tier of this.discountTiers) {
-      const min = Number(tier.min ?? 0);
-      const max = tier.max == null ? null : Number(tier.max);
-      const rate = Number(tier.rate ?? 0);
-      if (volume >= min && (max == null || volume <= max)) {
-        return Number.isFinite(rate) ? rate : 0;
-      }
-    }
-    return 0;
-  }
-
-  private monthKeyNow(): string {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    return `${y}-${m}`;
+    return this.dashboardControl.getProjectedDiscountPercent(this.subtotal);
   }
 
   private discountLevelLabelByPercent(pct: number): string {
@@ -716,13 +736,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private focusFirstMissingDeliveryField(): void {
-    const requiredFields: Array<{ value: string; name: string }> = [
-      { value: this.deliveryAddress.trim(), name: 'deliveryAddress' },
-      { value: this.deliveryPostalCode.trim(), name: 'deliveryPostalCode' },
-      { value: this.deliveryState.trim(), name: 'deliveryState' }
+    const requiredFields: Array<{ hasError: boolean; name: string }> = [
+      { hasError: this.deliveryFieldErrors.deliveryStreet, name: 'deliveryStreet' },
+      { hasError: this.deliveryFieldErrors.deliveryNumber, name: 'deliveryNumber' },
+      { hasError: this.deliveryFieldErrors.deliveryCity, name: 'deliveryCity' },
+      { hasError: this.deliveryFieldErrors.deliveryPostalCode, name: 'deliveryPostalCode' },
+      { hasError: this.deliveryFieldErrors.deliveryState, name: 'deliveryState' },
+      { hasError: this.deliveryFieldErrors.deliveryCountry, name: 'deliveryCountry' }
     ];
 
-    const missingField = requiredFields.find((field) => !field.value);
+    const missingField = requiredFields.find((field) => field.hasError);
     if (!missingField) {
       return;
     }
@@ -738,10 +761,59 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }, 180);
   }
 
-  onDeliveryFieldChange(field: 'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', value: string): void {
-    this.deliveryFieldErrors[field] = !String(value ?? '').trim();
+  onDeliveryFieldChange(
+    field: 'deliveryStreet' | 'deliveryNumber' | 'deliveryCity' | 'deliveryPostalCode' | 'deliveryState' | 'deliveryCountry',
+    value: string
+  ): void {
+    const normalizedIncomingValue = String(value ?? '');
+
     if (field === 'deliveryPostalCode') {
-      this.fetchShippingRates();
+      const sanitizedPostalCode = normalizedIncomingValue.replace(/\D/g, '').slice(0, 5);
+      this.deliveryPostalCode = sanitizedPostalCode;
+      value = sanitizedPostalCode;
+    } else {
+      this.assignDeliveryFieldValue(field, normalizedIncomingValue);
+      value = normalizedIncomingValue;
+    }
+
+    if (field === 'deliveryStreet' || field === 'deliveryNumber' || field === 'deliveryCity') {
+      this.deliveryAddress = this.buildDeliveryAddressLine();
+    }
+
+    const normalizedValue = String(value ?? '').trim();
+    if (field === 'deliveryPostalCode') {
+      this.deliveryFieldErrors[field] = !/^\d{5}$/.test(normalizedValue);
+    } else if (field === 'deliveryState') {
+      this.deliveryFieldErrors[field] = !ESTADOS_MX_CODES.has(normalizedValue);
+    } else {
+      this.deliveryFieldErrors[field] = !normalizedValue;
+    }
+    this.fetchShippingRates();
+  }
+
+  private assignDeliveryFieldValue(
+    field: 'deliveryStreet' | 'deliveryNumber' | 'deliveryCity' | 'deliveryPostalCode' | 'deliveryState' | 'deliveryCountry',
+    value: string
+  ): void {
+    switch (field) {
+      case 'deliveryStreet':
+        this.deliveryStreet = value;
+        return;
+      case 'deliveryNumber':
+        this.deliveryNumber = value;
+        return;
+      case 'deliveryCity':
+        this.deliveryCity = value;
+        return;
+      case 'deliveryPostalCode':
+        this.deliveryPostalCode = value;
+        return;
+      case 'deliveryState':
+        this.deliveryState = value;
+        return;
+      case 'deliveryCountry':
+        this.deliveryCountry = value;
+        return;
     }
   }
 
@@ -760,15 +832,22 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.selectedShippingAddressId = '';
     this.shippingAddressLabel = '';
     this.saveShippingAddress = true;
+    this.deliveryStreet = '';
+    this.deliveryNumber = '';
     this.deliveryAddress = '';
+    this.deliveryCity = '';
     this.deliveryPostalCode = '';
     this.deliveryState = '';
+    this.deliveryCountry = 'MX';
     this.deliveryBetweenStreets = '';
     this.deliveryReferences = '';
     this.deliveryFieldErrors = {
-      deliveryAddress: false,
+      deliveryStreet: false,
+      deliveryNumber: false,
+      deliveryCity: false,
       deliveryPostalCode: false,
-      deliveryState: false
+      deliveryState: false,
+      deliveryCountry: false
     };
     this.shippingRates = [];
     this.selectedShippingRate = null;
@@ -776,11 +855,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private setDeliveryFieldErrors(
-    values: Record<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState', string>
+    values: Record<'deliveryStreet' | 'deliveryNumber' | 'deliveryCity' | 'deliveryPostalCode' | 'deliveryState' | 'deliveryCountry', string>
   ): boolean {
     let valid = true;
-    (Object.keys(values) as Array<'deliveryAddress' | 'deliveryPostalCode' | 'deliveryState'>).forEach((field) => {
-      const hasError = !values[field].trim();
+    (Object.keys(values) as Array<'deliveryStreet' | 'deliveryNumber' | 'deliveryCity' | 'deliveryPostalCode' | 'deliveryState' | 'deliveryCountry'>).forEach((field) => {
+      const normalizedValue = values[field].trim();
+      const hasError = field === 'deliveryPostalCode'
+        ? !/^\d{5}$/.test(normalizedValue)
+        : field === 'deliveryState'
+          ? !ESTADOS_MX_CODES.has(normalizedValue)
+          : !normalizedValue;
       this.deliveryFieldErrors[field] = hasError;
       if (hasError) {
         valid = false;
@@ -818,6 +902,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   setDeliveryType(type: 'delivery' | 'pickup'): void {
     this.deliveryType = type;
+    if (type === 'delivery') {
+      this.fetchShippingRates();
+    }
     this.cdr.markForCheck();
   }
 
@@ -825,9 +912,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.isLoadingPickupStocks = true;
     this.api.listPickupStocks().subscribe({
       next: (stocks) => {
-        this.pickupStocks = stocks;
-        if (stocks.length === 1) {
-          this.selectedPickupStockId = stocks[0].id;
+        const normalizedStocks = this.normalizePickupStocks(stocks);
+        this.pickupStocks = normalizedStocks;
+        this.selectedPickupStockId = this.resolveSelectedPickupStockId(normalizedStocks, this.selectedPickupStockId);
+        if (!this.selectedPickupStockId && normalizedStocks.length === 1) {
+          this.selectedPickupStockId = normalizedStocks[0].id;
         }
         this.isLoadingPickupStocks = false;
         this.cdr.markForCheck();
@@ -839,40 +928,84 @@ export class CarritoComponent implements OnInit, OnDestroy {
     });
   }
 
-  private prefillCustomerAddress(): void {
+  private resolveSelectedPickupStockId(stocks: Array<{ id: string; name: string; location: string }>, selectedId: unknown): string {
+    const normalizedId = this.normalizePickupStockId(selectedId);
+    const matchedStock = stocks.find((stock) => this.normalizePickupStockId(stock.id) === normalizedId);
+    return matchedStock ? this.normalizePickupStockId(matchedStock.id) : '';
+  }
+
+  private normalizePickupStocks(stocks: Array<{ id: string; name: string; location: string }>): Array<{ id: string; name: string; location: string }> {
+    return stocks.reduce<Array<{ id: string; name: string; location: string }>>((acc, stock) => {
+      const id = this.normalizePickupStockId(stock?.id);
+      const name = typeof stock?.name === 'string' ? stock.name.trim() : '';
+      const location = typeof stock?.location === 'string' ? stock.location.trim() : '';
+
+      if (!id || !name || !location) {
+        return acc;
+      }
+
+      acc.push({ id, name, location });
+      return acc;
+    }, []);
+  }
+
+  private normalizePickupStockId(value: unknown): string {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return value.trim();
+  }
+
+  private prefillCustomerAddressFromDashboard(): void {
     const user = this.authService.currentUser;
     if (!user?.userId || user.role !== 'cliente') {
       return;
     }
-    this.customerSub = this.api.getCustomer(String(user.userId)).subscribe({
-      next: (customer) => {
-        this.deliveryName = this.deliveryName || customer.name || '';
-        this.deliveryPhone = this.deliveryPhone || customer.phone || '';
-        this.shippingAddresses = [...(customer.addresses ?? customer.shippingAddresses ?? [])];
+    const customer = this.dashboardControl.customer;
+    if (!customer) {
+      return;
+    }
 
-        const defaultShippingAddress =
-          this.shippingAddresses.find((entry) => entry.id === (customer.defaultAddressId || customer.defaultShippingAddressId)) ||
-          this.shippingAddresses.find((entry) => entry.isDefault) ||
-          this.shippingAddresses[0];
+    this.deliveryName = this.deliveryName || customer.name || this.authService.currentUser?.name || '';
+    this.deliveryPhone = this.deliveryPhone || customer.phone || '';
+    this.shippingAddresses = [...this.dashboardControl.shippingAddresses];
 
-        if (defaultShippingAddress) {
-          this.selectedShippingAddressId = defaultShippingAddress.id;
-          this.shippingAddressLabel = defaultShippingAddress.label || '';
-          this.saveShippingAddress = false;
-          this.applyShippingAddress(defaultShippingAddress);
-        } else {
-          this.deliveryAddress = this.deliveryAddress || customer.address || '';
-          const resolvedState = customer.state || customer.city || '';
-          this.deliveryState = this.deliveryState || resolvedState;
-          this.deliveryPostalCode = this.deliveryPostalCode || customer.postalCode || '';
-          this.saveShippingAddress = true;
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        // No-op: fallback to manual entry.
-      }
-    });
+    const defaultShippingAddress =
+      this.shippingAddresses.find((entry) => entry.id === this.dashboardControl.defaultShippingAddressId) ||
+      this.shippingAddresses.find((entry) => entry.isDefault) ||
+      this.shippingAddresses[0];
+
+    if (defaultShippingAddress) {
+      this.selectedShippingAddressId = defaultShippingAddress.id;
+      this.shippingAddressLabel = defaultShippingAddress.label || '';
+      this.saveShippingAddress = false;
+      this.applyShippingAddress(defaultShippingAddress);
+    } else {
+      this.deliveryStreet = this.deliveryStreet || customer.address || '';
+      this.deliveryCity = this.deliveryCity || customer.city || '';
+      this.deliveryAddress = this.deliveryAddress || this.buildDeliveryAddressLine() || customer.address || '';
+      const resolvedState = customer.state || '';
+      this.deliveryState = this.deliveryState || resolvedState;
+      this.deliveryPostalCode = this.deliveryPostalCode || customer.postalCode || '';
+      this.deliveryCountry = this.deliveryCountry || 'MX';
+      this.saveShippingAddress = true;
+      this.setDeliveryFieldErrors({
+        deliveryStreet: this.deliveryStreet,
+        deliveryNumber: this.deliveryNumber,
+        deliveryCity: this.deliveryCity,
+        deliveryPostalCode: this.deliveryPostalCode,
+        deliveryState: this.deliveryState,
+        deliveryCountry: this.deliveryCountry
+      });
+    }
+
+    this.hasPrefilledDashboardAddress = true;
+    this.cdr.markForCheck();
   }
 
   openGuestRegisterModal(): void {
@@ -891,7 +1024,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.isGuestRegisterSubmitting) {
       return;
     }
-    if (!this.guestRegisterForm.name || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.apellidoMaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
       this.guestRegisterFeedback = 'Completa los campos obligatorios.';
       this.guestRegisterFeedbackType = 'error';
       return;
@@ -902,8 +1035,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const fullName = `${this.guestRegisterForm.firstName.trim()} ${this.guestRegisterForm.apellidoPaterno.trim()} ${this.guestRegisterForm.apellidoMaterno.trim()}`.trim();
     const payload = {
-      name: this.guestRegisterForm.name.trim(),
+      name: fullName,
       email: this.guestRegisterForm.email.trim(),
       phone: this.guestRegisterForm.phone.trim() || undefined,
       password: this.guestRegisterForm.password,
@@ -921,11 +1055,29 @@ export class CarritoComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (response) => {
+          if (response?.requiresEmailVerification) {
+            this.guestRegisterForm = {
+              firstName: '',
+              apellidoPaterno: '',
+              apellidoMaterno: '',
+              email: '',
+              phone: '',
+              password: '',
+              confirmPassword: ''
+            };
+            this.guestRegisterFeedback = '';
+            this.guestRegisterFeedbackType = '';
+            this.showGuestRegisterModal = false;
+            this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electronico.');
+            return;
+          }
           if (response?.customer) {
             this.authService.setUserFromCreateAccount(response.customer);
           }
           this.guestRegisterForm = {
-            name: '',
+            firstName: '',
+            apellidoPaterno: '',
+            apellidoMaterno: '',
             email: '',
             phone: '',
             password: '',
@@ -947,17 +1099,49 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private applyShippingAddress(address: CustomerShippingAddress): void {
     this.deliveryName = address.recipientName?.trim() || this.deliveryName || this.authService.currentUser?.name || '';
     this.deliveryPhone = address.phone?.trim() || this.deliveryPhone;
-    this.deliveryAddress = address.address?.trim() || '';
+    this.deliveryStreet = address.street?.trim() || address.address?.trim() || '';
+    this.deliveryNumber = address.number?.trim() || '';
+    this.deliveryCity = address.city?.trim() || '';
+    this.deliveryAddress = address.address?.trim() || this.buildDeliveryAddressLine();
     this.deliveryPostalCode = address.postalCode?.trim() || '';
     this.deliveryState = address.state?.trim() || '';
+    this.deliveryCountry = address.country?.trim() || 'MX';
     this.deliveryBetweenStreets = address.betweenStreets?.trim() || '';
     this.deliveryReferences = address.references?.trim() || '';
     this.setDeliveryFieldErrors({
-      deliveryAddress: this.deliveryAddress,
+      deliveryStreet: this.deliveryStreet,
+      deliveryNumber: this.deliveryNumber,
+      deliveryCity: this.deliveryCity,
       deliveryPostalCode: this.deliveryPostalCode,
-      deliveryState: this.deliveryState
+      deliveryState: this.deliveryState,
+      deliveryCountry: this.deliveryCountry
     });
     this.fetchShippingRates();
+  }
+
+  private buildDeliveryAddressLine(): string {
+    return [this.deliveryStreet.trim(), this.deliveryNumber.trim(), this.deliveryCity.trim()].filter(Boolean).join(', ');
+  }
+
+  private hasValidShippingQuoteFormData(): boolean {
+    return Boolean(
+      this.resolveDeliveryName() &&
+      this.resolveDeliveryPhone() &&
+      this.deliveryStreet.trim() &&
+      this.deliveryNumber.trim() &&
+      this.deliveryCity.trim() &&
+      /^\d{5}$/.test(this.deliveryPostalCode.trim()) &&
+      ESTADOS_MX_CODES.has(this.deliveryState.trim()) &&
+      this.deliveryCountry.trim()
+    );
+  }
+
+  private resolveDeliveryName(): string {
+    return this.deliveryName.trim() || this.dashboardControl.customer?.name?.trim() || this.authService.currentUser?.name?.trim() || '';
+  }
+
+  private resolveDeliveryPhone(): string {
+    return this.deliveryPhone.trim() || this.dashboardControl.customer?.phone?.trim() || '';
   }
 
   private resolveShippingAddressLabel(): string {

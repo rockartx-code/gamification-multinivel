@@ -34,7 +34,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
   @Input() helpText = '';
   @Input() tooltipText = '';
   @Input() errorText = '';
-  @Input() options: FieldOption[] = [];
+  @Input() options: readonly FieldOption[] = [];
   @Input() wrapperClass = 'block';
   @Input() inputClass =
     'mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted focus:border-olive-70';

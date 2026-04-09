@@ -1,0 +1,234 @@
+<section class="antialiased">
+  <header class="border-b border-olive-20 bg-sand-200-90 backdrop-blur">
+    <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+      <img src="/Logo-sin_slogan.svg" width="320" height="96" alt="Logo" class="h-15 w-40" />
+      <ui-button variant="ghost" size="md" [routerLink]="['/orden', orderId]">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        Regresar
+      </ui-button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-4 py-10">
+
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-24 text-sm text-gray-500">
+      Cargando orden…
+    </div>
+
+    <!-- Success result -->
+    <div *ngIf="!isLoading && result"
+      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-8 shadow-sm text-center">
+      <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-100">
+        <i class="fa-solid fa-rotate-left text-2xl text-green-600" aria-hidden="true"></i>
+      </span>
+      <h1 class="mt-4 text-xl font-extrabold text-main">Solicitud registrada</h1>
+      <p class="mt-2 text-sm text-gray-600">{{ result.message }}</p>
+      <div class="mt-4 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 text-sm text-main">
+        <p class="font-semibold">ID de solicitud: <span class="text-gold">{{ result.requestId }}</span></p>
+        <p class="mt-1 text-xs text-gray-500">
+          Costo de envío de devolución: <span class="font-semibold">{{ result.shippingResponsibility === 'empresa' ? 'A cargo de la empresa' : 'A cargo del cliente' }}</span>
+        </p>
+      </div>
+      <div class="mt-6">
+        <ui-button variant="primary" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
+      </div>
+    </div>
+
+    <!-- Error if not delivered -->
+    <div *ngIf="!isLoading && !result && !orderIsDelivered && order"
+      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <i class="fa-solid fa-lock mt-0.5 text-amber-500" aria-hidden="true"></i>
+        <div>
+          <p class="text-sm font-semibold text-amber-800">Devolución no disponible</p>
+          <p class="mt-1 text-xs text-amber-700">{{ error || 'Solo puedes solicitar devoluciones de pedidos entregados.' }}</p>
+        </div>
+      </div>
+      <div class="mt-4">
+        <ui-button variant="ghost" size="md" [routerLink]="['/orden', orderId]">Volver a la orden</ui-button>
+      </div>
+    </div>
+
+    <!-- Main form -->
+    <div *ngIf="!isLoading && !result && orderIsDelivered"
+      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+
+      <!-- Header -->
+      <p class="text-xs font-semibold tracking-widest text-gray-500 uppercase">Gestión de orden</p>
+      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-main">Solicitar devolución</h1>
+      <p class="mt-1 text-sm text-gray-500">Orden <span class="font-semibold text-main">{{ orderId }}</span></p>
+
+      <!-- Progress steps -->
+      <div class="mt-5 flex items-center gap-2">
+        <ng-container *ngFor="let s of [1,2,3]; let last = last">
+          <div class="flex items-center gap-1.5">
+            <span class="grid h-6 w-6 place-items-center rounded-full text-xs font-bold"
+              [ngClass]="step >= s ? 'bg-main text-white' : 'bg-olive-10 text-gray-400'">
+              {{ step > s ? '✓' : s }}
+            </span>
+            <span class="hidden text-xs font-medium sm:block"
+              [ngClass]="step === s ? 'text-main' : 'text-gray-400'">
+              {{ s === 1 ? 'Motivo' : s === 2 ? 'Evidencia' : 'Confirmación' }}
+            </span>
+          </div>
+          <div *ngIf="!last" class="h-px flex-1 bg-olive-20"></div>
+        </ng-container>
+      </div>
+
+      <!-- STEP 1: Motivo -->
+      <div *ngIf="step === 1" class="mt-6 space-y-4">
+        <p class="text-sm font-semibold text-main">¿Cuál es el motivo de la devolución?</p>
+
+        <div *ngFor="let m of motivos"
+          class="cursor-pointer rounded-2xl border p-4 transition-colors"
+          [ngClass]="motivo === m.value ? 'border-main bg-main/5' : 'border-olive-20 bg-white/60 hover:border-main/40'"
+          (click)="motivo = m.value">
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border"
+              [ngClass]="motivo === m.value ? 'border-main bg-main' : 'border-olive-30 bg-white'">
+              <span *ngIf="motivo === m.value" class="h-2 w-2 rounded-full bg-white"></span>
+            </span>
+            <div>
+              <p class="text-sm font-semibold text-main">{{ m.label }}</p>
+              <p class="mt-0.5 text-xs text-gray-500">{{ m.hint }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time policy info -->
+        <div *ngIf="motivo" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+          <ng-container *ngIf="motivo !== 'DESISTIMIENTO'">
+            <i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>
+            Aplica dentro de las <strong>48 horas</strong> posteriores a la entrega.
+          </ng-container>
+          <ng-container *ngIf="motivo === 'DESISTIMIENTO'">
+            <i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>
+            Aplica dentro de los <strong>7 días</strong> posteriores a la entrega.
+            El costo de envío de la devolución corre a tu cargo.
+          </ng-container>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-gray-600">Descripción adicional (opcional)</label>
+          <textarea
+            rows="3"
+            [(ngModel)]="descripcion"
+            placeholder="Describe el problema con más detalle…"
+            class="w-full rounded-xl border border-olive-30 bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20">
+          </textarea>
+        </div>
+
+        <div class="flex justify-end">
+          <ui-button variant="primary" size="md" [disabled]="!canProceedStep1" (pressed)="nextStep()">
+            Siguiente
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </ui-button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Evidence -->
+      <div *ngIf="step === 2" class="mt-6 space-y-5">
+        <p class="text-sm font-semibold text-main">Sube la evidencia requerida</p>
+        <p class="text-xs text-gray-500">Se requieren los tres tipos de fotos para continuar. Acepta JPG, PNG o PDF.</p>
+
+        <!-- Fotos producto -->
+        <div>
+          <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+            <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+              [ngClass]="fotosProducto.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+              <i [class]="fotosProducto.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-camera'" aria-hidden="true"></i>
+            </span>
+            Fotos del producto <span class="text-red-500">*</span>
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+            <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('producto', $event)" />
+            <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+            <span>{{ fotosProductoNames.length > 0 ? fotosProductoNames.join(', ') : 'Seleccionar fotos del producto…' }}</span>
+          </label>
+        </div>
+
+        <!-- Fotos empaque -->
+        <div>
+          <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+            <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+              [ngClass]="fotosEmpaque.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+              <i [class]="fotosEmpaque.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-box'" aria-hidden="true"></i>
+            </span>
+            Fotos del empaque <span class="text-red-500">*</span>
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+            <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('empaque', $event)" />
+            <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+            <span>{{ fotosEmpaqueNames.length > 0 ? fotosEmpaqueNames.join(', ') : 'Seleccionar fotos del empaque…' }}</span>
+          </label>
+        </div>
+
+        <!-- Fotos guía de envío -->
+        <div>
+          <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+            <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+              [ngClass]="fotosGuia.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+              <i [class]="fotosGuia.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-file-lines'" aria-hidden="true"></i>
+            </span>
+            Fotos de la guía de envío <span class="text-red-500">*</span>
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+            <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('guia', $event)" />
+            <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+            <span>{{ fotosGuiaNames.length > 0 ? fotosGuiaNames.join(', ') : 'Seleccionar fotos de la guía…' }}</span>
+          </label>
+        </div>
+
+        <div class="flex gap-3">
+          <ui-button variant="ghost" size="md" (pressed)="prevStep()">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            Atrás
+          </ui-button>
+          <ui-button variant="primary" size="md" [disabled]="!canProceedStep2" (pressed)="nextStep()">
+            Siguiente
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </ui-button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Confirm -->
+      <div *ngIf="step === 3" class="mt-6 space-y-4">
+        <p class="text-sm font-semibold text-main">Confirmar solicitud de devolución</p>
+
+        <div class="rounded-2xl border border-olive-20 bg-white/60 p-4 space-y-3 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Motivo</span>
+            <span class="font-semibold text-main">{{ motivoLabel }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Evidencia</span>
+            <span class="font-semibold text-main">{{ fotosProducto.length + fotosEmpaque.length + fotosGuia.length }} archivo(s)</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Costo de envío devolución</span>
+            <span [ngClass]="shippingResponsibility === 'empresa' ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'">
+              {{ shippingResponsibility === 'empresa' ? 'A cargo de la empresa' : 'A cargo del cliente' }}
+            </span>
+          </div>
+        </div>
+
+        <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ error }}
+        </div>
+
+        <div class="flex gap-3">
+          <ui-button variant="ghost" size="md" (pressed)="prevStep()">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            Atrás
+          </ui-button>
+          <ui-button variant="primary" size="md" [disabled]="isSubmitting" (pressed)="submit()">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            {{ isSubmitting ? 'Enviando…' : 'Enviar solicitud' }}
+          </ui-button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</section>

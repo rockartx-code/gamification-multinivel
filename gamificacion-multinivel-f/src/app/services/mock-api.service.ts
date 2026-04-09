@@ -15,8 +15,10 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerOwnDocumentPayload,
   CustomerShippingAddress,
   CustomerProfile,
+  LinkCustomerDocumentPayload,
   InventoryMovement,
   PosCashControl,
   PosCashCut,
@@ -38,7 +40,10 @@ import {
   ProductVariant,
   SaveProductCategoryPayload,
   ShippingRate,
-  ShippingQuoteRequest
+  ShippingQuoteRequest,
+  OrderCancelResponse,
+  OrderReturnRequestPayload,
+  OrderReturnRequestResponse
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
@@ -52,12 +57,16 @@ import {
 } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
+  CatalogData,
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  DashboardData,
+  HonorBoard,
   SponsorContact,
   UserDashboardData
 } from '../models/user-dashboard.model';
+import { ESTADOS_MX_CODES } from '../constants/states-mx';
 import type { AuthUser } from './auth.service';
 import { ALL_PRIVILEGES, normalizePrivileges } from '../models/privileges.model';
 
@@ -458,7 +467,7 @@ export class MockApiService {
       discountRate: 0,
       commissions: 0
     };
-    return of({ customer, requiresEmailVerification: true }).pipe(delay(160));
+    return of({ ok: true, customerId: customer.id, customer, requiresEmailVerification: true }).pipe(delay(160));
   }
 
   verifyEmail(_token: string): Observable<{ ok: boolean; message?: string }> {
@@ -618,6 +627,68 @@ export class MockApiService {
     return of(order).pipe(delay(120));
   }
 
+  getCatalogData(): Observable<CatalogData> {
+    const full = this.getMockDashboardPayload('1');
+    const catalog: CatalogData = {
+      products: full.products,
+      featured: full.featured,
+      productOfMonth: full.productOfMonth ?? null,
+      campaigns: full.campaigns ?? [],
+      categories: full.categories ?? [],
+      config: {
+        vpConfig: { mxnPerVp: 50, maxNetworkLevels: 5 },
+        rankThresholds: [
+          { rank: 'ORO', vg: 700 },
+          { rank: 'PLATINO', vg: 2000 },
+          { rank: 'DIAMANTE', vg: 5000 },
+        ],
+        discountTiers: [
+          { min: 0, max: 999, rate: 0 },
+          { min: 1000, max: 2999, rate: 0.05 },
+          { min: 3000, rate: 0.10 },
+        ],
+      },
+    };
+    return of(catalog).pipe(delay(100));
+  }
+
+  getDashboardData(): Observable<DashboardData> {
+    const customerKey = '1';
+    const full = this.getMockDashboardPayload(customerKey);
+    const customer = this.ensureCustomerProfile(customerKey);
+    const dashboard: DashboardData = {
+      isGuest: full.isGuest,
+      settings: full.settings,
+      customer: {
+        id: String(customer.id),
+        name: customer.name,
+        phone: customer.phone,
+        address: customer.address,
+        city: customer.city,
+        state: customer.state,
+        postalCode: customer.postalCode,
+        addresses: [...(customer.addresses ?? customer.shippingAddresses ?? [])],
+        defaultAddressId: customer.defaultAddressId,
+        shippingAddresses: [...(customer.addresses ?? customer.shippingAddresses ?? [])],
+        defaultShippingAddressId: customer.defaultShippingAddressId
+      },
+      user: full.user,
+      sponsor: full.sponsor,
+      goals: full.goals,
+      featured: full.featured,
+      campaigns: full.campaigns,
+      networkMembers: full.networkMembers,
+      buyAgainIds: full.buyAgainIds,
+      commissions: full.commissions,
+      notifications: full.notifications ?? [],
+      vp: full.vp,
+      vg: full.vg,
+      rank: full.rank,
+      bonuses: full.bonuses ?? [],
+    };
+    return of(dashboard).pipe(delay(120));
+  }
+
   getCartData(): Observable<CartData> {
     const payload: CartData = {
       countdownLabel: '3d 8h',
@@ -658,9 +729,8 @@ export class MockApiService {
     return of(payload).pipe(delay(120));
   }
 
-  getUserDashboardData(userId?: string): Observable<UserDashboardData> {
-    const customerKey = this.normalizeCustomerKey(userId || '1') || '1';
-    const payload: UserDashboardData = {
+  private getMockDashboardPayload(customerKey: string): UserDashboardData {
+    return {
       settings: {
         cutoffDay: 25,
         cutoffHour: 23,
@@ -681,23 +751,15 @@ export class MockApiService {
       goals: [
         {
           key: 'active',
-          title: 'Siguiente reto: Usuario activo',
-          subtitle: 'Completa tu consumo mínimo del mes',
-          target: 60,
-          base: 45,
+          title: 'VP personal mínimo (usuario activo)',
+          subtitle: 'Meta mensual: 50 VP',
+          target: 50,
+          base: 52,
           cart: 0,
           ctaText: 'Ir a tienda',
-          ctaFragment: 'merchant'
-        },
-        {
-          key: 'discount',
-          title: 'Siguiente nivel de descuento',
-          subtitle: 'Alcanza el umbral para mejorar tu beneficio',
-          target: 120,
-          base: 45,
-          cart: 0,
-          ctaText: 'Completar consumo',
-          ctaFragment: 'merchant'
+          ctaFragment: 'merchant',
+          unit: 'vp' as const,
+          achieved: true
         },
         {
           key: 'invite',
@@ -708,17 +770,45 @@ export class MockApiService {
           cart: 0,
           ctaText: 'Invitar ahora',
           ctaFragment: 'links',
-          isCountGoal: true
+          isCountGoal: true,
+          unit: 'count' as const
         },
         {
-          key: 'network',
-          title: 'Red logra sus metas',
-          subtitle: 'Impulsa el consumo de tu red este mes',
-          target: 300,
+          key: 'rank_oro',
+          title: 'Alcanzar rango ORO',
+          subtitle: 'VG mínimo para ORO: 700 VP',
+          target: 700,
+          base: 730,
+          cart: 0,
+          ctaText: 'Ver bonos ORO',
+          ctaFragment: 'volumen',
+          unit: 'vp' as const,
+          rank: 'ORO',
+          achieved: true
+        },
+        {
+          key: 'rank_platino',
+          title: 'Alcanzar rango PLATINO',
+          subtitle: 'VG mínimo para PLATINO: 2,000 VP',
+          target: 2000,
+          base: 730,
+          cart: 0,
+          ctaText: 'Impulsar tu red',
+          ctaFragment: 'red',
+          unit: 'vp' as const,
+          rank: 'PLATINO'
+        },
+        {
+          key: 'bonus_inicio_rapido',
+          title: 'Bono de Inicio Rápido',
+          subtitle: 'VG de referidos directos ≥ 600 VP en primeros 30 días',
+          target: 600,
           base: 160,
           cart: 0,
-          ctaText: 'Compartir enlace',
-          ctaFragment: 'links'
+          ctaText: 'Invitar ahora',
+          ctaFragment: 'links',
+          unit: 'vp' as const,
+          bonusRuleId: 'inicio_rapido'
         }
       ],
       products: [
@@ -842,6 +932,24 @@ export class MockApiService {
         { id: 'c-6', name: 'Diego S.', level: 'L2', spend: 0, status: 'Inactiva', leaderId: 'c-2' }
       ],
       buyAgainIds: ['omega3', 'complejoB', 'antioxidante'],
+      categories: this.categories.filter((c) => c.active !== false),
+      honorBoard: this.getMockHonorBoard(),
+      vp: 52,
+      vg: 730,
+      rank: 'ORO',
+      bonuses: [
+        {
+          id: 'mock-award-1',
+          ruleId: 'oro_smart_tv',
+          ruleName: 'Bono ORO — Smart TV',
+          customerId: 1,
+          monthKey: '2026-02',
+          rewardType: 'item',
+          rewardItemLabel: 'Smart TV',
+          status: 'pending',
+          createdAt: '2026-02-28T00:00:00Z'
+        }
+      ],
       commissions: {
         monthKey: '2026-02',
         pendingTotal: 150,
@@ -854,8 +962,11 @@ export class MockApiService {
         payoutDay: 10
       }
     };
+  }
 
-    return of(payload).pipe(delay(120));
+  getUserDashboardData(userId?: string): Observable<UserDashboardData> {
+    const customerKey = this.normalizeCustomerKey(userId || '1') || '1';
+    return of(this.getMockDashboardPayload(customerKey)).pipe(delay(120));
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -897,7 +1008,40 @@ export class MockApiService {
   }
 
   saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
+    const key = this.normalizeCustomerKey(String(payload.customerId));
+    if (key) {
+      const profile = this.ensureCustomerProfile(key);
+      profile.clabeInterbancaria = payload.clabe;
+      if (payload.bankInstitution !== undefined) {
+        profile.bankInstitution = payload.bankInstitution;
+      }
+      this.customerProfiles[key] = profile;
+    }
     return of({ ok: true, clabeLast4: payload.clabe.slice(-4) }).pipe(delay(120));
+  }
+
+  uploadCustomerOwnDocument(payload: CustomerOwnDocumentPayload): Observable<CustomerProfile> {
+    const key = this.normalizeCustomerKey(payload.userId) || '1';
+    const profile = this.ensureCustomerProfile(key);
+    const assetId = `mock-asset-${Math.random().toString(16).slice(2)}`;
+    const newDoc = {
+      id: `mock-own-doc-${Math.random().toString(16).slice(2)}`,
+      assetId,
+      name: payload.docLabel,
+      type: payload.contentType,
+      url: `s3://mock-bucket/${assetId}`,
+      uploadedAt: new Date().toISOString(),
+      docType: payload.docType
+    };
+    const updated: CustomerProfile = {
+      ...profile,
+      ownDocuments: [
+        ...(profile.ownDocuments ?? []).filter((d) => (d as { docType?: string }).docType !== payload.docType),
+        newDoc
+      ]
+    };
+    this.customerProfiles[key] = updated;
+    return of(updated).pipe(delay(200));
   }
 
   createOrder(payload: CreateAdminOrderPayload): Observable<AdminOrder> {
@@ -906,6 +1050,10 @@ export class MockApiService {
     const trimmedAddress = payload.address?.trim() ?? '';
     const trimmedPostalCode = payload.postalCode?.trim() ?? '';
     const trimmedState = payload.state?.trim() ?? '';
+    const trimmedStreet = payload.street?.trim() ?? '';
+    const trimmedNumber = payload.number?.trim() ?? '';
+    const trimmedCity = payload.city?.trim() ?? '';
+    const trimmedCountry = payload.country?.trim() ?? '';
     const trimmedPhone = payload.phone?.trim() ?? '';
     const trimmedRecipientName = payload.recipientName?.trim() ?? payload.customerName?.trim() ?? '';
     const trimmedLabel = payload.shippingAddressLabel?.trim() ?? '';
@@ -920,9 +1068,13 @@ export class MockApiService {
         label: trimmedLabel || `Direccion ${nextAddresses.length + (existingIndex >= 0 ? 0 : 1)}`,
         recipientName: trimmedRecipientName || undefined,
         phone: trimmedPhone || undefined,
+        street: trimmedStreet || undefined,
+        number: trimmedNumber || undefined,
         address: trimmedAddress,
+        city: trimmedCity || undefined,
         postalCode: trimmedPostalCode,
         state: trimmedState,
+        country: trimmedCountry || undefined,
         isDefault: true
       };
       if (existingIndex >= 0) {
@@ -940,6 +1092,7 @@ export class MockApiService {
       profile.defaultShippingAddressId = savedAddress.id;
       profile.phone = savedAddress.phone || profile.phone;
       profile.address = savedAddress.address || profile.address;
+      profile.city = savedAddress.city || profile.city;
       profile.state = savedAddress.state || profile.state;
       profile.postalCode = savedAddress.postalCode || profile.postalCode;
       this.customerProfiles[customerKey] = profile;
@@ -957,11 +1110,16 @@ export class MockApiService {
       status: payload.status,
       recipientName: payload.recipientName,
       phone: payload.phone,
+      street: payload.street,
+      number: payload.number,
       address: payload.address,
+      city: payload.city,
       postalCode: payload.postalCode,
       state: payload.state,
+      country: payload.country,
       betweenStreets: payload.betweenStreets,
       references: payload.references,
+      deliveryNotes: payload.deliveryNotes,
       shippingAddressId: payload.shippingAddressId,
       shippingAddressLabel: payload.shippingAddressLabel,
       items: payload.items
@@ -1041,7 +1199,31 @@ export class MockApiService {
     ).pipe(delay(120));
   }
 
-  getOrders(customerId: string): Observable<AdminOrder[]> {
+  getAdminOrders(params: { status?: AdminOrder['status']; limit?: number } = {}): Observable<{ orders: AdminOrder[]; total: number }> {
+    return of({ orders: [], total: 0 }).pipe(delay(80));
+  }
+
+  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
+    return of([]).pipe(delay(80));
+  }
+
+  listCustomers(): Observable<AdminCustomer[]> {
+    return of(this.customers ?? []).pipe(delay(120));
+  }
+
+  listProducts(): Observable<AdminProduct[]> {
+    return of(this.products ?? []).pipe(delay(120));
+  }
+
+  listCampaigns(): Observable<AdminCampaign[]> {
+    return of(this.campaigns ?? []).pipe(delay(120));
+  }
+
+  listAdminNotifications(): Observable<PortalNotification[]> {
+    return of(this.notifications ?? []).pipe(delay(120));
+  }
+
+  getOrders(customerId: string, params: { limit?: number; page?: number } = {}): Observable<AdminOrder[]> {
     const orders: AdminOrder[] = [
       {
         id: `#${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1091,6 +1273,33 @@ export class MockApiService {
       }
     };
     return of(response).pipe(delay(120));
+  }
+
+  addCustomerDocument(customerId: string, payload: LinkCustomerDocumentPayload): Observable<CustomerProfile> {
+    const profile = this.ensureCustomerProfile(this.normalizeCustomerKey(customerId) || '1');
+    const assetId = String(payload.assetId ?? '').trim();
+    if (!assetId) {
+      return throwError(() => new Error('Asset invalido.'));
+    }
+
+    const name = String(payload.name ?? '').trim() || `Documento ${(profile.documents?.length ?? 0) + 1}`;
+    const now = new Date().toISOString();
+    const nextDocument = {
+      id: `mock-doc-${Math.random().toString(16).slice(2)}`,
+      assetId,
+      name,
+      type: 'application/pdf',
+      url: `s3://mock-bucket/${assetId}`,
+      uploadedAt: now
+    };
+    const updated: CustomerProfile = {
+      ...profile,
+      documents: [...(profile.documents ?? []), nextDocument],
+      addresses: [...(profile.addresses ?? profile.shippingAddresses ?? [])],
+      shippingAddresses: [...(profile.addresses ?? profile.shippingAddresses ?? [])]
+    };
+    this.customerProfiles[this.normalizeCustomerKey(customerId) || '1'] = updated;
+    return of(updated).pipe(delay(120));
   }
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
@@ -1718,6 +1927,19 @@ export class MockApiService {
     return of(structuredClone(this.businessConfig)).pipe(delay(120));
   }
 
+  getPublicBusinessConfig(): Observable<AppBusinessConfig> {
+    // Returns same structure but only the rewards/bonuses slice (matches /catalog/config/public backend shape)
+    const cfg = structuredClone(this.businessConfig);
+    const publicCfg: AppBusinessConfig = {
+      ...cfg,
+      bonuses: cfg.bonuses ? {
+        ...cfg.bonuses,
+        rules: cfg.bonuses.rules.filter((r: import('../models/admin.model').BonusRule) => r.active)
+      } : undefined
+    };
+    return of(publicCfg).pipe(delay(120));
+  }
+
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     this.businessConfig = structuredClone(payload.config);
     return of(structuredClone(this.businessConfig)).pipe(delay(120));
@@ -1727,7 +1949,7 @@ export class MockApiService {
     return of([...this.categories]).pipe(delay(80));
   }
 
-  getReferrerContact(_referrerId: string): Observable<SponsorContact> {
+  getSponsorContact(_sponsorId: string): Observable<SponsorContact> {
     return of({
       name: 'Ana Promotora',
       email: 'ana@ejemplo.com',
@@ -1758,7 +1980,29 @@ export class MockApiService {
     return of({ ok: true }).pipe(delay(80));
   }
 
-  getShippingQuote(_payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
+  getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
+    const postalCode = String(payload.postalCode ?? payload.zipTo ?? '').trim();
+    const name = String(payload.name ?? payload.recipientName ?? '').trim();
+    const phone = String(payload.phone ?? '').trim();
+    const street = String(payload.street ?? payload.address ?? '').trim();
+    const number = String(payload.number ?? '').trim();
+    const city = String(payload.city ?? '').trim();
+    const state = String(payload.state ?? '').trim();
+    const country = String(payload.country ?? '').trim().toUpperCase();
+
+    if (
+      !name ||
+      !phone ||
+      !street ||
+      !number ||
+      !city ||
+      !/^\d{5}$/.test(postalCode) ||
+      !ESTADOS_MX_CODES.has(state) ||
+      !country
+    ) {
+      return throwError(() => new Error('Datos de cotizacion incompletos o invalidos.'));
+    }
+
     const mockRates: ShippingRate[] = [
       { carrier: 'FedEx', service: 'FedEx Express', price: 145, displayPrice: this.applyShippingMarkup(145), currency: 'MXN', transitDays: 1, deliveryEstimate: 'Día siguiente' },
       { carrier: 'DHL', service: 'DHL Express', price: 132, displayPrice: this.applyShippingMarkup(132), currency: 'MXN', transitDays: 2, deliveryEstimate: '2-3 días' },
@@ -1770,5 +2014,54 @@ export class MockApiService {
 
   private applyShippingMarkup(price: number): number {
     return Math.ceil((price * 1.15) / 50) * 50;
+  }
+
+  cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
+    return of({ ok: true, orderId, status: 'cancelled', pendingRefund: true }).pipe(delay(200));
+  }
+
+  requestReturn(orderId: string, payload: OrderReturnRequestPayload): Observable<OrderReturnRequestResponse> {
+    const requestId = `RET-MOCK-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+    const shipping: 'empresa' | 'cliente' = payload.motivo === 'DESISTIMIENTO' ? 'cliente' : 'empresa';
+    return of({
+      ok: true,
+      requestId,
+      status: 'PENDIENTE' as const,
+      shippingResponsibility: shipping,
+      message: 'Solicitud registrada correctamente.'
+    }).pipe(delay(300));
+  }
+
+  getHonorBoard(): Observable<HonorBoard> {
+    return of(this.getMockHonorBoard()).pipe(delay(120));
+  }
+
+  private getMockHonorBoard(): HonorBoard {
+    const monthKey = '2026-04';
+    const byVg = [
+      { customerId: 'c-other-1', name: 'Roberto A.', vp: 180, vg: 4100, rank: 'PLATINO', position: 1 },
+      { customerId: 'c-other-2', name: 'Sandra M.', vp: 145, vg: 3250, rank: 'PLATINO', position: 2 },
+      { customerId: 'client-001', name: 'Valeria Torres', vp: 52, vg: 730, rank: 'ORO', position: 3, prevPosition: 5 },
+      { customerId: 'c-other-3', name: 'Andrés V.', vp: 120, vg: 620, rank: 'ORO', position: 4 },
+      { customerId: 'c-other-4', name: 'Lucía H.', vp: 98, vg: 510, rank: 'ORO', position: 5 },
+      { customerId: 'c-other-5', name: 'Carlos P.', vp: 90, vg: 490, rank: 'ORO', position: 6 },
+      { customerId: 'c-other-6', name: 'Diana R.', vp: 82, vg: 410, rank: 'ORO', position: 7 },
+      { customerId: 'c-other-7', name: 'Marcos T.', vp: 75, vg: 380, rank: 'ORO', position: 8 },
+      { customerId: 'c-other-8', name: 'Elena S.', vp: 70, vg: 320, rank: '', position: 9 },
+      { customerId: 'c-other-9', name: 'Javier C.', vp: 65, vg: 290, rank: '', position: 10 }
+    ];
+    const byVp = [
+      { customerId: 'c-other-1', name: 'Roberto A.', vp: 180, vg: 4100, rank: 'PLATINO', position: 1 },
+      { customerId: 'c-other-2', name: 'Sandra M.', vp: 145, vg: 3250, rank: 'PLATINO', position: 2 },
+      { customerId: 'c-other-3', name: 'Andrés V.', vp: 120, vg: 620, rank: 'ORO', position: 3 },
+      { customerId: 'c-other-4', name: 'Lucía H.', vp: 98, vg: 510, rank: 'ORO', position: 4 },
+      { customerId: 'c-other-5', name: 'Carlos P.', vp: 90, vg: 490, rank: 'ORO', position: 5 },
+      { customerId: 'client-001', name: 'Valeria Torres', vp: 52, vg: 730, rank: 'ORO', position: 6, prevPosition: 4 },
+      { customerId: 'c-other-6', name: 'Diana R.', vp: 82, vg: 410, rank: 'ORO', position: 7 },
+      { customerId: 'c-other-7', name: 'Marcos T.', vp: 75, vg: 380, rank: 'ORO', position: 8 },
+      { customerId: 'c-other-8', name: 'Elena S.', vp: 70, vg: 320, rank: '', position: 9 },
+      { customerId: 'c-other-9', name: 'Javier C.', vp: 65, vg: 290, rank: '', position: 10 }
+    ];
+    return { monthKey, byVg, byVp };
   }
 }

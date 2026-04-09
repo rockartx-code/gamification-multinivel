@@ -10,6 +10,8 @@ import {
   DashboardCampaign,
   DashboardProduct,
   FeaturedItem,
+  HonorBoard,
+  HonorEntry,
   NetworkMember,
   SponsorContact,
   UserDashboardData
@@ -87,7 +89,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   lastAutoCaption = true;
   lastClipboardError = '';
   guestRegisterForm = {
-    name: '',
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     email: '',
     phone: '',
     password: '',
@@ -98,6 +102,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   guestRegisterFeedbackType: 'error' | 'success' | '' = '';
   isLoading = false;
   activeGoal: any | null = null;
+  // ─── Honor Board ───────────────────────────────────────────────────────────
+  isHonorBoardModalOpen = false;
+  private honorBoardModalShown = false;
+  showRankDownAnim = false;
+  private rankDownAnimTimeout?: number;
   secondaryGoals: any[] = [];
   isDevMode = false;
   showGuestRegisterModal = false;
@@ -107,12 +116,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   ordersPage = 0;
   readonly ORDERS_PAGE_SIZE = 10;
 
+  // El backend ya devuelve la página correcta; mostramos el set completo recibido
   get pagedOrders(): AdminOrder[] {
-    return this.orders.slice(this.ordersPage * this.ORDERS_PAGE_SIZE, (this.ordersPage + 1) * this.ORDERS_PAGE_SIZE);
+    return this.orders;
   }
 
   get ordersTotalPages(): number {
-    return Math.max(1, Math.ceil(this.orders.length / this.ORDERS_PAGE_SIZE));
+    // Sin total del backend, usamos indicador simple
+    return this.orders.length === this.ORDERS_PAGE_SIZE ? this.ordersPage + 2 : this.ordersPage + 1;
   }
   isCommissionModalOpen = false;
   isCommissionSubmitting = false;
@@ -207,7 +218,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get dashboardNavLinks(): SidebarLink[] {
-    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}`;
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|honor`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
     }
@@ -222,6 +233,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
+      links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
       links.push({ id: 'perfil', icon: 'fa-circle-user', label: 'Mi perfil' });
     }
 
@@ -235,6 +247,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       void this.router.navigate(['/perfil']);
       this.closeMobileNav();
       return;
+    }
+    // Carga lazy de órdenes solo cuando el usuario abre esa sección
+    if (sectionId === 'ordenes' && this.orders.length === 0 && !this.isOrdersLoading) {
+      this.loadOrders();
     }
     this.scrollToSection(sectionId);
     this.closeMobileNav();
@@ -319,6 +335,113 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.data?.commissions ?? null;
   }
 
+  get vpPoints(): number {
+    return this.dashboardControl.data?.vp ?? 0;
+  }
+
+  get vgPoints(): number {
+    return this.dashboardControl.data?.vg ?? 0;
+  }
+
+  get currentRank(): string {
+    return this.dashboardControl.data?.rank ?? '';
+  }
+
+  get honorBoard(): HonorBoard | null {
+    return this.dashboardControl.data?.honorBoard ?? null;
+  }
+
+  private get currentUserId(): string {
+    return this.authService.currentUser?.userId ?? '';
+  }
+
+  get userVgEntry(): HonorEntry | null {
+    return this.honorBoard?.byVg.find((e) => e.customerId === this.currentUserId) ?? null;
+  }
+
+  get userVpEntry(): HonorEntry | null {
+    return this.honorBoard?.byVp.find((e) => e.customerId === this.currentUserId) ?? null;
+  }
+
+  get isInTop10(): boolean {
+    return (this.userVgEntry !== null && this.userVgEntry.position <= 10) ||
+           (this.userVpEntry !== null && this.userVpEntry.position <= 10);
+  }
+
+  get bestHonorPosition(): number {
+    const vg = this.userVgEntry?.position ?? 999;
+    const vp = this.userVpEntry?.position ?? 999;
+    return Math.min(vg, vp);
+  }
+
+  get honorMedalClass(): string {
+    const pos = this.bestHonorPosition;
+    if (pos === 1) return 'text-yellow-400';
+    if (pos <= 3) return 'text-yellow-500';
+    if (pos <= 6) return 'text-gray-400';
+    return 'text-amber-700';
+  }
+
+  get hasRankDown(): boolean {
+    const vg = this.userVgEntry;
+    const vp = this.userVpEntry;
+    return (!!vg?.prevPosition && vg.prevPosition < vg.position) ||
+           (!!vp?.prevPosition && vp.prevPosition < vp.position);
+  }
+
+  openHonorBoardModal(): void { this.isHonorBoardModalOpen = true; }
+  closeHonorBoardModal(): void { this.isHonorBoardModalOpen = false; }
+
+  honorEntryIsMe(entry: HonorEntry): boolean {
+    return entry.customerId === this.currentUserId;
+  }
+
+  positionDeltaLabel(entry: HonorEntry): string {
+    if (!entry.prevPosition) return '';
+    const delta = entry.prevPosition - entry.position;
+    if (delta > 0) return `▲${delta}`;
+    if (delta < 0) return `▼${Math.abs(delta)}`;
+    return '—';
+  }
+
+  positionDeltaClass(entry: HonorEntry): string {
+    if (!entry.prevPosition) return '';
+    const delta = entry.prevPosition - entry.position;
+    if (delta > 0) return 'text-green-600';
+    if (delta < 0) return 'text-red-500';
+    return 'text-gray-400';
+  }
+
+  get bonusAwards(): UserDashboardData['bonuses'] {
+    return this.dashboardControl.data?.bonuses ?? [];
+  }
+
+  get hasBonuses(): boolean {
+    return (this.bonusAwards?.length ?? 0) > 0;
+  }
+
+  bonusRewardLabel(award: NonNullable<UserDashboardData['bonuses']>[0]): string {
+    switch (award.rewardType) {
+      case 'cash_mxn':
+      case 'monthly_cash':
+        return this.formatMoney(award.rewardAmount ?? 0);
+      case 'item':
+        return award.rewardItemLabel ?? 'Artículo';
+      case 'annual_fund_pct':
+        return `${award.rewardPct ?? 0}% fondo anual`;
+      default:
+        return '';
+    }
+  }
+
+  bonusStatusLabel(status: string): string {
+    return status === 'paid' ? 'Pagado' : status === 'cancelled' ? 'Cancelado' : 'Pendiente';
+  }
+
+  bonusStatusClass(status: string): string {
+    return status === 'paid' ? 'text-green-600' : status === 'cancelled' ? 'text-red-400' : 'text-amber-600';
+  }
+
   get currentNotifications(): PortalNotification[] {
     return this.dashboardControl.notifications;
   }
@@ -387,7 +510,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get heroImage(): string {
-    return this.productOfMonth?.img || 'images/Colageno-Clean.png';
+    return this.productOfMonth?.images?.find((im)=>im.section === 'landing')?.url ||this.productOfMonth?.img || 'images/Colageno-Clean.png';
   }
 
   get heroTags(): string[] {
@@ -439,6 +562,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.featuredCarousel[0] ??
       this.emptyFeatured
     );
+  }
+
+  get userReferralCode(): string {
+    const name = this.currentUser?.name || '';
+    const words = name.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return '';
+    const initials = words.map(w => w[0].toUpperCase()).join('');
+    return `${words[0]}-${initials}`;
   }
 
   get referralLink(): string {
@@ -926,7 +1057,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             }
           }
           this.featuredPage = 0;
-          this.loadOrders();
+          this.checkHonorBoardOnLoad();
           this.cdr.markForCheck();
         },
         error: () => {
@@ -960,7 +1091,30 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.goalFillTimeout) {
       window.clearTimeout(this.goalFillTimeout);
     }
+    if (this.rankDownAnimTimeout) {
+      window.clearTimeout(this.rankDownAnimTimeout);
+    }
     this.goalsSub?.unsubscribe();
+  }
+
+  private checkHonorBoardOnLoad(): void {
+    if (this.isGuest) return;
+    // Show rank-down animation once if applicable
+    if (this.hasRankDown && !this.showRankDownAnim) {
+      this.showRankDownAnim = true;
+      this.rankDownAnimTimeout = window.setTimeout(() => {
+        this.showRankDownAnim = false;
+        this.cdr.markForCheck();
+      }, 6000);
+    }
+    // Show honor board modal once per session if in top 10
+    if (this.isInTop10 && !this.honorBoardModalShown) {
+      this.honorBoardModalShown = true;
+      setTimeout(() => {
+        this.isHonorBoardModalOpen = true;
+        this.cdr.markForCheck();
+      }, 1200);
+    }
   }
 
   logout(): void {
@@ -1000,7 +1154,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isGuestRegisterSubmitting) {
       return;
     }
-    if (!this.guestRegisterForm.name || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.apellidoMaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
       this.guestRegisterFeedback = 'Completa los campos obligatorios.';
       this.guestRegisterFeedbackType = 'error';
       return;
@@ -1011,8 +1165,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
 
+    const fullName = `${this.guestRegisterForm.firstName.trim()} ${this.guestRegisterForm.apellidoPaterno.trim()} ${this.guestRegisterForm.apellidoMaterno.trim()}`.trim();
     const payload = {
-      name: this.guestRegisterForm.name.trim(),
+      name: fullName,
       email: this.guestRegisterForm.email.trim(),
       phone: this.guestRegisterForm.phone.trim() || undefined,
       password: this.guestRegisterForm.password,
@@ -1030,11 +1185,29 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       )
       .subscribe({
         next: (response) => {
+          if (response?.requiresEmailVerification) {
+            this.guestRegisterForm = {
+              firstName: '',
+              apellidoPaterno: '',
+              apellidoMaterno: '',
+              email: '',
+              phone: '',
+              password: '',
+              confirmPassword: ''
+            };
+            this.guestRegisterFeedback = '';
+            this.guestRegisterFeedbackType = '';
+            this.showGuestRegisterModal = false;
+            this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electronico.');
+            return;
+          }
           if (response?.customer) {
             this.authService.setUserFromCreateAccount(response.customer);
           }
           this.guestRegisterForm = {
-            name: '',
+            firstName: '',
+            apellidoPaterno: '',
+            apellidoMaterno: '',
             email: '',
             phone: '',
             password: '',
@@ -1266,6 +1439,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.captionText = this.buildAutoCaption();
       this.lastAutoCaption = true;
     }
+  }
+
+  copyText(text: string): void {
+    this.copyToClipboard(text, 'Copiado.');
   }
 
   copyLink(): void {
@@ -1582,7 +1759,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: () => {
           this.showToast('Solicitud enviada. Te contactaremos por el deposito.');
           this.closeCommissionModal();
-          this.dashboardControl.load().subscribe();
+          this.dashboardControl.load({ force: true }).subscribe();
         },
         error: () => {
           this.showToast('No se pudo solicitar el pago.');
@@ -1609,7 +1786,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: () => {
           this.showToast('CLABE actualizada.');
           this.closeClabeConfirm();
-          this.dashboardControl.load().subscribe();
+          this.dashboardControl.load({ force: true }).subscribe();
         },
         error: () => {
           this.showToast('No se pudo actualizar la CLABE.');
@@ -1932,15 +2109,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }, 2200);
   }
 
-  private loadOrders(): void {
+  loadOrders(page = 0): void {
     if (!this.currentUser?.userId) {
       return;
     }
     this.isOrdersLoading = true;
-    this.api.getOrders(String(this.currentUser.userId)).subscribe({
+    this.ordersPage = page;
+    this.api.getOrders(String(this.currentUser.userId), { limit: this.ORDERS_PAGE_SIZE, page }).subscribe({
       next: (orders) => {
         this.orders = orders ?? [];
-        this.ordersPage = 0;
         this.isOrdersLoading = false;
         this.cdr.markForCheck();
       },
@@ -1949,6 +2126,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         this.cdr.markForCheck();
       }
     });
+  }
+
+  loadOrdersPage(page: number): void {
+    this.loadOrders(page);
   }
 
   private copyToClipboard(text: string, toastMessage: string): void {
@@ -1994,13 +2175,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (fromList) {
       return fromList;
     }
+
+
+    
     if (this.productOfMonth?.id === productId) {
+      console.log(this.productOfMonth.images?.find((im)=>im.section === 'landing')?.url);
       return {
         id: this.productOfMonth.id,
         name: this.productOfMonth.name,
         price: this.productOfMonth.price,
         badge: this.productOfMonth.badge || '',
-        img: this.productOfMonth.img || ''
+        img: this.productOfMonth.images?.find((im)=>im.section === 'landing')?.url || this.productOfMonth.img || ''
       };
     }
     return null;

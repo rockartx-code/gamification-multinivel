@@ -32,11 +32,25 @@
 
         <div class="grid gap-4 sm:grid-cols-2">
           <ui-form-field
-            label="Nombre completo"
-            placeholder="Tu nombre"
-            name="profileName"
-            [(ngModel)]="infoForm.name"
+            label="Nombre(s) *"
+            placeholder="Tu(s) nombre(s)"
+            name="profileFirstName"
+            [(ngModel)]="infoForm.firstName"
             wrapperClass="block sm:col-span-2">
+          </ui-form-field>
+
+          <ui-form-field
+            label="Apellido paterno *"
+            placeholder="Apellido paterno"
+            name="profileApellidoPaterno"
+            [(ngModel)]="infoForm.apellidoPaterno">
+          </ui-form-field>
+
+          <ui-form-field
+            label="Apellido materno *"
+            placeholder="Apellido materno"
+            name="profileApellidoMaterno"
+            [(ngModel)]="infoForm.apellidoMaterno">
           </ui-form-field>
 
           <!-- Correo (read-only) -->
@@ -85,23 +99,34 @@
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">CLABE interbancaria</h2>
         <p class="mb-5 text-xs text-gray-500">Se utiliza para recibir el depósito de tus comisiones.</p>
 
-        <!-- Current masked CLABE -->
+        <!-- Current masked CLABE + bank -->
         <div *ngIf="maskedClabe" class="mb-4 flex items-center gap-3 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3">
           <i class="fa-solid fa-building-columns text-sm text-gray-400" aria-hidden="true"></i>
-          <span class="font-mono text-sm tracking-widest text-main">{{ maskedClabe }}</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-sm tracking-widest text-main">{{ maskedClabe }}</p>
+            <p *ngIf="profile?.bankInstitution" class="mt-0.5 text-xs text-gray-500">{{ profile!.bankInstitution }}</p>
+          </div>
           <span class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Registrada</span>
         </div>
         <div *ngIf="!maskedClabe" class="mb-4 rounded-xl border border-dashed border-olive-30 bg-sand-200-90 px-4 py-3 text-xs text-gray-400">
           No tienes una CLABE registrada todavía.
         </div>
 
-        <div class="flex gap-3">
+        <div class="grid gap-3 sm:grid-cols-2">
           <ui-form-field
             label="Nueva CLABE (18 dígitos)"
             placeholder="123456789012345678"
             name="clabeDraft"
             [(ngModel)]="clabeDraft"
-            wrapperClass="block flex-1">
+            wrapperClass="block">
+          </ui-form-field>
+
+          <ui-form-field
+            label="Institución bancaria"
+            placeholder="Ej: BBVA, Banorte, HSBC…"
+            name="bankInstitutionDraft"
+            [(ngModel)]="bankInstitutionDraft"
+            wrapperClass="block">
           </ui-form-field>
         </div>
 
@@ -110,6 +135,71 @@
             <i class="fa-solid fa-shield-check" aria-hidden="true"></i>
             {{ isSavingClabe ? 'Guardando…' : 'Actualizar CLABE' }}
           </ui-button>
+        </div>
+      </div>
+
+      <!-- ── CARGA DE DOCUMENTACIÓN ─────────────────────────────────── -->
+      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+        <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Carga de documentación</h2>
+        <p class="mb-5 text-xs text-gray-500">Sube los documentos requeridos para completar tu registro.</p>
+
+        <div class="flex flex-col gap-4">
+          <div *ngFor="let docType of requiredDocTypes"
+            class="rounded-2xl border border-olive-20 bg-sand-200-90 p-4">
+
+            <div class="mb-3 flex items-center gap-2">
+              <!-- Status icon -->
+              <ng-container *ngIf="getOwnDocForType(docType.key) as existing; else pendingIcon">
+                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-green-100">
+                  <i class="fa-solid fa-check text-xs text-green-600" aria-hidden="true"></i>
+                </span>
+              </ng-container>
+              <ng-template #pendingIcon>
+                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-amber-100">
+                  <i class="fa-solid fa-file-arrow-up text-xs text-amber-600" aria-hidden="true"></i>
+                </span>
+              </ng-template>
+
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-main">{{ docType.label }}</p>
+                <ng-container *ngIf="getOwnDocForType(docType.key) as existing">
+                  <p class="text-xs text-green-600">Subido el {{ formatDate(existing.uploadedAt) }}</p>
+                </ng-container>
+                <p *ngIf="docType.required && !getOwnDocForType(docType.key)" class="text-xs text-amber-600">Requerido</p>
+              </div>
+            </div>
+
+            <!-- File input -->
+            <div class="flex items-center gap-3">
+              <label class="flex-1">
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  class="sr-only"
+                  [attr.id]="'own-doc-' + docType.key"
+                  (change)="onOwnDocFileChange(docType.key, $event)" />
+                <div class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-2.5 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+                  <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+                  <span class="min-w-0 truncate">
+                    {{ ownDocStates[docType.key]?.file?.name || (getOwnDocForType(docType.key) ? 'Reemplazar archivo…' : 'Seleccionar archivo…') }}
+                  </span>
+                </div>
+              </label>
+
+              <ui-button
+                variant="primary"
+                size="sm"
+                [disabled]="!ownDocStates[docType.key]?.file || ownDocStates[docType.key]?.uploading === true"
+                (pressed)="uploadOwnDoc(docType)">
+                <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                {{ ownDocStates[docType.key]?.uploading ? 'Subiendo…' : 'Subir' }}
+              </ui-button>
+            </div>
+
+            <p *ngIf="ownDocStates[docType.key]?.error" class="mt-1.5 text-xs text-red-500">
+              {{ ownDocStates[docType.key].error }}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -190,10 +280,10 @@
         </div>
       </div>
 
-      <!-- ── DOCUMENTOS ─────────────────────────────────────────────── -->
+      <!-- ── DOCUMENTOS DE TU ADMINISTRADOR ────────────────────────── -->
       <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
-        <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Documentos</h2>
-        <p class="mb-5 text-xs text-gray-500">Sube tu constancia de situación fiscal u otros documentos de identificación.</p>
+        <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Documentos de tu administrador</h2>
+        <p class="mb-5 text-xs text-gray-500">Acá podés ver y descargar los documentos que tu administrador ligó a tu cuenta.</p>
 
         <!-- Documents list -->
         <div *ngIf="profile?.documents && profile!.documents!.length > 0" class="mb-5 flex flex-col gap-2">
@@ -204,43 +294,16 @@
               <p class="truncate text-sm font-semibold text-main">{{ doc.name }}</p>
               <p *ngIf="doc.uploadedAt" class="text-xs text-gray-400">{{ formatDate(doc.uploadedAt) }}</p>
             </div>
-            <a *ngIf="doc.url" [href]="doc.url" target="_blank" rel="noopener noreferrer"
-              class="rounded-lg px-3 py-1.5 text-xs font-semibold text-main hover:bg-olive-10 transition-colors">
-              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-              Ver
+            <a *ngIf="doc.url" [href]="doc.url" [attr.download]="doc.name" target="_blank" rel="noopener noreferrer"
+               class="rounded-lg px-3 py-1.5 text-xs font-semibold text-main hover:bg-olive-10 transition-colors">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              Descargar
             </a>
           </div>
         </div>
         <div *ngIf="!profile?.documents || profile!.documents!.length === 0"
           class="mb-5 rounded-xl border border-dashed border-olive-30 bg-sand-200-90 px-4 py-4 text-xs text-gray-400">
-          Aún no has subido documentos.
-        </div>
-
-        <!-- Upload area -->
-        <div class="rounded-xl border border-dashed border-olive-30 bg-sand-200-90 p-4">
-          <p class="mb-3 text-xs font-semibold text-gray-600">Subir nuevo documento</p>
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div class="flex-1">
-              <label class="mb-1 block text-xs text-gray-500">Nombre del documento</label>
-              <input
-                type="text"
-                [(ngModel)]="selectedDocName"
-                placeholder="Constancia de situación fiscal"
-                class="w-full rounded-xl border border-olive-20 bg-ivory-80 px-3 py-2 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/30" />
-            </div>
-            <label class="shrink-0 cursor-pointer rounded-xl border border-olive-30 bg-ivory-80 px-4 py-2 text-sm font-semibold text-main hover:bg-olive-10 transition-colors">
-              <i class="fa-solid fa-paperclip mr-1" aria-hidden="true"></i>
-              {{ selectedDocFile ? selectedDocFile.name : 'Seleccionar archivo' }}
-              <input type="file" class="hidden" accept=".pdf,.png,.jpg,.jpeg" (change)="onDocFileSelected($event)" />
-            </label>
-          </div>
-
-          <div *ngIf="selectedDocFile" class="mt-3 flex justify-end">
-            <ui-button variant="primary" size="sm" (pressed)="uploadDocument()" [disabled]="isUploadingDoc">
-              <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
-              {{ isUploadingDoc ? 'Subiendo…' : 'Subir documento' }}
-            </ui-button>
-          </div>
+          Tu administrador todavía no te compartió documentos.
         </div>
       </div>
 
@@ -260,9 +323,13 @@
       <p class="mb-2 text-sm text-gray-600">
         Estás a punto de registrar la siguiente CLABE interbancaria:
       </p>
-      <p class="mb-4 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 font-mono text-sm tracking-widest text-main">
+      <p class="mb-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 font-mono text-sm tracking-widest text-main">
         {{ clabePending }}
       </p>
+      <div *ngIf="bankInstitutionDraft.trim()" class="mb-4 flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2 text-sm text-main">
+        <i class="fa-solid fa-building-columns text-xs text-gray-400" aria-hidden="true"></i>
+        <span>{{ bankInstitutionDraft.trim() }}</span>
+      </div>
       <p class="mb-5 text-xs text-gray-400">
         Verifica que los 18 dígitos sean correctos. Esta cuenta se usará para depósitos de comisiones.
       </p>

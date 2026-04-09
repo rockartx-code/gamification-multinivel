@@ -40,7 +40,7 @@ Centro operativo del asociado. Reúne:
 - tienda y carrito,
 - red y links para compartir,
 - órdenes,
-- comisiones, CLABE y comprobantes.
+- comisiones, CLABE, comprobantes y documentos asociados por administración.
 
 Si no hay sesión activa, muestra CTAs para registro.
 
@@ -61,6 +61,7 @@ Panel único para operación diaria:
 
 - pedidos y estados logísticos,
 - clientes, niveles y comisiones,
+- carga de documentos por cliente,
 - catálogo y assets,
 - métricas y alertas,
 - notificaciones con rango de fechas y link opcional.

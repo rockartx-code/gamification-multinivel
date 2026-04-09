@@ -1,0 +1,83 @@
+{
+  "Comment": "Orquestador de Procesamiento de Ventas y Comisiones Multinivel",
+  "StartAt": "DetermineAction",
+  "States": {
+    "DetermineAction": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.action",
+          "StringEquals": "ORDER_PAID",
+          "Next": "ProcessCommissions"
+        },
+        {
+          "Variable": "$.action",
+          "StringEquals": "ORDER_DELIVERED",
+          "Next": "ConfirmCommissions"
+        }
+      ],
+      "Default": "SuccessState"
+    },
+
+    "ProcessCommissions": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:region:account:function:commissions_lambda",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "SyncToAnalytics",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleFailure"
+        }
+      ]
+    },
+
+    "ConfirmCommissions": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:region:account:function:commissions_lambda",
+      "Parameters": {
+        "orderId.$": "$.orderId",
+        "action": "ORDER_DELIVERED"
+      },
+      "Next": "SyncToAnalytics"
+    },
+
+    "SyncToAnalytics": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:region:account:function:dashboard_lambda",
+      "Comment": "Mueve una copia de la orden a S3 Tables / Iceberg para reportes históricos",
+      "Parameters": {
+        "orderId.$": "$.orderId",
+        "task": "sync_iceberg"
+      },
+      "End": true
+    },
+
+    "HandleFailure": {
+      "Type": "Pass",
+      "Result": "Error en el procesamiento de red. Requiere revisión manual.",
+      "Next": "NotifyAdmin"
+    },
+
+    "NotifyAdmin": {
+      "Type": "Task",
+      "Resource": "arn:aws:arn:aws:lambda:region:account:function:auth_lambda",
+      "Parameters": {
+        "task": "send_admin_alert",
+        "message.$": "$.error"
+      },
+      "End": true
+    },
+
+    "SuccessState": {
+      "Type": "Succeed"
+    }
+  }
+}

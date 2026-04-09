@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import {
@@ -16,7 +16,9 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerOwnDocumentPayload,
   CustomerProfile,
+  LinkCustomerDocumentPayload,
   InventoryMovement,
   PosCashControl,
   PosCashCut,
@@ -37,7 +39,10 @@ import {
   ProductCategory,
   SaveProductCategoryPayload,
   ShippingRate,
-  ShippingQuoteRequest
+  ShippingQuoteRequest,
+  OrderCancelResponse,
+  OrderReturnRequestPayload,
+  OrderReturnRequestResponse
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
@@ -52,9 +57,11 @@ import {
 } from '../models/auth.model';
 import { CartData } from '../models/cart.model';
 import {
+  CatalogData,
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  DashboardData,
   SponsorContact,
   UserDashboardData
 } from '../models/user-dashboard.model';
@@ -66,6 +73,10 @@ import { RealApiService } from './real-api.service';
   providedIn: 'root'
 })
 export class ApiService {
+  private readonly pickupStocksCacheKey = 'pickup-stocks-cache-v1';
+  private readonly pickupStocksTtlMs = 24 * 60 * 60 * 1000;
+  private pickupStocksRequest?: Observable<Array<{ id: string; name: string; location: string }>>;
+
   constructor(
     private readonly mockApi: MockApiService,
     private readonly realApi: RealApiService
@@ -95,12 +106,48 @@ export class ApiService {
     return this.resolveApi().getAdminData();
   }
 
+  getAdminOrders(params: { status?: AdminOrder['status']; limit?: number } = {}): Observable<{ orders: AdminOrder[]; total: number }> {
+    return this.resolveApi().getAdminOrders(params);
+  }
+
+  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
+    return this.resolveApi().getAdminWarnings();
+  }
+
+  listCustomers(): Observable<AdminCustomer[]> {
+    return this.resolveApi().listCustomers();
+  }
+
+  listProducts(): Observable<AdminProduct[]> {
+    return this.resolveApi().listProducts();
+  }
+
+  listCampaigns(): Observable<AdminCampaign[]> {
+    return this.resolveApi().listCampaigns();
+  }
+
+  listAdminNotifications(): Observable<PortalNotification[]> {
+    return this.resolveApi().listAdminNotifications();
+  }
+
   getCartData(): Observable<CartData> {
     return this.resolveApi().getCartData();
   }
 
+  getCatalogData(): Observable<CatalogData> {
+    return this.resolveApi().getCatalogData();
+  }
+
+  getDashboardData(): Observable<DashboardData> {
+    return this.resolveApi().getDashboardData();
+  }
+
   getUserDashboardData(userId?: string): Observable<UserDashboardData> {
     return this.resolveApi().getUserDashboardData(userId);
+  }
+
+  getHonorBoard(): Observable<import('../models/user-dashboard.model').HonorBoard> {
+    return this.resolveApi().getHonorBoard();
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -157,8 +204,8 @@ export class ApiService {
     return this.resolveApi().getAssociateMonth(associateId, monthKey);
   }
 
-  getOrders(customerId: string): Observable<AdminOrder[]> {
-    return this.resolveApi().getOrders(customerId);
+  getOrders(customerId: string, params: { limit?: number; page?: number } = {}): Observable<AdminOrder[]> {
+    return this.resolveApi().getOrders(customerId, params);
   }
 
   getCustomer(customerId: string): Observable<CustomerProfile> {
@@ -171,6 +218,14 @@ export class ApiService {
 
   createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
     return this.resolveApi().createAsset(payload);
+  }
+
+  addCustomerDocument(customerId: string, payload: LinkCustomerDocumentPayload): Observable<CustomerProfile> {
+    return this.resolveApi().addCustomerDocument(customerId, payload);
+  }
+
+  uploadCustomerOwnDocument(payload: CustomerOwnDocumentPayload): Observable<CustomerProfile> {
+    return this.resolveApi().uploadCustomerOwnDocument(payload);
   }
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
@@ -189,8 +244,8 @@ export class ApiService {
     return this.resolveApi().listCategories();
   }
 
-  getReferrerContact(referrerId: string): Observable<SponsorContact> {
-    return this.resolveApi().getReferrerContact(referrerId);
+  getSponsorContact(sponsorId: string): Observable<SponsorContact> {
+    return this.resolveApi().getSponsorContact(sponsorId);
   }
 
   saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
@@ -210,7 +265,28 @@ export class ApiService {
   }
 
   listPickupStocks(): Observable<Array<{ id: string; name: string; location: string }>> {
-    return this.resolveApi().listPickupStocks();
+    const cached = this.readPickupStocksCache();
+    if (cached) {
+      return of(cached);
+    }
+
+    if (this.pickupStocksRequest) {
+      return this.pickupStocksRequest;
+    }
+
+    const request = this.resolveApi()
+      .listPickupStocks()
+      .pipe(
+        map((stocks) => this.normalizePickupStocks(stocks)),
+        tap((stocks) => this.writePickupStocksCache(stocks)),
+        finalize(() => {
+          this.pickupStocksRequest = undefined;
+        }),
+        shareReplay(1)
+      );
+
+    this.pickupStocksRequest = request;
+    return request;
   }
 
   createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
@@ -305,6 +381,10 @@ export class ApiService {
     return this.resolveApi().getBusinessConfig();
   }
 
+  getPublicBusinessConfig(): Observable<AppBusinessConfig> {
+    return this.resolveApi().getPublicBusinessConfig();
+  }
+
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.resolveApi().saveBusinessConfig(payload);
   }
@@ -329,7 +409,95 @@ export class ApiService {
     return this.resolveApi().getShippingQuote(payload);
   }
 
+  cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
+    return this.resolveApi().cancelOrder(orderId, reason);
+  }
+
+  requestReturn(orderId: string, payload: OrderReturnRequestPayload): Observable<OrderReturnRequestResponse> {
+    return this.resolveApi().requestReturn(orderId, payload);
+  }
+
   private resolveApi(): MockApiService | RealApiService {
     return environment.useMockApi ? this.mockApi : this.realApi;
+  }
+
+  private readPickupStocksCache(): Array<{ id: string; name: string; location: string }> | null {
+    try {
+      const raw = localStorage.getItem(this.pickupStocksCacheKey);
+      if (!raw) {
+        return null;
+      }
+
+      const parsed = JSON.parse(raw) as {
+        expiresAt?: number;
+        stocks?: Array<{ id: string; name: string; location: string }>;
+      };
+
+      if (!parsed.expiresAt || parsed.expiresAt <= Date.now() || !Array.isArray(parsed.stocks)) {
+        localStorage.removeItem(this.pickupStocksCacheKey);
+        return null;
+      }
+
+      const stocks = this.normalizePickupStocks(parsed.stocks);
+
+      if (stocks.length === 0) {
+        localStorage.removeItem(this.pickupStocksCacheKey);
+        return null;
+      }
+
+      return stocks;
+    } catch {
+      return null;
+    }
+  }
+
+  private writePickupStocksCache(stocks: Array<{ id: string; name: string; location: string }>): void {
+    try {
+      localStorage.setItem(
+        this.pickupStocksCacheKey,
+        JSON.stringify({
+          expiresAt: Date.now() + this.pickupStocksTtlMs,
+          stocks
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private normalizePickupStocks(stocks: unknown): Array<{ id: string; name: string; location: string }> {
+    if (!Array.isArray(stocks)) {
+      return [];
+    }
+
+    return stocks.reduce<Array<{ id: string; name: string; location: string }>>((acc, entry) => {
+      if (!entry || typeof entry !== 'object') {
+        return acc;
+      }
+
+      const row = entry as { id?: unknown; stockId?: unknown; name?: unknown; location?: unknown };
+      const id = this.normalizePickupStockId(row.id ?? row.stockId);
+      const name = typeof row.name === 'string' ? row.name.trim() : '';
+      const location = typeof row.location === 'string' ? row.location.trim() : '';
+
+      if (!id || !name || !location) {
+        return acc;
+      }
+
+      acc.push({ id, name, location });
+      return acc;
+    }, []);
+  }
+
+  private normalizePickupStockId(value: unknown): string {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return value.trim();
   }
 }

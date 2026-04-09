@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 import { AdminOrder } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
@@ -10,12 +10,12 @@ import { ApiService } from '../../services/api.service';
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, UiButtonComponent, UiOrderTimelineComponent],
+  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
 export class OrderStatusComponent implements OnInit, OnDestroy {
-  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered'] as const;
+  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as const;
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   orderId = '';
   orderReference = '';
@@ -30,6 +30,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
     private readonly api: ApiService,
     private readonly cdr: ChangeDetectorRef
   ) { }
@@ -67,8 +68,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     }
 
     if (this.orderId) {
-      this.loadOrder(this.orderId);
-      this.pollStatus(this.orderReference || this.paymentId || this.orderId);
+      this.loadOrder(this.orderReference || this.paymentId || this.orderId);
     }
 
     if (this.redirectStatus === 'success') {
@@ -88,6 +88,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         if (order?.id) {
           this.orderId = order.id;
         }
+        this.syncOrderStatusState(order);
         this.isLoading = false;
         this.cdr.markForCheck();
       },
@@ -103,8 +104,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (!lookupId) {
       return;
     }
-    this.pollStatus(lookupId);
-    this.pollingTimer = setInterval(() => this.pollStatus(lookupId), 60000);
+    this.pollingTimer = setInterval(() => this.loadOrder(lookupId), 60000);
   }
 
   private stopSuccessPolling(): void {
@@ -114,38 +114,25 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     }
   }
 
-  private pollStatus(lookupId: string): void {
-    this.api.getOrderStatus(lookupId).subscribe({
-      next: (statusData) => {
-        const backendStatus = this.normalizeStatus(statusData?.status as AdminOrder['status']);
-        const markedByWebhook = Boolean(statusData?.markedByWebhook);
-        const backendOrderId = String(statusData?.orderId ?? '').trim();
-        const shouldStop = markedByWebhook || ['paid', 'shipped', 'delivered'].includes(backendStatus);
-        if (markedByWebhook) {
-          this.redirectMessage = '';
-        }
-        const cutoffWindow = Boolean(statusData?.discountCutoffWindow);
-        const cutoffCountdown = String(statusData?.discountCutoffCountdown ?? '').trim();
-        if (cutoffWindow && cutoffCountdown) {
-          this.cutoffCountdownMessage = `Tu descuento solo aplicara hasta el corte de mes. Tiempo restante: ${cutoffCountdown}`;
-        } else {
-          this.cutoffCountdownMessage = '';
-        }
+  private syncOrderStatusState(order: AdminOrder | null | undefined): void {
+    const backendStatus = this.normalizeStatus(order?.status);
+    const markedByWebhook = Boolean(order?.markedByWebhook);
+    const shouldStop = markedByWebhook || ['paid', 'shipped', 'delivered'].includes(backendStatus);
+    if (markedByWebhook) {
+      this.redirectMessage = '';
+    }
 
-        if (backendOrderId && backendOrderId !== this.orderId) {
-          this.orderId = backendOrderId;
-          this.loadOrder(backendOrderId);
-        }
+    const cutoffWindow = Boolean(order?.discountCutoffWindow);
+    const cutoffCountdown = String(order?.discountCutoffCountdown ?? '').trim();
+    if (cutoffWindow && cutoffCountdown) {
+      this.cutoffCountdownMessage = `Tu descuento solo aplicara hasta el corte de mes. Tiempo restante: ${cutoffCountdown}`;
+    } else {
+      this.cutoffCountdownMessage = '';
+    }
 
-        if (shouldStop) {
-          this.stopSuccessPolling();
-          if (backendOrderId && (!this.order || this.order.id !== backendOrderId)) {
-            this.loadOrder(backendOrderId);
-          }
-        }
-      },
-      error: () => {}
-    });
+    if (shouldStop) {
+      this.stopSuccessPolling();
+    }
   }
 
   get statusLabel(): string {
@@ -165,6 +152,18 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (status === 'delivered') {
       return 'Pedido entregado';
     }
+    if (status === 'cancelled') {
+      return 'Cancelado';
+    }
+    if (status === 'en_devolucion') {
+      return 'En devolución';
+    }
+    if (status === 'devuelto_validado') {
+      return 'Devolución aprobada';
+    }
+    if (status === 'devolucion_rechazada') {
+      return 'Devolución rechazada';
+    }
     return 'Pago pendiente';
   }
 
@@ -181,6 +180,18 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     }
     if (status === 'delivered') {
       return 'border-emerald-400/30 bg-emerald-400/10 text-main';
+    }
+    if (status === 'cancelled') {
+      return 'border-red-400/30 bg-red-500/10 text-main';
+    }
+    if (status === 'en_devolucion') {
+      return 'border-amber-400/30 bg-amber-400/10 text-main';
+    }
+    if (status === 'devuelto_validado') {
+      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
+    }
+    if (status === 'devolucion_rechazada') {
+      return 'border-red-400/30 bg-red-500/10 text-main';
     }
     return 'border-yellow-400/30 bg-yellow-400/10 text-main';
   }
@@ -250,6 +261,32 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   get displayOrderRef(): string {
     return this.orderReference || this.orderId || this.paymentId || '';
+  }
+
+  get canCancel(): boolean {
+    const s = this.normalizeStatus(this.order?.status);
+    return s === 'paid';
+  }
+
+  get cancelBlocked(): boolean {
+    const s = this.normalizeStatus(this.order?.status);
+    return ['shipped', 'delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'cancelled'].includes(s as string);
+  }
+
+  get canRequestReturn(): boolean {
+    return this.normalizeStatus(this.order?.status) === 'delivered';
+  }
+
+  navigateToCancel(): void {
+    if (this.orderId) {
+      void this.router.navigate(['/orden', this.orderId, 'cancelar']);
+    }
+  }
+
+  navigateToReturn(): void {
+    if (this.orderId) {
+      void this.router.navigate(['/orden', this.orderId, 'devolucion']);
+    }
   }
 
   payWithMercadoPago(): void {

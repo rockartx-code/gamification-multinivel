@@ -15,7 +15,7 @@
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
-        <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/dashboard']" extraClass="sm:text-sm">
+          <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="dashboardLink" extraClass="sm:text-sm">
           Regresar
         </ui-button>
       </div>
@@ -243,6 +243,40 @@
         </button>
       </div>
     </div>
+
+    <!-- Método de pago (solo recoger en sucursal) -->
+    <div *ngIf="deliveryType === 'pickup'" class="mt-4">
+      <div class="flex items-center gap-2 text-xs font-semibold text-main mb-2">
+        <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+        Método de pago
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          class="flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition"
+          [ngClass]="pickupPaymentMethod === 'online' ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
+          (click)="pickupPaymentMethod = 'online'">
+          <i class="fa-solid fa-lock text-xl" [ngClass]="pickupPaymentMethod === 'online' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+          <div class="text-sm font-semibold text-main">Pagar en línea</div>
+          <div class="text-[11px] text-gray-500">Tarjeta / transferencia</div>
+          <i class="fa-solid text-sm" [ngClass]="pickupPaymentMethod === 'online' ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
+          class="flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition"
+          [ngClass]="pickupPaymentMethod === 'at_store' ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
+          (click)="pickupPaymentMethod = 'at_store'">
+          <i class="fa-solid fa-store text-xl" [ngClass]="pickupPaymentMethod === 'at_store' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+          <div class="text-sm font-semibold text-main">Pagar en sucursal</div>
+          <div class="text-[11px] text-gray-500">Al recoger tu pedido</div>
+          <i class="fa-solid text-sm" [ngClass]="pickupPaymentMethod === 'at_store' ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div *ngIf="pickupPaymentMethod === 'at_store'" class="mt-2 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0" aria-hidden="true"></i>
+        <span>Tu pedido quedará reservado. Paga al llegar a la sucursal para que se procese.</span>
+      </div>
+    </div>
   </div>
 
   <!-- ENTREGA -->
@@ -315,13 +349,30 @@
       ></ui-form-field>
 
       <ui-form-field
-        label="Dirección"
-        placeholder="Calle, número, colonia, ciudad"
-        name="deliveryAddress"
-        [(ngModel)]="deliveryAddress"
-        (ngModelChange)="onDeliveryFieldChange('deliveryAddress', $event)"
-        [errorText]="deliveryFieldErrors.deliveryAddress ? 'Campo obligatorio.' : ''"
-        wrapperClass="block sm:col-span-2"
+        label="Calle"
+        placeholder="Av. Reforma"
+        name="deliveryStreet"
+        [(ngModel)]="deliveryStreet"
+        (ngModelChange)="onDeliveryFieldChange('deliveryStreet', $event)"
+        [errorText]="deliveryFieldErrors.deliveryStreet ? 'Campo obligatorio.' : ''"
+      ></ui-form-field>
+
+      <ui-form-field
+        label="Número"
+        placeholder="123"
+        name="deliveryNumber"
+        [(ngModel)]="deliveryNumber"
+        (ngModelChange)="onDeliveryFieldChange('deliveryNumber', $event)"
+        [errorText]="deliveryFieldErrors.deliveryNumber ? 'Campo obligatorio.' : ''"
+      ></ui-form-field>
+
+      <ui-form-field
+        label="Ciudad"
+        placeholder="Monterrey"
+        name="deliveryCity"
+        [(ngModel)]="deliveryCity"
+        (ngModelChange)="onDeliveryFieldChange('deliveryCity', $event)"
+        [errorText]="deliveryFieldErrors.deliveryCity ? 'Campo obligatorio.' : ''"
       ></ui-form-field>
 
       <ui-form-field
@@ -330,16 +381,29 @@
         name="deliveryPostalCode"
         [(ngModel)]="deliveryPostalCode"
         (ngModelChange)="onDeliveryFieldChange('deliveryPostalCode', $event)"
-        [errorText]="deliveryFieldErrors.deliveryPostalCode ? 'Campo obligatorio.' : ''"
+        [errorText]="deliveryFieldErrors.deliveryPostalCode ? 'Debe tener 5 digitos.' : ''"
       ></ui-form-field>
 
       <ui-form-field
         label="Estado"
-        placeholder="CDMX"
+        kind="select"
+        placeholder="Selecciona un estado"
         name="deliveryState"
+        [options]="stateOptions"
         [(ngModel)]="deliveryState"
         (ngModelChange)="onDeliveryFieldChange('deliveryState', $event)"
-        [errorText]="deliveryFieldErrors.deliveryState ? 'Campo obligatorio.' : ''"
+        [errorText]="deliveryFieldErrors.deliveryState ? 'Selecciona un estado valido.' : ''"
+      ></ui-form-field>
+
+      <ui-form-field
+        label="Pais"
+        kind="select"
+        placeholder="Selecciona un pais"
+        name="deliveryCountry"
+        [options]="countryOptions"
+        [(ngModel)]="deliveryCountry"
+        (ngModelChange)="onDeliveryFieldChange('deliveryCountry', $event)"
+        [errorText]="deliveryFieldErrors.deliveryCountry ? 'Campo obligatorio.' : ''"
       ></ui-form-field>
 
       <ui-form-field
@@ -357,6 +421,17 @@
         [(ngModel)]="deliveryReferences"
         wrapperClass="block sm:col-span-2"
       ></ui-form-field>
+
+      <div class="block sm:col-span-2">
+        <label class="mb-1 block text-xs font-semibold text-gray-600">Detalles en la entrega</label>
+        <textarea
+          name="deliveryNotes"
+          [(ngModel)]="deliveryNotes"
+          rows="3"
+          placeholder="Ej: Entregar en caseta, dejar con un vecino, tocar la campana de la entrada..."
+          class="w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20 resize-none"
+        ></textarea>
+      </div>
 
       <div *ngIf="!isGuest" class="space-y-2 sm:col-span-2">
         <label class="flex items-start gap-3 rounded-2xl border border-olive-30 surface-soft px-3 py-3 text-sm text-main">
@@ -383,7 +458,7 @@
   </div>
 
   <!-- PAQUETERIAS -->
-  <div *ngIf="deliveryType === 'delivery' && deliveryPostalCode.length >= 5" class="rounded-2xl border border-olive-30 surface-soft p-4">
+  <div *ngIf="deliveryType === 'delivery' && isShippingQuoteReady" class="rounded-2xl border border-olive-30 surface-soft p-4">
     <div class="flex items-center gap-2 text-sm font-semibold text-main">
       <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
       Opciones de envío
@@ -520,8 +595,8 @@
             </div>
 
             <ui-button size="lg" variant="primary" class="mt-auto w-full" [disabled]="isPlacingOrder" (pressed)="placeOrder()">
-              <i class="fa-solid fa-lock" aria-hidden="true"></i>
-              {{ isPlacingOrder ? 'Creando orden...' : 'Pagar y finalizar' }}
+              <i class="fa-solid" [ngClass]="deliveryType === 'pickup' && pickupPaymentMethod === 'at_store' ? 'fa-store' : 'fa-lock'" aria-hidden="true"></i>
+              {{ isPlacingOrder ? 'Creando orden...' : (deliveryType === 'pickup' && pickupPaymentMethod === 'at_store' ? 'Reservar y pagar en sucursal' : 'Pagar y finalizar') }}
             </ui-button>
 
             <p class="mt-3 text-xs text-gray-500">Al finalizar aceptas términos y políticas.</p>
@@ -545,8 +620,8 @@
         </div>
 
         <ui-button size="sm" variant="primary" [disabled]="isPlacingOrder" (pressed)="placeOrder()">
-          <i class="fa-solid fa-lock" aria-hidden="true"></i>
-          {{ isPlacingOrder ? 'Creando orden...' : 'Pagar' }}
+          <i class="fa-solid" [ngClass]="deliveryType === 'pickup' && pickupPaymentMethod === 'at_store' ? 'fa-store' : 'fa-lock'" aria-hidden="true"></i>
+          {{ isPlacingOrder ? 'Creando...' : (deliveryType === 'pickup' && pickupPaymentMethod === 'at_store' ? 'Reservar' : 'Pagar') }}
         </ui-button>
       </div>
     </div>
@@ -637,13 +712,31 @@
 
       <div class="mt-6 grid gap-3">
         <ui-form-field
-          name="guestName"
-          [(ngModel)]="guestRegisterForm.name"
-          label="Nombre completo"
-          placeholder="Tu nombre"
+          name="guestFirstName"
+          [(ngModel)]="guestRegisterForm.firstName"
+          label="Nombre(s) *"
+          placeholder="Tu(s) nombre(s)"
           wrapperClass="block"
           inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main placeholder:text-muted"
         ></ui-form-field>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <ui-form-field
+            name="guestApellidoPaterno"
+            [(ngModel)]="guestRegisterForm.apellidoPaterno"
+            label="Apellido paterno *"
+            placeholder="Apellido paterno"
+            wrapperClass="block"
+            inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main placeholder:text-muted"
+          ></ui-form-field>
+          <ui-form-field
+            name="guestApellidoMaterno"
+            [(ngModel)]="guestRegisterForm.apellidoMaterno"
+            label="Apellido materno *"
+            placeholder="Apellido materno"
+            wrapperClass="block"
+            inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main placeholder:text-muted"
+          ></ui-form-field>
+        </div>
         <ui-form-field
           kind="input"
           type="email"

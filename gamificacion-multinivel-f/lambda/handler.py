@@ -124,9 +124,16 @@ def _address_snapshot_for_log(value: Any) -> dict:
         "label": value.get("label"),
         "recipientName": value.get("recipientName"),
         "phone": value.get("phone"),
+        "street": value.get("street"),
+        "number": value.get("number"),
         "address": value.get("address"),
+        "city": value.get("city"),
         "postalCode": value.get("postalCode"),
         "state": value.get("state") or value.get("city"),
+        "country": value.get("country"),
+        "betweenStreets": value.get("betweenStreets"),
+        "references": value.get("references"),
+        "deliveryNotes": value.get("deliveryNotes"),
         "isDefault": value.get("isDefault"),
     }
 
@@ -1729,9 +1736,15 @@ def _build_shipping_address_entry(
     *,
     recipient_name: str = "",
     phone: str = "",
+    street: str = "",
+    number: str = "",
     address: str = "",
+    city: str = "",
     postal_code: str = "",
     state: str = "",
+    country: str = "",
+    between_streets: str = "",
+    references: str = "",
     label: str = "",
     address_id: Optional[str] = None,
     is_default: bool = False,
@@ -1740,10 +1753,19 @@ def _build_shipping_address_entry(
 ) -> Optional[dict]:
     recipient_name = _clean_str(recipient_name)
     phone = _clean_str(phone)
+    street = _clean_str(street)
+    number = _clean_str(number)
     address = _clean_str(address)
+    city = _clean_str(city)
     postal_code = _clean_str(postal_code)
     state = _clean_str(state)
+    country = _clean_str(country)
+    between_streets = _clean_str(between_streets)
+    references = _clean_str(references)
     label = _clean_str(label)
+
+    if not address:
+        address = ", ".join(part for part in [street, number, city] if part)
 
     if not any([address, postal_code, state]):
         return None
@@ -1752,9 +1774,15 @@ def _build_shipping_address_entry(
         "label": label,
         "recipientName": recipient_name,
         "phone": phone,
+        "street": street,
+        "number": number,
         "address": address,
+        "city": city,
         "postalCode": postal_code,
         "state": state,
+        "country": country,
+        "betweenStreets": between_streets,
+        "references": references,
         "isDefault": bool(is_default),
     }
     if address_id:
@@ -1773,9 +1801,15 @@ def _shipping_address_from_payload(payload: dict, fallback_label: str = "") -> O
     snapshot = _build_shipping_address_entry(
         recipient_name=shipping_address.get("recipientName") or payload.get("recipientName") or payload.get("customerName"),
         phone=shipping_address.get("phone") or payload.get("phone"),
+        street=shipping_address.get("street") or payload.get("street"),
+        number=shipping_address.get("number") or payload.get("number"),
         address=shipping_address.get("address") or payload.get("address"),
+        city=shipping_address.get("city") or payload.get("city"),
         postal_code=shipping_address.get("postalCode") or payload.get("postalCode"),
         state=shipping_address.get("state") or shipping_address.get("city") or payload.get("state") or payload.get("city"),
+        country=shipping_address.get("country") or payload.get("country"),
+        between_streets=shipping_address.get("betweenStreets") or payload.get("betweenStreets"),
+        references=shipping_address.get("references") or payload.get("references"),
         label=shipping_address.get("label") or payload.get("shippingAddressLabel") or fallback_label,
         address_id=shipping_address.get("addressId") or shipping_address.get("id") or payload.get("shippingAddressId"),
         is_default=bool(shipping_address.get("isDefault")),
@@ -1787,9 +1821,15 @@ def _shipping_address_from_payload(payload: dict, fallback_label: str = "") -> O
         directAddress={
             "recipientName": payload.get("recipientName"),
             "phone": payload.get("phone"),
+            "street": payload.get("street"),
+            "number": payload.get("number"),
             "address": payload.get("address"),
+            "city": payload.get("city"),
             "postalCode": payload.get("postalCode"),
             "state": payload.get("state") or payload.get("city"),
+            "country": payload.get("country"),
+            "betweenStreets": payload.get("betweenStreets"),
+            "references": payload.get("references"),
             "shippingAddressId": payload.get("shippingAddressId"),
             "shippingAddressLabel": payload.get("shippingAddressLabel"),
             "saveShippingAddress": payload.get("saveShippingAddress"),
@@ -1815,9 +1855,15 @@ def _normalize_customer_shipping_addresses(customer: Optional[dict]) -> List[dic
             entry = _build_shipping_address_entry(
                 recipient_name=raw.get("recipientName") or customer.get("name"),
                 phone=raw.get("phone") or customer.get("phone"),
+                street=raw.get("street"),
+                number=raw.get("number"),
                 address=raw.get("address"),
+                city=raw.get("city"),
                 postal_code=raw.get("postalCode"),
                 state=raw.get("state") or raw.get("city") or customer.get("state") or customer.get("city"),
+                country=raw.get("country"),
+                between_streets=raw.get("betweenStreets"),
+                references=raw.get("references"),
                 label=raw.get("label") or f"Direccion {idx}",
                 address_id=_clean_str(raw.get("addressId")) or f"ADDR-{idx}",
                 is_default=bool(raw.get("isDefault")),
@@ -1831,9 +1877,15 @@ def _normalize_customer_shipping_addresses(customer: Optional[dict]) -> List[dic
         legacy = _build_shipping_address_entry(
             recipient_name=customer.get("name"),
             phone=customer.get("phone"),
+            street=customer.get("street"),
+            number=customer.get("number"),
             address=customer.get("address"),
+            city=customer.get("city"),
             postal_code=customer.get("postalCode"),
             state=customer.get("state") or customer.get("city"),
+            country=customer.get("country"),
+            between_streets=customer.get("betweenStreets"),
+            references=customer.get("references"),
             label=customer.get("defaultShippingAddressLabel") or "Principal",
             address_id=default_id or "default",
             is_default=True,
@@ -2788,34 +2840,78 @@ def _mercadolibre_webhook(query: dict, payload: dict, headers: Optional[dict] = 
         },
     )
 
-def _get_order_status(order_id: str) -> dict:
+def _get_order_status(order_id: str, headers: Optional[dict] = None) -> dict:
     item = _find_order_by_payment_reference(order_id)
     if not item:
         return _json_response(200, {"message": "Pedido no encontrado", "Error": "NoEncontrado"})
+    access_error = _validate_order_access(item, headers)
+    if access_error:
+        return access_error
+    return _json_response(200, _order_status_payload(item))
+
+def _order_status_payload(item: dict) -> dict:
     st = str(item.get("status") or "pending").lower()
     cutoff = _discount_cutoff_payload()
     is_in_process = st == "pending"
-    return _json_response(
-        200,
-        {
-            "orderId": str(item.get("orderId")),
-            "status": st,
-            "paymentStatus": item.get("paymentStatus"),
-            "deliveryStatus": item.get("deliveryStatus"),
-            "paymentProvider": item.get("paymentProvider"),
-            "paymentPreferenceId": item.get("paymentPreferenceId"),
-            "paymentTransactionId": item.get("paymentTransactionId"),
-            "paymentRawStatus": item.get("paymentRawStatus"),
-            "paymentInitPoint": item.get("paymentInitPoint"),
-            "paymentSandboxInitPoint": item.get("paymentSandboxInitPoint"),
-            "paymentWebhookAt": item.get("paymentWebhookAt"),
-            "markedByWebhook": bool(item.get("paymentWebhookAt")),
-            "discountCutoffWindow": bool(is_in_process and cutoff.get("isWindow")),
-            "discountCutoffCountdown": cutoff.get("countdownLabel") if is_in_process and cutoff.get("isWindow") else "",
-            "discountCutoffMessage": cutoff.get("message") if is_in_process and cutoff.get("isWindow") else "",
-            "updatedAt": item.get("updatedAt"),
-        },
-    )
+    return {
+        "orderId": str(item.get("orderId")),
+        "status": st,
+        "paymentStatus": item.get("paymentStatus"),
+        "deliveryStatus": item.get("deliveryStatus"),
+        "paymentProvider": item.get("paymentProvider"),
+        "paymentPreferenceId": item.get("paymentPreferenceId"),
+        "paymentTransactionId": item.get("paymentTransactionId"),
+        "paymentRawStatus": item.get("paymentRawStatus"),
+        "paymentInitPoint": item.get("paymentInitPoint"),
+        "paymentSandboxInitPoint": item.get("paymentSandboxInitPoint"),
+        "paymentWebhookAt": item.get("paymentWebhookAt"),
+        "markedByWebhook": bool(item.get("paymentWebhookAt")),
+        "discountCutoffWindow": bool(is_in_process and cutoff.get("isWindow")),
+        "discountCutoffCountdown": cutoff.get("countdownLabel") if is_in_process and cutoff.get("isWindow") else "",
+        "discountCutoffMessage": cutoff.get("message") if is_in_process and cutoff.get("isWindow") else "",
+        "updatedAt": item.get("updatedAt"),
+    }
+
+def _request_actor_id(headers: Optional[dict]) -> Optional[Any]:
+    h = headers or {}
+    actor_id = _normalize_user_id(h.get("x-user-id") or h.get("X-User-Id"))
+    if actor_id is not None:
+        return actor_id
+
+    email = _normalize_email(h.get("x-user-email") or h.get("X-User-Email"))
+    if not email:
+        return None
+
+    auth = _get_auth_by_email(email)
+    if auth and auth.get("customerId") is not None:
+        return _normalize_user_id(auth.get("customerId"))
+
+    customer = _find_customer_by_email(email)
+    if customer and customer.get("customerId") is not None:
+        return _normalize_user_id(customer.get("customerId"))
+
+    return None
+
+def _request_actor_role(headers: Optional[dict]) -> str:
+    h = headers or {}
+    return str(h.get("x-user-role") or h.get("X-User-Role") or "").strip().lower()
+
+def _validate_order_access(item: dict, headers: Optional[dict]) -> Optional[dict]:
+    buyer_type = str(item.get("buyerType") or "registered").strip().lower()
+    if buyer_type == "guest":
+        return None
+
+    token = _extract_bearer_token(headers or {})
+    actor_id = _request_actor_id(headers)
+    actor_role = _request_actor_role(headers)
+    owner_id = _normalize_user_id(item.get("customerId"))
+    if not token or actor_id is None:
+        return _json_response(401, {"message": "Autenticacion requerida", "Error": "Unauthorized"})
+    if actor_role == "admin":
+        return None
+    if owner_id is not None and str(actor_id) == str(owner_id):
+        return None
+    return _json_response(403, {"message": "No autorizado para consultar esta orden", "Error": "Forbidden"})
 
 def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
     customer_id = payload.get("customerId")
@@ -2826,11 +2922,18 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         return _json_response(200, {"message": "customerName e items son obligatorios", "Error": "BadRequest"})
     
     shipping_address = payload.get("shippingAddress") if isinstance(payload.get("shippingAddress"), dict) else {}
+    street = _clean_str(payload.get("street") or shipping_address.get("street"))
+    number = _clean_str(payload.get("number") or shipping_address.get("number"))
     address = _clean_str(payload.get("address") or shipping_address.get("address"))
+    city = _clean_str(payload.get("city") or shipping_address.get("city"))
     postal_code = _clean_str(payload.get("postalCode") or shipping_address.get("postalCode"))
     state = _clean_str(payload.get("state") or shipping_address.get("state") or shipping_address.get("city"))
+    country = _clean_str(payload.get("country") or shipping_address.get("country"))
     phone = _clean_str(payload.get("phone") or shipping_address.get("phone"))
     recipient_name = _clean_str(payload.get("recipientName") or shipping_address.get("recipientName"))
+    between_streets = _clean_str(payload.get("betweenStreets") or shipping_address.get("betweenStreets"))
+    references = _clean_str(payload.get("references") or shipping_address.get("references"))
+    delivery_notes = _clean_str(payload.get("deliveryNotes"))
     shipping_address_label = _clean_str(payload.get("shippingAddressLabel") or shipping_address.get("label"))
     shipping_address_id = _clean_str(payload.get("shippingAddressId") or shipping_address.get("addressId") or shipping_address.get("id"))
 
@@ -2853,9 +2956,16 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         directAddress={
             "recipientName": recipient_name,
             "phone": phone,
+            "street": street,
+            "number": number,
             "address": address,
+            "city": city,
             "postalCode": postal_code,
             "state": state,
+            "country": country,
+            "betweenStreets": between_streets,
+            "references": references,
+            "deliveryNotes": delivery_notes,
             "shippingAddressId": shipping_address_id,
             "shippingAddressLabel": shipping_address_label,
             "saveShippingAddress": payload.get("saveShippingAddress"),
@@ -2936,9 +3046,15 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
             "label": default_shipping_address.get("label") or "",
             "recipientName": default_shipping_address.get("recipientName") or "",
             "phone": default_shipping_address.get("phone") or "",
+            "street": default_shipping_address.get("street") or "",
+            "number": default_shipping_address.get("number") or "",
             "address": default_shipping_address.get("address") or "",
+            "city": default_shipping_address.get("city") or "",
             "postalCode": default_shipping_address.get("postalCode") or "",
             "state": default_shipping_address.get("state") or "",
+            "country": default_shipping_address.get("country") or "",
+            "betweenStreets": default_shipping_address.get("betweenStreets") or "",
+            "references": default_shipping_address.get("references") or "",
             "isDefault": bool(default_shipping_address.get("isDefault")),
         }
     if shipping_snapshot:
@@ -2959,6 +3075,7 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
     if delivery_type not in ("pickup", "delivery"):
         delivery_type = "delivery"
     pickup_stock_id = _clean_str(payload.get("pickupStockId")) if delivery_type == "pickup" else None
+    pickup_payment_method = _clean_str(payload.get("pickupPaymentMethod")) if delivery_type == "pickup" else None
 
     order_item = {
         "entityType": "order",
@@ -2981,6 +3098,8 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
     }
     if pickup_stock_id:
         order_item["pickupStockId"] = pickup_stock_id
+    if pickup_payment_method:
+        order_item["pickupPaymentMethod"] = pickup_payment_method
 
     if shipping_snapshot:
         order_item["shippingAddress"] = shipping_snapshot
@@ -2992,15 +3111,29 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
             order_item["recipientName"] = shipping_snapshot.get("recipientName")
         if shipping_snapshot.get("phone"):
             order_item["phone"] = shipping_snapshot.get("phone")
+        if shipping_snapshot.get("street"):
+            order_item["street"] = shipping_snapshot.get("street")
+        if shipping_snapshot.get("number"):
+            order_item["number"] = shipping_snapshot.get("number")
         if shipping_snapshot.get("address"):
             order_item["address"] = shipping_snapshot.get("address")
+        if shipping_snapshot.get("city"):
+            order_item["city"] = shipping_snapshot.get("city")
         if shipping_snapshot.get("postalCode"):
             order_item["postalCode"] = shipping_snapshot.get("postalCode")
         if shipping_snapshot.get("state"):
             order_item["state"] = shipping_snapshot.get("state")
-    
+        if shipping_snapshot.get("country"):
+            order_item["country"] = shipping_snapshot.get("country")
+        if shipping_snapshot.get("betweenStreets"):
+            order_item["betweenStreets"] = shipping_snapshot.get("betweenStreets")
+        if shipping_snapshot.get("references"):
+            order_item["references"] = shipping_snapshot.get("references")
+    if delivery_notes:
+        order_item["deliveryNotes"] = delivery_notes
+
     # Optional fields
-    for field in ["shippingType", "trackingNumber", "deliveryPlace", "deliveryDate", "recipientName", "phone", "address", "postalCode", "state"]:
+    for field in ["shippingType", "trackingNumber", "deliveryPlace", "deliveryDate", "recipientName", "phone", "street", "number", "address", "city", "postalCode", "state", "country", "betweenStreets", "references", "deliveryNotes"]:
         val = payload.get(field)
         if val:
             order_item[field] = val.strip() if isinstance(val, str) else val
@@ -3035,6 +3168,7 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
         selected_shipping_address = persisted_shipping_address if persisted_shipping_address else None
         if selected_shipping_address:
             if selected_shipping_address.get("address"): updates.append("address = :a"); eav[":a"] = selected_shipping_address.get("address")
+            if selected_shipping_address.get("city"): updates.append("city = :ct"); eav[":ct"] = selected_shipping_address.get("city")
             if selected_shipping_address.get("state"):
                 updates.append("#state = :st")
                 eav[":st"] = selected_shipping_address.get("state")
@@ -3051,6 +3185,7 @@ def _create_order(payload: dict, headers: Optional[dict] = None) -> dict:
                 eav[":sa"] = shipping_addresses_to_save
         else:
             if address: updates.append("address = :a"); eav[":a"] = address
+            if city: updates.append("city = :ct"); eav[":ct"] = city
             if state:
                 updates.append("#state = :st")
                 eav[":st"] = state
@@ -3566,9 +3701,16 @@ def _update_order_status(order_id: str, payload: dict, headers: Optional[dict] =
         "deliveryDate": updated.get("deliveryDate"),
         "recipientName": updated.get("recipientName"),
         "phone": updated.get("phone"),
+        "street": updated.get("street"),
+        "number": updated.get("number"),
         "address": updated.get("address"),
+        "city": updated.get("city"),
         "postalCode": updated.get("postalCode"),
         "state": updated.get("state"),
+        "country": updated.get("country"),
+        "betweenStreets": updated.get("betweenStreets"),
+        "references": updated.get("references"),
+        "deliveryNotes": updated.get("deliveryNotes"),
         "items": updated.get("items") or [],
         "stockId": updated.get("stockId"),
         "attendantUserId": updated.get("attendantUserId"),
@@ -3580,6 +3722,7 @@ def _update_order_status(order_id: str, payload: dict, headers: Optional[dict] =
         "shippingAddressLabel": updated.get("shippingAddressLabel"),
         "deliveryType": updated.get("deliveryType") or "delivery",
         "pickupStockId": updated.get("pickupStockId"),
+        "pickupPaymentMethod": updated.get("pickupPaymentMethod"),
     }
     if rewards_result is not None:
         _audit_event("order.status.update", headers, payload, {"orderId": order_id, "status": status})
@@ -4126,10 +4269,14 @@ def _get_network(customer_id: str, query: dict) -> dict:
 
     return _json_response(200, {"network": trim(root, depth)})
 
-def _get_order(order_id: str) -> dict:
-    item = _get_by_id("ORDER", order_id)
+def _get_order(order_id: str, headers: Optional[dict] = None) -> dict:
+    item = _find_order_by_payment_reference(order_id)
     if not item:
         return _json_response(200, {"message": "Pedido no encontrado", "Error": "NoEncontrado"})
+    access_error = _validate_order_access(item, headers)
+    if access_error:
+        return access_error
+    status_payload = _order_status_payload(item)
     return _json_response(200, {"order": {
         "id": item.get("orderId"), "createdAt": item.get("createdAt"), "customer": item.get("customerName"),
         "grossSubtotal": float(item.get("grossSubtotal") or 0),
@@ -4140,22 +4287,31 @@ def _get_order(order_id: str) -> dict:
         "shippingType": item.get("shippingType"), "trackingNumber": item.get("trackingNumber"),
         "deliveryPlace": item.get("deliveryPlace"), "deliveryDate": item.get("deliveryDate"),
         "recipientName": item.get("recipientName"), "phone": item.get("phone"),
-        "address": item.get("address"), "postalCode": item.get("postalCode"), "state": item.get("state"),
+        "street": item.get("street"), "number": item.get("number"), "address": item.get("address"),
+        "city": item.get("city"), "postalCode": item.get("postalCode"), "state": item.get("state"),
+        "country": item.get("country"), "betweenStreets": item.get("betweenStreets"),
+        "references": item.get("references"), "deliveryNotes": item.get("deliveryNotes"),
         "items": item.get("items") or [],
         "stockId": item.get("stockId"),
         "attendantUserId": item.get("attendantUserId"),
         "paymentStatus": item.get("paymentStatus"),
         "paymentTransactionId": item.get("paymentTransactionId"),
         "paymentRawStatus": item.get("paymentRawStatus"),
+        "paymentWebhookAt": item.get("paymentWebhookAt"),
         "paymentProvider": item.get("paymentProvider"),
         "paymentPreferenceId": item.get("paymentPreferenceId"),
         "paymentInitPoint": item.get("paymentInitPoint"),
         "paymentSandboxInitPoint": item.get("paymentSandboxInitPoint"),
+        "markedByWebhook": status_payload.get("markedByWebhook"),
+        "discountCutoffWindow": status_payload.get("discountCutoffWindow"),
+        "discountCutoffCountdown": status_payload.get("discountCutoffCountdown"),
+        "discountCutoffMessage": status_payload.get("discountCutoffMessage"),
         "deliveryStatus": item.get("deliveryStatus"),
         "shippingAddressId": item.get("shippingAddressId"),
         "shippingAddressLabel": item.get("shippingAddressLabel"),
         "deliveryType": item.get("deliveryType") or "delivery",
         "pickupStockId": item.get("pickupStockId"),
+        "pickupPaymentMethod": item.get("pickupPaymentMethod"),
     }})
 
 def _list_orders_for_customer(customer_id: str) -> dict:
@@ -4172,10 +4328,25 @@ def _list_orders_for_customer(customer_id: str) -> dict:
             "total": float(item.get("netTotal") or item.get("total") or 0),
             "status": item.get("status"),
             "items": item.get("items") or [],
+            "recipientName": item.get("recipientName"),
+            "phone": item.get("phone"),
+            "street": item.get("street"),
+            "number": item.get("number"),
+            "address": item.get("address"),
+            "city": item.get("city"),
+            "postalCode": item.get("postalCode"),
+            "state": item.get("state"),
+            "country": item.get("country"),
+            "betweenStreets": item.get("betweenStreets"),
+            "references": item.get("references"),
+            "deliveryNotes": item.get("deliveryNotes"),
             "stockId": item.get("stockId"),
             "attendantUserId": item.get("attendantUserId"),
             "paymentStatus": item.get("paymentStatus"),
             "deliveryStatus": item.get("deliveryStatus"),
+            "deliveryType": item.get("deliveryType") or "delivery",
+            "pickupStockId": item.get("pickupStockId"),
+            "pickupPaymentMethod": item.get("pickupPaymentMethod"),
         })
     return _json_response(200, {"orders": rows})
 
@@ -4443,16 +4614,17 @@ def _get_shipping_quote(payload: dict) -> dict:
         return _json_response(200, {"rates": [], "error": "Servicio de envío no configurado."})
 
     zip_to = _clean_str(payload.get("zipTo") or payload.get("postalCode"))
-    if not zip_to or len(zip_to) < 4:
+    if not zip_to or len(zip_to) != 5 or not zip_to.isdigit():
         return _json_response(400, {"message": "zipTo es obligatorio", "Error": "BadRequest"})
 
-    # Destination — only postalCode is strictly needed for rate queries; rest defaults for the API call
-    dest_name = _clean_str(payload.get("recipientName") or payload.get("name")) or "Cliente"
+    # Destination — support new structured payload while keeping legacy fallbacks
+    dest_name = _clean_str(payload.get("name") or payload.get("recipientName")) or "Cliente"
     dest_phone = _clean_str(payload.get("phone")) or "0000000000"
-    dest_street = _clean_str(payload.get("address") or payload.get("street")) or "Calle Principal"
+    dest_street = _clean_str(payload.get("street") or payload.get("address")) or "Calle Principal"
     dest_number = _clean_str(payload.get("number")) or "1"
     dest_city = _clean_str(payload.get("city")) or "Ciudad"
     dest_state = _clean_str(payload.get("state")) or "CDMX"
+    dest_country = _clean_str(payload.get("country")) or _SHIPPING_DESTINATION_COUNTRY
 
     # Build item list for packing algorithm
     raw_items: List[dict] = []
@@ -4497,7 +4669,7 @@ def _get_shipping_quote(payload: dict) -> dict:
         "number": dest_number,
         "city": dest_city,
         "state": dest_state,
-        "country": _SHIPPING_DESTINATION_COUNTRY,
+        "country": dest_country,
         "postalCode": zip_to,
     }
 
@@ -5734,8 +5906,21 @@ def _get_admin_dashboard() -> dict:
             "trackingNumber": item.get("trackingNumber"),
             "deliveryPlace": item.get("deliveryPlace"),
             "deliveryDate": item.get("deliveryDate"),
+            "recipientName": item.get("recipientName"),
+            "phone": item.get("phone"),
+            "street": item.get("street"),
+            "number": item.get("number"),
+            "address": item.get("address"),
+            "city": item.get("city"),
+            "postalCode": item.get("postalCode"),
+            "state": item.get("state"),
+            "country": item.get("country"),
+            "betweenStreets": item.get("betweenStreets"),
+            "references": item.get("references"),
+            "deliveryNotes": item.get("deliveryNotes"),
             "deliveryType": item.get("deliveryType") or "delivery",
             "pickupStockId": item.get("pickupStockId"),
+            "pickupPaymentMethod": item.get("pickupPaymentMethod"),
         })
 
     active_products = 0
@@ -6288,7 +6473,7 @@ def lambda_handler(event, context):
     if route_key == (2, "products", "GET") and segments[1] == "product-of-month": return _get_product_of_month()
     if route_key == (2, "products", "POST") and segments[1] == "product-of-month": return _set_product_of_month(_parse_body(event), headers)
     if route_key == (2, "products", "GET"): return _get_product(segments[1])
-    if route_key == (2, "orders", "GET"): return _get_order(segments[1])
+    if route_key == (2, "orders", "GET"): return _get_order(segments[1], headers)
     if route_key == (2, "orders", "PATCH"): return _update_order_status(segments[1], _parse_body(event), headers)
     if route_key == (2, "commissions", "POST") and segments[1] == "request": return _request_commission_payout(_parse_body(event))
     if route_key == (2, "commissions", "POST") and segments[1] == "receipt": return _upload_commission_receipt(_parse_body(event))
@@ -6313,7 +6498,7 @@ def lambda_handler(event, context):
     if route_key == (3, "orders", "POST") and segments[2] == "refund": return _refund_order(segments[1], _parse_body(event))
     if route_key == (3, "orders", "POST") and segments[2] == "cancel": return _cancel_order(segments[1], _parse_body(event))
     if route_key == (3, "orders", "POST") and segments[2] == "checkout": return _create_mercadolibre_checkout(segments[1], _parse_body(event), headers)
-    if route_key == (3, "orders", "GET") and segments[2] == "status": return _get_order_status(segments[1])
+    if route_key == (3, "orders", "GET") and segments[2] == "status": return _get_order_status(segments[1], headers)
     if route_key == (3, "stocks", "POST") and segments[2] == "entries": return _register_stock_entry(segments[1], _parse_body(event), headers)
     if route_key == (3, "stocks", "POST") and segments[2] == "damages": return _register_stock_damage(segments[1], _parse_body(event), headers)
     if route_key == (3, "customers", "PATCH") and segments[2] == "privileges": return _update_customer_privileges(segments[1], _parse_body(event), headers)

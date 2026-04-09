@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, finalize, forkJoin, Observable, of, shareReplay, tap } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import {
+  DashboardData,
+  DashboardCustomerProfile,
   DashboardGoal,
   DashboardProduct,
   FeaturedItem,
@@ -9,6 +12,7 @@ import {
   NetworkMember,
   UserDashboardData
 } from '../models/user-dashboard.model';
+import { CustomerShippingAddress } from '../models/admin.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
@@ -30,21 +34,74 @@ export class UserDashboardControlService {
   private heroProductId = '';
   private networkMembersCache: NetworkMember[] = [];
   private buyAgainIdsCache = new Set<string>();
+  private loadRequest?: Observable<UserDashboardData>;
 
   constructor(
     private readonly api: ApiService,
     private readonly authService: AuthService
   ) {}
 
-  load(): Observable<UserDashboardData> {
-    const userId = this.authService.currentUser?.userId;
-    return this.api.getUserDashboardData(userId).pipe(
+  load(options: { force?: boolean } = {}): Observable<UserDashboardData> {
+    if (!options.force && this.dataSubject.value) {
+      return of(this.cloneDashboardData(this.dataSubject.value));
+    }
+
+    if (!options.force && this.loadRequest) {
+      return this.loadRequest;
+    }
+
+    const dashboardRequest = this.authService.hasSession
+      ? this.api.getDashboardData()
+      : of<DashboardData>({
+          isGuest: true,
+          settings: {
+            cutoffDay: 25,
+            cutoffHour: 23,
+            cutoffMinute: 59,
+            userCode: '',
+            networkGoal: 300
+          },
+          goals: [],
+          featured: [],
+          campaigns: [],
+          networkMembers: [],
+          buyAgainIds: [],
+          commissions: null,
+          notifications: [],
+          customer: null
+        });
+
+    const request = forkJoin([
+      this.api.getCatalogData(),
+      dashboardRequest
+    ]).pipe(
+      map(([catalog, dashboard]) => ({
+        // Datos de catálogo (GET /catalog)
+        products: catalog.products ?? [],
+        productOfMonth: catalog.productOfMonth ?? null,
+        categories: [],
+        // Datos de dashboard autenticado (GET /customer/dashboard)
+        featured: dashboard.featured ?? [],
+        campaigns: dashboard.campaigns ?? [],
+        settings: dashboard.settings,
+        goals: dashboard.goals ?? [],
+        networkMembers: dashboard.networkMembers ?? [],
+        buyAgainIds: dashboard.buyAgainIds ?? [],
+        commissions: dashboard.commissions ?? null,
+        notifications: dashboard.notifications ?? [],
+        customer: this.normalizeDashboardCustomer(dashboard.customer),
+        user: dashboard.user,
+        sponsor: dashboard.sponsor,
+        isGuest: dashboard.isGuest,
+        vp: dashboard.vp,
+        vg: dashboard.vg,
+        rank: dashboard.rank,
+        bonuses: dashboard.bonuses ?? [],
+      } satisfies UserDashboardData)),
       tap((data) => {
         const safeNetworkMembers = Array.isArray(data.networkMembers) ? data.networkMembers : [];
-        const rawBuyAgainIds = data.buyAgainIds;
-        const safeBuyAgainIds = Array.isArray(rawBuyAgainIds)
-          ? rawBuyAgainIds.filter((item): item is string => typeof item === 'string')
-          : [];
+        const safeBuyAgainIds = (Array.isArray(data.buyAgainIds) ? data.buyAgainIds : [])
+          .filter((item): item is string => typeof item === 'string');
         const rawCommissions = data.commissions;
         const normalizedCommissions = rawCommissions
           ? {
@@ -60,18 +117,14 @@ export class UserDashboardControlService {
               hasPending:
                 typeof (rawCommissions as any).hasPending === 'boolean'
                   ? (rawCommissions as any).hasPending
-                  : Boolean(
-                      ((rawCommissions as any).pendingTotal ?? (rawCommissions as any).totalPending ?? 0) > 0
-                    ),
+                  : Boolean(((rawCommissions as any).pendingTotal ?? (rawCommissions as any).totalPending ?? 0) > 0),
               hasConfirmed:
                 typeof (rawCommissions as any).hasConfirmed === 'boolean'
                   ? (rawCommissions as any).hasConfirmed
-                  : Boolean(
-                      ((rawCommissions as any).monthTotal ?? (rawCommissions as any).totalConfirmed ?? 0) > 0
-                    )
+                  : Boolean(((rawCommissions as any).monthTotal ?? (rawCommissions as any).totalConfirmed ?? 0) > 0)
             }
           : null;
-        const mappedData = {
+        const mappedData: UserDashboardData = {
           ...data,
           networkMembers: safeNetworkMembers,
           buyAgainIds: safeBuyAgainIds,
@@ -80,18 +133,22 @@ export class UserDashboardControlService {
         };
         this.networkMembersCache = safeNetworkMembers;
         this.buyAgainIdsCache = new Set(safeBuyAgainIds);
-        const clonedData =
-          typeof structuredClone === 'function'
-            ? structuredClone(mappedData)
-            : (JSON.parse(JSON.stringify(mappedData)) as UserDashboardData);
+        const clonedData = this.cloneDashboardData(mappedData);
         this.dataSubject.next(clonedData);
         this.heroProductId =
           mappedData.productOfMonth?.id ?? mappedData.products?.[0]?.id ?? this.heroProductId;
         if (this.heroProductId) {
           this.heroQty = this.cart[this.heroProductId] ?? 0;
         }
-      })
+      }),
+      finalize(() => {
+        this.loadRequest = undefined;
+      }),
+      shareReplay(1)
     );
+
+    this.loadRequest = request;
+    return request;
   }
 
   get data(): UserDashboardData | null {
@@ -125,8 +182,62 @@ export class UserDashboardControlService {
     return this.data?.notifications ?? this.emptyNotifications;
   }
 
+  get customer(): DashboardCustomerProfile | null {
+    return this.data?.customer ?? null;
+  }
+
+  get shippingAddresses(): CustomerShippingAddress[] {
+    const customer = this.customer;
+    if (!customer) {
+      return [];
+    }
+    return customer.addresses?.length ? customer.addresses : customer.shippingAddresses ?? [];
+  }
+
+  get defaultShippingAddressId(): string {
+    const customer = this.customer;
+    if (!customer) {
+      return '';
+    }
+    return customer.defaultAddressId ?? customer.defaultShippingAddressId ?? '';
+  }
+
   get buyAgainIds(): Set<string> {
     return this.buyAgainIdsCache.size ? new Set(this.buyAgainIdsCache) : new Set(this.data?.buyAgainIds ?? []);
+  }
+
+  getProjectedDiscountPercent(cartSubtotal: number): number {
+    if (!Number.isFinite(cartSubtotal) || cartSubtotal <= 0) {
+      return 0;
+    }
+
+    const discountGoals = (this.data?.goals ?? [])
+      .filter((goal) => goal?.key?.startsWith('discount_'))
+      .map((goal) => {
+        const target = Number(goal.target ?? 0);
+        const base = Number(goal.base ?? 0);
+        const percent = this.extractDiscountPercent(goal);
+        return {
+          target,
+          base,
+          percent
+        };
+      })
+      .filter((goal) => goal.percent > 0 && goal.target > 0 && Number.isFinite(goal.base))
+      .sort((a, b) => a.percent - b.percent);
+
+    if (!discountGoals.length) {
+      return 0;
+    }
+
+    const projectedNet = discountGoals[0].base + cartSubtotal;
+    let projectedPercent = 0;
+    for (const goal of discountGoals) {
+      if (projectedNet >= goal.target) {
+        projectedPercent = goal.percent;
+      }
+    }
+    return projectedPercent;
   }
 
   get heroQuantity(): number {
@@ -162,7 +273,7 @@ export class UserDashboardControlService {
   }
 
   goalCartPercent(goal: DashboardGoal): number {
-    if (goal.isCountGoal) {
+    if (goal.isCountGoal || goal.unit === 'vp') {
       return 0;
     }
     const basePercent = this.goalBasePercent(goal);
@@ -171,8 +282,11 @@ export class UserDashboardControlService {
   }
 
   goalProgressLabel(goal: DashboardGoal): string {
-    if (goal.isCountGoal) {
+    if (goal.isCountGoal || goal.unit === 'count') {
       return `${goal.base} / ${goal.target}`;
+    }
+    if (goal.unit === 'vp') {
+      return `${goal.base.toFixed(1)} / ${goal.target.toFixed(0)} VP`;
     }
     return `${this.formatMoney(goal.base)} / ${this.formatMoney(goal.target)}`;
   }
@@ -272,7 +386,7 @@ export class UserDashboardControlService {
         goal.key === 'active' ||
         goal.key === 'discount' ||
         goal.key.startsWith('discount_');
-      if (isConsumptionGoal && !goal.isCountGoal) {
+      if (isConsumptionGoal && !goal.isCountGoal && goal.unit !== 'vp') {
         return { ...goal, cart: this.cartTotal };
       }
       return goal;
@@ -304,5 +418,49 @@ export class UserDashboardControlService {
     }
     return cutoff;
   }
-}
 
+  private normalizeDashboardCustomer(customer: DashboardData['customer']): DashboardCustomerProfile | null {
+    if (!customer) {
+      return null;
+    }
+
+    const sourceAddresses = Array.isArray(customer.addresses)
+      ? customer.addresses
+      : Array.isArray(customer.shippingAddresses)
+        ? customer.shippingAddresses
+        : [];
+
+    const addresses = sourceAddresses
+      .filter((entry): entry is CustomerShippingAddress => Boolean(entry?.id))
+      .map((entry) => ({ ...entry }));
+
+    const defaultAddressId = customer.defaultAddressId ?? customer.defaultShippingAddressId ?? '';
+    const normalizedAddresses = addresses.map((entry) => ({
+      ...entry,
+      isDefault: Boolean(entry.isDefault) || Boolean(defaultAddressId && entry.id === defaultAddressId)
+    }));
+
+    return {
+      ...customer,
+      addresses: normalizedAddresses,
+      shippingAddresses: normalizedAddresses,
+      defaultAddressId,
+      defaultShippingAddressId: defaultAddressId
+    };
+  }
+
+  private extractDiscountPercent(goal: DashboardGoal): number {
+    const match = String(goal.title ?? '').match(/(\d+(?:\.\d+)?)\s*%/);
+    if (!match) {
+      return 0;
+    }
+    const value = Number(match[1]);
+    return Number.isFinite(value) ? Math.round(value) : 0;
+  }
+
+  private cloneDashboardData(data: UserDashboardData): UserDashboardData {
+    return typeof structuredClone === 'function'
+      ? structuredClone(data)
+      : (JSON.parse(JSON.stringify(data)) as UserDashboardData);
+  }
+}

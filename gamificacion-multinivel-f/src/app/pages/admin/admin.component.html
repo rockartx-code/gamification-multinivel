@@ -143,9 +143,21 @@
                           <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
                           <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
                         </div>
-                        <div *ngIf="order.deliveryType === 'pickup'" class="mt-2 inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-main">
-                          <i class="fa-solid fa-store" aria-hidden="true"></i>
-                          Recoger en sucursal
+                        <div *ngIf="order.deliveryType === 'pickup'" class="mt-2 flex flex-wrap items-center gap-1">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-main">
+                            <i class="fa-solid fa-store" aria-hidden="true"></i>
+                            Recoger en sucursal
+                          </span>
+                          <span *ngIf="order.pickupPaymentMethod === 'at_store'"
+                            class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                            Paga en sucursal
+                          </span>
+                          <span *ngIf="order.pickupPaymentMethod === 'online' || !order.pickupPaymentMethod"
+                            class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                            Pago en línea
+                          </span>
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
@@ -179,6 +191,7 @@
                               <div *ngIf="order.references"><span class="text-gray-500">Referencias:</span> <span class="text-main">{{ order.references }}</span></div>
                               <div *ngIf="order.postalCode || order.state"><span class="text-gray-500">CP:</span> <span class="text-main">{{ order.postalCode }}</span><span *ngIf="order.state"> · <span class="text-gray-500">Estado:</span> <span class="text-main">{{ order.state }}</span></span></div>
                               <div *ngIf="order.phone"><span class="text-gray-500">Tel:</span> <span class="text-main">{{ order.phone }}</span></div>
+                              <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i><span class="font-semibold">Detalles entrega:</span> {{ order.deliveryNotes }}</div>
                             </ng-container>
                             <div *ngIf="!order.address && order.shippingType === 'personal' && order.deliveryPlace">
                               <span class="text-gray-500">Entrega personal en:</span> <span class="text-main">{{ order.deliveryPlace }}</span>
@@ -213,9 +226,16 @@
                           </ui-button>
                         </div>
                         <div class="flex flex-col gap-1">
-                          <div *ngIf="order.deliveryType === 'pickup'" class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-main w-fit">
-                            <i class="fa-solid fa-store" aria-hidden="true"></i>
-                            Sucursal
+                          <div *ngIf="order.deliveryType === 'pickup'" class="flex flex-wrap gap-1">
+                            <span class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-main">
+                              <i class="fa-solid fa-store" aria-hidden="true"></i>
+                              Sucursal
+                            </span>
+                            <span *ngIf="order.pickupPaymentMethod === 'at_store'"
+                              class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                              <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                              Paga aquí
+                            </span>
                           </div>
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
@@ -259,6 +279,7 @@
                                 <div *ngIf="order.references" class="text-gray-600">Ref: {{ order.references }}</div>
                                 <div *ngIf="order.postalCode || order.state">CP {{ order.postalCode }}<span *ngIf="order.state"> · {{ order.state }}</span></div>
                                 <div *ngIf="order.phone">Tel: {{ order.phone }}</div>
+                                <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>{{ order.deliveryNotes }}</div>
                               </ng-container>
                               <div *ngIf="!order.address && order.shippingType === 'personal' && order.deliveryPlace">
                                 Entrega personal en: <span class="font-semibold text-main">{{ order.deliveryPlace }}</span>
@@ -463,6 +484,82 @@
                       <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
                       Ver comprobante
                     </ui-button>
+                  </div>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedCustomer as customer">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-semibold text-main">Documentos del cliente</div>
+                      <div class="mt-1 text-xs text-gray-600">Carga archivos administrativos o fiscales y quedarán visibles en <code>/perfil</code>.</div>
+                    </div>
+                    <div class="rounded-full border border-olive-20 bg-ivory-70 px-3 py-1 text-xs font-semibold text-main">
+                      {{ selectedCustomerProfile?.documents?.length ?? 0 }} archivo(s)
+                    </div>
+                  </div>
+
+                  <div *ngIf="customerDocumentMessage"
+                    class="mt-3 rounded-2xl border px-3 py-2 text-xs"
+                    [ngClass]="isCustomerDocumentMessageError ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+                    {{ customerDocumentMessage }}
+                  </div>
+
+                  <div *ngIf="isLoadingSelectedCustomerProfile" class="mt-3 rounded-2xl border border-olive-20 bg-ivory-70 px-4 py-3 text-xs text-gray-500">
+                    Cargando documentos de {{ customer.name }}...
+                  </div>
+
+                  <div *ngIf="!isLoadingSelectedCustomerProfile && selectedCustomerProfile?.documents?.length"
+                    class="mt-3 flex flex-col gap-2">
+                    <div *ngFor="let doc of selectedCustomerProfile?.documents"
+                      class="flex items-center gap-3 rounded-2xl border border-olive-20 bg-ivory-70 px-4 py-3">
+                      <i class="fa-solid fa-file-lines text-sm text-gray-400" aria-hidden="true"></i>
+                      <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-main">{{ doc.name }}</div>
+                        <div class="mt-1 text-xs text-gray-500">
+                          {{ doc.uploadedAt ? formatDateTime(doc.uploadedAt) : 'Sin fecha' }}
+                        </div>
+                      </div>
+                      <ui-button size="sm" variant="ghost" [disabled]="!doc.url" (pressed)="openCustomerDocument(doc)">
+                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                        Abrir
+                      </ui-button>
+                    </div>
+                  </div>
+
+                  <div *ngIf="!isLoadingSelectedCustomerProfile && !selectedCustomerProfile?.documents?.length"
+                    class="mt-3 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 px-4 py-4 text-xs text-gray-500">
+                    Este cliente todavía no tiene documentos asociados.
+                  </div>
+
+                  <div class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4">
+                    <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                      <ui-form-field
+                        wrapperClass="block"
+                        label="Nombre del documento"
+                        placeholder="Constancia fiscal"
+                        [ngModel]="customerDocumentName"
+                        (ngModelChange)="customerDocumentName = $event">
+                      </ui-form-field>
+
+                      <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-olive-30 bg-white/70 px-4 py-2 text-sm font-semibold text-main transition hover:bg-olive-10">
+                        <i class="fa-solid fa-paperclip mr-2" aria-hidden="true"></i>
+                        {{ customerDocumentFile ? customerDocumentFile.name : 'Seleccionar archivo' }}
+                        <input type="file" class="hidden" accept=".pdf,.png,.jpg,.jpeg" (change)="onCustomerDocumentFileSelected($event)" />
+                      </label>
+                    </div>
+
+                    <div *ngIf="customerDocumentError" class="mt-3 text-xs text-red-600">
+                      {{ customerDocumentError }}
+                    </div>
+
+                    <div class="mt-3 flex justify-end">
+                      <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60"
+                        [disabled]="!customerDocumentFile || isUploadingCustomerDocument"
+                        (pressed)="uploadCustomerDocument()">
+                        <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                        {{ isUploadingCustomerDocument ? 'Cargando...' : 'Subir documento' }}
+                      </ui-button>
+                    </div>
                   </div>
                 </div>
 
@@ -728,14 +825,32 @@
                 <div class="md:hidden divide-y divide-olive-20">
                   <div *ngIf="!filteredProducts.length" class="p-4 text-xs text-gray-500">Sin resultados.</div>
                   <div *ngFor="let product of pagedProducts" class="p-4">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-start justify-between gap-2">
                       <div class="text-sm font-semibold text-main">{{ product.name }}</div>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1 text-xs">
+                      <span class="shrink-0 rounded-full border px-3 py-1 text-xs"
+                        [ngClass]="product.active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-olive-30 bg-ivory-80 text-gray-500'">
                         {{ product.active ? 'Activo' : 'Retirado' }}
                       </span>
                     </div>
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
                       <div>Precio: <span class="text-main">{{ formatMoney(product.price) }}</span></div>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-1">
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                        [ngClass]="product.inOnlineStore !== false ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                        <i class="fa-solid fa-globe fa-xs" aria-hidden="true"></i>
+                        {{ product.inOnlineStore !== false ? 'Tienda online' : 'Sin tienda online' }}
+                      </span>
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                        [ngClass]="product.inPOS !== false ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                        <i class="fa-solid fa-cash-register fa-xs" aria-hidden="true"></i>
+                        {{ product.inPOS !== false ? 'En POS' : 'Sin POS' }}
+                      </span>
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                        [ngClass]="product.commissionable !== false ? 'border-violet-200 bg-violet-50 text-violet-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                        <i class="fa-solid fa-percent fa-xs" aria-hidden="true"></i>
+                        {{ product.commissionable !== false ? 'Comisionable' : 'No comisionable' }}
+                      </span>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                       <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
@@ -834,14 +949,61 @@
                     wrapperClass="block"
                     inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main placeholder:text-muted outline-none  focus:border-olive-70 focus:ring-2 focus-ring-olive-20">
                   </ui-form-field>
-                  <div class="block md:col-span-2 rounded-2xl border border-olive-30 bg-white/70 px-4 py-3">
-                    <label class="flex items-center justify-between gap-3 text-sm text-main">
-                      <div>
-                        <div class="font-semibold">{{ productForm.active ? 'Producto visible' : 'Producto retirado' }}</div>
-                        <div class="mt-1 text-xs text-gray-600">Si lo retiras, desaparece de compra, gancho y producto del mes.</div>
+                  <!-- Banderas de disponibilidad -->
+                  <div class="block md:col-span-2 space-y-2">
+                    <div class="rounded-2xl border border-olive-30 bg-white/70 px-4 py-3">
+                      <label class="flex items-center justify-between gap-3 text-sm text-main">
+                        <div>
+                          <div class="font-semibold">{{ productForm.active ? 'Producto activo' : 'Producto retirado' }}</div>
+                          <div class="mt-1 text-xs text-gray-600">Si lo retiras, desaparece de compra, gancho y producto del mes.</div>
+                        </div>
+                        <input type="checkbox" [checked]="productForm.active" (change)="updateProductActive($any($event.target).checked)" />
+                      </label>
+                    </div>
+                    <div class="grid gap-2 sm:grid-cols-3">
+                      <div class="rounded-2xl border px-4 py-3 transition"
+                        [ngClass]="productForm.inOnlineStore ? 'border-gold bg-amber-50' : 'border-olive-30 bg-white/70'">
+                        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-main">
+                          <div>
+                            <div class="flex items-center gap-2 font-semibold">
+                              <i class="fa-solid fa-globe text-sm" [ngClass]="productForm.inOnlineStore ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+                              Tienda en línea
+                            </div>
+                            <div class="mt-0.5 text-[11px] text-gray-500">Visible para clientes online</div>
+                          </div>
+                          <input type="checkbox" [checked]="productForm.inOnlineStore"
+                            (change)="productForm = { ...productForm, inOnlineStore: $any($event.target).checked }" />
+                        </label>
                       </div>
-                      <input type="checkbox" [checked]="productForm.active" (change)="updateProductActive($any($event.target).checked)" />
-                    </label>
+                      <div class="rounded-2xl border px-4 py-3 transition"
+                        [ngClass]="productForm.inPOS ? 'border-gold bg-amber-50' : 'border-olive-30 bg-white/70'">
+                        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-main">
+                          <div>
+                            <div class="flex items-center gap-2 font-semibold">
+                              <i class="fa-solid fa-cash-register text-sm" [ngClass]="productForm.inPOS ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+                              Punto de Venta
+                            </div>
+                            <div class="mt-0.5 text-[11px] text-gray-500">Disponible en caja / consultorio</div>
+                          </div>
+                          <input type="checkbox" [checked]="productForm.inPOS"
+                            (change)="productForm = { ...productForm, inPOS: $any($event.target).checked }" />
+                        </label>
+                      </div>
+                      <div class="rounded-2xl border px-4 py-3 transition"
+                        [ngClass]="productForm.commissionable ? 'border-gold bg-amber-50' : 'border-olive-30 bg-white/70'">
+                        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-main">
+                          <div>
+                            <div class="flex items-center gap-2 font-semibold">
+                              <i class="fa-solid fa-percent text-sm" [ngClass]="productForm.commissionable ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+                              Comisionable
+                            </div>
+                            <div class="mt-0.5 text-[11px] text-gray-500">Cuenta para metas y comisiones</div>
+                          </div>
+                          <input type="checkbox" [checked]="productForm.commissionable"
+                            (change)="productForm = { ...productForm, commissionable: $any($event.target).checked }" />
+                        </label>
+                      </div>
+                    </div>
                   </div>
 
                   <ui-form-field
@@ -913,37 +1075,52 @@
                       Agregar tipo
                     </ui-button>
                   </div>
-                  <div class="mt-3 space-y-2">
+                  <div class="mt-3 space-y-3">
                     <div *ngFor="let v of productForm.variants; let vi = index; trackBy: trackByVariantId"
-                      class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
-                      <ui-form-field
-                        label="Nombre"
-                        [placeholder]="'Sabor Coco'"
-                        [ngModel]="v.name"
-                        (ngModelChange)="updateProductVariant(vi, 'name', $event)"
-                        wrapperClass="block"
-                        inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
-                      </ui-form-field>
-                      <ui-form-field
-                        kind="input" type="number"
-                        label="Precio (dejar vacío = precio base)"
-                        placeholder="0"
-                        [ngModel]="v.price"
-                        (ngModelChange)="updateProductVariant(vi, 'price', $event)"
-                        wrapperClass="block"
-                        inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
-                      </ui-form-field>
-                      <ui-form-field
-                        label="SKU"
-                        placeholder="SKU-VAR"
-                        [ngModel]="v.sku"
-                        (ngModelChange)="updateProductVariant(vi, 'sku', $event)"
-                        wrapperClass="block"
-                        inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
-                      </ui-form-field>
-                      <ui-button size="sm" variant="ghost" (pressed)="removeProductVariant(vi)" class="mb-0.5">
-                        <i class="fa-solid fa-trash text-red-400 text-xs" aria-hidden="true"></i>
-                      </ui-button>
+                      class="rounded-xl border border-olive-20 bg-white/50 p-3">
+                      <div class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+                        <ui-form-field
+                          label="Nombre"
+                          [placeholder]="'Sabor Coco'"
+                          [ngModel]="v.name"
+                          (ngModelChange)="updateProductVariant(vi, 'name', $event)"
+                          wrapperClass="block"
+                          inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                        </ui-form-field>
+                        <ui-form-field
+                          kind="input" type="number"
+                          label="Precio (vacío = base)"
+                          placeholder="0"
+                          [ngModel]="v.price"
+                          (ngModelChange)="updateProductVariant(vi, 'price', $event)"
+                          wrapperClass="block"
+                          inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                        </ui-form-field>
+                        <ui-form-field
+                          label="SKU"
+                          placeholder="SKU-VAR"
+                          [ngModel]="v.sku"
+                          (ngModelChange)="updateProductVariant(vi, 'sku', $event)"
+                          wrapperClass="block"
+                          inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
+                        </ui-form-field>
+                        <ui-button size="sm" variant="ghost" (pressed)="removeProductVariant(vi)" class="mb-0.5">
+                          <i class="fa-solid fa-trash text-red-400 text-xs" aria-hidden="true"></i>
+                        </ui-button>
+                      </div>
+                      <!-- Imagen de variante -->
+                      <div class="mt-2 flex items-center gap-3">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-olive-30 bg-ivory-80">
+                          <img *ngIf="variantImagePreviews.get(v.id)" [src]="variantImagePreviews.get(v.id)"
+                            alt="Preview" class="h-full w-full object-cover" />
+                          <i *ngIf="!variantImagePreviews.get(v.id)" class="fa-solid fa-image text-gray-300 text-lg" aria-hidden="true"></i>
+                        </div>
+                        <label class="flex-1 cursor-pointer">
+                          <span class="text-[11px] font-semibold text-gray-500">Imagen de variante</span>
+                          <input type="file" accept="image/*" class="mt-1 block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-olive-10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-main"
+                            (change)="uploadVariantImage($event, v.id)" />
+                        </label>
+                      </div>
                     </div>
                     <div *ngIf="productForm.variants.length === 0" class="text-xs text-gray-400">
                       Sin tipos configurados. El producto se vende en presentación única.
@@ -1287,6 +1464,47 @@
             <app-admin-campaigns [campaigns]="campaigns"></app-admin-campaigns>
           </div>
           <div class="space-y-4" *ngIf="currentView === 'pos' && canAccessView('pos')">
+
+            <!-- AVISO: clientes pendientes por pagar en sucursal -->
+            <div *ngIf="pendingPickupAtStoreOrders.length > 0"
+              class="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-200 text-amber-800">
+                  <i class="fa-solid fa-bell fa-lg" aria-hidden="true"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-extrabold text-amber-900">
+                    {{ pendingPickupAtStoreOrders.length }} pedido{{ pendingPickupAtStoreOrders.length > 1 ? 's' : '' }} pendiente{{ pendingPickupAtStoreOrders.length > 1 ? 's' : '' }} de pago en sucursal
+                  </div>
+                  <div class="text-xs text-amber-700">Un cliente pasará a recoger y pagar. Prepara el pedido.</div>
+                </div>
+              </div>
+              <div class="mt-3 space-y-2">
+                <div
+                  *ngFor="let o of pendingPickupAtStoreOrders"
+                  class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-white/70 px-4 py-3">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-main">{{ o.customer }}</div>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+                      <span><i class="fa-solid fa-hashtag fa-xs mr-0.5" aria-hidden="true"></i>{{ o.id }}</span>
+                      <span *ngIf="o.createdAt"><i class="fa-solid fa-clock fa-xs mr-0.5" aria-hidden="true"></i>{{ formatDateTime(o.createdAt) }}</span>
+                      <span class="font-semibold text-main">{{ formatMoney(o.total) }}</span>
+                    </div>
+                    <div *ngIf="o.items?.length" class="mt-1 flex flex-wrap gap-1">
+                      <span *ngFor="let item of o.items"
+                        class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] text-gray-700">
+                        {{ item.name }} ×{{ item.quantity }}
+                      </span>
+                    </div>
+                  </div>
+                  <ui-button size="sm" variant="ghost" (pressed)="setView('orders')">
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    Ver orden
+                  </ui-button>
+                </div>
+              </div>
+            </div>
+
             <div class="grid gap-3 md:grid-cols-4">
               <ui-kpi-card label="Ventas en caja" [value]="visiblePosSales.length"></ui-kpi-card>
               <ui-kpi-card label="Caja actual" [value]="formatMoney(posCashControl ? posCashControl.currentTotal : 0)"></ui-kpi-card>
@@ -1644,6 +1862,89 @@
             </div>
           </div>
 
+          <!-- ══════════════════════════════════════════ CUADRO DE HONOR -->
+          <div class="space-y-4" *ngIf="currentView === 'honor_board' && canAccessView('honor_board')">
+
+            <!-- Loading state -->
+            <div *ngIf="isLoadingHonorBoard" class="rounded-2xl border border-olive-30 surface-soft p-8 text-center text-sm text-gray-400">
+              Cargando Cuadro de Honor...
+            </div>
+
+            <ng-container *ngIf="!isLoadingHonorBoard && honorBoardData">
+              <!-- Sort controls -->
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="text-sm text-gray-500">
+                  Mes: <span class="font-semibold text-main">{{ honorBoardData.monthKey }}</span>
+                </div>
+                <div class="flex gap-2">
+                  <ui-button size="sm" [variant]="honorBoardSort === 'vg' ? 'primary' : 'ghost'" (pressed)="honorBoardSort = 'vg'">
+                    <i class="fa-solid fa-users" aria-hidden="true"></i>
+                    Por VG
+                  </ui-button>
+                  <ui-button size="sm" [variant]="honorBoardSort === 'vp' ? 'primary' : 'ghost'" (pressed)="honorBoardSort = 'vp'">
+                    <i class="fa-solid fa-user" aria-hidden="true"></i>
+                    Por VP
+                  </ui-button>
+                  <ui-button size="sm" [variant]="honorBoardSort === 'alpha' ? 'primary' : 'ghost'" (pressed)="honorBoardSort = 'alpha'">
+                    <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
+                    Alfabético
+                  </ui-button>
+                </div>
+              </div>
+
+              <!-- Ranking table -->
+              <div class="rounded-2xl border border-olive-30 surface-soft overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-olive-20 bg-ivory-70 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <th class="px-4 py-3 text-left w-10">#</th>
+                      <th class="px-4 py-3 text-left">Nombre</th>
+                      <th class="px-4 py-3 text-center hidden sm:table-cell">Rango</th>
+                      <th class="px-4 py-3 text-right">VG</th>
+                      <th class="px-4 py-3 text-right">VP</th>
+                      <th class="px-4 py-3 text-center w-14">Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let entry of sortedHonorEntries"
+                      class="border-b border-olive-10 transition hover:bg-ivory-70/60"
+                      [class.bg-gold-12]="entry.position <= 3">
+                      <td class="px-4 py-3 font-extrabold"
+                        [class.text-yellow-500]="entry.position === 1"
+                        [class.text-gray-400]="entry.position === 2"
+                        [class.text-amber-700]="entry.position === 3"
+                        [class.text-gray-500]="entry.position > 3">
+                        <div class="flex items-center gap-1.5">
+                          <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs" aria-hidden="true"></i>
+                          {{ entry.position }}
+                        </div>
+                      </td>
+                      <td class="px-4 py-3 font-semibold text-main">{{ entry.name }}</td>
+                      <td class="px-4 py-3 text-center hidden sm:table-cell">
+                        <span *ngIf="entry.rank" class="rounded-full border border-olive-20 bg-ivory-80 px-2.5 py-0.5 text-[11px] font-semibold text-main">
+                          {{ entry.rank }}
+                        </span>
+                        <span *ngIf="!entry.rank" class="text-gray-300">—</span>
+                      </td>
+                      <td class="px-4 py-3 text-right text-gray-700">{{ entry.vg | number:'1.0-0' }}</td>
+                      <td class="px-4 py-3 text-right text-gray-700">{{ entry.vp | number:'1.0-0' }}</td>
+                      <td class="px-4 py-3 text-center text-xs font-bold" [class]="honorPositionDeltaClass(entry)">
+                        {{ honorPositionDeltaLabel(entry) || '—' }}
+                      </td>
+                    </tr>
+                    <tr *ngIf="sortedHonorEntries.length === 0">
+                      <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-400">Sin datos disponibles.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+
+            <div *ngIf="!isLoadingHonorBoard && !honorBoardData" class="rounded-2xl border border-olive-30 surface-soft p-6 text-center text-sm text-gray-400">
+              No hay datos de Cuadro de Honor para este mes.
+            </div>
+          </div>
+
           <div class="space-y-4" *ngIf="currentView === 'notifications' && canAccessView('notifications')">
             <div class="grid gap-3 md:grid-cols-4">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -1933,12 +2234,214 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Documentos requeridos del cliente -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4 xl:col-span-2">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div class="text-sm font-semibold text-main">Documentos requeridos del cliente</div>
+                    <div class="mt-0.5 text-xs text-gray-600">Define los tipos de documento que el cliente debe subir en su perfil (Constancia, INE, CURP, etc.).</div>
+                  </div>
+                  <ui-button size="sm" variant="ghost" (pressed)="addCustomerDocumentType()">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    Agregar
+                  </ui-button>
+                </div>
+                <div class="mt-4 flex flex-col gap-2" *ngIf="(businessConfigDraft.customerDocumentTypes ?? []).length > 0">
+                  <div
+                    *ngFor="let dt of businessConfigDraft.customerDocumentTypes; let i = index; trackBy: trackByIndex"
+                    class="flex items-center gap-3 rounded-xl border border-olive-20 bg-white/60 px-3 py-2">
+                    <div class="grid flex-1 gap-2 md:grid-cols-2">
+                      <ui-form-field
+                        label="Nombre del documento"
+                        placeholder="Ej: INE (frente y reverso)"
+                        [ngModel]="dt.label"
+                        (ngModelChange)="dt.label = $event">
+                      </ui-form-field>
+                      <ui-form-field
+                        label="Clave interna"
+                        placeholder="Ej: ine"
+                        [ngModel]="dt.key"
+                        (ngModelChange)="dt.key = $event">
+                      </ui-form-field>
+                    </div>
+                    <label class="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-gray-600">
+                      <input type="checkbox" [checked]="dt.required" (change)="dt.required = $any($event.target).checked" />
+                      Obligatorio
+                    </label>
+                    <button type="button" class="shrink-0 rounded-lg p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                      (click)="removeCustomerDocumentType(i)">
+                      <i class="fa-solid fa-trash-can text-sm" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                <div *ngIf="(businessConfigDraft.customerDocumentTypes ?? []).length === 0"
+                  class="mt-3 rounded-xl border border-dashed border-olive-30 px-4 py-3 text-xs text-gray-400">
+                  No hay tipos de documento configurados. Haz clic en "Agregar" para añadir uno.
+                </div>
+              </div>
+
             </div>
 
+            <!-- VP / VG y Bonos -->
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="text-sm font-semibold text-main">Unidades de Volumen (VP / VG)</div>
+              <div class="mt-1 text-xs text-gray-500">1 VP = X MXN netos (sin IVA ni envío). VP = compras personales del mes; VG = VP + red hasta N niveles.</div>
+              <div class="mt-3 grid gap-3 md:grid-cols-2">
+                <ui-form-field type="number" [min]="1" label="MXN netos por 1 VP" [ngModel]="bonusConfig.vpConfig.mxnPerVp" (ngModelChange)="bonusConfig.vpConfig.mxnPerVp = +$event || 50; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                <ui-form-field type="number" [min]="1" [max]="10" label="Niveles de red para VG" [ngModel]="bonusConfig.vpConfig.maxNetworkLevels" (ngModelChange)="bonusConfig.vpConfig.maxNetworkLevels = +$event || 5; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+              </div>
+            </div>
+
+            <!-- Rangos -->
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold text-main">Rangos de la Red</div>
+                  <div class="mt-1 text-xs text-gray-500">Define cada rango y el VG mínimo (en puntos VP) para alcanzarlo.</div>
+                </div>
+                <ui-button size="sm" variant="secondary" type="button" (pressed)="addRankThreshold()">
+                  <i class="fa-solid fa-plus mr-1" aria-hidden="true"></i> Agregar rango
+                </ui-button>
+              </div>
+              <div class="mt-3 flex flex-col gap-2" *ngIf="bonusConfig.rankThresholds.length > 0">
+                <div *ngFor="let rt of bonusConfig.rankThresholds; let ri = index; trackBy: trackByIndex"
+                  class="flex items-center gap-3 rounded-xl border border-olive-30 bg-white/60 px-3 py-2">
+                  <input class="w-32 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" placeholder="Nombre (ORO…)" [ngModel]="rt.rank" (ngModelChange)="bonusConfig.rankThresholds[ri].rank = $event; businessConfigDraft.bonuses = bonusConfig" />
+                  <span class="text-xs text-gray-500">VG min:</span>
+                  <input type="number" class="w-24 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.vgMin" (ngModelChange)="bonusConfig.rankThresholds[ri].vgMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                  <span class="text-xs text-gray-400">VP</span>
+                  <ui-button size="sm" variant="ghost" type="button" (pressed)="removeRankThreshold(ri)">
+                    <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                  </ui-button>
+                </div>
+              </div>
+              <div *ngIf="bonusConfig.rankThresholds.length === 0" class="mt-3 rounded-xl border border-dashed border-olive-30 px-4 py-3 text-xs text-gray-400">
+                Sin rangos configurados.
+              </div>
+            </div>
+
+            <!-- Reglas de Bonos -->
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold text-main">Reglas de Bonos</div>
+                  <div class="mt-1 text-xs text-gray-500">Cada regla define condiciones (VP/VG/meses…) y la recompensa asociada.</div>
+                </div>
+                <ui-button size="sm" variant="secondary" type="button" (pressed)="addBonusRule()">
+                  <i class="fa-solid fa-plus mr-1" aria-hidden="true"></i> Agregar regla
+                </ui-button>
+              </div>
+
+              <div class="mt-4 flex flex-col gap-4" *ngIf="bonusConfig.rules.length > 0">
+                <div *ngFor="let rule of bonusConfig.rules; let ri = index; trackBy: trackByIndex"
+                  class="rounded-2xl border border-olive-30 bg-white/60 p-4">
+                  <!-- Header de la regla -->
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div class="flex flex-1 flex-col gap-1">
+                      <input class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm font-semibold" placeholder="Nombre del bono" [ngModel]="rule.name" (ngModelChange)="bonusConfig.rules[ri].name = $event; businessConfigDraft.bonuses = bonusConfig" />
+                      <input class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs text-gray-500" placeholder="Notas (opcional)" [ngModel]="rule.notes" (ngModelChange)="bonusConfig.rules[ri].notes = $event; businessConfigDraft.bonuses = bonusConfig" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                        <input type="checkbox" [ngModel]="rule.active" (ngModelChange)="bonusConfig.rules[ri].active = $event; businessConfigDraft.bonuses = bonusConfig" />
+                        Activo
+                      </label>
+                      <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusRule(ri)">
+                        <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                      </ui-button>
+                    </div>
+                  </div>
+
+                  <!-- Rango y cooldown -->
+                  <div class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
+                    <div>
+                      <div class="text-xs text-gray-500 mb-1">Rango (opcional)</div>
+                      <input class="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" placeholder="ORO, PLATINO…" [ngModel]="rule.rank" (ngModelChange)="bonusConfig.rules[ri].rank = $event || undefined; businessConfigDraft.bonuses = bonusConfig" />
+                    </div>
+                    <div>
+                      <div class="text-xs text-gray-500 mb-1">Frecuencia de otorgamiento</div>
+                      <select class="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rule.cooldown" (ngModelChange)="bonusConfig.rules[ri].cooldown = $event; businessConfigDraft.bonuses = bonusConfig">
+                        <option *ngFor="let opt of bonusCooldownOptions" [value]="opt.value">{{ opt.label }}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Condiciones -->
+                  <div class="mt-4">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <div class="text-xs font-semibold text-main">Condiciones (todas deben cumplirse)</div>
+                      <ui-button size="sm" variant="ghost" type="button" (pressed)="addBonusCondition(ri)">
+                        <i class="fa-solid fa-plus text-green-600 mr-1" aria-hidden="true"></i> Condición
+                      </ui-button>
+                    </div>
+                    <div class="flex flex-col gap-2" *ngIf="rule.conditions.length > 0">
+                      <div *ngFor="let cond of rule.conditions; let ci = index; trackBy: trackByIndex"
+                        class="flex flex-wrap items-center gap-2 rounded-lg border border-olive-20 bg-ivory-50 px-3 py-2">
+                        <select class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" [ngModel]="cond.type" (ngModelChange)="bonusConfig.rules[ri].conditions[ci].type = $event; businessConfigDraft.bonuses = bonusConfig">
+                          <option *ngFor="let opt of bonusConditionTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <ng-container *ngIf="conditionNeedsValue(cond.type)">
+                          <input type="number" class="w-24 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Valor" [ngModel]="cond.value" (ngModelChange)="bonusConfig.rules[ri].conditions[ci].value = +$event; businessConfigDraft.bonuses = bonusConfig" />
+                          <span class="text-xs text-gray-400">{{ cond.type === 'consecutive_months' ? 'meses' : cond.type === 'direct_rank_count' ? 'referidos' : 'VP' }}</span>
+                        </ng-container>
+                        <ng-container *ngIf="conditionNeedsRank(cond.type)">
+                          <input class="w-28 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Rango requerido" [ngModel]="cond.rank" (ngModelChange)="bonusConfig.rules[ri].conditions[ci].rank = $event; businessConfigDraft.bonuses = bonusConfig" />
+                        </ng-container>
+                        <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusCondition(ri, ci)">
+                          <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+                        </ui-button>
+                      </div>
+                    </div>
+                    <div *ngIf="rule.conditions.length === 0" class="text-xs text-gray-400 italic">Sin condiciones — se aplicará siempre.</div>
+                  </div>
+
+                  <!-- Recompensas -->
+                  <div class="mt-4">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <div class="text-xs font-semibold text-main">Recompensas</div>
+                      <ui-button size="sm" variant="ghost" type="button" (pressed)="addBonusReward(ri)">
+                        <i class="fa-solid fa-plus text-green-600 mr-1" aria-hidden="true"></i> Recompensa
+                      </ui-button>
+                    </div>
+                    <div class="flex flex-col gap-2" *ngIf="rule.rewards.length > 0">
+                      <div *ngFor="let rew of rule.rewards; let wi = index; trackBy: trackByIndex"
+                        class="flex flex-wrap items-center gap-2 rounded-lg border border-olive-20 bg-ivory-50 px-3 py-2">
+                        <select class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" [ngModel]="rew.type" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].type = $event; businessConfigDraft.bonuses = bonusConfig">
+                          <option *ngFor="let opt of bonusRewardTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <ng-container *ngIf="rewardNeedsAmount(rew.type)">
+                          <input type="number" class="w-28 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Monto MXN" [ngModel]="rew.amount" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].amount = +$event; businessConfigDraft.bonuses = bonusConfig" />
+                          <span class="text-xs text-gray-400">MXN</span>
+                        </ng-container>
+                        <ng-container *ngIf="rewardNeedsItem(rew.type)">
+                          <input class="w-36 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Descripción artículo" [ngModel]="rew.itemLabel" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].itemLabel = $event; businessConfigDraft.bonuses = bonusConfig" />
+                          <input type="number" class="w-20 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Mes N" [ngModel]="rew.triggerMonths" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].triggerMonths = +$event || undefined; businessConfigDraft.bonuses = bonusConfig" />
+                          <span class="text-xs text-gray-400">mes</span>
+                        </ng-container>
+                        <ng-container *ngIf="rewardNeedsPct(rew.type)">
+                          <input type="number" class="w-20 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="%" [ngModel]="rew.pct" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].pct = +$event; businessConfigDraft.bonuses = bonusConfig" />
+                          <span class="text-xs text-gray-400">%</span>
+                        </ng-container>
+                        <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusReward(ri, wi)">
+                          <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+                        </ui-button>
+                      </div>
+                    </div>
+                    <div *ngIf="rule.rewards.length === 0" class="text-xs text-gray-400 italic">Sin recompensas configuradas.</div>
+                  </div>
+                </div>
+              </div>
+              <div *ngIf="bonusConfig.rules.length === 0" class="mt-3 rounded-xl border border-dashed border-olive-30 px-4 py-3 text-xs text-gray-400">
+                Sin reglas de bonos configuradas. Haz clic en "Agregar regla" para crear la primera.
+              </div>
+            </div>
+
+            <!-- Recompensas (comisiones) -->
             <div class="rounded-2xl border border-olive-30 surface-soft p-4">
               <div class="text-sm font-semibold text-main">Recompensas</div>
               <div class="mt-3 grid gap-3 md:grid-cols-2">
-                <ui-form-field type="number" [min]="0" label="Activacion neta minima" [ngModel]="businessConfigDraft.rewards.activationNetMin" (ngModelChange)="businessConfigDraft.rewards.activationNetMin = +$event || 0"></ui-form-field>
+                <ui-form-field type="number" [min]="0" label="Activacion minima (VP)" [ngModel]="businessConfigDraft.rewards.activationNetMin" (ngModelChange)="businessConfigDraft.rewards.activationNetMin = +$event || 0"></ui-form-field>
                 <ui-form-field type="number" [min]="1" label="Dia de pago" [ngModel]="businessConfigDraft.rewards.payoutDay" (ngModelChange)="businessConfigDraft.rewards.payoutDay = +$event || 1"></ui-form-field>
                 <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-4 md:col-span-2">
                   <div class="flex items-start justify-between gap-3">
@@ -1949,7 +2452,7 @@
                     <div class="text-xs text-gray-600">{{ businessConfigDraft.rewards.discountTiers.length }} niveles</div>
                   </div>
                   <div class="mt-4 grid gap-3">
-                    <div *ngFor="let tier of businessConfigDraft.rewards.discountTiers; let index = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
+                    <div *ngFor="let tier of businessConfigDraft.rewards.discountTiers; let index = index; trackBy: trackByIndex" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
                       <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="text-sm font-semibold text-main">Nivel {{ index + 1 }}</div>
                         <div class="flex items-center gap-2">
@@ -2018,11 +2521,11 @@
                       [ngModel]="lvl.minActiveUsers"
                       (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minActiveUsers = +$event || 0">
                     </ui-form-field>
-                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra individual min. ($)"
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra individual min. (VP)"
                       [ngModel]="lvl.minIndividualPurchase"
                       (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minIndividualPurchase = +$event || 0">
                     </ui-form-field>
-                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra grupal min. ($)"
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra grupal min. (VP)"
                       [ngModel]="lvl.minGroupPurchase"
                       (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minGroupPurchase = +$event || 0">
                     </ui-form-field>
@@ -2308,12 +2811,26 @@
 
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <ui-form-field
-          wrapperClass="block"
-          label="Nombre"
+          wrapperClass="block sm:col-span-2"
+          label="Nombre(s) *"
           iconClass="fa-solid fa-user"
-          placeholder="Nombre del cliente"
-          [ngModel]="structureForm.name"
-          (ngModelChange)="updateStructureField('name', $event)"></ui-form-field>
+          placeholder="Nombre(s) del cliente"
+          [ngModel]="structureForm.firstName"
+          (ngModelChange)="updateStructureField('firstName', $event)"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block"
+          label="Apellido paterno *"
+          iconClass="fa-solid fa-user"
+          placeholder="Apellido paterno"
+          [ngModel]="structureForm.apellidoPaterno"
+          (ngModelChange)="updateStructureField('apellidoPaterno', $event)"></ui-form-field>
+        <ui-form-field
+          wrapperClass="block"
+          label="Apellido materno *"
+          iconClass="fa-solid fa-user"
+          placeholder="Apellido materno"
+          [ngModel]="structureForm.apellidoMaterno"
+          (ngModelChange)="updateStructureField('apellidoMaterno', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block"
           label="Teléfono"
@@ -2480,6 +2997,10 @@
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           Stats
         </ui-button>
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('honor_board')" [variant]="currentView === 'honor_board' ? 'primary' : 'ghost'" (click)="setView('honor_board')">
+          <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
+          Honor
+        </ui-button>
         <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('notifications')" [variant]="currentView === 'notifications' ? 'primary' : 'ghost'" (click)="setView('notifications')">
           <i class="fa-solid fa-bell" aria-hidden="true"></i>
           Avisos
@@ -2493,4 +3014,16 @@
   </div>
 
   <ui-footer></ui-footer>
+
+  <!-- Snackbar global -->
+  <div
+    *ngIf="snackbar.visible"
+    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg transition-all"
+    [style.background]="snackbar.tone === 'success' ? 'var(--color-primary)' : '#dc2626'"
+    [style.color]="snackbar.tone === 'success' ? '#1b1b1b' : '#fff'"
+    role="status"
+    aria-live="polite"
+  >
+    {{ snackbar.message }}
+  </div>
 </section>

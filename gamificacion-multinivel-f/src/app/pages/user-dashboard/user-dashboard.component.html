@@ -37,6 +37,18 @@
 
     <!-- DERECHA (hijo directo) -->
     <div class="flex shrink-0  items-center gap-2 sm:gap-3">
+      <!-- Medal icon — visible only if user is in top 10 -->
+      <ui-button *ngIf="!isGuest && isInTop10" size="sm" variant="ghost" type="button"
+        (pressed)="scrollToSection('honor')" aria-label="Cuadro de Honor">
+        <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
+          <i class="fa-solid fa-medal text-[15px]" [ngClass]="honorMedalClass" aria-hidden="true"></i>
+          <span class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-[10px] font-bold leading-none text-main">
+            {{ bestHonorPosition }}
+          </span>
+        </span>
+        <span class="hidden text-sm font-semibold lg:block">Top&nbsp;{{ bestHonorPosition }}</span>
+      </ui-button>
+
       <ui-button *ngIf="!isGuest && hasCurrentNotifications" size="sm" variant="ghost" type="button"
         (pressed)="openNotificationsCenter()" aria-label="Ver avisos del portal">
         <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
@@ -587,6 +599,43 @@
       </div>
     </section>
 
+    <!-- ─── VP / VG / RANGO / BONOS ──────────────────────────────────────── -->
+    <section id="volumen" class="scroll-mt-10" *ngIf="!isGuest && (vpPoints > 0 || vgPoints > 0 || hasBonuses)">
+      <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+        <i class="fa-solid fa-trophy hidden text-gold md:inline" aria-hidden="true"></i>
+        Volumen &amp; Rangos
+      </h2>
+
+      <!-- KPIs de volumen -->
+      <div class="mt-6 grid gap-4 sm:grid-cols-3">
+        <ui-kpi-card label="VP (Volumen Personal)" [value]="(vpPoints | number:'1.0-1') ?? ''"></ui-kpi-card>
+        <ui-kpi-card label="VG (Volumen de Grupo)" [value]="(vgPoints | number:'1.0-1') ?? ''"></ui-kpi-card>
+        <div class="flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold-35 bg-gold-12 px-5 py-4">
+          <div class="text-xs font-semibold uppercase tracking-widest text-gold-70">Rango actual</div>
+          <div *ngIf="currentRank" class="mt-1 text-2xl font-extrabold text-main tracking-wide">{{ currentRank }}</div>
+          <div *ngIf="!currentRank" class="mt-1 text-sm text-gray-400 italic">Sin rango aún</div>
+        </div>
+      </div>
+
+      <!-- Bonos -->
+      <div *ngIf="hasBonuses" class="mt-6">
+        <div class="flex items-center gap-3 mb-3">
+          <i class="fa-solid fa-gift text-gold" aria-hidden="true"></i>
+          <span class="text-lg font-bold text-main">Bonos del mes</span>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div *ngFor="let award of bonusAwards" class="rounded-2xl border border-olive-30 bg-ivory-80 p-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="text-sm font-semibold text-main leading-tight">{{ award.ruleName }}</div>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/70 border border-olive-20" [class]="bonusStatusClass(award.status)">{{ bonusStatusLabel(award.status) }}</span>
+            </div>
+            <div class="mt-2 text-xl font-extrabold text-main">{{ bonusRewardLabel(award) }}</div>
+            <div class="mt-1 text-xs text-gray-400">{{ award.monthKey }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && commissionSummary as commissions">
       <div class="flex items-end justify-between gap-6">
         <div>
@@ -798,6 +847,11 @@
                   <div *ngIf="expandedOrderId === order.id && !order.items?.length" class="mt-3 text-xs text-gray-500">
                     Sin detalle de productos disponible.
                   </div>
+                  <div *ngIf="expandedOrderId === order.id && order.deliveryNotes"
+                    class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
+                    <span class="font-semibold">Detalles entrega:</span> {{ order.deliveryNotes }}
+                  </div>
                 </div>
               </ng-template>
               <ng-template #desktopHeader>
@@ -845,15 +899,11 @@
         </ui-table>
         <div *ngIf="ordersTotalPages > 1"
           class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-          <span>Pág. {{ ordersPage + 1 }} de {{ ordersTotalPages }}</span>
+          <span>Pág. {{ ordersPage + 1 }}</span>
           <div class="flex gap-1">
-            <button [disabled]="ordersPage === 0" (click)="ordersPage = ordersPage - 1"
+            <button [disabled]="ordersPage === 0 || isOrdersLoading" (click)="loadOrdersPage(ordersPage - 1)"
               class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-            <button *ngFor="let p of [].constructor(ordersTotalPages); let i = index" (click)="ordersPage = i"
-              class="rounded-lg border px-2.5 py-1"
-              [class]="i === ordersPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{
-              i + 1 }}</button>
-            <button [disabled]="ordersPage >= ordersTotalPages - 1" (click)="ordersPage = ordersPage + 1"
+            <button [disabled]="isOrdersLoading" (click)="loadOrdersPage(ordersPage + 1)"
               class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
           </div>
         </div>
@@ -987,6 +1037,11 @@
             </div-->
 
             <div class="mt-6 rounded-2xl border border-olive-30 surface-soft p-4">
+              <p class="mb-4 text-xs text-gray-500">
+                Comparte tu link <strong class="text-main">o</strong> pídeles que usen tu código de referido al registrarse.
+              </p>
+
+              <!-- Referral link -->
               <div class="flex items-center gap-2 text-xs text-gray-600">
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
                 Tu link
@@ -1001,7 +1056,26 @@
                   </ui-button>
                 </div>
               </div>
-              <div class="mt-2 text-xs text-gray-500">
+
+              <!-- Referral code -->
+              <div *ngIf="userReferralCode" class="mt-4">
+                <div class="flex items-center gap-2 text-xs text-gray-600">
+                  <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                  Tu código de referido
+                </div>
+                <div class="mt-2 flex items-center gap-3">
+                  <span class="flex-1 rounded-2xl border border-olive-30 surface-soft px-4 py-3 font-mono text-sm font-semibold text-main tracking-wider">
+                    {{ userReferralCode }}
+                  </span>
+                  <ui-button size="sm" variant="ghost" (pressed)="copyText(userReferralCode)">
+                    <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                    Copiar
+                  </ui-button>
+                </div>
+                <p class="mt-2 text-xs text-gray-500">Tus referidos pueden escribirlo al registrarse si no tienen tu link.</p>
+              </div>
+
+              <div class="mt-3 text-xs text-gray-500">
                 Tip: fija el link en tu bio y rep&#237;telo en 3 historias.
               </div>
             </div>
@@ -1103,7 +1177,198 @@
 
       </div>
     </section>
+
+    <!-- ══════════════════════════════════════════════════════ CUADRO DE HONOR -->
+    <section id="honor" class="scroll-mt-10" *ngIf="!isGuest && honorBoard">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-ranking-star hidden text-gold md:inline" aria-hidden="true"></i>
+            Cuadro de Honor
+          </h2>
+          <p class="mt-2 text-sm text-gray-600">Top 10 del mes {{ honorBoard.monthKey }} por Red (VG) y Personal (VP).</p>
+        </div>
+        <ui-button size="sm" variant="ghost" (pressed)="openHonorBoardModal()">
+          <i class="fa-solid fa-expand" aria-hidden="true"></i>
+          Ver completo
+        </ui-button>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-2">
+
+        <!-- Ranking por VG -->
+        <div class="rounded-3xl border border-olive-30 bg-ivory-80 p-5">
+          <div class="mb-3 flex items-center gap-2 text-sm font-bold text-main">
+            <i class="fa-solid fa-users text-accent" aria-hidden="true"></i>
+            Por Red (VG)
+          </div>
+          <div class="space-y-1">
+            <div *ngFor="let entry of honorBoard.byVg"
+              class="flex items-center gap-3 rounded-xl px-3 py-2 transition"
+              [class.bg-gold-20]="honorEntryIsMe(entry)"
+              [class.border]="honorEntryIsMe(entry)"
+              [class.border-gold-35]="honorEntryIsMe(entry)">
+              <!-- Position -->
+              <span class="w-6 text-center text-sm font-extrabold"
+                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gray-400]="entry.position === 2"
+                [class.text-amber-700]="entry.position === 3"
+                [class.text-gray-500]="entry.position > 3">
+                {{ entry.position }}
+              </span>
+              <!-- Medal for top 3 -->
+              <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs"
+                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gray-400]="entry.position === 2"
+                [class.text-amber-700]="entry.position === 3"
+                aria-hidden="true"></i>
+              <span *ngIf="entry.position > 3" class="w-4"></span>
+              <!-- Name -->
+              <span class="flex-1 truncate text-sm font-semibold text-main">
+                {{ entry.name }}
+                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span>
+              </span>
+              <!-- Rank badge -->
+              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-main sm:inline">
+                {{ entry.rank }}
+              </span>
+              <!-- VG value -->
+              <span class="text-xs font-bold text-gray-700">{{ entry.vg | number:'1.0-0' }} VG</span>
+              <!-- Delta -->
+              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-[11px] font-bold" [class]="positionDeltaClass(entry)">
+                {{ positionDeltaLabel(entry) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ranking por VP -->
+        <div class="rounded-3xl border border-olive-30 bg-ivory-80 p-5">
+          <div class="mb-3 flex items-center gap-2 text-sm font-bold text-main">
+            <i class="fa-solid fa-user text-accent" aria-hidden="true"></i>
+            Personal (VP)
+          </div>
+          <div class="space-y-1">
+            <div *ngFor="let entry of honorBoard.byVp"
+              class="flex items-center gap-3 rounded-xl px-3 py-2 transition"
+              [class.bg-gold-20]="honorEntryIsMe(entry)"
+              [class.border]="honorEntryIsMe(entry)"
+              [class.border-gold-35]="honorEntryIsMe(entry)">
+              <span class="w-6 text-center text-sm font-extrabold"
+                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gray-400]="entry.position === 2"
+                [class.text-amber-700]="entry.position === 3"
+                [class.text-gray-500]="entry.position > 3">
+                {{ entry.position }}
+              </span>
+              <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs"
+                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gray-400]="entry.position === 2"
+                [class.text-amber-700]="entry.position === 3"
+                aria-hidden="true"></i>
+              <span *ngIf="entry.position > 3" class="w-4"></span>
+              <span class="flex-1 truncate text-sm font-semibold text-main">
+                {{ entry.name }}
+                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span>
+              </span>
+              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-main sm:inline">
+                {{ entry.rank }}
+              </span>
+              <span class="text-xs font-bold text-gray-700">{{ entry.vp | number:'1.0-0' }} VP</span>
+              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-[11px] font-bold" [class]="positionDeltaClass(entry)">
+                {{ positionDeltaLabel(entry) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
   </main>
+
+  <!-- ══════ RANK DOWN ANIMATION BANNER ══════ -->
+  <div *ngIf="showRankDownAnim"
+    class="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 animate-[slide-up_0.4s_ease] rounded-2xl border border-red-300 bg-red-50 px-5 py-3 shadow-xl">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-arrow-trend-down text-red-500 text-lg" aria-hidden="true"></i>
+      <div>
+        <p class="text-sm font-bold text-red-700">Bajaste en el ranking</p>
+        <p class="text-xs text-red-500">Tu posición en VP descendió. ¡Sigue comprando para recuperarla!</p>
+      </div>
+      <ui-button size="sm" variant="ghost" (pressed)="showRankDownAnim = false">
+        <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+      </ui-button>
+    </div>
+  </div>
+
+  <!-- ══════ HONOR BOARD MODAL ══════ -->
+  <ui-modal [isOpen]="isHonorBoardModalOpen" maxWidthClass="max-w-3xl" contentClass="p-6"
+    (closed)="closeHonorBoardModal()">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-ranking-star text-gold text-xl" aria-hidden="true"></i>
+          <h3 class="text-xl font-extrabold text-main">Cuadro de Honor</h3>
+        </div>
+        <p class="mt-1 text-sm text-gray-500">{{ honorBoard?.monthKey }} · Top 10 de la red</p>
+      </div>
+      <ui-button type="button" variant="ghost" size="sm" (pressed)="closeHonorBoardModal()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </ui-button>
+    </div>
+
+    <!-- User's position highlight -->
+    <div *ngIf="isInTop10" class="mt-5 flex flex-wrap items-center gap-4 rounded-2xl border border-gold-35 bg-gold-20 px-5 py-4">
+      <i class="fa-solid fa-medal text-gold text-2xl" aria-hidden="true"></i>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-main">¡Estás en el Cuadro de Honor!</p>
+        <div class="mt-1 flex flex-wrap gap-4 text-xs text-gray-600">
+          <span *ngIf="userVgEntry">Red (VG): <strong class="text-main">#{{ userVgEntry.position }}</strong></span>
+          <span *ngIf="userVpEntry">Personal (VP): <strong class="text-main">#{{ userVpEntry.position }}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="honorBoard" class="mt-6 grid gap-6 sm:grid-cols-2">
+      <!-- VG -->
+      <div>
+        <div class="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Por Red (VG)</div>
+        <div class="space-y-1">
+          <div *ngFor="let entry of honorBoard.byVg"
+            class="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm"
+            [class.bg-gold-20]="honorEntryIsMe(entry)"
+            [class.font-bold]="honorEntryIsMe(entry)">
+            <span class="w-5 text-center font-extrabold text-xs"
+              [class.text-yellow-500]="entry.position === 1"
+              [class.text-gray-400]="entry.position === 2"
+              [class.text-amber-700]="entry.position === 3">{{ entry.position }}</span>
+            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span></span>
+            <span class="text-xs text-gray-500">{{ entry.vg | number:'1.0-0' }}</span>
+            <span *ngIf="positionDeltaLabel(entry)" class="text-[11px] font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
+          </div>
+        </div>
+      </div>
+      <!-- VP -->
+      <div>
+        <div class="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Personal (VP)</div>
+        <div class="space-y-1">
+          <div *ngFor="let entry of honorBoard.byVp"
+            class="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm"
+            [class.bg-gold-20]="honorEntryIsMe(entry)"
+            [class.font-bold]="honorEntryIsMe(entry)">
+            <span class="w-5 text-center font-extrabold text-xs"
+              [class.text-yellow-500]="entry.position === 1"
+              [class.text-gray-400]="entry.position === 2"
+              [class.text-amber-700]="entry.position === 3">{{ entry.position }}</span>
+            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span></span>
+            <span class="text-xs text-gray-500">{{ entry.vp | number:'1.0-0' }}</span>
+            <span *ngIf="positionDeltaLabel(entry)" class="text-[11px] font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ui-modal>
 
   <ui-modal [isOpen]="isNotificationsCenterOpen" maxWidthClass="max-w-2xl" contentClass="p-6"
     (closed)="closeNotificationsCenter()">
@@ -1271,10 +1536,20 @@
     </div>
 
     <div class="mt-6 grid gap-3">
-      <ui-form-field name="guestName" [(ngModel)]="guestRegisterForm.name" label="Nombre completo"
-        placeholder="Tu nombre" wrapperClass="block"
+      <ui-form-field name="guestFirstName" [(ngModel)]="guestRegisterForm.firstName" label="Nombre(s) *"
+        placeholder="Tu(s) nombre(s)" wrapperClass="block"
         inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong">
       </ui-form-field>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <ui-form-field name="guestApellidoPaterno" [(ngModel)]="guestRegisterForm.apellidoPaterno" label="Apellido paterno *"
+          placeholder="Apellido paterno" wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong">
+        </ui-form-field>
+        <ui-form-field name="guestApellidoMaterno" [(ngModel)]="guestRegisterForm.apellidoMaterno" label="Apellido materno *"
+          placeholder="Apellido materno" wrapperClass="block"
+          inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong">
+        </ui-form-field>
+      </div>
       <ui-form-field kind="input" type="email" name="guestEmail" [(ngModel)]="guestRegisterForm.email" label="Correo"
         placeholder="tucorreo@ejemplo.com" wrapperClass="block"
         inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong">

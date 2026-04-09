@@ -5,6 +5,8 @@ import { AdminComponent } from './pages/admin/admin.component';
 import { CarritoComponent } from './pages/carrito/carrito.component';
 import { LandingComponent } from './pages/landing/landing.component';
 import { LoginComponent } from './pages/login/login.component';
+import { OrderCancelacionComponent } from './pages/order-cancelacion/order-cancelacion.component';
+import { OrderDevolucionComponent } from './pages/order-devolucion/order-devolucion.component';
 import { OrderStatusComponent } from './pages/order-status/order-status.component';
 import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
 import { UserDashboardComponent } from './pages/user-dashboard/user-dashboard.component';
@@ -31,6 +33,10 @@ export const routes: Routes = [
     component: VerifyEmailComponent
   },
   {
+    path: 'verify-email',
+    component: VerifyEmailComponent
+  },
+  {
     path: 'admin',
     component: AdminComponent,
     canActivate: [adminGuard]
@@ -54,6 +60,14 @@ export const routes: Routes = [
     component: OrderStatusComponent
   },
   {
+    path: 'orden/:idOrden/cancelar',
+    component: OrderCancelacionComponent
+  },
+  {
+    path: 'orden/:idOrden/devolucion',
+    component: OrderDevolucionComponent
+  },
+  {
     path: 'tienda',
     component: TiendaComponent
   },
@@ -62,7 +76,7 @@ export const routes: Routes = [
     component: TiendaComponent
   },
   {
-    path: ':refToken',
+    path: ':idSponsor',
     component: LandingComponent
   }
 ];

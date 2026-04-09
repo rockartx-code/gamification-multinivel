@@ -28,7 +28,8 @@ export class GoalControlService {
               goal.key === 'active' ||
               goal.key === 'discount' ||
               goal.key.startsWith('discount_');
-            if (isConsumptionGoal && !goal.isCountGoal) {
+            // VP-unit goals track volume points, not MXN cart — cart injection doesn't apply
+            if (isConsumptionGoal && !goal.isCountGoal && goal.unit !== 'vp') {
               return { ...goal, cart: cartTotal };
             }
             return goal;

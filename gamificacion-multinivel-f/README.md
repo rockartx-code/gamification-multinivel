@@ -9,6 +9,7 @@ Este README está orientado a onboarding técnico para mantener el proyecto con 
 - Estado local de dominio: servicios `*ControlService` con `BehaviorSubject`.
 - API: capa adaptadora `ApiService` que enruta a `RealApiService` o `MockApiService`.
 - Backend: AWS Lambda en `lambda/handler.py` (DynamoDB + S3).
+- Documentos de cliente: metadata persistida en `CUSTOMER.documents`; binarios en S3 via `ASSET`.
 
 ## 2. Estructura del repositorio
 
@@ -93,6 +94,7 @@ Responsabilidades:
 - Dashboard usuario y admin.
 - Comisiones (solicitud, recibos, CLABE).
 - Assets en S3.
+- Documentos asociados a clientes para consulta en `/perfil`.
 - Producto del mes.
 - Cálculo de red y metas de gamificación.
 

@@ -1,0 +1,2098 @@
+openapi: "3.0.1"
+
+info:
+  title: "Gamification Multinivel API"
+  description: |
+    API REST para la plataforma de gamificación multinivel. Diseñada para importar
+    directamente en **AWS API Gateway REST API (v1)**.
+
+    ## Estrategia de rutas
+    - **Rutas explícitas**: endpoints raíz de colecciones (`GET /orders`, `POST /products`, etc.)
+    - **`{proxy+}` greedy**: captura todos los sub-paths de cada recurso y los reenvía
+      al mismo Lambda handler, que resuelve la ruta internamente.
+
+    ## Autenticación
+    El API Gateway público de auth entra por `/auth/{proxy+}`.
+    `POST /auth/login` devuelve el JWT de sesión y el perfil del usuario.
+    `POST /auth/password/recovery` y `POST /auth/password/reset` también son públicas y no requieren JWT.
+    Las rutas protegidas aceptan los headers `x-user-id`, `x-user-name` y `x-user-role`
+    y también `Authorization: Bearer <jwt>` cuando el cliente ya tiene sesión iniciada.
+
+    ## Variables a sustituir antes de importar
+    - `${AWS_REGION}` — Región AWS (ej. `us-east-1`)
+    - `${LAMBDA_ARN}` — ARN completo de la función Lambda principal
+
+    ## Nuevos endpoints separados (split de `/user-dashboard`)
+    - `GET /catalog` — catálogo público resumido (`products`, `productOfMonth`)
+    - `GET /customers/dashboard` — dashboard autenticado del cliente actual
+
+    ## Split de carga del dashboard
+    El frontend llama a `GET /catalog` y `GET /customers/dashboard` en paralelo (`forkJoin`)
+    en lugar del monolítico `GET /user-dashboard`.
+  version: "1.0.0"
+  contact:
+    name: "rockartx-code"
+
+servers:
+  - url: "https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod"
+    description: "Desarrollo"
+  - url: "https://m85v7secp8.execute-api.us-east-1.amazonaws.com/default/Multinivel"
+    description: "Producción"
+
+# ─── Bloque CORS OPTIONS reutilizable ──────────────────────────────────────────
+# NOTA: usa YAML merge key (<<:). Si tu parser no lo soporta, expande cada bloque.
+x-cors-options-template: &cors-options
+  summary: "CORS preflight"
+  tags: ["CORS"]
+  responses:
+    "200":
+      description: "CORS OK"
+      headers:
+        Access-Control-Allow-Headers:
+          schema: { type: string }
+        Access-Control-Allow-Methods:
+          schema: { type: string }
+        Access-Control-Allow-Origin:
+          schema: { type: string }
+  x-amazon-apigateway-integration:
+    type: mock
+    requestTemplates:
+      application/json: '{"statusCode":200}'
+    responses:
+      default:
+        statusCode: "200"
+        responseParameters:
+          method.response.header.Access-Control-Allow-Headers: >-
+            'Content-Type,Authorization,x-user-id,x-user-name,x-user-role,X-Amz-Date,X-Api-Key'
+          method.response.header.Access-Control-Allow-Methods: >-
+            'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+          method.response.header.Access-Control-Allow-Origin: "'*'"
+        responseTemplates:
+          application/json: "{}"
+
+# ─── Bloque de integración Lambda reutilizable ─────────────────────────────────
+x-lambda-proxy: &lambda-proxy
+  type: aws_proxy
+  httpMethod: POST
+  uri: "arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/${LAMBDA_ARN}/invocations"
+  passthroughBehavior: when_no_match
+  contentHandling: CONVERT_TO_TEXT
+  timeoutInMillis: 29000
+
+x-lambda-proxy-path: &lambda-proxy-path
+  type: aws_proxy
+  httpMethod: POST
+  uri: "arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/${LAMBDA_ARN}/invocations"
+  passthroughBehavior: when_no_match
+  contentHandling: CONVERT_TO_TEXT
+  timeoutInMillis: 29000
+  cacheKeyParameters:
+    - method.request.path.proxy
+
+# ─── Validadores ───────────────────────────────────────────────────────────────
+x-amazon-apigateway-request-validators:
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+  body-and-params:
+    validateRequestBody: true
+    validateRequestParameters: true
+
+# ─── Componentes ───────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    UserSession:
+      type: apiKey
+      in: header
+      name: x-user-id
+      description: "ID del usuario en sesión (numérico como string)"
+
+  parameters:
+    xUserId:
+      name: x-user-id
+      in: header
+      required: false
+      schema: { type: string }
+    xUserRole:
+      name: x-user-role
+      in: header
+      required: false
+      schema:
+        type: string
+        enum: [admin, cliente, employee]
+    xUserName:
+      name: x-user-name
+      in: header
+      required: false
+      schema: { type: string }
+    proxyPath:
+      name: proxy
+      in: path
+      required: true
+      description: "Path greedy capturado por API Gateway"
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: "No autorizado"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: "Recurso no encontrado"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: "Solicitud inválida"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ── Respuestas genéricas ─────────────────────────────────────────────────
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        message:
+          type: string
+        Error:
+          type: string
+          enum: [NotFound, BadRequest, Unauthorized, Conflict]
+
+    # ── Auth ─────────────────────────────────────────────────────────────────
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+          description: JWT de sesión a reutilizar durante la sesión autenticada.
+        user:
+          type: object
+          required: [name, role]
+          properties:
+            userId:
+              oneOf: [{ type: string }, { type: integer }]
+            name:
+              type: string
+            role:
+              type: string
+              enum: [admin, cliente, employee]
+            canAccessAdmin:
+              type: boolean
+            privileges:
+              type: object
+              additionalProperties: true
+          additionalProperties: true
+
+    CreateAccountRequest:
+      type: object
+      required: [name, email, phone]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        referrerId:
+          oneOf: [{ type: string }, { type: integer }]
+        address:
+          type: object
+          additionalProperties: true
+
+    PasswordRecoveryRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [email, otp, password]
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+        password:
+          type: string
+
+    # ── Productos ────────────────────────────────────────────────────────────
+    SaveProductRequest:
+      type: object
+      required: [name, price]
+      properties:
+        id:
+          oneOf: [{ type: integer }, { type: "null" }]
+        name:
+          type: string
+        price:
+          type: string
+        active:
+          type: boolean
+        inOnlineStore:
+          type: boolean
+        inPOS:
+          type: boolean
+        commissionable:
+          type: boolean
+        sku:
+          type: string
+        hook:
+          type: string
+        description:
+          type: string
+        copyFacebook:
+          type: string
+        copyInstagram:
+          type: string
+        copyWhatsapp:
+          type: string
+        tags:
+          type: string
+        categoryIds:
+          type: array
+          items:
+            type: string
+        variants:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              price:
+                type: string
+              sku:
+                type: string
+              active:
+                type: boolean
+              img:
+                type: string
+        weightKg:
+          oneOf: [{ type: string }, { type: number }]
+        lengthCm:
+          oneOf: [{ type: string }, { type: number }]
+        widthCm:
+          oneOf: [{ type: string }, { type: number }]
+        heightCm:
+          oneOf: [{ type: string }, { type: number }]
+
+    # ── Órdenes ──────────────────────────────────────────────────────────────
+    CreateOrderRequest:
+      type: object
+      required: [customerId, items]
+      properties:
+        customerId:
+          oneOf: [{ type: string }, { type: integer }]
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, qty]
+            properties:
+              productId:
+                type: string
+              variantId:
+                type: string
+              qty:
+                type: integer
+              price:
+                type: number
+        shippingAddress:
+          type: object
+          additionalProperties: true
+        stockId:
+          type: string
+        deliveryMethod:
+          type: string
+          enum: [envio, retiro]
+        notes:
+          type: string
+
+    # ── Assets ───────────────────────────────────────────────────────────────
+    CreateAssetRequest:
+      type: object
+      required: [type, name]
+      properties:
+        type:
+          type: string
+          enum: [image, document, receipt]
+        name:
+          type: string
+        contentType:
+          type: string
+          example: "image/jpeg"
+        folder:
+          type: string
+
+    AssetResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+          format: uri
+          description: "URL pre-firmada de S3 para subir el archivo directamente"
+        assetId:
+          type: string
+        key:
+          type: string
+        expiresIn:
+          type: integer
+
+    # ── Inventario ───────────────────────────────────────────────────────────
+    StockEntryRequest:
+      type: object
+      required: [productId, qty]
+      properties:
+        productId:
+          type: string
+        variantId:
+          type: string
+        qty:
+          type: integer
+        costPerUnit:
+          type: number
+        note:
+          type: string
+        userId:
+          type: string
+
+    StockDamageRequest:
+      type: object
+      required: [productId, qty, reason]
+      properties:
+        productId:
+          type: string
+        variantId:
+          type: string
+        qty:
+          type: integer
+        reason:
+          type: string
+        userId:
+          type: string
+
+    StockTransferRequest:
+      type: object
+      required: [sourceStockId, destStockId, lines]
+      properties:
+        sourceStockId:
+          type: string
+        destStockId:
+          type: string
+        lines:
+          type: array
+          items:
+            type: object
+            required: [productId, qty]
+            properties:
+              productId:
+                type: string
+              variantId:
+                type: string
+              qty:
+                type: integer
+        notes:
+          type: string
+
+    # ── Envíos ───────────────────────────────────────────────────────────────
+    ShippingQuoteRequest:
+      type: object
+      required: [originStockId, destinationAddress, items]
+      properties:
+        originStockId:
+          type: string
+        destinationAddress:
+          type: object
+          required: [zip, state, country]
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zip:
+              type: string
+            country:
+              type: string
+              default: "MX"
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, qty]
+            properties:
+              productId:
+                type: string
+              qty:
+                type: integer
+
+    # ── Comisiones ───────────────────────────────────────────────────────────
+    CommissionRequestPayload:
+      type: object
+      required: [customerId, monthKey, amount]
+      properties:
+        customerId:
+          oneOf: [{ type: string }, { type: integer }]
+        monthKey:
+          type: string
+          example: "2026-04"
+        amount:
+          type: number
+        clabeId:
+          type: string
+
+    # ── Empleados ────────────────────────────────────────────────────────────
+    CreateEmployeeRequest:
+      type: object
+      required: [name, email, role]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        phone:
+          type: string
+        stockId:
+          type: string
+
+# ─── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+
+  # ════════════════════════════════════════════════════════════
+  # AUTH
+  # ════════════════════════════════════════════════════════════
+  /crearcuenta:
+    post:
+      summary: "Registrar nueva cuenta de distribuidor"
+      operationId: createAccount
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        "201":
+          description: "Cuenta creada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer:
+                    type: object
+                    additionalProperties: true
+                  requiresEmailVerification:
+                    type: boolean
+        "409":
+          description: "Email ya registrado"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /auth/{proxy+}:
+    # Captura: POST /auth/login | POST /auth/password/recovery | POST /auth/password/reset | POST /auth/verify-email
+    x-amazon-apigateway-any-method:
+      summary: "Auth sub-rutas (proxy)"
+      description: |
+        Proxy público del gateway de autenticación. Estas rutas NO requieren JWT.
+
+        | Método | Path | Auth | Respuesta |
+        |--------|------|------|-----------|
+        | POST | /auth/login | Pública | `LoginResponse` con JWT |
+        | POST | /auth/password/recovery | Pública | `OkResponse` |
+        | POST | /auth/password/reset | Pública | `OkResponse` |
+        | POST | /auth/verify-email | Pública | ⚠️ pendiente backend |
+      operationId: authProxy
+      tags: [Auth]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "Respuesta de autenticación"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/LoginResponse'
+                  - $ref: '#/components/schemas/OkResponse'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # CLIENTES
+  # ════════════════════════════════════════════════════════════
+  /customers:
+    get:
+      summary: "Listar clientes"
+      operationId: listCustomers
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista de clientes"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customers:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear cliente (admin — con estructura de red)"
+      operationId: createCustomer
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        "201":
+          description: "Cliente creado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/sponsor/{idSponsor}:
+    get:
+      summary: "Datos públicos básicos del sponsor"
+      description: |
+        Endpoint público para la landing y el registro.
+        Devuelve solamente nombre completo, correo y teléfono del sponsor.
+      operationId: getPublicSponsor
+      tags: [Customers]
+      parameters:
+        - name: idSponsor
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Datos básicos del sponsor"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sponsor:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      email: { type: string }
+                      phone: { type: string }
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/{proxy+}:
+    # Captura:
+    #   GET    /customers/{customerId}
+    #   PATCH  /customers/{customerId}
+    #   PATCH  /customers/{customerId}/privileges
+    #   POST   /customers/{customerId}/documents
+    #   POST   /customers/{customerId}/password        ⚠️ pendiente
+    #   PATCH  /customers/{customerId}/profile         ⚠️ pendiente
+    #   POST   /customers/clabe
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de clientes (proxy)"
+      description: |
+        | Método | Path | Auth | Estado |
+        |--------|------|------|--------|
+        | GET    | /customers/{customerId} | admin | ✅ |
+        | PATCH  | /customers/{customerId} | admin | ✅ |
+        | PATCH  | /customers/{customerId}/privileges | admin | ✅ |
+        | POST   | /customers/{customerId}/documents | admin | ✅ |
+        | POST   | /customers/{customerId}/password | cliente | ⚠️ pendiente |
+        | PATCH  | /customers/{customerId}/profile | cliente | ⚠️ pendiente |
+        | POST   | /customers/clabe | cliente | ✅ |
+      operationId: customersProxy
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # PERFIL PROPIO
+  # ════════════════════════════════════════════════════════════
+  /profile/{proxy+}:
+    # Captura: POST /profile/documents  ⚠️ pendiente backend
+    x-amazon-apigateway-any-method:
+      summary: "Perfil del usuario autenticado (proxy)"
+      description: |
+        | Método | Path | Estado |
+        |--------|------|--------|
+        | POST | /profile/documents | ⚠️ pendiente backend |
+      operationId: profileProxy
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # ADMIN
+  # ════════════════════════════════════════════════════════════
+  /admin/{proxy+}:
+    # Captura:
+    #   GET  /admin/dashboard
+    #   GET  /admin/orders?status=X&limit=N
+    #   GET  /admin/warnings
+    #   POST /admin/commissions/receipt
+    x-amazon-apigateway-any-method:
+      summary: "Panel de administración (proxy)"
+      description: |
+        | Método | Path | Body / Query |
+        |--------|------|-------------|
+        | GET  | /admin/dashboard | — |
+        | GET  | /admin/orders | `?status&limit` |
+        | GET  | /admin/warnings | — |
+        | POST | /admin/commissions/receipt | `CommissionReceiptPayload` |
+      operationId: adminProxy
+      tags: [Admin]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "OK"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # PRODUCTOS
+  # ════════════════════════════════════════════════════════════
+  /products:
+    get:
+      summary: "Listar productos activos"
+      operationId: listProducts
+      tags: [Products]
+      responses:
+        "200":
+          description: "Lista de productos"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear o actualizar producto"
+      operationId: saveProduct
+      tags: [Products]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProductRequest'
+      responses:
+        "200":
+          description: "Producto guardado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /products/{proxy+}:
+    # Captura:
+    #   GET  /products/{productId}
+    #   POST /products/assets
+    #   GET  /products/product-of-month
+    #   POST /products/product-of-month
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de productos (proxy)"
+      description: |
+        | Método | Path | Body |
+        |--------|------|------|
+        | GET  | /products/{productId} | — |
+        | POST | /products/assets | `{type, name, contentType, productId}` |
+        | GET  | /products/product-of-month | — |
+        | POST | /products/product-of-month | `{productId}` |
+      operationId: productsProxy
+      tags: [Products]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # CATEGORÍAS
+  # ════════════════════════════════════════════════════════════
+  /product-categories:
+    get:
+      summary: "Listar categorías de productos"
+      operationId: listCategories
+      tags: [Categories]
+      responses:
+        "200":
+          description: "Árbol de categorías"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        parentId:
+                          type: string
+                        children:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear o actualizar categoría"
+      operationId: saveCategory
+      tags: [Categories]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                parentId:
+                  type: string
+      responses:
+        "200":
+          description: "Categoría guardada"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /product-categories/{proxy+}:
+    # Captura: DELETE /product-categories/{id}
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de categorías (proxy)"
+      description: |
+        | Método | Path |
+        |--------|------|
+        | DELETE | /product-categories/{id} |
+      operationId: categoriesProxy
+      tags: [Categories]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # CAMPAÑAS
+  # ════════════════════════════════════════════════════════════
+  /campaigns:
+    get:
+      summary: "Listar campañas activas"
+      operationId: listCampaigns
+      tags: [Campaigns]
+      responses:
+        "200":
+          description: "Lista de campañas"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear o actualizar campaña"
+      operationId: saveCampaign
+      tags: [Campaigns]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                active:
+                  type: boolean
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+                targetRanks:
+                  type: array
+                  items:
+                    type: string
+                imageUrl:
+                  type: string
+      responses:
+        "200":
+          description: "Campaña guardada"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # NOTIFICACIONES
+  # ════════════════════════════════════════════════════════════
+  /notifications:
+    get:
+      summary: "Listar notificaciones del portal"
+      operationId: listNotifications
+      tags: [Notifications]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista de notificaciones"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear notificación (admin)"
+      operationId: saveNotification
+      tags: [Notifications]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                id:
+                  type: string
+                title:
+                  type: string
+                body:
+                  type: string
+                targetRoles:
+                  type: array
+                  items:
+                    type: string
+                expiresAt:
+                  type: string
+                  format: date-time
+                pinned:
+                  type: boolean
+      responses:
+        "201":
+          description: "Notificación creada"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /notifications/{proxy+}:
+    # Captura: POST /notifications/{notificationId}/read
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de notificaciones (proxy)"
+      description: |
+        | Método | Path | Body |
+        |--------|------|------|
+        | POST | /notifications/{notificationId}/read | `{customerId?}` |
+      operationId: notificationsProxy
+      tags: [Notifications]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # ÓRDENES
+  # ════════════════════════════════════════════════════════════
+  /orders:
+    get:
+      summary: "Listar órdenes"
+      operationId: listOrders
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: customerId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, processing, shipped, delivered, cancelled, en_devolucion]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "Lista paginada de órdenes"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  total:
+                    type: integer
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear orden legacy (admin / POS)"
+      operationId: createOrderLegacy
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        "201":
+          description: "Orden creada (alias legacy de /orders/create)"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/create:
+    post:
+      summary: "Crear orden (admin / POS)"
+      operationId: createOrder
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        "201":
+          description: "Orden creada"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/{proxy+}:
+    # Captura:
+    #   GET   /orders/{orderId}
+    #   PATCH /orders/{orderId}
+    #   GET   /orders/{orderId}/status    (público — no requiere auth)
+    #   POST  /orders/{orderId}/checkout
+    #   POST  /orders/{orderId}/cancel
+    #   POST  /orders/{orderId}/return    ⚠️ pendiente
+    #   POST  /orders/{orderId}/refund    (admin)
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de órdenes (proxy)"
+      description: |
+        | Método | Path | Auth | Body | Estado |
+        |--------|------|------|------|--------|
+        | GET    | /orders/{orderId} | auth | — | ✅ |
+        | PATCH  | /orders/{orderId} | admin | `{status, ...}` | ✅ |
+        | GET    | /orders/{orderId}/status | público | — | ✅ |
+        | POST   | /orders/{orderId}/checkout | auth | `{successUrl?, failureUrl?}` | ✅ |
+        | POST   | /orders/{orderId}/cancel | auth | `{reason}` | ✅ |
+        | POST   | /orders/{orderId}/return | auth | `OrderReturnRequestPayload` | ⚠️ pendiente |
+        | POST   | /orders/{orderId}/refund | admin | `{reason?}` | ✅ |
+      operationId: ordersProxy
+      tags: [Orders]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # ASOCIADOS / COMISIONES
+  # ════════════════════════════════════════════════════════════
+  /associates/{proxy+}:
+    # Captura:
+    #   GET /associates/{associateId}/month/{monthKey}
+    #   GET /associates/{associateId}/commissions?monthKey=X&page=N
+    x-amazon-apigateway-any-method:
+      summary: "Métricas de asociados (proxy)"
+      description: |
+        | Método | Path | Query |
+        |--------|------|-------|
+        | GET | /associates/{associateId}/month/{monthKey} | — |
+        | GET | /associates/{associateId}/commissions | `?monthKey&page&limit` |
+      operationId: associatesProxy
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: monthKey
+          in: query
+          schema:
+            type: string
+            example: "2026-04"
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /commissions/{proxy+}:
+    # Captura:
+    #   POST /commissions/request
+    #   POST /commissions/receipt
+    x-amazon-apigateway-any-method:
+      summary: "Solicitudes de retiro de comisiones (proxy)"
+      description: |
+        | Método | Path | Body |
+        |--------|------|------|
+        | POST | /commissions/request | `{customerId, monthKey, amount, clabeId}` |
+        | POST | /commissions/receipt | `{requestId, assetId}` |
+      operationId: commissionsProxy
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # CONFIGURACIÓN DE NEGOCIO
+  # ════════════════════════════════════════════════════════════
+  /config/{proxy+}:
+    # Captura:
+    #   GET /config/app
+    #   PUT /config/app
+    #   GET /config/public
+    #   GET /config/rewards
+    #   PUT /config/rewards
+    x-amazon-apigateway-any-method:
+      summary: "Configuración de negocio (proxy)"
+      description: |
+        | Método | Path | Auth | Estado |
+        |--------|------|------|--------|
+        | GET | /config/app | admin | ✅ |
+        | PUT | /config/app | admin | ✅ |
+        | GET | /config/public | público | ✅ |
+        | GET | /config/rewards | admin | ✅ |
+        | PUT | /config/rewards | admin | ✅ |
+      operationId: configProxy
+      tags: [Config]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Configuración de negocio (reglas de bonos, rangos, VP, etc.)"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # ASSETS (S3 pre-signed URLs)
+  # ════════════════════════════════════════════════════════════
+  /assets:
+    post:
+      summary: "Crear asset — obtener URL pre-firmada de S3"
+      operationId: createAsset
+      tags: [Assets]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssetRequest'
+      responses:
+        "200":
+          description: "URL pre-firmada generada — el cliente sube directamente a S3"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponse'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /assets/{proxy+}:
+    # Captura: GET /assets/{assetId}
+    x-amazon-apigateway-any-method:
+      summary: "Metadata de asset (proxy)"
+      description: |
+        | Método | Path |
+        |--------|------|
+        | GET | /assets/{assetId} |
+      operationId: assetsProxy
+      tags: [Assets]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Metadata del asset"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # DASHBOARD / CARRITO / HONOR
+  # ════════════════════════════════════════════════════════════
+  /catalog:
+    get:
+      summary: "Catálogo público resumido — productos y producto del mes"
+      description: |
+        Endpoint público (sin auth). Derivado de `GET /products`, pero
+        reducido a lo que consume el frontend actual para catálogo:
+        `products` y `productOfMonth`.
+        Llamado en paralelo con `GET /customer/dashboard` desde el frontend.
+      operationId: getCatalog
+      tags: [Dashboard]
+      responses:
+        "200":
+          description: "Datos de catálogo"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  productOfMonth:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /catalog/config/public:
+    get:
+      summary: "Configuración pública para landing"
+      description: |
+        Endpoint público consumido por la landing.
+        Devuelve reglas visibles de descuentos, comisiones y bonos sin requerir token.
+      operationId: getCatalogPublicConfig
+      tags: [Config]
+      responses:
+        "200":
+          description: "Configuración pública de negocio"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config:
+                    type: object
+                    additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/dashboard:
+    get:
+      summary: "Dashboard autenticado del cliente actual"
+      description: |
+        Requiere headers de sesión. No acepta `userId` por query ni path:
+        el backend resuelve el cliente desde el contexto de autenticación.
+        Devuelve los bloques personalizados consumidos por el frontend
+        (`featured`, `campaigns`, `goals`, `commissions`, `notifications`, etc.).
+        Llamado en paralelo con `GET /catalog` desde el frontend.
+      operationId: getDashboard
+      tags: [Dashboard]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Datos de dashboard del usuario"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isGuest:
+                    type: boolean
+                  settings:
+                    type: object
+                    properties:
+                      cutoffDay: { type: integer }
+                      cutoffHour: { type: integer }
+                      cutoffMinute: { type: integer }
+                      userCode: { type: string }
+                      networkGoal: { type: number }
+                  customer:
+                    type: object
+                    nullable: true
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      phone: { type: string }
+                      address: { type: string }
+                      city: { type: string }
+                      state: { type: string }
+                      postalCode: { type: string }
+                      defaultAddressId: { type: string }
+                      defaultShippingAddressId: { type: string }
+                      addresses:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: true
+                      shippingAddresses:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: true
+                  user:
+                    type: object
+                    nullable: true
+                    properties:
+                      discountPercent: { type: number }
+                      discountActive: { type: boolean }
+                  sponsor:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                  goals:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  featured:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  campaigns:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  networkMembers:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  buyAgainIds:
+                    type: array
+                    items:
+                      type: string
+                  commissions:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  vp: { type: number }
+                  vg: { type: number }
+                  rank: { type: string }
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /cart:
+    get:
+      summary: "Carrito activo del usuario"
+      operationId: getCart
+      tags: [Dashboard]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Datos del carrito"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /user-dashboard:
+    get:
+      summary: "Dashboard del distribuidor (metas, red, comisiones, campañas)"
+      operationId: getUserDashboard
+      tags: [Dashboard]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: userId
+          in: query
+          description: "Si es admin puede consultar el dashboard de otro usuario"
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Datos completos del dashboard"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vp:
+                    type: number
+                  vg:
+                    type: number
+                  rank:
+                    type: string
+                  commissions:
+                    type: object
+                    additionalProperties: true
+                  goals:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  campaigns:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  network:
+                    type: object
+                    additionalProperties: true
+                  honorBoard:
+                    type: object
+                    additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /honor-board:
+    get:
+      summary: "Tablero de honor — ranking de distribuidores"
+      description: "⚠️ Pendiente implementar en el backend"
+      operationId: getHonorBoard
+      tags: [Dashboard]
+      responses:
+        "200":
+          description: "Ranking"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rank:
+                          type: integer
+                        customerId:
+                          type: string
+                        name:
+                          type: string
+                        vg:
+                          type: number
+                        level:
+                          type: string
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # RED MULTINIVEL
+  # ════════════════════════════════════════════════════════════
+  /network/{proxy+}:
+    # Captura: GET /network/{customerId}?depth=N
+    x-amazon-apigateway-any-method:
+      summary: "Árbol de red multinivel (proxy)"
+      description: |
+        | Método | Path | Query |
+        |--------|------|-------|
+        | GET | /network/{customerId} | `?depth=3` |
+      operationId: networkProxy
+      tags: [Network]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: depth
+          in: query
+          schema:
+            type: integer
+            default: 3
+            minimum: 1
+            maximum: 10
+      responses:
+        "200":
+          description: "Árbol de red del distribuidor"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tree:
+                    type: object
+                    additionalProperties: true
+                  members:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # REFERIDOS
+  # ════════════════════════════════════════════════════════════
+  /referrer/{proxy+}:
+    # Captura: GET /referrer/{referrerId}
+    x-amazon-apigateway-any-method:
+      summary: "Info pública del patrocinador (proxy)"
+      description: |
+        | Método | Path |
+        |--------|------|
+        | GET | /referrer/{referrerId} |
+
+        Público — usado en el formulario de registro para mostrar datos del sponsor.
+      operationId: referrerProxy
+      tags: [Customers]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "Datos de contacto del patrocinador"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  phone:
+                    type: string
+                  photoUrl:
+                    type: string
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # INVENTARIO / ALMACENES
+  # ════════════════════════════════════════════════════════════
+  /stocks:
+    get:
+      summary: "Listar almacenes con inventario actual"
+      operationId: listStocks
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista de almacenes"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear almacén"
+      operationId: createStock
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, location]
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+                type:
+                  type: string
+                  enum: [warehouse, store, virtual]
+      responses:
+        "201":
+          description: "Almacén creado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /stocks/{proxy+}:
+    # Captura:
+    #   PATCH /stocks/{stockId}
+    #   POST  /stocks/{stockId}/entries
+    #   POST  /stocks/{stockId}/damages
+    #   GET   /stocks/transfers          ?stockId=X
+    #   POST  /stocks/transfers
+    #   POST  /stocks/transfers/{transferId}/receive
+    #   GET   /stocks/movements          ?stockId=X
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de inventario (proxy)"
+      description: |
+        | Método | Path | Body / Query |
+        |--------|------|-------------|
+        | PATCH | /stocks/{stockId} | `{name?, location?}` |
+        | POST  | /stocks/{stockId}/entries | `StockEntryRequest` |
+        | POST  | /stocks/{stockId}/damages | `StockDamageRequest` |
+        | GET   | /stocks/transfers | `?stockId` |
+        | POST  | /stocks/transfers | `StockTransferRequest` |
+        | POST  | /stocks/transfers/{transferId}/receive | `{receivedByUserId?}` |
+        | GET   | /stocks/movements | `?stockId` |
+      operationId: stocksProxy
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: stockId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /pickup-stocks:
+    get:
+      summary: "Listar puntos de retiro disponibles"
+      description: "Público — usado en el checkout para seleccionar punto de retiro."
+      operationId: listPickupStocks
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "Puntos de retiro"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stocks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        location:
+                          type: string
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # POS — PUNTO DE VENTA
+  # ════════════════════════════════════════════════════════════
+  /pos/{proxy+}:
+    # Captura:
+    #   GET  /pos/sales        ?stockId=X
+    #   POST /pos/sales
+    #   GET  /pos/cash-control ?stockId=X
+    #   POST /pos/cash-cut
+    x-amazon-apigateway-any-method:
+      summary: "Punto de venta presencial (proxy)"
+      description: |
+        | Método | Path | Body / Query |
+        |--------|------|-------------|
+        | GET  | /pos/sales | `?stockId` |
+        | POST | /pos/sales | `{stockId, items[], customerId?, paymentMethod}` |
+        | GET  | /pos/cash-control | `?stockId` |
+        | POST | /pos/cash-cut | `{stockId}` |
+      operationId: posProxy
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: stockId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # ENVÍOS
+  # ════════════════════════════════════════════════════════════
+  /shipping/{proxy+}:
+    # Captura: POST /shipping/quote
+    x-amazon-apigateway-any-method:
+      summary: "Cotización de envío (proxy)"
+      description: |
+        | Método | Path | Body |
+        |--------|------|------|
+        | POST | /shipping/quote | `ShippingQuoteRequest` |
+
+        Integra con Skydropx / Enviaya para obtener tarifas en tiempo real.
+      operationId: shippingProxy
+      tags: [Shipping]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShippingQuoteRequest'
+      responses:
+        "200":
+          description: "Tarifas de envío disponibles"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        carrier:
+                          type: string
+                        service:
+                          type: string
+                        price:
+                          type: number
+                        currency:
+                          type: string
+                          default: MXN
+                        estimatedDays:
+                          type: integer
+                        rateId:
+                          type: string
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # EMPLEADOS
+  # ════════════════════════════════════════════════════════════
+  /employees:
+    get:
+      summary: "Listar empleados"
+      operationId: listEmployees
+      tags: [Employees]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista de empleados"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear empleado"
+      operationId: createEmployee
+      tags: [Employees]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeRequest'
+      responses:
+        "201":
+          description: "Empleado creado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /employees/{proxy+}:
+    # Captura:
+    #   PATCH /employees/{employeeId}
+    #   PATCH /employees/{employeeId}/privileges
+    x-amazon-apigateway-any-method:
+      summary: "Sub-rutas de empleados (proxy)"
+      description: |
+        | Método | Path | Body |
+        |--------|------|------|
+        | PATCH | /employees/{employeeId} | `{name?, phone?, stockId?}` |
+        | PATCH | /employees/{employeeId}/privileges | `{canManageInventory?, canManagePOS?, ...}` |
+      operationId: employeesProxy
+      tags: [Employees]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # WEBHOOKS
+  # ════════════════════════════════════════════════════════════
+  /webhooks/{proxy+}:
+    # Captura:
+    #   POST /webhooks/mercadolibre  — Notificación de pago
+    #   GET  /webhooks/mercadolibre  — Challenge / verificación
+    x-amazon-apigateway-any-method:
+      summary: "Webhooks de integraciones externas (proxy)"
+      description: |
+        | Método | Path | Origen |
+        |--------|------|--------|
+        | POST | /webhooks/mercadolibre | MercadoLibre Payments |
+        | GET  | /webhooks/mercadolibre | MercadoLibre challenge |
+
+        ⚠️ Esta ruta NO debe tener autenticación por custom headers — MercadoLibre
+        no los envía. La validación se hace con la firma del payload en el Lambda.
+      operationId: webhooksProxy
+      tags: [Webhooks]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+# ─── Tags ──────────────────────────────────────────────────────────────────────
+tags:
+  - name: Auth
+    description: "Autenticación, registro y gestión de contraseñas"
+  - name: Customers
+    description: "Gestión de distribuidores/clientes y perfiles"
+  - name: Admin
+    description: "Panel de control administrativo"
+  - name: Products
+    description: "Catálogo de productos y variantes"
+  - name: Categories
+    description: "Categorías de productos"
+  - name: Campaigns
+    description: "Campañas de marketing y materiales"
+  - name: Notifications
+    description: "Notificaciones del portal"
+  - name: Orders
+    description: "Órdenes de venta, pagos y devoluciones"
+  - name: Commissions
+    description: "Comisiones, bonos y retiros"
+  - name: Network
+    description: "Red multinivel — árbol de distribuidores"
+  - name: Dashboard
+    description: "Dashboard del distribuidor, carrito y tablero de honor"
+  - name: Config
+    description: "Configuración de negocio — bonos, rangos, VP/VG"
+  - name: Assets
+    description: "Archivos e imágenes (S3 pre-signed URLs)"
+  - name: Inventory
+    description: "Almacenes, entradas, mermas y traspasos"
+  - name: POS
+    description: "Punto de venta presencial"
+  - name: Shipping
+    description: "Cotización de envíos"
+  - name: Employees
+    description: "Gestión de empleados y privilegios"
+  - name: Webhooks
+    description: "Callbacks de integraciones externas (MercadoLibre)"
+  - name: CORS
+    description: "Preflight CORS (generados automáticamente)"

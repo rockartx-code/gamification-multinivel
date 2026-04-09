@@ -11,33 +11,44 @@ export interface AdminOrder {
   discountAmount?: number;
   netTotal?: number;
   total: number;
-  status: 'pending' | 'paid' | 'shipped' | 'delivered';
+  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'en_devolucion' | 'devuelto_validado' | 'devolucion_rechazada';
   shippingType?: 'carrier' | 'personal';
   trackingNumber?: string;
   deliveryPlace?: string;
   deliveryDate?: string;
   recipientName?: string;
   phone?: string;
+  street?: string;
+  number?: string;
   address?: string;
+  city?: string;
   postalCode?: string;
   state?: string;
+  country?: string;
   betweenStreets?: string;
   references?: string;
+  deliveryNotes?: string;
   items?: AdminOrderItem[];
   stockId?: string;
   attendantUserId?: number | null;
   paymentStatus?: string;
   paymentTransactionId?: string;
   paymentRawStatus?: string;
+  paymentWebhookAt?: string;
   paymentProvider?: string;
   paymentPreferenceId?: string;
   paymentInitPoint?: string;
   paymentSandboxInitPoint?: string;
+  markedByWebhook?: boolean;
+  discountCutoffWindow?: boolean;
+  discountCutoffCountdown?: string;
+  discountCutoffMessage?: string;
   deliveryStatus?: string;
   shippingAddressId?: string;
   shippingAddressLabel?: string;
   deliveryType?: 'pickup' | 'delivery';
   pickupStockId?: string;
+  pickupPaymentMethod?: 'online' | 'at_store';
 }
 
 export interface OrderStatusLookup {
@@ -72,9 +83,13 @@ export interface CustomerShippingAddress {
   label: string;
   recipientName?: string;
   phone?: string;
+  street?: string;
+  number?: string;
   address: string;
+  city?: string;
   postalCode: string;
   state: string;
+  country?: string;
   betweenStreets?: string;
   references?: string;
   isDefault?: boolean;
@@ -86,9 +101,13 @@ export interface OrderShippingAddressPayload {
   label?: string;
   recipientName?: string;
   phone?: string;
+  street?: string;
+  number?: string;
   address?: string;
+  city?: string;
   postalCode?: string;
   state?: string;
+  country?: string;
   betweenStreets?: string;
   references?: string;
   isDefault?: boolean;
@@ -102,16 +121,22 @@ export interface CreateAdminOrderPayload {
   shippingAddress?: OrderShippingAddressPayload;
   recipientName?: string;
   phone?: string;
+  street?: string;
+  number?: string;
   address?: string;
+  city?: string;
   postalCode?: string;
   state?: string;
+  country?: string;
   betweenStreets?: string;
   references?: string;
+  deliveryNotes?: string;
   shippingAddressId?: string;
   shippingAddressLabel?: string;
   saveShippingAddress?: boolean;
   deliveryType?: 'pickup' | 'delivery';
   pickupStockId?: string;
+  pickupPaymentMethod?: 'online' | 'at_store';
 }
 
 export interface UpdateOrderStatusPayload {
@@ -126,10 +151,16 @@ export interface UpdateOrderStatusPayload {
 
 export interface CustomerDocument {
   id: string;
+  assetId?: string;
   name: string;
   type: string;
   url?: string;
   uploadedAt?: string;
+}
+
+export interface LinkCustomerDocumentPayload {
+  assetId: string;
+  name?: string;
 }
 
 export interface CustomerProfile {
@@ -145,7 +176,9 @@ export interface CustomerProfile {
   postalCode?: string;
   clabeInterbancaria?: string;
   clabeLast4?: string;
+  bankInstitution?: string;
   documents?: CustomerDocument[];
+  ownDocuments?: CustomerDocument[];
   addresses?: CustomerShippingAddress[];
   defaultAddressId?: string;
   shippingAddresses?: CustomerShippingAddress[];
@@ -183,6 +216,9 @@ export interface SaveAdminProductPayload {
   name: string;
   price: number;
   active: boolean;
+  inOnlineStore?: boolean;
+  inPOS?: boolean;
+  commissionable?: boolean;
   sku?: string;
   hook?: string;
   description?: string;
@@ -263,6 +299,23 @@ export interface AdminCustomer {
   commissionsPrevStatus?: 'no_moves' | 'pending' | 'paid';
   commissionsPrevReceiptUrl?: string;
   clabeInterbancaria?: string;
+  bankInstitution?: string;
+  documents?: CustomerDocument[];
+}
+
+export interface CustomerDocumentTypeConfig {
+  key: string;
+  label: string;
+  required?: boolean;
+}
+
+export interface CustomerOwnDocumentPayload {
+  userId: string;
+  docType: string;
+  docLabel: string;
+  contentBase64: string;
+  contentType: string;
+  fileName: string;
 }
 
 export interface ProductVariant {
@@ -271,6 +324,8 @@ export interface ProductVariant {
   price?: number;
   sku?: string;
   active?: boolean;
+  /** URL de imagen específica para esta variante */
+  img?: string;
 }
 
 export interface ProductCategory {
@@ -287,6 +342,9 @@ export interface AdminProduct {
   name: string;
   price: number;
   active: boolean;
+  inOnlineStore?: boolean;
+  inPOS?: boolean;
+  commissionable?: boolean;
   sku?: string;
   hook?: string;
   description?: string;
@@ -383,6 +441,8 @@ export interface AppBusinessConfig {
     markup: number;
     carriers: string[];
   };
+  customerDocumentTypes?: CustomerDocumentTypeConfig[];
+  bonuses?: BonusConfig;
 }
 
 export interface AdminAssetSlot {
@@ -541,6 +601,16 @@ export interface ShippingQuoteItem {
 
 export interface ShippingQuoteRequest {
   zipTo: string;
+  name?: string;
+  recipientName?: string;
+  phone?: string;
+  street?: string;
+  number?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
   items?: ShippingQuoteItem[];
   /** @deprecated — kept for backward compat; prefer items[] */
   weightKg?: number;
@@ -560,4 +630,121 @@ export interface ShippingRate {
   currency: string | null;
   transitDays: number | null;
   deliveryEstimate?: string | null;
+}
+
+export type OrderReturnMotivo = 'DANADO_DEFECTUOSO' | 'ERROR_ENVIO' | 'DESISTIMIENTO';
+export type OrderReturnStatus = 'PENDIENTE' | 'EN_DEVOLUCION' | 'DEVUELTO_VALIDADO' | 'DEVOLUCION_RECHAZADA';
+
+export interface OrderReturnEvidenceFile {
+  contentBase64: string;
+  contentType: string;
+  fileName: string;
+}
+
+export interface OrderReturnEvidencePayload {
+  fotos_producto: OrderReturnEvidenceFile[];
+  fotos_empaque: OrderReturnEvidenceFile[];
+  fotos_guia_envio: OrderReturnEvidenceFile[];
+}
+
+export interface OrderReturnRequestPayload {
+  motivo: OrderReturnMotivo;
+  descripcion?: string;
+  evidence: OrderReturnEvidencePayload;
+}
+
+export interface OrderReturnRequestResponse {
+  ok: boolean;
+  requestId: string;
+  status: OrderReturnStatus;
+  shippingResponsibility: 'empresa' | 'cliente';
+  message?: string;
+}
+
+export interface OrderCancelResponse {
+  ok: boolean;
+  orderId: string;
+  status: string;
+  pendingRefund: boolean;
+}
+
+// ─── BONUS / VP-VG SYSTEM ─────────────────────────────────────────────────────
+
+/** Tipos de condición que puede evaluar una regla de bono. */
+export type BonusConditionType =
+  | 'vg_min'             // VG del cliente >= value VP
+  | 'vp_min'             // VP personal >= value VP
+  | 'direct_vg_min'      // Suma de VG de referidos directos >= value VP
+  | 'consecutive_months' // Rango mantenido N meses consecutivos
+  | 'direct_rank_count'  // N referidos directos con un rango dado
+  | 'first_30_days'      // Cliente se registró hace ≤ 30 días
+  | 'first_time';        // Primera vez que se alcanza este bono
+
+/** Tipos de recompensa que puede otorgar un bono. */
+export type BonusRewardType = 'cash_mxn' | 'item' | 'monthly_cash' | 'annual_fund_pct';
+
+export interface BonusCondition {
+  type: BonusConditionType;
+  /** Umbral numérico (VP, meses, conteo…) */
+  value?: number;
+  /** Para direct_rank_count: rango requerido en los referidos */
+  rank?: string;
+}
+
+export interface BonusReward {
+  type: BonusRewardType;
+  /** MXN para cash_mxn / monthly_cash */
+  amount?: number;
+  /** Descripción del artículo físico (p. ej. "Smart TV") */
+  itemLabel?: string;
+  /** Porcentaje para annual_fund_pct */
+  pct?: number;
+  /** Mes consecutivo específico que dispara este premio (p. ej. 2 ó 3) */
+  triggerMonths?: number;
+}
+
+export interface BonusRule {
+  id: string;
+  name: string;
+  active: boolean;
+  /** Rango de la red al que aplica (ORO, PLATINO, DIAMANTE…) */
+  rank?: string;
+  conditions: BonusCondition[];
+  rewards: BonusReward[];
+  /** Con qué frecuencia puede otorgarse: 'once' | 'monthly' | 'annual' */
+  cooldown?: 'once' | 'monthly' | 'annual';
+  notes?: string;
+}
+
+export interface RankThreshold {
+  rank: string;
+  /** VG mínimo (en puntos VP) para alcanzar este rango */
+  vgMin: number;
+}
+
+export interface VpConfig {
+  /** MXN netos (sin IVA ni envío) equivalentes a 1 VP. Default: 50 */
+  mxnPerVp: number;
+  /** Niveles de red que se suman al VG. Default: 5 */
+  maxNetworkLevels: number;
+}
+
+export interface BonusConfig {
+  vpConfig: VpConfig;
+  rankThresholds: RankThreshold[];
+  rules: BonusRule[];
+}
+
+export interface BonusAward {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  customerId: number | string;
+  monthKey: string;
+  rewardType: BonusRewardType;
+  rewardAmount?: number;
+  rewardItemLabel?: string;
+  rewardPct?: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  createdAt?: string;
 }

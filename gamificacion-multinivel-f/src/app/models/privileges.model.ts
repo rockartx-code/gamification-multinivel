@@ -6,6 +6,7 @@ export type AdminViewId =
   | 'campaigns'
   | 'pos'
   | 'stats'
+  | 'honor_board'
   | 'notifications'
   | 'settings'
   | 'employees';
@@ -38,7 +39,8 @@ export type AppPrivilege =
   | 'employee_add'
   | 'employee_manage_privileges'
   | 'access_screen_employees'
-  | 'config_manage';
+  | 'config_manage'
+  | 'access_screen_honor_board';
 
 export type UserPrivileges = Partial<Record<AppPrivilege, boolean>>;
 
@@ -70,7 +72,8 @@ export const ALL_PRIVILEGES: AppPrivilege[] = [
   'employee_add',
   'employee_manage_privileges',
   'access_screen_employees',
-  'config_manage'
+  'config_manage',
+  'access_screen_honor_board'
 ];
 
 export const SCREEN_PRIVILEGE_BY_VIEW: Record<AdminViewId, AppPrivilege> = {
@@ -82,6 +85,7 @@ export const SCREEN_PRIVILEGE_BY_VIEW: Record<AdminViewId, AppPrivilege> = {
   campaigns: 'access_screen_stocks',
   pos: 'access_screen_pos',
   stats: 'access_screen_stats',
+  honor_board: 'access_screen_honor_board',
   notifications: 'config_manage',
   settings: 'access_screen_settings',
   employees: 'access_screen_employees'

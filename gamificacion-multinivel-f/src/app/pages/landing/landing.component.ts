@@ -6,7 +6,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
-import { UserDashboardData, FeaturedItem, DashboardCampaign, SponsorContact } from '../../models/user-dashboard.model';
+import { CatalogData, FeaturedItem, DashboardCampaign, SponsorContact } from '../../models/user-dashboard.model';
+import { AppBusinessConfig, BonusRule, RankThreshold } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { FeatureBadgeComponent } from '../../components/feature-badge/feature-badge.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -37,7 +38,9 @@ export class LandingComponent implements OnInit {
   };
 
   form = {
-    name: '',
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     email: '',
     phone: '',
     password: '',
@@ -45,15 +48,19 @@ export class LandingComponent implements OnInit {
   };
 
   referralToken = '';
+  referralCodeInput = '';
   productId = '';
   sponsor: SponsorContact | null = null;
+  businessConfig: AppBusinessConfig | null = null;
   isSubmitting = false;
   feedbackMessage = '';
   feedbackType: 'error' | 'success' | '' = '';
   registrationState: 'form' | 'pending' = 'form';
   registeredEmail = '';
-  fieldErrors: { name: string; email: string; password: string; confirmPassword: string } = {
-    name: '',
+  fieldErrors: { firstName: string; apellidoPaterno: string; apellidoMaterno: string; email: string; password: string; confirmPassword: string } = {
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -83,15 +90,79 @@ export class LandingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const token = this.route.snapshot.paramMap.get('refToken') ?? '';
+    const token = this.route.snapshot.paramMap.get('idSponsor') ?? '';
     const product = this.route.snapshot.queryParamMap.get('p') ?? this.getHashQueryParam('p');
     this.referralToken = token.trim();
     this.productId = product.trim();
     if (this.referralToken) {
       localStorage.setItem('leaderId', this.referralToken);
-      this.loadReferrerContact(this.referralToken);
+      this.loadSponsorContact(this.referralToken);
     }
-    this.loadFeaturedProduct(this.productId);
+    this.loadBusinessConfig();
+  }
+
+  // ─── Business config derived getters ────────────────────────────────────────
+
+  get discountTiers(): Array<{ min: number; max: number | null; rate: number }> {
+    return this.businessConfig?.rewards?.discountTiers ?? [];
+  }
+
+  get commissionLevels(): AppBusinessConfig['rewards']['commissionLevels'] {
+    return this.businessConfig?.rewards?.commissionLevels ?? [];
+  }
+
+  get mxnPerVp(): number {
+    return this.businessConfig?.bonuses?.vpConfig?.mxnPerVp ?? 50;
+  }
+
+  get rankThresholds(): RankThreshold[] {
+    return this.businessConfig?.bonuses?.rankThresholds ?? [
+      { rank: 'ORO', vgMin: 700 },
+      { rank: 'PLATINO', vgMin: 2000 },
+      { rank: 'DIAMANTE', vgMin: 6000 }
+    ];
+  }
+
+  get activeBonus_inicioRapido(): BonusRule | null {
+    return this.businessConfig?.bonuses?.rules?.find(r => r.id === 'inicio_rapido' && r.active) ?? null;
+  }
+
+  /** Reglas de bono agrupadas por rango */
+  get rulesByRank(): Array<{ rank: RankThreshold; rules: BonusRule[] }> {
+    const rules = this.businessConfig?.bonuses?.rules ?? [];
+    return this.rankThresholds.map(rt => ({
+      rank: rt,
+      rules: rules.filter(r => r.active && r.rank === rt.rank)
+    }));
+  }
+
+  rankIcon(rank: string): string {
+    switch (rank.toUpperCase()) {
+      case 'ORO':      return '🥇';
+      case 'PLATINO':  return '🥈';
+      case 'DIAMANTE': return '💎';
+      default:         return '⭐';
+    }
+  }
+
+  rewardLabel(rule: BonusRule): string {
+    return rule.rewards.map(r => {
+      if (r.type === 'cash_mxn' && r.amount) return `$${r.amount.toLocaleString('es-MX')} MXN`;
+      if (r.type === 'monthly_cash' && r.amount) return `$${r.amount.toLocaleString('es-MX')} MXN/mes`;
+      if (r.type === 'item' && r.itemLabel) return r.itemLabel;
+      if (r.type === 'annual_fund_pct' && r.pct) return `${r.pct}% fondo anual`;
+      return '';
+    }).filter(Boolean).join(' · ');
+  }
+
+  discountRateLabel(rate: number): string {
+    return `${Math.round(rate * 100)}% OFF`;
+  }
+
+  discountRangeLabel(tier: { min: number; max: number | null }): string {
+    const min = `$${tier.min.toLocaleString('es-MX')}`;
+    if (!tier.max) return `${min} o más`;
+    return `De ${min} a $${tier.max.toLocaleString('es-MX')}`;
   }
 
   get heroTitle(): string {
@@ -165,17 +236,23 @@ export class LandingComponent implements OnInit {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  get referralCodeDisplay(): string {
+    return this.buildReferralCode(this.form.firstName, this.form.apellidoPaterno, this.form.apellidoMaterno);
+  }
+
   createAccount(): void {
     if (this.isSubmitting) {
       return;
     }
     this.fieldErrors = {
-      name: this.form.name.trim() ? '' : 'El nombre completo es obligatorio.',
+      firstName: this.form.firstName.trim() ? '' : 'El nombre es obligatorio.',
+      apellidoPaterno: this.form.apellidoPaterno.trim() ? '' : 'El apellido paterno es obligatorio.',
+      apellidoMaterno: this.form.apellidoMaterno.trim() ? '' : 'El apellido materno es obligatorio.',
       email: this.form.email.trim() ? '' : 'El correo electrónico es obligatorio.',
       password: this.form.password ? '' : 'La contraseña es obligatoria.',
       confirmPassword: ''
     };
-    if (this.fieldErrors.name || this.fieldErrors.email || this.fieldErrors.password) {
+    if (this.fieldErrors.firstName || this.fieldErrors.apellidoPaterno || this.fieldErrors.apellidoMaterno || this.fieldErrors.email || this.fieldErrors.password) {
       return;
     }
     if (this.form.password !== this.form.confirmPassword) {
@@ -183,13 +260,16 @@ export class LandingComponent implements OnInit {
       return;
     }
 
+    const fullName = `${this.form.firstName.trim()} ${this.form.apellidoPaterno.trim()} ${this.form.apellidoMaterno.trim()}`.trim();
+    const effectiveToken = this.referralToken || this.referralCodeInput.trim() || undefined;
+
     const payload = {
-      name: this.form.name.trim(),
+      name: fullName,
       email: this.form.email.trim(),
       phone: this.form.phone.trim() || undefined,
       password: this.form.password,
       confirmPassword: this.form.confirmPassword,
-      referralToken: this.referralToken || undefined,
+      referralToken: effectiveToken,
       productId: this.productId || undefined
     };
 
@@ -201,9 +281,10 @@ export class LandingComponent implements OnInit {
         next: (response) => {
           this.isSubmitting = false;
           if (response?.requiresEmailVerification) {
+            this.setFeedback('', 'success');
             this.registeredEmail = this.form.email.trim();
-            this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
-            this.fieldErrors = { name: '', email: '', password: '', confirmPassword: '' };
+            this.form = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', phone: '', password: '', confirmPassword: '' };
+            this.fieldErrors = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', password: '', confirmPassword: '' };
             this.registrationState = 'pending';
             this.cdr.detectChanges();
             return;
@@ -211,8 +292,8 @@ export class LandingComponent implements OnInit {
           if (response?.customer) {
             this.authService.setUserFromCreateAccount(response.customer);
           }
-          this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
-          this.fieldErrors = { name: '', email: '', password: '', confirmPassword: '' };
+          this.form = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', phone: '', password: '', confirmPassword: '' };
+          this.fieldErrors = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', password: '', confirmPassword: '' };
           this.setFeedback('', 'success');
           this.cdr.detectChanges();
           this.router.navigate(['/dashboard']);
@@ -227,14 +308,35 @@ export class LandingComponent implements OnInit {
       });
   }
 
+  private buildReferralCode(firstName: string, apellidoPaterno: string, apellidoMaterno: string): string {
+    const all = `${firstName} ${apellidoPaterno} ${apellidoMaterno}`.trim();
+    const words = all.split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return '';
+    const initials = words.map(w => w[0].toUpperCase()).join('');
+    return `${words[0]}-${initials}`;
+  }
+
   private setFeedback(message: string, type: 'error' | 'success'): void {
     this.feedbackMessage = message;
     this.feedbackType = type;
   }
 
-  private loadReferrerContact(referrerId: string): void {
+  private loadBusinessConfig(): void {
     this.api
-      .getReferrerContact(referrerId)
+      .getPublicBusinessConfig()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (config) => {
+          this.businessConfig = config;
+          this.cdr.detectChanges();
+        },
+        error: () => { this.businessConfig = null; }
+      });
+  }
+
+  private loadSponsorContact(sponsorId: string): void {
+    this.api
+      .getSponsorContact(sponsorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (contact) => {
@@ -247,7 +349,7 @@ export class LandingComponent implements OnInit {
 
   private loadFeaturedProduct(queryProductId: string): void {
     this.api
-      .getUserDashboardData()
+      .getCatalogData()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {
@@ -286,7 +388,7 @@ export class LandingComponent implements OnInit {
     }
   }
 
-  private pickFromQuery(data: UserDashboardData, queryId: string): LandingComponent['featuredProduct'] | null {
+  private pickFromQuery(data: CatalogData, queryId: string): LandingComponent['featuredProduct'] | null {
     if (queryId.startsWith('campaign:')) {
       const campaignId = queryId.slice('campaign:'.length);
       const campaign = (data.campaigns ?? []).find((entry) => entry.id === campaignId);
@@ -318,7 +420,7 @@ export class LandingComponent implements OnInit {
     return null;
   }
 
-  private pickDefaultProduct(data: UserDashboardData): LandingComponent['featuredProduct'] | null {
+  private pickDefaultProduct(data: CatalogData): LandingComponent['featuredProduct'] | null {
     const pom = data.productOfMonth;
     if (pom) {
       return {

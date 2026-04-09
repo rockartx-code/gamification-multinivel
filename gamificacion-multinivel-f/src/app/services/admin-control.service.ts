@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin, map, Observable, tap } from 'rxjs';
+import { BehaviorSubject, forkJoin, map, Observable, of, tap } from 'rxjs';
 
 import {
   AdminCustomer,
@@ -17,6 +17,8 @@ import {
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerProfile,
+  LinkCustomerDocumentPayload,
   InventoryMovement,
   PosCashControl,
   PosCashCut,
@@ -44,26 +46,137 @@ export class AdminControlService {
   private readonly dataSubject = new BehaviorSubject<AdminData | null>(null);
   readonly data$ = this.dataSubject.asObservable();
 
+  // Rastrear qué secciones ya fueron cargadas en esta sesión
+  private readonly loadedSections = new Set<string>();
+
+  // Estado de carga por sección
+  readonly loadingState = new BehaviorSubject<Record<string, boolean>>({});
+
   constructor(private readonly api: ApiService) {}
 
+  private setLoading(section: string, value: boolean): void {
+    this.loadingState.next({ ...this.loadingState.value, [section]: value });
+  }
+
+  private patchData(patch: Partial<AdminData>): void {
+    const current = this.dataSubject.value ?? ({} as AdminData);
+    this.dataSubject.next({ ...current, ...patch });
+  }
+
+  /** Carga inicial mínima: solo warnings */
   load(): Observable<AdminData> {
-    return this.api.getAdminData().pipe(
-      tap((data) => {
-        const normalized: AdminData = {
-          ...data,
-          orders: data.orders ?? [],
-          customers: data.customers ?? [],
-          employees: data.employees ?? [],
-          products: data.products ?? [],
-          campaigns: data.campaigns ?? [],
-          notifications: data.notifications ?? [],
-          businessConfig: data.businessConfig,
-          warnings: data.warnings ?? [],
-          assetSlots: data.assetSlots ?? []
-        };
-        this.dataSubject.next(structuredClone(normalized));
+    return this.api.getAdminWarnings().pipe(
+      tap((warnings) => {
+        this.patchData({ warnings: warnings as AdminData['warnings'] });
+        this.loadedSections.add('warnings');
+      }),
+      map(() => this.dataSubject.value as AdminData)
+    );
+  }
+
+  /** Órdenes filtradas por status desde el backend */
+  loadOrders(status: AdminOrder['status'], limit = 100): Observable<AdminOrder[]> {
+    this.setLoading('orders', true);
+    return this.api.getAdminOrders({ status, limit }).pipe(
+      tap(({ orders }) => {
+        const current = this.dataSubject.value;
+        // Fusionar: reemplazar las del status dado, conservar el resto
+        const existing = (current?.orders ?? []).filter((o) => o.status !== status);
+        this.patchData({ orders: [...orders, ...existing] });
+        this.loadedSections.add(`orders:${status}`);
+        this.setLoading('orders', false);
+      }),
+      map(({ orders }) => orders)
+    );
+  }
+
+  hasLoadedOrders(status: AdminOrder['status']): boolean {
+    return this.loadedSections.has(`orders:${status}`);
+  }
+
+  /** Clientes — carga única */
+  loadCustomers(): Observable<AdminCustomer[]> {
+    if (this.loadedSections.has('customers')) return of(this.customers);
+    this.setLoading('customers', true);
+    return this.api.listCustomers().pipe(
+      tap((customers) => {
+        this.patchData({ customers });
+        this.loadedSections.add('customers');
+        this.setLoading('customers', false);
       })
     );
+  }
+
+  /** Productos — carga única */
+  loadProducts(): Observable<AdminProduct[]> {
+    if (this.loadedSections.has('products')) return of(this.products);
+    this.setLoading('products', true);
+    return this.api.listProducts().pipe(
+      tap((products) => {
+        this.patchData({ products });
+        this.loadedSections.add('products');
+        this.setLoading('products', false);
+      })
+    );
+  }
+
+  /** Empleados — carga única */
+  loadEmployees(): Observable<AdminEmployee[]> {
+    if (this.loadedSections.has('employees')) return of(this.employees);
+    this.setLoading('employees', true);
+    return this.api.listEmployees().pipe(
+      tap((employees) => {
+        this.patchData({ employees });
+        this.loadedSections.add('employees');
+        this.setLoading('employees', false);
+      })
+    );
+  }
+
+  /** Campañas — carga única */
+  loadCampaigns(): Observable<AdminCampaign[]> {
+    if (this.loadedSections.has('campaigns')) return of(this.campaigns);
+    this.setLoading('campaigns', true);
+    return this.api.listCampaigns().pipe(
+      tap((campaigns) => {
+        this.patchData({ campaigns });
+        this.loadedSections.add('campaigns');
+        this.setLoading('campaigns', false);
+      })
+    );
+  }
+
+  /** Notificaciones — carga única */
+  loadNotifications(): Observable<PortalNotification[]> {
+    if (this.loadedSections.has('notifications')) return of(this.notifications);
+    this.setLoading('notifications', true);
+    return this.api.listAdminNotifications().pipe(
+      tap((notifications) => {
+        this.patchData({ notifications });
+        this.loadedSections.add('notifications');
+        this.setLoading('notifications', false);
+      })
+    );
+  }
+
+  get employees(): AdminEmployee[] {
+    return (this.data as (AdminData & { employees?: AdminEmployee[] }) | null)?.employees ?? [];
+  }
+
+  get campaigns(): AdminCampaign[] {
+    return this.data?.campaigns ?? [];
+  }
+
+  get notifications(): PortalNotification[] {
+    return this.data?.notifications ?? [];
+  }
+
+  get products(): AdminProduct[] {
+    return this.data?.products ?? [];
+  }
+
+  isLoading(section: string): boolean {
+    return this.loadingState.value[section] ?? false;
   }
 
   get data(): AdminData | null {
@@ -177,6 +290,14 @@ export class AdminControlService {
 
   createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
     return this.api.createAsset(payload);
+  }
+
+  getCustomer(customerId: string): Observable<CustomerProfile> {
+    return this.api.getCustomer(customerId);
+  }
+
+  addCustomerDocument(customerId: string, payload: LinkCustomerDocumentPayload): Observable<CustomerProfile> {
+    return this.api.addCustomerDocument(customerId, payload);
   }
 
   uploadAdminCommissionReceipt(payload: CommissionReceiptPayload): Observable<{ receipt: unknown; asset?: unknown }> {

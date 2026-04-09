@@ -10,12 +10,13 @@ import {
 import { AdminViewId, AppPrivilege, normalizePrivileges, SCREEN_PRIVILEGE_BY_VIEW, UserPrivileges } from '../models/privileges.model';
 import { ApiService } from './api.service';
 
-export type UserRole = 'admin' | 'cliente';
+export type UserRole = 'admin' | 'cliente' | 'employee';
 
 export interface AuthUser {
   userId?: string;
   name: string;
   role: UserRole;
+  token?: string;
   canAccessAdmin?: boolean;
   privileges?: UserPrivileges;
   isSuperUser?: boolean;
@@ -41,6 +42,10 @@ export class AuthService {
 
   get isLoggedIn(): boolean {
     return this.userSubject.value !== null;
+  }
+
+  get hasSession(): boolean {
+    return this.hasValidSession(this.userSubject.value);
   }
 
   login(username: string, password: string): Observable<AuthUser> {
@@ -98,6 +103,7 @@ export class AuthService {
   private setUser(user: AuthUser): void {
     const normalized: AuthUser = {
       ...user,
+      token: typeof user.token === 'string' && user.token.trim().length > 0 ? user.token.trim() : undefined,
       canAccessAdmin: Boolean(user.canAccessAdmin),
       privileges: normalizePrivileges(user.privileges)
     };
@@ -177,5 +183,9 @@ export class AuthService {
       localStorage.removeItem(this.storageKey);
       return null;
     }
+  }
+
+  private hasValidSession(user: AuthUser | null | undefined): boolean {
+    return typeof user?.token === 'string' && user.token.trim().length > 0;
   }
 }

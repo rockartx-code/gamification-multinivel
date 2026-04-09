@@ -18,12 +18,23 @@ import {
   AdminProduct,
   AdminWarning,
   AssetResponse,
+  BonusCondition,
+  BonusConditionType,
+  BonusConfig,
+  BonusReward,
+  BonusRewardType,
+  BonusRule,
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
   CreateStructureCustomerPayload,
+  CustomerDocument,
+  CustomerDocumentTypeConfig,
+  CustomerProfile,
   ProductCategory,
-  ProductVariant
+  ProductVariant,
+  RankThreshold,
+  VpConfig
 } from '../../models/admin.model';
 import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
@@ -39,8 +50,10 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { AdminControlService } from '../../services/admin-control.service';
+import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
+import { HonorBoard, HonorEntry } from '../../models/user-dashboard.model';
 
 type StructureNode = {
   id: string;
@@ -284,7 +297,8 @@ export class AdminComponent implements OnInit {
     private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly api: ApiService
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
@@ -314,11 +328,19 @@ export class AdminComponent implements OnInit {
   notificationPage = 0;
 
   selectedCustomer: AdminCustomer | null = null;
+  selectedCustomerProfile: CustomerProfile | null = null;
   selectedCustomerAdminAccess = false;
   selectedCustomerPrivilegeDraft: UserPrivileges = {};
   selectedCustomerLeaderId = '';
   selectedCustomerSponsorSearch = '';
   selectedCustomerSponsorRecommendations: Array<{ id: string; name: string; email: string; label: string }> = [];
+  customerDocumentFile: File | null = null;
+  customerDocumentName = '';
+  customerDocumentError = '';
+  customerDocumentMessage = '';
+  isCustomerDocumentMessageError = false;
+  isLoadingSelectedCustomerProfile = false;
+  isUploadingCustomerDocument = false;
   selectedSponsorLabel = 'FindingU (sin patrocinador)';
   hasValidSelectedSponsorId = true;
   canSaveSelectedCustomerPosition = false;
@@ -356,7 +378,9 @@ export class AdminComponent implements OnInit {
   isSavingBusinessConfig = false;
   businessConfigMessage = '';
   structureForm = {
-    name: '',
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     phone: '',
     email: '',
     address: '',
@@ -367,6 +391,8 @@ export class AdminComponent implements OnInit {
   productImagePreviews = new Map<CreateProductAssetPayload['section'], string>();
   productImageUploads = new Map<CreateProductAssetPayload['section'], boolean>();
   productImageFiles = new Map<CreateProductAssetPayload['section'], File>();
+  variantImageFiles = new Map<string, File>();
+  variantImagePreviews = new Map<string, string>();
   productMessage = '';
   private productMessageTimeout?: number;
   private readonly updatingProductStatusIds = new Set<number>();
@@ -375,6 +401,9 @@ export class AdminComponent implements OnInit {
     name: '',
     price: '',
     active: true,
+    inOnlineStore: true,
+    inPOS: true,
+    commissionable: true,
     sku: '',
     hook: '',
     description: '',
@@ -382,7 +411,7 @@ export class AdminComponent implements OnInit {
     copyInstagram: '',
     copyWhatsapp: '',
     tags: '',
-    variants: [] as Array<{ id: string; name: string; price: string; sku: string; active: boolean }>,
+    variants: [] as Array<{ id: string; name: string; price: string; sku: string; active: boolean; img: string }>,
     categoryIds: [] as string[],
     weightKg: '' as string | number,
     lengthCm: '' as string | number,
@@ -402,6 +431,10 @@ export class AdminComponent implements OnInit {
   newOrderStatus: AdminOrder['status'] = 'pending';
   newOrderItems = new Map<number, number>();
   isSavingOrder = false;
+  // ─── Honor Board ─────────────────────────────────────────────────────────
+  honorBoardData: HonorBoard | null = null;
+  honorBoardSort: 'vg' | 'vp' | 'alpha' = 'vg';
+  isLoadingHonorBoard = false;
   isSavingStructure = false;
   isSavingProduct = false;
   isSettingProductOfMonth = false;
@@ -486,6 +519,9 @@ export class AdminComponent implements OnInit {
   employeeMessage = '';
   employeeMessageIsError = false;
   employeeTempPassword = '';
+
+  snackbar: { message: string; tone: 'success' | 'error'; visible: boolean } = { message: '', tone: 'success', visible: false };
+  private snackbarTimeout?: number;
   employeeForm = {
     name: '',
     email: '',
@@ -494,27 +530,74 @@ export class AdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentView = this.getFirstAllowedView();
-    this.adminControl.load().subscribe(() => {
-      if (!this.selectedCustomer) {
-        this.selectedCustomer = this.customers[0] ?? null;
-      }
-      if (!this.selectedEmployee) {
-        this.selectedEmployee = this.employees[0] ?? null;
-        this.syncSelectedEmployeePrivilegeDraft();
-      }
-      this.syncSelectedCustomerAccessDraft();
-      this.ensureCurrentViewAllowed();
-      if (!this.newOrderCustomerId) {
-        this.newOrderCustomerId = this.customers[0]?.id ?? null;
-      }
-      this.stockEntryForm.createdByUserId = this.stockEntryForm.createdByUserId ?? this.employees[0]?.id ?? null;
-      this.stockTransferForm.createdByUserId = this.stockTransferForm.createdByUserId ?? this.employees[0]?.id ?? null;
-      this.stockDamageForm.reportedByUserId = this.stockDamageForm.reportedByUserId ?? this.employees[0]?.id ?? null;
-      this.transferReceiverUserId = this.transferReceiverUserId ?? this.employees[0]?.id ?? null;
-      this.selectPublicGeneralCustomer();
-      this.syncBusinessConfigDraft();
-      this.loadStocksAndPosState();
-    });
+    // Carga mínima: solo warnings
+    this.adminControl.load().subscribe();
+    // Cargar la vista inicial bajo demanda
+    this.loadViewData(this.currentView);
+  }
+
+  private loadViewData(view: AdminViewId): void {
+    switch (view) {
+      case 'orders':
+        if (!this.adminControl.hasLoadedOrders(this.currentOrderStatus)) {
+          this.adminControl.loadOrders(this.currentOrderStatus).subscribe(() => {
+            this.syncInitialOrderDeps();
+          });
+        }
+        break;
+      case 'customers':
+        this.adminControl.loadCustomers().subscribe(() => {
+          if (!this.selectedCustomer) {
+            this.selectedCustomer = this.customers[0] ?? null;
+            if (this.selectedCustomer) this.loadSelectedCustomerProfile(this.selectedCustomer.id);
+          }
+          this.syncSelectedCustomerAccessDraft();
+          if (!this.newOrderCustomerId) this.newOrderCustomerId = this.customers[0]?.id ?? null;
+        });
+        break;
+      case 'products':
+        this.adminControl.loadProducts().subscribe();
+        break;
+      case 'employees':
+        this.adminControl.loadEmployees().subscribe(() => {
+          if (!this.selectedEmployee) {
+            this.selectedEmployee = this.employees[0] ?? null;
+            this.syncSelectedEmployeePrivilegeDraft();
+          }
+          this.stockEntryForm.createdByUserId ??= this.employees[0]?.id ?? null;
+          this.stockTransferForm.createdByUserId ??= this.employees[0]?.id ?? null;
+          this.stockDamageForm.reportedByUserId ??= this.employees[0]?.id ?? null;
+          this.transferReceiverUserId ??= this.employees[0]?.id ?? null;
+        });
+        break;
+      case 'campaigns':
+        this.adminControl.loadCampaigns().subscribe();
+        break;
+      case 'notifications':
+        this.adminControl.loadNotifications().subscribe();
+        break;
+      case 'stocks':
+      case 'pos':
+        this.loadStocksAndPosState();
+        break;
+      case 'settings':
+        this.syncBusinessConfigDraft();
+        break;
+      case 'honor_board':
+        if (!this.honorBoardData && !this.isLoadingHonorBoard) {
+          this.isLoadingHonorBoard = true;
+          this.api.getHonorBoard().subscribe({
+            next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; },
+            error: () => { this.isLoadingHonorBoard = false; }
+          });
+        }
+        break;
+    }
+  }
+
+  private syncInitialOrderDeps(): void {
+    this.ensureCurrentViewAllowed();
+    this.selectPublicGeneralCustomer();
   }
 
   get orders(): AdminOrder[] {
@@ -706,6 +789,7 @@ export class AdminComponent implements OnInit {
       { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
       { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+      { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
       { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
       { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
     ];
@@ -762,6 +846,7 @@ export class AdminComponent implements OnInit {
       { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
       { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+      { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
       { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
       { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
     ];
@@ -791,6 +876,9 @@ export class AdminComponent implements OnInit {
     }
     if (this.currentView === 'stats') {
       return 'Estadisticas';
+    }
+    if (this.currentView === 'honor_board') {
+      return 'Cuadro de Honor';
     }
     if (this.currentView === 'notifications') {
       return 'Notificaciones';
@@ -1031,6 +1119,18 @@ export class AdminComponent implements OnInit {
     return this.linkedPosStocks.length > 0;
   }
 
+  /** Pedidos de pickup pendientes donde el cliente pagará en sucursal. */
+  get pendingPickupAtStoreOrders(): AdminOrder[] {
+    const stockId = this.currentPosStock?.id;
+    return this.orders.filter(
+      (o) =>
+        o.deliveryType === 'pickup' &&
+        (o as AdminOrder & { pickupPaymentMethod?: string }).pickupPaymentMethod === 'at_store' &&
+        o.status === 'pending' &&
+        (!stockId || o.pickupStockId === stockId)
+    );
+  }
+
   get currentPosStock(): AdminStock | null {
     return this.linkedPosStocks.find((stock) => stock.id === this.posForm.stockId) ?? this.linkedPosStocks[0] ?? null;
   }
@@ -1249,7 +1349,7 @@ export class AdminComponent implements OnInit {
   }
 
   private getFirstAllowedView(): AdminViewId {
-    const ordered: AdminViewId[] = ['orders', 'customers', 'employees', 'products', 'stocks', 'campaigns', 'pos', 'stats', 'notifications', 'settings'];
+    const ordered: AdminViewId[] = ['orders', 'customers', 'employees', 'products', 'stocks', 'campaigns', 'pos', 'stats', 'honor_board', 'notifications', 'settings'];
     return ordered.find((view) => this.canAccessView(view)) ?? 'orders';
   }
 
@@ -1517,7 +1617,7 @@ export class AdminComponent implements OnInit {
   }
 
   get isStructureFormValid(): boolean {
-    return Boolean(this.structureForm.name.trim() && this.structureForm.email.trim());
+    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim() && this.structureForm.apellidoMaterno.trim() && this.structureForm.email.trim());
   }
 
   get isProductFormValid(): boolean {
@@ -1669,7 +1769,69 @@ export class AdminComponent implements OnInit {
 
   downloadCommissionsReport(): void {
     const prevMonthKey = this.getPrevMonthKey();
-    const rows = this.customers
+    const commissionLevels = this.businessConfig?.rewards?.commissionLevels ?? [];
+
+    // --- helpers ---
+    const prevDate = (() => {
+      const [y, m] = prevMonthKey.split('-').map(Number);
+      return new Date(y, (m as number) - 1, 1);
+    })();
+    const spendByName = this.getMonthlySpendByCustomerName(prevDate);
+    const memberSpend = (name: string): number =>
+      spendByName.get(this.normalizeCustomerKey(name)) ?? 0;
+
+    const referralMap = this.buildReferralMap(this.customers);
+    const customerById = new Map(this.customers.map((c) => [c.id, c]));
+
+    // Build tree levels for a given leader (L1, L2, L3)
+    const buildTree = (leaderId: number): Array<{ member: AdminCustomer; treeLevel: number }> => {
+      const result: Array<{ member: AdminCustomer; treeLevel: number }> = [];
+      const l1 = referralMap.get(leaderId) ?? [];
+      for (const m1 of l1) {
+        result.push({ member: m1, treeLevel: 1 });
+        const l2 = referralMap.get(m1.id) ?? [];
+        for (const m2 of l2) {
+          result.push({ member: m2, treeLevel: 2 });
+          const l3 = referralMap.get(m2.id) ?? [];
+          for (const m3 of l3) {
+            result.push({ member: m3, treeLevel: 3 });
+          }
+        }
+      }
+      return result;
+    };
+
+    // Determine qualification for each commission level
+    const checkQualification = (
+      leader: AdminCustomer,
+      treeMembers: Array<{ member: AdminCustomer; treeLevel: number }>,
+      levelIndex: number
+    ): { qualified: boolean; reason: string } => {
+      const lvl = commissionLevels[levelIndex];
+      if (!lvl) return { qualified: false, reason: 'Nivel no configurado' };
+
+      const leaderSpend = memberSpend(leader.name);
+      const l1Members = treeMembers.filter((e) => e.treeLevel === 1);
+      const activeL1 = l1Members.filter((e) => memberSpend(e.member.name) >= (lvl.minIndividualPurchase || 0));
+      const groupSpend = leaderSpend + treeMembers.reduce((s, e) => s + memberSpend(e.member.name), 0);
+
+      const reasons: string[] = [];
+      if (lvl.minIndividualPurchase > 0 && leaderSpend < lvl.minIndividualPurchase) {
+        reasons.push(`compra propia $${leaderSpend.toFixed(2)} < mín $${lvl.minIndividualPurchase}`);
+      }
+      if (lvl.minActiveUsers > 0 && activeL1.length < lvl.minActiveUsers) {
+        reasons.push(`${activeL1.length} miembros L1 activos < mín ${lvl.minActiveUsers}`);
+      }
+      if (lvl.minGroupPurchase > 0 && groupSpend < lvl.minGroupPurchase) {
+        reasons.push(`volumen grupal $${groupSpend.toFixed(2)} < mín $${lvl.minGroupPurchase}`);
+      }
+      return reasons.length === 0
+        ? { qualified: true, reason: '' }
+        : { qualified: false, reason: reasons.join('; ') };
+    };
+
+    // --- Sheet 1: Summary (existing behaviour, all customers) ---
+    const summaryRows = this.customers
       .filter((c) => (c.commissionsPrevMonth ?? 0) > 0 || c.commissionsPrevStatus === 'pending')
       .sort((a, b) => {
         if (a.commissionsPrevStatus === 'pending' && b.commissionsPrevStatus !== 'pending') return -1;
@@ -1687,16 +1849,140 @@ export class AdminComponent implements OnInit {
         'CLABE': c.clabeInterbancaria || ''
       }));
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-
-    // Column widths
-    ws['!cols'] = [
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    wsSummary['!cols'] = [
       { wch: 28 }, { wch: 30 }, { wch: 8 }, { wch: 12 },
       { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 22 }
     ];
 
+    // --- Sheet 2: Per-customer tree breakdown ---
+    type DesgloceRow = {
+      'Líder': string;
+      'Email líder': string;
+      'CLABE líder': string;
+      'Comisión registrada': number | string;
+      'Estado pago': string;
+      'Miembro del árbol': string;
+      'Nivel en árbol': string;
+      'Compra del miembro ($)': number;
+      'Tasa comisión (%)': number;
+      'Comisión ganada ($)': number;
+      'Comisión perdida ($)': number;
+      'Motivo de pérdida': string;
+    };
+
+    const desgloceRows: DesgloceRow[] = [];
+
+    // Include all customers that have any tree OR any commissions
+    const leadersToInclude = this.customers.filter((c) => {
+      const hasTree = (referralMap.get(c.id) ?? []).length > 0;
+      const hasCommissions = (c.commissionsPrevMonth ?? 0) > 0 || c.commissionsPrevStatus === 'pending';
+      return hasTree || hasCommissions;
+    });
+
+    for (const leader of leadersToInclude) {
+      const treeMembers = buildTree(leader.id);
+
+      if (treeMembers.length === 0) {
+        // No tree — still show as a row with no breakdown
+        desgloceRows.push({
+          'Líder': leader.name,
+          'Email líder': leader.email,
+          'CLABE líder': leader.clabeInterbancaria || '',
+          'Comisión registrada': leader.commissionsPrevMonth ?? 0,
+          'Estado pago': this.commissionStatusLabel(leader.commissionsPrevStatus),
+          'Miembro del árbol': '(sin red)',
+          'Nivel en árbol': '',
+          'Compra del miembro ($)': 0,
+          'Tasa comisión (%)': 0,
+          'Comisión ganada ($)': 0,
+          'Comisión perdida ($)': 0,
+          'Motivo de pérdida': ''
+        });
+        continue;
+      }
+
+      // Pre-compute qualification per commission level
+      const qualByLevel: Array<{ qualified: boolean; reason: string }> = commissionLevels.map((_, idx) =>
+        checkQualification(leader, treeMembers, idx)
+      );
+
+      let firstRowForLeader = true;
+      for (const { member, treeLevel } of treeMembers) {
+        const levelIndex = treeLevel - 1;
+        const lvl = commissionLevels[levelIndex];
+        const rate = lvl ? Number(lvl.rate ?? 0) : 0;
+        const ratePercent = this.roundMoney(rate * 100);
+        const spend = memberSpend(member.name);
+        const potential = this.roundMoney(spend * rate);
+
+        const qual = qualByLevel[levelIndex] ?? { qualified: false, reason: 'Nivel no configurado' };
+        const earned = qual.qualified ? potential : 0;
+        const lost = qual.qualified ? 0 : potential;
+
+        desgloceRows.push({
+          'Líder': firstRowForLeader ? leader.name : '',
+          'Email líder': firstRowForLeader ? leader.email : '',
+          'CLABE líder': firstRowForLeader ? (leader.clabeInterbancaria || '') : '',
+          'Comisión registrada': firstRowForLeader ? (leader.commissionsPrevMonth ?? 0) : '',
+          'Estado pago': firstRowForLeader ? this.commissionStatusLabel(leader.commissionsPrevStatus) : '',
+          'Miembro del árbol': member.name,
+          'Nivel en árbol': `L${treeLevel}`,
+          'Compra del miembro ($)': spend,
+          'Tasa comisión (%)': ratePercent,
+          'Comisión ganada ($)': earned,
+          'Comisión perdida ($)': lost,
+          'Motivo de pérdida': qual.qualified ? '' : qual.reason
+        });
+        firstRowForLeader = false;
+      }
+
+      // Totals row per leader
+      const totalEarned = this.roundMoney(
+        treeMembers.reduce((s, { member, treeLevel }) => {
+          const idx = treeLevel - 1;
+          const rate = commissionLevels[idx] ? Number(commissionLevels[idx].rate ?? 0) : 0;
+          return s + ((qualByLevel[idx]?.qualified ? memberSpend(member.name) * rate : 0));
+        }, 0)
+      );
+      const totalLost = this.roundMoney(
+        treeMembers.reduce((s, { member, treeLevel }) => {
+          const idx = treeLevel - 1;
+          const rate = commissionLevels[idx] ? Number(commissionLevels[idx].rate ?? 0) : 0;
+          return s + ((!qualByLevel[idx]?.qualified ? memberSpend(member.name) * rate : 0));
+        }, 0)
+      );
+      desgloceRows.push({
+        'Líder': '',
+        'Email líder': '',
+        'CLABE líder': '',
+        'Comisión registrada': '',
+        'Estado pago': '',
+        'Miembro del árbol': 'TOTAL',
+        'Nivel en árbol': '',
+        'Compra del miembro ($)': treeMembers.reduce((s, { member }) => s + memberSpend(member.name), 0),
+        'Tasa comisión (%)': 0,
+        'Comisión ganada ($)': totalEarned,
+        'Comisión perdida ($)': totalLost,
+        'Motivo de pérdida': ''
+      });
+      // Blank separator between leaders
+      desgloceRows.push({
+        'Líder': '', 'Email líder': '', 'CLABE líder': '', 'Comisión registrada': '', 'Estado pago': '',
+        'Miembro del árbol': '', 'Nivel en árbol': '', 'Compra del miembro ($)': 0,
+        'Tasa comisión (%)': 0, 'Comisión ganada ($)': 0, 'Comisión perdida ($)': 0, 'Motivo de pérdida': ''
+      });
+    }
+
+    const wsDesgloce = XLSX.utils.json_to_sheet(desgloceRows);
+    wsDesgloce['!cols'] = [
+      { wch: 28 }, { wch: 30 }, { wch: 22 }, { wch: 22 }, { wch: 18 },
+      { wch: 28 }, { wch: 14 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 45 }
+    ];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Comisiones');
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
+    XLSX.utils.book_append_sheet(wb, wsDesgloce, 'Desglose por árbol');
     XLSX.writeFile(wb, `comisiones-${prevMonthKey}.xlsx`);
   }
 
@@ -1745,13 +2031,7 @@ export class AdminComponent implements OnInit {
     this.productPage = 0; this.productSearch = '';
     this.employeePage = 0; this.employeeSearch = '';
     this.notificationPage = 0; this.notificationSearch = '';
-    if (view === 'stocks' || view === 'pos') {
-      this.loadStocksAndPosState();
-      return;
-    }
-    if (view === 'settings') {
-      this.syncBusinessConfigDraft();
-    }
+    this.loadViewData(view);
   }
 
   private loadStocksAndPosState(): void {
@@ -1847,6 +2127,9 @@ export class AdminComponent implements OnInit {
     this.currentOrderStatus = status;
     this.orderPage = 0;
     this.orderSearch = '';
+    if (!this.adminControl.hasLoadedOrders(status)) {
+      this.adminControl.loadOrders(status).subscribe();
+    }
   }
 
   pageRange(totalPages: number, current: number): number[] {
@@ -1992,6 +2275,7 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
+        next: () => this.showSnackbar('Comprobante cargado.'),
         error: () => {
           this.receiptError = 'No se pudo cargar el comprobante.';
         }
@@ -2036,7 +2320,9 @@ export class AdminComponent implements OnInit {
           this.requestViewUpdate();
         })
       )
-      .subscribe();
+      .subscribe({
+        next: () => this.showSnackbar('Orden actualizada.')
+      });
   }
 
   openShippingModal(order: AdminOrder): void {
@@ -2110,6 +2396,7 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.closeShippingModal();
+          this.showSnackbar('Envio registrado.');
         },
         error: (error: unknown) => {
           this.shippingError = this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.');
@@ -2172,6 +2459,7 @@ export class AdminComponent implements OnInit {
         next: () => {
           this.closeShippingModal();
           this.requestViewUpdate();
+          this.showSnackbar('Envio registrado.');
         },
         error: (error: unknown) => {
           this.setShippingError(this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.'));
@@ -2227,7 +2515,9 @@ export class AdminComponent implements OnInit {
           this.requestViewUpdate();
         })
       )
-      .subscribe();
+      .subscribe({
+        next: () => this.showSnackbar('Orden entregada en sucursal.')
+      });
   }
 
   updateNewOrderCustomer(customerId: number): void {
@@ -2345,7 +2635,9 @@ export class AdminComponent implements OnInit {
 
   resetStructureForm(): void {
     this.structureForm = {
-      name: '',
+      firstName: '',
+      apellidoPaterno: '',
+      apellidoMaterno: '',
       phone: '',
       email: '',
       address: '',
@@ -2362,7 +2654,7 @@ export class AdminComponent implements OnInit {
   }
 
   updateStructureField(
-    field: 'name' | 'phone' | 'email' | 'address' | 'city',
+    field: 'firstName' | 'apellidoPaterno' | 'apellidoMaterno' | 'phone' | 'email' | 'address' | 'city',
     value: string
   ): void {
     this.structureForm = {
@@ -2375,8 +2667,9 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('customer_add')) {
       return;
     }
+    const fullName = `${this.structureForm.firstName.trim()} ${this.structureForm.apellidoPaterno.trim()} ${this.structureForm.apellidoMaterno.trim()}`.trim();
     const payload: CreateStructureCustomerPayload = {
-      name: this.structureForm.name.trim(),
+      name: fullName,
       email: this.structureForm.email.trim(),
       phone: this.structureForm.phone?.trim() || undefined,
       address: this.structureForm.address?.trim() || undefined,
@@ -2389,6 +2682,7 @@ export class AdminComponent implements OnInit {
         this.isSavingStructure = false;
         this.adminControl.load().subscribe();
         this.closeModals();
+        this.showSnackbar('Miembro creado.');
       },
       error: () => {
         this.isSavingStructure = false;
@@ -2401,6 +2695,93 @@ export class AdminComponent implements OnInit {
     this.selectedCustomer = selected;
     this.isChangingSponsor = false;
     this.syncSelectedCustomerAccessDraft();
+    this.resetCustomerDocumentDraft();
+    this.customerDocumentMessage = '';
+    this.customerDocumentError = '';
+    this.selectedCustomerProfile = null;
+    if (selected) {
+      this.loadSelectedCustomerProfile(selected.id);
+    }
+  }
+
+  onCustomerDocumentFileSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0] ?? null;
+    this.customerDocumentError = '';
+    this.customerDocumentMessage = '';
+    this.isCustomerDocumentMessageError = false;
+
+    if (!file) {
+      this.customerDocumentFile = null;
+      this.customerDocumentName = '';
+      return;
+    }
+    if (!this.isSupportedCustomerDocumentFile(file)) {
+      this.customerDocumentFile = null;
+      this.customerDocumentName = '';
+      this.customerDocumentError = 'Solo se permiten PDF, PNG o JPG.';
+      target.value = '';
+      return;
+    }
+
+    this.customerDocumentFile = file;
+    this.customerDocumentName = file.name.replace(/\.[^.]+$/, '');
+    target.value = '';
+  }
+
+  uploadCustomerDocument(): void {
+    if (!this.selectedCustomer || !this.customerDocumentFile || this.isUploadingCustomerDocument) {
+      this.customerDocumentError = 'Selecciona un documento valido.';
+      return;
+    }
+
+    const file = this.customerDocumentFile;
+    const customerId = String(this.selectedCustomer.id);
+    const name = (this.customerDocumentName || file.name.replace(/\.[^.]+$/, '')).trim();
+    if (!name) {
+      this.customerDocumentError = 'Ingresa un nombre para el documento.';
+      return;
+    }
+
+    this.customerDocumentError = '';
+    this.customerDocumentMessage = '';
+    this.isCustomerDocumentMessageError = false;
+    this.isUploadingCustomerDocument = true;
+    this.createAssetFromFile(file)
+      .pipe(
+        switchMap((assetResponse) => {
+          const assetId = assetResponse.asset.assetId ?? '';
+          if (!assetId) {
+            throw new Error('No se pudo crear el asset del documento.');
+          }
+          return this.adminControl.addCustomerDocument(customerId, { assetId, name });
+        }),
+        finalize(() => {
+          this.isUploadingCustomerDocument = false;
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: (profile) => {
+          this.selectedCustomerProfile = profile;
+          this.resetCustomerDocumentDraft();
+          this.customerDocumentMessage = 'Documento asociado correctamente al cliente.';
+          this.isCustomerDocumentMessageError = false;
+          this.requestViewUpdate();
+        },
+        error: () => {
+          this.customerDocumentError = 'No se pudo cargar el documento.';
+          this.customerDocumentMessage = '';
+          this.isCustomerDocumentMessageError = true;
+        }
+      });
+  }
+
+  openCustomerDocument(doc: CustomerDocument): void {
+    if (!doc.url) {
+      return;
+    }
+    window.open(doc.url, '_blank', 'noopener,noreferrer');
   }
 
   updateSelectedCustomerAdminAccess(enabled: boolean): void {
@@ -2460,6 +2841,7 @@ export class AdminComponent implements OnInit {
           this.selectedCustomer = { ...this.selectedCustomer, ...updated };
           this.isChangingSponsor = false;
           this.syncSelectedCustomerAccessDraft();
+          this.showSnackbar('Posicion actualizada.');
         }
       });
   }
@@ -2489,6 +2871,7 @@ export class AdminComponent implements OnInit {
         next: (updated) => {
           this.selectedCustomer = { ...this.selectedCustomer, ...updated };
           this.syncSelectedCustomerAccessDraft();
+          this.showSnackbar('Permisos guardados.');
         }
       });
   }
@@ -2527,6 +2910,7 @@ export class AdminComponent implements OnInit {
         next: (updated) => {
           this.selectedEmployee = { ...this.selectedEmployee!, ...updated };
           this.syncSelectedEmployeePrivilegeDraft();
+          this.showSnackbar('Permisos del empleado guardados.');
         }
       });
   }
@@ -2554,6 +2938,7 @@ export class AdminComponent implements OnInit {
           this.employeeTempPassword = emp.tempPassword ?? '';
           this.employeeMessage = `Empleado creado: ${emp.name}.`;
           this.employeeMessageIsError = false;
+          this.showSnackbar(`Empleado creado: ${emp.name}.`);
           this.employeeForm = { name: '', email: '', phone: '' };
           this.selectedEmployee = emp;
           this.syncSelectedEmployeePrivilegeDraft();
@@ -2585,6 +2970,44 @@ export class AdminComponent implements OnInit {
       this.selectedCustomerSponsorSearch = 'FindingU';
     }
     this.refreshSelectedCustomerSponsorState();
+  }
+
+  private loadSelectedCustomerProfile(customerId: number): void {
+    this.isLoadingSelectedCustomerProfile = true;
+    this.adminControl.getCustomer(String(customerId))
+      .pipe(
+        finalize(() => {
+          this.isLoadingSelectedCustomerProfile = false;
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: (profile) => {
+          if (String(this.selectedCustomer?.id ?? '') !== String(customerId)) {
+            return;
+          }
+          this.selectedCustomerProfile = profile;
+        },
+        error: () => {
+          if (String(this.selectedCustomer?.id ?? '') !== String(customerId)) {
+            return;
+          }
+          this.selectedCustomerProfile = null;
+          this.customerDocumentMessage = '';
+          this.customerDocumentError = 'No se pudieron cargar los documentos del cliente.';
+          this.isCustomerDocumentMessageError = true;
+        }
+      });
+  }
+
+  private resetCustomerDocumentDraft(): void {
+    this.customerDocumentFile = null;
+    this.customerDocumentName = '';
+  }
+
+  private isSupportedCustomerDocumentFile(file: File): boolean {
+    const type = String(file.type || '').toLowerCase();
+    return type === 'application/pdf' || type === 'image/png' || type === 'image/jpeg';
   }
 
   syncSelectedEmployeePrivilegeDraft(): void {
@@ -2640,6 +3063,9 @@ export class AdminComponent implements OnInit {
       name: product.name,
       price: String(product.price),
       active: product.active !== false,
+      inOnlineStore: product.inOnlineStore !== false,
+      inPOS: product.inPOS !== false,
+      commissionable: product.commissionable !== false,
       sku: product.sku ?? '',
       hook: product.hook ?? '',
       description: product.description ?? '',
@@ -2652,7 +3078,8 @@ export class AdminComponent implements OnInit {
         name: v.name,
         price: v.price != null ? String(v.price) : '',
         sku: v.sku ?? '',
-        active: v.active !== false
+        active: v.active !== false,
+        img: v.img ?? ''
       })),
       categoryIds: product.categoryIds ?? [],
       weightKg: product.weightKg ?? '',
@@ -2663,6 +3090,9 @@ export class AdminComponent implements OnInit {
     this.resetProductAssets();
     this.productExistingImages = product.images ?? [];
     this.applyProductImagePreviews(product.images);
+    (product.variants ?? []).forEach((v) => {
+      if (v.img) this.variantImagePreviews.set(v.id, v.img);
+    });
     this.announceProductMessage(`Editando ${product.name}.`);
   }
 
@@ -2688,7 +3118,7 @@ export class AdminComponent implements OnInit {
       ...this.productForm,
       variants: [
         ...this.productForm.variants,
-        { id: `v-${Date.now()}`, name: '', price: '', sku: '', active: true }
+        { id: `v-${Date.now()}`, name: '', price: '', sku: '', active: true, img: '' }
       ]
     };
   }
@@ -2699,12 +3129,14 @@ export class AdminComponent implements OnInit {
     this.productForm = { ...this.productForm, variants };
   }
 
-  updateProductVariant(index: number, field: 'name' | 'price' | 'sku', value: string): void {
+  updateProductVariant(index: number, field: 'name' | 'price' | 'sku' | 'img', value: string): void {
     const variants = this.productForm.variants.map((v, i) =>
       i === index ? { ...v, [field]: value } : v
     );
     this.productForm = { ...this.productForm, variants };
   }
+
+  trackByIndex(index: number): number { return index; }
 
   trackByVariantId(index: number, v: any): string {
     return v.id;
@@ -2831,13 +3263,19 @@ export class AdminComponent implements OnInit {
     this.isSavingProduct = true;
     this.uploadProductImages()
       .pipe(
-        switchMap((uploads) => {
+        switchMap((uploads) =>
+          this.uploadVariantImages().pipe(map((varImgMap) => ({ uploads, varImgMap })))
+        ),
+        switchMap(({ uploads, varImgMap }) => {
           const payload = {
             id: this.productForm.id,
             productId: this.productForm.id ?? undefined,
             name: this.productForm.name.trim(),
             price: Number(this.productForm.price),
             active: this.productForm.active,
+            inOnlineStore: this.productForm.inOnlineStore,
+            inPOS: this.productForm.inPOS,
+            commissionable: this.productForm.commissionable,
             sku: this.productForm.sku.trim() || undefined,
             hook: this.productForm.hook.trim() || undefined,
             description: this.productForm.description || undefined,
@@ -2853,7 +3291,8 @@ export class AdminComponent implements OnInit {
                 name: v.name.trim(),
                 price: v.price ? Number(v.price) : undefined,
                 sku: v.sku.trim() || undefined,
-                active: v.active
+                active: v.active,
+                img: varImgMap.get(v.id) || v.img || undefined
               })),
             categoryIds: this.productForm.categoryIds,
             weightKg: this.productForm.weightKg !== '' ? Number(this.productForm.weightKg) : undefined,
@@ -2876,13 +3315,13 @@ export class AdminComponent implements OnInit {
         next: ({ product, uploads }) => {
           const hasFailures = uploads.some((upload) => !upload.success);
           if (hasFailures) {
-            this.announceProductMessage(
-              `Producto guardado: ${product.name}. Algunas imagenes no se pudieron subir.`
-            );
+            const msg = `Producto guardado: ${product.name}. Algunas imagenes no se pudieron subir.`;
+            this.announceProductMessage(msg);
+            this.showSnackbar(msg, 'error');
           } else {
-            this.announceProductMessage(
-              this.productForm.id ? `Producto actualizado: ${product.name}.` : `Producto creado: ${product.name}.`
-            );
+            const msg = this.productForm.id ? `Producto actualizado: ${product.name}.` : `Producto creado: ${product.name}.`;
+            this.announceProductMessage(msg);
+            this.showSnackbar(msg);
           }
           this.adminControl.load().subscribe();
           this.resetProductForm();
@@ -2941,9 +3380,11 @@ export class AdminComponent implements OnInit {
       )
       .subscribe({
         next: (notification) => {
-          this.notificationMessage = this.notificationForm.id
+          const msg = this.notificationForm.id
             ? `Notificacion actualizada: ${notification.title}.`
             : `Notificacion creada: ${notification.title}.`;
+          this.notificationMessage = msg;
+          this.showSnackbar(msg);
           this.resetNotificationForm();
         },
         error: () => {
@@ -2962,6 +3403,9 @@ export class AdminComponent implements OnInit {
       name: '',
       price: '',
       active: true,
+      inOnlineStore: true,
+      inPOS: true,
+      commissionable: true,
       sku: '',
       hook: '',
       description: '',
@@ -2978,6 +3422,16 @@ export class AdminComponent implements OnInit {
     };
     this.resetProductAssets();
     this.productExistingImages = [];
+  }
+
+  showSnackbar(message: string, tone: 'success' | 'error' = 'success'): void {
+    if (this.snackbarTimeout) {
+      window.clearTimeout(this.snackbarTimeout);
+    }
+    this.snackbar = { message, tone, visible: true };
+    this.snackbarTimeout = window.setTimeout(() => {
+      this.snackbar = { ...this.snackbar, visible: false };
+    }, 3500);
   }
 
   private announceProductMessage(message: string): void {
@@ -3091,6 +3545,31 @@ export class AdminComponent implements OnInit {
     this.productImageUploads.set(section, false);
   }
 
+  uploadVariantImage(event: Event, variantId: string): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+    const previewUrl = URL.createObjectURL(file);
+    const existing = this.variantImagePreviews.get(variantId);
+    if (existing?.startsWith('blob:')) URL.revokeObjectURL(existing);
+    this.variantImagePreviews.set(variantId, previewUrl);
+    this.variantImageFiles.set(variantId, file);
+  }
+
+  private uploadVariantImages(): Observable<Map<string, string>> {
+    const entries = Array.from(this.variantImageFiles.entries());
+    if (entries.length === 0) return of(new Map<string, string>());
+    const uploads = entries.map(([variantId, file]) =>
+      this.createAssetFromFile(file).pipe(
+        map((asset) => ({ variantId, url: asset.asset?.url ?? '' })),
+        catchError(() => of({ variantId, url: '' }))
+      )
+    );
+    return forkJoin(uploads).pipe(
+      map((results) => new Map(results.filter((r) => r.url).map((r) => [r.variantId, r.url])))
+    );
+  }
+
   private setProductImagePreview(section: CreateProductAssetPayload['section'], file: File): void {
     const previewUrl = URL.createObjectURL(file);
     const currentUrl = this.productImagePreviews.get(section);
@@ -3104,11 +3583,14 @@ export class AdminComponent implements OnInit {
     this.productImageFiles.clear();
     this.productImageUploads.clear();
     this.productImagePreviews.forEach((value) => {
-      if (value.startsWith('blob:')) {
-        URL.revokeObjectURL(value);
-      }
+      if (value.startsWith('blob:')) URL.revokeObjectURL(value);
     });
     this.productImagePreviews.clear();
+    this.variantImageFiles.clear();
+    this.variantImagePreviews.forEach((value) => {
+      if (value.startsWith('blob:')) URL.revokeObjectURL(value);
+    });
+    this.variantImagePreviews.clear();
   }
 
   private applyProductImagePreviews(images?: AdminProduct['images']): void {
@@ -3238,6 +3720,7 @@ export class AdminComponent implements OnInit {
         this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false, allowPickup: false };
         this.selectedStockId = stock.id;
         this.loadStocksAndPosState();
+        this.showSnackbar(`Stock creado: ${stock.name}.`);
       }
     });
   }
@@ -3262,7 +3745,7 @@ export class AdminComponent implements OnInit {
     }
     this.adminControl
       .updateStock(stock.id, { linkedUserIds: [...this.stockUserLinkDraft] })
-      .subscribe({ next: () => this.loadStocksAndPosState() });
+      .subscribe({ next: () => { this.loadStocksAndPosState(); this.showSnackbar('Usuarios vinculados guardados.'); } });
   }
 
   saveStockAllowPickup(stockId: string, value: boolean): void {
@@ -3313,6 +3796,7 @@ export class AdminComponent implements OnInit {
         this.setStockFeedback('Entrada de inventario registrada.', 'success');
         this.closeStockEntryModal();
         this.loadStocksAndPosState();
+        this.showSnackbar('Entrada de inventario registrada.');
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.setStockFeedback(
@@ -3458,6 +3942,7 @@ export class AdminComponent implements OnInit {
           this.setStockFeedback('Transferencia creada.', 'success');
           this.stockTransferForm.lines = [{ productId: this.products[0]?.id ?? null, qty: 1 }];
           this.loadStocksAndPosState();
+          this.showSnackbar('Transferencia creada.');
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.setStockFeedback(
@@ -3493,6 +3978,7 @@ export class AdminComponent implements OnInit {
         next: () => {
           this.setStockFeedback('Transferencia recibida.', 'success');
           this.loadStocksAndPosState();
+          this.showSnackbar('Transferencia recibida.');
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.setStockFeedback(
@@ -3552,6 +4038,7 @@ export class AdminComponent implements OnInit {
         this.stockDamageForm.reason = '';
         this.closeDamageModal();
         this.loadStocksAndPosState();
+        this.showSnackbar('Dano registrado.');
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.setStockFeedback(
@@ -3613,7 +4100,9 @@ export class AdminComponent implements OnInit {
     if (!stockId) {
       return [];
     }
-    return this.products.filter((product) => product.active && this.stockQty(stockId, product.id) > 0);
+    return this.products.filter(
+      (product) => product.active && product.inPOS !== false && this.stockQty(stockId, product.id) > 0
+    );
   }
 
   stockQty(stockId: string, productId: number): number {
@@ -3718,6 +4207,7 @@ export class AdminComponent implements OnInit {
           this.posForm.status = 'delivered';
           this.selectPublicGeneralCustomer();
           this.setPosFeedback('Venta registrada en caja.', 'success');
+          this.showSnackbar('Venta registrada en caja.');
           this.adminControl.load().subscribe({
             next: () => this.loadStocksAndPosState(),
             error: () => this.loadStocksAndPosState()
@@ -3752,6 +4242,7 @@ export class AdminComponent implements OnInit {
             lastSaleAt: control.lastSaleAt
           };
           this.setPosFeedback('Corte de caja registrado.', 'success');
+          this.showSnackbar('Corte de caja registrado.');
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.setPosFeedback(error?.error?.message || error?.message || 'No se pudo registrar el corte.', 'error');
@@ -3995,6 +4486,165 @@ export class AdminComponent implements OnInit {
       .filter(Boolean);
   }
 
+  addCustomerDocumentType(): void {
+    const types = this.businessConfigDraft.customerDocumentTypes ?? [];
+    types.push({ key: `doc_${Date.now()}`, label: '', required: false });
+    this.businessConfigDraft.customerDocumentTypes = [...types];
+  }
+
+  removeCustomerDocumentType(index: number): void {
+    const types = [...(this.businessConfigDraft.customerDocumentTypes ?? [])];
+    types.splice(index, 1);
+    this.businessConfigDraft.customerDocumentTypes = types;
+  }
+
+  // ─── Bonus config helpers ────────────────────────────────────────────────────
+
+  get bonusConfig(): BonusConfig {
+    return this.businessConfigDraft.bonuses ?? this.getDefaultBonusConfig();
+  }
+
+  addRankThreshold(): void {
+    const cfg = this.bonusConfig;
+    cfg.rankThresholds = [...cfg.rankThresholds, { rank: '', vgMin: 0 }];
+    this.businessConfigDraft.bonuses = { ...cfg };
+  }
+
+  removeRankThreshold(index: number): void {
+    const cfg = this.bonusConfig;
+    const thresholds = [...cfg.rankThresholds];
+    thresholds.splice(index, 1);
+    this.businessConfigDraft.bonuses = { ...cfg, rankThresholds: thresholds };
+  }
+
+  addBonusRule(): void {
+    const cfg = this.bonusConfig;
+    const newRule: BonusRule = {
+      id: `rule_${Date.now()}`,
+      name: 'Nuevo Bono',
+      active: true,
+      conditions: [],
+      rewards: [],
+      cooldown: 'monthly'
+    };
+    this.businessConfigDraft.bonuses = { ...cfg, rules: [...cfg.rules, newRule] };
+  }
+
+  removeBonusRule(index: number): void {
+    const cfg = this.bonusConfig;
+    const rules = [...cfg.rules];
+    rules.splice(index, 1);
+    this.businessConfigDraft.bonuses = { ...cfg, rules };
+  }
+
+  addBonusCondition(ruleIndex: number): void {
+    const cfg = this.bonusConfig;
+    const rules = cfg.rules.map((r, i) =>
+      i === ruleIndex ? { ...r, conditions: [...r.conditions, { type: 'vg_min' as BonusConditionType, value: 0 }] } : r
+    );
+    this.businessConfigDraft.bonuses = { ...cfg, rules };
+  }
+
+  removeBonusCondition(ruleIndex: number, condIndex: number): void {
+    const cfg = this.bonusConfig;
+    const rules = cfg.rules.map((r, i) => {
+      if (i !== ruleIndex) return r;
+      const conditions = [...r.conditions];
+      conditions.splice(condIndex, 1);
+      return { ...r, conditions };
+    });
+    this.businessConfigDraft.bonuses = { ...cfg, rules };
+  }
+
+  addBonusReward(ruleIndex: number): void {
+    const cfg = this.bonusConfig;
+    const rules = cfg.rules.map((r, i) =>
+      i === ruleIndex ? { ...r, rewards: [...r.rewards, { type: 'cash_mxn' as BonusRewardType, amount: 0 }] } : r
+    );
+    this.businessConfigDraft.bonuses = { ...cfg, rules };
+  }
+
+  removeBonusReward(ruleIndex: number, rewIndex: number): void {
+    const cfg = this.bonusConfig;
+    const rules = cfg.rules.map((r, i) => {
+      if (i !== ruleIndex) return r;
+      const rewards = [...r.rewards];
+      rewards.splice(rewIndex, 1);
+      return { ...r, rewards };
+    });
+    this.businessConfigDraft.bonuses = { ...cfg, rules };
+  }
+
+  readonly bonusConditionTypeOptions: Array<{ value: BonusConditionType; label: string }> = [
+    { value: 'vg_min',            label: 'VG mínimo (VP)' },
+    { value: 'vp_min',            label: 'VP personal mínimo (VP)' },
+    { value: 'direct_vg_min',     label: 'VG de referidos directos (VP)' },
+    { value: 'consecutive_months', label: 'Meses consecutivos en rango' },
+    { value: 'direct_rank_count', label: 'Número de referidos directos con rango' },
+    { value: 'first_30_days',     label: 'Registro en los primeros 30 días' },
+    { value: 'first_time',        label: 'Primera vez que alcanza este bono' }
+  ];
+
+  readonly bonusRewardTypeOptions: Array<{ value: BonusRewardType; label: string }> = [
+    { value: 'cash_mxn',         label: 'Efectivo MXN (único)' },
+    { value: 'monthly_cash',     label: 'Efectivo MXN (mensual recurrente)' },
+    { value: 'item',             label: 'Artículo físico (TV, viaje…)' },
+    { value: 'annual_fund_pct',  label: '% del fondo anual acumulado' }
+  ];
+
+  readonly bonusCooldownOptions: Array<{ value: 'once' | 'monthly' | 'annual'; label: string }> = [
+    { value: 'once',    label: 'Una sola vez (de por vida)' },
+    { value: 'monthly', label: 'Una vez por mes' },
+    { value: 'annual',  label: 'Una vez por año' }
+  ];
+
+  conditionNeedsValue(type: BonusConditionType): boolean {
+    return ['vg_min', 'vp_min', 'direct_vg_min', 'consecutive_months', 'direct_rank_count'].includes(type);
+  }
+
+  conditionNeedsRank(type: BonusConditionType): boolean {
+    return type === 'direct_rank_count';
+  }
+
+  rewardNeedsAmount(type: BonusRewardType): boolean {
+    return type === 'cash_mxn' || type === 'monthly_cash';
+  }
+
+  rewardNeedsItem(type: BonusRewardType): boolean {
+    return type === 'item';
+  }
+
+  rewardNeedsPct(type: BonusRewardType): boolean {
+    return type === 'annual_fund_pct';
+  }
+
+  // ─── Honor Board helpers ─────────────────────────────────────────────────
+  get sortedHonorEntries(): HonorEntry[] {
+    const list = this.honorBoardSort === 'vp'
+      ? [...(this.honorBoardData?.byVp ?? [])]
+      : [...(this.honorBoardData?.byVg ?? [])];
+    if (this.honorBoardSort === 'alpha') {
+      list.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    }
+    return list;
+  }
+
+  honorPositionDeltaLabel(entry: HonorEntry): string {
+    if (!entry.prevPosition) return '';
+    const d = entry.prevPosition - entry.position;
+    if (d > 0) return `▲${d}`;
+    if (d < 0) return `▼${Math.abs(d)}`;
+    return '—';
+  }
+
+  honorPositionDeltaClass(entry: HonorEntry): string {
+    if (!entry.prevPosition) return 'text-gray-400';
+    const d = entry.prevPosition - entry.position;
+    if (d > 0) return 'text-green-600';
+    if (d < 0) return 'text-red-500';
+    return 'text-gray-400';
+  }
+
   saveBusinessConfig(): void {
     if (!this.hasPermission('config_manage')) {
       return;
@@ -4010,6 +4660,7 @@ export class AdminComponent implements OnInit {
         next: (config) => {
           this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
           this.businessConfigMessage = 'Configuracion guardada.';
+          this.showSnackbar('Configuracion guardada.');
         },
         error: () => {
           this.businessConfigMessage = 'No se pudo guardar la configuracion.';
@@ -4193,7 +4844,115 @@ export class AdminComponent implements OnInit {
         enabled: true,
         markup: 0,
         carriers: ['dhl', 'fedex']
-      }
+      },
+      customerDocumentTypes: [
+        { key: 'constancia', label: 'Constancia de situación fiscal', required: true },
+        { key: 'ine', label: 'INE (frente y reverso)', required: true },
+        { key: 'curp', label: 'CURP', required: true }
+      ],
+      bonuses: this.getDefaultBonusConfig()
+    };
+  }
+
+  private getDefaultBonusConfig(): BonusConfig {
+    return {
+      vpConfig: { mxnPerVp: 50, maxNetworkLevels: 5 },
+      rankThresholds: [
+        { rank: 'ORO', vgMin: 700 },
+        { rank: 'PLATINO', vgMin: 2000 },
+        { rank: 'DIAMANTE', vgMin: 6000 }
+      ],
+      rules: [
+        {
+          id: 'inicio_rapido',
+          name: 'Bono de Inicio Rápido',
+          active: true,
+          conditions: [
+            { type: 'first_30_days' },
+            { type: 'direct_vg_min', value: 600 }
+          ],
+          rewards: [{ type: 'cash_mxn', amount: 5000 }],
+          cooldown: 'once',
+          notes: 'Primeros 30 días: VG directos ≥ 600 VP → $5,000 MXN'
+        },
+        {
+          id: 'oro_smart_tv',
+          name: 'Bono ORO — Smart TV',
+          active: true,
+          rank: 'ORO',
+          conditions: [
+            { type: 'vg_min', value: 700 },
+            { type: 'consecutive_months', value: 2 }
+          ],
+          rewards: [{ type: 'item', itemLabel: 'Smart TV', triggerMonths: 2 }],
+          cooldown: 'once',
+          notes: '700 VG por 2 meses consecutivos'
+        },
+        {
+          id: 'oro_viaje',
+          name: 'Bono ORO — Viaje Nacional',
+          active: true,
+          rank: 'ORO',
+          conditions: [
+            { type: 'vg_min', value: 700 },
+            { type: 'consecutive_months', value: 3 }
+          ],
+          rewards: [{ type: 'item', itemLabel: 'Viaje nacional', triggerMonths: 3 }],
+          cooldown: 'once',
+          notes: '700 VG por 3 meses consecutivos'
+        },
+        {
+          id: 'platino_primera_vez',
+          name: 'Bono PLATINO — Primera Vez',
+          active: true,
+          rank: 'PLATINO',
+          conditions: [
+            { type: 'vg_min', value: 2000 },
+            { type: 'first_time' }
+          ],
+          rewards: [{ type: 'cash_mxn', amount: 10000 }],
+          cooldown: 'once',
+          notes: 'Bono único al alcanzar PLATINO por primera vez'
+        },
+        {
+          id: 'platino_apoyo_auto',
+          name: 'Bono PLATINO — Apoyo Mensual Auto',
+          active: true,
+          rank: 'PLATINO',
+          conditions: [
+            { type: 'vg_min', value: 2000 },
+            { type: 'consecutive_months', value: 4 }
+          ],
+          rewards: [{ type: 'monthly_cash', amount: 8000 }],
+          cooldown: 'monthly',
+          notes: 'Requiere 4 meses consecutivos en PLATINO'
+        },
+        {
+          id: 'diamante_platinos',
+          name: 'Bono DIAMANTE — Por Platinos Directos',
+          active: true,
+          rank: 'DIAMANTE',
+          conditions: [
+            { type: 'vg_min', value: 6000 },
+            { type: 'direct_rank_count', value: 3, rank: 'PLATINO' }
+          ],
+          rewards: [{ type: 'cash_mxn', amount: 25000 }],
+          cooldown: 'monthly',
+          notes: '$25,000 por cada 3 Platinos directos'
+        },
+        {
+          id: 'diamante_fondo_anual',
+          name: 'Bono DIAMANTE — Fondo Anual',
+          active: true,
+          rank: 'DIAMANTE',
+          conditions: [
+            { type: 'vg_min', value: 6000 }
+          ],
+          rewards: [{ type: 'annual_fund_pct', pct: 2 }],
+          cooldown: 'monthly',
+          notes: '2% mensual acumulado al fondo anual DIAMANTE'
+        }
+      ]
     };
   }
 

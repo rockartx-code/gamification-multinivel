@@ -9,6 +9,7 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
 import { UserDashboardData, DashboardCampaign, DashboardProduct } from '../../models/user-dashboard.model';
+import { ProductCategory } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { FeatureBadgeComponent } from '../../components/feature-badge/feature-badge.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -61,9 +62,13 @@ export class TiendaComponent implements OnInit {
   } | null = null;
 
   allProducts: DashboardProduct[] = [];
+  categories: ProductCategory[] = [];
+  selectedCategoryId = '';
 
   form = {
-    name: '',
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     email: '',
     phone: '',
     password: '',
@@ -115,10 +120,36 @@ export class TiendaComponent implements OnInit {
   get heroBadge(): string { return this.featuredProduct?.badge || this.defaultHero.badge; }
   get heroPrimaryCta(): string { return this.featuredProduct?.ctaPrimaryText || this.defaultHero.ctaPrimaryText; }
   get heroSecondaryCta(): string { return this.featuredProduct?.ctaSecondaryText || this.defaultHero.ctaSecondaryText; }
-  get heroImage(): string { return this.featuredProduct?.img || this.defaultHero.img; }
+  get heroImage(): string {
+    if (this.selectedVariantId) {
+      const variant = this.featuredVariants.find((v) => v.id === this.selectedVariantId);
+      if (variant?.img) return variant.img;
+    }
+    return this.featuredProduct?.img || this.defaultHero.img;
+  }
   get heroTags(): string[] { const t = this.featuredProduct?.tags ?? []; return t.length ? t : this.defaultHero.tags; }
   get heroPrice(): number { return this.activeVariantPrice; }
   get heroName(): string { return this.featuredProduct?.name || this.defaultHero.name; }
+
+  get availableCategories(): ProductCategory[] {
+    const usedIds = new Set(this.allProducts.flatMap((p) => p.categoryIds ?? []));
+    return this.categories.filter((c) => usedIds.has(c.id) && c.active !== false);
+  }
+
+  get filteredProducts(): DashboardProduct[] {
+    if (!this.selectedCategoryId) return this.allProducts;
+    return this.allProducts.filter((p) => (p.categoryIds ?? []).includes(this.selectedCategoryId));
+  }
+
+  selectCategory(id: string): void {
+    this.selectedCategoryId = this.selectedCategoryId === id ? '' : id;
+  }
+
+  selectProduct(product: DashboardProduct): void {
+    this.featuredProduct = this.mapProduct(product);
+    this.selectedVariantId = '';
+    document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   get featuredVariants() {
     const product = this.allProducts.find((p) => p.id === this.featuredProduct?.id);
@@ -165,7 +196,7 @@ export class TiendaComponent implements OnInit {
 
   createAccount(): void {
     if (this.isSubmitting) return;
-    if (!this.form.name || !this.form.email || !this.form.password) {
+    if (!this.form.firstName.trim() || !this.form.apellidoPaterno.trim() || !this.form.apellidoMaterno.trim() || !this.form.email || !this.form.password) {
       this.setFeedback('Completa los campos obligatorios.', 'error');
       return;
     }
@@ -173,8 +204,9 @@ export class TiendaComponent implements OnInit {
       this.setFeedback('Las contraseñas no coinciden.', 'error');
       return;
     }
+    const fullName = `${this.form.firstName.trim()} ${this.form.apellidoPaterno.trim()} ${this.form.apellidoMaterno.trim()}`.trim();
     const payload = {
-      name: this.form.name.trim(),
+      name: fullName,
       email: this.form.email.trim(),
       phone: this.form.phone.trim() || undefined,
       password: this.form.password,
@@ -186,10 +218,16 @@ export class TiendaComponent implements OnInit {
     this.api.createAccount(payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         this.isSubmitting = false;
+        if (response?.requiresEmailVerification) {
+          this.form = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', phone: '', password: '', confirmPassword: '' };
+          this.setFeedback('Solo falta un paso, confirma tu cuenta desde tu correo electronico.', 'success');
+          this.cdr.detectChanges();
+          return;
+        }
         if (response?.customer) {
           this.authService.setUserFromCreateAccount(response.customer);
         }
-        this.form = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
+        this.form = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', phone: '', password: '', confirmPassword: '' };
         this.setFeedback('', 'success');
         this.cdr.detectChanges();
         this.router.navigate(['/dashboard']);
@@ -212,7 +250,8 @@ export class TiendaComponent implements OnInit {
     this.api.getUserDashboardData().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.isLoading = false;
-        this.allProducts = data.products ?? [];
+        this.allProducts = (data.products ?? []).filter((p) => p.inOnlineStore !== false);
+        this.categories = data.categories ?? [];
         const queryId = this.productId.trim();
         const fromQuery = queryId ? this.pickFromQuery(data, queryId) : null;
         const defaultProduct = this.pickDefaultProduct(data);
@@ -246,7 +285,7 @@ export class TiendaComponent implements OnInit {
     return null;
   }
 
-  private mapProduct(p: DashboardProduct): TiendaComponent['featuredProduct'] {
+  mapProduct(p: DashboardProduct): TiendaComponent['featuredProduct'] {
     return {
       id: p.id,
       name: p.name,

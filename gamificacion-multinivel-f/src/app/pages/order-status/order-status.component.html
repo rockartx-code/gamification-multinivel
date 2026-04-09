@@ -193,6 +193,12 @@
                   <div class="mt-1 text-xs text-gray-500">
                     Tel: {{ order?.phone || '-' }}
                   </div>
+
+                  <!-- Detalles entrega -->
+                  <div *ngIf="order?.deliveryNotes" class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
+                    <span class="font-semibold">Detalles:</span> {{ order?.deliveryNotes }}
+                  </div>
                 </div>
               </div>
 
@@ -262,6 +268,53 @@
             <div *ngIf="checkoutError" class="mt-2 text-xs text-red-600">
               {{ checkoutError }}
             </div>
+          </div>
+        </div>
+
+        <!-- ── ACCIONES DE LA ORDEN ──────────────────────────────────── -->
+        <div *ngIf="order && !isLoading" class="mt-5 flex flex-wrap items-center gap-3">
+
+          <!-- Cancelar orden (solo si pagado) -->
+          <ng-container *ngIf="!cancelBlocked">
+            <ui-button
+              variant="ghost"
+              size="md"
+              [disabled]="!canCancel"
+              (pressed)="navigateToCancel()">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              Cancelar orden
+            </ui-button>
+          </ng-container>
+
+          <!-- Cancelar bloqueado - en proceso logístico -->
+          <div *ngIf="cancelBlocked && !canRequestReturn && order.status !== 'cancelled'"
+            class="flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2.5 text-xs text-gray-500">
+            <i class="fa-solid fa-lock text-gray-400" aria-hidden="true"></i>
+            Pedido en proceso logístico — solicita una devolución si aplica
+          </div>
+
+          <!-- Solicitar devolución (solo si entregado) -->
+          <ui-button
+            *ngIf="canRequestReturn"
+            variant="primary"
+            size="md"
+            (pressed)="navigateToReturn()">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+            Solicitar devolución
+          </ui-button>
+
+          <!-- Estado cancelado -->
+          <div *ngIf="order.status === 'cancelled'"
+            class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+            Orden cancelada — reembolso en proceso
+          </div>
+
+          <!-- Estado devolución -->
+          <div *ngIf="order.status === 'en_devolucion'"
+            class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+            Devolución en proceso de inspección
           </div>
         </div>
 

@@ -1,3 +1,28 @@
+export type AuthApiRole = 'admin' | 'cliente' | 'employee';
+
+export interface LoginResponseUser {
+  userId?: string | number;
+  name: string;
+  role: AuthApiRole;
+  canAccessAdmin?: boolean;
+  privileges?: Record<string, boolean>;
+  isSuperUser?: boolean;
+  discountPercent?: number;
+  discountActive?: boolean;
+  level?: string;
+}
+
+export interface LoginResponse {
+  /** JWT de sesión que se persiste en localStorage para Authorization Bearer. */
+  token?: string;
+  user?: LoginResponseUser;
+  id?: string | number;
+  name?: string;
+  role?: AuthApiRole;
+  message?: string;
+  Error?: string;
+}
+
 export interface CreateAccountPayload {
   name: string;
   email: string;
@@ -22,8 +47,11 @@ export interface CreateAccountCustomer {
 }
 
 export interface CreateAccountResponse {
-  customer: CreateAccountCustomer;
+  ok?: boolean;
+  customerId?: number | string;
+  customer?: CreateAccountCustomer;
   requiresEmailVerification?: boolean;
+  message?: string;
 }
 
 export interface VerifyEmailResponse {

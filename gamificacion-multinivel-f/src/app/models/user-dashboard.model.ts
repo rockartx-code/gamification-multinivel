@@ -1,5 +1,35 @@
 import { PortalNotification } from './portal-notification.model';
-import { ProductVariant } from './admin.model';
+import { BonusAward, CustomerShippingAddress, ProductCategory, ProductVariant } from './admin.model';
+
+export interface DashboardCustomerProfile {
+  id?: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  addresses: CustomerShippingAddress[];
+  defaultAddressId?: string;
+  shippingAddresses: CustomerShippingAddress[];
+  defaultShippingAddressId?: string;
+}
+
+export interface HonorEntry {
+  customerId: string;
+  name: string;
+  vp: number;
+  vg: number;
+  rank?: string;
+  position: number;
+  prevPosition?: number;
+}
+
+export interface HonorBoard {
+  monthKey: string;
+  byVg: HonorEntry[];
+  byVp: HonorEntry[];
+}
 
 export interface DashboardGoal {
   key: string;
@@ -13,6 +43,12 @@ export interface DashboardGoal {
   isCountGoal?: boolean;
   achieved?: boolean;
   locked?: boolean;
+  /** Unidad de medida para mostrar el progreso */
+  unit?: 'mxn' | 'vp' | 'count';
+  /** Rango de red al que corresponde esta meta (ORO, PLATINO, DIAMANTE…) */
+  rank?: string;
+  /** ID de la regla de bono asociada (si aplica) */
+  bonusRuleId?: string;
 }
 
 export interface DashboardProduct {
@@ -32,6 +68,9 @@ export interface DashboardProduct {
   heightCm?: number;
   variants?: ProductVariant[];
   categoryIds?: string[];
+  inOnlineStore?: boolean;
+  inPOS?: boolean;
+  commissionable?: boolean;
 }
 
 export interface NetworkMember {
@@ -96,6 +135,7 @@ export interface UserDashboardData {
   featured: FeaturedItem[];
   campaigns?: DashboardCampaign[];
   notifications?: PortalNotification[];
+  customer?: DashboardCustomerProfile | null;
   user?: {
     level?: string;
     discountPercent?: number;
@@ -119,6 +159,16 @@ export interface UserDashboardData {
   } | null;
   networkMembers: NetworkMember[];
   buyAgainIds: string[];
+  categories?: ProductCategory[];
+  honorBoard?: HonorBoard;
+  /** Volumen Personal del mes en puntos VP */
+  vp?: number;
+  /** Volumen de Grupo del mes en puntos VP (red hasta nivel 5) */
+  vg?: number;
+  /** Rango actual calculado (ORO, PLATINO, DIAMANTE…) */
+  rank?: string;
+  /** Bonos otorgados o pendientes este mes */
+  bonuses?: BonusAward[];
   commissions?: {
     monthKey: string;
     pendingTotal: number;
@@ -147,6 +197,40 @@ export interface UserDashboardData {
   } | null;
 }
 
+/** Respuesta de GET /catalog */
+export interface CatalogData {
+  products: DashboardProduct[];
+  productOfMonth: UserDashboardData['productOfMonth'];
+  featured?: FeaturedItem[];
+  campaigns?: DashboardCampaign[];
+  categories?: ProductCategory[];
+  config?: {
+    vpConfig?: { mxnPerVp: number; maxNetworkLevels: number };
+    rankThresholds?: Array<{ rank: string; vg: number }>;
+    discountTiers?: Array<{ min: number; max?: number; rate: number }>;
+  };
+}
+
+/** Respuesta de GET /dashboard (sin datos de catálogo) */
+export interface DashboardData {
+  isGuest?: boolean;
+  settings: DashboardSettings;
+  customer?: DashboardCustomerProfile | null;
+  user?: UserDashboardData['user'];
+  sponsor?: SponsorContact | null;
+  goals: DashboardGoal[];
+  featured?: FeaturedItem[];
+  campaigns?: DashboardCampaign[];
+  networkMembers: NetworkMember[];
+  buyAgainIds: string[];
+  commissions: UserDashboardData['commissions'];
+  notifications?: import('./portal-notification.model').PortalNotification[];
+  vp?: number;
+  vg?: number;
+  rank?: string;
+  bonuses?: BonusAward[];
+}
+
 export interface CommissionRequestPayload {
   customerId: number;
   clabe: string;
@@ -164,4 +248,5 @@ export interface CommissionReceiptPayload {
 export interface CustomerClabePayload {
   customerId: number;
   clabe: string;
+  bankInstitution?: string;
 }

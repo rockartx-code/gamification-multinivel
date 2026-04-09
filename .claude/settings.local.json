@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
-      "Bash(node -e \"require\\(''xlsx''\\); console.log\\(''OK''\\)\")"
+      "Bash(node -e \"require\\(''xlsx''\\); console.log\\(''OK''\\)\")",
+      "Bash(python:*)",
+      "Bash(grep:*)",
+      "Bash(node node_modules/.bin/tsc --noEmit)",
+      "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc.cmd --noEmit 2>&1\")"
     ]
   }
 }
