@@ -65,6 +65,26 @@
             <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
               {{ errorMessage }}
             </p>
+            <div *ngIf="shouldShowResendConfirmation" class="rounded-2xl border border-olive-30 bg-white/70 px-4 py-4">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs text-gray-700">Si no te llego el correo, te lo reenviamos a la misma direccion.</p>
+                <ui-button
+                  variant="ghost"
+                  size="md"
+                  iconClass="fa-solid fa-envelope-circle-check"
+                  [disabled]="isResendingConfirmation"
+                  (pressed)="resendConfirmationEmail()"
+                >
+                  {{ isResendingConfirmation ? 'Reenviando correo...' : 'Reenviar correo de confirmacion' }}
+                </ui-button>
+              </div>
+              <p *ngIf="resendMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
+                {{ resendMessage }}
+              </p>
+              <p *ngIf="resendErrorMessage" class="mt-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
+                {{ resendErrorMessage }}
+              </p>
+            </div>
             <div class="mt-2">
               <ui-button
                 variant="secondary"

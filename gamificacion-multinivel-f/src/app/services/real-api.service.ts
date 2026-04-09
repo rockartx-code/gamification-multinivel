@@ -56,6 +56,8 @@ import {
   LoginResponse,
   PasswordRecoveryRequestPayload,
   PasswordRecoveryRequestResponse,
+  ResendEmailConfirmationPayload,
+  ResendEmailConfirmationResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
   VerifyEmailResponse
@@ -172,6 +174,19 @@ export class RealApiService {
         return throwError(() => error);
       })
     );
+  }
+
+  resendEmailConfirmation(payload: ResendEmailConfirmationPayload): Observable<ResendEmailConfirmationResponse> {
+    return this.http
+      .post<ResendEmailConfirmationResponse & { Error?: string }>(`${this.baseUrl}/auth/resend-email-confirmation`, payload)
+      .pipe(
+        map((response) => {
+          if (response.ok) {
+            return response;
+          }
+          throw new Error(response.message ?? 'No se pudo reenviar el correo de confirmacion.');
+        })
+      );
   }
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {

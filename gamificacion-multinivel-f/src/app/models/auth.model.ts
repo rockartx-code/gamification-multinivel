@@ -59,6 +59,15 @@ export interface VerifyEmailResponse {
   message?: string;
 }
 
+export interface ResendEmailConfirmationPayload {
+  email: string;
+}
+
+export interface ResendEmailConfirmationResponse {
+  ok: boolean;
+  message: string;
+}
+
 export interface PasswordRecoveryRequestPayload {
   email: string;
 }

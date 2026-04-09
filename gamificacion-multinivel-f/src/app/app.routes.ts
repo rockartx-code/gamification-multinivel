@@ -78,5 +78,9 @@ export const routes: Routes = [
   {
     path: ':idSponsor',
     component: LandingComponent
+  },
+  {
+    path: 'landing',
+    component: LandingComponent
   }
 ];

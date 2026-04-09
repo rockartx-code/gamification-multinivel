@@ -52,6 +52,8 @@ import {
   CreateAccountResponse,
   PasswordRecoveryRequestPayload,
   PasswordRecoveryRequestResponse,
+  ResendEmailConfirmationPayload,
+  ResendEmailConfirmationResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
   VerifyEmailResponse
@@ -93,6 +95,10 @@ export class ApiService {
 
   verifyEmail(token: string): Observable<VerifyEmailResponse> {
     return this.resolveApi().verifyEmail(token);
+  }
+
+  resendEmailConfirmation(payload: ResendEmailConfirmationPayload): Observable<ResendEmailConfirmationResponse> {
+    return this.resolveApi().resendEmailConfirmation(payload);
   }
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {

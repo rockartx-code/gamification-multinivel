@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 import {
   CreateAccountCustomer,
   PasswordRecoveryRequestResponse,
+  ResendEmailConfirmationResponse,
   ResetPasswordPayload,
   ResetPasswordResponse
 } from '../models/auth.model';
@@ -54,6 +55,10 @@ export class AuthService {
 
   requestPasswordRecovery(email: string): Observable<PasswordRecoveryRequestResponse> {
     return this.api.requestPasswordRecovery({ email });
+  }
+
+  resendEmailConfirmation(email: string): Observable<ResendEmailConfirmationResponse> {
+    return this.api.resendEmailConfirmation({ email });
   }
 
   resetPassword(payload: ResetPasswordPayload): Observable<ResetPasswordResponse> {

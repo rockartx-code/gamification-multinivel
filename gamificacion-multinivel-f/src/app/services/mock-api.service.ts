@@ -53,6 +53,8 @@ import {
   CreateAccountResponse,
   PasswordRecoveryRequestPayload,
   PasswordRecoveryRequestResponse,
+  ResendEmailConfirmationPayload,
+  ResendEmailConfirmationResponse,
   ResetPasswordPayload,
   ResetPasswordResponse
 } from '../models/auth.model';
@@ -473,6 +475,16 @@ export class MockApiService {
 
   verifyEmail(_token: string): Observable<{ ok: boolean; message?: string }> {
     return of({ ok: true, message: 'Correo verificado correctamente.' }).pipe(delay(300));
+  }
+
+  resendEmailConfirmation(payload: ResendEmailConfirmationPayload): Observable<ResendEmailConfirmationResponse> {
+    if (!payload.email?.trim()) {
+      return throwError(() => new Error('Ingresa tu correo electronico.'));
+    }
+    return of({
+      ok: true,
+      message: 'Te reenviamos el correo de confirmacion. Revisa tu bandeja de entrada.'
+    }).pipe(delay(180));
   }
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {

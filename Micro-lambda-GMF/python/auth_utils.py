@@ -355,6 +355,33 @@ def handle_verify_email(body):
 
     return utils._json_response(200, {"ok": True, "message": "Correo verificado correctamente."})
 
+def handle_resend_email_confirmation(body):
+    """POST /auth/resend-email-confirmation"""
+    email = utils._normalize_email(body.get("email"))
+    if not email:
+        return utils._json_response(400, {"message": "Ingresa tu correo electronico."})
+
+    auth = utils._get_by_id("AUTH", email)
+    if not auth:
+        return utils._json_response(404, {"message": "No encontramos una cuenta registrada con ese correo."})
+
+    if auth.get("emailVerified") is True:
+        return utils._json_response(409, {"message": "La cuenta ya fue confirmada. Ya puedes iniciar sesion."})
+
+    customer_id = auth.get("customerId")
+    customer = utils._get_by_id("CUSTOMER", customer_id) if customer_id is not None else None
+    customer_name = str((customer or {}).get("name") or auth.get("email") or "")
+
+    confirmation_token = _create_email_confirmation(email, customer_id)
+    confirmation_url = _build_email_confirmation_url(confirmation_token)
+    subj, txt, html = _build_activation_email(customer_name, confirmation_url)
+    utils._send_ses_email(email, subj, txt, html)
+
+    return utils._json_response(200, {
+        "ok": True,
+        "message": "Te reenviamos el correo de confirmacion. Revisa tu bandeja de entrada."
+    })
+
 def handle_password_recovery(body):
     """POST /auth/password/recovery"""
     email = utils._normalize_email(body.get("email"))
@@ -498,6 +525,9 @@ def lambda_handler(event, context):
 
         if root == "verify-email" and method == "POST":
             return handle_verify_email(body)
+
+        if root == "resend-email-confirmation" and method == "POST":
+            return handle_resend_email_confirmation(body)
 
         if root == "password":
             sub = segments[1] if len(segments) > 1 else ""

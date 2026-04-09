@@ -18,16 +18,25 @@ import { AuthService } from '../../services/auth.service';
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
+  private readonly confirmationRequiredMessage = 'Confirma tu cuenta desde tu correo electronico para iniciar sesion.';
+
   username = '';
   password = '';
   errorMessage = '';
+  resendMessage = '';
+  resendErrorMessage = '';
   recoveryMessage = '';
   recoveryErrorMessage = '';
   recoveryEmail = '';
   isSubmitting = false;
+  isResendingConfirmation = false;
   isRecovering = false;
   showPassword = false;
   showRecoveryForm = false;
+
+  get shouldShowResendConfirmation(): boolean {
+    return this.errorMessage === this.confirmationRequiredMessage;
+  }
 
   get usernameError(): string {
     if (this.errorMessage && !this.username) {
@@ -52,10 +61,14 @@ export class LoginComponent {
   login(): void {
     if (!this.username || !this.password) {
       this.errorMessage = 'Ingresa tu correo electronico y contrasena.';
+      this.resendMessage = '';
+      this.resendErrorMessage = '';
       return;
     }
 
     this.errorMessage = '';
+    this.resendMessage = '';
+    this.resendErrorMessage = '';
     this.isSubmitting = true;
     this.authService
       .login(this.username, this.password)
@@ -65,8 +78,9 @@ export class LoginComponent {
           const target = this.authService.defaultRoute(user);
           void this.router.navigate([target]);
         },
-        error: () => {
-          this.errorMessage = 'Credenciales invalidas. Verifica tu correo electronico y contrasena.';
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.errorMessage =
+            error?.error?.message || error?.message || 'Credenciales invalidas. Verifica tu correo electronico y contrasena.';
           this.cdr.detectChanges();
         }
       });
@@ -79,6 +93,8 @@ export class LoginComponent {
   openRecoveryForm(): void {
     this.showRecoveryForm = true;
     this.errorMessage = '';
+    this.resendMessage = '';
+    this.resendErrorMessage = '';
   }
 
   openLoginForm(): void {
@@ -111,6 +127,36 @@ export class LoginComponent {
           this.recoveryErrorMessage =
             error?.error?.message || error?.message || 'No se pudo enviar el codigo OTP.';
           this.recoveryMessage = '';
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  resendConfirmationEmail(): void {
+    const email = this.username.trim();
+    if (!email) {
+      this.resendErrorMessage = 'Ingresa tu correo electronico para reenviar la confirmacion.';
+      this.resendMessage = '';
+      return;
+    }
+
+    this.isResendingConfirmation = true;
+    this.resendErrorMessage = '';
+    this.resendMessage = '';
+
+    this.authService
+      .resendEmailConfirmation(email)
+      .pipe(finalize(() => (this.isResendingConfirmation = false)))
+      .subscribe({
+        next: (response) => {
+          this.resendMessage = response.message;
+          this.resendErrorMessage = '';
+          this.cdr.detectChanges();
+        },
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.resendErrorMessage =
+            error?.error?.message || error?.message || 'No se pudo reenviar el correo de confirmacion.';
+          this.resendMessage = '';
           this.cdr.detectChanges();
         }
       });

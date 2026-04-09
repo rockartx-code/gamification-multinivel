@@ -534,7 +534,7 @@ paths:
       <<: *cors-options
 
   /auth/{proxy+}:
-    # Captura: POST /auth/login | POST /auth/password/recovery | POST /auth/password/reset | POST /auth/verify-email
+    # Captura: POST /auth/login | POST /auth/password/recovery | POST /auth/password/reset | POST /auth/verify-email | POST /auth/resend-email-confirmation
     x-amazon-apigateway-any-method:
       summary: "Auth sub-rutas (proxy)"
       description: |
@@ -545,7 +545,8 @@ paths:
         | POST | /auth/login | Pública | `LoginResponse` con JWT |
         | POST | /auth/password/recovery | Pública | `OkResponse` |
         | POST | /auth/password/reset | Pública | `OkResponse` |
-        | POST | /auth/verify-email | Pública | ⚠️ pendiente backend |
+        | POST | /auth/verify-email | Pública | `OkResponse` |
+        | POST | /auth/resend-email-confirmation | Pública | `OkResponse` |
       operationId: authProxy
       tags: [Auth]
       security: []
