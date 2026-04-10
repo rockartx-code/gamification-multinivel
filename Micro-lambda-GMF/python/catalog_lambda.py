@@ -171,6 +171,11 @@ def handle_products(method, body, product_id=None):
         pid = body.get("productId") or body.get("id") or int(datetime.now().timestamp() * 1000)
         now = utils._now_iso()
 
+        # Preservar createdAt del registro existente para que _put_entity use el mismo SK
+        # y haga overwrite en lugar de insertar un duplicado en el bucket.
+        existing = utils._get_by_id("PRODUCT", int(pid)) if (body.get("productId") or body.get("id")) else None
+        original_created_at = existing.get("createdAt") if existing else None
+
         # Normalizar variantes: guardar id, name, price, sku, active, img
         raw_variants = body.get("variants") or []
         variants = []
@@ -183,7 +188,7 @@ def handle_products(method, body, product_id=None):
                 "active": bool(v.get("active", True)),
             }
             if v.get("price") is not None:
-                variant["price"] = float(utils._to_decimal(v.get("price")))
+                variant["price"] = utils._to_decimal(v.get("price"))
             if v.get("sku"):
                 variant["sku"] = str(v.get("sku"))
             if v.get("img"):
@@ -218,14 +223,14 @@ def handle_products(method, body, product_id=None):
             "images": body.get("images") or [],
             "variants": variants,
             "categoryIds": body.get("categoryIds") or [],
-            "weightKg": float(utils._to_decimal(body.get("weightKg"))) if body.get("weightKg") is not None else None,
-            "lengthCm": float(utils._to_decimal(body.get("lengthCm"))) if body.get("lengthCm") is not None else None,
-            "widthCm":  float(utils._to_decimal(body.get("widthCm")))  if body.get("widthCm")  is not None else None,
-            "heightCm": float(utils._to_decimal(body.get("heightCm"))) if body.get("heightCm") is not None else None,
+            "weightKg": utils._to_decimal(body.get("weightKg")) if body.get("weightKg") is not None else None,
+            "lengthCm": utils._to_decimal(body.get("lengthCm")) if body.get("lengthCm") is not None else None,
+            "widthCm":  utils._to_decimal(body.get("widthCm"))  if body.get("widthCm")  is not None else None,
+            "heightCm": utils._to_decimal(body.get("heightCm")) if body.get("heightCm") is not None else None,
             "updatedAt": now,
         }
 
-        saved = utils._put_entity("PRODUCT", pid, product_item)
+        saved = utils._put_entity("PRODUCT", pid, product_item, created_at_iso=original_created_at)
         utils._audit_event("product.save", None, body, {"productId": pid})
         return utils._json_response(201, {"product": saved})
 
@@ -404,6 +409,83 @@ def lambda_handler(event, context):
 
         if root == "catalog" and len(segments) > 2 and segments[1] == "config" and segments[2] == "public" and method == "GET":
             return handle_public_config()
+
+        # catalog/product — rutas unificadas del admin para productos
+        if root == "catalog" and len(segments) >= 2 and segments[1] == "product":
+            sub = segments[2] if len(segments) > 2 else None
+
+            # POST catalog/product/product-of-month → establecer producto del mes
+            if sub == "product-of-month" and method == "POST":
+                err = utils._require_admin(headers, "product_set_month")
+                if err: return err
+                return handle_products(method, body, "product-of-month")
+
+            # POST catalog/product/remove → eliminar (desactivar) producto
+            if sub == "remove" and method == "POST":
+                err = utils._require_admin(headers, "product_add")
+                if err: return err
+                pid = body.get("productId") or body.get("id")
+                if not pid:
+                    return utils._json_response(400, {"message": "Se requiere productId en el body."})
+                try:
+                    pid = int(pid)
+                except (TypeError, ValueError):
+                    return utils._json_response(400, {"message": "productId debe ser numérico."})
+                product = utils._get_by_id("PRODUCT", pid)
+                if not product:
+                    return utils._json_response(404, {"message": "Producto no encontrado."})
+                now = utils._now_iso()
+                updated = utils._update_by_id(
+                    "PRODUCT", pid,
+                    "SET active = :a, inOnlineStore = :ios, inPOS = :ip, updatedAt = :u",
+                    {":a": False, ":ios": False, ":ip": False, ":u": now},
+                )
+                utils._audit_event("product.remove", headers, body, {"productId": pid})
+                return utils._json_response(200, {"ok": True, "productId": pid, "product": updated})
+
+            # POST catalog/product/{id}/assets → subir imagen de producto
+            if sub is not None and sub not in ("product-of-month", "remove") and len(segments) >= 4 and segments[3] == "assets" and method == "POST":
+                err = utils._require_admin(headers, "product_add")
+                if err: return err
+                product_id = sub
+                section = str(body.get("section", "general")).strip()
+                file_name = str(body.get("fileName", f"{section}.jpg")).strip() or f"{section}.jpg"
+                content_b64 = body.get("contentBase64", "")
+                content_type = str(body.get("contentType", "image/jpeg")).strip()
+                if not content_b64:
+                    return utils._json_response(400, {"message": "contentBase64 requerido"})
+                try:
+                    raw_data = base64.b64decode(content_b64)
+                    unique = utils.uuid.uuid4().hex[:8]
+                    s3_key = f"products/{product_id}/{section}/{unique}-{file_name}"
+                    s3.put_object(Bucket=BUCKET_NAME, Key=s3_key, Body=raw_data, ContentType=content_type, ACL="public-read")
+                    url = f"https://{BUCKET_NAME}.s3.{utils.AWS_REGION}.amazonaws.com/{s3_key}"
+                except Exception as e:
+                    print(f"[S3_ERROR] {e}")
+                    return utils._json_response(500, {"message": "Error al subir imagen"})
+                return utils._json_response(201, {"asset": {
+                    "assetId": s3_key, "url": url, "section": section,
+                    "productId": product_id, "contentType": content_type,
+                }})
+
+            # GET catalog/product → listar TODOS los productos para admin (sin filtros de activo/tienda)
+            if method == "GET" and sub is None:
+                err = utils._require_admin(headers, "product_add")
+                if err: return err
+                all_products = list(utils._query_bucket("PRODUCT"))
+                pom_product = _get_catalog_product_of_month()
+                return utils._json_response(200, {
+                    "products": all_products,
+                    "productOfMonth": pom_product,
+                })
+
+            # POST catalog/product → crear / actualizar producto
+            if method == "POST" and sub is None:
+                err = utils._require_admin(headers, "product_add")
+                if err: return err
+                return handle_products(method, body, None)
+
+            return utils._json_response(404, {"message": "Ruta de producto no encontrada."})
 
         if root == "products":
             p_id = segments[1] if len(segments) > 1 else None

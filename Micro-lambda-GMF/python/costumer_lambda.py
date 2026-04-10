@@ -1110,24 +1110,44 @@ def handle_update_clabe(customer_id, body, headers):
 
 
 def handle_add_document(customer_id, body, headers):
-    """POST /customers/{id}/documents  — Admin liga un asset existente al cliente"""
+    """POST /customers/{id}/documents  — Admin sube y liga un documento al cliente.
+    Acepta contentBase64 (subida directa) o assetId (asset ya existente)."""
     err = utils._require_admin(headers or {}, "access_screen_customers")
     if err: return err
-    asset_id = body.get("assetId")
     doc_name = body.get("name", "Documento")
+    content_b64 = body.get("contentBase64")
 
-    asset = utils._get_by_id("ASSET", asset_id)
-    if not asset:
-        return utils._json_response(404, {"message": "El archivo (asset) no existe en S3"})
-
-    doc_entry = {
-        "documentId": f"DOC-{utils.uuid.uuid4().hex[:8].upper()}",
-        "assetId": asset_id,
-        "name": doc_name,
-        "url": asset.get("url"),
-        "contentType": asset.get("contentType"),
-        "uploadedAt": utils._now_iso(),
-    }
+    if content_b64:
+        content_type = str(body.get("contentType", "application/octet-stream")).strip()
+        file_name = str(body.get("fileName", "documento")).strip() or "documento"
+        try:
+            asset = _upload_document_s3(file_name, content_b64, content_type, prefix=f"docs-admin/{customer_id}")
+        except ValueError:
+            return utils._json_response(400, {"message": "contentBase64 inválido"})
+        except Exception as e:
+            print(f"[S3_UPLOAD_ERROR] {e}")
+            return utils._json_response(500, {"message": "Error al subir el archivo"})
+        doc_entry = {
+            "documentId": f"DOC-{utils.uuid.uuid4().hex[:8].upper()}",
+            "assetId": asset["assetId"],
+            "name": doc_name,
+            "url": asset["url"],
+            "contentType": content_type,
+            "uploadedAt": utils._now_iso(),
+        }
+    else:
+        asset_id = body.get("assetId")
+        asset = utils._get_by_id("ASSET", asset_id)
+        if not asset:
+            return utils._json_response(404, {"message": "El archivo (asset) no existe en S3"})
+        doc_entry = {
+            "documentId": f"DOC-{utils.uuid.uuid4().hex[:8].upper()}",
+            "assetId": asset_id,
+            "name": doc_name,
+            "url": asset.get("url"),
+            "contentType": asset.get("contentType"),
+            "uploadedAt": utils._now_iso(),
+        }
 
     utils._update_by_id(
         "CUSTOMER", customer_id,

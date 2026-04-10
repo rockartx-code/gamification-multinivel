@@ -36,7 +36,7 @@ import {
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { PortalNotification } from '../models/portal-notification.model';
-import { CommissionReceiptPayload } from '../models/user-dashboard.model';
+import { CatalogData, CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
 
 @Injectable({
@@ -61,6 +61,35 @@ export class AdminControlService {
   private patchData(patch: Partial<AdminData>): void {
     const current = this.dataSubject.value ?? ({} as AdminData);
     this.dataSubject.next({ ...current, ...patch });
+  }
+
+  private normalizeCatalogProducts(products: CatalogData['products']): AdminProduct[] {
+    return (products ?? []).map((product) => ({
+      id: Number(product.id),
+      name: product.name,
+      price: Number(product.price ?? 0),
+      active: true,
+      inOnlineStore: product.inOnlineStore,
+      inPOS: product.inPOS,
+      commissionable: product.commissionable,
+      hook: product.hook,
+      description: product.description,
+      copyFacebook: product.copyFacebook,
+      copyInstagram: product.copyInstagram,
+      copyWhatsapp: product.copyWhatsapp,
+      tags: product.tags,
+      weightKg: product.weightKg,
+      lengthCm: product.lengthCm,
+      widthCm: product.widthCm,
+      heightCm: product.heightCm,
+      variants: product.variants,
+      categoryIds: product.categoryIds,
+      images: product.images?.map((image) => ({
+        section: image.section as 'redes' | 'landing' | 'miniatura' | 'variante',
+        url: image.url,
+        assetId: image.assetId,
+      })),
+    }));
   }
 
   /** Carga inicial mínima: solo warnings */
@@ -119,12 +148,19 @@ export class AdminControlService {
     if (this.loadedSections.has('products')) return of(this.products);
     this.setLoading('products', true);
     return this.api.listProducts().pipe(
-      tap((products) => {
-        this.patchData({ products });
+      tap(({ products, productOfMonthId }) => {
+        this.patchData({ products, productOfMonthId });
         this.loadedSections.add('products');
         this.setLoading('products', false);
-      })
+      }),
+      map(({ products }) => products)
     );
+  }
+
+  /** Fuerza recarga de productos desde el backend */
+  reloadProducts(): Observable<AdminProduct[]> {
+    this.loadedSections.delete('products');
+    return this.loadProducts();
   }
 
   /** Empleados — carga única */
@@ -316,23 +352,20 @@ export class AdminControlService {
   }
 
   setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
-    return this.api.setProductOfMonth(productId);
+    return this.api.setProductOfMonth(productId).pipe(
+      tap(() => { this.reloadProducts().subscribe(); })
+    );
   }
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
     return this.api.saveProduct(payload).pipe(
-      tap((product) => {
-        const current = this.dataSubject.value;
-        if (!current) {
-          return;
-        }
-        const existingIndex = current.products.findIndex((entry) => entry.id === payload.id);
-        const updatedProducts =
-          existingIndex >= 0
-            ? current.products.map((entry, index) => (index === existingIndex ? product : entry))
-            : [product, ...current.products];
-        this.dataSubject.next({ ...current, products: updatedProducts });
-      })
+      tap(() => { this.reloadProducts().subscribe(); })
+    );
+  }
+
+  deleteProduct(productId: number): Observable<{ ok: boolean; productId: number }> {
+    return this.api.deleteProduct(productId).pipe(
+      tap(() => { this.reloadProducts().subscribe(); })
     );
   }
 
@@ -401,15 +434,15 @@ export class AdminControlService {
     return this.api.createStock(payload);
   }
 
-  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup' | 'isMainWarehouse'>>): Observable<AdminStock> {
     return this.api.updateStock(stockId, payload);
   }
 
-  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ ok: boolean; stock?: AdminStock }> {
     return this.api.registerStockEntry(stockId, payload);
   }
 
-  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ ok: boolean; stock?: AdminStock }> {
     return this.api.registerStockDamage(stockId, payload);
   }
 
@@ -532,11 +565,18 @@ export class AdminControlService {
     posSales: PosSale[];
   }> {
     return forkJoin({
+      catalog: this.api.getCatalogData(),
       stocks: this.api.listStocks(),
       transfers: this.api.listStockTransfers(),
       movements: this.api.listInventoryMovements(),
       posSales: this.api.listPosSales()
     }).pipe(
+      tap((response) => {
+        if (this.loadedSections.has('products')) {
+          return;
+        }
+        this.patchData({ products: this.normalizeCatalogProducts(response.catalog?.products ?? []) });
+      }),
       map((response) => ({
         stocks: response.stocks ?? [],
         transfers: response.transfers ?? [],

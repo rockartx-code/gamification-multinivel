@@ -41,6 +41,10 @@ import {
   SaveProductCategoryPayload,
   ShippingRate,
   ShippingQuoteRequest,
+  AdminRefundPayload,
+  AdminRefundResponse,
+  AdminReturnInspectPayload,
+  AdminReturnInspectResponse,
   OrderCancelResponse,
   OrderReturnRequestPayload,
   OrderReturnRequestResponse
@@ -129,7 +133,7 @@ export class ApiService {
     return this.realApi.listCustomersPaged(params);
   }
 
-  listProducts(): Observable<AdminProduct[]> {
+  listProducts(): Observable<{ products: AdminProduct[]; productOfMonthId: number | null }> {
     return this.resolveApi().listProducts();
   }
 
@@ -251,6 +255,10 @@ export class ApiService {
     return this.resolveApi().saveProduct(payload);
   }
 
+  deleteProduct(productId: number): Observable<{ ok: boolean; productId: number }> {
+    return this.resolveApi().deleteProduct(productId);
+  }
+
   listCategories(): Observable<ProductCategory[]> {
     return this.resolveApi().listCategories();
   }
@@ -308,11 +316,11 @@ export class ApiService {
     return this.resolveApi().updateStock(stockId, payload);
   }
 
-  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ ok: boolean; stock?: AdminStock }> {
     return this.resolveApi().registerStockEntry(stockId, payload);
   }
 
-  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ ok: boolean; stock?: AdminStock }> {
     return this.resolveApi().registerStockDamage(stockId, payload);
   }
 
@@ -426,6 +434,14 @@ export class ApiService {
 
   requestReturn(orderId: string, payload: OrderReturnRequestPayload): Observable<OrderReturnRequestResponse> {
     return this.resolveApi().requestReturn(orderId, payload);
+  }
+
+  refundOrder(orderId: string, payload: AdminRefundPayload): Observable<AdminRefundResponse> {
+    return this.resolveApi().refundOrder(orderId, payload);
+  }
+
+  inspectReturn(orderId: string, payload: AdminReturnInspectPayload): Observable<AdminReturnInspectResponse> {
+    return this.resolveApi().inspectReturn(orderId, payload);
   }
 
   private resolveApi(): MockApiService | RealApiService {

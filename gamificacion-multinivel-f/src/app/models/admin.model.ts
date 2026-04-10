@@ -11,7 +11,7 @@ export interface AdminOrder {
   discountAmount?: number;
   netTotal?: number;
   total: number;
-  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'en_devolucion' | 'devuelto_validado' | 'devolucion_rechazada';
+  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'en_devolucion' | 'devuelto_validado' | 'devolucion_rechazada';
   shippingType?: 'carrier' | 'personal';
   trackingNumber?: string;
   deliveryPlace?: string;
@@ -49,6 +49,48 @@ export interface AdminOrder {
   deliveryType?: 'pickup' | 'delivery';
   pickupStockId?: string;
   pickupPaymentMethod?: 'online' | 'at_store';
+  cancelReason?: string;
+  cancelledAt?: string;
+  returnRequestId?: string;
+  rejectionReason?: string;
+  rejectedAt?: string;
+  refundReceiptUrl?: string;
+  refundedAt?: string;
+}
+
+export interface AdminRefundPayload {
+  reason?: string;
+  receiptBase64?: string;
+  receiptName?: string;
+  receiptContentType?: string;
+}
+
+export interface AdminRefundResponse {
+  orderId: string;
+  status: string;
+  refundReceiptUrl?: string;
+}
+
+export interface AdminReturnInspectPayload {
+  inspection: {
+    empaque_original: boolean;
+    sellos_intactos: boolean;
+    sin_uso: boolean;
+    producto_abierto: boolean;
+    danio_no_empresa: boolean;
+    coincide_con_pedido: boolean;
+    trazabilidad_valida: boolean;
+  };
+  packageImages?: Array<{ contentBase64: string; fileName: string; contentType: string }>;
+  rejectionReason?: string;
+}
+
+export interface AdminReturnInspectResponse {
+  ok: boolean;
+  requestId: string;
+  returnStatus: string;
+  orderStatus: string;
+  approved: boolean;
 }
 
 export interface CustomerOrdersPage {
@@ -169,8 +211,11 @@ export interface CustomerDocument {
 }
 
 export interface LinkCustomerDocumentPayload {
-  assetId: string;
+  assetId?: string;
   name?: string;
+  contentBase64?: string;
+  contentType?: string;
+  fileName?: string;
 }
 
 export interface CustomerProfile {
@@ -212,12 +257,12 @@ export interface CreateStructureCustomerPayload {
 }
 
 export interface CreateProductAssetPayload {
-  productId: string;
-  assetId?: string;
-  assetKey?: string;
-  section: 'redes' | 'landing' | 'miniatura';
-  filename?: string;
+  productId: string | number;
+  section: 'redes' | 'landing' | 'miniatura' | 'variante';
+  contentBase64?: string;
+  fileName?: string;
   contentType?: string;
+  assetId?: string;
 }
 
 export interface SaveAdminProductPayload {
@@ -252,14 +297,15 @@ export interface SaveAdminProductPayload {
 export interface ProductAssetUpload {
   asset: {
     assetId: string;
-    bucket: string;
-    key: string;
-    ownerType: string;
-    ownerId: string;
-    section: string;
-    contentType: string;
-    createdAt: string;
-    updatedAt: string;
+    url?: string;
+    bucket?: string;
+    key?: string;
+    ownerType?: string;
+    ownerId?: string;
+    section?: string;
+    contentType?: string;
+    createdAt?: string;
+    updatedAt?: string;
   };
   uploadUrl?: string;
 }

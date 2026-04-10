@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, type Signal } from '@angular/core';
+import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -27,6 +28,8 @@ import {
   CreateAssetPayload,
   CreateAdminOrderPayload,
   CreateProductAssetPayload,
+  AdminRefundPayload,
+  AdminReturnInspectPayload,
   CreateStructureCustomerPayload,
   CustomerDocument,
   CustomerDocumentTypeConfig,
@@ -78,6 +81,7 @@ type AdminStock = {
   linkedUserIds: number[];
   inventory: Record<number, number>;
   allowPickup?: boolean;
+  isMainWarehouse?: boolean;
 };
 
 type StockTransferLine = {
@@ -228,7 +232,12 @@ export class AdminComponent implements OnInit {
     { value: 'pending', label: 'Pendiente' },
     { value: 'paid', label: 'Pagado' },
     { value: 'shipped', label: 'Enviado' },
-    { value: 'delivered', label: 'Entregado' }
+    { value: 'delivered', label: 'Entregado' },
+    { value: 'cancelled', label: 'Cancelado' },
+    { value: 'refunded', label: 'Reembolsado' },
+    { value: 'en_devolucion', label: 'Por devolver' },
+    { value: 'devuelto_validado', label: 'Devuelto' },
+    { value: 'devolucion_rechazada', label: 'Dev. rechazada' }
   ];
   readonly rewardCutRuleOptions: Array<ExplainedSelectOption<string>> = [
     {
@@ -298,13 +307,15 @@ export class AdminComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
-    private readonly api: ApiService
+    private readonly api: ApiService,
+    private readonly sanitizer: DomSanitizer
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
 
   currentView: AdminViewId = 'orders';
   currentOrderStatus: AdminOrder['status'] = 'pending';
+  orderStockFilter: string = '';
   expandedOrderDetailId: string | null = null;
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
@@ -312,6 +323,29 @@ export class AdminComponent implements OnInit {
   isShippingModalOpen = false;
   isReceiptModalOpen = false;
   isUploadingReceipt = false;
+
+  // Refund modal (from cancelled or devuelto_validado)
+  isRefundModalOpen = false;
+  refundTargetOrder: AdminOrder | null = null;
+  refundReceiptBase64 = '';
+  refundReceiptName = '';
+  refundReason = '';
+  refundError = '';
+  isSavingRefund = false;
+
+  // Receive return modal (from en_devolucion)
+  isReceiveReturnModalOpen = false;
+  receiveReturnOrder: AdminOrder | null = null;
+  receiveReturnImages: Array<{ contentBase64: string; fileName: string; contentType: string }> = [];
+  receiveReturnError = '';
+  isSavingReceiveReturn = false;
+
+  // Reject return modal (from devuelto_validado)
+  isRejectReturnModalOpen = false;
+  rejectReturnOrder: AdminOrder | null = null;
+  rejectReturnReason = '';
+  rejectReturnError = '';
+  isSavingRejectReturn = false;
 
   readonly PAGE_SIZE = 15;
   readonly ORDER_PAGE_SIZE = 10;
@@ -580,6 +614,7 @@ export class AdminComponent implements OnInit {
       case 'stocks':
       case 'pos':
         this.loadStocksAndPosState();
+        this.adminControl.loadEmployees().subscribe();
         break;
       case 'settings':
         this.syncBusinessConfigDraft();
@@ -944,6 +979,18 @@ export class AdminComponent implements OnInit {
     return options;
   }
 
+  /** Stocks a los que el operador actual tiene acceso (para modales de inventario). Admin ve todos. */
+  get accessibleStockOptionsStable(): Array<SelectOption<string>> {
+    const operatorId = this.currentOperatorId;
+    const accessible = operatorId != null && !this.hasPermission('config_manage')
+      ? this.stocks.filter((s) => s.linkedUserIds.map(Number).includes(operatorId))
+      : this.stocks;
+    return accessible.map((stock) => ({
+      value: stock.id,
+      label: `${stock.name} · ${stock.location}`
+    }));
+  }
+
   get productOptionsStable(): Array<SelectOption<number>> {
     if (this.productOptionsCache?.productsRef === this.products) {
       return this.productOptionsCache.options;
@@ -1037,7 +1084,13 @@ export class AdminComponent implements OnInit {
   }
 
   get filteredOrdersStable(): AdminOrder[] {
-    const byStatus = this.orders.filter((o) => o.status === this.currentOrderStatus);
+    let byStatus = this.orders.filter((o) => o.status === this.currentOrderStatus);
+    // Stock filter (applies to all statuses when a stock is selected)
+    if (this.orderStockFilter) {
+      byStatus = byStatus.filter(
+        (o) => o.stockId === this.orderStockFilter || o.pickupStockId === this.orderStockFilter
+      );
+    }
     const q = this.orderSearch.trim().toLowerCase();
     if (!q) return byStatus;
     return byStatus.filter((o) =>
@@ -1046,7 +1099,8 @@ export class AdminComponent implements OnInit {
       (o.trackingNumber || '').toLowerCase().includes(q) ||
       (o.address || '').toLowerCase().includes(q) ||
       (o.phone || '').toLowerCase().includes(q) ||
-      (o.recipientName || '').toLowerCase().includes(q)
+      (o.recipientName || '').toLowerCase().includes(q) ||
+      (o.cancelReason || '').toLowerCase().includes(q)
     );
   }
 
@@ -2045,7 +2099,8 @@ export class AdminComponent implements OnInit {
           location: stock.location,
           linkedUserIds: stock.linkedUserIds ?? [],
           inventory: this.normalizeInventoryRecord(stock.inventory as Record<number, number> | Record<string, number>),
-          allowPickup: Boolean((stock as { allowPickup?: boolean }).allowPickup)
+          allowPickup: Boolean((stock as { allowPickup?: boolean }).allowPickup),
+          isMainWarehouse: Boolean((stock as { isMainWarehouse?: boolean }).isMainWarehouse)
         }));
 
         this.transfers = (state.transfers ?? []).map((transfer) => ({
@@ -2523,6 +2578,185 @@ export class AdminComponent implements OnInit {
       });
   }
 
+  // ── Refund modal ──────────────────────────────────────────────────────────
+
+  openRefundModal(order: AdminOrder): void {
+    this.refundTargetOrder = order;
+    this.refundReceiptBase64 = '';
+    this.refundReceiptName = '';
+    this.refundReason = '';
+    this.refundError = '';
+    this.isRefundModalOpen = true;
+  }
+
+  closeRefundModal(): void {
+    this.isRefundModalOpen = false;
+    this.refundTargetOrder = null;
+  }
+
+  onRefundReceiptFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.refundReceiptName = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = (e.target as FileReader).result as string;
+      this.refundReceiptBase64 = result.split(',')[1] ?? result;
+      this.requestViewUpdate();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  confirmRefund(): void {
+    if (!this.refundTargetOrder) return;
+    if (!this.refundReceiptBase64) {
+      this.refundError = 'Adjunta el comprobante de depósito.';
+      return;
+    }
+    this.refundError = '';
+    this.isSavingRefund = true;
+    const orderId = this.refundTargetOrder.id;
+    const payload: AdminRefundPayload = {
+      reason: this.refundReason || 'refund',
+      receiptBase64: this.refundReceiptBase64,
+      receiptName: this.refundReceiptName || 'comprobante.jpg',
+      receiptContentType: this.refundReceiptName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+    };
+    this.api.refundOrder(orderId, payload).pipe(
+      finalize(() => { this.isSavingRefund = false; this.requestViewUpdate(); })
+    ).subscribe({
+      next: () => {
+        this.closeRefundModal();
+        this.adminControl.loadOrders().subscribe();
+        this.showSnackbar('Reembolso registrado correctamente.');
+      },
+      error: (err: unknown) => {
+        this.refundError = this.resolveUiErrorMessage(err, 'No se pudo registrar el reembolso.');
+      }
+    });
+  }
+
+  // ── Receive return modal (en_devolucion → devuelto_validado) ──────────────
+
+  openReceiveReturnModal(order: AdminOrder): void {
+    this.receiveReturnOrder = order;
+    this.receiveReturnImages = [];
+    this.receiveReturnError = '';
+    this.isReceiveReturnModalOpen = true;
+  }
+
+  closeReceiveReturnModal(): void {
+    this.isReceiveReturnModalOpen = false;
+    this.receiveReturnOrder = null;
+    this.receiveReturnImages = [];
+  }
+
+  onReceiveReturnImageFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    let pending = files.length;
+    if (!pending) return;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = (e.target as FileReader).result as string;
+        this.receiveReturnImages.push({
+          contentBase64: result.split(',')[1] ?? result,
+          fileName: file.name,
+          contentType: file.type || 'image/jpeg',
+        });
+        pending--;
+        if (pending === 0) this.requestViewUpdate();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  confirmReceiveReturn(): void {
+    if (!this.receiveReturnOrder) return;
+    if (!this.receiveReturnImages.length) {
+      this.receiveReturnError = 'Adjunta al menos una imagen del estado del paquete.';
+      return;
+    }
+    this.receiveReturnError = '';
+    this.isSavingReceiveReturn = true;
+    const orderId = this.receiveReturnOrder.id;
+    const payload: AdminReturnInspectPayload = {
+      inspection: {
+        empaque_original: true,
+        sellos_intactos: true,
+        sin_uso: true,
+        producto_abierto: false,
+        danio_no_empresa: false,
+        coincide_con_pedido: true,
+        trazabilidad_valida: true,
+      },
+      packageImages: this.receiveReturnImages,
+    };
+    this.api.inspectReturn(orderId, payload).pipe(
+      finalize(() => { this.isSavingReceiveReturn = false; this.requestViewUpdate(); })
+    ).subscribe({
+      next: () => {
+        this.closeReceiveReturnModal();
+        this.adminControl.loadOrders().subscribe();
+        this.showSnackbar('Paquete recibido. Devolución validada.');
+      },
+      error: (err: unknown) => {
+        this.receiveReturnError = this.resolveUiErrorMessage(err, 'No se pudo registrar la recepción del paquete.');
+      }
+    });
+  }
+
+  // ── Reject return modal (devuelto_validado → devolucion_rechazada) ────────
+
+  openRejectReturnModal(order: AdminOrder): void {
+    this.rejectReturnOrder = order;
+    this.rejectReturnReason = '';
+    this.rejectReturnError = '';
+    this.isRejectReturnModalOpen = true;
+  }
+
+  closeRejectReturnModal(): void {
+    this.isRejectReturnModalOpen = false;
+    this.rejectReturnOrder = null;
+  }
+
+  confirmRejectReturn(): void {
+    if (!this.rejectReturnOrder) return;
+    if (!this.rejectReturnReason.trim()) {
+      this.rejectReturnError = 'Ingresa el motivo del rechazo.';
+      return;
+    }
+    this.rejectReturnError = '';
+    this.isSavingRejectReturn = true;
+    const orderId = this.rejectReturnOrder.id;
+    const payload: AdminReturnInspectPayload = {
+      inspection: {
+        empaque_original: false,
+        sellos_intactos: false,
+        sin_uso: false,
+        producto_abierto: true,
+        danio_no_empresa: false,
+        coincide_con_pedido: true,
+        trazabilidad_valida: true,
+      },
+      rejectionReason: this.rejectReturnReason.trim(),
+    };
+    this.api.inspectReturn(orderId, payload).pipe(
+      finalize(() => { this.isSavingRejectReturn = false; this.requestViewUpdate(); })
+    ).subscribe({
+      next: () => {
+        this.closeRejectReturnModal();
+        this.adminControl.loadOrders().subscribe();
+        this.showSnackbar('Devolución rechazada.');
+      },
+      error: (err: unknown) => {
+        this.rejectReturnError = this.resolveUiErrorMessage(err, 'No se pudo rechazar la devolución.');
+      }
+    });
+  }
+
   updateNewOrderCustomer(customerId: number): void {
     this.newOrderCustomerId = customerId;
   }
@@ -2750,14 +2984,17 @@ export class AdminComponent implements OnInit {
     this.customerDocumentMessage = '';
     this.isCustomerDocumentMessageError = false;
     this.isUploadingCustomerDocument = true;
-    this.createAssetFromFile(file)
+    this.readFileAsDataUrl(file)
       .pipe(
-        switchMap((assetResponse) => {
-          const assetId = assetResponse.asset.assetId ?? '';
-          if (!assetId) {
-            throw new Error('No se pudo crear el asset del documento.');
-          }
-          return this.adminControl.addCustomerDocument(customerId, { assetId, name });
+        switchMap((dataUrl) => {
+          const contentBase64 = this.extractBase64(dataUrl);
+          if (!contentBase64) throw new Error('No se pudo leer el archivo.');
+          return this.adminControl.addCustomerDocument(customerId, {
+            name,
+            contentBase64,
+            contentType: file.type || 'application/octet-stream',
+            fileName: file.name,
+          });
         }),
         finalize(() => {
           this.isUploadingCustomerDocument = false;
@@ -2785,6 +3022,10 @@ export class AdminComponent implements OnInit {
       return;
     }
     window.open(doc.url, '_blank', 'noopener,noreferrer');
+  }
+
+  safeResourceUrl(url: string): SafeResourceUrl {
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
   updateSelectedCustomerAdminAccess(enabled: boolean): void {
@@ -3187,6 +3428,9 @@ export class AdminComponent implements OnInit {
         name: product.name,
         price: product.price,
         active: nextActive,
+        inOnlineStore: product.inOnlineStore,
+        inPOS: product.inPOS,
+        commissionable: product.commissionable,
         sku: product.sku,
         hook: product.hook,
         description: product.description,
@@ -3402,7 +3646,7 @@ export class AdminComponent implements OnInit {
 
   private resetProductForm(): void {
     this.productForm = {
-      id: null,
+      id: Date.now(),
       name: '',
       price: '',
       active: true,
@@ -3562,9 +3806,23 @@ export class AdminComponent implements OnInit {
   private uploadVariantImages(): Observable<Map<string, string>> {
     const entries = Array.from(this.variantImageFiles.entries());
     if (entries.length === 0) return of(new Map<string, string>());
+    const productId = this.productForm.id ?? Date.now();
     const uploads = entries.map(([variantId, file]) =>
-      this.createAssetFromFile(file).pipe(
-        map((asset) => ({ variantId, url: asset.asset?.url ?? '' })),
+      this.readFileAsDataUrl(file).pipe(
+        switchMap((dataUrl) => {
+          const contentBase64 = this.extractBase64(dataUrl);
+          if (!contentBase64) return of({ variantId, url: '' });
+          return this.adminControl.createProductAsset({
+            productId,
+            section: 'variante',
+            contentBase64,
+            fileName: file.name,
+            contentType: file.type || 'image/jpeg',
+          }).pipe(
+            map((res) => ({ variantId, url: res.asset?.url ?? '' })),
+            catchError(() => of({ variantId, url: '' }))
+          );
+        }),
         catchError(() => of({ variantId, url: '' }))
       )
     );
@@ -3640,15 +3898,26 @@ export class AdminComponent implements OnInit {
     entries.forEach(([section]) => {
       this.productImageUploads.set(section, true);
     });
+    const productId = this.productForm.id ?? Date.now();
     const uploads = entries.map(([section, file]) => {
-      return this.createAssetFromFile(file).pipe(
-        switchMap((asset) => {
-          const assetId = asset.asset?.assetId;
-          const url = asset.asset?.url;
-          if (!assetId || !url) {
-            return of({ section, success: false });
-          }
-          return of({ section, success: true, assetId, url });
+      return this.readFileAsDataUrl(file).pipe(
+        switchMap((dataUrl) => {
+          const contentBase64 = this.extractBase64(dataUrl);
+          if (!contentBase64) return of({ section, success: false });
+          return this.adminControl.createProductAsset({
+            productId,
+            section,
+            contentBase64,
+            fileName: file.name,
+            contentType: file.type || 'image/jpeg',
+          }).pipe(
+            map((res) => {
+              const assetId = res.asset?.assetId ?? '';
+              const url = res.asset?.url ?? '';
+              return assetId && url ? { section, success: true, assetId, url } : { section, success: false };
+            }),
+            catchError(() => of({ section, success: false }))
+          );
         }),
         catchError(() => of({ section, success: false })),
         finalize(() => {
@@ -3738,7 +4007,13 @@ export class AdminComponent implements OnInit {
     this.stockEntryForm.stockId = selected.id;
     this.stockTransferForm.sourceStockId = this.stockTransferForm.sourceStockId || selected.id;
     this.posForm.stockId = this.posForm.stockId || selected.id;
-    this.stockUserLinkDraft = new Set(selected.linkedUserIds);
+    this.stockUserLinkDraft = new Set(selected.linkedUserIds.map(Number));
+    // Auto-fill "registrado por" con el primer empleado vinculado al stock
+    const linkedEmployee = this.employees.find((e) => selected.linkedUserIds.map(Number).includes(e.id));
+    const defaultOperator = linkedEmployee?.id ?? this.employees[0]?.id ?? null;
+    this.stockEntryForm.createdByUserId = defaultOperator;
+    this.stockDamageForm.reportedByUserId = defaultOperator;
+    this.stockTransferForm.createdByUserId = defaultOperator;
   }
 
   saveStockLinks(): void {
@@ -3754,6 +4029,12 @@ export class AdminComponent implements OnInit {
   saveStockAllowPickup(stockId: string, value: boolean): void {
     this.adminControl
       .updateStock(stockId, { allowPickup: value })
+      .subscribe({ next: () => this.loadStocksAndPosState() });
+  }
+
+  saveStockIsMainWarehouse(stockId: string, value: boolean): void {
+    this.adminControl
+      .updateStock(stockId, { isMainWarehouse: value })
       .subscribe({ next: () => this.loadStocksAndPosState() });
   }
 
@@ -3778,14 +4059,20 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('stock_add_inventory')) {
       return;
     }
-    const { stockId, productId, qty, note, createdByUserId } = this.stockEntryForm;
-    if (!stockId || !productId || qty <= 0) {
-      this.setStockFeedback('Selecciona stock, producto y una cantidad valida.', 'error');
+    const { note, createdByUserId } = this.stockEntryForm;
+    const stockId = this.stockEntryForm.stockId;
+    const productId = Number(this.stockEntryForm.productId) || null;
+    const normalizedQty = Math.floor(Number(this.stockEntryForm.qty));
+    if (!stockId) {
+      this.setStockFeedback('Selecciona un stock.', 'error');
       return;
     }
-    const normalizedQty = Math.floor(Number(qty));
+    if (!productId) {
+      this.setStockFeedback('Selecciona un producto.', 'error');
+      return;
+    }
     if (!Number.isFinite(normalizedQty) || normalizedQty <= 0) {
-      this.setStockFeedback('La cantidad debe ser mayor a cero.', 'error');
+      this.setStockFeedback('Ingresa una cantidad válida mayor a cero.', 'error');
       return;
     }
     this.setStockFeedback('', '');
@@ -3924,17 +4211,23 @@ export class AdminComponent implements OnInit {
     const { sourceStockId, destinationStockId, createdByUserId } = this.stockTransferForm;
     const normalizedLines = this.normalizeTransferLines(this.stockTransferForm.lines);
     if (!sourceStockId || !destinationStockId || sourceStockId === destinationStockId || !normalizedLines.length) {
-      this.setStockFeedback('Completa origen, destino y al menos una linea valida.', 'error');
+      const msg = 'Completa origen, destino y al menos una linea valida.';
+      this.setStockFeedback(msg, 'error');
+      this.showSnackbar(msg);
       return;
     }
     const sourceStock = this.stocks.find((stock) => stock.id === sourceStockId);
     if (!sourceStock) {
-      this.setStockFeedback('Selecciona un stock origen valido.', 'error');
+      const msg = 'Selecciona un stock origen valido.';
+      this.setStockFeedback(msg, 'error');
+      this.showSnackbar(msg);
       return;
     }
     const insufficientLine = normalizedLines.find((line) => (sourceStock.inventory[line.productId] ?? 0) < line.qty);
     if (insufficientLine) {
-      this.setStockFeedback(`Stock insuficiente para ${this.productName(insufficientLine.productId)}.`, 'error');
+      const msg = `Stock insuficiente para ${this.productName(insufficientLine.productId)}.`;
+      this.setStockFeedback(msg, 'error');
+      this.showSnackbar(msg);
       return;
     }
     this.setStockFeedback('', '');
@@ -3948,10 +4241,9 @@ export class AdminComponent implements OnInit {
           this.showSnackbar('Transferencia creada.');
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
-          this.setStockFeedback(
-            error?.error?.message || error?.message || 'No se pudo crear la transferencia.',
-            'error'
-          );
+          const msg = error?.error?.message || error?.message || 'No se pudo crear la transferencia.';
+          this.setStockFeedback(msg, 'error');
+          this.showSnackbar(msg);
         }
       });
   }
@@ -4013,11 +4305,14 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('stock_mark_damaged')) {
       return;
     }
-    const { stockId, productId, qty, reason, reportedByUserId } = this.stockDamageForm;
-    if (!stockId || !productId || qty <= 0 || !reason.trim()) {
-      this.setStockFeedback('Completa stock, producto, cantidad y motivo.', 'error');
-      return;
-    }
+    const { reason, reportedByUserId } = this.stockDamageForm;
+    const stockId = this.stockDamageForm.stockId;
+    const productId = Number(this.stockDamageForm.productId) || null;
+    const qty = Math.floor(Number(this.stockDamageForm.qty));
+    if (!stockId) { this.setStockFeedback('Selecciona un stock.', 'error'); return; }
+    if (!productId) { this.setStockFeedback('Selecciona un producto.', 'error'); return; }
+    if (!Number.isFinite(qty) || qty <= 0) { this.setStockFeedback('Ingresa una cantidad válida mayor a cero.', 'error'); return; }
+    if (!reason.trim()) { this.setStockFeedback('Ingresa el motivo del daño.', 'error'); return; }
     const stock = this.stocks.find((entry) => entry.id === stockId);
     if (!stock) {
       this.setStockFeedback('Selecciona un stock valido.', 'error');

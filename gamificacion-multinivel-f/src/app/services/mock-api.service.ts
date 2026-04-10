@@ -42,6 +42,10 @@ import {
   SaveProductCategoryPayload,
   ShippingRate,
   ShippingQuoteRequest,
+  AdminRefundPayload,
+  AdminRefundResponse,
+  AdminReturnInspectPayload,
+  AdminReturnInspectResponse,
   OrderCancelResponse,
   OrderReturnRequestPayload,
   OrderReturnRequestResponse
@@ -624,6 +628,14 @@ export class MockApiService {
       this.products = [product, ...this.products];
     }
     return of(product).pipe(delay(120));
+  }
+
+  deleteProduct(productId: number): Observable<{ ok: boolean; productId: number }> {
+    const idx = this.products.findIndex((p) => p.id === productId);
+    if (idx >= 0) {
+      this.products[idx] = { ...this.products[idx], active: false, inOnlineStore: false, inPOS: false };
+    }
+    return of({ ok: true, productId }).pipe(delay(120));
   }
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
@@ -1238,8 +1250,8 @@ export class MockApiService {
     return of({ customers: page, total: customers.length, hasMore, nextToken: hasMore ? String(nextOffset) : undefined }).pipe(delay(120));
   }
 
-  listProducts(): Observable<AdminProduct[]> {
-    return of(this.products ?? []).pipe(delay(120));
+  listProducts(): Observable<{ products: AdminProduct[]; productOfMonthId: number | null }> {
+    return of({ products: this.products ?? [], productOfMonthId: null }).pipe(delay(120));
   }
 
   listCampaigns(): Observable<AdminCampaign[]> {
@@ -1344,9 +1356,10 @@ export class MockApiService {
       asset: {
         assetId,
         bucket: 'mock-bucket',
-        key: `products/${payload.productId}/${payload.section}/${assetId}/${payload.filename}`,
+        key: `products/${payload.productId}/${payload.section}/${assetId}/${payload.fileName ?? ''}`,
+        url: `https://mock-bucket.s3.amazonaws.com/products/${payload.productId}/${payload.section}/${assetId}`,
         ownerType: 'product',
-        ownerId: payload.productId,
+        ownerId: String(payload.productId),
         section: payload.section,
         contentType: payload.contentType ?? 'application/octet-stream',
         createdAt: now,
@@ -1405,7 +1418,7 @@ export class MockApiService {
     return of(updated).pipe(delay(120));
   }
 
-  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ ok: boolean; stock?: AdminStock }> {
     const stock = this.stocks.find((entry) => entry.id === stockId);
     if (!stock) {
       throw new Error('Stock no encontrado');
@@ -1427,10 +1440,10 @@ export class MockApiService {
       },
       ...this.inventoryMovements
     ];
-    return of({ stock: updated }).pipe(delay(120));
+    return of({ ok: true, stock: updated }).pipe(delay(120));
   }
 
-  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ ok: boolean; stock?: AdminStock }> {
     const stock = this.stocks.find((entry) => entry.id === stockId);
     if (!stock) {
       throw new Error('Stock no encontrado');
@@ -1452,7 +1465,7 @@ export class MockApiService {
       },
       ...this.inventoryMovements
     ];
-    return of({ stock: updated }).pipe(delay(120));
+    return of({ ok: true, stock: updated }).pipe(delay(120));
   }
 
   listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
@@ -2064,6 +2077,21 @@ export class MockApiService {
       status: 'PENDIENTE' as const,
       shippingResponsibility: shipping,
       message: 'Solicitud registrada correctamente.'
+    }).pipe(delay(300));
+  }
+
+  refundOrder(orderId: string, _payload: AdminRefundPayload): Observable<AdminRefundResponse> {
+    return of({ orderId, status: 'refunded' }).pipe(delay(300));
+  }
+
+  inspectReturn(orderId: string, payload: AdminReturnInspectPayload): Observable<AdminReturnInspectResponse> {
+    const approved = payload.inspection.empaque_original && !payload.inspection.producto_abierto;
+    return of({
+      ok: true,
+      requestId: `RET-MOCK-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      returnStatus: approved ? 'DEVUELTO_VALIDADO' : 'DEVOLUCION_RECHAZADA',
+      orderStatus: approved ? 'devuelto_validado' : 'devolucion_rechazada',
+      approved,
     }).pipe(delay(300));
   }
 

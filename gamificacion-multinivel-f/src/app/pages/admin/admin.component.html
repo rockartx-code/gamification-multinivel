@@ -95,6 +95,27 @@
             <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'delivered' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('delivered')">
               Entregado
             </ui-button>
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'cancelled' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('cancelled')">
+              Cancelado
+            </ui-button>
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'refunded' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('refunded')">
+              Reembolsado
+            </ui-button>
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'en_devolucion' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('en_devolucion')">
+              Por devolver
+            </ui-button>
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'devuelto_validado' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('devuelto_validado')">
+              Devuelto
+            </ui-button>
+            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'devolucion_rechazada' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('devolucion_rechazada')">
+              Dev. rechazada
+            </ui-button>
+            <!-- Filtro por stock -->
+            <select *ngIf="stocks.length" [(ngModel)]="orderStockFilter"
+              class="ml-2 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70">
+              <option value="">Todos los stocks</option>
+              <option *ngFor="let s of stocks" [value]="s.id">{{ s.name }}</option>
+            </select>
           </div>
         </div>
 
@@ -243,6 +264,23 @@
                           <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar' }}
                           </ui-button>
+                          <!-- Reembolsar (desde cancelado) -->
+                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-money-bill-transfer" *ngIf="order.status === 'cancelled'" (pressed)="openRefundModal(order)">
+                            Reembolsar
+                          </ui-button>
+                          <!-- Recibir paquete (desde en_devolucion) -->
+                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-box-open" *ngIf="order.status === 'en_devolucion'" (pressed)="openReceiveReturnModal(order)">
+                            Recibir paquete
+                          </ui-button>
+                          <!-- Reembolsar o rechazar (desde devuelto_validado) -->
+                          <ng-container *ngIf="order.status === 'devuelto_validado'">
+                            <ui-button variant="primary" size="sm" iconClass="fa-solid fa-money-bill-transfer" (pressed)="openRefundModal(order)">
+                              Reembolsar
+                            </ui-button>
+                            <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-ban" (pressed)="openRejectReturnModal(order)">
+                              Rechazar
+                            </ui-button>
+                          </ng-container>
                         </div>
                       </div>
                       <div *ngIf="expandedOrderDetailId === order.id" class="border-t border-olive-20 bg-ivory-80 px-4 py-4">
@@ -281,15 +319,39 @@
                                 <div *ngIf="order.phone">Tel: {{ order.phone }}</div>
                                 <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>{{ order.deliveryNotes }}</div>
                               </ng-container>
+                              <div *ngIf="!order.address && order.deliveryType === 'pickup'">
+                                <span class="text-gray-500">Sucursal:</span>
+                                <span class="text-main font-semibold"> {{ stockName(order.pickupStockId ?? '') || order.pickupStockId || '—' }}</span>
+                              </div>
                               <div *ngIf="!order.address && order.shippingType === 'personal' && order.deliveryPlace">
                                 Entrega personal en: <span class="font-semibold text-main">{{ order.deliveryPlace }}</span>
                               </div>
                               <div *ngIf="!order.address && order.shippingType === 'personal' && !order.deliveryPlace">
                                 Entrega personal (sin lugar especificado)
                               </div>
-                              <div *ngIf="!order.address && order.shippingType !== 'personal'" class="text-gray-400 italic">
+                              <div *ngIf="!order.address && order.deliveryType !== 'pickup' && order.shippingType !== 'personal'" class="text-gray-400 italic">
                                 Sin dirección de envío registrada.
                               </div>
+                            </div>
+                            <!-- Paquetería / guía -->
+                            <div *ngIf="order.shippingType === 'carrier' && order.trackingNumber" class="mt-2 space-y-1 text-xs">
+                              <div class="font-semibold text-gray-600"><i class="fa-solid fa-truck text-accent mr-1" aria-hidden="true"></i>Envío</div>
+                              <div class="text-gray-700">Guía: <span class="font-semibold text-main">{{ order.trackingNumber }}</span></div>
+                              <div *ngIf="order.stockId" class="text-gray-600">Stock origen: {{ stockName(order.stockId) || order.stockId }}</div>
+                            </div>
+                            <!-- Cancelación -->
+                            <div *ngIf="order.cancelReason" class="mt-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-800">
+                              <i class="fa-solid fa-ban mr-1" aria-hidden="true"></i>
+                              <span class="font-semibold">Motivo cancelación:</span> {{ order.cancelReason }}
+                              <span *ngIf="order.cancelledAt"> · {{ order.cancelledAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            </div>
+                            <!-- Devolución -->
+                            <div *ngIf="order.returnRequestId" class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+                              <i class="fa-solid fa-rotate-left mr-1" aria-hidden="true"></i>
+                              <span class="font-semibold">Solicitud devolución:</span> {{ order.returnRequestId }}
+                              <span *ngIf="order.status === 'en_devolucion'" class="ml-1 italic">— En proceso de validación</span>
+                              <span *ngIf="order.status === 'devuelto_validado'" class="ml-1 italic">— Aprobada</span>
+                              <span *ngIf="order.status === 'devolucion_rechazada'" class="ml-1 italic">— Rechazada</span>
                             </div>
                           </div>
                         </div>
@@ -449,20 +511,7 @@
                       {{ formatMoney(customer?.commissionsCurrentPending ?? 0) }}
                     </div>
                   </div>
-                  <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                    <div class="text-xs text-gray-600">Acción sugerida</div>
-                    <div class="mt-1 text-sm text-muted">
-                      {{
-                      (customer?.commissions ?? 0) > 0
-                      ? 'Pagar comisiones pendientes.'
-                      : 'Invitar a subir de nivel.'
-                      }}
-                    </div>
-                    <ui-button size="sm" variant="ghost" class="mt-3 w-full">
-                      <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                      Enviar recordatorio
-                    </ui-button>
-                  </div>
+
                   <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                     <div class="text-xs text-gray-600">Comisiones mes anterior</div>
                     <div class="mt-1 text-2xl font-extrabold">
@@ -559,6 +608,61 @@
                         <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
                         {{ isUploadingCustomerDocument ? 'Cargando...' : 'Subir documento' }}
                       </ui-button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DOCUMENTOS PROPIOS DEL CLIENTE (ownDocuments) -->
+                <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="selectedCustomer">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-semibold text-main">Documentos del cliente</div>
+                      <div class="mt-1 text-xs text-gray-600">Documentos subidos por el cliente (INE, CURP, Constancia fiscal, etc.).</div>
+                    </div>
+                    <div class="rounded-full border border-olive-20 bg-ivory-70 px-3 py-1 text-xs font-semibold text-main">
+                      {{ selectedCustomerProfile?.ownDocuments?.length ?? 0 }} archivo(s)
+                    </div>
+                  </div>
+
+                  <div *ngIf="isLoadingSelectedCustomerProfile" class="mt-3 rounded-2xl border border-olive-20 bg-ivory-70 px-4 py-3 text-xs text-gray-500">
+                    Cargando documentos...
+                  </div>
+
+                  <div *ngIf="!isLoadingSelectedCustomerProfile && !selectedCustomerProfile?.ownDocuments?.length"
+                    class="mt-3 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 px-4 py-4 text-xs text-gray-500">
+                    El cliente no ha subido documentos propios aún.
+                  </div>
+
+                  <div *ngIf="!isLoadingSelectedCustomerProfile && selectedCustomerProfile?.ownDocuments?.length"
+                    class="mt-3 flex flex-col gap-4">
+                    <div *ngFor="let doc of selectedCustomerProfile?.ownDocuments"
+                      class="rounded-2xl border border-olive-20 bg-ivory-70 overflow-hidden">
+                      <!-- Header del documento -->
+                      <div class="flex items-center gap-3 px-4 py-3">
+                        <i class="fa-solid text-sm text-gray-400"
+                          [ngClass]="doc.type.includes('pdf') ? 'fa-file-pdf text-red-400' : 'fa-file-image text-blue-400'"
+                          aria-hidden="true"></i>
+                        <div class="min-w-0 flex-1">
+                          <div class="truncate text-sm font-semibold text-main">{{ doc.name }}</div>
+                          <div class="mt-0.5 flex gap-2 text-xs text-gray-500">
+                            <span *ngIf="doc.docType" class="rounded-full border border-olive-20 bg-white/70 px-2 py-0.5 font-medium">{{ doc.docType }}</span>
+                            <span>{{ doc.uploadedAt ? formatDateTime(doc.uploadedAt) : 'Sin fecha' }}</span>
+                          </div>
+                        </div>
+                        <ui-button size="sm" variant="ghost" [disabled]="!doc.url" (pressed)="openCustomerDocument(doc)">
+                          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                          Abrir
+                        </ui-button>
+                      </div>
+                      <!-- Vista previa -->
+                      <div *ngIf="doc.url" class="border-t border-olive-20">
+                        <ng-container *ngIf="doc.type.includes('pdf')">
+                          <iframe [src]="safeResourceUrl(doc.url)" class="h-64 w-full" title="{{ doc.name }}" loading="lazy"></iframe>
+                        </ng-container>
+                        <ng-container *ngIf="!doc.type.includes('pdf') && doc.url && (doc.type.includes('image') || doc.url.endsWith('.png') || doc.url.endsWith('.jpg') || doc.url.endsWith('.jpeg') || doc.url.endsWith('.webp') || doc.url.endsWith('.gif'))">
+                          <img [src]="doc.url" [alt]="doc.name" class="max-h-64 w-full object-contain bg-gray-50 p-2" loading="lazy" />
+                        </ng-container>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1305,6 +1409,14 @@
                       (change)="saveStockAllowPickup(stock.id, $any($event.target).checked)"
                       class="rounded" />
                     <span class="text-xs text-main">Permitir recoger en esta sucursal</span>
+                  </div>
+                  <div class="mt-2 flex items-center gap-3 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      [checked]="stock.isMainWarehouse"
+                      (change)="saveStockIsMainWarehouse(stock.id, $any($event.target).checked)"
+                      class="rounded" />
+                    <span class="text-xs text-main">Bodega principal (origen de envíos)</span>
                   </div>
                   <div class="mt-3 text-xs font-semibold text-main">Empleados vinculados</div>
                   <div class="mt-2 grid gap-2 sm:grid-cols-2">
@@ -2797,6 +2909,115 @@
       </div>
   </ui-modal>
 
+<!-- ── Refund modal ─────────────────────────────────────────────────────── -->
+<ui-modal [isOpen]="isRefundModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeRefundModal()">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-lg font-extrabold text-main">Registrar reembolso</div>
+      <div class="mt-1 text-sm text-gray-600">Pedido: <span class="font-semibold text-main">{{ refundTargetOrder?.id }}</span></div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="closeRefundModal()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </ui-button>
+  </div>
+  <div class="mt-4 grid gap-3">
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Motivo del reembolso (opcional)</label>
+      <input type="text" [(ngModel)]="refundReason" placeholder="Ej. Cancelación por cliente"
+        class="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70" />
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Comprobante de depósito <span class="text-red-500">*</span></label>
+      <input type="file" accept="image/*,application/pdf" (change)="onRefundReceiptFile($event)"
+        class="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-olive-10 file:px-3 file:py-1 file:text-xs file:font-semibold hover:file:bg-olive-20" />
+      <div *ngIf="refundReceiptBase64" class="mt-1 text-xs text-green-700">
+        <i class="fa-solid fa-check mr-1" aria-hidden="true"></i>{{ refundReceiptName || 'Archivo adjunto' }}
+      </div>
+    </div>
+    <div *ngIf="refundError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      {{ refundError }}
+    </div>
+  </div>
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" (pressed)="closeRefundModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="isSavingRefund" (pressed)="confirmRefund()">
+      <i class="fa-solid fa-money-bill-transfer mr-1" aria-hidden="true"></i>
+      {{ isSavingRefund ? 'Guardando...' : 'Confirmar reembolso' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- ── Receive return modal ─────────────────────────────────────────────── -->
+<ui-modal [isOpen]="isReceiveReturnModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeReceiveReturnModal()">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-lg font-extrabold text-main">Recibir paquete de devolución</div>
+      <div class="mt-1 text-sm text-gray-600">Pedido: <span class="font-semibold text-main">{{ receiveReturnOrder?.id }}</span></div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="closeReceiveReturnModal()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </ui-button>
+  </div>
+  <div class="mt-4 grid gap-3">
+    <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
+      Adjunta fotos del estado del paquete recibido. Esto marcará la devolución como <strong>validada</strong>.
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Fotos del paquete <span class="text-red-500">*</span></label>
+      <input type="file" accept="image/*" multiple (change)="onReceiveReturnImageFile($event)"
+        class="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-olive-10 file:px-3 file:py-1 file:text-xs file:font-semibold hover:file:bg-olive-20" />
+      <div *ngIf="receiveReturnImages.length" class="mt-1 text-xs text-green-700">
+        <i class="fa-solid fa-check mr-1" aria-hidden="true"></i>{{ receiveReturnImages.length }} imagen(es) adjunta(s)
+      </div>
+    </div>
+    <div *ngIf="receiveReturnError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      {{ receiveReturnError }}
+    </div>
+  </div>
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" (pressed)="closeReceiveReturnModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="isSavingReceiveReturn" (pressed)="confirmReceiveReturn()">
+      <i class="fa-solid fa-box-open mr-1" aria-hidden="true"></i>
+      {{ isSavingReceiveReturn ? 'Guardando...' : 'Confirmar recepción' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- ── Reject return modal ──────────────────────────────────────────────── -->
+<ui-modal [isOpen]="isRejectReturnModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeRejectReturnModal()">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-lg font-extrabold text-main">Rechazar devolución</div>
+      <div class="mt-1 text-sm text-gray-600">Pedido: <span class="font-semibold text-main">{{ rejectReturnOrder?.id }}</span></div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="closeRejectReturnModal()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </ui-button>
+  </div>
+  <div class="mt-4 grid gap-3">
+    <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+      <i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>
+      Esta acción marcará la devolución como <strong>rechazada</strong> y notificará al cliente.
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Motivo del rechazo <span class="text-red-500">*</span></label>
+      <textarea [(ngModel)]="rejectReturnReason" rows="3" placeholder="Ej. El producto presenta daños causados por el cliente..."
+        class="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70 resize-none"></textarea>
+    </div>
+    <div *ngIf="rejectReturnError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      {{ rejectReturnError }}
+    </div>
+  </div>
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" (pressed)="closeRejectReturnModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="isSavingRejectReturn" (pressed)="confirmRejectReturn()">
+      <i class="fa-solid fa-ban mr-1" aria-hidden="true"></i>
+      {{ isSavingRejectReturn ? 'Guardando...' : 'Confirmar rechazo' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
 <ui-modal [isOpen]="isAddStructureModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeModals()">
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -2905,7 +3126,7 @@
     </div>
 
     <div class="mt-4 grid gap-3 sm:grid-cols-2">
-      <ui-form-field kind="select" label="Stock" [options]="stockOptionsStable" [ngModel]="stockEntryForm.stockId" (ngModelChange)="stockEntryForm.stockId = $event"></ui-form-field>
+      <ui-form-field kind="select" label="Stock" [options]="accessibleStockOptionsStable" [ngModel]="stockEntryForm.stockId" (ngModelChange)="stockEntryForm.stockId = $event"></ui-form-field>
       <ui-form-field kind="select" label="Producto" [options]="productOptionsStable" [ngModel]="stockEntryForm.productId" (ngModelChange)="stockEntryForm.productId = +$event"></ui-form-field>
       <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockEntryForm.qty" (ngModelChange)="stockEntryForm.qty = +$event || 1"></ui-form-field>
       <ui-form-field kind="select" label="Registrado por" [options]="employeeOptionsStable" [ngModel]="stockEntryForm.createdByUserId" (ngModelChange)="stockEntryForm.createdByUserId = +$event"></ui-form-field>
@@ -2942,7 +3163,7 @@
     </div>
 
     <div class="mt-4 grid gap-3 sm:grid-cols-2">
-      <ui-form-field kind="select" label="Stock" [options]="stockOptionsStable" [ngModel]="stockDamageForm.stockId" (ngModelChange)="stockDamageForm.stockId = $event"></ui-form-field>
+      <ui-form-field kind="select" label="Stock" [options]="accessibleStockOptionsStable" [ngModel]="stockDamageForm.stockId" (ngModelChange)="stockDamageForm.stockId = $event"></ui-form-field>
       <ui-form-field kind="select" label="Producto" [options]="productOptionsStable" [ngModel]="stockDamageForm.productId" (ngModelChange)="stockDamageForm.productId = +$event"></ui-form-field>
       <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="stockDamageForm.qty" (ngModelChange)="stockDamageForm.qty = +$event || 1"></ui-form-field>
       <ui-form-field kind="select" label="Reportado por" [options]="employeeOptionsStable" [ngModel]="stockDamageForm.reportedByUserId" (ngModelChange)="stockDamageForm.reportedByUserId = +$event"></ui-form-field>

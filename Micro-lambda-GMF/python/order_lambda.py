@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 import core_utils as utils  # Importado desde la Layer
 from datetime import datetime, timezone
+from decimal import Decimal
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -120,9 +121,44 @@ def _serialize_order_list_item(item: dict) -> dict:
         "discountAmount": item.get("discountAmount", utils.D_ZERO),
         "netTotal": item.get("netTotal", total),
         "total": total,
+        # Delivery / shipping
         "deliveryType": item.get("deliveryType"),
         "deliveryNotes": item.get("deliveryNotes"),
         "shippingAddressLabel": item.get("shippingAddressLabel"),
+        "shippingType": item.get("shippingType"),
+        "trackingNumber": item.get("trackingNumber"),
+        "deliveryPlace": item.get("deliveryPlace"),
+        "deliveryDate": item.get("deliveryDate"),
+        "deliveredAt": item.get("deliveredAt"),
+        # Address fields
+        "recipientName": item.get("recipientName"),
+        "phone": item.get("phone"),
+        "street": item.get("street"),
+        "number": item.get("number"),
+        "address": item.get("address"),
+        "city": item.get("city"),
+        "postalCode": item.get("postalCode"),
+        "state": item.get("state"),
+        "country": item.get("country"),
+        "betweenStreets": item.get("betweenStreets"),
+        "references": item.get("references"),
+        # Pickup
+        "pickupStockId": item.get("pickupStockId"),
+        "pickupPaymentMethod": item.get("pickupPaymentMethod"),
+        # Stock dispatched from
+        "stockId": item.get("stockId"),
+        "attendantUserId": item.get("attendantUserId"),
+        # Cancellation / return / refund
+        "cancelReason": item.get("cancelReason"),
+        "cancelledAt": item.get("cancelledAt"),
+        "returnRequestId": item.get("returnRequestId"),
+        "rejectionReason": item.get("rejectionReason"),
+        "rejectedAt": item.get("rejectedAt"),
+        "refundReceiptUrl": item.get("refundReceiptUrl"),
+        "refundedAt": item.get("refundedAt"),
+        # Payment
+        "paymentStatus": item.get("paymentStatus"),
+        "paymentProvider": item.get("paymentProvider"),
         "createdAt": item.get("createdAt"),
         "updatedAt": item.get("updatedAt"),
     }
@@ -163,6 +199,7 @@ def _backfill_customer_order_history(customer_id) -> int:
 def handle_list_orders(customer_id, query, headers):
     next_token = query.get("nextToken")
     status_filter = (query.get("status") or "").lower().strip()
+    stock_id_filter = (query.get("stockId") or "").strip()
 
     # Admin: devuelve todas las órdenes sin filtrar por customerId
     admin_actor = utils._extract_admin_actor(headers)
@@ -180,6 +217,12 @@ def handle_list_orders(customer_id, query, headers):
         items = utils._query_bucket("ORDER", forward=False)
         if status_filter:
             items = [o for o in items if (o.get("status") or "").lower() == status_filter]
+        # Filtrar por stock (stockId = stock de despacho, pickupStockId = sucursal de retiro)
+        if stock_id_filter:
+            items = [
+                o for o in items
+                if o.get("stockId") == stock_id_filter or o.get("pickupStockId") == stock_id_filter
+            ]
         total = len(items)
         # Paginación manual sobre la lista filtrada
         try:
@@ -415,14 +458,70 @@ def handle_update_status(order_id, body, headers):
             print(f"[SFN_ERROR] {e}")
 
     extra_updates = {}
+    now = utils._now_iso()
     if new_status == "delivered":
-        extra_updates["deliveredAt"] = utils._now_iso()
+        extra_updates["deliveredAt"] = now
+    if new_status == "devolucion_rechazada":
+        rejection_reason = (body.get("rejectionReason") or "").strip()
+        if rejection_reason:
+            extra_updates["rejectionReason"] = rejection_reason
+        extra_updates["rejectedAt"] = now
+    if new_status == "shipped":
+        if body.get("shippingType"):
+            extra_updates["shippingType"] = body["shippingType"]
+        if body.get("trackingNumber"):
+            extra_updates["trackingNumber"] = body["trackingNumber"]
+        if body.get("deliveryPlace"):
+            extra_updates["deliveryPlace"] = body["deliveryPlace"]
+        if body.get("deliveryDate"):
+            extra_updates["deliveryDate"] = body["deliveryDate"]
+        if body.get("stockId"):
+            extra_updates["stockId"] = body["stockId"]
+        # Procesar salida de inventario si se proveen dispatchLines
+        dispatch_lines = body.get("dispatchLines") or []
+        stock_id_for_dispatch = body.get("stockId")
+        if dispatch_lines and stock_id_for_dispatch:
+            deltas = {}
+            for line in dispatch_lines:
+                pid = str(line.get("productId", ""))
+                qty = int(line.get("quantity") or line.get("qty") or 0)
+                if pid and qty > 0:
+                    deltas[pid] = deltas.get(pid, 0) - qty
+            if deltas:
+                stock = utils._get_by_id("STOCK", stock_id_for_dispatch)
+                if stock:
+                    inventory = {str(k): int(v) for k, v in (stock.get("inventory") or {}).items()}
+                    for pid, delta in deltas.items():
+                        inventory[pid] = max(0, inventory.get(pid, 0) + delta)
+                    utils._update_by_id(
+                        "STOCK", stock_id_for_dispatch,
+                        "SET inventory = :inv, updatedAt = :u",
+                        {":inv": inventory, ":u": now},
+                    )
+                    actor = utils._extract_actor(headers)
+                    user_id = actor.get("user_id") or body.get("attendantUserId")
+                    for pid, delta in deltas.items():
+                        move_id = f"MOV-{utils.uuid.uuid4().hex[:12].upper()}"
+                        utils._put_entity("INVENTORY_MOVEMENT", move_id, {
+                            "entityType": "inventoryMovement",
+                            "movementId": move_id,
+                            "stockId": stock_id_for_dispatch,
+                            "movementType": "exit_order",
+                            "type": "exit_order",
+                            "productId": int(pid),
+                            "qty": abs(delta),
+                            "referenceId": order_id,
+                            "userId": user_id,
+                            "reason": f"Despacho orden {order_id}",
+                            "createdAt": now,
+                        })
 
     update_expr = "SET #s = :s, updatedAt = :u"
-    eav = {":s": new_status, ":u": utils._now_iso()}
+    eav = {":s": new_status, ":u": now}
     for k, v in extra_updates.items():
-        update_expr += f", {k} = :{k}"
-        eav[f":{k}"] = v
+        safe_key = k.replace(".", "_")
+        update_expr += f", {safe_key} = :{safe_key}"
+        eav[f":{safe_key}"] = v
 
     updated = utils._update_by_id("ORDER", order_id, update_expr, eav, {"#s": "status"})
     utils._upsert_order_customer_history(updated)
@@ -720,7 +819,7 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         "status": "PENDIENTE",
         "shippingResponsibility": shipping_responsibility,
         "evidence": uploaded_evidence,
-        "horasDesdEntrega": float(hours_since),
+        "horasDesdEntrega": Decimal(str(round(hours_since, 4))),
         "inspection": None,
         "createdAt": now,
         "updatedAt": now,
@@ -802,19 +901,50 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     now = utils._now_iso()
     new_return_status = "DEVUELTO_VALIDADO" if approved else "DEVOLUCION_RECHAZADA"
     new_order_status = "devuelto_validado" if approved else "devolucion_rechazada"
-    actor = (headers or {}).get("x-user-id") or (headers or {}).get("x-actor-id") or "admin"
+    actor_header = (headers or {})
+    actor = actor_header.get("x-user-id") or actor_header.get("x-actor-id") or "admin"
+
+    # Subir imágenes del paquete recibido si se proporcionan
+    package_image_urls = []
+    for i, img in enumerate(body.get("packageImages") or []):
+        if isinstance(img, dict):
+            cb64 = img.get("contentBase64", "")
+            ct = img.get("contentType", "image/jpeg")
+            fname = img.get("fileName", f"paquete_{i+1}.jpg")
+        else:
+            cb64, ct, fname = str(img), "image/jpeg", f"paquete_{i+1}.jpg"
+        try:
+            asset = _upload_evidence_s3(
+                fname, cb64, ct,
+                prefix=f"devoluciones/{order_id}/{request_id}/paquete_recibido",
+            )
+            package_image_urls.append(asset["url"])
+        except Exception as e:
+            print(f"[S3_PACKAGE_IMG] {e}")
+
+    inspection_record = {**inspection}
+    if package_image_urls:
+        inspection_record["packageImageUrls"] = package_image_urls
+
+    # Motivo de rechazo opcional (cuando admin rechaza desde devuelto_validado)
+    rejection_reason = (body.get("rejectionReason") or "").strip()
 
     utils._update_by_id(
         "RETURN_REQUEST", request_id,
         "SET #s = :s, inspection = :i, inspectedAt = :ia, inspectedBy = :ib, updatedAt = :u",
-        {":s": new_return_status, ":i": inspection, ":ia": now, ":ib": actor, ":u": now},
+        {":s": new_return_status, ":i": inspection_record, ":ia": now, ":ib": actor, ":u": now},
         {"#s": "status"},
     )
+
+    order_update_expr = "SET #s = :s, updatedAt = :u"
+    order_eav = {":s": new_order_status, ":u": now}
+    if not approved and rejection_reason:
+        order_update_expr += ", rejectionReason = :rr, rejectedAt = :ra"
+        order_eav[":rr"] = rejection_reason
+        order_eav[":ra"] = now
+
     updated_order = utils._update_by_id(
-        "ORDER", order_id,
-        "SET #s = :s, updatedAt = :u",
-        {":s": new_order_status, ":u": now},
-        {"#s": "status"},
+        "ORDER", order_id, order_update_expr, order_eav, {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
 
@@ -842,20 +972,56 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
 
 
 def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
-    """POST /orders/{id}/refund"""
-    if not utils._get_by_id("ORDER", order_id):
+    """POST /orders/{id}/refund
+    Acepta un comprobante de depósito (receiptBase64) para registrar el reembolso.
+    Puede llamarse desde órdenes canceladas o con devolución validada.
+    """
+    order = utils._get_by_id("ORDER", order_id)
+    if not order:
         return utils._json_response(404, {"message": "Pedido no encontrado"})
+
+    allowed_statuses = {"cancelled", "canceled", "devuelto_validado"}
+    current_status = (order.get("status") or "").lower()
+    if current_status not in allowed_statuses:
+        return utils._json_response(409, {
+            "message": f"No se puede reembolsar un pedido en estado '{current_status}'. Solo cancelados o devoluciones validadas.",
+            "code": "INVALID_STATUS_FOR_REFUND",
+        })
+
     now = utils._now_iso()
-    updated_order = utils._update_by_id(
-        "ORDER", order_id,
-        "SET #s = :s, refundReason = :r, updatedAt = :u",
-        {":s": "refunded", ":r": body.get("reason") or "refund", ":u": now},
-        {"#s": "status"},
-    )
+    refund_receipt_url = None
+
+    # Subir comprobante de depósito si se proporciona
+    receipt_b64 = (body.get("receiptBase64") or "").strip()
+    if receipt_b64:
+        receipt_name = body.get("receiptName") or "comprobante_reembolso.jpg"
+        receipt_ct = body.get("receiptContentType") or "image/jpeg"
+        try:
+            asset = _upload_evidence_s3(
+                receipt_name, receipt_b64, receipt_ct,
+                prefix=f"reembolsos/{order_id}",
+            )
+            refund_receipt_url = asset["url"]
+        except Exception as e:
+            print(f"[S3_REFUND_RECEIPT] {e}")
+            return utils._json_response(400, {"message": "No se pudo procesar el comprobante de depósito.", "detail": str(e)})
+
+    update_expr = "SET #s = :s, refundReason = :r, refundedAt = :ra, updatedAt = :u"
+    eav = {":s": "refunded", ":r": body.get("reason") or "refund", ":ra": now, ":u": now}
+    if refund_receipt_url:
+        update_expr += ", refundReceiptUrl = :rru"
+        eav[":rru"] = refund_receipt_url
+
+    updated_order = utils._update_by_id("ORDER", order_id, update_expr, eav, {"#s": "status"})
     utils._upsert_order_customer_history(updated_order)
     actions = _void_commissions_for_order(order_id, reason="refund")
     utils._audit_event("order.refund", headers, body, {"orderId": order_id})
-    return utils._json_response(200, {"orderId": order_id, "status": "refunded", "commissionActions": actions})
+    return utils._json_response(200, {
+        "orderId": order_id,
+        "status": "refunded",
+        "refundReceiptUrl": refund_receipt_url,
+        "commissionActions": actions,
+    })
 
 
 def handle_mp_webhook(query, body):

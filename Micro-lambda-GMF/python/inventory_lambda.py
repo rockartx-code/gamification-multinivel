@@ -67,7 +67,10 @@ def handle_stocks(method, body, stock_id=None):
         sid = body.get("stockId") or f"STK-{utils.uuid.uuid4().hex[:6].upper()}"
         item = {
             "entityType": "stock", "stockId": sid, "name": body.get("name"),
-            "location": body.get("location"), "allowPickup": body.get("allowPickup", False),
+            "location": body.get("location"),
+            "allowPickup": bool(body.get("allowPickup", False)),
+            "isMainWarehouse": bool(body.get("isMainWarehouse", False)),
+            "linkedUserIds": [int(u) for u in (body.get("linkedUserIds") or []) if u is not None],
             "inventory": body.get("inventory") or {}, "createdAt": utils._now_iso()
         }
         utils._put_entity("STOCK", sid, item)
@@ -76,10 +79,13 @@ def handle_stocks(method, body, stock_id=None):
     if method == "PATCH" and stock_id:
         updates = ["updatedAt = :u"]
         eav = {":u": utils._now_iso()}
-        for f in ["name", "location", "allowPickup", "inventory"]:
+        for f in ["name", "location", "allowPickup", "isMainWarehouse", "inventory"]:
             if f in body:
                 updates.append(f"{f} = :{f}")
                 eav[f":{f}"] = body[f]
+        if "linkedUserIds" in body:
+            updates.append("linkedUserIds = :linkedUserIds")
+            eav[":linkedUserIds"] = [int(u) for u in (body["linkedUserIds"] or []) if u is not None]
         updated = utils._update_by_id("STOCK", stock_id, f"SET {', '.join(updates)}", eav)
         return utils._json_response(200, {"stock": updated})
 

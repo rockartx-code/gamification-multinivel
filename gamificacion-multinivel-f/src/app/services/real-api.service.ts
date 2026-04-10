@@ -44,6 +44,10 @@ import {
   SaveProductCategoryPayload,
   ShippingRate,
   ShippingQuoteRequest,
+  AdminRefundPayload,
+  AdminRefundResponse,
+  AdminReturnInspectPayload,
+  AdminReturnInspectResponse,
   OrderCancelResponse,
   OrderReturnRequestPayload,
   OrderReturnRequestResponse
@@ -290,9 +294,57 @@ export class RealApiService {
     })));
   }
 
-  listProducts(): Observable<AdminProduct[]> {
-    return this.http.get<{ products: AdminProduct[] }>(`${this.baseUrl}/catalog/catalog`, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.products ?? []));
+  listProducts(): Observable<{ products: AdminProduct[]; productOfMonthId: number | null }> {
+    return this.http.get<{ products: Record<string, unknown>[]; productOfMonth?: Record<string, unknown> | null }>(
+      `${this.baseUrl}/catalog/product`, { headers: this.actorHeaders() }
+    ).pipe(map((r) => {
+      const pomRaw = r.productOfMonth;
+      const productOfMonthId = pomRaw != null
+        ? (Number(pomRaw['productId'] ?? pomRaw['id'] ?? 0) || null)
+        : null;
+      return {
+        products: (r.products ?? []).map((p) => this.normalizeAdminProduct(p)),
+        productOfMonthId,
+      };
+    }));
+  }
+
+  private normalizeProductCategory(c: Record<string, unknown>): ProductCategory {
+    return {
+      id: String(c['categoryId'] ?? c['id'] ?? ''),
+      name: String(c['name'] ?? ''),
+      parentId: c['parentId'] != null ? String(c['parentId']) : null,
+      position: c['position'] != null ? Number(c['position']) : 0,
+      active: c['active'] !== false,
+      createdAt: c['createdAt'] != null ? String(c['createdAt']) : undefined,
+    };
+  }
+
+  private normalizeAdminProduct(p: Record<string, unknown>): AdminProduct {
+    const tags = Array.isArray(p['tags']) ? (p['tags'] as string[]) : [];
+    return {
+      id: Number(p['productId'] ?? p['id'] ?? 0),
+      name: String(p['name'] ?? ''),
+      price: Number(p['price'] ?? 0),
+      active: p['active'] !== false,
+      inOnlineStore: p['inOnlineStore'] !== false,
+      inPOS: p['inPOS'] !== false,
+      commissionable: p['commissionable'] !== false,
+      sku: p['sku'] != null ? String(p['sku']) : undefined,
+      hook: p['hook'] != null ? String(p['hook']) : undefined,
+      description: p['description'] != null ? String(p['description']) : undefined,
+      copyFacebook: p['copyFacebook'] != null ? String(p['copyFacebook']) : undefined,
+      copyInstagram: p['copyInstagram'] != null ? String(p['copyInstagram']) : undefined,
+      copyWhatsapp: p['copyWhatsapp'] != null ? String(p['copyWhatsapp']) : undefined,
+      tags: tags.length ? tags : undefined,
+      images: Array.isArray(p['images']) ? (p['images'] as AdminProduct['images']) : undefined,
+      variants: Array.isArray(p['variants']) ? (p['variants'] as AdminProduct['variants']) : undefined,
+      categoryIds: Array.isArray(p['categoryIds']) ? (p['categoryIds'] as string[]) : undefined,
+      weightKg: p['weightKg'] != null ? Number(p['weightKg']) : undefined,
+      lengthCm: p['lengthCm'] != null ? Number(p['lengthCm']) : undefined,
+      widthCm: p['widthCm'] != null ? Number(p['widthCm']) : undefined,
+      heightCm: p['heightCm'] != null ? Number(p['heightCm']) : undefined,
+    };
   }
 
   listCampaigns(): Observable<AdminCampaign[]> {
@@ -496,17 +548,29 @@ export class RealApiService {
   }
 
   createProductAsset(payload: CreateProductAssetPayload): Observable<ProductAssetUpload> {
-    return this.http.post<ProductAssetUpload>(`${this.baseUrl}/products/assets`, payload, { headers: this.actorHeaders() });
+    return this.http.post<ProductAssetUpload>(
+      `${this.baseUrl}/catalog/product/${encodeURIComponent(String(payload.productId))}/assets`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
   }
 
   setProductOfMonth(productId: number): Observable<ProductOfMonthResponse> {
-    return this.http.post<ProductOfMonthResponse>(`${this.baseUrl}/products/product-of-month`, { productId }, { headers: this.actorHeaders() });
+    return this.http.post<ProductOfMonthResponse>(`${this.baseUrl}/catalog/product/product-of-month`, { productId }, { headers: this.actorHeaders() });
   }
 
   saveProduct(payload: SaveAdminProductPayload): Observable<AdminProduct> {
     return this.http
-      .post<{ product: AdminProduct }>(`${this.baseUrl}/products`, payload, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.product));
+      .post<{ product: Record<string, unknown> }>(`${this.baseUrl}/catalog/product`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => this.normalizeAdminProduct(response.product ?? {})));
+  }
+
+  deleteProduct(productId: number): Observable<{ ok: boolean; productId: number }> {
+    return this.http.post<{ ok: boolean; productId: number }>(
+      `${this.baseUrl}/catalog/product/remove`,
+      { productId },
+      { headers: this.actorHeaders() }
+    );
   }
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
@@ -521,8 +585,19 @@ export class RealApiService {
 
   listStocks(): Observable<AdminStock[]> {
     return this.http
-      .get<{ stocks: AdminStock[] }>(`${this.baseUrl}/inventory/stocks`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.stocks ?? []));
+      .get<{ stocks: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/stocks`, { headers: this.actorHeaders() })
+      .pipe(map((response) => (response.stocks ?? []).map((s) => ({
+        id: String(s['stockId'] ?? s['id'] ?? ''),
+        name: String(s['name'] ?? ''),
+        location: String(s['location'] ?? ''),
+        postalCode: s['postalCode'] != null ? String(s['postalCode']) : undefined,
+        isMainWarehouse: Boolean(s['isMainWarehouse']),
+        allowPickup: Boolean(s['allowPickup']),
+        linkedUserIds: Array.isArray(s['linkedUserIds']) ? (s['linkedUserIds'] as number[]) : [],
+        inventory: (s['inventory'] as Record<number, number>) ?? {},
+        createdAt: s['createdAt'] != null ? String(s['createdAt']) : undefined,
+        updatedAt: s['updatedAt'] != null ? String(s['updatedAt']) : undefined,
+      } as AdminStock))));
   }
 
   listPickupStocks(): Observable<Array<{ id: string; name: string; location: string }>> {
@@ -537,45 +612,73 @@ export class RealApiService {
       .pipe(map((response) => response.stock));
   }
 
-  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup'>>): Observable<AdminStock> {
+  updateStock(stockId: string, payload: Partial<Pick<AdminStock, 'name' | 'location' | 'linkedUserIds' | 'inventory' | 'allowPickup' | 'isMainWarehouse'>>): Observable<AdminStock> {
     return this.http
       .patch<{ stock: AdminStock }>(`${this.baseUrl}/inventory/stocks/${encodeURIComponent(stockId)}`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.stock));
   }
 
-  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ stock: AdminStock }> {
+  registerStockEntry(stockId: string, payload: { productId: number; qty: number; userId?: number | null; note?: string }): Observable<{ ok: boolean; stock?: AdminStock }> {
     return this.http
-      .post<{ stock?: AdminStock; message?: string; Error?: string }>(
+      .post<{ ok?: boolean; stock?: AdminStock; message?: string; Error?: string }>(
         `${this.baseUrl}/inventory/stocks/${encodeURIComponent(stockId)}/entries`,
         payload,
         { headers: this.actorHeaders() }
       )
       .pipe(
-        map((response) => ({
-          stock: this.requireBusinessValue(response, response.stock, 'No se pudo registrar la entrada de inventario.')
-        }))
+        map((response) => {
+          if (response.Error) {
+            throw new Error(response.message ?? 'No se pudo registrar la entrada de inventario.');
+          }
+          if (response.ok === true || response.stock) {
+            return {
+              ok: true,
+              ...(response.stock ? { stock: response.stock } : {})
+            };
+          }
+          throw new Error(response.message ?? 'No se pudo registrar la entrada de inventario.');
+        })
       );
   }
 
-  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ stock: AdminStock }> {
+  registerStockDamage(stockId: string, payload: { productId: number; qty: number; reason: string; userId?: number | null }): Observable<{ ok: boolean; stock?: AdminStock }> {
     return this.http
-      .post<{ stock?: AdminStock; message?: string; Error?: string }>(
+      .post<{ ok?: boolean; stock?: AdminStock; message?: string; Error?: string }>(
         `${this.baseUrl}/inventory/stocks/${encodeURIComponent(stockId)}/damages`,
         payload,
         { headers: this.actorHeaders() }
       )
       .pipe(
-        map((response) => ({
-          stock: this.requireBusinessValue(response, response.stock, 'No se pudo registrar la merma de inventario.')
-        }))
+        map((response) => {
+          if (response.Error) {
+            throw new Error(response.message ?? 'No se pudo registrar la merma de inventario.');
+          }
+          if (response.ok === true || response.stock) {
+            return {
+              ok: true,
+              ...(response.stock ? { stock: response.stock } : {})
+            };
+          }
+          throw new Error(response.message ?? 'No se pudo registrar la merma de inventario.');
+        })
       );
   }
 
   listStockTransfers(stockId?: string): Observable<StockTransfer[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ transfers: StockTransfer[] }>(`${this.baseUrl}/inventory/stocks/transfers${query}`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.transfers ?? []));
+      .get<{ transfers: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/stocks/transfers${query}`, { headers: this.actorHeaders() })
+      .pipe(map((response) => (response.transfers ?? []).map((t) => ({
+        id: String(t['transferId'] ?? t['id'] ?? ''),
+        sourceStockId: String(t['sourceStockId'] ?? ''),
+        destinationStockId: String(t['destinationStockId'] ?? ''),
+        lines: Array.isArray(t['lines']) ? (t['lines'] as Array<{ productId: number; qty: number }>) : [],
+        status: (t['status'] as StockTransfer['status']) ?? 'pending',
+        createdByUserId: (t['createdByUserId'] as number | null) ?? null,
+        receivedByUserId: (t['receivedByUserId'] as number | null) ?? null,
+        createdAt: t['createdAt'] != null ? String(t['createdAt']) : undefined,
+        receivedAt: t['receivedAt'] != null ? String(t['receivedAt']) : undefined,
+      } as StockTransfer))));
   }
 
   createStockTransfer(payload: {
@@ -612,15 +715,40 @@ export class RealApiService {
   listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ movements: InventoryMovement[] }>(`${this.baseUrl}/inventory/stocks/movements${query}`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.movements ?? []));
+      .get<{ movements: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/stocks/movements${query}`, { headers: this.actorHeaders() })
+      .pipe(map((response) => (response.movements ?? []).map((m) => ({
+        id: String(m['movementId'] ?? m['id'] ?? ''),
+        type: (m['type'] as InventoryMovement['type']) ?? 'entry',
+        stockId: String(m['stockId'] ?? ''),
+        productId: Number(m['productId'] ?? 0),
+        qty: Number(m['qty'] ?? 0),
+        userId: (m['userId'] as number | null) ?? null,
+        reason: m['reason'] != null ? String(m['reason']) : undefined,
+        referenceId: m['referenceId'] != null ? String(m['referenceId']) : undefined,
+        createdAt: m['createdAt'] != null ? String(m['createdAt']) : undefined,
+      } as InventoryMovement))));
   }
 
   listPosSales(stockId?: string): Observable<PosSale[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
-      .get<{ sales: PosSale[] }>(`${this.baseUrl}/inventory/pos/sales${query}`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.sales ?? []));
+      .get<{ sales: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/pos/sales${query}`, { headers: this.actorHeaders() })
+      .pipe(map((response) => (response.sales ?? []).map((s) => ({
+        id: String(s['saleId'] ?? s['id'] ?? ''),
+        orderId: String(s['orderId'] ?? ''),
+        stockId: String(s['stockId'] ?? ''),
+        attendantUserId: (s['attendantUserId'] as number | null) ?? null,
+        customerId: (s['customerId'] as number | null) ?? null,
+        customerName: String(s['customerName'] ?? ''),
+        paymentStatus: (s['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
+        deliveryStatus: (s['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
+        grossSubtotal: s['grossSubtotal'] != null ? Number(s['grossSubtotal']) : undefined,
+        discountRate: s['discountRate'] != null ? Number(s['discountRate']) : undefined,
+        discountAmount: s['discountAmount'] != null ? Number(s['discountAmount']) : undefined,
+        total: Number(s['total'] ?? 0),
+        lines: Array.isArray(s['lines']) ? (s['lines'] as AdminOrderItem[]) : [],
+        createdAt: s['createdAt'] != null ? String(s['createdAt']) : undefined,
+      } as PosSale))));
   }
 
   registerPosSale(payload: {
@@ -667,8 +795,17 @@ export class RealApiService {
 
   listEmployees(): Observable<AdminEmployee[]> {
     return this.http
-      .get<{ employees: AdminEmployee[] }>(`${this.baseUrl}/auth/employees`, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.employees ?? []));
+      .get<{ employees: Record<string, unknown>[] }>(`${this.baseUrl}/auth/employees`, { headers: this.actorHeaders() })
+      .pipe(map((response) => (response.employees ?? []).map((e) => ({
+        id: Number(e['employeeId'] ?? e['id'] ?? 0),
+        name: String(e['name'] ?? ''),
+        email: String(e['email'] ?? ''),
+        phone: e['phone'] != null ? String(e['phone']) : undefined,
+        canAccessAdmin: Boolean(e['canAccessAdmin']),
+        privileges: (e['privileges'] as AdminEmployee['privileges']) ?? {},
+        active: e['active'] !== false,
+        createdAt: e['createdAt'] != null ? String(e['createdAt']) : undefined,
+      } as AdminEmployee))));
   }
 
   createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
@@ -734,8 +871,8 @@ export class RealApiService {
 
   listCategories(): Observable<ProductCategory[]> {
     return this.http
-      .get<{ categories: ProductCategory[] }>(`${this.baseUrl}/catalog/categories`, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.categories));
+      .get<{ categories: Record<string, unknown>[] }>(`${this.baseUrl}/catalog/categories`, { headers: this.actorHeaders() })
+      .pipe(map((r) => (r.categories ?? []).map((c) => this.normalizeProductCategory(c))));
   }
 
   getSponsorContact(sponsorId: string): Observable<SponsorContact> {
@@ -746,8 +883,8 @@ export class RealApiService {
 
   saveCategory(payload: SaveProductCategoryPayload): Observable<ProductCategory> {
     return this.http
-      .post<{ category: ProductCategory }>(`${this.baseUrl}/catalog/categories`, payload, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.category));
+      .post<{ category: Record<string, unknown> }>(`${this.baseUrl}/catalog/categories`, payload, { headers: this.actorHeaders() })
+      .pipe(map((r) => this.normalizeProductCategory(r.category)));
   }
 
   deleteCategory(id: string): Observable<{ ok: boolean }> {
@@ -805,6 +942,22 @@ export class RealApiService {
   requestReturn(orderId: string, payload: OrderReturnRequestPayload): Observable<OrderReturnRequestResponse> {
     return this.http.post<OrderReturnRequestResponse>(
       `${this.baseUrl}/orders/${encodeURIComponent(orderId)}/return`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  refundOrder(orderId: string, payload: AdminRefundPayload): Observable<AdminRefundResponse> {
+    return this.http.post<AdminRefundResponse>(
+      `${this.baseUrl}/orders/${encodeURIComponent(orderId)}/refund`,
+      payload,
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  inspectReturn(orderId: string, payload: AdminReturnInspectPayload): Observable<AdminReturnInspectResponse> {
+    return this.http.post<AdminReturnInspectResponse>(
+      `${this.baseUrl}/orders/${encodeURIComponent(orderId)}/return/inspect`,
       payload,
       { headers: this.actorHeaders() }
     );
@@ -926,6 +1079,13 @@ export class RealApiService {
       deliveryType: this.readString(order, ['deliveryType']) as AdminOrder['deliveryType'] | undefined,
       pickupStockId: this.readString(order, ['pickupStockId']) || undefined,
       pickupPaymentMethod: this.readString(order, ['pickupPaymentMethod']) as AdminOrder['pickupPaymentMethod'] | undefined,
+      cancelReason: this.readString(order, ['cancelReason']) || undefined,
+      cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
+      returnRequestId: this.readString(order, ['returnRequestId']) || undefined,
+      rejectionReason: this.readString(order, ['rejectionReason']) || undefined,
+      rejectedAt: this.readString(order, ['rejectedAt']) || undefined,
+      refundReceiptUrl: this.readString(order, ['refundReceiptUrl']) || undefined,
+      refundedAt: this.readString(order, ['refundedAt']) || undefined,
     };
   }
 
@@ -950,6 +1110,7 @@ export class RealApiService {
       status === 'shipped' ||
       status === 'delivered' ||
       status === 'cancelled' ||
+      status === 'refunded' ||
       status === 'en_devolucion' ||
       status === 'devuelto_validado' ||
       status === 'devolucion_rechazada'
