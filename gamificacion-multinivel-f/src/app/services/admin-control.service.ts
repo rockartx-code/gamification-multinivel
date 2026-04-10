@@ -295,6 +295,7 @@ export class AdminControlService {
                 deliveryPlace: order.deliveryPlace ?? payload.deliveryPlace ?? entry.deliveryPlace,
                 deliveryDate: order.deliveryDate ?? payload.deliveryDate ?? entry.deliveryDate,
                 stockId: order.stockId ?? payload.stockId ?? entry.stockId,
+                paymentMethod: order.paymentMethod ?? payload.paymentMethod ?? entry.paymentMethod,
                 paymentStatus: order.paymentStatus ?? entry.paymentStatus,
                 deliveryStatus: order.deliveryStatus ?? entry.deliveryStatus,
                 attendantUserId: order.attendantUserId ?? entry.attendantUserId,

@@ -74,6 +74,82 @@ def _parse_orders_page_size(raw_limit) -> int:
     return max(1, min(limit, MAX_ORDER_HISTORY_PAGE_SIZE))
 
 
+def _apply_stock_delta(stock_id: str, deltas: dict):
+    stock = utils._get_by_id("STOCK", stock_id)
+    if not stock:
+        return None, "Almacen no encontrado"
+
+    inventory = {str(k): int(v) for k, v in (stock.get("inventory") or {}).items()}
+    for pid, delta in (deltas or {}).items():
+        current = inventory.get(str(pid), 0)
+        next_qty = current + int(delta)
+        if next_qty < 0:
+            return None, f"Stock insuficiente para el producto {pid}"
+        inventory[str(pid)] = next_qty
+
+    updated = utils._update_by_id(
+        "STOCK",
+        stock_id,
+        "SET inventory = :inv, updatedAt = :u",
+        {":inv": inventory, ":u": utils._now_iso()},
+    )
+    return updated, None
+
+
+def _log_inventory_movement(stock_id, movement_type, product_id, qty, reference_id, user_id, reason=""):
+    move_id = f"MOV-{utils.uuid.uuid4().hex[:12].upper()}"
+    return utils._put_entity("INVENTORY_MOVEMENT", move_id, {
+        "entityType": "inventoryMovement",
+        "movementId": move_id,
+        "stockId": stock_id,
+        "movementType": movement_type,
+        "type": movement_type,
+        "productId": int(product_id),
+        "qty": int(qty),
+        "referenceId": reference_id,
+        "userId": user_id,
+        "reason": reason,
+        "createdAt": utils._now_iso(),
+    })
+
+
+def _user_can_operate_pickup_stock(user_id, pickup_stock_id) -> bool:
+    if user_id in (None, "") or not pickup_stock_id:
+        return False
+    stock = utils._get_by_id("STOCK", pickup_stock_id)
+    if not stock:
+        return False
+    linked_ids = {str(item) for item in (stock.get("linkedUserIds") or []) if item is not None}
+    return str(user_id) in linked_ids
+
+
+def _register_cash_sale_for_pickup_order(order: dict, user_id, now_iso: str) -> str:
+    sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
+    pickup_stock_id = order.get("pickupStockId")
+    sale_item = {
+        "entityType": "posSale",
+        "saleId": sale_id,
+        "orderId": order.get("orderId"),
+        "stockId": pickup_stock_id,
+        "attendantUserId": user_id,
+        "customerId": order.get("customerId"),
+        "customerName": order.get("customerName") or "Cliente",
+        "paymentStatus": "paid_branch",
+        "deliveryStatus": "paid_branch",
+        "paymentMethod": "cash",
+        "grossSubtotal": order.get("grossSubtotal") or order.get("netTotal") or order.get("total") or utils.D_ZERO,
+        "discountRate": order.get("discountRate") or utils.D_ZERO,
+        "discountAmount": order.get("discountAmount") or utils.D_ZERO,
+        "total": order.get("netTotal") or order.get("total") or utils.D_ZERO,
+        "lines": order.get("items") or [],
+        "createdAt": now_iso,
+        "updatedAt": now_iso,
+        "source": "pickup_cash_payment",
+    }
+    utils._put_entity("POS_SALE", sale_id, sale_item, created_at_iso=now_iso)
+    return sale_id
+
+
 def _encode_orders_next_token(last_evaluated_key: dict) -> str:
     if not last_evaluated_key:
         return ""
@@ -157,6 +233,7 @@ def _serialize_order_list_item(item: dict) -> dict:
         "refundReceiptUrl": item.get("refundReceiptUrl"),
         "refundedAt": item.get("refundedAt"),
         # Payment
+        "paymentMethod": item.get("paymentMethod"),
         "paymentStatus": item.get("paymentStatus"),
         "paymentProvider": item.get("paymentProvider"),
         "createdAt": item.get("createdAt"),
@@ -439,6 +516,16 @@ def handle_update_status(order_id, body, headers):
     if not order:
         return utils._json_response(404, {"message": "No encontrada"})
 
+    actor = utils._extract_actor(headers)
+    actor_user_id = actor.get("user_id")
+    pickup_stock_id = order.get("pickupStockId")
+    pickup_stock_id_str = str(pickup_stock_id or "").strip()
+    is_pickup_order = order.get("deliveryType") == "pickup" and pickup_stock_id_str
+
+    if is_pickup_order and new_status in ("paid", "delivered"):
+        if not _user_can_operate_pickup_stock(actor_user_id, pickup_stock_id_str):
+            return utils._json_response(403, {"message": "El usuario logueado no esta vinculado a la sucursal de entrega"})
+
     action_map = {
         "paid": "ORDER_PAID",
         "delivered": "ORDER_DELIVERED",
@@ -459,8 +546,45 @@ def handle_update_status(order_id, body, headers):
 
     extra_updates = {}
     now = utils._now_iso()
+    payment_method = (body.get("paymentMethod") or order.get("paymentMethod") or "").strip().lower()
+    if payment_method and payment_method not in ("cash", "card", "transfer"):
+        return utils._json_response(400, {"message": "Forma de pago invalida"})
+    if payment_method:
+        extra_updates["paymentMethod"] = payment_method
+    if is_pickup_order and new_status in ("paid", "delivered") and actor_user_id not in (None, ""):
+        extra_updates["attendantUserId"] = actor_user_id
+        extra_updates["stockId"] = pickup_stock_id_str
+    if new_status == "paid" and is_pickup_order and order.get("pickupPaymentMethod") == "at_store":
+        extra_updates["paymentStatus"] = body.get("paymentStatus") or "paid_branch"
+        if payment_method == "cash" and not order.get("cashSaleId"):
+            extra_updates["cashSaleId"] = _register_cash_sale_for_pickup_order(order, actor_user_id, now)
     if new_status == "delivered":
         extra_updates["deliveredAt"] = now
+        if is_pickup_order and not order.get("pickupStockDeductedAt"):
+            deltas = {}
+            for line in order.get("items") or []:
+                pid = str(line.get("productId") or "").strip()
+                qty = int(line.get("quantity") or line.get("qty") or 0)
+                if pid and qty > 0:
+                    deltas[pid] = deltas.get(pid, 0) - qty
+            if deltas:
+                _, stock_error = _apply_stock_delta(pickup_stock_id_str, deltas)
+                if stock_error:
+                    return utils._json_response(400, {"message": stock_error})
+                for line in order.get("items") or []:
+                    qty = int(line.get("quantity") or line.get("qty") or 0)
+                    if qty <= 0:
+                        continue
+                    _log_inventory_movement(
+                        pickup_stock_id_str,
+                        "exit_order",
+                        line.get("productId"),
+                        qty,
+                        order_id,
+                        actor_user_id,
+                        f"Entrega pickup orden {order_id}",
+                    )
+                extra_updates["pickupStockDeductedAt"] = now
     if new_status == "devolucion_rechazada":
         rejection_reason = (body.get("rejectionReason") or "").strip()
         if rejection_reason:
@@ -498,23 +622,9 @@ def handle_update_status(order_id, body, headers):
                         "SET inventory = :inv, updatedAt = :u",
                         {":inv": inventory, ":u": now},
                     )
-                    actor = utils._extract_actor(headers)
-                    user_id = actor.get("user_id") or body.get("attendantUserId")
+                    user_id = actor_user_id or body.get("attendantUserId")
                     for pid, delta in deltas.items():
-                        move_id = f"MOV-{utils.uuid.uuid4().hex[:12].upper()}"
-                        utils._put_entity("INVENTORY_MOVEMENT", move_id, {
-                            "entityType": "inventoryMovement",
-                            "movementId": move_id,
-                            "stockId": stock_id_for_dispatch,
-                            "movementType": "exit_order",
-                            "type": "exit_order",
-                            "productId": int(pid),
-                            "qty": abs(delta),
-                            "referenceId": order_id,
-                            "userId": user_id,
-                            "reason": f"Despacho orden {order_id}",
-                            "createdAt": now,
-                        })
+                        _log_inventory_movement(stock_id_for_dispatch, "exit_order", pid, abs(delta), order_id, user_id, f"Despacho orden {order_id}")
 
     update_expr = "SET #s = :s, updatedAt = :u"
     eav = {":s": new_status, ":u": now}

@@ -992,6 +992,54 @@ def _resolve_clabe_customer_id(customer_id, body, headers):
 
 # --- HANDLERS DE ENDPOINTS ---
 
+def handle_create_customer(body, headers=None):
+    """POST /customers and POST /customers/create"""
+    err = utils._require_admin(headers or {}, "customer_add")
+    if err:
+        return err
+
+    name = str(body.get("name") or "").strip()
+    email = utils._normalize_email(body.get("email"))
+    if not name:
+        return utils._json_response(400, {"message": "name es obligatorio"})
+
+    if email:
+        existing = [
+            item for item in utils._query_bucket("CUSTOMER")
+            if utils._normalize_email(item.get("email")) == email
+        ]
+        if existing:
+            return utils._json_response(409, {"message": "El correo ya esta registrado"})
+
+    customer_id = body.get("customerId") or int(datetime.now(timezone.utc).timestamp() * 1000)
+    leader_id = body.get("leaderId")
+    leader_id = utils._customer_entity_id(leader_id) if leader_id not in (None, "") else None
+    now = utils._now_iso()
+    item = {
+        "entityType": "customer",
+        "customerId": customer_id,
+        "name": name,
+        "phone": body.get("phone"),
+        "address": body.get("address"),
+        "city": body.get("city"),
+        "leaderId": leader_id,
+        "isAssociate": bool(body.get("isAssociate", True)),
+        "canAccessAdmin": bool(body.get("canAccessAdmin", False)),
+        "privileges": utils._normalize_privileges(body.get("privileges")),
+        "activeBuyer": False,
+        "discountRate": utils.D_ZERO,
+        "discount": "0%",
+        "commissions": utils.D_ZERO,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    if email:
+        item["email"] = email
+    if body.get("level") is not None:
+        item["level"] = body.get("level")
+    main = utils._put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
+    return utils._json_response(201, {"customer": _format_customer_output(main)})
+
 def handle_get_customer(customer_id, headers=None):
     """GET /customers/{id}"""
     item = utils._get_by_id("CUSTOMER", customer_id)
@@ -1519,6 +1567,11 @@ def lambda_handler(event, context):
             })
 
         # ── /customers/... ─────────────────────────────────────────────
+        if root == "customers" and method == "POST" and (
+            len(segments) == 1 or (len(segments) == 2 and segments[1] == "create")
+        ):
+            return handle_create_customer(body, headers)
+
         if root == "customers" and len(segments) > 1:
             target_id = segments[1]
 

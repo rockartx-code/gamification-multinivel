@@ -1296,7 +1296,7 @@ export class MockApiService {
     const customer: AdminCustomer = {
       id: Math.floor(100000 + Math.random() * 900000),
       name: payload.name,
-      email: payload.email,
+      email: payload.email ?? '',
       leaderId: payload.leaderId ?? null,
       level: 'L1',
       discount: '0%',

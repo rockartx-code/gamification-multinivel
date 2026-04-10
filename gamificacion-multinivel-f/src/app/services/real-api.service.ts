@@ -513,8 +513,8 @@ export class RealApiService {
 
   createStructureCustomer(payload: CreateStructureCustomerPayload): Observable<AdminCustomer> {
     return this.http
-      .post<{ customer: AdminCustomer }>(`${this.baseUrl}/customers`, payload, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.customer));
+      .post<{ customer: Record<string, unknown> }>(`${this.baseUrl}/customers/create`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => this.normalizeAdminCustomer(response.customer ?? {})));
   }
 
   createAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
@@ -742,6 +742,7 @@ export class RealApiService {
         customerName: String(s['customerName'] ?? ''),
         paymentStatus: (s['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
         deliveryStatus: (s['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
+        paymentMethod: s['paymentMethod'] != null ? (String(s['paymentMethod']) as PosSale['paymentMethod']) : undefined,
         grossSubtotal: s['grossSubtotal'] != null ? Number(s['grossSubtotal']) : undefined,
         discountRate: s['discountRate'] != null ? Number(s['discountRate']) : undefined,
         discountAmount: s['discountAmount'] != null ? Number(s['discountAmount']) : undefined,
@@ -1061,6 +1062,7 @@ export class RealApiService {
       items: rawItems.map((item) => this.normalizeAdminOrderItem(item)),
       stockId: this.readString(order, ['stockId']) || undefined,
       attendantUserId: this.readNullableNumber(order, ['attendantUserId']),
+      paymentMethod: this.readString(order, ['paymentMethod']) as AdminOrder['paymentMethod'] | undefined,
       paymentStatus: this.readString(order, ['paymentStatus']) || undefined,
       paymentTransactionId: this.readString(order, ['paymentTransactionId', 'paymentId']) || undefined,
       paymentRawStatus: this.readString(order, ['paymentRawStatus']) || undefined,

@@ -31,6 +31,7 @@ export interface AdminOrder {
   items?: AdminOrderItem[];
   stockId?: string;
   attendantUserId?: number | null;
+  paymentMethod?: 'cash' | 'card' | 'transfer';
   paymentStatus?: string;
   paymentTransactionId?: string;
   paymentRawStatus?: string;
@@ -197,6 +198,8 @@ export interface UpdateOrderStatusPayload {
   deliveryPlace?: string;
   deliveryDate?: string;
   stockId?: string;
+  paymentMethod?: 'cash' | 'card' | 'transfer';
+  attendantUserId?: number | null;
   dispatchLines?: Array<{ productId: number; quantity: number }>;
 }
 
@@ -249,7 +252,7 @@ export interface UpdateProfilePayload {
 
 export interface CreateStructureCustomerPayload {
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
   address?: string;
   city?: string;
@@ -601,7 +604,8 @@ export interface PosSale {
   customerId?: number | null;
   customerName: string;
   paymentStatus: 'paid_branch';
-  deliveryStatus: 'delivered_branch';
+  deliveryStatus: 'paid_branch' | 'delivered_branch';
+  paymentMethod?: 'cash' | 'card' | 'transfer';
   grossSubtotal?: number;
   discountRate?: number;
   discountAmount?: number;

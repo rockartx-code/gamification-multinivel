@@ -6449,6 +6449,7 @@ def lambda_handler(event, context):
     if route_key == (2, "shipping", "POST") and segments[1] == "quote": return _get_shipping_quote(_parse_body(event))
     if route_key == (1, "orders", "GET") and query.get("customerId"): return _list_orders_for_customer(query.get("customerId"))
     if route_key == (1, "customers", "POST"): return _create_customer(_parse_body(event), headers)
+    if route_key == (2, "customers", "POST") and segments[1] == "create": return _create_customer(_parse_body(event), headers)
     if route_key == (1, "employees", "GET"): return _list_employees()
     if route_key == (1, "employees", "POST"): return _create_employee(_parse_body(event), headers)
     if route_key == (1, "stocks", "GET"): return _list_stocks()

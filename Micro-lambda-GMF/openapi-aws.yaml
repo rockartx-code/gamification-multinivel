@@ -226,6 +226,34 @@ components:
           type: object
           additionalProperties: true
 
+    CreateCustomerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        leaderId:
+          oneOf: [{ type: string }, { type: integer }]
+        address:
+          type: object
+          additionalProperties: true
+        city:
+          type: string
+        level:
+          type: string
+        isAssociate:
+          type: boolean
+        canAccessAdmin:
+          type: boolean
+        privileges:
+          type: object
+          additionalProperties: true
+
     PasswordRecoveryRequest:
       type: object
       required: [email]
@@ -608,7 +636,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAccountRequest'
+              $ref: '#/components/schemas/CreateCustomerRequest'
       responses:
         "201":
           description: "Cliente creado"

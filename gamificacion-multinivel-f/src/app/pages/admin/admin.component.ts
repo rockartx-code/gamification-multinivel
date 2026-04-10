@@ -123,7 +123,8 @@ type PosSale = {
   discountAmount: number;
   total: number;
   paymentStatus: 'paid_branch';
-  deliveryStatus: 'delivered_branch';
+  deliveryStatus: 'paid_branch' | 'delivered_branch';
+  paymentMethod?: 'cash' | 'card' | 'transfer';
   createdAt: string;
   lines: AdminOrderItem[];
 };
@@ -296,6 +297,11 @@ export class AdminComponent implements OnInit {
       label: 'Reembolsado',
       description: 'Marca la orden como reembolsada.'
     }
+  ];
+  readonly posOrderPaymentMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer'>> = [
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'card', label: 'Tarjeta' },
+    { value: 'transfer', label: 'Transferencia' }
   ];
   readonly rewardCutRuleTooltip = this.buildSelectTooltip(this.rewardCutRuleOptions);
   readonly posPaymentStatusConfigTooltip = this.buildSelectTooltip(this.posPaymentStatusConfigOptions);
@@ -544,6 +550,23 @@ export class AdminComponent implements OnInit {
   isCuttingPosCash = false;
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
+  isPosPaymentModalOpen = false;
+  posPaymentTargetOrder: AdminOrder | null = null;
+  posPaymentMethod: 'cash' | 'card' | 'transfer' = 'cash';
+  isSubmittingPosPayment = false;
+  posPaymentError = '';
+  isPosCustomerModalOpen = false;
+  posCustomerError = '';
+  isSavingPosCustomer = false;
+  posCustomerForm = {
+    firstName: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: ''
+  };
 
   selectedEmployee: AdminEmployee | null = null;
   selectedEmployeePrivilegeDraft: UserPrivileges = {};
@@ -614,6 +637,10 @@ export class AdminComponent implements OnInit {
       case 'stocks':
       case 'pos':
         this.loadStocksAndPosState();
+        this.adminControl.loadCustomers().subscribe();
+        if (!this.adminControl.hasLoadedOrders()) {
+          this.adminControl.loadOrders().subscribe();
+        }
         this.adminControl.loadEmployees().subscribe();
         break;
       case 'settings':
@@ -1176,13 +1203,19 @@ export class AdminComponent implements OnInit {
 
   /** Pedidos de pickup pendientes donde el cliente pagará en sucursal. */
   get pendingPickupAtStoreOrders(): AdminOrder[] {
-    const stockId = this.currentPosStock?.id;
-    return this.orders.filter(
-      (o) =>
-        o.deliveryType === 'pickup' &&
-        (o as AdminOrder & { pickupPaymentMethod?: string }).pickupPaymentMethod === 'at_store' &&
-        o.status === 'pending' &&
-        (!stockId || o.pickupStockId === stockId)
+    return this.orders.filter((order) =>
+      order.deliveryType === 'pickup' &&
+      order.pickupPaymentMethod === 'at_store' &&
+      order.status === 'pending' &&
+      this.canCurrentOperatorHandlePickupOrder(order)
+    );
+  }
+
+  get pendingPickupDeliveryOrders(): AdminOrder[] {
+    return this.orders.filter((order) =>
+      order.deliveryType === 'pickup' &&
+      order.status === 'paid' &&
+      this.canCurrentOperatorHandlePickupOrder(order)
     );
   }
 
@@ -1195,6 +1228,16 @@ export class AdminComponent implements OnInit {
       value: stock.id,
       label: `${stock.name} · ${stock.location}`
     }));
+  }
+
+  get canSavePosCustomer(): boolean {
+    return Boolean(
+      this.hasPermission('customer_add') &&
+      this.posCustomerForm.firstName.trim() &&
+      this.posCustomerForm.apellidoPaterno.trim() &&
+      this.posCustomerForm.apellidoMaterno.trim() &&
+      !this.isSavingPosCustomer
+    );
   }
 
   get selectedPosCustomer(): AdminCustomer | null {
@@ -1673,7 +1716,7 @@ export class AdminComponent implements OnInit {
   }
 
   get isStructureFormValid(): boolean {
-    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim() && this.structureForm.apellidoMaterno.trim() && this.structureForm.email.trim());
+    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim() && this.structureForm.apellidoMaterno.trim());
   }
 
   get isProductFormValid(): boolean {
@@ -2152,6 +2195,7 @@ export class AdminComponent implements OnInit {
           total: Number(sale.total),
           paymentStatus: sale.paymentStatus,
           deliveryStatus: sale.deliveryStatus,
+          paymentMethod: sale.paymentMethod,
           createdAt: sale.createdAt ?? '',
           lines: sale.lines ?? []
         }));
@@ -2252,6 +2296,14 @@ export class AdminComponent implements OnInit {
     this.isAddStructureModalOpen = true;
   }
 
+  openPosCustomerModal(): void {
+    if (!this.hasPermission('customer_add')) {
+      return;
+    }
+    this.resetPosCustomerForm();
+    this.isPosCustomerModalOpen = true;
+  }
+
   closeModals(): void {
     console.log('[Admin] closeModals()', {
       isActionsModalOpen: this.isActionsModalOpen,
@@ -2261,8 +2313,15 @@ export class AdminComponent implements OnInit {
     this.isActionsModalOpen = false;
     this.isNewOrderModalOpen = false;
     this.isAddStructureModalOpen = false;
+    this.isPosCustomerModalOpen = false;
+    this.isPosPaymentModalOpen = false;
     this.isShippingModalOpen = false;
     this.isReceiptModalOpen = false;
+  }
+
+  closePosCustomerModal(): void {
+    this.isPosCustomerModalOpen = false;
+    this.resetPosCustomerForm();
   }
 
   openReceiptModal(customer: AdminCustomer): void {
@@ -2379,7 +2438,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Orden actualizada.')
+        next: () => this.showSnackbar('Orden actualizada.'),
+        error: (error: unknown) => {
+          this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
+        }
       });
   }
 
@@ -2546,15 +2608,83 @@ export class AdminComponent implements OnInit {
     if (order.status !== 'paid' && order.status !== 'shipped') {
       return false;
     }
-    if (order.deliveryType !== 'pickup' || !order.pickupStockId) {
+    if (order.deliveryType !== 'pickup') {
+      return false;
+    }
+    return this.canCurrentOperatorHandlePickupOrder(order);
+  }
+
+  canReceivePickupPayment(order: AdminOrder): boolean {
+    if (order.status !== 'pending' || order.deliveryType !== 'pickup' || order.pickupPaymentMethod !== 'at_store') {
+      return false;
+    }
+    return this.canCurrentOperatorHandlePickupOrder(order);
+  }
+
+  private canCurrentOperatorHandlePickupOrder(order: AdminOrder): boolean {
+    if (!order.pickupStockId) {
       return false;
     }
     const operatorId = this.currentOperatorId;
     if (operatorId == null) {
       return false;
     }
+    const currentStockId = this.currentPosStock?.id;
+    if (currentStockId && order.pickupStockId !== currentStockId) {
+      return false;
+    }
     const stock = this.stocks.find((s) => s.id === order.pickupStockId);
     return Boolean(stock?.linkedUserIds?.includes(operatorId));
+  }
+
+  openReceivePickupPaymentModal(order: AdminOrder): void {
+    if (!this.canReceivePickupPayment(order)) {
+      return;
+    }
+    this.posPaymentTargetOrder = order;
+    this.posPaymentMethod = 'cash';
+    this.posPaymentError = '';
+    this.isPosPaymentModalOpen = true;
+  }
+
+  closeReceivePickupPaymentModal(): void {
+    this.isPosPaymentModalOpen = false;
+    this.posPaymentTargetOrder = null;
+    this.posPaymentMethod = 'cash';
+    this.posPaymentError = '';
+  }
+
+  confirmReceivePickupPayment(): void {
+    const order = this.posPaymentTargetOrder;
+    if (!order || !this.canReceivePickupPayment(order) || this.isSubmittingPosPayment) {
+      return;
+    }
+    this.isSubmittingPosPayment = true;
+    this.posPaymentError = '';
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .updateOrderStatus(order.id, { status: 'paid', paymentMethod: this.posPaymentMethod })
+      .pipe(
+        finalize(() => {
+          this.isSubmittingPosPayment = false;
+          this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: () => {
+          const successMessage =
+            this.posPaymentMethod === 'cash'
+              ? 'Pago recibido y registrado en caja.'
+              : 'Pago recibido correctamente.';
+          this.closeReceivePickupPaymentModal();
+          this.showSnackbar(successMessage);
+          this.refreshPosCashControl();
+        },
+        error: (error: { error?: { message?: string }; message?: string }) => {
+          this.posPaymentError = error?.error?.message || error?.message || 'No se pudo registrar el pago.';
+        }
+      });
   }
 
   markBranchDelivered(order: AdminOrder): void {
@@ -2574,7 +2704,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Orden entregada en sucursal.')
+        next: () => this.showSnackbar('Orden entregada en sucursal.'),
+        error: (error: unknown) => {
+          this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo registrar la entrega.'), 'error');
+        }
       });
   }
 
@@ -2890,6 +3023,38 @@ export class AdminComponent implements OnInit {
     this.structureLevel = 'Raí­z';
   }
 
+  resetPosCustomerForm(): void {
+    this.posCustomerForm = {
+      firstName: '',
+      apellidoPaterno: '',
+      apellidoMaterno: '',
+      phone: '',
+      email: '',
+      address: '',
+      city: ''
+    };
+    this.posCustomerError = '';
+    this.isSavingPosCustomer = false;
+  }
+
+  updatePosCustomerField(
+    field: 'firstName' | 'apellidoPaterno' | 'apellidoMaterno' | 'phone' | 'email' | 'address' | 'city',
+    value: string
+  ): void {
+    this.posCustomerForm = {
+      ...this.posCustomerForm,
+      [field]: value
+    };
+  }
+
+  private buildCustomerFullName(form: {
+    firstName: string;
+    apellidoPaterno: string;
+    apellidoMaterno: string;
+  }): string {
+    return `${form.firstName.trim()} ${form.apellidoPaterno.trim()} ${form.apellidoMaterno.trim()}`.trim();
+  }
+
   updateStructureField(
     field: 'firstName' | 'apellidoPaterno' | 'apellidoMaterno' | 'phone' | 'email' | 'address' | 'city',
     value: string
@@ -2904,10 +3069,11 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('customer_add')) {
       return;
     }
-    const fullName = `${this.structureForm.firstName.trim()} ${this.structureForm.apellidoPaterno.trim()} ${this.structureForm.apellidoMaterno.trim()}`.trim();
+    const fullName = this.buildCustomerFullName(this.structureForm);
+    const email = this.structureForm.email.trim();
     const payload: CreateStructureCustomerPayload = {
       name: fullName,
-      email: this.structureForm.email.trim(),
+      email: email || undefined,
       phone: this.structureForm.phone?.trim() || undefined,
       address: this.structureForm.address?.trim() || undefined,
       city: this.structureForm.city?.trim() || undefined,
@@ -2923,6 +3089,35 @@ export class AdminComponent implements OnInit {
       },
       error: () => {
         this.isSavingStructure = false;
+      }
+    });
+  }
+
+  savePosCustomer(): void {
+    if (!this.canSavePosCustomer) {
+      return;
+    }
+    this.isSavingPosCustomer = true;
+    this.posCustomerError = '';
+    const email = this.posCustomerForm.email.trim();
+    const payload: CreateStructureCustomerPayload = {
+      name: this.buildCustomerFullName(this.posCustomerForm),
+      email: email || undefined,
+      phone: this.posCustomerForm.phone.trim() || undefined,
+      address: this.posCustomerForm.address.trim() || undefined,
+      city: this.posCustomerForm.city.trim() || undefined,
+      leaderId: null
+    };
+    this.adminControl.createStructureCustomer(payload).subscribe({
+      next: (customer) => {
+        this.isSavingPosCustomer = false;
+        this.closePosCustomerModal();
+        this.selectPosCustomerRecommendation(customer.id);
+        this.showSnackbar('Cliente creado y seleccionado en POS.');
+      },
+      error: (error: { error?: { message?: string }; message?: string }) => {
+        this.isSavingPosCustomer = false;
+        this.posCustomerError = error?.error?.message || error?.message || 'No se pudo crear el cliente.';
       }
     });
   }
