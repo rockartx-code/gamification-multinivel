@@ -235,6 +235,10 @@ export class ApiService {
     return this.resolveApi().createAsset(payload);
   }
 
+  createCampaignAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.resolveApi().createCampaignAsset(payload);
+  }
+
   addCustomerDocument(customerId: string, payload: LinkCustomerDocumentPayload): Observable<CustomerProfile> {
     return this.resolveApi().addCustomerDocument(customerId, payload);
   }

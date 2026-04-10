@@ -273,7 +273,7 @@ export class AdminCampaignsComponent {
           contentBase64,
           contentType: file.type || 'application/octet-stream'
         };
-        return this.adminControl.createAsset(payload);
+        return this.adminControl.createCampaignAsset(payload);
       })
     );
   }

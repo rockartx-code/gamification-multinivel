@@ -1,10 +1,13 @@
 import boto3
+import base64
 import time
 from datetime import datetime, timezone
 from decimal import Decimal
 import core_utils as utils # Importado desde la Layer
 
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
+BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
+_s3 = boto3.client('s3', region_name=utils.AWS_REGION)
 
 _GOAL_EMAIL_BASE_CSS = """
 body { margin:0; padding:0; background-color:#F9F7F2; font-family:'Segoe UI',Arial,sans-serif; }
@@ -1110,6 +1113,40 @@ def _normalize_campaign(item: dict) -> dict:
     cid = item.get("campaignId") or item.get("id") or ""
     return {**item, "id": cid}
 
+def _handle_campaign_asset(method, body, headers):
+    """POST /dashboard/campaigns/assets — sube un asset de campana a S3."""
+    err = utils._require_admin(headers, "access_screen_stocks")
+    if err:
+        return err
+    if method != "POST":
+        return utils._json_response(405, {"message": "Método no permitido"})
+    name = body.get("name", "upload")
+    b64_data = body.get("contentBase64")
+    content_type = body.get("contentType", "image/png")
+    if not b64_data:
+        return utils._json_response(400, {"message": "contentBase64 requerido"})
+    try:
+        raw_data = base64.b64decode(b64_data)
+        asset_id = f"assets/{utils.uuid.uuid4()}-{name}"
+        _s3.put_object(
+            Bucket=BUCKET_NAME,
+            Key=asset_id,
+            Body=raw_data,
+            ContentType=content_type,
+            ACL='public-read'
+        )
+        url = f"https://{BUCKET_NAME}.s3.{utils.AWS_REGION}.amazonaws.com/{asset_id}"
+    except Exception as e:
+        print(f"[S3_CAMPAIGN_ASSET_ERROR] {e}")
+        return utils._json_response(500, {"message": "Error al subir a S3"})
+    asset_item = {
+        "entityType": "asset", "assetId": asset_id, "name": name,
+        "url": url, "contentType": content_type, "createdAt": utils._now_iso()
+    }
+    utils._put_entity("ASSET", asset_id, asset_item)
+    return utils._json_response(201, {"asset": asset_item})
+
+
 def _handle_campaigns(method, body):
     """GET /campaigns  |  POST /campaigns — también resuelve /dashboard/campaigns"""
     if method == "GET":
@@ -1223,6 +1260,8 @@ def lambda_handler(event, context):
 
         # ── /campaigns  (también /dashboard/campaigns) ───────────────────────────
         if root == "campaigns":
+            if len(segments) > 1 and segments[1] == "assets":
+                return _handle_campaign_asset(method, body, headers)
             if method == "POST":
                 err = utils._require_admin(headers, "access_screen_stocks")
                 if err: return err

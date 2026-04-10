@@ -121,6 +121,10 @@ export interface AssociateMonth {
   monthKey: string;
   netVolume: number;
   isActive: boolean;
+  vp?: number;
+  currentDiscount?: { rate: number; min: number; max: number | null } | null;
+  nextGoal?: { min: number; rate: number; label: string } | null;
+  commissionLevels?: { rate: number; minActiveUsers: number; minIndividualPurchase: number; minGroupPurchase: number }[];
 }
 
 export interface AdminOrderItem {

@@ -336,6 +336,10 @@ export class AdminControlService {
     return this.api.createAsset(payload);
   }
 
+  createCampaignAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.api.createCampaignAsset(payload);
+  }
+
   getCustomer(customerId: string): Observable<CustomerProfile> {
     return this.api.getCustomer(customerId);
   }

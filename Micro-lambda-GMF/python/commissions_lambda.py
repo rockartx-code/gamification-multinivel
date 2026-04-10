@@ -685,7 +685,12 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
                 "max": tier_max_f,
             }
         if next_goal is None and tier_min > net_volume:
-            next_goal = {"min": tier_min, "rate": float(utils._to_decimal(tier.get("rate", 0)))}
+            tier_rate = float(utils._to_decimal(tier.get("rate", 0)))
+            next_goal = {
+                "min": tier_min,
+                "rate": tier_rate,
+                "label": f"Descuento {round(tier_rate * 100)}%",
+            }
 
     # VP / VG for this month
     vp = _mxn_to_vp(net_volume, mxn_per_vp) if mxn_per_vp > 0 else 0.0

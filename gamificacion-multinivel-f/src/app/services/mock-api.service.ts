@@ -1322,6 +1322,10 @@ export class MockApiService {
     return of(response).pipe(delay(120));
   }
 
+  createCampaignAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.createAsset(payload);
+  }
+
   addCustomerDocument(customerId: string, payload: LinkCustomerDocumentPayload): Observable<CustomerProfile> {
     const profile = this.ensureCustomerProfile(this.normalizeCustomerKey(customerId) || '1');
     const assetId = String(payload.assetId ?? '').trim();

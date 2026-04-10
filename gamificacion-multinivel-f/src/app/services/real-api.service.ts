@@ -542,6 +542,10 @@ export class RealApiService {
     return this.http.post<AssetResponse>(`${this.baseUrl}/assets`, payload, { headers: this.actorHeaders() });
   }
 
+  createCampaignAsset(payload: CreateAssetPayload): Observable<AssetResponse> {
+    return this.http.post<AssetResponse>(`${this.baseUrl}/dashboard/campaigns/assets`, payload, { headers: this.actorHeaders() });
+  }
+
   addCustomerDocument(customerId: string, payload: LinkCustomerDocumentPayload): Observable<CustomerProfile> {
     return this.http
       .post<{ customer?: Record<string, unknown>; message?: string; Error?: string }>(

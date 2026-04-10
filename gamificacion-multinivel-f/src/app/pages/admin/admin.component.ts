@@ -654,6 +654,9 @@ export class AdminComponent implements OnInit {
       case 'settings':
         this.syncBusinessConfigDraft();
         break;
+      case 'stats':
+        this.adminControl.loadCustomers().subscribe();
+        break;
       case 'honor_board':
         if (!this.honorBoardData && !this.isLoadingHonorBoard) {
           this.isLoadingHonorBoard = true;
@@ -1316,10 +1319,21 @@ export class AdminComponent implements OnInit {
   }
 
   get posCurrentDiscountLabel(): string {
+    const apiDiscount = this.posSelectedCustomerMonth?.currentDiscount;
+    if (apiDiscount) {
+      return `${Math.round(apiDiscount.rate * 100)}%`;
+    }
     return this.selectedPosCustomer?.discount ?? '0%';
   }
 
   get posNextGoal(): { label: string; min: number } | null {
+    const apiNextGoal = this.posSelectedCustomerMonth?.nextGoal;
+    if (apiNextGoal) {
+      return {
+        min: apiNextGoal.min,
+        label: apiNextGoal.label || `Descuento ${Math.round(apiNextGoal.rate * 100)}%`
+      };
+    }
     const rewards = this.businessConfig?.rewards;
     if (!rewards || !this.selectedPosCustomer) {
       return null;
@@ -4916,7 +4930,11 @@ export class AdminComponent implements OnInit {
           associateId: String(month.associateId),
           monthKey: month.monthKey,
           netVolume: Number(month.netVolume ?? 0),
-          isActive: Boolean(month.isActive)
+          isActive: Boolean(month.isActive),
+          vp: ('currentDiscount' in month && month.vp != null) ? Number(month.vp) : undefined,
+          currentDiscount: 'currentDiscount' in month ? month.currentDiscount : undefined,
+          nextGoal: 'nextGoal' in month ? month.nextGoal : undefined,
+          commissionLevels: 'commissionLevels' in month ? month.commissionLevels : undefined
         };
       });
   }
