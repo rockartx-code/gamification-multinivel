@@ -4921,7 +4921,8 @@ export class AdminComponent implements OnInit {
             associateId: String(customer.id),
             monthKey: this.currentMonthKey(),
             netVolume: 0,
-            isActive: false
+            isActive: false,
+            vp: undefined
           })
         )
       )
