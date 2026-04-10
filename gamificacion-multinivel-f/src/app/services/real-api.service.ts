@@ -348,8 +348,17 @@ export class RealApiService {
   }
 
   listCampaigns(): Observable<AdminCampaign[]> {
-    return this.http.get<{ campaigns: AdminCampaign[] }>(`${this.baseUrl}/dashboard/campaigns`, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.campaigns ?? []));
+    return this.http.get<{ campaigns: Record<string, unknown>[] }>(`${this.baseUrl}/dashboard/campaigns`, { headers: this.actorHeaders() })
+      .pipe(map((r) => (r.campaigns ?? []).map((c) => ({
+        ...c,
+        id: String(c['campaignId'] ?? c['id'] ?? ''),
+        name: String(c['name'] ?? ''),
+        active: c['active'] !== false,
+        hook: String(c['hook'] ?? ''),
+        story: String(c['story'] ?? ''),
+        feed: String(c['feed'] ?? ''),
+        banner: String(c['banner'] ?? ''),
+      } as AdminCampaign))));
   }
 
   listAdminNotifications(): Observable<PortalNotification[]> {
@@ -496,6 +505,15 @@ export class RealApiService {
     return this.http.get<OrderStatusLookup>(`${this.baseUrl}/orders/${encodeURIComponent(orderOrPaymentId)}/status`, {
       headers: this.actorHeaders()
     });
+  }
+
+  getCommissionsSummary(monthKey: string): Observable<Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>> {
+    return this.http
+      .get<{ summary: Record<string, unknown> }>(
+        `${this.baseUrl}/commissions/summary?month=${encodeURIComponent(monthKey)}`,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(map((r) => (r.summary ?? {}) as Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>));
   }
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
@@ -741,8 +759,8 @@ export class RealApiService {
         id: String(s['saleId'] ?? s['id'] ?? ''),
         orderId: String(s['orderId'] ?? ''),
         stockId: String(s['stockId'] ?? ''),
-        attendantUserId: (s['attendantUserId'] as number | null) ?? null,
-        customerId: (s['customerId'] as number | null) ?? null,
+        attendantUserId: s['attendantUserId'] != null ? Number(s['attendantUserId']) : null,
+        customerId: s['customerId'] != null ? Number(s['customerId']) : null,
         customerName: String(s['customerName'] ?? ''),
         paymentStatus: (s['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
         deliveryStatus: (s['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
@@ -870,8 +888,8 @@ export class RealApiService {
       id: String(sale['saleId'] ?? sale['id'] ?? ''),
       orderId: String(sale['orderId'] ?? ''),
       stockId: String(sale['stockId'] ?? ''),
-      attendantUserId: (sale['attendantUserId'] as number | null) ?? null,
-      customerId: (sale['customerId'] as number | null) ?? null,
+      attendantUserId: sale['attendantUserId'] != null ? Number(sale['attendantUserId']) : null,
+      customerId: sale['customerId'] != null ? Number(sale['customerId']) : null,
       customerName: String(sale['customerName'] ?? 'Publico en General'),
       paymentStatus: (sale['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
       deliveryStatus: (sale['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
@@ -934,8 +952,17 @@ export class RealApiService {
 
   createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
     return this.http
-      .post<{ employee: AdminEmployee }>(`${this.baseUrl}/auth/employees`, payload, { headers: this.actorHeaders() })
-      .pipe(map((response) => response.employee));
+      .post<{ employee: AdminEmployee; tempPassword?: string }>(`${this.baseUrl}/auth/employees`, payload, { headers: this.actorHeaders() })
+      .pipe(map((response) => ({ ...response.employee, tempPassword: response.tempPassword })));
+  }
+
+  generateEmployeePassword(employeeId: number): Observable<{ tempPassword: string }> {
+    return this.http
+      .post<{ tempPassword: string }>(
+        `${this.baseUrl}/auth/employees/${encodeURIComponent(String(employeeId))}/reset-password`,
+        {},
+        { headers: this.actorHeaders() }
+      );
   }
 
   updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {

@@ -425,6 +425,14 @@ export class ApiService {
     return this.resolveApi().updateEmployeePrivileges(employeeId, payload);
   }
 
+  generateEmployeePassword(employeeId: number): Observable<{ tempPassword: string }> {
+    return this.resolveApi().generateEmployeePassword(employeeId);
+  }
+
+  getCommissionsSummary(monthKey: string): Observable<Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>> {
+    return this.resolveApi().getCommissionsSummary(monthKey);
+  }
+
   getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
     return this.resolveApi().getShippingQuote(payload);
   }

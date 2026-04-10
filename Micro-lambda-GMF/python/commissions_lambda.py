@@ -396,8 +396,18 @@ def _normalize_app_config(raw) -> dict:
     merged = _merge_dict(base, raw if isinstance(raw, dict) else {})
     return merged
 
+def _decimal_clean(obj):
+    """Recursively convert float → Decimal so DynamoDB doesn't throw."""
+    if isinstance(obj, float):
+        return utils.Decimal(str(obj))
+    if isinstance(obj, dict):
+        return {k: _decimal_clean(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_decimal_clean(i) for i in obj]
+    return obj
+
 def _save_app_config(cfg: dict) -> dict:
-    normalized = _normalize_app_config(cfg)
+    normalized = _decimal_clean(_normalize_app_config(cfg))
     now = utils._now_iso()
     existing = utils._get_by_id("CONFIG", "app-v1")
     if not existing:
@@ -652,12 +662,52 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
             "monthKey": month_key, "netVolume": utils.D_ZERO, "isActive": False,
             "createdAt": utils._now_iso(), "updatedAt": utils._now_iso(),
         }
+    net_volume = float(utils._to_decimal(item.get("netVolume")))
+
+    # Load config for discount tiers and goals
+    cfg = utils._load_app_config() or _default_app_config()
+    rewards = cfg.get("rewards") or {}
+    discount_tiers = rewards.get("discountTiers") or []
+    commission_levels = rewards.get("commissionLevels") or []
+    mxn_per_vp = float(utils._to_decimal((cfg.get("bonuses") or {}).get("vpConfig", {}).get("mxnPerVp", 50)))
+
+    # Determine current discount tier for this associate
+    current_discount = None
+    next_goal = None
+    for tier in sorted(discount_tiers, key=lambda t: float(utils._to_decimal(t.get("min", 0)))):
+        tier_min = float(utils._to_decimal(tier.get("min", 0)))
+        tier_max = tier.get("max")
+        tier_max_f = float(utils._to_decimal(tier_max)) if tier_max is not None else None
+        if net_volume >= tier_min and (tier_max_f is None or net_volume < tier_max_f):
+            current_discount = {
+                "rate": float(utils._to_decimal(tier.get("rate", 0))),
+                "min": tier_min,
+                "max": tier_max_f,
+            }
+        if next_goal is None and tier_min > net_volume:
+            next_goal = {"min": tier_min, "rate": float(utils._to_decimal(tier.get("rate", 0)))}
+
+    # VP / VG for this month
+    vp = _mxn_to_vp(net_volume, mxn_per_vp) if mxn_per_vp > 0 else 0.0
+
     return utils._json_response(200, {"month": {
         "associateId": associate_id,
         "monthKey": month_key,
-        "netVolume": float(utils._to_decimal(item.get("netVolume"))),
+        "netVolume": net_volume,
+        "vp": vp,
         "isActive": bool(item.get("isActive")),
         "updatedAt": item.get("updatedAt"),
+        "currentDiscount": current_discount,
+        "nextGoal": next_goal,
+        "commissionLevels": [
+            {
+                "rate": float(utils._to_decimal(lvl.get("rate", 0))),
+                "minActiveUsers": int(lvl.get("minActiveUsers") or 0),
+                "minIndividualPurchase": float(utils._to_decimal(lvl.get("minIndividualPurchase", 0))),
+                "minGroupPurchase": float(utils._to_decimal(lvl.get("minGroupPurchase", 0))),
+            }
+            for lvl in commission_levels
+        ],
     }})
 
 # --- VOID COMMISSIONS ACTION (Step Functions) ---
@@ -773,6 +823,44 @@ def lambda_handler(event, context):
             return utils._json_response(200, {"service": "commissions"})
 
         root = segments[0]
+
+        # GET /commissions/summary?month={monthKey}  — batch export helper
+        if root == "summary" and method == "GET":
+            err = utils._require_admin(headers, "access_screen_stats")
+            if err: return err
+            month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
+            prev_month = (event.get("queryStringParameters") or {}).get("prevMonth")
+            # Query all COMMISSION_MONTH records and filter in memory
+            all_comm = utils._query_bucket("COMMISSION_MONTH")
+            receipts_raw = utils._query_bucket("COMMISSION_RECEIPT")
+            receipt_by_cust = {}
+            for r in receipts_raw:
+                if str(r.get("monthKey")) == str(month):
+                    receipt_by_cust[str(r.get("customerId"))] = r.get("assetUrl") or ""
+            summary = {}
+            for item in all_comm:
+                sk = str(item.get("SK") or "")
+                if f"#MONTH#{month}" not in sk:
+                    continue
+                bid = str(item.get("beneficiaryId") or "")
+                if not bid:
+                    continue
+                confirmed = float(utils._to_decimal(item.get("totalConfirmed", 0)))
+                receipt_url = receipt_by_cust.get(bid, "")
+                if confirmed <= 0:
+                    status = "no_moves"
+                elif receipt_url:
+                    status = "paid"
+                else:
+                    status = "pending"
+                summary[bid] = {
+                    "customerId": bid,
+                    "monthKey": month,
+                    "paidTotal": confirmed,
+                    "status": status,
+                    "receiptUrl": receipt_url,
+                }
+            return utils._json_response(200, {"summary": summary, "monthKey": month})
 
         # POST /commissions/request
         if root == "request" and method == "POST":

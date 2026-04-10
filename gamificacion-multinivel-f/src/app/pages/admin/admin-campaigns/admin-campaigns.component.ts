@@ -96,12 +96,15 @@ export class AdminCampaignsComponent {
   }
 
   get isCampaignFormValid(): boolean {
+    const storyOk = Boolean(this.campaignForm.story.trim()) || this.campaignAssetFiles.has('story');
+    const feedOk = Boolean(this.campaignForm.feed.trim()) || this.campaignAssetFiles.has('feed');
+    const bannerOk = Boolean(this.campaignForm.banner.trim()) || this.campaignAssetFiles.has('banner');
     return Boolean(
       this.campaignForm.name.trim() &&
         this.campaignForm.hook.trim() &&
-        this.campaignForm.story.trim() &&
-        this.campaignForm.feed.trim() &&
-        this.campaignForm.banner.trim()
+        storyOk &&
+        feedOk &&
+        bannerOk
     );
   }
 

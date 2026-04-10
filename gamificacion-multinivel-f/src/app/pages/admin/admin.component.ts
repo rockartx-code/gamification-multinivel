@@ -1888,6 +1888,29 @@ export class AdminComponent implements OnInit {
 
   downloadCommissionsReport(): void {
     const prevMonthKey = this.getPrevMonthKey();
+    // First fetch commission summary for prev month, then generate report
+    this.adminControl.getCommissionsSummary(prevMonthKey).subscribe({
+      next: (summary) => this._buildAndDownloadCommissionsReport(prevMonthKey, summary),
+      error: () => this._buildAndDownloadCommissionsReport(prevMonthKey, {})
+    });
+  }
+
+  private _buildAndDownloadCommissionsReport(
+    prevMonthKey: string,
+    summary: Record<string, { paidTotal: number; status: string; receiptUrl: string }>
+  ): void {
+    // Merge commission summary into customers for this export run
+    const enrichedCustomers = this.customers.map((c) => {
+      const s = summary[String(c.id)];
+      if (!s) return c;
+      return {
+        ...c,
+        commissionsPrevMonth: s.paidTotal,
+        commissionsPrevStatus: s.status as AdminCustomer['commissionsPrevStatus'],
+        commissionsPrevMonthKey: prevMonthKey,
+        commissionsPrevReceiptUrl: s.receiptUrl || c.commissionsPrevReceiptUrl,
+      };
+    });
     const commissionLevels = this.businessConfig?.rewards?.commissionLevels ?? [];
 
     // --- helpers ---
@@ -1899,8 +1922,7 @@ export class AdminComponent implements OnInit {
     const memberSpend = (name: string): number =>
       spendByName.get(this.normalizeCustomerKey(name)) ?? 0;
 
-    const referralMap = this.buildReferralMap(this.customers);
-    const customerById = new Map(this.customers.map((c) => [c.id, c]));
+    const referralMap = this.buildReferralMap(enrichedCustomers);
 
     // Build tree levels for a given leader (L1, L2, L3)
     const buildTree = (leaderId: number): Array<{ member: AdminCustomer; treeLevel: number }> => {
@@ -1950,7 +1972,7 @@ export class AdminComponent implements OnInit {
     };
 
     // --- Sheet 1: Summary (existing behaviour, all customers) ---
-    const summaryRows = this.customers
+    const summaryRows = enrichedCustomers
       .filter((c) => (c.commissionsPrevMonth ?? 0) > 0 || c.commissionsPrevStatus === 'pending')
       .sort((a, b) => {
         if (a.commissionsPrevStatus === 'pending' && b.commissionsPrevStatus !== 'pending') return -1;
@@ -1993,7 +2015,7 @@ export class AdminComponent implements OnInit {
     const desgloceRows: DesgloceRow[] = [];
 
     // Include all customers that have any tree OR any commissions
-    const leadersToInclude = this.customers.filter((c) => {
+    const leadersToInclude = enrichedCustomers.filter((c) => {
       const hasTree = (referralMap.get(c.id) ?? []).length > 0;
       const hasCommissions = (c.commissionsPrevMonth ?? 0) > 0 || c.commissionsPrevStatus === 'pending';
       return hasTree || hasCommissions;
@@ -2104,6 +2126,7 @@ export class AdminComponent implements OnInit {
     XLSX.utils.book_append_sheet(wb, wsDesgloce, 'Desglose por árbol');
     XLSX.writeFile(wb, `comisiones-${prevMonthKey}.xlsx`);
   }
+  // end _buildAndDownloadCommissionsReport
 
   private isCustomerActive(customer: AdminCustomer): boolean {
     const anyCustomer = customer as AdminCustomer & { active?: boolean; status?: string };
@@ -3402,6 +3425,7 @@ export class AdminComponent implements OnInit {
           this.employeeForm = { name: '', email: '', phone: '' };
           this.selectedEmployee = emp;
           this.syncSelectedEmployeePrivilegeDraft();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           const serverMsg = err?.error?.message || err?.error?.Error;
@@ -3474,6 +3498,25 @@ export class AdminComponent implements OnInit {
     const selected = this.selectedEmployee;
     this.selectedEmployeeAdminAccess = Boolean(selected?.canAccessAdmin);
     this.selectedEmployeePrivilegeDraft = normalizePrivileges(selected?.privileges);
+  }
+
+  isGeneratingEmployeePassword = false;
+
+  generateEmployeePassword(): void {
+    if (!this.selectedEmployee || this.isGeneratingEmployeePassword) return;
+    this.isGeneratingEmployeePassword = true;
+    this.adminControl.generateEmployeePassword(this.selectedEmployee.id)
+      .pipe(finalize(() => { this.isGeneratingEmployeePassword = false; }))
+      .subscribe({
+        next: ({ tempPassword }) => {
+          this.employeeTempPassword = tempPassword;
+          this.cdr.detectChanges();
+          this.showSnackbar('Nueva contraseña temporal generada.');
+        },
+        error: () => {
+          this.showSnackbar('No se pudo generar la contraseña.');
+        }
+      });
   }
 
   private normalizeSponsorSearch(value: string): string {

@@ -560,6 +560,14 @@ export class AdminControlService {
     );
   }
 
+  generateEmployeePassword(employeeId: number): Observable<{ tempPassword: string }> {
+    return this.api.generateEmployeePassword(employeeId);
+  }
+
+  getCommissionsSummary(monthKey: string): Observable<Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>> {
+    return this.api.getCommissionsSummary(monthKey);
+  }
+
   loadStocksAndPosState(): Observable<{
     stocks: AdminStock[];
     transfers: StockTransfer[];

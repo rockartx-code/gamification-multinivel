@@ -1105,21 +1105,40 @@ def get_honor_board() -> dict:
     })
 
 
+def _normalize_campaign(item: dict) -> dict:
+    """Normalize a campaign item: ensure 'id' is present."""
+    cid = item.get("campaignId") or item.get("id") or ""
+    return {**item, "id": cid}
+
 def _handle_campaigns(method, body):
     """GET /campaigns  |  POST /campaigns — también resuelve /dashboard/campaigns"""
     if method == "GET":
         items = utils._query_bucket("CAMPAIGN")
-        return utils._json_response(200, {"campaigns": items})
+        return utils._json_response(200, {"campaigns": [_normalize_campaign(c) for c in items]})
     if method == "POST":
         cid = body.get("id") or f"CMP-{utils.uuid.uuid4().hex[:8].upper()}"
+        now = utils._now_iso()
+        existing = utils._get_by_id("CAMPAIGN", cid) if body.get("id") else None
         campaign = {
-            "entityType": "campaign", "campaignId": cid,
+            "entityType": "campaign", "campaignId": cid, "id": cid,
             "name": body.get("name"), "active": bool(body.get("active", True)),
+            "type": body.get("type") or "multinivel",
+            "hook": body.get("hook") or "",
+            "description": body.get("description") or "",
             "banner": body.get("banner"), "story": body.get("story"), "feed": body.get("feed"),
-            "ctaPrimaryText": body.get("ctaPrimaryText"), "updatedAt": utils._now_iso()
+            "heroImage": body.get("heroImage"),
+            "heroBadge": body.get("heroBadge"),
+            "heroTitle": body.get("heroTitle"),
+            "heroAccent": body.get("heroAccent"),
+            "heroTail": body.get("heroTail"),
+            "heroDescription": body.get("heroDescription"),
+            "ctaPrimaryText": body.get("ctaPrimaryText"),
+            "ctaSecondaryText": body.get("ctaSecondaryText"),
+            "benefits": body.get("benefits") or [],
+            "updatedAt": now,
         }
-        saved = utils._put_entity("CAMPAIGN", cid, campaign)
-        return utils._json_response(201, {"campaign": saved})
+        saved = utils._put_entity("CAMPAIGN", cid, campaign, created_at_iso=existing.get("createdAt") if existing else None)
+        return utils._json_response(201, {"campaign": _normalize_campaign(saved)})
     return utils._json_response(405, {"message": "Método no permitido"})
 
 

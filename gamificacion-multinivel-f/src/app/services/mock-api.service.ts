@@ -1732,6 +1732,14 @@ export class MockApiService {
     return of(updated).pipe(delay(120));
   }
 
+  generateEmployeePassword(_employeeId: number): Observable<{ tempPassword: string }> {
+    return of({ tempPassword: 'MOCK-TEMP-PASS' }).pipe(delay(120));
+  }
+
+  getCommissionsSummary(_monthKey: string): Observable<Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>> {
+    return of({}).pipe(delay(120));
+  }
+
   changePassword(_userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
     if (!payload.currentPassword) {
       return throwError(() => ({ error: { message: 'La contraseña actual es requerida.' } }));

@@ -189,10 +189,14 @@ def handle_pos_sale(body, headers):
         _log_movement(stock_id, "pos_sale", it['productId'], it['quantity'], order_id, user_id, payment_method=payment_method)
 
     # 5. DISPARAR STEP FUNCTION (Motor de Comisiones)
-    sfn.start_execution(
-        stateMachineArn=ORDER_SFN_ARN,
-        input=json.dumps({"orderId": order_id, "action": "ORDER_DELIVERED"})
-    )
+    if ORDER_SFN_ARN:
+        try:
+            sfn.start_execution(
+                stateMachineArn=ORDER_SFN_ARN,
+                input=json.dumps({"orderId": order_id, "action": "ORDER_DELIVERED"})
+            )
+        except Exception as e:
+            print(f"[SFN_ERROR] pos_sale={sale_id} err={e}")
 
     return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
 
@@ -226,7 +230,9 @@ def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
         and (not last_cut_at or str(item.get("createdAt") or "") > last_cut_at)
     ]
     sales.sort(key=lambda x: str(x.get("createdAt") or ""))
-    current_total = sum((utils._to_decimal(item.get("total")) for item in sales), utils.D_ZERO)
+    cash_carry = utils._to_decimal(last_cut.get("cashToKeep")) if last_cut else utils.D_ZERO
+    sales_total = sum((utils._to_decimal(item.get("total")) for item in sales), utils.D_ZERO)
+    current_total = cash_carry + sales_total
     return {
         "stockId": stock_id,
         "attendantUserId": attendant_user_id,

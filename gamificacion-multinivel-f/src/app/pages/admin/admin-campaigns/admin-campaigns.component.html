@@ -134,6 +134,15 @@
 
         <div *ngIf="campaignMessage" class="mt-3 text-xs text-accent">{{ campaignMessage }}</div>
 
+        <div *ngIf="!isCampaignFormValid && !isSavingCampaign" class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          Faltan campos obligatorios:
+          <span *ngIf="!campaignForm.name.trim()"> Nombre</span>
+          <span *ngIf="!campaignForm.hook.trim()"> · Hook</span>
+          <span *ngIf="!campaignForm.story.trim() && !campaignAssetFiles.has('story')"> · Story (URL o archivo)</span>
+          <span *ngIf="!campaignForm.feed.trim() && !campaignAssetFiles.has('feed')"> · Feed (URL o archivo)</span>
+          <span *ngIf="!campaignForm.banner.trim() && !campaignAssetFiles.has('banner')"> · Banner (URL o archivo)</span>
+        </div>
+
         <div class="mt-4 grid gap-2 md:grid-cols-2">
           <ui-form-field label="Nombre" [ngModel]="campaignForm.name" (ngModelChange)="updateCampaignField('name', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
 

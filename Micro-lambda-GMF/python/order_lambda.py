@@ -5,6 +5,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import core_utils as utils  # Importado desde la Layer
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -897,28 +898,39 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     request_id = f"RET-{utils.uuid.uuid4().hex[:8].upper()}"
     uploaded_evidence = {}
 
+    def _upload_one(category, i, f):
+        if isinstance(f, dict):
+            cb64 = f.get("contentBase64", "")
+            ct = f.get("contentType", "image/jpeg")
+            fname = f.get("fileName", f"{category}_{i + 1}.jpg")
+        else:
+            cb64, ct, fname = str(f), "image/jpeg", f"{category}_{i + 1}.jpg"
+        try:
+            asset = _upload_evidence_s3(
+                fname, cb64, ct,
+                prefix=f"devoluciones/{order_id}/{request_id}/{category}",
+            )
+            return category, i, asset["url"]
+        except Exception as e:
+            print(f"[S3_EVIDENCE] {e}")
+            return category, i, None
+
+    upload_tasks = []
     for category, files in [
         ("fotos_producto", fotos_producto),
         ("fotos_empaque", fotos_empaque),
         ("fotos_guia_envio", fotos_guia),
     ]:
-        urls = []
+        uploaded_evidence[category] = []
         for i, f in enumerate(files):
-            if isinstance(f, dict):
-                cb64 = f.get("contentBase64", "")
-                ct = f.get("contentType", "image/jpeg")
-                fname = f.get("fileName", f"{category}_{i + 1}.jpg")
-            else:
-                cb64, ct, fname = str(f), "image/jpeg", f"{category}_{i + 1}.jpg"
-            try:
-                asset = _upload_evidence_s3(
-                    fname, cb64, ct,
-                    prefix=f"devoluciones/{order_id}/{request_id}/{category}",
-                )
-                urls.append(asset["url"])
-            except Exception as e:
-                print(f"[S3_EVIDENCE] {e}")
-        uploaded_evidence[category] = urls
+            upload_tasks.append((category, i, f))
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_upload_one, cat, i, f): (cat, i) for cat, i, f in upload_tasks}
+        for future in as_completed(futures):
+            cat, i, url = future.result()
+            if url:
+                uploaded_evidence[cat].append(url)
 
     # Crear entidad RETURN_REQUEST
     now = utils._now_iso()

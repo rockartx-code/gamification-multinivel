@@ -596,6 +596,24 @@ def lambda_handler(event, context):
 
         if root == "employees":
             emp_id = segments[1] if len(segments) > 1 else None
+            # POST /employees/{id}/reset-password
+            if emp_id and len(segments) >= 3 and segments[2] == "reset-password" and method == "POST":
+                err = utils._require_admin(headers, "employee_manage_privileges")
+                if err: return err
+                eid = int(emp_id)
+                emp = utils._get_by_id("EMPLOYEE", eid)
+                if not emp:
+                    return utils._json_response(404, {"message": "Empleado no encontrado"})
+                auth_record = utils._get_by_id("AUTH", emp.get("email"))
+                if not auth_record:
+                    return utils._json_response(404, {"message": "Cuenta de acceso no encontrada"})
+                temp_pass = "".join(random.choices("ABCDEFGHJKMNPQRSTUVWXYZ23456789", k=10))
+                utils._update_by_id(
+                    "AUTH", emp.get("email"),
+                    "SET passwordHash = :p, updatedAt = :u",
+                    {":p": utils._hash_password(temp_pass), ":u": utils._now_iso()}
+                )
+                return utils._json_response(200, {"tempPassword": temp_pass})
             return handle_employees(method, body, emp_id, headers)
 
         return utils._json_response(404, {"message": f"Ruta {path} no encontrada"})
