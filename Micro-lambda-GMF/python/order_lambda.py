@@ -123,7 +123,7 @@ def _user_can_operate_pickup_stock(user_id, pickup_stock_id) -> bool:
     return str(user_id) in linked_ids
 
 
-def _register_cash_sale_for_pickup_order(order: dict, user_id, now_iso: str) -> str:
+def _register_branch_sale_for_pickup_order(order: dict, user_id, now_iso: str, payment_method: str) -> str:
     sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
     pickup_stock_id = order.get("pickupStockId")
     sale_item = {
@@ -136,7 +136,7 @@ def _register_cash_sale_for_pickup_order(order: dict, user_id, now_iso: str) -> 
         "customerName": order.get("customerName") or "Cliente",
         "paymentStatus": "paid_branch",
         "deliveryStatus": "paid_branch",
-        "paymentMethod": "cash",
+        "paymentMethod": payment_method,
         "grossSubtotal": order.get("grossSubtotal") or order.get("netTotal") or order.get("total") or utils.D_ZERO,
         "discountRate": order.get("discountRate") or utils.D_ZERO,
         "discountAmount": order.get("discountAmount") or utils.D_ZERO,
@@ -144,7 +144,7 @@ def _register_cash_sale_for_pickup_order(order: dict, user_id, now_iso: str) -> 
         "lines": order.get("items") or [],
         "createdAt": now_iso,
         "updatedAt": now_iso,
-        "source": "pickup_cash_payment",
+        "source": f"pickup_{payment_method}_payment",
     }
     utils._put_entity("POS_SALE", sale_id, sale_item, created_at_iso=now_iso)
     return sale_id
@@ -556,8 +556,11 @@ def handle_update_status(order_id, body, headers):
         extra_updates["stockId"] = pickup_stock_id_str
     if new_status == "paid" and is_pickup_order and order.get("pickupPaymentMethod") == "at_store":
         extra_updates["paymentStatus"] = body.get("paymentStatus") or "paid_branch"
-        if payment_method == "cash" and not order.get("cashSaleId"):
-            extra_updates["cashSaleId"] = _register_cash_sale_for_pickup_order(order, actor_user_id, now)
+        if payment_method and not (order.get("cashSaleId") or order.get("branchSaleId")):
+            branch_sale_id = _register_branch_sale_for_pickup_order(order, actor_user_id, now, payment_method)
+            extra_updates["branchSaleId"] = branch_sale_id
+            if payment_method == "cash":
+                extra_updates["cashSaleId"] = branch_sale_id
     if new_status == "delivered":
         extra_updates["deliveredAt"] = now
         if is_pickup_order and not order.get("pickupStockDeductedAt"):

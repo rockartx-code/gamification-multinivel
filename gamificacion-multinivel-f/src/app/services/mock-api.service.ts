@@ -1523,6 +1523,7 @@ export class MockApiService {
     stockId: string;
     customerId?: number | null;
     customerName?: string;
+    paymentMethod?: 'cash' | 'card' | 'transfer';
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
@@ -1584,6 +1585,7 @@ export class MockApiService {
       customerName: customer?.name || payload.customerName || 'Publico en General',
       paymentStatus: payload.paymentStatus ?? 'paid_branch',
       deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
+      paymentMethod: payload.paymentMethod ?? 'cash',
       grossSubtotal,
       discountRate,
       discountAmount,
@@ -1599,6 +1601,7 @@ export class MockApiService {
         productId: item.productId,
         qty: item.quantity,
         userId: actorId,
+        paymentMethod: payload.paymentMethod ?? 'cash',
         referenceId: sale.orderId,
         createdAt: sale.createdAt
       })),
@@ -1637,7 +1640,7 @@ export class MockApiService {
     return of(control).pipe(delay(120));
   }
 
-  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+  createPosCashCut(payload: { stockId: string; cashToKeep?: number }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
     const actorId = this.currentActorId();
     if (!actorId) {
       return throwError(() => new Error('Se requiere un usuario logeado para operar POS'));
@@ -1650,12 +1653,15 @@ export class MockApiService {
       return throwError(() => new Error('No hay ventas pendientes para corte'));
     }
     const now = new Date().toISOString();
+    const cashToKeep = Math.max(0, Math.min(control.currentTotal, Number(payload.cashToKeep ?? 0)));
     const cut: PosCashCut = {
       id: `CUT-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       stockId: control.stockId,
       attendantUserId: actorId,
       total: control.currentTotal,
       salesCount: control.salesCount,
+      cashToKeep,
+      withdrawnAmount: Math.max(0, control.currentTotal - cashToKeep),
       startedAt: control.startedAt,
       endedAt: now,
       createdAt: now
@@ -1667,7 +1673,10 @@ export class MockApiService {
         stockId: payload.stockId,
         attendantUserId: actorId,
         currentTotal: 0,
-        salesCount: 0
+        salesCount: 0,
+        cashToKeepSuggested: cashToKeep,
+        lastCutCashToKeep: cashToKeep,
+        lastCutWithdrawnAmount: cut.withdrawnAmount
       }
     }).pipe(delay(120));
   }
@@ -1852,6 +1861,7 @@ export class MockApiService {
         (entry) =>
           entry.stockId === selectedStock.id &&
           entry.attendantUserId === actorId &&
+          (entry.paymentMethod ?? 'cash') === 'cash' &&
           (!lastCut?.createdAt || String(entry.createdAt ?? '') > String(lastCut.createdAt))
       )
       .sort((a, b) => String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
@@ -1860,10 +1870,13 @@ export class MockApiService {
       attendantUserId: actorId,
       currentTotal: relevantSales.reduce((acc, entry) => acc + entry.total, 0),
       salesCount: relevantSales.length,
+      cashToKeepSuggested: relevantSales.reduce((acc, entry) => acc + entry.total, 0),
       startedAt: relevantSales[0]?.createdAt ?? lastCut?.createdAt,
       lastCutAt: lastCut?.createdAt,
       lastCutTotal: lastCut?.total ?? 0,
       lastCutSalesCount: lastCut?.salesCount ?? 0,
+      lastCutCashToKeep: lastCut?.cashToKeep ?? 0,
+      lastCutWithdrawnAmount: lastCut?.withdrawnAmount ?? 0,
       lastSaleAt: relevantSales.at(-1)?.createdAt
     };
   }

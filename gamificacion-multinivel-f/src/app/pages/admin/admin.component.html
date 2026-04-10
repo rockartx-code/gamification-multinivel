@@ -1561,7 +1561,12 @@
                   <div>{{ movement.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
                   <div>{{ movement.stockName }}</div>
                   <div>{{ movement.productName }}</div>
-                  <div class="text-xs">{{ movement.typeLabel }}</div>
+                  <div class="text-xs">
+                    {{ movement.typeLabel }}
+                    <span *ngIf="movement.type === 'pos_sale'" class="mt-1 inline-flex rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px]">
+                      {{ posPaymentMethodLabel(movement.paymentMethod) }}
+                    </span>
+                  </div>
                   <div [ngClass]="movementQtyClass(movement)">
                     {{ movement.signedQty > 0 ? '+' : '' }}{{ movement.signedQty }}
                   </div>
@@ -1840,7 +1845,20 @@
                   </div>
 
                   <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
-                    <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <ui-form-field
+                        kind="select"
+                        label="Forma de pago"
+                        [options]="posOrderPaymentMethodOptions"
+                        [ngModel]="posSalePaymentMethod"
+                        (ngModelChange)="posSalePaymentMethod = $event">
+                      </ui-form-field>
+                      <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-xs text-gray-600">
+                        Efectivo impacta la caja actual. Tarjeta y transferencia se registran aparte y no entran al corte de caja.
+                      </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-3">
                       <div>
                         <div class="text-[11px] text-gray-500">Subtotal</div>
                         <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posSubtotal) }}</div>
@@ -1918,48 +1936,89 @@
                     <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-600">
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Monto: {{ formatMoney(posCashControl ? (posCashControl.lastCutTotal || 0) : 0) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas: {{ posCashControl ? (posCashControl.lastCutSalesCount || 0) : 0 }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">En caja: {{ formatMoney(posCashControl ? (posCashControl.lastCutCashToKeep || 0) : 0) }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Retirado: {{ formatMoney(posCashControl ? (posCashControl.lastCutWithdrawnAmount || 0) : 0) }}</span>
                     </div>
                   </div>
                 </div>
 
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                   <div class="text-sm font-semibold text-main">Ventas registradas</div>
-                  <div class="mt-1 text-xs text-gray-600">Solo se muestran las ventas del operador actual sobre su stock ligado.</div>
+                  <div class="mt-1 text-xs text-gray-600">Solo se muestran las ventas del operador actual sobre su stock ligado, separadas por forma de pago.</div>
                   <div *ngIf="!visiblePosSales.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4 text-sm text-gray-600">
                     No hay ventas registradas para esta caja.
                   </div>
-                  <div *ngIf="visiblePosSales.length" class="mt-3 space-y-2 max-h-[520px] overflow-auto">
-                    <div *ngFor="let sale of visiblePosSales" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="flex items-start justify-between gap-3">
-                        <div>
-                          <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                          <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
-                        </div>
-                        <div class="text-right">
-                          <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                          <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
-                        </div>
+                  <div *ngIf="visiblePosSales.length" class="mt-3 space-y-4 max-h-[520px] overflow-auto">
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="text-xs font-semibold text-main">Efectivo</div>
+                        <div class="text-[11px] text-gray-500">{{ visibleCashPosSales.length }} venta(s)</div>
                       </div>
-                      <div class="mt-2 text-[11px] text-gray-600">
-                        {{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}
-                      </div>
-                      <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
-                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Subtotal: {{ formatMoney(sale.grossSubtotal || sale.total) }}</span>
-                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Descuento: {{ formatMoney(sale.discountAmount || 0) }}</span>
-                        <span *ngIf="(sale.discountRate || 0) > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Tasa: {{ ((sale.discountRate || 0) * 100) | number: '1.0-0' }}%</span>
-                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">{{ sale.lines.length }} producto(s)</span>
+                      <div *ngIf="!visibleCashPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas en efectivo.</div>
+                      <div *ngIf="visibleCashPosSales.length" class="mt-3 space-y-2">
+                        <div *ngFor="let sale of visibleCashPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
+                          <div class="flex items-start justify-between gap-3">
+                            <div>
+                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
+                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                            </div>
+                            <div class="text-right">
+                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
+                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                            </div>
+                          </div>
+                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                        </div>
                       </div>
                     </div>
-                    <ng-container *ngIf="false">
-                    <div *ngFor="let sale of visiblePosSales" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div class="text-xs font-semibold text-main">{{ sale.orderId }} Â· {{ formatMoney(sale.total) }}</div>
-                    <div class="text-[11px] text-gray-600">{{ stockName(sale.stockId) }} Â· {{ customerName(sale.attendantUserId) }}</div>
-                    <div class="mt-1 text-[11px] text-accent">pagada en sucursal Â· entregada en sucursal</div>
-                    <div class="mt-1 text-[11px] text-gray-600">{{ sale.lines.length }} producto(s)</div>
+
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="text-xs font-semibold text-main">Tarjeta</div>
+                        <div class="text-[11px] text-gray-500">{{ visibleCardPosSales.length }} venta(s)</div>
+                      </div>
+                      <div *ngIf="!visibleCardPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas con tarjeta.</div>
+                      <div *ngIf="visibleCardPosSales.length" class="mt-3 space-y-2">
+                        <div *ngFor="let sale of visibleCardPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
+                          <div class="flex items-start justify-between gap-3">
+                            <div>
+                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
+                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                            </div>
+                            <div class="text-right">
+                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
+                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                            </div>
+                          </div>
+                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="text-xs font-semibold text-main">Transferencia</div>
+                        <div class="text-[11px] text-gray-500">{{ visibleTransferPosSales.length }} venta(s)</div>
+                      </div>
+                      <div *ngIf="!visibleTransferPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas por transferencia.</div>
+                      <div *ngIf="visibleTransferPosSales.length" class="mt-3 space-y-2">
+                        <div *ngFor="let sale of visibleTransferPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
+                          <div class="flex items-start justify-between gap-3">
+                            <div>
+                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
+                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                            </div>
+                            <div class="text-right">
+                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
+                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                            </div>
+                          </div>
+                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                    </ng-container>
                 </div>
-              </div>
             </div>
           </div>
           </div>
@@ -3102,6 +3161,52 @@
     <ui-button size="sm" variant="primary" [disabled]="isSubmittingPosPayment" (pressed)="confirmReceivePickupPayment()">
       <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
       {{ isSubmittingPosPayment ? 'Guardando...' : 'Confirmar pago' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<ui-modal [isOpen]="isPosCashCutModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closePosCashCutModal()">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-lg font-extrabold text-main">Corte de caja</div>
+      <div class="mt-1 text-sm text-gray-600">Indicá cuánto efectivo se queda en caja antes de cerrar el corte.</div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="closePosCashCutModal()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      Cerrar
+    </ui-button>
+  </div>
+
+  <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4 text-sm text-gray-700">
+    <div class="flex items-center justify-between gap-3">
+      <span>Efectivo disponible</span>
+      <strong>{{ formatMoney(posCashControl?.currentTotal || 0) }}</strong>
+    </div>
+    <div class="mt-3">
+      <ui-form-field
+        type="number"
+        label="Monto a dejar en caja"
+        [min]="0"
+        [max]="posCashControl?.currentTotal || 0"
+        [step]="0.01"
+        [ngModel]="posCashCutKeepAmount"
+        (ngModelChange)="posCashCutKeepAmount = $event">
+      </ui-form-field>
+    </div>
+    <div class="mt-2 text-xs text-gray-600">
+      Se retirará {{ formatMoney((posCashControl?.currentTotal || 0) - (+posCashCutKeepAmount || 0)) }} del efectivo acumulado.
+    </div>
+  </div>
+
+  <div *ngIf="posCashCutError" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    {{ posCashCutError }}
+  </div>
+
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" (pressed)="closePosCashCutModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="isCuttingPosCash" (pressed)="confirmPosCashCut()">
+      <i class="fa-solid fa-scissors" aria-hidden="true"></i>
+      {{ isCuttingPosCash ? 'Guardando...' : 'Registrar corte' }}
     </ui-button>
   </div>
 </ui-modal>

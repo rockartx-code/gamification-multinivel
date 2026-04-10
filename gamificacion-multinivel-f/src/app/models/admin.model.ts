@@ -591,6 +591,7 @@ export interface InventoryMovement {
   productId: number;
   qty: number;
   userId?: number | null;
+  paymentMethod?: 'cash' | 'card' | 'transfer';
   reason?: string;
   referenceId?: string;
   createdAt?: string;
@@ -619,10 +620,13 @@ export interface PosCashControl {
   attendantUserId?: number | null;
   currentTotal: number;
   salesCount: number;
+  cashToKeepSuggested?: number;
   startedAt?: string;
   lastCutAt?: string;
   lastCutTotal?: number;
   lastCutSalesCount?: number;
+  lastCutCashToKeep?: number;
+  lastCutWithdrawnAmount?: number;
   lastSaleAt?: string;
 }
 
@@ -632,6 +636,8 @@ export interface PosCashCut {
   attendantUserId?: number | null;
   total: number;
   salesCount: number;
+  cashToKeep?: number;
+  withdrawnAmount?: number;
   startedAt?: string;
   endedAt?: string;
   createdAt?: string;

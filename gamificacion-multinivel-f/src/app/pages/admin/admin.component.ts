@@ -134,10 +134,13 @@ type PosCashControl = {
   attendantUserId: number | null;
   currentTotal: number;
   salesCount: number;
+  cashToKeepSuggested?: number;
   startedAt?: string;
   lastCutAt?: string;
   lastCutTotal?: number;
   lastCutSalesCount?: number;
+  lastCutCashToKeep?: number;
+  lastCutWithdrawnAmount?: number;
   lastSaleAt?: string;
 };
 
@@ -151,6 +154,7 @@ type InventoryMovement = {
   qty: number;
   createdAt: string;
   userId: number | null;
+  paymentMethod?: 'cash' | 'card' | 'transfer';
   reason?: string;
   referenceId?: string;
 };
@@ -541,6 +545,7 @@ export class AdminComponent implements OnInit {
   posItems = new Map<number, number>();
   posSales: PosSale[] = [];
   posCashControl: PosCashControl | null = null;
+  posSalePaymentMethod: 'cash' | 'card' | 'transfer' = 'cash';
   posCustomerSearch = 'Publico en General';
   selectedPosCustomerId: number | null = null;
   posCustomerRecommendations: PosCustomerRecommendation[] = [];
@@ -548,6 +553,9 @@ export class AdminComponent implements OnInit {
   isLoadingPosCustomerProjection = false;
   isRegisteringPosSale = false;
   isCuttingPosCash = false;
+  isPosCashCutModalOpen = false;
+  posCashCutKeepAmount = '';
+  posCashCutError = '';
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
   isPosPaymentModalOpen = false;
@@ -1250,6 +1258,18 @@ export class AdminComponent implements OnInit {
     return this.posSales.filter(
       (sale) => (!stockId || sale.stockId === stockId) && (operatorId == null || sale.attendantUserId === operatorId)
     );
+  }
+
+  get visibleCashPosSales(): PosSale[] {
+    return this.visiblePosSales.filter((sale) => (sale.paymentMethod ?? 'cash') === 'cash');
+  }
+
+  get visibleCardPosSales(): PosSale[] {
+    return this.visiblePosSales.filter((sale) => sale.paymentMethod === 'card');
+  }
+
+  get visibleTransferPosSales(): PosSale[] {
+    return this.visiblePosSales.filter((sale) => sale.paymentMethod === 'transfer');
   }
 
   get posSubtotal(): number {
@@ -2166,6 +2186,7 @@ export class AdminComponent implements OnInit {
           qty: Number(movement.qty),
           createdAt: movement.createdAt ?? '',
           userId: movement.userId ?? null,
+          paymentMethod: movement.paymentMethod,
           reason: movement.reason,
           referenceId: movement.referenceId
         }));
@@ -4689,6 +4710,7 @@ export class AdminComponent implements OnInit {
         stockId: this.currentPosStock.id,
         customerId: this.selectedPosCustomer?.id,
         customerName: this.selectedPosCustomer?.name || 'Publico en General',
+        paymentMethod: this.posSalePaymentMethod,
         paymentStatus: 'paid_branch',
         deliveryStatus: 'delivered_branch',
         items: lineItems
@@ -4698,6 +4720,7 @@ export class AdminComponent implements OnInit {
         next: () => {
           this.posItems.clear();
           this.posForm.status = 'delivered';
+          this.posSalePaymentMethod = 'cash';
           this.selectPublicGeneralCustomer();
           this.setPosFeedback('Venta registrada en caja.', 'success');
           this.showSnackbar('Venta registrada en caja.');
@@ -4713,13 +4736,39 @@ export class AdminComponent implements OnInit {
   }
 
   createPosCashCut(): void {
-    if (!this.canCreatePosCashCut || !this.currentPosStock) {
+    if (!this.canCreatePosCashCut) {
+      return;
+    }
+    this.posCashCutKeepAmount = String(this.roundMoney(this.posCashControl?.currentTotal ?? 0));
+    this.posCashCutError = '';
+    this.isPosCashCutModalOpen = true;
+  }
+
+  closePosCashCutModal(): void {
+    this.isPosCashCutModalOpen = false;
+    this.posCashCutKeepAmount = '';
+    this.posCashCutError = '';
+  }
+
+  confirmPosCashCut(): void {
+    if (!this.canCreatePosCashCut || !this.currentPosStock || this.isCuttingPosCash) {
+      return;
+    }
+    const currentTotal = Number(this.posCashControl?.currentTotal ?? 0);
+    const cashToKeep = this.roundMoney(Number(this.posCashCutKeepAmount));
+    if (!Number.isFinite(cashToKeep) || cashToKeep < 0) {
+      this.posCashCutError = 'Ingresa un monto valido para dejar en caja.';
+      return;
+    }
+    if (cashToKeep > currentTotal) {
+      this.posCashCutError = 'El monto a dejar en caja no puede ser mayor al disponible.';
       return;
     }
     this.isCuttingPosCash = true;
     this.setPosFeedback('', '');
+    this.posCashCutError = '';
     this.adminControl
-      .createPosCashCut({ stockId: this.currentPosStock.id })
+      .createPosCashCut({ stockId: this.currentPosStock.id, cashToKeep })
       .pipe(finalize(() => (this.isCuttingPosCash = false)))
       .subscribe({
         next: ({ control }) => {
@@ -4728,17 +4777,21 @@ export class AdminComponent implements OnInit {
             attendantUserId: control.attendantUserId ?? null,
             currentTotal: Number(control.currentTotal ?? 0),
             salesCount: Number(control.salesCount ?? 0),
+            cashToKeepSuggested: Number(control.cashToKeepSuggested ?? 0),
             startedAt: control.startedAt,
             lastCutAt: control.lastCutAt,
             lastCutTotal: Number(control.lastCutTotal ?? 0),
             lastCutSalesCount: Number(control.lastCutSalesCount ?? 0),
+            lastCutCashToKeep: Number(control.lastCutCashToKeep ?? 0),
+            lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
             lastSaleAt: control.lastSaleAt
           };
+          this.closePosCashCutModal();
           this.setPosFeedback('Corte de caja registrado.', 'success');
           this.showSnackbar('Corte de caja registrado.');
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
-          this.setPosFeedback(error?.error?.message || error?.message || 'No se pudo registrar el corte.', 'error');
+          this.posCashCutError = error?.error?.message || error?.message || 'No se pudo registrar el corte.';
         }
       });
   }
@@ -4844,10 +4897,13 @@ export class AdminComponent implements OnInit {
           attendantUserId: control.attendantUserId ?? null,
           currentTotal: Number(control.currentTotal ?? 0),
           salesCount: Number(control.salesCount ?? 0),
+          cashToKeepSuggested: Number(control.cashToKeepSuggested ?? 0),
           startedAt: control.startedAt,
           lastCutAt: control.lastCutAt,
           lastCutTotal: Number(control.lastCutTotal ?? 0),
           lastCutSalesCount: Number(control.lastCutSalesCount ?? 0),
+          lastCutCashToKeep: Number(control.lastCutCashToKeep ?? 0),
+          lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
           lastSaleAt: control.lastSaleAt
         };
       });
@@ -5514,6 +5570,16 @@ export class AdminComponent implements OnInit {
       return 'Dano';
     }
     return 'Salida por venta POS';
+  }
+
+  posPaymentMethodLabel(method?: PosSale['paymentMethod'] | InventoryMovement['paymentMethod']): string {
+    if (method === 'card') {
+      return 'Tarjeta';
+    }
+    if (method === 'transfer') {
+      return 'Transferencia';
+    }
+    return 'Efectivo';
   }
 
   private movementSignedQty(movement: InventoryMovement): number {

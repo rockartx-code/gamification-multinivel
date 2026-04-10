@@ -476,6 +476,7 @@ export class AdminControlService {
     stockId: string;
     customerId?: number | null;
     customerName?: string;
+    paymentMethod?: 'cash' | 'card' | 'transfer';
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
@@ -491,7 +492,7 @@ export class AdminControlService {
     return this.api.getPosCashControl(stockId);
   }
 
-  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+  createPosCashCut(payload: { stockId: string; cashToKeep?: number }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
     return this.api.createPosCashCut(payload);
   }
 

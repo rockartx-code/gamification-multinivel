@@ -500,7 +500,10 @@ export class RealApiService {
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
     return this.http
-      .get<{ month: AssociateMonth }>(`${this.baseUrl}/commissions/associates/${encodeURIComponent(associateId)}/month/${encodeURIComponent(monthKey)}`)
+      .get<{ month: AssociateMonth }>(
+        `${this.baseUrl}/commissions/associates/${encodeURIComponent(associateId)}/month/${encodeURIComponent(monthKey)}`,
+        { headers: this.actorHeaders() }
+      )
       .pipe(map((response) => response.month));
   }
 
@@ -718,11 +721,12 @@ export class RealApiService {
       .get<{ movements: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/stocks/movements${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => (response.movements ?? []).map((m) => ({
         id: String(m['movementId'] ?? m['id'] ?? ''),
-        type: (m['type'] as InventoryMovement['type']) ?? 'entry',
+        type: (m['type'] as InventoryMovement['type']) ?? (m['movementType'] as InventoryMovement['type']) ?? 'entry',
         stockId: String(m['stockId'] ?? ''),
         productId: Number(m['productId'] ?? 0),
         qty: Number(m['qty'] ?? 0),
         userId: (m['userId'] as number | null) ?? null,
+        paymentMethod: m['paymentMethod'] != null ? (String(m['paymentMethod']) as InventoryMovement['paymentMethod']) : undefined,
         reason: m['reason'] != null ? String(m['reason']) : undefined,
         referenceId: m['referenceId'] != null ? String(m['referenceId']) : undefined,
         createdAt: m['createdAt'] != null ? String(m['createdAt']) : undefined,
@@ -756,18 +760,17 @@ export class RealApiService {
     stockId: string;
     customerId?: number | null;
     customerName?: string;
+    paymentMethod?: 'cash' | 'card' | 'transfer';
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
   }): Observable<{ sale: PosSale }> {
     return this.http
-      .post<{ sale?: PosSale; message?: string; Error?: string }>(`${this.baseUrl}/inventory/pos/sales`, payload, {
+      .post<{ sale?: Record<string, unknown>; saleId?: string; orderId?: string; message?: string; Error?: string }>(`${this.baseUrl}/inventory/pos/sales`, payload, {
         headers: this.actorHeaders()
       })
       .pipe(
-        map((response) => ({
-          sale: this.requireBusinessValue(response, response.sale, 'No se pudo registrar la venta.')
-        }))
+        map((response) => ({ sale: this.normalizePosSaleResponse(response, payload) }))
       );
   }
 
@@ -778,10 +781,39 @@ export class RealApiService {
       .pipe(map((response) => response.control));
   }
 
-  createPosCashCut(payload: { stockId: string }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
-    return this.http.post<{ cut: PosCashCut; control: PosCashControl }>(`${this.baseUrl}/inventory/pos/cash-cut`, payload, {
-      headers: this.actorHeaders()
-    });
+  createPosCashCut(payload: { stockId: string; cashToKeep?: number }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
+    return this.http
+      .post<{ cut?: Record<string, unknown>; cashCut?: Record<string, unknown>; control?: Record<string, unknown> }>(
+        `${this.baseUrl}/inventory/pos/cash-cut`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(
+        map((response) => {
+          const cutRaw = this.asRecord(response.cut) ?? this.asRecord(response.cashCut);
+          const controlRaw = this.asRecord(response.control);
+          if (!cutRaw) {
+            throw new Error('No se pudo registrar el corte.');
+          }
+          return {
+            cut: this.normalizePosCashCut(cutRaw),
+            control: controlRaw
+              ? this.normalizePosCashControl(controlRaw)
+              : {
+                  stockId: String(payload.stockId),
+                  attendantUserId: null,
+                  currentTotal: 0,
+                  salesCount: 0,
+                  cashToKeepSuggested: Number(payload.cashToKeep ?? 0),
+                  lastCutAt: String(cutRaw['createdAt'] ?? ''),
+                  lastCutTotal: Number(cutRaw['total'] ?? 0),
+                  lastCutSalesCount: Number(cutRaw['salesCount'] ?? 0),
+                  lastCutCashToKeep: Number(cutRaw['cashToKeep'] ?? 0),
+                  lastCutWithdrawnAmount: Number(cutRaw['withdrawnAmount'] ?? 0),
+                }
+          };
+        })
+      );
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
@@ -792,6 +824,97 @@ export class RealApiService {
         { headers: this.actorHeaders() }
       )
       .pipe(map((response) => response.customer));
+  }
+
+  private normalizePosSaleResponse(
+    response: { sale?: Record<string, unknown>; saleId?: string; orderId?: string; message?: string; Error?: string },
+    payload: {
+      stockId: string;
+      customerId?: number | null;
+      customerName?: string;
+      paymentMethod?: 'cash' | 'card' | 'transfer';
+      paymentStatus?: 'paid_branch';
+      deliveryStatus?: 'delivered_branch';
+      items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+    }
+  ): PosSale {
+    const sale = this.asRecord(response.sale);
+    if (sale) {
+      return this.normalizePosSaleRecord(sale);
+    }
+    if (response.Error) {
+      throw new Error(response.message ?? 'No se pudo registrar la venta.');
+    }
+
+    const grossSubtotal = payload.items.reduce((acc, item) => acc + Number(item.price) * Number(item.quantity), 0);
+    return {
+      id: String(response.saleId ?? ''),
+      orderId: String(response.orderId ?? ''),
+      stockId: payload.stockId,
+      attendantUserId: null,
+      customerId: payload.customerId ?? null,
+      customerName: payload.customerName ?? 'Publico en General',
+      paymentStatus: payload.paymentStatus ?? 'paid_branch',
+      deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
+      paymentMethod: payload.paymentMethod,
+      grossSubtotal,
+      discountRate: 0,
+      discountAmount: 0,
+      total: grossSubtotal,
+      lines: payload.items.map((item) => ({ ...item })),
+    };
+  }
+
+  private normalizePosSaleRecord(sale: Record<string, unknown>): PosSale {
+    return {
+      id: String(sale['saleId'] ?? sale['id'] ?? ''),
+      orderId: String(sale['orderId'] ?? ''),
+      stockId: String(sale['stockId'] ?? ''),
+      attendantUserId: (sale['attendantUserId'] as number | null) ?? null,
+      customerId: (sale['customerId'] as number | null) ?? null,
+      customerName: String(sale['customerName'] ?? 'Publico en General'),
+      paymentStatus: (sale['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
+      deliveryStatus: (sale['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
+      paymentMethod: sale['paymentMethod'] != null ? (String(sale['paymentMethod']) as PosSale['paymentMethod']) : undefined,
+      grossSubtotal: sale['grossSubtotal'] != null ? Number(sale['grossSubtotal']) : undefined,
+      discountRate: sale['discountRate'] != null ? Number(sale['discountRate']) : undefined,
+      discountAmount: sale['discountAmount'] != null ? Number(sale['discountAmount']) : undefined,
+      total: Number(sale['total'] ?? 0),
+      lines: Array.isArray(sale['lines']) ? (sale['lines'] as AdminOrderItem[]) : [],
+      createdAt: sale['createdAt'] != null ? String(sale['createdAt']) : undefined,
+    };
+  }
+
+  private normalizePosCashCut(cut: Record<string, unknown>): PosCashCut {
+    return {
+      id: String(cut['cashCutId'] ?? cut['cutId'] ?? cut['id'] ?? ''),
+      stockId: String(cut['stockId'] ?? ''),
+      attendantUserId: (cut['attendantUserId'] as number | null) ?? null,
+      total: Number(cut['total'] ?? 0),
+      salesCount: Number(cut['salesCount'] ?? 0),
+      cashToKeep: cut['cashToKeep'] != null ? Number(cut['cashToKeep']) : undefined,
+      withdrawnAmount: cut['withdrawnAmount'] != null ? Number(cut['withdrawnAmount']) : undefined,
+      startedAt: cut['startedAt'] != null ? String(cut['startedAt']) : undefined,
+      endedAt: cut['endedAt'] != null ? String(cut['endedAt']) : undefined,
+      createdAt: cut['createdAt'] != null ? String(cut['createdAt']) : undefined,
+    };
+  }
+
+  private normalizePosCashControl(control: Record<string, unknown>): PosCashControl {
+    return {
+      stockId: String(control['stockId'] ?? ''),
+      attendantUserId: (control['attendantUserId'] as number | null) ?? null,
+      currentTotal: Number(control['currentTotal'] ?? 0),
+      salesCount: Number(control['salesCount'] ?? 0),
+      cashToKeepSuggested: control['cashToKeepSuggested'] != null ? Number(control['cashToKeepSuggested']) : undefined,
+      startedAt: control['startedAt'] != null ? String(control['startedAt']) : undefined,
+      lastCutAt: control['lastCutAt'] != null ? String(control['lastCutAt']) : undefined,
+      lastCutTotal: control['lastCutTotal'] != null ? Number(control['lastCutTotal']) : undefined,
+      lastCutSalesCount: control['lastCutSalesCount'] != null ? Number(control['lastCutSalesCount']) : undefined,
+      lastCutCashToKeep: control['lastCutCashToKeep'] != null ? Number(control['lastCutCashToKeep']) : undefined,
+      lastCutWithdrawnAmount: control['lastCutWithdrawnAmount'] != null ? Number(control['lastCutWithdrawnAmount']) : undefined,
+      lastSaleAt: control['lastSaleAt'] != null ? String(control['lastSaleAt']) : undefined,
+    };
   }
 
   listEmployees(): Observable<AdminEmployee[]> {

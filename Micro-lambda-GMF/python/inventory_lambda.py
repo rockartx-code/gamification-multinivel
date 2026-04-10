@@ -38,7 +38,7 @@ def _apply_stock_delta(stock_id: str, deltas: dict):
     )
     return updated, None
 
-def _log_movement(stock_id, m_type, product_id, qty, ref_id, user_id, reason=""):
+def _log_movement(stock_id, m_type, product_id, qty, ref_id, user_id, reason="", payment_method=None):
     """Crea un registro individual de movimiento de inventario."""
     move_id = f"MOV-{utils.uuid.uuid4().hex[:12].upper()}"
     item = {
@@ -46,10 +46,12 @@ def _log_movement(stock_id, m_type, product_id, qty, ref_id, user_id, reason="")
         "movementId": move_id,
         "stockId": stock_id,
         "movementType": m_type,
+        "type": m_type,
         "productId": product_id,
         "qty": int(qty),
         "referenceId": ref_id,
         "userId": user_id,
+        "paymentMethod": payment_method,
         "reason": reason,
         "createdAt": utils._now_iso()
     }
@@ -137,6 +139,9 @@ def handle_pos_sale(body, headers):
     stock_id = body.get("stockId")
     items = body.get("items", [])
     user_id = headers.get("x-user-id", "system")
+    payment_method = str(body.get("paymentMethod") or "cash").strip().lower()
+    if payment_method not in ("cash", "card", "transfer"):
+        return utils._json_response(400, {"message": "Forma de pago invalida"})
 
     # 1. Aplicar descuento de stock
     deltas = {str(it['productId']): -int(it['quantity']) for it in items}
@@ -153,7 +158,7 @@ def handle_pos_sale(body, headers):
         "customerName": body.get("customerName", "Público General"),
         "status": "delivered", "items": items, "netTotal": total, "total": total,
         "deliveryType": "pickup", "stockId": stock_id, "attendantUserId": user_id,
-        "monthKey": utils._month_key(), "createdAt": now
+        "monthKey": utils._month_key(), "paymentMethod": payment_method, "createdAt": now
     }
     utils._put_entity("ORDER", order_id, order_item)
     utils._upsert_order_customer_history(order_item)
@@ -162,13 +167,26 @@ def handle_pos_sale(body, headers):
     sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
     sale_item = {
         "entityType": "posSale", "saleId": sale_id, "orderId": order_id,
-        "stockId": stock_id, "total": total, "attendantUserId": user_id, "createdAt": now
+        "stockId": stock_id,
+        "total": total,
+        "grossSubtotal": total,
+        "discountRate": 0,
+        "discountAmount": 0,
+        "attendantUserId": user_id,
+        "customerId": body.get("customerId"),
+        "customerName": body.get("customerName", "Público General"),
+        "paymentStatus": body.get("paymentStatus") or "paid_branch",
+        "deliveryStatus": body.get("deliveryStatus") or "delivered_branch",
+        "paymentMethod": payment_method,
+        "lines": items,
+        "createdAt": now,
+        "updatedAt": now,
     }
     utils._put_entity("POS_SALE", sale_id, sale_item)
 
     # 4. Registrar movimientos
     for it in items:
-        _log_movement(stock_id, "pos_sale", it['productId'], it['quantity'], order_id, user_id)
+        _log_movement(stock_id, "pos_sale", it['productId'], it['quantity'], order_id, user_id, payment_method=payment_method)
 
     # 5. DISPARAR STEP FUNCTION (Motor de Comisiones)
     sfn.start_execution(
@@ -176,7 +194,7 @@ def handle_pos_sale(body, headers):
         input=json.dumps({"orderId": order_id, "action": "ORDER_DELIVERED"})
     )
 
-    return utils._json_response(201, {"saleId": sale_id, "orderId": order_id})
+    return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
 
 def _stock_id_str(value) -> str:
     """Normaliza stockId a string."""
@@ -204,6 +222,7 @@ def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
         item for item in utils._query_bucket("POS_SALE")
         if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
         and str(item.get("attendantUserId")) == str(attendant_user_id)
+        and str(item.get("paymentMethod") or "cash").lower() == "cash"
         and (not last_cut_at or str(item.get("createdAt") or "") > last_cut_at)
     ]
     sales.sort(key=lambda x: str(x.get("createdAt") or ""))
@@ -213,10 +232,13 @@ def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
         "attendantUserId": attendant_user_id,
         "currentTotal": float(current_total),
         "salesCount": len(sales),
+        "cashToKeepSuggested": float(current_total),
         "startedAt": sales[0].get("createdAt") if sales else (last_cut.get("createdAt") if last_cut else None),
         "lastCutAt": last_cut.get("createdAt") if last_cut else None,
         "lastCutTotal": float(utils._to_decimal(last_cut.get("total"))) if last_cut else 0.0,
         "lastCutSalesCount": int(last_cut.get("salesCount") or 0) if last_cut else 0,
+        "lastCutCashToKeep": float(utils._to_decimal(last_cut.get("cashToKeep"))) if last_cut else 0.0,
+        "lastCutWithdrawnAmount": float(utils._to_decimal(last_cut.get("withdrawnAmount"))) if last_cut else 0.0,
         "lastSaleAt": sales[-1].get("createdAt") if sales else None,
     }
 
@@ -224,22 +246,39 @@ def handle_cash_cut(body, headers):
     """POST /pos/cash-cut"""
     stock_id = body.get("stockId")
     user_id = headers.get("x-user-id")
+    cash_to_keep = utils._to_decimal(body.get("cashToKeep") or 0)
     
     # Buscar todas las ventas POS de este usuario en este stock que no estén en un corte
     all_sales = utils._query_bucket("POS_SALE")
     # (En una implementación real, usaríamos un GSI para filtrar por stock/status)
-    pending_sales = [s for s in all_sales if s['stockId'] == stock_id and not s.get("cashCutId")]
+    pending_sales = [
+        s for s in all_sales
+        if s['stockId'] == stock_id
+        and str(s.get("attendantUserId")) == str(user_id)
+        and str(s.get("paymentMethod") or "cash").lower() == "cash"
+        and not s.get("cashCutId")
+    ]
     
     if not pending_sales:
         return utils._json_response(400, {"message": "No hay ventas pendientes para corte"})
 
     total_cash = sum([utils._to_decimal(s['total']) for s in pending_sales])
+    if cash_to_keep < utils.D_ZERO:
+        return utils._json_response(400, {"message": "El monto a dejar en caja no puede ser negativo"})
+    if cash_to_keep > total_cash:
+        return utils._json_response(400, {"message": "El monto a dejar en caja no puede exceder el total en efectivo"})
     cut_id = f"CUT-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
 
     cut_item = {
         "entityType": "posCashCut", "cashCutId": cut_id, "stockId": stock_id,
-        "total": total_cash, "salesCount": len(pending_sales), "attendantUserId": user_id,
+        "total": total_cash,
+        "salesCount": len(pending_sales),
+        "cashToKeep": cash_to_keep,
+        "withdrawnAmount": total_cash - cash_to_keep,
+        "attendantUserId": user_id,
+        "startedAt": pending_sales[0].get("createdAt") if pending_sales else now,
+        "endedAt": now,
         "createdAt": now
     }
     utils._put_entity("POS_CASH_CUT", cut_id, cut_item)
@@ -248,7 +287,7 @@ def handle_cash_cut(body, headers):
     for s in pending_sales:
         utils._update_by_id("POS_SALE", s['saleId'], "SET cashCutId = :c", {":c": cut_id})
 
-    return utils._json_response(201, {"cashCut": cut_item})
+    return utils._json_response(201, {"cut": cut_item, "control": _build_pos_cash_control(stock_id, user_id)})
 
 # --- LAMBDA ROUTER ---
 
@@ -313,7 +352,7 @@ def lambda_handler(event, context):
                 if err: return err
                 _, error = _apply_stock_delta(sid, {str(body['productId']): -int(body['qty'])})
                 if error: return utils._json_response(400, {"message": error})
-                _log_movement(sid, "damage", body['productId'], body['qty'], "manual", body.get("userId"), body.get("reason"))
+                _log_movement(sid, "damage", body['productId'], body['qty'], "manual", body.get("userId"), body.get("reason") or "")
                 return utils._json_response(200, {"ok": True})
 
         # /pos
