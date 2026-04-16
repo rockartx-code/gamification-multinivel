@@ -18,7 +18,7 @@ import { AuthService } from '../../services/auth.service';
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
-  private readonly confirmationRequiredMessage = 'Confirma tu cuenta desde tu correo electronico para iniciar sesion.';
+  private readonly confirmationRequiredMessage = 'Confirma tu cuenta desde tu correo electrónico para iniciar sesion.';
 
   username = '';
   password = '';
@@ -40,14 +40,14 @@ export class LoginComponent {
 
   get usernameError(): string {
     if (this.errorMessage && !this.username) {
-      return 'Ingresa tu correo electronico.';
+      return 'Ingresa tu correo electrónico.';
     }
     return '';
   }
 
   get passwordError(): string {
     if (this.errorMessage && !this.password) {
-      return 'Ingresa tu contrasena.';
+      return 'Ingresa tu contraseña.';
     }
     return '';
   }
@@ -60,7 +60,7 @@ export class LoginComponent {
 
   login(): void {
     if (!this.username || !this.password) {
-      this.errorMessage = 'Ingresa tu correo electronico y contrasena.';
+      this.errorMessage = 'Ingresa tu correo electrónico y contraseña.';
       this.resendMessage = '';
       this.resendErrorMessage = '';
       return;
@@ -80,7 +80,7 @@ export class LoginComponent {
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.errorMessage =
-            error?.error?.message || error?.message || 'Credenciales invalidas. Verifica tu correo electronico y contrasena.';
+            error?.error?.message || error?.message || 'Credenciales invalidas. Verifica tu correo electrónico y contraseña.';
           this.cdr.detectChanges();
         }
       });
@@ -105,7 +105,7 @@ export class LoginComponent {
 
   requestPasswordRecovery(): void {
     if (!this.recoveryEmail.trim()) {
-      this.recoveryErrorMessage = 'Ingresa tu correo electronico para recuperar la contrasena.';
+      this.recoveryErrorMessage = 'Ingresa tu correo electrónico para recuperar la contraseña.';
       this.recoveryMessage = '';
       return;
     }
@@ -135,7 +135,7 @@ export class LoginComponent {
   resendConfirmationEmail(): void {
     const email = this.username.trim();
     if (!email) {
-      this.resendErrorMessage = 'Ingresa tu correo electronico para reenviar la confirmacion.';
+      this.resendErrorMessage = 'Ingresa tu correo electrónico para reenviar la confirmacion.';
       this.resendMessage = '';
       return;
     }

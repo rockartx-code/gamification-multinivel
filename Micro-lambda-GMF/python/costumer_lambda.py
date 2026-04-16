@@ -11,7 +11,7 @@ _s3 = boto3.client("s3", region_name=utils.AWS_REGION)
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
 DEFAULT_SPONSOR = {
     "name": "FindingU",
-    "email": "coach@findingu.com.mx",
+    "email": "contacto@findingu.com.mx",
     "phone": "+52 1 55 1498 2351",
 }
 

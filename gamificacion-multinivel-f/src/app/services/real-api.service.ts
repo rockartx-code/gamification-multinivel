@@ -218,7 +218,7 @@ export class RealApiService {
           if (response.ok) {
             return response;
           }
-          throw new Error(response.message ?? 'No se pudo actualizar la contrasena.');
+          throw new Error(response.message ?? 'No se pudo actualizar la contraseña.');
         })
       );
   }

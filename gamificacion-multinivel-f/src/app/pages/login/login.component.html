@@ -13,7 +13,7 @@
         <div class="relative space-y-4">
           <div class="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-600">
             <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
-            {{ showRecoveryForm ? 'Recuperar contrasena' : 'Login' }}
+            {{ showRecoveryForm ? 'Recuperar contraseña' : 'Login' }}
           </div>
           <div class="flex items-center gap-2 text-2xl font-extrabold">
             <i class="fa-solid fa-gauge-high text-accent" aria-hidden="true"></i>
@@ -23,7 +23,7 @@
           <ng-container *ngIf="!showRecoveryForm; else recoveryForm">
             <ui-form-field
               name="username"
-              label="Correo electronico"
+              label="Correo electrónico"
               leadingIconClass="fa-solid fa-user"
               placeholder="tu@correo.com"
               [(ngModel)]="username"
@@ -32,7 +32,7 @@
             ></ui-form-field>
 
             <label class="block">
-              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">Contrasena</span>
+              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">contraseña</span>
               <div class="relative">
                 <i
                   class="fa-solid fa-key pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-500"
@@ -41,7 +41,7 @@
                 <input
                   [type]="showPassword ? 'text' : 'password'"
                   name="password"
-                  placeholder="Tu contrasena"
+                  placeholder="Tu contraseña"
                   [(ngModel)]="password"
                   class="mt-2 w-full rounded-2xl border bg-white/70 px-4 py-3 pl-10 pr-12 text-sm text-main outline-none focus:ring-2 focus-ring-olive-20"
                   [class.border-danger]="passwordError"
@@ -53,8 +53,8 @@
                   type="button"
                   class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
                   (click)="togglePasswordVisibility()"
-                  [attr.aria-label]="showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'"
-                  [title]="showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+                  [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [title]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
                 >
                   <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" aria-hidden="true"></i>
                 </button>
@@ -103,7 +103,7 @@
                 class="text-sm text-accent underline-offset-2 hover:underline"
                 (click)="openRecoveryForm()"
               >
-                Recuperar contrasena
+                Recuperar contraseña
               </button>
             </div>
           </ng-container>
@@ -112,12 +112,12 @@
             <div class="rounded-2xl border border-olive-30 bg-white/60 p-4">
               <div class="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
                 <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i>
-                Recuperar contrasena
+                Recuperar contraseña
               </div>
               <ui-form-field
                 name="recoveryEmail"
                 type="email"
-                label="Correo electronico"
+                label="Correo electrónico"
                 leadingIconClass="fa-solid fa-envelope"
                 placeholder="tu@correo.com"
                 [(ngModel)]="recoveryEmail"
@@ -131,10 +131,10 @@
                   [disabled]="isRecovering"
                   (pressed)="requestPasswordRecovery()"
                 >
-                  {{ isRecovering ? 'Enviando correo...' : 'Enviar Correo de recuperacion' }}
+                  {{ isRecovering ? 'Enviando correo...' : 'Enviar Correo de recuperación' }}
                 </ui-button>
                 <a routerLink="/recuperar-contrasena" class="text-sm text-accent underline-offset-2 hover:underline">
-                  Ya tengo un codigo
+                  Ya tengo un código
                 </a>
               </div>
               <p *ngIf="recoveryMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">

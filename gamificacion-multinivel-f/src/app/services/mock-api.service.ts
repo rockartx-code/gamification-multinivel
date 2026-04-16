@@ -175,7 +175,7 @@ export class MockApiService {
       heroDescription: 'Un sistema de bienestar con recompensas: mejoras tu y ayudas a otros a mejorar.',
       ctaPrimaryText: 'Obtenerlo ahora',
       ctaSecondaryText: 'Ver recompensas',
-      benefits: ['Recuperacion activa', 'Energia sostenida', 'Red deportiva', 'Bonos mensuales'],
+      benefits: ['Recuperación activa', 'Energia sostenida', 'Red deportiva', 'Bonos mensuales'],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     },
@@ -197,7 +197,7 @@ export class MockApiService {
       heroDescription: 'Un empuje inicial para compartir bienestar y activar recompensas.',
       ctaPrimaryText: 'Quiero activar la campana',
       ctaSecondaryText: 'Ver recompensas',
-      benefits: ['Energia diaria', 'Recuperacion', 'Red activa', 'Bonos'],
+      benefits: ['Energia diaria', 'Recuperación', 'Red activa', 'Bonos'],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -483,7 +483,7 @@ export class MockApiService {
 
   resendEmailConfirmation(payload: ResendEmailConfirmationPayload): Observable<ResendEmailConfirmationResponse> {
     if (!payload.email?.trim()) {
-      return throwError(() => new Error('Ingresa tu correo electronico.'));
+      return throwError(() => new Error('Ingresa tu correo electrónico.'));
     }
     return of({
       ok: true,
@@ -493,24 +493,24 @@ export class MockApiService {
 
   requestPasswordRecovery(payload: PasswordRecoveryRequestPayload): Observable<PasswordRecoveryRequestResponse> {
     if (!payload.email?.trim()) {
-      return throwError(() => new Error('Ingresa tu correo electronico.'));
+      return throwError(() => new Error('Ingresa tu correo electrónico.'));
     }
     return of({
       ok: true,
-      message: 'Si el correo existe, te enviamos un codigo OTP para recuperar tu contrasena.'
+      message: 'Si el correo existe, te enviamos un codigo para recuperar tu contraseña.'
     }).pipe(delay(140));
   }
 
   resetPassword(payload: ResetPasswordPayload): Observable<ResetPasswordResponse> {
     if (!payload.email?.trim() || !payload.otp?.trim() || !payload.password) {
-      return throwError(() => new Error('Completa correo, OTP y nueva contrasena.'));
+      return throwError(() => new Error('Completa correo, OTP y nueva contraseña.'));
     }
     if (payload.password !== payload.confirmPassword) {
-      return throwError(() => new Error('Las contrasenas no coinciden.'));
+      return throwError(() => new Error('Las contraseñas no coinciden.'));
     }
     return of({
       ok: true,
-      message: 'Contrasena actualizada correctamente.'
+      message: 'contraseña actualizada correctamente.'
     }).pipe(delay(160));
   }
 
@@ -769,7 +769,7 @@ export class MockApiService {
       },
       sponsor: {
         name: 'FindingU',
-        email: 'coach@findingu.com.mx',
+        email: 'contacto@findingu.com.mx',
         phone: '+52 1 55 1498 2351',
         isDefault: true
       },

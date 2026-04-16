@@ -26,7 +26,7 @@ SES_REPLY_TO = (os.getenv("SES_REPLY_TO") or "").strip()
 FRONTEND_BASE_URL = (os.getenv("FRONTEND_BASE_URL") or "https://www.findingu.com.mx/").strip().rstrip("/")
 PASSWORD_RESET_OTP_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_OTP_TTL_MINUTES", "15"))
 DEFAULT_SPONSOR_NAME = (os.getenv("DEFAULT_SPONSOR_NAME") or "FindingU").strip() or "FindingU"
-DEFAULT_SPONSOR_EMAIL = (os.getenv("DEFAULT_SPONSOR_EMAIL") or "coach@findingu.com.mx").strip()
+DEFAULT_SPONSOR_EMAIL = (os.getenv("DEFAULT_SPONSOR_EMAIL") or "contacto@findingu.com.mx").strip()
 DEFAULT_SPONSOR_PHONE = (os.getenv("DEFAULT_SPONSOR_PHONE") or "+52 1 55 1498 2351").strip()
 MERCADOLIBRE_ACCESS_TOKEN = (os.getenv("MERCADOLIBRE_ACCESS_TOKEN") or "").strip()
 _MERCADOLIBRE_ENABLED_RAW = (
@@ -1146,7 +1146,7 @@ def _store_password_reset_otp(email: str, customer_id: Any, otp: str) -> dict:
 def _request_password_recovery(payload: dict) -> dict:
     email_norm = _normalize_email(payload.get("email"))
     if not email_norm:
-        return _json_response(200, {"message": "Ingresa un correo electronico valido", "Error": "BadRequest"})
+        return _json_response(200, {"message": "Ingresa un correo electrónico valido", "Error": "BadRequest"})
 
     auth = _get_auth_by_email(email_norm)
     customer = _find_customer_by_email(email_norm)

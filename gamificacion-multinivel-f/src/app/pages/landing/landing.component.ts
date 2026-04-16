@@ -34,7 +34,7 @@ export class LandingComponent implements OnInit {
     ctaPrimaryText: 'Obtenerlo ahora',
     ctaSecondaryText: 'Ver recompensas',
     img: 'images/Colageno-Clean.png',
-    tags: ['Energia diaria', 'Recuperacion', 'Salud integral', 'Recompensas']
+    tags: ['Energia diaria', 'Recuperación', 'Salud integral', 'Recompensas']
   };
 
   form = {

@@ -480,7 +480,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   get sponsorEmailHref(): string {
     const email = (this.sponsor?.email ?? '').trim();
     if (!email) {
-      return 'mailto:coach@findingu.com.mx';
+      return 'mailto:contacto@findingu.com.mx';
     }
     return `mailto:${encodeURIComponent(email)}`;
   }
@@ -607,7 +607,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     // Products and 'producto' campaigns go to the store landing (/tienda).
     const isMultinivel = featuredId.startsWith('campaign:') && featured.campaignType !== 'producto';
     //if (isMultinivel) {
-    return `${baseUrl}/#/${userCode}`;
+    return `${baseUrl}/#/landing/${userCode}`;
     //}
     //return `${baseUrl}/#/tienda/${userCode}${query}`;
   }
@@ -1221,7 +1221,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             this.guestRegisterFeedback = '';
             this.guestRegisterFeedbackType = '';
             this.showGuestRegisterModal = false;
-            this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electronico.');
+            this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electrónico.');
             return;
           }
           if (response?.customer) {

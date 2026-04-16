@@ -1068,7 +1068,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
             this.guestRegisterFeedback = '';
             this.guestRegisterFeedbackType = '';
             this.showGuestRegisterModal = false;
-            this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electronico.');
+            this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electrónico.');
             return;
           }
           if (response?.customer) {

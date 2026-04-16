@@ -209,7 +209,7 @@ def handle_login(body):
         return utils._json_response(401, {"message": "Credenciales invalidas"})
 
     if auth.get("emailVerified") is False:
-        return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electronico para iniciar sesion."})
+        return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electrónico para iniciar sesión."})
 
     # 3. Determinar Perfil
     user_id = auth.get("employeeId") or auth.get("customerId")
@@ -378,7 +378,7 @@ def handle_resend_email_confirmation(body):
     """POST /auth/resend-email-confirmation"""
     email = utils._normalize_email(body.get("email"))
     if not email:
-        return utils._json_response(400, {"message": "Ingresa tu correo electronico."})
+        return utils._json_response(400, {"message": "Ingresa tu correo electrónico."})
 
     auth = utils._get_by_id("AUTH", email)
     if not auth:
@@ -487,7 +487,7 @@ def handle_get_referrer(referrer_id):
     if not customer:
         return utils._json_response(200, {"referrer": {
             "name": "FindingU",
-            "email": "coach@findingu.com.mx",
+            "email": "contacto@findingu.com.mx",
             "phone": "+52 1 55 1498 2351",
             "isDefault": True,
         }})

@@ -220,7 +220,7 @@ export class TiendaComponent implements OnInit {
         this.isSubmitting = false;
         if (response?.requiresEmailVerification) {
           this.form = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', email: '', phone: '', password: '', confirmPassword: '' };
-          this.setFeedback('Solo falta un paso, confirma tu cuenta desde tu correo electronico.', 'success');
+          this.setFeedback('Solo falta un paso, confirma tu cuenta desde tu correo electrónico.', 'success');
           this.cdr.detectChanges();
           return;
         }

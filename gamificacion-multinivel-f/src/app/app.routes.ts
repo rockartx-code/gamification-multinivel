@@ -17,7 +17,7 @@ import { VerifyEmailComponent } from './pages/verify-email/verify-email.componen
 export const routes: Routes = [
   {
     path: '',
-    component: LandingComponent
+    component: UserDashboardComponent
   },
   {
     path: 'login',
@@ -76,7 +76,7 @@ export const routes: Routes = [
     component: TiendaComponent
   },
   {
-    path: ':idSponsor',
+    path: 'landing/:idSponsor',
     component: LandingComponent
   },
   {

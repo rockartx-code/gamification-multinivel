@@ -42,7 +42,7 @@ export class ResetPasswordComponent implements OnInit {
 
   submit(): void {
     if (!this.email || !this.otp || !this.password || !this.confirmPassword) {
-      this.errorMessage = 'Completa correo, OTP, nueva contrasena y confirmacion.';
+      this.errorMessage = 'Completa correo, codigo, nueva contraseña y confirmacion.';
       this.successMessage = '';
       return;
     }
@@ -70,7 +70,7 @@ export class ResetPasswordComponent implements OnInit {
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.errorMessage =
-            error?.error?.message || error?.message || 'No se pudo actualizar la contrasena.';
+            error?.error?.message || error?.message || 'No se pudo actualizar la contraseña.';
           this.successMessage = '';
           this.cdr.detectChanges();
         }
