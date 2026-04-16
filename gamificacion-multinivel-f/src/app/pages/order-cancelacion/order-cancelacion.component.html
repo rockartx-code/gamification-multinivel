@@ -23,7 +23,10 @@
         <i class="fa-solid fa-check text-2xl text-green-600" aria-hidden="true"></i>
       </span>
       <h1 class="mt-4 text-xl font-extrabold text-main">Orden cancelada</h1>
-      <p class="mt-2 text-sm text-gray-600">Tu orden <span class="font-semibold text-main">{{ orderId }}</span> fue cancelada exitosamente. El reembolso está siendo procesado por nuestro equipo.</p>
+      <p class="mt-2 text-sm text-gray-600">Tu orden <span class="font-semibold text-main">{{ orderId }}</span> fue cancelada exitosamente.
+        <ng-container *ngIf="isPendingOrder"> El pago no había sido confirmado, por lo que no se generará ningún cargo.</ng-container>
+        <ng-container *ngIf="!isPendingOrder"> El reembolso está siendo procesado por nuestro equipo.</ng-container>
+      </p>
       <div class="mt-6">
         <ui-button variant="primary" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
       </div>
@@ -78,7 +81,8 @@
           <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-500" aria-hidden="true"></i>
           <div class="text-sm text-amber-800">
             <p class="font-semibold">¿Confirmar cancelación?</p>
-            <p class="mt-1 text-xs">Esta acción no se puede deshacer. La orden será marcada como cancelada y se gestionará el reembolso correspondiente.</p>
+            <p *ngIf="isPendingOrder" class="mt-1 text-xs">Esta acción no se puede deshacer. La orden será cancelada. Como el pago aún no fue confirmado, no se generará ningún cargo.</p>
+            <p *ngIf="!isPendingOrder" class="mt-1 text-xs">Esta acción no se puede deshacer. La orden será marcada como cancelada y se gestionará el reembolso correspondiente.</p>
           </div>
         </div>
 

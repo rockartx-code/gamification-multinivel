@@ -106,6 +106,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   suggestedProducts: DashboardProduct[] = [];
 
   ngOnInit(): void {
+    this.restoreDeliveryState();
     this.cartControl.load().subscribe();
     this.refreshSuggestedProducts();
     this.dataSub = this.cartControl.data$.subscribe(() => {
@@ -126,6 +127,33 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.loadPickupStocks();
   }
 
+  private restoreDeliveryState(): void {
+    const saved = this.cartControl.getDeliveryState();
+    if (saved.deliveryType) {
+      this.deliveryType = saved.deliveryType;
+    }
+    if (saved.selectedShippingAddressId) {
+      this.selectedShippingAddressId = saved.selectedShippingAddressId;
+      this.shippingAddressLabel = saved.shippingAddressLabel;
+      this.hasPrefilledDashboardAddress = true;
+    }
+    if (saved.deliveryName) { this.deliveryName = saved.deliveryName; }
+    if (saved.deliveryPhone) { this.deliveryPhone = saved.deliveryPhone; }
+    if (saved.deliveryStreet) { this.deliveryStreet = saved.deliveryStreet; }
+    if (saved.deliveryNumber) { this.deliveryNumber = saved.deliveryNumber; }
+    if (saved.deliveryCity) { this.deliveryCity = saved.deliveryCity; }
+    if (saved.deliveryPostalCode) { this.deliveryPostalCode = saved.deliveryPostalCode; }
+    if (saved.deliveryState) { this.deliveryState = saved.deliveryState; }
+    if (saved.deliveryCountry) { this.deliveryCountry = saved.deliveryCountry; }
+    if (saved.deliveryBetweenStreets) { this.deliveryBetweenStreets = saved.deliveryBetweenStreets; }
+    if (saved.deliveryReferences) { this.deliveryReferences = saved.deliveryReferences; }
+    if (saved.deliveryNotes) { this.deliveryNotes = saved.deliveryNotes; }
+
+    if (this.deliveryType === 'delivery' && this.hasValidShippingQuoteFormData()) {
+      this.fetchShippingRates();
+    }
+  }
+
   ngOnDestroy(): void {
     this.dataSub?.unsubscribe();
     this.goalsSub?.unsubscribe();
@@ -143,6 +171,24 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     this.dashboardSub?.unsubscribe();
     this.shippingQuoteSub?.unsubscribe();
+    this.cartControl.saveDeliveryState({
+      deliveryType: this.deliveryType,
+      selectedShippingAddressId: this.selectedShippingAddressId,
+      shippingAddressLabel: this.shippingAddressLabel,
+      selectedShippingCarrier: this.selectedShippingRate?.carrier ?? '',
+      selectedShippingRateId: this.selectedShippingRate?.service ?? '',
+      deliveryName: this.deliveryName,
+      deliveryPhone: this.deliveryPhone,
+      deliveryStreet: this.deliveryStreet,
+      deliveryNumber: this.deliveryNumber,
+      deliveryCity: this.deliveryCity,
+      deliveryPostalCode: this.deliveryPostalCode,
+      deliveryState: this.deliveryState,
+      deliveryCountry: this.deliveryCountry,
+      deliveryBetweenStreets: this.deliveryBetweenStreets,
+      deliveryReferences: this.deliveryReferences,
+      deliveryNotes: this.deliveryNotes
+    });
   }
 
   get countdownLabel(): string {

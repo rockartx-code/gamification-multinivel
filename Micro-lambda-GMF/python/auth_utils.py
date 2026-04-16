@@ -258,8 +258,12 @@ def handle_create_account(body):
     pass_hash = utils._hash_password(str(password))
     now = utils._now_iso()
 
-    # Resolver patrocinador
-    leader_id = body.get("leaderId") or body.get("referralToken")
+    # Resolver patrocinador: primero intentar lookup por código de referido,
+    # si no aplica usar leaderId directo (admin/internal flows)
+    raw_referral = body.get("referralToken") or body.get("referralCodeInput")
+    leader_id = _resolve_leader_from_referral_code(raw_referral) or body.get("leaderId") or None
+    if raw_referral and not leader_id:
+        print(f"[REFERRAL_CODE_UNRESOLVED] referralToken={raw_referral} — se registra sin líder")
     
     customer_item = {
         "entityType": "customer", "customerId": customer_id, "name": name,
@@ -267,6 +271,9 @@ def handle_create_account(body):
         "isAssociate": True, "canAccessAdmin": False, "createdAt": now
     }
     utils._put_entity("CUSTOMER", customer_id, customer_item)
+
+    # Referencia propia: REFERRAL_CODE#{customerId} → leaderId={customerId}
+    _upsert_referral_code_self(customer_id, name)
 
     # Índice por nombre para búsqueda rápida paginada: PK="REF#NOMBRE#{letra}" SK="{createdAt}#{customerId}"
     try:
@@ -475,6 +482,176 @@ def handle_change_password(body, headers):
     return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
 
 
+def _referral_code_pk(code: str) -> str:
+    return f"REFERRAL_CODE#{code.strip().upper()}"
+
+def _build_user_referral_code(name: str) -> str:
+    """Genera el código de referido a partir del nombre completo.
+    Ej: 'Maria Garcia Lopez' → 'Maria-MGL'
+    Idéntico a buildReferralCode() en el frontend."""
+    n = (name or "").strip()
+    if not n:
+        return ""
+    words = n.split()
+    initials = "".join(w[0].upper() for w in words if w)
+    return f"{words[0]}-{initials}"
+
+def _resolve_unique_referral_code(base_code: str, customer_id) -> str:
+    """Devuelve base_code si está libre o ya pertenece a customer_id.
+    Si está tomado por otro, prueba base_code-2, base_code-3, … hasta encontrar uno libre."""
+    candidate = base_code
+    suffix = 2
+    while True:
+        resp = utils._table.get_item(Key={"PK": _referral_code_pk(candidate), "SK": "REFCodeInput"})
+        item = resp.get("Item")
+        if not item:
+            # Libre — usar este
+            return candidate
+        existing_leader = item.get("leaderId")
+        try:
+            same_owner = int(existing_leader) == int(customer_id)
+        except (TypeError, ValueError):
+            same_owner = str(existing_leader) == str(customer_id)
+        if same_owner:
+            # Ya existe y ya es del mismo customer — no hay conflicto
+            return candidate
+        # Colisión con otro customer — probar siguiente consecutivo
+        candidate = f"{base_code}-{suffix}"
+        suffix += 1
+
+def _upsert_referral_code_self(customer_id, name: str = "") -> None:
+    """Crea/actualiza REFERRAL_CODE#{userReferralCode} → leaderId={customerId}.
+    El código se genera desde el nombre; si hay colisión agrega consecutivo (-2, -3…)."""
+    base_code = _build_user_referral_code(name)
+    if not base_code:
+        print(f"[REFERRAL_CODE_SELF_SKIP] customerId={customer_id} sin nombre — omitido")
+        return
+    try:
+        code = _resolve_unique_referral_code(base_code, customer_id)
+        utils._table.put_item(Item={
+            "PK": _referral_code_pk(code),
+            "SK": "REFCodeInput",
+            "code": code.upper(),
+            "leaderId": customer_id,
+            "leaderName": name,
+            "createdAt": utils._now_iso(),
+        })
+        if code != base_code:
+            print(f"[REFERRAL_CODE_COLLISION] customerId={customer_id} base={base_code} asignado={code}")
+    except Exception as ex:
+        print(f"[REFERRAL_CODE_SELF_INSERT_ERROR] customerId={customer_id} error={ex}")
+
+def _resolve_leader_from_referral_code(raw_code) -> str | None:
+    """Dada una referralCode, devuelve el leaderId asociado o None si no existe."""
+    if not raw_code:
+        return None
+    code = str(raw_code).strip().upper()
+    try:
+        resp = utils._table.get_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        item = resp.get("Item")
+        if item:
+            return str(item["leaderId"])
+    except Exception as ex:
+        print(f"[REFERRAL_CODE_LOOKUP_ERROR] code={code} error={ex}")
+    return None
+
+def handle_referral_code(method, body, code_segment, headers):
+    """
+    POST   /auth/referral-code           → crear relación código → leaderId (requiere admin)
+    POST   /auth/referral-code/migrate   → corrida masiva para todos los customers (requiere admin)
+    GET    /auth/referral-code/{code}    → consultar a qué líder apunta un código
+    DELETE /auth/referral-code/{code}    → eliminar relación (requiere admin)
+    """
+    # ── MIGRATE — corrida masiva para todos los customers existentes ──────────
+    if code_segment == "migrate" and method == "POST":
+        err = utils._require_admin(headers, "config_manage")
+        if err: return err
+        inserted = 0
+        skipped = 0
+        errors = 0
+        for customer in utils._query_bucket("CUSTOMER"):
+            cid = customer.get("customerId")
+            if not cid:
+                skipped += 1
+                continue
+            try:
+                _upsert_referral_code_self(cid, str(customer.get("name") or ""))
+                inserted += 1
+            except Exception as ex:
+                print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
+                errors += 1
+        utils._audit_event("referral_code.migrate", headers, body, {
+            "inserted": inserted, "skipped": skipped, "errors": errors
+        })
+        return utils._json_response(200, {
+            "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors
+        })
+
+    # ── GET (lookup público para validar código en registro) ─────────────────
+    if method == "GET":
+        if not code_segment:
+            return utils._json_response(400, {"message": "Se requiere el código en la URL."})
+        code = code_segment.strip().upper()
+        resp = utils._table.get_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        item = resp.get("Item")
+        if not item:
+            return utils._json_response(404, {"message": "Código de referido no encontrado."})
+        leader_id = item.get("leaderId")
+        try:
+            lid = int(leader_id)
+        except (TypeError, ValueError):
+            lid = leader_id
+        leader = utils._get_by_id("CUSTOMER", lid)
+        return utils._json_response(200, {
+            "code": code,
+            "leaderId": leader_id,
+            "leaderName": leader.get("name") if leader else None,
+        })
+
+    # ── POST (crear / actualizar) ─────────────────────────────────────────────
+    if method == "POST":
+        err = utils._require_admin(headers, "config_manage")
+        if err: return err
+        code = str(body.get("code") or "").strip().upper()
+        leader_id = body.get("leaderId")
+        if not code or not leader_id:
+            return utils._json_response(400, {"message": "Se requieren 'code' y 'leaderId'."})
+        try:
+            leader_id = int(leader_id)
+        except (TypeError, ValueError):
+            pass
+        # Verificar que el líder existe
+        try:
+            lid_int = int(leader_id)
+        except (TypeError, ValueError):
+            lid_int = leader_id
+        leader = utils._get_by_id("CUSTOMER", lid_int)
+        if not leader:
+            return utils._json_response(404, {"message": "Líder no encontrado."})
+        utils._table.put_item(Item={
+            "PK": _referral_code_pk(code),
+            "SK": "REFCodeInput",
+            "code": code,
+            "leaderId": leader_id,
+            "leaderName": leader.get("name") or "",
+            "createdAt": utils._now_iso(),
+        })
+        utils._audit_event("referral_code.create", headers, body, {"code": code, "leaderId": leader_id})
+        return utils._json_response(201, {"ok": True, "code": code, "leaderId": leader_id})
+
+    # ── DELETE ────────────────────────────────────────────────────────────────
+    if method == "DELETE":
+        err = utils._require_admin(headers, "config_manage")
+        if err: return err
+        if not code_segment:
+            return utils._json_response(400, {"message": "Se requiere el código en la URL."})
+        code = code_segment.strip().upper()
+        utils._table.delete_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        utils._audit_event("referral_code.delete", headers, body, {"code": code})
+        return utils._json_response(200, {"ok": True, "code": code})
+
+    return utils._json_response(405, {"message": "Método no permitido."})
+
 def handle_get_referrer(referrer_id):
     """GET /referrer/{id}"""
     # Intentar lookup por ID numérico o string
@@ -593,6 +770,10 @@ def lambda_handler(event, context):
 
         if root == "referrer" and len(segments) > 1:
             return handle_get_referrer(segments[1])
+
+        if root == "referral-code":
+            code_segment = segments[1] if len(segments) > 1 else None
+            return handle_referral_code(method, body, code_segment, headers)
 
         if root == "employees":
             emp_id = segments[1] if len(segments) > 1 else None

@@ -274,7 +274,7 @@
         <!-- ── ACCIONES DE LA ORDEN ──────────────────────────────────── -->
         <div *ngIf="order && !isLoading" class="mt-5 flex flex-wrap items-center gap-3">
 
-          <!-- Cancelar orden (solo si pagado) -->
+          <!-- Cancelar orden (pendiente o pagado) -->
           <ng-container *ngIf="!cancelBlocked">
             <ui-button
               variant="ghost"

@@ -265,7 +265,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   get canCancel(): boolean {
     const s = this.normalizeStatus(this.order?.status);
-    return s === 'paid';
+    return s === 'paid' || s === 'pending';
   }
 
   get cancelBlocked(): boolean {

@@ -749,8 +749,9 @@ def handle_mercadopago_checkout(order_id, body):
 def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
     """POST /orders/{id}/cancel
 
-    Regla 2.1: Solo si status == 'paid' → cancelación automática
-    Regla 2.2: Cualquier otro estado → 409 bloqueado
+    Regla 2.1a: status == 'paid'    → cancelación con pendingRefund=True
+    Regla 2.1b: status == 'pending' → cancelación sin reembolso (pago no confirmado)
+    Regla 2.2:  Cualquier otro estado → 409 bloqueado
     """
     order = utils._get_by_id("ORDER", order_id)
     if not order:
@@ -759,7 +760,7 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
     current_status = (order.get("status") or "").lower()
 
     # REGLA 2.2 — Bloqueado
-    if current_status != "paid":
+    if current_status not in ("paid", "pending"):
         if current_status in ("shipped", "delivered", "en_devolucion", "devuelto_validado", "devolucion_rechazada"):
             return utils._json_response(409, {
                 "message": "Pedido en proceso logístico, solicitar devolución",
@@ -770,24 +771,26 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
         if current_status == "refunded":
             return utils._json_response(409, {"message": "El pedido ya fue reembolsado.", "code": "ALREADY_REFUNDED"})
         return utils._json_response(409, {
-            "message": f"No se puede cancelar un pedido en estado '{current_status}'. Solo se permiten cancelaciones de órdenes pagadas.",
+            "message": f"No se puede cancelar un pedido en estado '{current_status}'.",
             "code": "INVALID_STATUS_FOR_CANCEL",
         })
 
-    # REGLA 2.1 — Cancelación automática
     reason = body.get("reason") or "customer_request"
     now = utils._now_iso()
+
+    # Órdenes pagadas generan reembolso pendiente; las pendientes no (pago no confirmado)
+    pending_refund = current_status == "paid"
 
     updated_order = utils._update_by_id(
         "ORDER", order_id,
         "SET #s = :s, cancelReason = :r, pendingRefund = :pr, cancelledAt = :ca, updatedAt = :u",
-        {":s": "cancelled", ":r": reason, ":pr": True, ":ca": now, ":u": now},
+        {":s": "cancelled", ":r": reason, ":pr": pending_refund, ":ca": now, ":u": now},
         {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
 
-    # Void commissions
-    commission_actions = _void_commissions_for_order(order_id, reason="cancel")
+    # Void commissions solo si había pago confirmado
+    commission_actions = _void_commissions_for_order(order_id, reason="cancel") if pending_refund else []
 
     # Trigger Step Functions (notify admin, etc.)
     if ORDER_SFN_ARN:
@@ -799,13 +802,13 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
         except Exception as e:
             print(f"[SFN_CANCEL_ERROR] {e}")
 
-    utils._audit_event("order.cancel", headers, body, {"orderId": order_id, "reason": reason})
+    utils._audit_event("order.cancel", headers, body, {"orderId": order_id, "reason": reason, "previousStatus": current_status})
 
     return utils._json_response(200, {
         "ok": True,
         "orderId": order_id,
         "status": "cancelled",
-        "pendingRefund": True,
+        "pendingRefund": pending_refund,
         "commissionActions": commission_actions,
     })
 

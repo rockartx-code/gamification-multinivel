@@ -42,7 +42,12 @@ export class OrderCancelacionComponent implements OnInit {
   }
 
   get canCancel(): boolean {
-    return (this.order?.status ?? '') === 'paid';
+    const s = this.order?.status ?? '';
+    return s === 'paid' || s === 'pending';
+  }
+
+  get isPendingOrder(): boolean {
+    return (this.order?.status ?? '') === 'pending';
   }
 
   get blockReason(): string {
@@ -51,7 +56,6 @@ export class OrderCancelacionComponent implements OnInit {
       return 'Pedido en proceso logístico, solicitar devolución';
     }
     if (s === 'cancelled') return 'Esta orden ya fue cancelada.';
-    if (s === 'pending') return 'Solo se pueden cancelar órdenes con pago confirmado.';
     return `No se puede cancelar un pedido en estado "${s}".`;
   }
 

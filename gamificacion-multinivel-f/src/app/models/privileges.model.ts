@@ -27,6 +27,7 @@ export type AppPrivilege =
   | 'commissions_register_payment'
   | 'product_add'
   | 'product_update'
+  | 'product_delete'
   | 'product_set_month'
   | 'stock_create'
   | 'stock_create_transfer'
@@ -60,6 +61,7 @@ export const ALL_PRIVILEGES: AppPrivilege[] = [
   'commissions_register_payment',
   'product_add',
   'product_update',
+  'product_delete',
   'product_set_month',
   'stock_create',
   'stock_create_transfer',

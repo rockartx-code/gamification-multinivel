@@ -3,6 +3,25 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 
 import { CartData, CartItem } from '../models/cart.model';
 
+export type CartDeliveryState = {
+  deliveryType: 'delivery' | 'pickup';
+  selectedShippingAddressId: string;
+  shippingAddressLabel: string;
+  selectedShippingCarrier: string;
+  selectedShippingRateId: string;
+  deliveryName: string;
+  deliveryPhone: string;
+  deliveryStreet: string;
+  deliveryNumber: string;
+  deliveryCity: string;
+  deliveryPostalCode: string;
+  deliveryState: string;
+  deliveryCountry: string;
+  deliveryBetweenStreets: string;
+  deliveryReferences: string;
+  deliveryNotes: string;
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -11,6 +30,24 @@ export class CartControlService {
   readonly data$ = this.dataSubject.asObservable();
   private payMethod: 'card' | 'spei' | 'cash' = 'card';
   private readonly localCartKey = 'cart-items';
+  private deliveryState: CartDeliveryState = {
+    deliveryType: 'delivery',
+    selectedShippingAddressId: '',
+    shippingAddressLabel: '',
+    selectedShippingCarrier: '',
+    selectedShippingRateId: '',
+    deliveryName: '',
+    deliveryPhone: '',
+    deliveryStreet: '',
+    deliveryNumber: '',
+    deliveryCity: '',
+    deliveryPostalCode: '',
+    deliveryState: '',
+    deliveryCountry: 'MX',
+    deliveryBetweenStreets: '',
+    deliveryReferences: '',
+    deliveryNotes: ''
+  };
 
   constructor() {}
 
@@ -189,6 +226,14 @@ export class CartControlService {
 
   selectPay(method: 'card' | 'spei' | 'cash'): void {
     this.payMethod = method;
+  }
+
+  getDeliveryState(): CartDeliveryState {
+    return { ...this.deliveryState };
+  }
+
+  saveDeliveryState(state: Partial<CartDeliveryState>): void {
+    this.deliveryState = { ...this.deliveryState, ...state };
   }
 
   updateCountdown(label: string): void {

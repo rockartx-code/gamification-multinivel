@@ -420,9 +420,9 @@ def lambda_handler(event, context):
                 if err: return err
                 return handle_products(method, body, "product-of-month")
 
-            # POST catalog/product/remove → eliminar (desactivar) producto
+            # POST catalog/product/remove → eliminar producto permanentemente
             if sub == "remove" and method == "POST":
-                err = utils._require_admin(headers, "product_add")
+                err = utils._require_admin(headers, "product_delete")
                 if err: return err
                 pid = body.get("productId") or body.get("id")
                 if not pid:
@@ -431,17 +431,18 @@ def lambda_handler(event, context):
                     pid = int(pid)
                 except (TypeError, ValueError):
                     return utils._json_response(400, {"message": "productId debe ser numérico."})
+                # Usar _get_by_id (mismo mecanismo que el resto del código) para verificar existencia
                 product = utils._get_by_id("PRODUCT", pid)
                 if not product:
                     return utils._json_response(404, {"message": "Producto no encontrado."})
-                now = utils._now_iso()
-                updated = utils._update_by_id(
-                    "PRODUCT", pid,
-                    "SET active = :a, inOnlineStore = :ios, inPOS = :ip, updatedAt = :u",
-                    {":a": False, ":ios": False, ":ip": False, ":u": now},
-                )
-                utils._audit_event("product.remove", headers, body, {"productId": pid})
-                return utils._json_response(200, {"ok": True, "productId": pid, "product": updated})
+                # Reconstruir las claves del item principal usando createdAt almacenado en el item
+                created_at = product.get("createdAt") or ""
+                main_sk = f"{created_at}#{pid}"
+                # Eliminar item principal del bucket y su referencia
+                utils._table.delete_item(Key={"PK": "PRODUCT", "SK": main_sk})
+                utils._table.delete_item(Key={"PK": f"PRODUCT#{pid}", "SK": "REF"})
+                utils._audit_event("product.delete", headers, body, {"productId": pid})
+                return utils._json_response(200, {"ok": True, "productId": pid})
 
             # POST catalog/product/{id}/assets → subir imagen de producto
             if sub is not None and sub not in ("product-of-month", "remove") and len(segments) >= 4 and segments[3] == "assets" and method == "POST":

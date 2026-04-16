@@ -403,6 +403,12 @@ export class RealApiService {
     const landing = images.find((im) => im.section === 'landing')?.url ?? '';
     const fallback = images[0]?.url ?? '';
     const tags = Array.isArray(p['tags']) ? (p['tags'] as string[]) : [];
+    const variants = Array.isArray(p['variants'])
+      ? (p['variants'] as Array<Record<string, unknown>>).map((v) => ({
+          id: String(v['variantId'] ?? v['id'] ?? ''),
+          name: String(v['name'] ?? '')
+        }))
+      : undefined;
     return {
       id: String(p['productId'] ?? p['id'] ?? ''),
       name: String(p['name'] ?? ''),
@@ -419,6 +425,7 @@ export class RealApiService {
       inOnlineStore: p['inOnlineStore'] != null ? Boolean(p['inOnlineStore']) : undefined,
       inPOS: p['inPOS'] != null ? Boolean(p['inPOS']) : undefined,
       commissionable: p['commissionable'] != null ? Boolean(p['commissionable']) : undefined,
+      variants
     };
   }
 

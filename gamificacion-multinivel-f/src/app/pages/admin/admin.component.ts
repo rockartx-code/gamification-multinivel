@@ -407,6 +407,7 @@ export class AdminComponent implements OnInit {
     { key: 'commissions_register_payment', label: 'Registrar pago de comisiones' },
     { key: 'product_add', label: 'Agregar nuevo producto' },
     { key: 'product_update', label: 'Actualizar producto' },
+    { key: 'product_delete', label: 'Eliminar producto' },
     { key: 'product_set_month', label: 'Establecer producto del mes' },
     { key: 'stock_create', label: 'Crear stock' },
     { key: 'stock_create_transfer', label: 'Crear transferencia' },
@@ -482,6 +483,8 @@ export class AdminComponent implements OnInit {
   isSavingStructure = false;
   isSavingProduct = false;
   isSettingProductOfMonth = false;
+  isDeletingProduct = false;
+  productToDelete: AdminProduct | null = null;
   shippingTargetOrder: AdminOrder | null = null;
   shippingType: 'carrier' | 'personal' = 'carrier';
   shippingTrackingNumber = '';
@@ -3768,6 +3771,33 @@ export class AdminComponent implements OnInit {
       });
   }
 
+
+  confirmDeleteProduct(product: AdminProduct): void {
+    this.productToDelete = product;
+  }
+
+  cancelDeleteProduct(): void {
+    this.productToDelete = null;
+  }
+
+  removeProduct(): void {
+    const product = this.productToDelete;
+    if (!product || !this.hasPermission('product_delete') || this.isDeletingProduct) {
+      return;
+    }
+    this.isDeletingProduct = true;
+    this.adminControl
+      .deleteProduct(product.id)
+      .pipe(finalize(() => { this.isDeletingProduct = false; this.productToDelete = null; }))
+      .subscribe({
+        next: () => {
+          this.announceProductMessage(`Producto eliminado: ${product.name}.`);
+        },
+        error: () => {
+          this.announceProductMessage('No se pudo eliminar el producto.');
+        }
+      });
+  }
 
   saveProduct(): void {
     const isEditing = this.productForm.id != null;

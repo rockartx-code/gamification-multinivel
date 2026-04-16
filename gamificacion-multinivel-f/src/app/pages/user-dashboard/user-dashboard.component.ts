@@ -177,6 +177,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   isGoalsModalOpen = false;
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
+  readonly selectedVariantIds = new Map<string, string>();
   activeNotification: PortalNotification | null = null;
   achievedGoals: DashboardGoal[] = [];
   private goalToastState: 'near' | 'done' | '' = '';
@@ -515,6 +516,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   get otherProducts(): DashboardProduct[] {
     return this.products.filter((product) => !this.dashboardControl.buyAgainIds.has(product.id));
   }
+
 
   get productsCount(): string {
     return `${this.products.length} productos`;
@@ -1596,6 +1598,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
     }
     this.maybeShowGoalProgressToast();
+  }
+
+  selectVariant(productId: string, variantId: string): void {
+    this.selectedVariantIds.set(productId, variantId);
+  }
+
+  getSelectedVariantId(productId: string): string {
+    return this.selectedVariantIds.get(productId) ?? '';
   }
 
   addQuick(productId: string, addQty: number): void {
