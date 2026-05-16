@@ -1,14 +1,6 @@
 <section class="antialiased">
   <ui-header variant="admin" containerClass="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
     <div class="flex shrink-0 flex-wrap items-center gap-2">
-        <div class="hidden rounded-2xl border border-olive-30 bg-ivory-80 px-4 py-2 sm:block">
-          <div class="flex items-center gap-2 text-[11px] text-gray-600">
-            <i class="fa-solid fa-bell" aria-hidden="true"></i>
-            Acciones urgentes
-          </div>
-          <div class="text-sm font-extrabold">{{ warningsStable.length }}</div>
-        </div>
-
         <div class="hidden items-center gap-3 rounded-2xl border border-olive-30 surface-soft px-4 py-2 lg:flex"
           *ngIf="currentUser">
           <div class="text-right">
@@ -21,9 +13,24 @@
           </span>
         </div>
 
-        <ui-button size="sm" variant="ghost" (pressed)="showActions()">
-          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-          Acciones
+        <ui-button
+          size="sm"
+          variant="ghost"
+          class="min-w-[148px]"
+          [stacked]="true"
+          (pressed)="showActions()">
+          <span btnTitle>
+            <span class="inline-flex items-center gap-2">
+              <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+              Acciones
+            </span>
+          </span>
+          <span btnSubtitle>
+            <span class="inline-flex items-center gap-2 text-[11px]">
+              <i class="fa-solid fa-bell" aria-hidden="true"></i>
+              {{ warningsStable.length }} urgentes
+            </span>
+          </span>
         </ui-button>
         <ui-button size="sm" variant="ghost" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
@@ -3501,7 +3508,7 @@
   </div>
   <div class="mt-5 flex justify-end gap-2">
     <ui-button variant="ghost" size="sm" (pressed)="cancelDeleteProduct()">Cancelar</ui-button>
-    <ui-button variant="primary" size="sm" class="bg-red-600 hover:bg-red-700" [disabled]="isDeletingProduct" (pressed)="removeProduct()">
+    <ui-button variant="primary" size="sm" class="hover:text-red-600" [disabled]="isDeletingProduct" (pressed)="removeProduct()">
       <i class="fa-solid fa-trash" aria-hidden="true"></i>
       {{ isDeletingProduct ? 'Eliminando...' : 'Eliminar' }}
     </ui-button>

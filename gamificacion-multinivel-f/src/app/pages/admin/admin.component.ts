@@ -2268,7 +2268,7 @@ export class AdminComponent implements OnInit {
         }
         this.syncPosOperatorContext();
         this.refreshPosCashControl();
-        this.cdr.detectChanges();
+        this.requestViewUpdate();
       }
     });
   }

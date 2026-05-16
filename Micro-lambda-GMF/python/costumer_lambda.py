@@ -113,6 +113,7 @@ def _normalize_dashboard_customer(customer):
     return {
         "id": str(customer.get("customerId") or "").strip(),
         "name": str(customer.get("name") or "").strip(),
+        "referralCode": str(customer.get("referralCode") or "").strip().upper(),
         "phone": str(customer.get("phone") or "").strip(),
         "address": str(customer.get("address") or "").strip(),
         "city": str(customer.get("city") or "").strip(),
@@ -834,18 +835,50 @@ def _find_effective_sponsor(customer) -> dict:
     }
 
 
+def _referral_code_pk(code: str) -> str:
+    return f"REFERRAL_CODE#{str(code or '').strip().upper()}"
+
+
+def _find_customer_by_referral_identifier(identifier):
+    raw_identifier = str(identifier or "").strip()
+    if not raw_identifier:
+        return None
+
+    sponsor = utils._get_by_id("CUSTOMER", raw_identifier)
+    if sponsor:
+        return sponsor
+
+    try:
+        sponsor = utils._get_by_id("CUSTOMER", int(raw_identifier))
+        if sponsor:
+            return sponsor
+    except Exception:
+        sponsor = None
+
+    try:
+        referral_item = utils._table.get_item(Key={"PK": _referral_code_pk(raw_identifier), "SK": "REFCodeInput"}).get("Item") or {}
+        leader_id = referral_item.get("leaderId")
+        if leader_id in (None, ""):
+            return None
+        sponsor = utils._get_by_id("CUSTOMER", leader_id)
+        if sponsor:
+            return sponsor
+        try:
+            return utils._get_by_id("CUSTOMER", int(leader_id))
+        except Exception:
+            return None
+    except Exception as ex:
+        print(f"[SPONSOR_REFERRAL_LOOKUP_ERROR] identifier={raw_identifier} error={ex}")
+        return None
+
+
 def handle_get_public_sponsor(sponsor_id):
-    """GET /customers/sponsor/{idSponsor}"""
+    """GET /customers/sponsor/{idSponsor} admitiendo customerId o referralCode."""
     raw_sponsor_id = str(sponsor_id or "").strip()
     if not raw_sponsor_id:
         return utils._json_response(400, {"message": "idSponsor es obligatorio"})
 
-    sponsor = utils._get_by_id("CUSTOMER", raw_sponsor_id)
-    if not sponsor:
-        try:
-            sponsor = utils._get_by_id("CUSTOMER", int(raw_sponsor_id))
-        except Exception:
-            sponsor = None
+    sponsor = _find_customer_by_referral_identifier(raw_sponsor_id)
 
     if not sponsor:
         return utils._json_response(200, {
@@ -1469,7 +1502,7 @@ def handle_customer_dashboard(headers):
             "cutoffDay": 25,
             "cutoffHour": 23,
             "cutoffMinute": 59,
-            "userCode": str(customer.get("customerId") or ""),
+            "userCode": str(customer.get("referralCode") or customer.get("customerId") or "").strip().upper(),
             "networkGoal": 300,
         },
         "customer": _normalize_dashboard_customer(customer),

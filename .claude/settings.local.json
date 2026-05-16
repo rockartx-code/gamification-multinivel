@@ -9,7 +9,8 @@
       "Bash(node node_modules/.bin/tsc --noEmit)",
       "Bash(cmd /c \"node_modules\\\\.bin\\\\tsc.cmd --noEmit 2>&1\")",
       "Bash(ls \"C:/Users/jajr4/OneDrive/Documentos/GitHub/gamification-multinivel/Micro-lambda-GMF/python/\"*.py)",
-      "Bash(xargs -I{} basename {})"
+      "Bash(xargs -I{} basename {})",
+      "Bash(npx ng:*)"
     ]
   }
 }

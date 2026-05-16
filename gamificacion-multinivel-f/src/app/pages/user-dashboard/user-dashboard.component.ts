@@ -586,11 +586,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get userReferralCode(): string {
-    const name = this.currentUser?.name || '';
-    const words = name.trim().split(/\s+/).filter(w => w.length > 0);
-    if (words.length === 0) return '';
-    const initials = words.map(w => w[0].toUpperCase()).join('');
-    return `${words[0]}-${initials}`;
+    return (this.dashboardControl.customer?.referralCode ?? this.dashboardControl.data?.settings.userCode ?? '').trim();
   }
 
   get referralLink(): string {
@@ -1051,6 +1047,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   ngOnInit(): void {
     this.isLoading = true;
     this.cartControl.load().subscribe();
+    this.restoreSelectedVariantsFromCart();
     this.goalsSub = this.goalControl.goals$.subscribe((goals) => {
       if (goals) {
         this.processGoals(goals);
@@ -1071,6 +1068,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           this.processGoals(data?.goals ?? []);
           this.loadAchievedGoals(data?.goals ?? []);
           this.prepareNotifications(data?.notifications ?? []);
+          this.restoreSelectedVariantsFromCart();
           if (!this.activeFeaturedId) {
             const nextFeaturedId = this.featuredCarousel[0]?.id ?? data?.featured?.[0]?.id ?? this.featured[0]?.id ?? '';
             if (nextFeaturedId) {
@@ -1591,7 +1589,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   updateCart(productId: string, qty: number): void {
     const product = this.resolveProduct(productId);
     if (product) {
-      this.cartControl.upsertItem(this.buildCartItem(product), qty);
+      const variantId = this.selectedVariantIds.get(productId);
+      this.cartControl.upsertItem(this.buildCartItem(product, variantId), qty);
     }
     this.logGoalProgress();
     if (this.cartTotal > 0) {
@@ -1600,18 +1599,57 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.maybeShowGoalProgressToast();
   }
 
-  selectVariant(productId: string, variantId: string): void {
-    this.selectedVariantIds.set(productId, variantId);
+  getVariantQtys(productId: string): Record<string, number> {
+    const result: Record<string, number> = {};
+    for (const item of this.cartControl.cartItems) {
+      if (!item.id.startsWith(`${productId}::`)) {
+        continue;
+      }
+      const variantId = item.id.split('::')[1];
+      if (variantId) {
+        result[variantId] = item.qty;
+      }
+    }
+    return result;
   }
 
-  getSelectedVariantId(productId: string): string {
-    return this.selectedVariantIds.get(productId) ?? '';
+  onVariantQtyChange(productId: string, event: { variantId: string; qty: number }): void {
+    const product = this.resolveProduct(productId);
+    if (!product) {
+      return;
+    }
+    const cartItem = this.buildCartItem(product, event.variantId);
+    this.cartControl.upsertItem(cartItem, event.qty);
+    this.logGoalProgress();
+    if (this.cartTotal > 0) {
+      this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
+    }
+    this.maybeShowGoalProgressToast();
+  }
+
+  private restoreSelectedVariantsFromCart(): void {
+    for (const item of this.cartControl.cartItems) {
+      const productId = item.id.includes('::') ? item.id.split('::')[0] : item.id;
+      const variantId = item.id.includes('::') ? item.id.split('::')[1] : item.note;
+      if (!variantId) {
+        continue;
+      }
+      const product = this.resolveProduct(productId);
+      if (!product?.variants?.length) {
+        continue;
+      }
+      const match = product.variants.find((v) => v.id === variantId && v.active !== false);
+      if (match) {
+        this.selectedVariantIds.set(productId, match.id);
+      }
+    }
   }
 
   addQuick(productId: string, addQty: number): void {
     const product = this.resolveProduct(productId);
     if (product) {
-      this.cartControl.addItem(this.buildCartItem(product), addQty);
+      const variantId = this.selectedVariantIds.get(productId);
+      this.cartControl.addItem(this.buildCartItem(product, variantId), addQty);
     }
     this.logGoalProgress();
     this.maybeShowGoalProgressToast();
@@ -1642,7 +1680,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   getCartQty(productId: string): number {
-    return this.cartControl.getQty(productId);
+    const variantId = this.selectedVariantIds.get(productId);
+    if (variantId) {
+      return this.cartControl.getQty(`${productId}::${variantId}`);
+    }
+    return this.cartControl.getProductQty(productId);
   }
 
   showCartToast(): void {
@@ -2352,14 +2394,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return null;
   }
 
-  private buildCartItem(product: DashboardProduct): CartItem {
+  private buildCartItem(product: DashboardProduct, variantId?: string): CartItem {
+    const variant = variantId ? product.variants?.find((v) => v.id === variantId) : undefined;
+    const price = variant?.price ?? product.price;
+    const name = variant ? `${product.name} – ${variant.name}` : product.name;
     return {
-      id: product.id,
-      name: product.name,
-      price: product.price,
+      id: variantId ? `${product.id}::${variantId}` : product.id,
+      name,
+      price,
       qty: 0,
-      note: product.badge || '',
-      img: product.img || ''
+      note: variantId || product.badge || '',
+      img: variant?.img || product.img || ''
     };
   }
 }

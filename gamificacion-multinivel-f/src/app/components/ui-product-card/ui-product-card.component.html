@@ -47,25 +47,49 @@
       </div>
     </div>
 
-    <!-- Variantes -->
-    <div *ngIf="activeVariants.length > 0" class="flex flex-wrap gap-2">
-      <button
+    <!-- Variantes con selección múltiple y cantidad individual -->
+    <div *ngIf="activeVariants.length > 0" class="space-y-2">
+      <div
         *ngFor="let variant of activeVariants"
-        type="button"
-        class="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition"
-        [ngClass]="selectedVariantId === variant.id
-          ? 'border-accent bg-accent/10 text-accent'
-          : 'border-olive-30 bg-white/70 text-gray-700 hover:border-accent/50'"
-        (click)="selectVariant(variant.id)">
-        <i class="fa-solid text-[10px]"
-          [ngClass]="selectedVariantId === variant.id ? 'fa-circle-check text-accent' : 'fa-circle text-gray-300'"
-          aria-hidden="true"></i>
-        {{ variant.name }}
-      </button>
+        class="flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 transition"
+        [ngClass]="isVariantChecked(variant.id)
+          ? 'border-accent/40 bg-accent/5'
+          : 'border-olive-30 bg-white/60'">
+
+        <!-- Chip / toggle -->
+        <button
+          type="button"
+          class="flex items-center gap-1.5 text-xs font-medium"
+          [ngClass]="isVariantChecked(variant.id) ? 'text-accent' : 'text-gray-600'"
+          (click)="toggleVariant(variant.id)">
+          <i class="fa-solid text-[10px]"
+            [ngClass]="isVariantChecked(variant.id) ? 'fa-circle-check text-accent' : 'fa-circle text-gray-300'"
+            aria-hidden="true"></i>
+          {{ variant.name }}
+        </button>
+
+        <!-- Qty controls (solo cuando está marcado) -->
+        <div *ngIf="isVariantChecked(variant.id)" class="flex items-center gap-1">
+          <button
+            type="button"
+            class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5 disabled:opacity-40"
+            [disabled]="getVariantQty(variant.id) === 0"
+            (click)="changeVariantQty(variant.id, -1)">
+            <i class="fa-solid fa-minus text-[10px]" aria-hidden="true"></i>
+          </button>
+          <span class="w-6 text-center text-sm font-semibold">{{ getVariantQty(variant.id) }}</span>
+          <button
+            type="button"
+            class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5"
+            (click)="changeVariantQty(variant.id, 1)">
+            <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Acciones inferiores -->
-    <div class="flex items-center justify-between gap-3">
+    <!-- Acciones inferiores (solo para productos sin variantes) -->
+    <div *ngIf="activeVariants.length === 0" class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-2 rounded-2xl border border-olive-30 px-3 py-2">
         <span class="text-xs text-gray-600">Qty</span>
         <ui-form-field

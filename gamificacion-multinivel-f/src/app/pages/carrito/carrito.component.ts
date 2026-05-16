@@ -107,7 +107,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restoreDeliveryState();
-    this.cartControl.load().subscribe();
+    this.cartControl.load().subscribe(() => {
+      this.cdr.detectChanges();
+    });
     this.refreshSuggestedProducts();
     this.dataSub = this.cartControl.data$.subscribe(() => {
       this.refreshSuggestedProducts();
@@ -134,9 +136,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     if (saved.selectedShippingAddressId) {
       this.selectedShippingAddressId = saved.selectedShippingAddressId;
-      this.shippingAddressLabel = saved.shippingAddressLabel;
       this.hasPrefilledDashboardAddress = true;
     }
+    if (saved.shippingAddressLabel) { this.shippingAddressLabel = saved.shippingAddressLabel; }
     if (saved.deliveryName) { this.deliveryName = saved.deliveryName; }
     if (saved.deliveryPhone) { this.deliveryPhone = saved.deliveryPhone; }
     if (saved.deliveryStreet) { this.deliveryStreet = saved.deliveryStreet; }
@@ -205,7 +207,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    const cartIds = new Set(this.cartItems.map((item) => item.id));
+    const cartIds = new Set(this.cartItems.map((item) => this.extractProductId(item.id)));
     const cartTags = this.collectCartTags(products);
 
     const scored = products.map((product, index) => {
@@ -495,7 +497,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   getCartQty(productId: string): number {
-    return this.cartControl.getQty(productId);
+    return this.cartControl.getProductQty(productId);
+  }
+
+  private extractProductId(itemId: string): string {
+    return itemId.includes('::') ? itemId.split('::')[0] : itemId;
   }
 
   placeOrder(): void {
@@ -520,7 +526,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     const user = this.authService.currentUser;
     const items: AdminOrderItem[] = this.cartItems.map((item) => ({
-      productId: Number(item.id),
+      productId: Number(this.extractProductId(item.id)),
       name: item.name,
       price: item.price,
       quantity: item.qty
@@ -683,7 +689,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const products = this.dashboardControl.products ?? [];
     const items: ShippingQuoteItem[] = [];
     for (const item of this.cartItems) {
-      const product = products.find((p) => p.id === item.id);
+      const product = products.find((p) => p.id === this.extractProductId(item.id));
       items.push({
         weightKg: product ? (Number(product.weightKg) || 0.5) : 0.5,
         lengthCm: product ? (Number(product.lengthCm) || 20) : 20,
@@ -922,7 +928,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private collectCartTags(products: DashboardProduct[]): Set<string> {
     const tags = new Set<string>();
     for (const item of this.cartItems) {
-      const match = products.find((product) => product.id === item.id);
+      const match = products.find((product) => product.id === this.extractProductId(item.id));
       const rawTags = match?.tags?.length ? match.tags : match?.badge ? [match.badge] : item.note ? [item.note] : [];
       this.normalizeTags(rawTags).forEach((tag) => tags.add(tag));
     }

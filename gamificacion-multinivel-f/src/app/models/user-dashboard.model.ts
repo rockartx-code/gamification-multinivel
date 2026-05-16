@@ -4,6 +4,7 @@ import { BonusAward, CustomerShippingAddress, ProductCategory, ProductVariant } 
 export interface DashboardCustomerProfile {
   id?: string;
   name?: string;
+  referralCode?: string;
   phone?: string;
   address?: string;
   city?: string;

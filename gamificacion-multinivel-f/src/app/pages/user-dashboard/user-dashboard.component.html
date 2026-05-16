@@ -13,11 +13,6 @@
         <ui-sidebar-nav [links]="dashboardNavLinks" [compact]="true" (linkSelect)="handleDashboardNavSelect($event)">
         </ui-sidebar-nav>
 
-        <ui-button size="sm" variant="ghost" *ngIf="isGuest" class="mt-1 w-full rounded-xl" [routerLink]="['/login']"
-          (pressed)="closeMobileNav()">
-          <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-          Iniciar sesion
-        </ui-button>
       </div>
     </div>
 
@@ -37,6 +32,11 @@
 
     <!-- DERECHA (hijo directo) -->
     <div class="flex shrink-0  items-center gap-2 sm:gap-3">
+      <ui-button *ngIf="isGuest" size="sm" variant="ghost" class="lg:hidden" [routerLink]="['/login']">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+        Iniciar sesion
+      </ui-button>
+
       <!-- Medal icon — visible only if user is in top 10 -->
       <ui-button *ngIf="!isGuest && isInTop10" size="sm" variant="ghost" type="button"
         (pressed)="scrollToSection('honor')" aria-label="Cuadro de Honor">
@@ -341,8 +341,8 @@
             [discountedPriceLabel]="formatMoney(discountedPrice(product.price))"
             [originalPriceLabel]="hasDiscount ? formatMoney(product.price) : ''"
             [discountLabel]="discountAppliedLabel()" [qty]="getCartQty(product.id)"
-            [selectedVariantId]="getSelectedVariantId(product.id)"
-            (variantSelected)="selectVariant(product.id, $event)"
+            [variantQtys]="getVariantQtys(product.id)"
+            (variantQtyChange)="onVariantQtyChange(product.id, $event)"
             (qtyChange)="updateCart(product.id, $event)" (viewDetails)="openProductDetails(product)"
             (add)="addQuick(product.id, 1)"></ui-product-card>
         </div>
@@ -363,8 +363,8 @@
             [discountedPriceLabel]="formatMoney(discountedPrice(product.price))"
             [originalPriceLabel]="hasDiscount ? formatMoney(product.price) : ''"
             [discountLabel]="discountAppliedLabel()" [qty]="getCartQty(product.id)"
-            [selectedVariantId]="getSelectedVariantId(product.id)"
-            (variantSelected)="selectVariant(product.id, $event)"
+            [variantQtys]="getVariantQtys(product.id)"
+            (variantQtyChange)="onVariantQtyChange(product.id, $event)"
             (qtyChange)="updateCart(product.id, $event)" (viewDetails)="openProductDetails(product)"
             (add)="addQuick(product.id, 1)"></ui-product-card>
         </div>
@@ -474,7 +474,8 @@
 
               <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm text-main transition hover:border-gold-35 hover:bg-gold-12"
-                  [href]="sponsorEmailHref">
+                  [href]="sponsorEmailHref"
+                  (click)="copyText(sponsorContact.email)">
                   <div class="text-xs text-gray-600">Correo</div>
                   <div class="mt-1 font-semibold">{{ sponsorContact.email }}</div>
                 </a>

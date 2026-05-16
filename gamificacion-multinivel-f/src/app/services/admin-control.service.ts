@@ -36,7 +36,7 @@ import {
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { PortalNotification } from '../models/portal-notification.model';
-import { CatalogData, CommissionReceiptPayload } from '../models/user-dashboard.model';
+import { CommissionReceiptPayload } from '../models/user-dashboard.model';
 import { ApiService } from './api.service';
 
 @Injectable({
@@ -61,35 +61,6 @@ export class AdminControlService {
   private patchData(patch: Partial<AdminData>): void {
     const current = this.dataSubject.value ?? ({} as AdminData);
     this.dataSubject.next({ ...current, ...patch });
-  }
-
-  private normalizeCatalogProducts(products: CatalogData['products']): AdminProduct[] {
-    return (products ?? []).map((product) => ({
-      id: Number(product.id),
-      name: product.name,
-      price: Number(product.price ?? 0),
-      active: true,
-      inOnlineStore: product.inOnlineStore,
-      inPOS: product.inPOS,
-      commissionable: product.commissionable,
-      hook: product.hook,
-      description: product.description,
-      copyFacebook: product.copyFacebook,
-      copyInstagram: product.copyInstagram,
-      copyWhatsapp: product.copyWhatsapp,
-      tags: product.tags,
-      weightKg: product.weightKg,
-      lengthCm: product.lengthCm,
-      widthCm: product.widthCm,
-      heightCm: product.heightCm,
-      variants: product.variants,
-      categoryIds: product.categoryIds,
-      images: product.images?.map((image) => ({
-        section: image.section as 'redes' | 'landing' | 'miniatura' | 'variante',
-        url: image.url,
-        assetId: image.assetId,
-      })),
-    }));
   }
 
   /** Carga inicial mínima: solo warnings */
@@ -579,7 +550,7 @@ export class AdminControlService {
     posSales: PosSale[];
   }> {
     return forkJoin({
-      catalog: this.api.getCatalogData(),
+      productsResponse: this.api.listProducts(),
       stocks: this.api.listStocks(),
       transfers: this.api.listStockTransfers(),
       movements: this.api.listInventoryMovements(),
@@ -589,7 +560,11 @@ export class AdminControlService {
         if (this.loadedSections.has('products')) {
           return;
         }
-        this.patchData({ products: this.normalizeCatalogProducts(response.catalog?.products ?? []) });
+        this.patchData({
+          products: response.productsResponse.products ?? [],
+          productOfMonthId: response.productsResponse.productOfMonthId ?? null
+        });
+        this.loadedSections.add('products');
       }),
       map((response) => ({
         stocks: response.stocks ?? [],

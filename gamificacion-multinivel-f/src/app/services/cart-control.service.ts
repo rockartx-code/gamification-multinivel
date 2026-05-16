@@ -73,6 +73,12 @@ export class CartControlService {
     return this.cartItems.find((item) => item.id === itemId)?.qty ?? 0;
   }
 
+  getProductQty(productId: string): number {
+    return this.cartItems
+      .filter((item) => item.id === productId || item.id.startsWith(`${productId}::`))
+      .reduce((sum, item) => sum + item.qty, 0);
+  }
+
   get countdownLabel(): string {
     return this.data?.countdownLabel ?? '';
   }
@@ -181,6 +187,25 @@ export class CartControlService {
       return;
     }
     const updatedItems = current.items.filter((item) => item.id !== itemId);
+    this.dataSubject.next({ ...current, items: updatedItems });
+    this.persistLocalCartItems(updatedItems);
+  }
+
+  updateItemVariant(itemId: string, note: string, price?: number, name?: string): void {
+    const current = this.dataSubject.value;
+    if (!current) {
+      return;
+    }
+    const updatedItems = current.items.map((item) =>
+      item.id === itemId
+        ? {
+            ...item,
+            note,
+            ...(price !== undefined ? { price } : {}),
+            ...(name !== undefined ? { name } : {})
+          }
+        : item
+    );
     this.dataSubject.next({ ...current, items: updatedItems });
     this.persistLocalCartItems(updatedItems);
   }

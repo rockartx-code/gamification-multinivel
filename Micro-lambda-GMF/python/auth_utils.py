@@ -519,13 +519,13 @@ def _resolve_unique_referral_code(base_code: str, customer_id) -> str:
         candidate = f"{base_code}-{suffix}"
         suffix += 1
 
-def _upsert_referral_code_self(customer_id, name: str = "") -> None:
+def _upsert_referral_code_self(customer_id, name: str = "") -> str | None:
     """Crea/actualiza REFERRAL_CODE#{userReferralCode} → leaderId={customerId}.
     El código se genera desde el nombre; si hay colisión agrega consecutivo (-2, -3…)."""
     base_code = _build_user_referral_code(name)
     if not base_code:
         print(f"[REFERRAL_CODE_SELF_SKIP] customerId={customer_id} sin nombre — omitido")
-        return
+        return None
     try:
         code = _resolve_unique_referral_code(base_code, customer_id)
         utils._table.put_item(Item={
@@ -538,8 +538,10 @@ def _upsert_referral_code_self(customer_id, name: str = "") -> None:
         })
         if code != base_code:
             print(f"[REFERRAL_CODE_COLLISION] customerId={customer_id} base={base_code} asignado={code}")
+        return code
     except Exception as ex:
         print(f"[REFERRAL_CODE_SELF_INSERT_ERROR] customerId={customer_id} error={ex}")
+        return None
 
 def _resolve_leader_from_referral_code(raw_code) -> str | None:
     """Dada una referralCode, devuelve el leaderId asociado o None si no existe."""
@@ -554,6 +556,37 @@ def _resolve_leader_from_referral_code(raw_code) -> str | None:
     except Exception as ex:
         print(f"[REFERRAL_CODE_LOOKUP_ERROR] code={code} error={ex}")
     return None
+
+def migrate():
+    inserted = 0
+    skipped = 0
+    errors = 0
+    for customer in utils._query_bucket("CUSTOMER"):
+        cid = customer.get("customerId")
+        if not cid:
+            skipped += 1
+            continue
+        try:
+            referral_code = _upsert_referral_code_self(cid, str(customer.get("name") or ""))
+            if not referral_code:
+                skipped += 1
+                continue
+            utils._update_by_id(
+                "CUSTOMER",
+                cid,
+                "SET referralCode = :referralCode, updatedAt = :updatedAt",
+                {":referralCode": referral_code, ":updatedAt": utils._now_iso()},
+            )
+            inserted += 1
+        except Exception as ex:
+            print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
+            errors += 1
+    utils._audit_event("referral_code.migrate", headers, body, {
+        "inserted": inserted, "skipped": skipped, "errors": errors
+    })
+    return utils._json_response(200, {
+        "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors
+    })
 
 def handle_referral_code(method, body, code_segment, headers):
     """
@@ -575,7 +608,16 @@ def handle_referral_code(method, body, code_segment, headers):
                 skipped += 1
                 continue
             try:
-                _upsert_referral_code_self(cid, str(customer.get("name") or ""))
+                referral_code = _upsert_referral_code_self(cid, str(customer.get("name") or ""))
+                if not referral_code:
+                    skipped += 1
+                    continue
+                utils._update_by_id(
+                    "CUSTOMER",
+                    cid,
+                    "SET referralCode = :referralCode, updatedAt = :updatedAt",
+                    {":referralCode": referral_code, ":updatedAt": utils._now_iso()},
+                )
                 inserted += 1
             except Exception as ex:
                 print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
@@ -732,6 +774,8 @@ def handle_employees(method, body, employee_id=None, headers=None):
 
 def lambda_handler(event, context):
     path = event.get("path", "")
+    #if path == "":
+    #    return migrate()
     method = event.get("httpMethod", "")
     if method == "OPTIONS":
         return utils._cors_preflight_response()

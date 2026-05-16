@@ -254,7 +254,7 @@ export class LandingComponent implements OnInit {
       phone: this.form.phone.trim() || undefined,
       password: this.form.password,
       confirmPassword: this.form.confirmPassword,
-      referralToken: effectiveToken,
+      referralToken: effectiveToken?.toLocaleUpperCase(),
       productId: this.productId || undefined
     };
 

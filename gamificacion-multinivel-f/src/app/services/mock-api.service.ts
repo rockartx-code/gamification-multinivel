@@ -687,6 +687,7 @@ export class MockApiService {
       customer: {
         id: String(customer.id),
         name: customer.name,
+        referralCode: full.customer?.referralCode ?? full.settings.userCode,
         phone: customer.phone,
         address: customer.address,
         city: customer.city,
