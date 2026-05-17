@@ -973,6 +973,12 @@
                         <i class="fa-solid fa-percent fa-xs" aria-hidden="true"></i>
                         {{ product.commissionable !== false ? 'Comisionable' : 'No comisionable' }}
                       </span>
+                      <span *ngIf="product.commissionable !== false"
+                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                        [ngClass]="product.vpPoints != null ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                        <i class="fa-solid fa-star fa-xs" aria-hidden="true"></i>
+                        {{ product.vpPoints != null ? (product.vpPoints + ' VP/u') : 'VP automático' }}
+                      </span>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                       <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
@@ -1130,6 +1136,24 @@
                             (change)="productForm = { ...productForm, commissionable: $any($event.target).checked }" />
                         </label>
                       </div>
+                    </div>
+
+                    <!-- Puntos VP por unidad -->
+                    <div *ngIf="productForm.commissionable" class="rounded-2xl border border-olive-30 bg-white/70 px-4 py-3">
+                      <div class="mb-1.5 flex items-center gap-2 text-sm font-semibold text-main">
+                        <i class="fa-solid fa-star text-gold text-xs" aria-hidden="true"></i>
+                        Puntos VP por unidad
+                      </div>
+                      <div class="text-[11px] text-gray-500 mb-2">
+                        Puntos de Volumen Personal que otorga este producto por cada unidad vendida.
+                        Si se deja vacío se calculan automáticamente desde el precio
+                        (precio ÷ tarifa VP configurada). Los descuentos reducen los puntos proporcionalmente.
+                      </div>
+                      <input type="number" min="0" step="0.01"
+                        class="w-full rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70"
+                        placeholder="Ej: 5  (dejar vacío = automático)"
+                        [ngModel]="productForm.vpPoints"
+                        (ngModelChange)="productForm = { ...productForm, vpPoints: $event }" />
                     </div>
                   </div>
 
@@ -1881,18 +1905,69 @@
                       </div>
                     </div>
 
-                    <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <div class="text-[11px] text-gray-500">Subtotal</div>
-                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posSubtotal) }}</div>
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                      <ui-button size="sm" variant="ghost" (pressed)="openPosDiscountModal()" [disabled]="posSubtotal <= 0">
+                        <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                        {{ posAppliedCashierDiscount ? 'Cambiar descuento' : 'Aplicar descuento' }}
+                      </ui-button>
+                      <div *ngIf="posAppliedCashierDiscount" class="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] text-emerald-700">
+                        Descuento cajero: {{ posAppliedCashierDiscount.displayLabel }}
+                        <button (click)="removePosDiscount()" class="ml-1 text-emerald-600 hover:text-red-500" type="button">
+                          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                        </button>
                       </div>
-                      <div>
-                        <div class="text-[11px] text-gray-500">Descuento</div>
-                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedDiscountAmount) }}</div>
+                    </div>
+
+                    <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-[11px] font-semibold text-gray-600">Tipo de pago</div>
+                      <div class="mt-2 flex flex-wrap gap-2">
+                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'full' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('full')">
+                          Pago completo
+                        </ui-button>
+                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'partial' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('partial')">
+                          Pago parcial
+                        </ui-button>
+                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'credit' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('credit')">
+                          Credito
+                        </ui-button>
                       </div>
-                      <div>
-                        <div class="text-[11px] text-gray-500">Total neto</div>
-                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedNetTotal) }}</div>
+                      <div *ngIf="posPaymentTypeMode === 'partial'" class="mt-3">
+                        <ui-form-field
+                          type="number"
+                          label="Monto pagado ahora"
+                          [min]="0"
+                          [max]="posEffectiveTotal"
+                          [step]="0.01"
+                          [ngModel]="posPartialAmountPaid"
+                          (ngModelChange)="posPartialAmountPaid = $event">
+                        </ui-form-field>
+                      </div>
+                    </div>
+
+                    <div class="mt-4 space-y-1">
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="text-gray-500">Subtotal</span>
+                        <span class="font-semibold">{{ formatMoney(posSubtotal) }}</span>
+                      </div>
+                      <div *ngIf="posProjectedDiscountAmount > 0" class="flex items-center justify-between text-xs">
+                        <span class="text-gray-500">Descuento cliente</span>
+                        <span class="font-semibold text-emerald-600">- {{ formatMoney(posProjectedDiscountAmount) }}</span>
+                      </div>
+                      <div *ngIf="posCashierDiscountAmount > 0" class="flex items-center justify-between text-xs">
+                        <span class="text-gray-500">Descuento cajero ({{ posAppliedCashierDiscount?.displayLabel }})</span>
+                        <span class="font-semibold text-emerald-600">- {{ formatMoney(posCashierDiscountAmount) }}</span>
+                      </div>
+                      <div class="flex items-center justify-between border-t border-olive-30 pt-1 text-sm">
+                        <span class="font-semibold text-main">Total neto</span>
+                        <span class="text-lg font-extrabold text-main">{{ formatMoney(posEffectiveTotal) }}</span>
+                      </div>
+                      <div *ngIf="posPaymentTypeMode !== 'full'" class="flex items-center justify-between text-xs">
+                        <span class="text-gray-500">Monto a pagar ahora</span>
+                        <span class="font-semibold text-main">{{ formatMoney(posAmountPaidNow) }}</span>
+                      </div>
+                      <div *ngIf="posPendingAmount > 0" class="flex items-center justify-between text-xs">
+                        <span class="text-amber-600">Saldo pendiente</span>
+                        <span class="font-semibold text-amber-700">{{ formatMoney(posPendingAmount) }}</span>
                       </div>
                     </div>
 
@@ -1909,7 +1984,7 @@
                         [disabled]="!canRegisterPosSale"
                         (pressed)="registerPosSale()">
                         <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
-                        {{ isRegisteringPosSale ? 'Registrando...' : 'Cobrar ' + formatMoney(posProjectedNetTotal) }}
+                        {{ isRegisteringPosSale ? 'Registrando...' : 'Cobrar ' + formatMoney(posEffectiveTotal) }}
                       </ui-button>
                     </div>
                   </div>
@@ -1923,15 +1998,25 @@
                       <div class="text-sm font-semibold text-main">Control de caja actual</div>
                       <div class="mt-1 text-xs text-gray-600">Resumen de la caja abierta para el operador y stock actual.</div>
                     </div>
-                    <ui-button
-                      size="sm"
-                      variant="ghost"
-                      *ngIf="hasPermission('pos_register_sale')"
-                      [disabled]="!canCreatePosCashCut"
-                      (pressed)="createPosCashCut()">
-                      <i class="fa-solid fa-scissors" aria-hidden="true"></i>
-                      {{ isCuttingPosCash ? 'Registrando...' : 'Hacer corte de caja' }}
-                    </ui-button>
+                    <div class="flex flex-wrap gap-2">
+                      <ui-button
+                        size="sm"
+                        variant="ghost"
+                        *ngIf="hasPermission('pos_register_sale')"
+                        (pressed)="openPosWithdrawalModal()">
+                        <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
+                        Retirar efectivo
+                      </ui-button>
+                      <ui-button
+                        size="sm"
+                        variant="ghost"
+                        *ngIf="hasPermission('pos_register_sale')"
+                        [disabled]="!canCreatePosCashCut"
+                        (pressed)="createPosCashCut()">
+                        <i class="fa-solid fa-scissors" aria-hidden="true"></i>
+                        {{ isCuttingPosCash ? 'Registrando...' : 'Hacer corte de caja' }}
+                      </ui-button>
+                    </div>
                   </div>
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1962,6 +2047,21 @@
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">En caja: {{ formatMoney(posCashControl ? (posCashControl.lastCutCashToKeep || 0) : 0) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Retirado: {{ formatMoney(posCashControl ? (posCashControl.lastCutWithdrawnAmount || 0) : 0) }}</span>
                     </div>
+                  </div>
+
+                  <div *ngIf="(posCashControl?.withdrawalCount || 0) > 0" class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                    <div class="text-[11px] text-amber-700">Retiros en este turno</div>
+                    <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                      <span class="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-amber-800">{{ posCashControl?.withdrawalCount }} retiro(s)</span>
+                      <span class="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-amber-800">Total retirado: {{ formatMoney(posCashControl?.totalWithdrawn || 0) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="mt-3">
+                    <ui-button size="sm" variant="ghost" (pressed)="loadPosCashCuts()" [disabled]="isLoadingPosCashCuts">
+                      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                      {{ isLoadingPosCashCuts ? 'Cargando...' : 'Ver historial de cortes' }}
+                    </ui-button>
                   </div>
                 </div>
 
@@ -2044,61 +2144,443 @@
                 </div>
             </div>
           </div>
+
+          <div *ngIf="isPosCashCutsOpen" class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold text-main">Historial de cortes de caja</div>
+                <div class="mt-1 text-xs text-gray-600">Cortes registrados por este operador.</div>
+              </div>
+              <ui-button size="sm" variant="ghost" (pressed)="isPosCashCutsOpen = false">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                Cerrar
+              </ui-button>
+            </div>
+            <div *ngIf="!posCashCuts.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4 text-sm text-gray-600">
+              No hay cortes registrados.
+            </div>
+            <div *ngIf="posCashCuts.length" class="mt-3 space-y-3 max-h-[480px] overflow-auto">
+              <div *ngFor="let cut of posCashCuts" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <div class="text-xs font-semibold text-main">{{ cut.id }}</div>
+                    <div class="mt-1 text-[11px] text-gray-500">{{ formatDateTime(cut.createdAt) }}</div>
+                    <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Total: {{ formatMoney(cut.total) }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Ventas: {{ cut.salesCount }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">En caja: {{ formatMoney(cut.cashToKeep || 0) }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Retirado: {{ formatMoney(cut.withdrawnAmount || 0) }}</span>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <ui-button size="sm" variant="ghost" (pressed)="downloadCutReport(cut)">
+                      <i class="fa-solid fa-download" aria-hidden="true"></i>
+                      CSV
+                    </ui-button>
+                    <ui-button size="sm" variant="ghost" (pressed)="toggleCutExpansion(cut.id)">
+                      <i class="fa-solid" [ngClass]="expandedCutId === cut.id ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+                    </ui-button>
+                  </div>
+                </div>
+                <div *ngIf="expandedCutId === cut.id" class="mt-3 space-y-2">
+                  <div *ngIf="cut.sales?.length" class="text-[11px] font-semibold text-gray-600">Ventas ({{ cut.sales?.length }})</div>
+                  <div *ngFor="let sale of cut.sales" class="rounded-2xl border border-olive-30 bg-white/70 p-2 text-[11px]">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-semibold">{{ sale.orderId }}</span>
+                      <span>{{ formatMoney(sale.total) }}</span>
+                    </div>
+                    <div class="text-gray-500">{{ sale.customerName }} · {{ formatDateTime(sale.createdAt) }}</div>
+                  </div>
+                  <div *ngIf="cut.withdrawals?.length" class="mt-2 text-[11px] font-semibold text-amber-700">Retiros ({{ cut.withdrawals?.length }})</div>
+                  <div *ngFor="let wdr of cut.withdrawals" class="rounded-2xl border border-amber-200 bg-amber-50 p-2 text-[11px]">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-semibold text-amber-800">{{ wdr.reason }}</span>
+                      <span class="text-amber-800">- {{ formatMoney(wdr.amount) }}</span>
+                    </div>
+                    <div class="text-amber-600">{{ formatDateTime(wdr.createdAt) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           </div>
 
+          <!-- ══════════════════════════════════════════ ESTADÍSTICAS Y REPORTES -->
           <div class="space-y-4" *ngIf="currentView === 'stats' && canAccessView('stats')">
-            <div class="grid gap-3 md:grid-cols-4">
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Ventas (mes)</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(ordersTotal) }}</div>
+
+            <!-- Cargando indicador -->
+            <div *ngIf="isLoadingStats" class="flex items-center gap-2 text-sm text-gray-500 py-2">
+              <span class="animate-spin inline-block w-4 h-4 border-2 border-olive-50 border-t-transparent rounded-full"></span>
+              Cargando reporte del servidor…
+            </div>
+
+            <!-- Toolbar: mes + descargas -->
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <select class="rounded-xl border border-olive-30 bg-ivory-70 px-3 py-1.5 text-sm text-main focus:outline-none"
+                  [ngModel]="statsReportMonth" (ngModelChange)="statsReportMonth = $event; loadMonthlyStats($event || activeReportMonth)">
+                  <option *ngFor="let m of availableReportMonths" [value]="m.value">{{ m.label }}</option>
+                </select>
+                <span class="text-xs text-gray-500">Periodo analizado</span>
               </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Conversión</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ conversionRate | number: '1.1-1' }}%</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Ticket promedio</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(avgTicket) }}</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Recompra</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ repurchaseRate | number: '1.0-0' }}%</div>
+              <div class="flex flex-wrap gap-2">
+                <ui-button size="sm" variant="ghost" (pressed)="downloadFullReport()">
+                  <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                  Reporte completo Excel
+                </ui-button>
               </div>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-2">
-              <div id="admin-actions" class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="flex items-center gap-2 text-sm font-semibold text-main">
-                  <i class="fa-solid fa-triangle-exclamation text-gold" aria-hidden="true"></i>
-                  Advertencias (acciones por realizar)
-                </div>
-                <div class="mt-1 text-xs text-gray-600">Priorizadas por impacto operativo.</div>
-
-                <div class="mt-4 space-y-3">
-                  <div *ngFor="let warning of warningsStable" class="rounded-2xl border border-olive-30 surface-soft p-4">
-                    <div class="text-sm font-semibold">{{ warning.text }}</div>
-                    <div class="mt-1 text-xs text-gray-500">Severidad: {{ warning.severity }}</div>
-                  </div>
-                </div>
-              </div>
-
+            <!-- KPIs del periodo -->
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-sm font-semibold text-main">Tendencia (mock)</div>
-                <div class="mt-1 text-xs text-gray-600">Placeholder visual para dashboards.</div>
-
-                <div class="mt-4 overflow-hidden rounded-2xl border border-olive-30 surface-soft p-4">
-                  <svg viewBox="0 0 560 180" class="h-[180px] w-full">
-                    <path d="M20 140 C 90 90, 140 120, 190 80 C 240 40, 300 70, 350 60 C 410 45, 460 70, 540 30"
-                      fill="none" stroke="rgba(124,140,114,.85)" stroke-width="4" />
-                    <path d="M20 160 L540 160" stroke="rgba(255,255,255,.12)" stroke-width="2" />
-                    <circle cx="540" cy="30" r="6" fill="rgba(245,185,66,.92)" />
-                  </svg>
-                  <div class="mt-3 text-xs text-gray-500">
-                    En producción: alimenta con ventas por dí­a, cohortes, y funnel del checkout.
-                  </div>
-                </div>
+                <div class="text-[11px] text-gray-500">Ventas del periodo</div>
+                <div class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(reportOrdersTotal) }}</div>
+                <div class="mt-1 text-[11px] text-gray-400">{{ reportOrdersCount }} pedidos</div>
+              </div>
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-[11px] text-gray-500">Ticket promedio</div>
+                <div class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(reportAvgTicket) }}</div>
+                <div class="mt-1 text-[11px] text-gray-400">{{ reportConversionRate | number:'1.0-0' }}% entregados</div>
+              </div>
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-[11px] text-gray-500">Clientes activos</div>
+                <div class="mt-1 text-2xl font-extrabold text-main">{{ reportActiveCustomersCount }}</div>
+                <div class="mt-1 text-[11px] text-gray-400">{{ reportRepurchaseRate | number:'1.0-0' }}% recompra</div>
+              </div>
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-[11px] text-gray-500">Productos vendidos</div>
+                <div class="mt-1 text-2xl font-extrabold text-main">{{ reportTotalUnitsSold }}</div>
+                <div class="mt-1 text-[11px] text-gray-400">{{ reportProductSales.length }} SKUs distintos</div>
               </div>
             </div>
+
+            <!-- Tabs de reporte -->
+            <div class="flex flex-wrap gap-1 rounded-2xl border border-olive-30 bg-ivory-70 p-1">
+              <button *ngFor="let tab of [
+                {id:'resumen',label:'Resumen'},
+                {id:'pedidos',label:'Pedidos'},
+                {id:'clientes',label:'Clientes'},
+                {id:'productos',label:'Productos'},
+                {id:'stocks',label:'Stocks'}
+              ]"
+                class="rounded-xl px-4 py-1.5 text-sm font-medium transition"
+                [ngClass]="statsReportTab === tab.id
+                  ? 'bg-main text-ivory-80 shadow-sm'
+                  : 'text-gray-600 hover:bg-ivory-80'"
+                (click)="statsReportTab = $any(tab.id)">
+                {{ tab.label }}
+              </button>
+            </div>
+
+            <!-- ── TAB: RESUMEN ── -->
+            <ng-container *ngIf="statsReportTab === 'resumen'">
+              <div class="grid gap-4 lg:grid-cols-2">
+
+                <!-- Advertencias operativas -->
+                <div id="admin-actions" class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="flex items-center gap-2 text-sm font-semibold text-main">
+                    <i class="fa-solid fa-triangle-exclamation text-gold" aria-hidden="true"></i>
+                    Advertencias operativas
+                  </div>
+                  <div class="mt-1 text-xs text-gray-600">Acciones pendientes con mayor impacto.</div>
+                  <div class="mt-4 space-y-2">
+                    <div *ngIf="!warningsStable.length" class="text-sm text-gray-500">Sin advertencias activas.</div>
+                    <div *ngFor="let warning of warningsStable" class="rounded-2xl border border-olive-30 surface-soft p-3">
+                      <div class="text-sm font-semibold">{{ warning.text }}</div>
+                      <div class="mt-0.5 text-[11px] text-gray-500">{{ warning.severity }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Top pedidos por estado -->
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-sm font-semibold text-main">Pedidos por estado</div>
+                  <div class="mt-3 space-y-2">
+                    <div *ngFor="let row of reportOrdersByStatus" class="flex items-center justify-between gap-2 text-sm">
+                      <span class="text-gray-700">{{ row.status }}</span>
+                      <div class="flex items-center gap-3">
+                        <span class="rounded-full border border-olive-20 bg-ivory-80 px-2 py-0.5 text-[11px]">{{ row.count }}</span>
+                        <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
+                      </div>
+                    </div>
+                    <div *ngIf="!reportOrdersByStatus.length" class="text-sm text-gray-400">Sin pedidos en el periodo.</div>
+                  </div>
+                </div>
+
+                <!-- Top clientes -->
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4 lg:col-span-2">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="text-sm font-semibold text-main">Top clientes del periodo</div>
+                  </div>
+                  <div class="mt-3 overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                          <th class="pb-2 pr-4">#</th>
+                          <th class="pb-2 pr-4">Cliente</th>
+                          <th class="pb-2 pr-4 text-right">Pedidos</th>
+                          <th class="pb-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let row of reportTopCustomersByOrders; let i = index" class="border-b border-olive-10">
+                          <td class="py-1.5 pr-4 text-gray-400">{{ i + 1 }}</td>
+                          <td class="py-1.5 pr-4 font-medium text-main">{{ row.name }}</td>
+                          <td class="py-1.5 pr-4 text-right text-gray-600">{{ row.count }}</td>
+                          <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(row.total) }}</td>
+                        </tr>
+                        <tr *ngIf="!reportTopCustomersByOrders.length">
+                          <td colspan="4" class="py-4 text-center text-sm text-gray-400">Sin datos.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- ── TAB: PEDIDOS ── -->
+            <ng-container *ngIf="statsReportTab === 'pedidos'">
+              <div class="flex justify-end">
+                <ui-button size="sm" variant="ghost" (pressed)="downloadOrdersReport()">
+                  <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                  Exportar pedidos
+                </ui-button>
+              </div>
+              <div class="grid gap-4 lg:grid-cols-2">
+                <!-- Por estado -->
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-sm font-semibold text-main">Por estado</div>
+                  <div class="mt-3 space-y-2">
+                    <div *ngFor="let row of reportOrdersByStatus" class="flex items-center justify-between gap-2 rounded-xl border border-olive-20 bg-ivory-70 px-3 py-2 text-sm">
+                      <span class="text-gray-700">{{ row.status }}</span>
+                      <div class="flex items-center gap-3">
+                        <span class="text-[11px] text-gray-500">{{ row.count }} pedidos</span>
+                        <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Por método de pago -->
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-sm font-semibold text-main">Por método de pago</div>
+                  <div class="mt-3 space-y-2">
+                    <div *ngFor="let row of reportOrdersByPaymentMethod" class="flex items-center justify-between gap-2 rounded-xl border border-olive-20 bg-ivory-70 px-3 py-2 text-sm">
+                      <span class="capitalize text-gray-700">{{ row.method }}</span>
+                      <div class="flex items-center gap-3">
+                        <span class="text-[11px] text-gray-500">{{ row.count }} pedidos</span>
+                        <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
+                      </div>
+                    </div>
+                    <div *ngIf="!reportOrdersByPaymentMethod.length" class="text-sm text-gray-400">Sin pedidos.</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Lista de pedidos -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Pedidos del periodo ({{ reportOrdersCount }})</div>
+                <div class="mt-3 max-h-96 overflow-auto">
+                  <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-ivory-70">
+                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                        <th class="pb-2 pr-3">Folio</th>
+                        <th class="pb-2 pr-3">Fecha</th>
+                        <th class="pb-2 pr-3">Cliente</th>
+                        <th class="pb-2 pr-3">Estado</th>
+                        <th class="pb-2 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let o of reportOrders" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                        <td class="py-1.5 pr-3 font-mono text-[11px] text-gray-500">{{ o.id }}</td>
+                        <td class="py-1.5 pr-3 text-[11px] text-gray-500">{{ formatDateTime(o.createdAt) }}</td>
+                        <td class="py-1.5 pr-3 font-medium text-main">{{ o.customer || 'Público General' }}</td>
+                        <td class="py-1.5 pr-3 text-[11px]">{{ o.status }}</td>
+                        <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(o.total) }}</td>
+                      </tr>
+                      <tr *ngIf="!reportOrders.length">
+                        <td colspan="5" class="py-4 text-center text-sm text-gray-400">Sin pedidos en el periodo.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- ── TAB: CLIENTES ── -->
+            <ng-container *ngIf="statsReportTab === 'clientes'">
+              <div class="flex justify-end">
+                <ui-button size="sm" variant="ghost" (pressed)="downloadCustomersReport()">
+                  <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                  Exportar clientes
+                </ui-button>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-3">
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-[11px] text-gray-500">Clientes activos en periodo</div>
+                  <div class="mt-1 text-2xl font-extrabold text-main">{{ reportActiveCustomersCount }}</div>
+                </div>
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-[11px] text-gray-500">Total en base de datos</div>
+                  <div class="mt-1 text-2xl font-extrabold text-main">{{ customersCount }}</div>
+                </div>
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-[11px] text-gray-500">Tasa de recompra</div>
+                  <div class="mt-1 text-2xl font-extrabold text-main">{{ reportRepurchaseRate | number:'1.0-0' }}%</div>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Clientes con compras en el periodo</div>
+                <div class="mt-3 max-h-96 overflow-auto">
+                  <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-ivory-70">
+                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                        <th class="pb-2 pr-3">Cliente</th>
+                        <th class="pb-2 pr-3">Email</th>
+                        <th class="pb-2 pr-3">Nivel</th>
+                        <th class="pb-2 pr-3 text-right">Pedidos</th>
+                        <th class="pb-2 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let c of reportActiveCustomers" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                        <td class="py-1.5 pr-3 font-medium text-main">{{ c.name }}</td>
+                        <td class="py-1.5 pr-3 text-[11px] text-gray-500">{{ c.email }}</td>
+                        <td class="py-1.5 pr-3 text-[11px]">{{ c.level }}</td>
+                        <td class="py-1.5 pr-3 text-right text-gray-600">{{ c.orderCount }}</td>
+                        <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(c.total) }}</td>
+                      </tr>
+                      <tr *ngIf="!reportActiveCustomers.length">
+                        <td colspan="5" class="py-4 text-center text-sm text-gray-400">Sin actividad de clientes en el periodo.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- ── TAB: PRODUCTOS ── -->
+            <ng-container *ngIf="statsReportTab === 'productos'">
+              <div class="flex justify-end">
+                <ui-button size="sm" variant="ghost" (pressed)="downloadProductsReport()">
+                  <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                  Exportar productos
+                </ui-button>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-3">
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-[11px] text-gray-500">Productos con ventas</div>
+                  <div class="mt-1 text-2xl font-extrabold text-main">{{ reportProductSales.length }}</div>
+                </div>
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-[11px] text-gray-500">Unidades vendidas</div>
+                  <div class="mt-1 text-2xl font-extrabold text-main">{{ reportTotalUnitsSold }}</div>
+                </div>
+                <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                  <div class="text-[11px] text-gray-500">Ingresos por productos</div>
+                  <div class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(reportOrdersTotal) }}</div>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Ventas por producto</div>
+                <div class="mt-3 max-h-96 overflow-auto">
+                  <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-ivory-70">
+                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                        <th class="pb-2 pr-3">#</th>
+                        <th class="pb-2 pr-3">Producto</th>
+                        <th class="pb-2 pr-3">SKU</th>
+                        <th class="pb-2 pr-3 text-right">Unidades</th>
+                        <th class="pb-2 pr-3 text-right">P. unitario</th>
+                        <th class="pb-2 text-right">Ingresos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let p of reportProductSales; let i = index" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                        <td class="py-1.5 pr-3 text-gray-400">{{ i + 1 }}</td>
+                        <td class="py-1.5 pr-3 font-medium text-main">{{ p.name }}</td>
+                        <td class="py-1.5 pr-3 text-[11px] text-gray-500">{{ p.sku }}</td>
+                        <td class="py-1.5 pr-3 text-right text-gray-600">{{ p.units }}</td>
+                        <td class="py-1.5 pr-3 text-right text-gray-600">{{ formatMoney(p.price) }}</td>
+                        <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(p.revenue) }}</td>
+                      </tr>
+                      <tr *ngIf="!reportProductSales.length">
+                        <td colspan="6" class="py-4 text-center text-sm text-gray-400">Sin ventas de productos en el periodo.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- ── TAB: STOCKS ── -->
+            <ng-container *ngIf="statsReportTab === 'stocks'">
+              <div class="flex justify-end">
+                <ui-button size="sm" variant="ghost" (pressed)="downloadStocksReport()">
+                  <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                  Exportar stocks
+                </ui-button>
+              </div>
+              <!-- Resumen por almacén -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Actividad por almacén en el periodo</div>
+                <div class="mt-3 overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                        <th class="pb-2 pr-4">Almacén</th>
+                        <th class="pb-2 pr-4">Ubicación</th>
+                        <th class="pb-2 pr-4 text-right">Entradas (uds)</th>
+                        <th class="pb-2 pr-4 text-right">Salidas (uds)</th>
+                        <th class="pb-2 text-right">Ventas POS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of reportStockSummary" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                        <td class="py-1.5 pr-4 font-medium text-main">{{ row.name }}</td>
+                        <td class="py-1.5 pr-4 text-[11px] text-gray-500">{{ row.location }}</td>
+                        <td class="py-1.5 pr-4 text-right text-emerald-600">+{{ row.entries }}</td>
+                        <td class="py-1.5 pr-4 text-right text-red-500">-{{ row.exits }}</td>
+                        <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(row.sales) }}</td>
+                      </tr>
+                      <tr *ngIf="!reportStockSummary.length">
+                        <td colspan="5" class="py-4 text-center text-sm text-gray-400">Sin almacenes.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- Inventario actual -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+                <div class="text-sm font-semibold text-main">Inventario actual por almacén</div>
+                <div class="mt-3 max-h-96 overflow-auto">
+                  <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-ivory-70">
+                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                        <th class="pb-2 pr-4">Almacén</th>
+                        <th class="pb-2 pr-4">Producto</th>
+                        <th class="pb-2 text-right">Stock actual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of reportStockInventoryLines" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                        <td class="py-1.5 pr-4 text-[11px] text-gray-600">{{ row.stock }}</td>
+                        <td class="py-1.5 pr-4 font-medium text-main">{{ row.product }}</td>
+                        <td class="py-1.5 text-right"
+                          [ngClass]="row.qty <= 0 ? 'text-red-500 font-bold' : row.qty <= 5 ? 'text-amber-600 font-semibold' : 'text-main'">
+                          {{ row.qty }}
+                        </td>
+                      </tr>
+                      <tr *ngIf="!reportStockInventoryLines.length">
+                        <td colspan="3" class="py-4 text-center text-sm text-gray-400">Sin inventario registrado.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+
           </div>
 
           <!-- ══════════════════════════════════════════ CUADRO DE HONOR -->
@@ -2390,6 +2872,28 @@
                     <span>Exigir lineas de salida al marcar enviado</span>
                     <input type="checkbox" [checked]="businessConfigDraft.orders.requireDispatchLinesOnShipped" (change)="businessConfigDraft.orders.requireDispatchLinesOnShipped = $any($event.target).checked" />
                   </label>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('config_manage')">
+                <div class="text-sm font-semibold text-main">Codigo de autorizacion POS</div>
+                <div class="mt-1 text-xs text-gray-600">Codigo requerido para aplicar descuentos de cajero, pagos parciales, credito y retiros de efectivo.</div>
+                <div class="mt-3 grid gap-3">
+                  <ui-form-field
+                    kind="input"
+                    type="password"
+                    label="Nuevo codigo (min. 4 caracteres)"
+                    placeholder="****"
+                    [ngModel]="posAuthCodeDraft"
+                    (ngModelChange)="posAuthCodeDraft = $event">
+                  </ui-form-field>
+                  <div *ngIf="posAuthCodeMessage" class="rounded-2xl border px-3 py-2 text-xs"
+                    [ngClass]="posAuthCodeIsError ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+                    {{ posAuthCodeMessage }}
+                  </div>
+                  <ui-button size="sm" variant="primary" [disabled]="isSavingPosAuthCode || (posAuthCodeDraft || '').length < 4" (pressed)="savePosAuthCode()">
+                    {{ isSavingPosAuthCode ? 'Guardando...' : 'Actualizar codigo' }}
+                  </ui-button>
                 </div>
               </div>
 
@@ -3225,11 +3729,123 @@
     {{ posCashCutError }}
   </div>
 
+  <div *ngIf="lastCompletedCut" class="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 flex items-center justify-between gap-3">
+    <span>Ultimo corte registrado.</span>
+    <ui-button size="sm" variant="ghost" (pressed)="downloadCutReport($any(lastCompletedCut))">
+      <i class="fa-solid fa-download" aria-hidden="true"></i>
+      Descargar CSV
+    </ui-button>
+  </div>
+
   <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
     <ui-button size="sm" variant="ghost" (pressed)="closePosCashCutModal()">Cancelar</ui-button>
     <ui-button size="sm" variant="primary" [disabled]="isCuttingPosCash" (pressed)="confirmPosCashCut()">
       <i class="fa-solid fa-scissors" aria-hidden="true"></i>
       {{ isCuttingPosCash ? 'Guardando...' : 'Registrar corte' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- POS Auth code modal -->
+<ui-modal [isOpen]="isPosAuthModalOpen" maxWidthClass="max-w-sm" contentClass="p-6" (closed)="closePosAuthModal()">
+  <div class="text-lg font-extrabold text-main">Autorizacion requerida</div>
+  <div class="mt-1 text-sm text-gray-600">Ingresa el codigo de autorizacion para {{ posAuthAction }}.</div>
+  <div class="mt-4">
+    <ui-form-field
+      kind="input"
+      type="text"
+      label="Codigo de autorizacion"
+      placeholder="****"
+      [ngModel]="posAuthCode"
+      (ngModelChange)="posAuthCode = $event">
+    </ui-form-field>
+  </div>
+  <div *ngIf="posAuthError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posAuthError }}</div>
+  <div class="mt-5 flex justify-end gap-2">
+    <ui-button size="sm" variant="ghost" (pressed)="closePosAuthModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="isValidatingPosAuth || !posAuthCode.trim()" (pressed)="confirmPosAuth()">
+      {{ isValidatingPosAuth ? 'Verificando...' : 'Confirmar' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- POS Cashier discount modal -->
+<ui-modal [isOpen]="isPosDiscountModalOpen" maxWidthClass="max-w-sm" contentClass="p-6" (closed)="closePosDiscountModal()">
+  <div class="text-lg font-extrabold text-main">Descuento cajero</div>
+  <div class="mt-1 text-sm text-gray-600">Aplica un descuento adicional sobre el total de la venta.</div>
+  <div class="mt-4 flex gap-2">
+    <ui-button
+      size="sm"
+      [variant]="posDiscountMode === 'percent' ? 'primary' : 'ghost'"
+      (pressed)="posDiscountMode = 'percent'">
+      Porcentaje (%)
+    </ui-button>
+    <ui-button
+      size="sm"
+      [variant]="posDiscountMode === 'amount' ? 'primary' : 'ghost'"
+      (pressed)="posDiscountMode = 'amount'">
+      Monto fijo ($)
+    </ui-button>
+  </div>
+  <div class="mt-3">
+    <ui-form-field
+      kind="input"
+      type="number"
+      [label]="posDiscountMode === 'percent' ? 'Porcentaje de descuento' : 'Monto a descontar'"
+      [placeholder]="posDiscountMode === 'percent' ? 'Ej: 10' : 'Ej: 50'"
+      [min]="0"
+      [max]="posDiscountMode === 'percent' ? 100 : null"
+      [step]="0.01"
+      [ngModel]="posDiscountValue"
+      (ngModelChange)="posDiscountValue = $event">
+    </ui-form-field>
+  </div>
+  <div *ngIf="posDiscountError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posDiscountError }}</div>
+  <div class="mt-5 flex justify-end gap-2">
+    <ui-button size="sm" variant="ghost" (pressed)="closePosDiscountModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="!posDiscountValue || +posDiscountValue <= 0" (pressed)="applyPosDiscount()">
+      Aplicar descuento
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- POS Cash withdrawal modal -->
+<ui-modal [isOpen]="isPosWithdrawalModalOpen" maxWidthClass="max-w-sm" contentClass="p-6" (closed)="closePosWithdrawalModal()">
+  <div class="text-lg font-extrabold text-main">Retiro de efectivo</div>
+  <div class="mt-1 text-sm text-gray-600">Registra un retiro parcial del efectivo acumulado en caja.</div>
+  <div class="mt-4 flex flex-col gap-3">
+    <ui-form-field
+      kind="input"
+      type="number"
+      label="Monto a retirar"
+      placeholder="0.00"
+      [min]="0.01"
+      [step]="0.01"
+      [ngModel]="posWithdrawalAmount"
+      (ngModelChange)="posWithdrawalAmount = $event">
+    </ui-form-field>
+    <ui-form-field
+      kind="input"
+      type="text"
+      label="Motivo"
+      placeholder="Ej: Pago de proveedor"
+      [ngModel]="posWithdrawalReason"
+      (ngModelChange)="posWithdrawalReason = $event">
+    </ui-form-field>
+    <ui-form-field
+      kind="input"
+      type="text"
+      label="Codigo de autorizacion"
+      placeholder="****"
+      [ngModel]="posWithdrawalAuthCode"
+      (ngModelChange)="posWithdrawalAuthCode = $event">
+    </ui-form-field>
+  </div>
+  <div *ngIf="posWithdrawalError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posWithdrawalError }}</div>
+  <div class="mt-5 flex justify-end gap-2">
+    <ui-button size="sm" variant="ghost" (pressed)="closePosWithdrawalModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" [disabled]="isRegisteringPosWithdrawal || !posWithdrawalAmount || +posWithdrawalAmount <= 0 || !posWithdrawalReason.trim() || !posWithdrawalAuthCode.trim()" (pressed)="confirmPosWithdrawal()">
+      {{ isRegisteringPosWithdrawal ? 'Registrando...' : 'Confirmar retiro' }}
     </ui-button>
   </div>
 </ui-modal>

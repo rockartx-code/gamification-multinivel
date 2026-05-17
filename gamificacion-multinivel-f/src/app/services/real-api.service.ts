@@ -27,6 +27,7 @@ import {
   PosCashControl,
   PosCashCut,
   PosSale,
+  PosWithdrawal,
   StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
@@ -50,7 +51,8 @@ import {
   AdminReturnInspectResponse,
   OrderCancelResponse,
   OrderReturnRequestPayload,
-  OrderReturnRequestResponse
+  OrderReturnRequestResponse,
+  MonthlyStatsResult
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
@@ -330,6 +332,7 @@ export class RealApiService {
       inOnlineStore: p['inOnlineStore'] !== false,
       inPOS: p['inPOS'] !== false,
       commissionable: p['commissionable'] !== false,
+      vpPoints: p['vpPoints'] != null ? Number(p['vpPoints']) : undefined,
       sku: p['sku'] != null ? String(p['sku']) : undefined,
       hook: p['hook'] != null ? String(p['hook']) : undefined,
       description: p['description'] != null ? String(p['description']) : undefined,
@@ -766,23 +769,7 @@ export class RealApiService {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http
       .get<{ sales: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/pos/sales${query}`, { headers: this.actorHeaders() })
-      .pipe(map((response) => (response.sales ?? []).map((s) => ({
-        id: String(s['saleId'] ?? s['id'] ?? ''),
-        orderId: String(s['orderId'] ?? ''),
-        stockId: String(s['stockId'] ?? ''),
-        attendantUserId: s['attendantUserId'] != null ? Number(s['attendantUserId']) : null,
-        customerId: s['customerId'] != null ? Number(s['customerId']) : null,
-        customerName: String(s['customerName'] ?? ''),
-        paymentStatus: (s['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
-        deliveryStatus: (s['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
-        paymentMethod: s['paymentMethod'] != null ? (String(s['paymentMethod']) as PosSale['paymentMethod']) : undefined,
-        grossSubtotal: s['grossSubtotal'] != null ? Number(s['grossSubtotal']) : undefined,
-        discountRate: s['discountRate'] != null ? Number(s['discountRate']) : undefined,
-        discountAmount: s['discountAmount'] != null ? Number(s['discountAmount']) : undefined,
-        total: Number(s['total'] ?? 0),
-        lines: Array.isArray(s['lines']) ? (s['lines'] as AdminOrderItem[]) : [],
-        createdAt: s['createdAt'] != null ? String(s['createdAt']) : undefined,
-      } as PosSale))));
+      .pipe(map((response) => (response.sales ?? []).map((s) => this.normalizePosSaleRecord(s))));
   }
 
   registerPosSale(payload: {
@@ -793,6 +780,11 @@ export class RealApiService {
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+    cashierDiscountMode?: 'percent' | 'amount';
+    cashierDiscountValue?: number;
+    paymentType?: 'full' | 'partial' | 'credit';
+    amountPaid?: number;
+    authCode?: string;
   }): Observable<{ sale: PosSale }> {
     return this.http
       .post<{ sale?: Record<string, unknown>; saleId?: string; orderId?: string; message?: string; Error?: string }>(`${this.baseUrl}/inventory/pos/sales`, payload, {
@@ -801,6 +793,49 @@ export class RealApiService {
       .pipe(
         map((response) => ({ sale: this.normalizePosSaleResponse(response, payload) }))
       );
+  }
+
+  validatePosAuth(code: string): Observable<{ ok: boolean }> {
+    return this.http.post<{ ok: boolean }>(
+      `${this.baseUrl}/inventory/pos/validate-auth`,
+      { code },
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  registerPosWithdrawal(payload: { stockId: string; amount: number; reason: string; authCode: string }): Observable<{ withdrawal: PosWithdrawal; control: PosCashControl }> {
+    return this.http
+      .post<{ withdrawal: Record<string, unknown>; control: Record<string, unknown> }>(
+        `${this.baseUrl}/inventory/pos/withdrawal`,
+        payload,
+        { headers: this.actorHeaders() }
+      )
+      .pipe(
+        map((response) => ({
+          withdrawal: this.normalizePosWithdrawal(response.withdrawal),
+          control: this.normalizePosCashControl(response.control)
+        }))
+      );
+  }
+
+  savePosAuthCode(code: string): Observable<{ ok: boolean }> {
+    return this.http.put<{ ok: boolean }>(
+      `${this.baseUrl}/inventory/pos/auth-config`,
+      { posAuthCode: code },
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  listPosCashCuts(stockId?: string): Observable<PosCashCut[]> {
+    const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
+    return this.http
+      .get<{ cuts: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/pos/cash-cuts${query}`, { headers: this.actorHeaders() })
+      .pipe(map((response) => (response.cuts ?? []).map((c) => this.normalizePosCashCut(c))));
+  }
+
+  getMonthlyStats(month: string): Observable<MonthlyStatsResult> {
+    return this.http
+      .get<MonthlyStatsResult>(`${this.baseUrl}/commissions/monthly-stats?month=${encodeURIComponent(month)}`, { headers: this.actorHeaders() });
   }
 
   getPosCashControl(stockId?: string): Observable<PosCashControl> {
@@ -855,6 +890,17 @@ export class RealApiService {
       .pipe(map((response) => response.customer));
   }
 
+  private normalizePosWithdrawal(raw: Record<string, unknown>): PosWithdrawal {
+    return {
+      id: String(raw['withdrawalId'] ?? raw['id'] ?? ''),
+      stockId: String(raw['stockId'] ?? ''),
+      attendantUserId: raw['attendantUserId'] != null ? Number(raw['attendantUserId']) : null,
+      amount: Number(raw['amount'] ?? 0),
+      reason: String(raw['reason'] ?? ''),
+      createdAt: raw['createdAt'] != null ? String(raw['createdAt']) : undefined,
+    };
+  }
+
   private normalizePosSaleResponse(
     response: { sale?: Record<string, unknown>; saleId?: string; orderId?: string; message?: string; Error?: string },
     payload: {
@@ -865,6 +911,11 @@ export class RealApiService {
       paymentStatus?: 'paid_branch';
       deliveryStatus?: 'delivered_branch';
       items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+      cashierDiscountMode?: 'percent' | 'amount';
+      cashierDiscountValue?: number;
+      paymentType?: 'full' | 'partial' | 'credit';
+      amountPaid?: number;
+      authCode?: string;
     }
   ): PosSale {
     const sale = this.asRecord(response.sale);
@@ -911,6 +962,12 @@ export class RealApiService {
       total: Number(sale['total'] ?? 0),
       lines: Array.isArray(sale['lines']) ? (sale['lines'] as AdminOrderItem[]) : [],
       createdAt: sale['createdAt'] != null ? String(sale['createdAt']) : undefined,
+      cashCutId: sale['cashCutId'] != null ? String(sale['cashCutId']) : undefined,
+      paymentType: sale['paymentType'] != null ? (String(sale['paymentType']) as PosSale['paymentType']) : undefined,
+      amountPaid: sale['amountPaid'] != null ? Number(sale['amountPaid']) : undefined,
+      pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
+      cashierDiscountMode: sale['cashierDiscountMode'] != null ? (String(sale['cashierDiscountMode']) as PosSale['cashierDiscountMode']) : undefined,
+      cashierDiscountAmount: sale['cashierDiscountAmount'] != null ? Number(sale['cashierDiscountAmount']) : undefined,
     };
   }
 
@@ -926,6 +983,13 @@ export class RealApiService {
       startedAt: cut['startedAt'] != null ? String(cut['startedAt']) : undefined,
       endedAt: cut['endedAt'] != null ? String(cut['endedAt']) : undefined,
       createdAt: cut['createdAt'] != null ? String(cut['createdAt']) : undefined,
+      totalWithdrawals: cut['totalWithdrawals'] != null ? Number(cut['totalWithdrawals']) : undefined,
+      sales: Array.isArray(cut['sales'])
+        ? (cut['sales'] as Record<string, unknown>[]).map((s) => this.normalizePosSaleRecord(s))
+        : undefined,
+      withdrawals: Array.isArray(cut['withdrawals'])
+        ? (cut['withdrawals'] as Record<string, unknown>[]).map((w) => this.normalizePosWithdrawal(w))
+        : undefined,
     };
   }
 

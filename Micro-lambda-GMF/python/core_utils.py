@@ -534,6 +534,39 @@ def _increment_associate_month_net_volume(associate_id: Any, month_key: str, del
     _put_associate_month_ref(entity_id, now)
     return resp.get("Attributes") or {}
 
+def _increment_associate_month_net_vp(associate_id: Any, month_key: str, delta_vp: float) -> dict:
+    """Acumula puntos VP directos en el registro mensual del asociado."""
+    entity_id = _associate_month_entity_id(associate_id, month_key)
+    if not entity_id:
+        raise ValueError("ASSOCIATE_MONTH_INVALID_ID")
+    normalized_associate_id = _customer_id_str(associate_id)
+    now = _now_iso()
+    resp = _table.update_item(
+        Key=_associate_month_key(entity_id),
+        UpdateExpression=(
+            "SET entityType = if_not_exists(entityType, :entity_type), "
+            "associateId = if_not_exists(associateId, :associate_id), "
+            "monthKey = if_not_exists(monthKey, :month_key), "
+            "createdAt = if_not_exists(createdAt, :created_at), "
+            "updatedAt = :updated_at, "
+            "netVP = if_not_exists(netVP, :zero) + :delta, "
+            "isActive = if_not_exists(isActive, :inactive)"
+        ),
+        ExpressionAttributeValues={
+            ":entity_type": "associateMonth",
+            ":associate_id": normalized_associate_id,
+            ":month_key": str(month_key or "").strip(),
+            ":created_at": now,
+            ":updated_at": now,
+            ":zero": _to_decimal(0),
+            ":delta": _to_decimal(delta_vp),
+            ":inactive": False,
+        },
+        ReturnValues="ALL_NEW",
+    )
+    _put_associate_month_ref(entity_id, now)
+    return resp.get("Attributes") or {}
+
 def _normalize_batch_entity_id(entity: str, raw_id: Any) -> Any:
     entity = str(entity or "").upper()
     if entity == "CUSTOMER":

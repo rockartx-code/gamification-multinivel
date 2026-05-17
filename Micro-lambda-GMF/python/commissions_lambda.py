@@ -50,14 +50,57 @@ def _save_ledger_month(item):
 # --- MOTOR VP / VG ---
 
 def _mxn_to_vp(net_mxn: float, mxn_per_vp: float) -> float:
-    """Convierte MXN netos a puntos VP."""
+    """Convierte MXN netos a puntos VP (fallback cuando no hay vpPoints por producto)."""
     return net_mxn / mxn_per_vp if mxn_per_vp > 0 else 0.0
+
+def _state_to_vp(state: dict, mxn_per_vp: float) -> float:
+    """Lee VP de un ASSOCIATE_MONTH: usa netVP si existe, si no convierte netVolume."""
+    if state is None:
+        return 0.0
+    if "netVP" in state:
+        return float(utils._to_decimal(state.get("netVP", 0)))
+    return _mxn_to_vp(float(utils._to_decimal(state.get("netVolume", 0))), mxn_per_vp)
 
 def _calc_vp(customer_id: str, month_key: str, mxn_per_vp: float) -> float:
     """Volumen Personal: compras propias del mes expresadas en VP."""
     state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key))
-    net_mxn = float(utils._to_decimal(state.get("netVolume", 0)) if state else 0)
-    return _mxn_to_vp(net_mxn, mxn_per_vp)
+    return _state_to_vp(state, mxn_per_vp)
+
+def _compute_order_vp(order: dict, mxn_per_vp: float) -> float:
+    """
+    Calcula los puntos VP que genera una orden.
+    - Si el ítem tiene vpPoints configurado (copiado del catálogo al crear la orden),
+      se usan directamente: vpPoints * qty.
+    - Si no, se calcula desde el precio: price * qty / mxn_per_vp.
+    - Solo ítems comisionables contribuyen.
+    - Se aplica el descuento proporcional de la orden al total de VP.
+    """
+    items = order.get("items") or []
+    gross_subtotal = float(utils._to_decimal(order.get("grossSubtotal", 0)))
+    net_total      = float(utils._to_decimal(order.get("netTotal", gross_subtotal or 0)))
+
+    # Factor de descuento (1.0 = sin descuento)
+    if gross_subtotal > 0:
+        discount_factor = net_total / gross_subtotal
+    else:
+        raw_rate = float(utils._to_decimal(order.get("discountRate", 0)))
+        discount_factor = 1.0 - raw_rate
+
+    raw_vp = 0.0
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        if it.get("commissionable") is False:
+            continue
+        qty = float(utils._to_decimal(it.get("quantity", 1)))
+        vp_pts = it.get("vpPoints")
+        if vp_pts is not None:
+            raw_vp += float(utils._to_decimal(vp_pts)) * qty
+        else:
+            price = float(utils._to_decimal(it.get("price", 0)))
+            raw_vp += (price * qty / mxn_per_vp) if mxn_per_vp > 0 else 0.0
+
+    return raw_vp * discount_factor
 
 def _get_direct_reports(customer_id: str) -> list:
     """IDs de los referidos directos (nivel 1)."""
@@ -102,7 +145,7 @@ def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: in
 
     visited: set = set()
     queue: list = [(str(customer_id), 0)]
-    total_mxn = 0.0
+    total_vp = 0.0
 
     while queue:
         cid, depth = queue.pop(0)
@@ -110,13 +153,13 @@ def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: in
             continue
         visited.add(cid)
         state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, month_key))
-        total_mxn += float(utils._to_decimal(state.get("netVolume", 0)) if state else 0)
+        total_vp += _state_to_vp(state, mxn_per_vp)
         if depth < max_levels:
             for sid, c in id_map.items():
                 if str(c.get("leaderId", "")) == cid and sid not in visited:
                     queue.append((sid, depth + 1))
 
-    return _mxn_to_vp(total_mxn, mxn_per_vp)
+    return total_vp
 
 def _get_rank(vg: float, rank_thresholds: list) -> str:
     """Determina el rango del asociado por VG."""
@@ -499,13 +542,18 @@ def handle_apply_rewards(order_id):
     month_key  = order.get("monthKey") or utils._month_key()
     net_amount = utils._to_decimal(order.get("netTotal"))
 
-    # Calcular monto comisionable: sólo ítems de productos con commissionable=True
+    # Calcular monto comisionable en MXN (para comisiones al upline)
     commissionable_net = _commissionable_net(order, net_amount)
 
-    # 1. Actualizar volumen personal del comprador (solo monto comisionable)
+    # Calcular puntos VP de esta orden (usa vpPoints por producto + descuento)
+    order_vp = _compute_order_vp(order, mxn_per_vp)
+
+    # 1. Actualizar volumen personal del comprador
     buyer_id = order.get("customerId")
     if order.get("buyerType") in ["associate", "registered"] and buyer_id:
+        # Almacena netVolume en MXN (compatibilidad) y netVP en puntos directos
         utils._increment_associate_month_net_volume(buyer_id, month_key, commissionable_net)
+        utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
 
     # 2. Repartir comisiones al upline
     chain = _get_upline_chain(order['customerId'])
@@ -525,9 +573,9 @@ def handle_apply_rewards(order_id):
         rate   = rates.get(level, utils.D_ZERO)
         amount = (commissionable_net * rate).quantize(utils.D_CENT)
 
-        # Verificar activación (ahora en VP)
+        # Verificar activación usando VP directos (netVP si existe, sino convierte netVolume)
         m_state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(b_id, month_key))
-        beneficiary_vp = _mxn_to_vp(float(utils._to_decimal(m_state.get("netVolume", 0)) if m_state else 0), mxn_per_vp)
+        beneficiary_vp = _state_to_vp(m_state, mxn_per_vp)
         is_active = beneficiary_vp >= activation_vp
 
         item   = _get_ledger_month(b_id, month_key)
@@ -797,6 +845,139 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
     return {"voided": voided, "count": len(voided)}
 
 
+# --- REPORTE MENSUAL DE OPERACIONES ---
+
+def handle_monthly_stats(month: str) -> dict:
+    """Agrega estadísticas operacionales del mes para pedidos, clientes, productos y stocks."""
+
+    # --- PEDIDOS ---
+    all_orders = utils._query_bucket("ORDER")
+    month_orders = [o for o in all_orders if str(o.get("monthKey", "")) == month]
+
+    orders_count = len(month_orders)
+    orders_total = sum(float(utils._to_decimal(o.get("total", 0))) for o in month_orders)
+    avg_ticket = (orders_total / orders_count) if orders_count else 0
+
+    # Por estado
+    by_status: dict = {}
+    for o in month_orders:
+        s = o.get("status", "unknown")
+        by_status[s] = by_status.get(s, 0) + 1
+
+    # Por método de pago
+    by_payment: dict = {}
+    for o in month_orders:
+        pm = o.get("paymentMethod", "unknown")
+        by_payment[pm] = by_payment.get(pm, 0) + 1
+
+    # Clientes activos (compraron en el mes)
+    active_customer_ids = list({str(o.get("customerId", "")) for o in month_orders if o.get("customerId")})
+    active_customer_count = len(active_customer_ids)
+
+    # Top clientes por número de pedidos
+    cust_order_count: dict = {}
+    cust_order_total: dict = {}
+    for o in month_orders:
+        cid = str(o.get("customerId", ""))
+        if cid:
+            cust_order_count[cid] = cust_order_count.get(cid, 0) + 1
+            cust_order_total[cid] = cust_order_total.get(cid, 0) + float(utils._to_decimal(o.get("total", 0)))
+    top_customers = sorted(
+        [{"customerId": k, "orders": cust_order_count[k], "total": cust_order_total[k]} for k in cust_order_count],
+        key=lambda x: x["orders"], reverse=True
+    )[:10]
+
+    # Productos vendidos en pedidos
+    product_sales: dict = {}
+    for o in month_orders:
+        for item in (o.get("items") or []):
+            pid = str(item.get("productId", item.get("id", "")))
+            if not pid:
+                continue
+            name = item.get("name", pid)
+            qty = int(item.get("quantity", 1))
+            price = float(utils._to_decimal(item.get("price", 0)))
+            if pid not in product_sales:
+                product_sales[pid] = {"productId": pid, "name": name, "units": 0, "revenue": 0.0}
+            product_sales[pid]["units"] += qty
+            product_sales[pid]["revenue"] += qty * price
+
+    product_sales_list = sorted(product_sales.values(), key=lambda x: x["units"], reverse=True)
+    total_units_sold = sum(p["units"] for p in product_sales_list)
+
+    # --- CLIENTES ---
+    all_customers = utils._query_bucket("CUSTOMER")
+    new_customers = [c for c in all_customers if str(c.get("createdAt", "")).startswith(month)]
+    new_customer_count = len(new_customers)
+
+    # Tasa de recompra: clientes activos que tenían al menos 1 pedido en meses anteriores
+    prev_buyer_ids = {str(o.get("customerId", "")) for o in all_orders
+                      if str(o.get("monthKey", "")) < month and o.get("customerId")}
+    repurchase_ids = {cid for cid in active_customer_ids if cid in prev_buyer_ids}
+    repurchase_rate = (len(repurchase_ids) / active_customer_count * 100) if active_customer_count else 0
+
+    # --- POS VENTAS ---
+    all_pos = utils._query_bucket("POS_SALE")
+    month_pos = [p for p in all_pos if str(p.get("createdAt", "")).startswith(month)]
+    pos_count = len(month_pos)
+    pos_total = sum(float(utils._to_decimal(p.get("total", 0))) for p in month_pos)
+
+    # --- MOVIMIENTOS DE INVENTARIO ---
+    all_movements = utils._query_bucket("INVENTORY_MOVEMENT")
+    month_movements = [m for m in all_movements if str(m.get("createdAt", "")).startswith(month)]
+    movements_by_type: dict = {}
+    for mv in month_movements:
+        t = mv.get("type", "unknown")
+        movements_by_type[t] = movements_by_type.get(t, 0) + 1
+
+    # --- STOCKS ACTUALES ---
+    all_stocks = utils._query_bucket("STOCK")
+    stock_summary = []
+    for st in all_stocks:
+        stock_summary.append({
+            "stockId": str(st.get("SK", st.get("id", ""))),
+            "name": st.get("name", ""),
+            "location": st.get("location", ""),
+            "totalProducts": int(st.get("totalProducts", 0)),
+            "totalValue": float(utils._to_decimal(st.get("totalValue", 0))),
+        })
+
+    result = {
+        "month": month,
+        "orders": {
+            "count": orders_count,
+            "total": round(orders_total, 2),
+            "avgTicket": round(avg_ticket, 2),
+            "byStatus": by_status,
+            "byPaymentMethod": by_payment,
+            "activeCustomers": active_customer_ids,
+            "activeCustomerCount": active_customer_count,
+            "topCustomers": top_customers,
+        },
+        "products": {
+            "sales": product_sales_list,
+            "totalUnitsSold": total_units_sold,
+        },
+        "customers": {
+            "newCount": new_customer_count,
+            "activeCount": active_customer_count,
+            "repurchaseRate": round(repurchase_rate, 2),
+        },
+        "pos": {
+            "count": pos_count,
+            "total": round(pos_total, 2),
+        },
+        "stocks": {
+            "summary": stock_summary,
+            "movements": month_movements,
+            "movementsByType": movements_by_type,
+        },
+    }
+
+    print(f"[MONTHLY_STATS] month={month} orders={orders_count} pos={pos_count} customers_new={new_customer_count}")
+    return utils._json_response(200, result)
+
+
 # --- LAMBDA HANDLER PRINCIPAL ---
 
 def lambda_handler(event, context):
@@ -967,6 +1148,13 @@ def lambda_handler(event, context):
                 return utils._json_response(400, {"message": "customerId requerido"})
             result = handle_evaluate_bonuses(str(cid), month_key)
             return utils._json_response(200, result)
+
+        # GET /commissions/monthly-stats?month=YYYY-MM
+        if root == "monthly-stats" and method == "GET":
+            err = utils._require_admin(headers, "access_screen_stats")
+            if err: return err
+            month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
+            return handle_monthly_stats(month)
 
         return utils._json_response(404, {"message": "Ruta de comisiones no encontrada"})
 

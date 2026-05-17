@@ -23,6 +23,7 @@ import {
   PosCashControl,
   PosCashCut,
   PosSale,
+  PosWithdrawal,
   StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
@@ -32,7 +33,8 @@ import {
   SaveAdminNotificationPayload,
   UpdateBusinessConfigPayload,
   UpdateCustomerPayload,
-  UpdateCustomerPrivilegesPayload
+  UpdateCustomerPrivilegesPayload,
+  MonthlyStatsResult
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { PortalNotification } from '../models/portal-notification.model';
@@ -455,8 +457,33 @@ export class AdminControlService {
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+    cashierDiscountMode?: 'percent' | 'amount';
+    cashierDiscountValue?: number;
+    paymentType?: 'full' | 'partial' | 'credit';
+    amountPaid?: number;
+    authCode?: string;
   }): Observable<{ sale: PosSale }> {
     return this.api.registerPosSale(payload);
+  }
+
+  savePosAuthCode(code: string): Observable<{ ok: boolean }> {
+    return this.api.savePosAuthCode(code);
+  }
+
+  validatePosAuth(code: string): Observable<{ ok: boolean }> {
+    return this.api.validatePosAuth(code);
+  }
+
+  registerPosWithdrawal(payload: { stockId: string; amount: number; reason: string; authCode: string }): Observable<{ withdrawal: PosWithdrawal; control: PosCashControl }> {
+    return this.api.registerPosWithdrawal(payload);
+  }
+
+  listPosCashCuts(stockId?: string): Observable<PosCashCut[]> {
+    return this.api.listPosCashCuts(stockId);
+  }
+
+  getMonthlyStats(month: string): Observable<MonthlyStatsResult> {
+    return this.api.getMonthlyStats(month);
   }
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {

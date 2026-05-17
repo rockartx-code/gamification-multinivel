@@ -29,18 +29,20 @@ MAX_ADMIN_ORDER_PAGE_SIZE = 500         # admins
 
 def _enrich_items_commissionable(items: list) -> list:
     """
-    Añade la bandera commissionable a cada ítem según el catálogo de productos.
-    Si el producto no se encuentra, se asume commissionable=True.
+    Añade commissionable y vpPoints a cada ítem según el catálogo de productos.
+    Si el producto no se encuentra, se asume commissionable=True y vpPoints=None.
     """
     enriched = []
     for it in items:
         item = dict(it) if isinstance(it, dict) else {}
-        if "commissionable" not in item:
-            pid = item.get("productId")
-            if pid is not None:
-                product = utils._get_by_id("PRODUCT", pid)
-                if product:
+        pid = item.get("productId")
+        if pid is not None:
+            product = utils._get_by_id("PRODUCT", pid)
+            if product:
+                if "commissionable" not in item:
                     item["commissionable"] = bool(product.get("commissionable", True))
+                if "vpPoints" not in item and product.get("vpPoints") is not None:
+                    item["vpPoints"] = float(utils._to_decimal(product["vpPoints"]))
         enriched.append(item)
     return enriched
 

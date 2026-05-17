@@ -281,6 +281,7 @@ export interface SaveAdminProductPayload {
   inOnlineStore?: boolean;
   inPOS?: boolean;
   commissionable?: boolean;
+  vpPoints?: number;
   sku?: string;
   hook?: string;
   description?: string;
@@ -408,6 +409,8 @@ export interface AdminProduct {
   inOnlineStore?: boolean;
   inPOS?: boolean;
   commissionable?: boolean;
+  /** Puntos VP fijos por unidad vendida. Si es null, se calcula desde el precio. */
+  vpPoints?: number;
   sku?: string;
   hook?: string;
   description?: string;
@@ -608,7 +611,7 @@ export interface PosSale {
   attendantUserId?: number | null;
   customerId?: number | null;
   customerName: string;
-  paymentStatus: 'paid_branch';
+  paymentStatus: 'paid_branch' | 'partial_branch' | 'credit_branch';
   deliveryStatus: 'paid_branch' | 'delivered_branch';
   paymentMethod?: 'cash' | 'card' | 'transfer';
   grossSubtotal?: number;
@@ -617,6 +620,12 @@ export interface PosSale {
   total: number;
   lines: AdminOrderItem[];
   createdAt?: string;
+  cashCutId?: string;
+  paymentType?: 'full' | 'partial' | 'credit';
+  amountPaid?: number;
+  pendingAmount?: number;
+  cashierDiscountMode?: 'percent' | 'amount';
+  cashierDiscountAmount?: number;
 }
 
 export interface PosCashControl {
@@ -632,6 +641,8 @@ export interface PosCashControl {
   lastCutCashToKeep?: number;
   lastCutWithdrawnAmount?: number;
   lastSaleAt?: string;
+  withdrawalCount?: number;
+  totalWithdrawn?: number;
 }
 
 export interface PosCashCut {
@@ -644,6 +655,18 @@ export interface PosCashCut {
   withdrawnAmount?: number;
   startedAt?: string;
   endedAt?: string;
+  createdAt?: string;
+  sales?: PosSale[];
+  withdrawals?: PosWithdrawal[];
+  totalWithdrawals?: number;
+}
+
+export interface PosWithdrawal {
+  id: string;
+  stockId: string;
+  attendantUserId?: number | null;
+  amount: number;
+  reason: string;
   createdAt?: string;
 }
 
@@ -817,4 +840,59 @@ export interface BonusAward {
   rewardPct?: number;
   status: 'pending' | 'paid' | 'cancelled';
   createdAt?: string;
+}
+
+// --- ESTADÍSTICAS MENSUALES ---
+
+export interface MonthlyProductSale {
+  productId: string;
+  name: string;
+  units: number;
+  revenue: number;
+}
+
+export interface MonthlyTopCustomer {
+  customerId: string;
+  orders: number;
+  total: number;
+}
+
+export interface MonthlyStockSummary {
+  stockId: string;
+  name: string;
+  location: string;
+  totalProducts: number;
+  totalValue: number;
+}
+
+export interface MonthlyStatsResult {
+  month: string;
+  orders: {
+    count: number;
+    total: number;
+    avgTicket: number;
+    byStatus: Record<string, number>;
+    byPaymentMethod: Record<string, number>;
+    activeCustomers: string[];
+    activeCustomerCount: number;
+    topCustomers: MonthlyTopCustomer[];
+  };
+  products: {
+    sales: MonthlyProductSale[];
+    totalUnitsSold: number;
+  };
+  customers: {
+    newCount: number;
+    activeCount: number;
+    repurchaseRate: number;
+  };
+  pos: {
+    count: number;
+    total: number;
+  };
+  stocks: {
+    summary: MonthlyStockSummary[];
+    movements: Record<string, unknown>[];
+    movementsByType: Record<string, number>;
+  };
 }

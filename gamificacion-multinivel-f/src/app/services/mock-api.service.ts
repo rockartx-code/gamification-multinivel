@@ -24,6 +24,7 @@ import {
   PosCashControl,
   PosCashCut,
   PosSale,
+  PosWithdrawal,
   StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
@@ -48,7 +49,8 @@ import {
   AdminReturnInspectResponse,
   OrderCancelResponse,
   OrderReturnRequestPayload,
-  OrderReturnRequestResponse
+  OrderReturnRequestResponse,
+  MonthlyStatsResult
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
@@ -133,6 +135,7 @@ export class MockApiService {
   private inventoryMovements: InventoryMovement[] = [];
   private posSales: PosSale[] = [];
   private posCashCuts: PosCashCut[] = [];
+  private posWithdrawals: PosWithdrawal[] = [];
   private associateMonths: Record<string, AssociateMonth> = {};
   private campaigns: AdminCampaign[] = [
     {
@@ -1532,6 +1535,11 @@ export class MockApiService {
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+    cashierDiscountMode?: 'percent' | 'amount';
+    cashierDiscountValue?: number;
+    paymentType?: 'full' | 'partial' | 'credit';
+    amountPaid?: number;
+    authCode?: string;
   }): Observable<{ sale: PosSale }> {
     const actorId = this.currentActorId();
     if (!actorId) {
@@ -1581,6 +1589,17 @@ export class MockApiService {
         : entry
     );
 
+    const paymentType = payload.paymentType ?? 'full';
+    const cashierDiscountAmount = (() => {
+      const v = payload.cashierDiscountValue ?? 0;
+      if (!payload.cashierDiscountMode || v <= 0) return 0;
+      if (payload.cashierDiscountMode === 'percent') return Math.round(grossSubtotal * (v / 100) * 100) / 100;
+      return Math.min(v, grossSubtotal);
+    })();
+    const netTotal = Math.max(0, total - cashierDiscountAmount);
+    const amountPaidNow = paymentType === 'full' ? netTotal : paymentType === 'credit' ? 0 : Math.min(payload.amountPaid ?? 0, netTotal);
+    const paymentStatus: PosSale['paymentStatus'] = paymentType === 'full' ? 'paid_branch' : paymentType === 'partial' ? 'partial_branch' : 'credit_branch';
+
     const sale: PosSale = {
       id: `SALE-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
       orderId: `POS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
@@ -1588,13 +1607,18 @@ export class MockApiService {
       attendantUserId: actorId,
       customerId: customer?.id ?? null,
       customerName: customer?.name || payload.customerName || 'Publico en General',
-      paymentStatus: payload.paymentStatus ?? 'paid_branch',
+      paymentStatus,
       deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
       paymentMethod: payload.paymentMethod ?? 'cash',
       grossSubtotal,
       discountRate,
       discountAmount,
-      total,
+      cashierDiscountMode: payload.cashierDiscountMode,
+      cashierDiscountAmount,
+      paymentType,
+      amountPaid: amountPaidNow,
+      pendingAmount: Math.max(0, netTotal - amountPaidNow),
+      total: netTotal,
       lines: payload.items.map((item) => ({ ...item })),
       createdAt: new Date().toISOString()
     };
@@ -1671,6 +1695,20 @@ export class MockApiService {
       endedAt: now,
       createdAt: now
     };
+    const pendingSales = this.posSales.filter(
+      (s) => s.stockId === payload.stockId && s.attendantUserId === actorId && !s.cashCutId && (s.paymentMethod ?? 'cash') === 'cash'
+    );
+    const pendingWithdrawals = this.posWithdrawals.filter(
+      (w) => w.stockId === payload.stockId && w.attendantUserId === actorId && !(w as PosWithdrawal & { cashCutId?: string }).cashCutId
+    );
+    cut.sales = pendingSales;
+    cut.withdrawals = pendingWithdrawals;
+    this.posSales = this.posSales.map((s) =>
+      pendingSales.some((ps) => ps.id === s.id) ? { ...s, cashCutId: cut.id } : s
+    );
+    this.posWithdrawals = this.posWithdrawals.map((w) =>
+      pendingWithdrawals.some((pw) => pw.id === w.id) ? { ...w, cashCutId: cut.id } as PosWithdrawal : w
+    );
     this.posCashCuts = [cut, ...this.posCashCuts];
     return of({
       cut,
@@ -1684,6 +1722,58 @@ export class MockApiService {
         lastCutWithdrawnAmount: cut.withdrawnAmount
       }
     }).pipe(delay(120));
+  }
+
+  savePosAuthCode(_code: string): Observable<{ ok: boolean }> {
+    return of({ ok: true }).pipe(delay(100));
+  }
+
+  validatePosAuth(_code: string): Observable<{ ok: boolean }> {
+    return of({ ok: true }).pipe(delay(100));
+  }
+
+  registerPosWithdrawal(payload: { stockId: string; amount: number; reason: string; authCode: string }): Observable<{ withdrawal: PosWithdrawal; control: PosCashControl }> {
+    const actorId = this.currentActorId();
+    if (!actorId) {
+      return throwError(() => new Error('Se requiere un usuario logeado'));
+    }
+    const now = new Date().toISOString();
+    const withdrawal: PosWithdrawal = {
+      id: `WDR-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+      stockId: payload.stockId,
+      attendantUserId: actorId,
+      amount: payload.amount,
+      reason: payload.reason,
+      createdAt: now
+    };
+    this.posWithdrawals = [withdrawal, ...this.posWithdrawals];
+    const control = this.buildPosCashControl(payload.stockId, actorId) ?? {
+      stockId: payload.stockId,
+      attendantUserId: actorId,
+      currentTotal: 0,
+      salesCount: 0
+    };
+    return of({ withdrawal, control }).pipe(delay(120));
+  }
+
+  listPosCashCuts(stockId?: string): Observable<PosCashCut[]> {
+    const actorId = this.currentActorId();
+    const cuts = this.posCashCuts.filter(
+      (c) => (!stockId || c.stockId === stockId) && (!actorId || c.attendantUserId === actorId)
+    );
+    return of([...cuts]).pipe(delay(120));
+  }
+
+  getMonthlyStats(month: string): Observable<MonthlyStatsResult> {
+    const mockResult: MonthlyStatsResult = {
+      month,
+      orders: { count: 0, total: 0, avgTicket: 0, byStatus: {}, byPaymentMethod: {}, activeCustomers: [], activeCustomerCount: 0, topCustomers: [] },
+      products: { sales: [], totalUnitsSold: 0 },
+      customers: { newCount: 0, activeCount: 0, repurchaseRate: 0 },
+      pos: { count: 0, total: 0 },
+      stocks: { summary: [], movements: [], movementsByType: {} },
+    };
+    return of(mockResult).pipe(delay(200));
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
@@ -1875,15 +1965,28 @@ export class MockApiService {
           entry.stockId === selectedStock.id &&
           entry.attendantUserId === actorId &&
           (entry.paymentMethod ?? 'cash') === 'cash' &&
+          !entry.cashCutId &&
           (!lastCut?.createdAt || String(entry.createdAt ?? '') > String(lastCut.createdAt))
       )
       .sort((a, b) => String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
+    const pendingWithdrawals = this.posWithdrawals.filter(
+      (w) => w.stockId === selectedStock.id && w.attendantUserId === actorId && !(w as PosWithdrawal & { cashCutId?: string }).cashCutId
+    );
+    const cashCarry = lastCut?.cashToKeep ?? 0;
+    const salesTotal = relevantSales.reduce((acc, entry) => {
+      const paid = entry.paymentType === 'partial' || entry.paymentType === 'credit' ? (entry.amountPaid ?? 0) : entry.total;
+      return acc + paid;
+    }, 0);
+    const withdrawalsTotal = pendingWithdrawals.reduce((acc, w) => acc + w.amount, 0);
+    const currentTotal = cashCarry + salesTotal - withdrawalsTotal;
     return {
       stockId: selectedStock.id,
       attendantUserId: actorId,
-      currentTotal: relevantSales.reduce((acc, entry) => acc + entry.total, 0),
+      currentTotal,
       salesCount: relevantSales.length,
-      cashToKeepSuggested: relevantSales.reduce((acc, entry) => acc + entry.total, 0),
+      cashToKeepSuggested: currentTotal,
+      withdrawalCount: pendingWithdrawals.length,
+      totalWithdrawn: withdrawalsTotal,
       startedAt: relevantSales[0]?.createdAt ?? lastCut?.createdAt,
       lastCutAt: lastCut?.createdAt,
       lastCutTotal: lastCut?.total ?? 0,

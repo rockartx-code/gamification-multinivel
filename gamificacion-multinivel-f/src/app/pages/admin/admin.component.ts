@@ -121,12 +121,42 @@ type PosSale = {
   grossSubtotal: number;
   discountRate: number;
   discountAmount: number;
+  cashierDiscountAmount?: number;
   total: number;
-  paymentStatus: 'paid_branch';
+  paymentStatus: 'paid_branch' | 'partial_branch' | 'credit_branch';
   deliveryStatus: 'paid_branch' | 'delivered_branch';
   paymentMethod?: 'cash' | 'card' | 'transfer';
   createdAt: string;
   lines: AdminOrderItem[];
+  cashCutId?: string;
+  paymentType?: 'full' | 'partial' | 'credit';
+  amountPaid?: number;
+  pendingAmount?: number;
+};
+
+type PosCashCut = {
+  id: string;
+  stockId: string;
+  attendantUserId?: number | null;
+  total: number;
+  salesCount: number;
+  cashToKeep?: number;
+  withdrawnAmount?: number;
+  totalWithdrawals?: number;
+  startedAt?: string;
+  endedAt?: string;
+  createdAt?: string;
+  sales?: PosSale[];
+  withdrawals?: PosWithdrawal[];
+};
+
+type PosWithdrawal = {
+  id: string;
+  stockId: string;
+  attendantUserId?: number | null;
+  amount: number;
+  reason: string;
+  createdAt?: string;
 };
 
 type PosCashControl = {
@@ -142,6 +172,8 @@ type PosCashControl = {
   lastCutCashToKeep?: number;
   lastCutWithdrawnAmount?: number;
   lastSaleAt?: string;
+  withdrawalCount?: number;
+  totalWithdrawn?: number;
 };
 
 type InventoryMovementType = 'entry' | 'exit_order' | 'exit_transfer' | 'entry_transfer' | 'damaged' | 'pos_sale';
@@ -449,6 +481,7 @@ export class AdminComponent implements OnInit {
     inOnlineStore: true,
     inPOS: true,
     commissionable: true,
+    vpPoints: '' as string | number,
     sku: '',
     hook: '',
     description: '',
@@ -537,6 +570,12 @@ export class AdminComponent implements OnInit {
   isImportingInventory = false;
   inventoryImportResults: Array<{ productName: string; qty: number; ok: boolean; message?: string }> = [];
 
+  // --- STATS / REPORTES ---
+  statsReportMonth = '';
+  statsReportTab: 'resumen' | 'pedidos' | 'clientes' | 'productos' | 'stocks' = 'resumen';
+  statsData: import('../../models/admin.model').MonthlyStatsResult | null = null;
+  isLoadingStats = false;
+
   shippingStockId = '';
   shippingFallbackProductId: number | null = null;
   shippingFallbackQty = 1;
@@ -561,6 +600,42 @@ export class AdminComponent implements OnInit {
   posCashCutError = '';
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
+
+  isPosAuthModalOpen = false;
+  posAuthCode = '';
+  posAuthError = '';
+  posAuthAction = '';
+  posAuthPendingCallback: (() => void) | null = null;
+  isValidatingPosAuth = false;
+  posValidatedAuthCode = '';
+
+  isPosDiscountModalOpen = false;
+  posDiscountMode: 'percent' | 'amount' = 'percent';
+  posDiscountValue = '';
+  posDiscountError = '';
+  posAppliedCashierDiscount: { mode: 'percent' | 'amount'; value: number; displayLabel: string } | null = null;
+
+  posPaymentTypeMode: 'full' | 'partial' | 'credit' = 'full';
+  posPartialAmountPaid = '';
+
+  isPosWithdrawalModalOpen = false;
+  posWithdrawalAmount = '';
+  posWithdrawalReason = '';
+  posWithdrawalAuthCode = '';
+  posWithdrawalError = '';
+  isRegisteringPosWithdrawal = false;
+  posWithdrawals: PosWithdrawal[] = [];
+
+  posCashCuts: PosCashCut[] = [];
+  isLoadingPosCashCuts = false;
+  isPosCashCutsOpen = false;
+  expandedCutId: string | null = null;
+  lastCompletedCut: PosCashCut | null = null;
+
+  posAuthCodeDraft = '';
+  isSavingPosAuthCode = false;
+  posAuthCodeMessage = '';
+  posAuthCodeIsError = false;
   isPosPaymentModalOpen = false;
   posPaymentTargetOrder: AdminOrder | null = null;
   posPaymentMethod: 'cash' | 'card' | 'transfer' = 'cash';
@@ -659,6 +734,7 @@ export class AdminComponent implements OnInit {
         break;
       case 'stats':
         this.adminControl.loadCustomers().subscribe();
+        this.loadMonthlyStats(this.activeReportMonth);
         break;
       case 'honor_board':
         if (!this.honorBoardData && !this.isLoadingHonorBoard) {
@@ -1093,6 +1169,12 @@ export class AdminComponent implements OnInit {
     return rows;
   }
 
+  /** IDs de stocks permitidos para el usuario actual. null = sin restricción (super admin). */
+  private get permittedStockIds(): Set<string> | null {
+    const linked = this.linkedPosStocks;
+    return linked.length > 0 ? new Set(linked.map((s) => s.id)) : null;
+  }
+
   get inventoryMovementRowsStable(): Array<
     InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
   > {
@@ -1105,14 +1187,17 @@ export class AdminComponent implements OnInit {
     ) {
       return this.inventoryMovementRowsCache.rows;
     }
-    const rows = this.inventoryMovements.map((movement) => ({
-      ...movement,
-      stockName: this.stockName(movement.stockId),
-      productName: this.productName(movement.productId),
-      userName: this.employeeName(movement.userId),
-      typeLabel: this.movementTypeLabel(movement.type),
-      signedQty: this.movementSignedQty(movement)
-    }));
+    const allowed = this.permittedStockIds;
+    const rows = this.inventoryMovements
+      .filter((m) => !allowed || allowed.has(m.stockId))
+      .map((movement) => ({
+        ...movement,
+        stockName: this.stockName(movement.stockId),
+        productName: this.productName(movement.productId),
+        userName: this.employeeName(movement.userId),
+        typeLabel: this.movementTypeLabel(movement.type),
+        signedQty: this.movementSignedQty(movement)
+      }));
     this.inventoryMovementRowsCache = {
       movementsRef: this.inventoryMovements,
       stocksRef: this.stocks,
@@ -1184,14 +1269,17 @@ export class AdminComponent implements OnInit {
   get inventoryMovementRows(): Array<
     InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
   > {
-    return this.inventoryMovements.map((movement) => ({
-      ...movement,
-      stockName: this.stockName(movement.stockId),
-      productName: this.productName(movement.productId),
-      userName: this.employeeName(movement.userId),
-      typeLabel: this.movementTypeLabel(movement.type),
-      signedQty: this.movementSignedQty(movement)
-    }));
+    const allowed = this.permittedStockIds;
+    return this.inventoryMovements
+      .filter((m) => !allowed || allowed.has(m.stockId))
+      .map((movement) => ({
+        ...movement,
+        stockName: this.stockName(movement.stockId),
+        productName: this.productName(movement.productId),
+        userName: this.employeeName(movement.userId),
+        typeLabel: this.movementTypeLabel(movement.type),
+        signedQty: this.movementSignedQty(movement)
+      }));
   }
 
   get currentOperatorId(): number | null {
@@ -1262,7 +1350,10 @@ export class AdminComponent implements OnInit {
     const stockId = this.currentPosStock?.id;
     const operatorId = this.currentOperatorId;
     return this.posSales.filter(
-      (sale) => (!stockId || sale.stockId === stockId) && (operatorId == null || sale.attendantUserId === operatorId)
+      (sale) =>
+        (!stockId || sale.stockId === stockId) &&
+        (operatorId == null || sale.attendantUserId === operatorId) &&
+        !sale.cashCutId
     );
   }
 
@@ -1315,6 +1406,32 @@ export class AdminComponent implements OnInit {
 
   get posProjectedNetTotal(): number {
     return this.roundMoney(this.posSubtotal - this.posProjectedDiscountAmount);
+  }
+
+  get posCashierDiscountAmount(): number {
+    if (!this.posAppliedCashierDiscount) return 0;
+    if (this.posAppliedCashierDiscount.mode === 'percent') {
+      return this.roundMoney(this.posSubtotal * (this.posAppliedCashierDiscount.value / 100));
+    }
+    return Math.min(this.posAppliedCashierDiscount.value, this.posSubtotal);
+  }
+
+  get posTotalDiscountAmount(): number {
+    return this.roundMoney(this.posProjectedDiscountAmount + this.posCashierDiscountAmount);
+  }
+
+  get posEffectiveTotal(): number {
+    return this.roundMoney(this.posSubtotal - this.posTotalDiscountAmount);
+  }
+
+  get posAmountPaidNow(): number {
+    if (this.posPaymentTypeMode === 'full') return this.posEffectiveTotal;
+    if (this.posPaymentTypeMode === 'credit') return 0;
+    return Math.min(this.roundMoney(Number(this.posPartialAmountPaid) || 0), this.posEffectiveTotal);
+  }
+
+  get posPendingAmount(): number {
+    return this.roundMoney(this.posEffectiveTotal - this.posAmountPaidNow);
   }
 
   get posProjectedDiscountLabel(): string {
@@ -1449,6 +1566,421 @@ export class AdminComponent implements OnInit {
 
   get productsCount(): number {
     return this.products.length;
+  }
+
+  // --- STATS REPORT HELPERS ---
+
+  loadMonthlyStats(month: string): void {
+    if (this.isLoadingStats) return;
+    this.isLoadingStats = true;
+    this.statsData = null;
+    this.adminControl.getMonthlyStats(month).subscribe({
+      next: (data) => { this.statsData = data; this.isLoadingStats = false; },
+      error: () => { this.isLoadingStats = false; }
+    });
+  }
+
+  get availableReportMonths(): { value: string; label: string }[] {
+    const monthSet = new Set<string>();
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    for (const order of this.orders) {
+      if (order.createdAt) {
+        const d = new Date(order.createdAt);
+        if (!isNaN(d.getTime())) {
+          monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        }
+      }
+    }
+    return [...monthSet]
+      .sort((a, b) => b.localeCompare(a))
+      .map((mk) => {
+        const [y, m] = mk.split('-');
+        const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-MX', { year: 'numeric', month: 'long' });
+        return { value: mk, label: label.charAt(0).toUpperCase() + label.slice(1) };
+      });
+  }
+
+  get activeReportMonth(): string {
+    if (this.statsReportMonth) return this.statsReportMonth;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private isInReportMonth(isoDate?: string): boolean {
+    if (!isoDate) return false;
+    return isoDate.startsWith(this.activeReportMonth);
+  }
+
+  get reportOrders(): AdminOrder[] {
+    return this.orders.filter((o) => this.isInReportMonth(o.createdAt));
+  }
+
+  get reportPosSales(): PosSale[] {
+    return this.posSales.filter((s) => this.isInReportMonth(s.createdAt));
+  }
+
+  get reportMovements(): InventoryMovement[] {
+    return this.inventoryMovements.filter((m) => this.isInReportMonth(m.createdAt));
+  }
+
+  // PEDIDOS — usa statsData del backend cuando esté disponible
+  get reportOrdersTotal(): number {
+    return this.statsData?.orders.total ?? this.reportOrders.reduce((s, o) => s + (o.total || 0), 0);
+  }
+
+  get reportOrdersCount(): number {
+    return this.statsData?.orders.count ?? this.reportOrders.length;
+  }
+
+  get reportAvgTicket(): number {
+    return this.statsData?.orders.avgTicket ?? (this.reportOrdersCount ? this.reportOrdersTotal / this.reportOrdersCount : 0);
+  }
+
+  get reportDeliveredCount(): number {
+    return this.statsData?.orders.byStatus?.['delivered'] ?? this.reportOrders.filter((o) => o.status === 'delivered').length;
+  }
+
+  get reportConversionRate(): number {
+    return this.reportOrdersCount ? (this.reportDeliveredCount / this.reportOrdersCount) * 100 : 0;
+  }
+
+  get reportOrdersByStatus(): Array<{ status: string; count: number; total: number }> {
+    if (this.statsData) {
+      return Object.entries(this.statsData.orders.byStatus).map(([status, count]) => ({ status, count, total: 0 })).sort((a, b) => b.count - a.count);
+    }
+    const map = new Map<string, { count: number; total: number }>();
+    for (const o of this.reportOrders) {
+      const s = o.status || 'unknown';
+      const cur = map.get(s) ?? { count: 0, total: 0 };
+      map.set(s, { count: cur.count + 1, total: cur.total + (o.total || 0) });
+    }
+    return [...map.entries()].map(([status, v]) => ({ status, ...v })).sort((a, b) => b.count - a.count);
+  }
+
+  get reportOrdersByPaymentMethod(): Array<{ method: string; count: number; total: number }> {
+    if (this.statsData) {
+      return Object.entries(this.statsData.orders.byPaymentMethod).map(([method, count]) => ({ method, count, total: 0 })).sort((a, b) => b.count - a.count);
+    }
+    const map = new Map<string, { count: number; total: number }>();
+    for (const o of this.reportOrders) {
+      const m = (o as AdminOrder & { paymentMethod?: string }).paymentMethod || 'online';
+      const cur = map.get(m) ?? { count: 0, total: 0 };
+      map.set(m, { count: cur.count + 1, total: cur.total + (o.total || 0) });
+    }
+    return [...map.entries()].map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
+  }
+
+  get reportTopCustomersByOrders(): Array<{ name: string; count: number; total: number }> {
+    if (this.statsData) {
+      return this.statsData.orders.topCustomers.map((c) => ({ name: c.customerId, count: c.orders, total: c.total }));
+    }
+    const map = new Map<string, { count: number; total: number }>();
+    for (const o of this.reportOrders) {
+      const key = (o.customer || 'Público General').trim();
+      const cur = map.get(key) ?? { count: 0, total: 0 };
+      map.set(key, { count: cur.count + 1, total: cur.total + (o.total || 0) });
+    }
+    return [...map.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 15);
+  }
+
+  // CLIENTES
+  get reportActiveCustomers(): Array<{ id: number; name: string; email: string; orderCount: number; total: number; level: string }> {
+    const map = new Map<string, { id: number; name: string; email: string; orderCount: number; total: number; level: string }>();
+    for (const o of this.reportOrders) {
+      const key = (o.customer || '').trim().toLowerCase();
+      if (!key) continue;
+      const customer = this.customers.find((c) => c.name.trim().toLowerCase() === key);
+      const cur = map.get(key) ?? { id: customer?.id ?? 0, name: o.customer || '', email: customer?.email || '', orderCount: 0, total: 0, level: customer?.level || '' };
+      map.set(key, { ...cur, orderCount: cur.orderCount + 1, total: cur.total + (o.total || 0) });
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }
+
+  get reportActiveCustomersCount(): number {
+    return this.statsData?.customers.activeCount ?? this.reportActiveCustomers.length;
+  }
+
+  get reportRepurchaseRate(): number {
+    if (this.statsData) return this.statsData.customers.repurchaseRate;
+    const total = this.reportActiveCustomers.length;
+    if (!total) return 0;
+    const repeaters = this.reportActiveCustomers.filter((c) => c.orderCount >= 2).length;
+    return (repeaters / total) * 100;
+  }
+
+  get reportNewCustomersCount(): number {
+    return this.statsData?.customers.newCount ?? 0;
+  }
+
+  // PRODUCTOS — usa statsData del backend cuando esté disponible
+  get reportProductSales(): Array<{ id: number; name: string; sku: string; units: number; revenue: number; price: number }> {
+    if (this.statsData) {
+      return this.statsData.products.sales.map((p) => ({
+        id: Number(p.productId) || 0,
+        name: p.name,
+        sku: this.products.find((pr) => String(pr.id) === String(p.productId))?.sku || '',
+        units: p.units,
+        revenue: p.revenue,
+        price: p.units ? p.revenue / p.units : 0,
+      }));
+    }
+    const map = new Map<number, { id: number; name: string; sku: string; units: number; revenue: number; price: number }>();
+    const addLine = (productId: number, name: string, price: number, quantity: number) => {
+      const product = this.products.find((p) => p.id === productId);
+      const cur = map.get(productId) ?? { id: productId, name: product?.name || name, sku: product?.sku || '', units: 0, revenue: 0, price: product?.price ?? price };
+      map.set(productId, { ...cur, units: cur.units + quantity, revenue: cur.revenue + price * quantity });
+    };
+    for (const o of this.reportOrders) {
+      for (const line of ((o as AdminOrder & { lines?: AdminOrderItem[] }).lines ?? [])) {
+        addLine(line.productId, line.name, line.price, line.quantity);
+      }
+    }
+    for (const s of this.reportPosSales) {
+      for (const line of (s.lines ?? [])) {
+        addLine(line.productId, line.name, line.price, line.quantity);
+      }
+    }
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+  }
+
+  get reportTotalUnitsSold(): number {
+    return this.statsData?.products.totalUnitsSold ?? this.reportProductSales.reduce((s, p) => s + p.units, 0);
+  }
+
+  // STOCKS
+  get reportStockSummary(): Array<{ stockId: string; name: string; location: string; entries: number; exits: number; sales: number }> {
+    return this.stocks.map((stock) => {
+      const moves = this.reportMovements.filter((m) => m.stockId === stock.id);
+      const entries = moves.filter((m) => ['entry', 'entry_transfer'].includes(m.type)).reduce((s, m) => s + (m.qty || 0), 0);
+      const exits = moves.filter((m) => ['exit_order', 'exit_transfer', 'pos_sale', 'damaged'].includes(m.type)).reduce((s, m) => s + (m.qty || 0), 0);
+      const sales = this.reportPosSales.filter((s) => s.stockId === stock.id).reduce((acc, s) => acc + s.total, 0);
+      return { stockId: stock.id, name: stock.name, location: stock.location, entries, exits, sales };
+    });
+  }
+
+  get reportStockInventoryLines(): Array<{ stock: string; product: string; qty: number }> {
+    const lines: Array<{ stock: string; product: string; qty: number }> = [];
+    for (const stock of this.stocks) {
+      for (const [pid, qty] of Object.entries(stock.inventory ?? {})) {
+        const product = this.products.find((p) => String(p.id) === String(pid));
+        if (product) {
+          lines.push({ stock: stock.name, product: product.name, qty: Number(qty) });
+        }
+      }
+    }
+    return lines.sort((a, b) => a.stock.localeCompare(b.stock) || a.product.localeCompare(b.product));
+  }
+
+  // EXCEL DOWNLOADS
+  downloadOrdersReport(): void {
+    const month = this.activeReportMonth;
+    const orders = this.reportOrders;
+    const rows = orders.map((o) => ({
+      'Folio': o.id,
+      'Fecha': o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+      'Cliente': o.customer || 'Público General',
+      'Estado': o.status,
+      'Método pago': (o as AdminOrder & { paymentMethod?: string }).paymentMethod || 'online',
+      'Subtotal': o.grossSubtotal ?? o.total,
+      'Descuento': o.discountAmount ?? 0,
+      'Total': o.total
+    }));
+    const wsByStatus = this.reportOrdersByStatus.map((r) => ({
+      'Estado': r.status,
+      'Pedidos': r.count,
+      'Total': r.total
+    }));
+    const wsTop = this.reportTopCustomersByOrders.map((r) => ({
+      'Cliente': r.name,
+      'Pedidos': r.count,
+      'Total': r.total
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(rows);
+    ws1['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Pedidos');
+    const ws2 = XLSX.utils.json_to_sheet(wsByStatus);
+    ws2['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Por estado');
+    const ws3 = XLSX.utils.json_to_sheet(wsTop);
+    ws3['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Top clientes');
+    XLSX.writeFile(wb, `pedidos-${month}.xlsx`);
+  }
+
+  downloadCustomersReport(): void {
+    const month = this.activeReportMonth;
+    const active = this.reportActiveCustomers;
+    const allRows = this.customers.map((c) => {
+      const act = active.find((a) => a.id === c.id);
+      return {
+        'ID': c.id,
+        'Nombre': c.name,
+        'Email': c.email,
+        'Nivel': c.level,
+        'Descuento': c.discount,
+        'Pedidos en periodo': act?.orderCount ?? 0,
+        'Compras en periodo': act?.total ?? 0,
+        'Comisiones pendientes': c.commissionsCurrentPending ?? 0,
+        'Comisiones confirmadas': c.commissionsCurrentConfirmed ?? 0,
+        'CLABE': c.clabeInterbancaria || ''
+      };
+    });
+    const activeRows = active.map((a) => ({
+      'Nombre': a.name,
+      'Email': a.email,
+      'Nivel': a.level,
+      'Pedidos': a.orderCount,
+      'Total compras': a.total
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(allRows);
+    ws1['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 30 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 22 }];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Todos los clientes');
+    const ws2 = XLSX.utils.json_to_sheet(activeRows);
+    ws2['!cols'] = [{ wch: 28 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, ws2, `Activos ${month}`);
+    XLSX.writeFile(wb, `clientes-${month}.xlsx`);
+  }
+
+  downloadProductsReport(): void {
+    const month = this.activeReportMonth;
+    const sales = this.reportProductSales;
+    const salesRows = sales.map((p) => ({
+      'ID': p.id,
+      'Producto': p.name,
+      'SKU': p.sku,
+      'Precio unitario': p.price,
+      'Unidades vendidas': p.units,
+      'Ingresos': p.revenue
+    }));
+    const catalogRows = this.products.map((p) => {
+      const s = sales.find((x) => x.id === p.id);
+      return {
+        'ID': p.id,
+        'Producto': p.name,
+        'SKU': p.sku || '',
+        'Precio': p.price,
+        'Activo': p.active ? 'Sí' : 'No',
+        'En tienda': (p as AdminProduct & { inOnlineStore?: boolean }).inOnlineStore ? 'Sí' : 'No',
+        'En POS': (p as AdminProduct & { inPOS?: boolean }).inPOS ? 'Sí' : 'No',
+        'Unidades vendidas': s?.units ?? 0,
+        'Ingresos': s?.revenue ?? 0
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(salesRows);
+    ws1['!cols'] = [{ wch: 8 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws1, `Ventas ${month}`);
+    const ws2 = XLSX.utils.json_to_sheet(catalogRows);
+    ws2['!cols'] = [{ wch: 8 }, { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 18 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Catálogo');
+    XLSX.writeFile(wb, `productos-${month}.xlsx`);
+  }
+
+  downloadStocksReport(): void {
+    const month = this.activeReportMonth;
+    const invRows = this.reportStockInventoryLines;
+    const mvRows = this.reportMovements.map((m) => ({
+      'Fecha': m.createdAt ? new Date(m.createdAt).toLocaleString('es-MX') : '',
+      'Almacén': this.stockName(m.stockId),
+      'Tipo': m.type,
+      'Producto ID': m.productId,
+      'Cantidad': m.qty,
+      'Referencia': (m as InventoryMovement & { referenceId?: string }).referenceId || ''
+    }));
+    const summaryRows = this.reportStockSummary.map((s) => ({
+      'Almacén': s.name,
+      'Ubicación': s.location,
+      'Entradas (uds)': s.entries,
+      'Salidas (uds)': s.exits,
+      'Ventas POS ($)': s.sales
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(invRows.map((r) => ({ 'Almacén': r.stock, 'Producto': r.product, 'Stock actual': r.qty })));
+    ws1['!cols'] = [{ wch: 24 }, { wch: 30 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Inventario actual');
+    const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+    ws2['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, ws2, `Resumen ${month}`);
+    const ws3 = XLSX.utils.json_to_sheet(mvRows);
+    ws3['!cols'] = [{ wch: 20 }, { wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Movimientos');
+    XLSX.writeFile(wb, `stocks-${month}.xlsx`);
+  }
+
+  downloadFullReport(): void {
+    const month = this.activeReportMonth;
+    const wb = XLSX.utils.book_new();
+
+    // Resumen ejecutivo
+    const resumeRows = [
+      { 'Indicador': 'Mes', 'Valor': month },
+      { 'Indicador': 'Pedidos', 'Valor': this.reportOrdersCount },
+      { 'Indicador': 'Ventas totales', 'Valor': this.reportOrdersTotal },
+      { 'Indicador': 'Ticket promedio', 'Valor': this.reportAvgTicket },
+      { 'Indicador': 'Tasa de entrega', 'Valor': `${this.reportConversionRate.toFixed(1)}%` },
+      { 'Indicador': 'Clientes activos', 'Valor': this.reportActiveCustomersCount },
+      { 'Indicador': 'Tasa recompra', 'Valor': `${this.reportRepurchaseRate.toFixed(1)}%` },
+      { 'Indicador': 'Productos con ventas', 'Valor': this.reportProductSales.length },
+      { 'Indicador': 'Unidades vendidas', 'Valor': this.reportTotalUnitsSold }
+    ];
+    const wsResumen = XLSX.utils.json_to_sheet(resumeRows);
+    wsResumen['!cols'] = [{ wch: 28 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+    // Pedidos
+    const ordersRows = this.reportOrders.map((o) => ({
+      'Folio': o.id,
+      'Fecha': o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
+      'Cliente': o.customer || 'Público General',
+      'Estado': o.status,
+      'Total': o.total
+    }));
+    const wsOrders = XLSX.utils.json_to_sheet(ordersRows);
+    wsOrders['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsOrders, 'Pedidos');
+
+    // Clientes activos
+    const custRows = this.reportActiveCustomers.map((c) => ({
+      'Nombre': c.name,
+      'Email': c.email,
+      'Pedidos': c.orderCount,
+      'Total': c.total
+    }));
+    const wsCust = XLSX.utils.json_to_sheet(custRows);
+    wsCust['!cols'] = [{ wch: 28 }, { wch: 30 }, { wch: 10 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsCust, 'Clientes activos');
+
+    // Productos
+    const prodRows = this.reportProductSales.map((p) => ({
+      'Producto': p.name,
+      'SKU': p.sku,
+      'Unidades': p.units,
+      'Ingresos': p.revenue
+    }));
+    const wsProd = XLSX.utils.json_to_sheet(prodRows);
+    wsProd['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsProd, 'Productos');
+
+    // Stocks
+    const stockRows = this.reportStockInventoryLines.map((r) => ({
+      'Almacén': r.stock,
+      'Producto': r.product,
+      'Stock actual': r.qty
+    }));
+    const wsStock = XLSX.utils.json_to_sheet(stockRows);
+    wsStock['!cols'] = [{ wch: 24 }, { wch: 30 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsStock, 'Inventario');
+
+    XLSX.writeFile(wb, `reporte-mensual-${month}.xlsx`);
   }
 
   get currentUser(): AuthUser | null {
@@ -2253,12 +2785,17 @@ export class AdminComponent implements OnInit {
           grossSubtotal: Number(sale.grossSubtotal ?? sale.total ?? 0),
           discountRate: Number(sale.discountRate ?? 0),
           discountAmount: Number(sale.discountAmount ?? 0),
+          cashierDiscountAmount: sale.cashierDiscountAmount != null ? Number(sale.cashierDiscountAmount) : undefined,
           total: Number(sale.total),
           paymentStatus: sale.paymentStatus,
           deliveryStatus: sale.deliveryStatus,
           paymentMethod: sale.paymentMethod,
           createdAt: sale.createdAt ?? '',
-          lines: sale.lines ?? []
+          lines: sale.lines ?? [],
+          cashCutId: sale.cashCutId,
+          paymentType: sale.paymentType,
+          amountPaid: sale.amountPaid != null ? Number(sale.amountPaid) : undefined,
+          pendingAmount: sale.pendingAmount != null ? Number(sale.pendingAmount) : undefined,
         }));
 
         if (!this.selectedStockId && this.stocks.length) {
@@ -3586,6 +4123,7 @@ export class AdminComponent implements OnInit {
       inOnlineStore: product.inOnlineStore !== false,
       inPOS: product.inPOS !== false,
       commissionable: product.commissionable !== false,
+      vpPoints: product.vpPoints ?? '',
       sku: product.sku ?? '',
       hook: product.hook ?? '',
       description: product.description ?? '',
@@ -3826,6 +4364,7 @@ export class AdminComponent implements OnInit {
             inOnlineStore: this.productForm.inOnlineStore,
             inPOS: this.productForm.inPOS,
             commissionable: this.productForm.commissionable,
+            vpPoints: this.productForm.vpPoints !== '' ? Number(this.productForm.vpPoints) : undefined,
             sku: this.productForm.sku.trim() || undefined,
             hook: this.productForm.hook.trim() || undefined,
             description: this.productForm.description || undefined,
@@ -3956,6 +4495,7 @@ export class AdminComponent implements OnInit {
       inOnlineStore: true,
       inPOS: true,
       commissionable: true,
+      vpPoints: '',
       sku: '',
       hook: '',
       description: '',
@@ -4777,6 +5317,195 @@ export class AdminComponent implements OnInit {
       }));
   }
 
+  openPosAuthModal(action: string, callback: () => void): void {
+    this.posAuthAction = action;
+    this.posAuthCode = '';
+    this.posAuthError = '';
+    this.posAuthPendingCallback = callback;
+    this.isPosAuthModalOpen = true;
+  }
+
+  closePosAuthModal(): void {
+    this.isPosAuthModalOpen = false;
+    this.posAuthCode = '';
+    this.posAuthError = '';
+    this.posAuthPendingCallback = null;
+  }
+
+  confirmPosAuth(): void {
+    if (!this.posAuthCode.trim() || this.isValidatingPosAuth) return;
+    this.isValidatingPosAuth = true;
+    this.adminControl.validatePosAuth(this.posAuthCode.trim()).pipe(
+      finalize(() => (this.isValidatingPosAuth = false))
+    ).subscribe({
+      next: () => {
+        this.posValidatedAuthCode = this.posAuthCode.trim();
+        const cb = this.posAuthPendingCallback;
+        this.closePosAuthModal();
+        if (cb) cb();
+      },
+      error: (err: { error?: { message?: string }; message?: string }) => {
+        this.posAuthError = err?.error?.message || 'Codigo incorrecto.';
+      }
+    });
+  }
+
+  openPosDiscountModal(): void {
+    this.openPosAuthModal('aplicar descuento', () => {
+      this.posDiscountMode = 'percent';
+      this.posDiscountValue = '';
+      this.posDiscountError = '';
+      this.isPosDiscountModalOpen = true;
+    });
+  }
+
+  closePosDiscountModal(): void {
+    this.isPosDiscountModalOpen = false;
+    this.posDiscountError = '';
+  }
+
+  applyPosDiscount(): void {
+    const val = Number(this.posDiscountValue);
+    if (!Number.isFinite(val) || val <= 0) {
+      this.posDiscountError = 'Ingresa un valor valido mayor a cero.';
+      return;
+    }
+    if (this.posDiscountMode === 'percent' && val > 100) {
+      this.posDiscountError = 'El porcentaje no puede ser mayor a 100%.';
+      return;
+    }
+    if (this.posDiscountMode === 'amount' && val > this.posSubtotal) {
+      this.posDiscountError = 'El descuento no puede exceder el subtotal.';
+      return;
+    }
+    const displayLabel = this.posDiscountMode === 'percent' ? `${val}%` : this.formatMoney(val);
+    this.posAppliedCashierDiscount = { mode: this.posDiscountMode, value: val, displayLabel };
+    this.closePosDiscountModal();
+  }
+
+  removePosDiscount(): void {
+    this.posAppliedCashierDiscount = null;
+  }
+
+  enablePosPartialPayment(mode: 'full' | 'partial' | 'credit'): void {
+    if (mode === 'full') {
+      this.posPaymentTypeMode = 'full';
+      this.posPartialAmountPaid = '';
+      this.posValidatedAuthCode = '';
+      return;
+    }
+    this.openPosAuthModal(mode === 'credit' ? 'registrar venta a credito' : 'registrar pago parcial', () => {
+      this.posPaymentTypeMode = mode;
+      this.posPartialAmountPaid = '';
+    });
+  }
+
+  openPosWithdrawalModal(): void {
+    this.posWithdrawalAmount = '';
+    this.posWithdrawalReason = '';
+    this.posWithdrawalAuthCode = '';
+    this.posWithdrawalError = '';
+    this.isPosWithdrawalModalOpen = true;
+  }
+
+  closePosWithdrawalModal(): void {
+    this.isPosWithdrawalModalOpen = false;
+  }
+
+  confirmPosWithdrawal(): void {
+    if (!this.currentPosStock || this.isRegisteringPosWithdrawal) return;
+    const amount = Number(this.posWithdrawalAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.posWithdrawalError = 'Ingresa un monto valido.';
+      return;
+    }
+    if (!this.posWithdrawalReason.trim()) {
+      this.posWithdrawalError = 'El motivo es requerido.';
+      return;
+    }
+    if (!this.posWithdrawalAuthCode.trim()) {
+      this.posWithdrawalError = 'Se requiere el codigo de autorizacion.';
+      return;
+    }
+    this.isRegisteringPosWithdrawal = true;
+    this.adminControl.registerPosWithdrawal({
+      stockId: this.currentPosStock.id,
+      amount,
+      reason: this.posWithdrawalReason.trim(),
+      authCode: this.posWithdrawalAuthCode.trim()
+    }).pipe(finalize(() => (this.isRegisteringPosWithdrawal = false))).subscribe({
+      next: ({ control }) => {
+        this.posCashControl = { ...this.posCashControl!, ...control };
+        this.closePosWithdrawalModal();
+        this.showSnackbar('Retiro registrado.');
+      },
+      error: (err: { error?: { message?: string }; message?: string }) => {
+        this.posWithdrawalError = err?.error?.message || 'No se pudo registrar el retiro.';
+      }
+    });
+  }
+
+  loadPosCashCuts(): void {
+    if (!this.currentPosStock) return;
+    this.isLoadingPosCashCuts = true;
+    this.adminControl.listPosCashCuts(this.currentPosStock.id).pipe(
+      finalize(() => (this.isLoadingPosCashCuts = false))
+    ).subscribe({
+      next: (cuts) => {
+        this.posCashCuts = (cuts as unknown as PosCashCut[]);
+        this.isPosCashCutsOpen = true;
+      }
+    });
+  }
+
+  toggleCutExpansion(cutId: string): void {
+    this.expandedCutId = this.expandedCutId === cutId ? null : cutId;
+  }
+
+  downloadCutReport(cut: PosCashCut): void {
+    const sales = cut.sales ?? [];
+    const withdrawals = cut.withdrawals ?? [];
+    const rows: string[] = [
+      'Tipo,Hora,Cliente,Metodo Pago,Subtotal,Descuento,Total,Estado'
+    ];
+    for (const sale of sales) {
+      rows.push([
+        'Venta',
+        sale.createdAt ? new Date(sale.createdAt).toLocaleString('es-MX') : '',
+        sale.customerName || 'Publico en General',
+        sale.paymentMethod || 'cash',
+        (sale.grossSubtotal ?? sale.total).toFixed(2),
+        ((sale.discountAmount ?? 0) + (sale.cashierDiscountAmount ?? 0)).toFixed(2),
+        sale.total.toFixed(2),
+        sale.paymentStatus || 'paid_branch'
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    }
+    for (const wdr of withdrawals) {
+      rows.push([
+        'Retiro',
+        wdr.createdAt ? new Date(wdr.createdAt).toLocaleString('es-MX') : '',
+        wdr.reason || '',
+        'efectivo',
+        '',
+        '',
+        (-wdr.amount).toFixed(2),
+        'retiro'
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    }
+    const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
+    const totalWdr = withdrawals.reduce((sum, w) => sum + w.amount, 0);
+    rows.push(`"TOTAL","","","","",""," ${(totalSales - totalWdr).toFixed(2)}",""`);
+    const csv = rows.join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = cut.createdAt ? new Date(cut.createdAt).toISOString().slice(0, 10) : 'fecha';
+    link.href = url;
+    link.download = `corte-${cut.id}-${date}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   registerPosSale(): void {
     if (!this.canRegisterPosSale || !this.currentPosStock) {
       return;
@@ -4800,7 +5529,12 @@ export class AdminComponent implements OnInit {
         paymentMethod: this.posSalePaymentMethod,
         paymentStatus: 'paid_branch',
         deliveryStatus: 'delivered_branch',
-        items: lineItems
+        items: lineItems,
+        cashierDiscountMode: this.posAppliedCashierDiscount?.mode,
+        cashierDiscountValue: this.posAppliedCashierDiscount?.value,
+        paymentType: this.posPaymentTypeMode,
+        amountPaid: this.posPaymentTypeMode !== 'full' ? this.posAmountPaidNow : undefined,
+        authCode: this.posValidatedAuthCode || undefined
       })
       .pipe(finalize(() => (this.isRegisteringPosSale = false)))
       .subscribe({
@@ -4808,6 +5542,10 @@ export class AdminComponent implements OnInit {
           this.posItems.clear();
           this.posForm.status = 'delivered';
           this.posSalePaymentMethod = 'cash';
+          this.posAppliedCashierDiscount = null;
+          this.posPaymentTypeMode = 'full';
+          this.posPartialAmountPaid = '';
+          this.posValidatedAuthCode = '';
           this.selectPublicGeneralCustomer();
           this.setPosFeedback('Venta registrada en caja.', 'success');
           this.showSnackbar('Venta registrada en caja.');
@@ -4858,7 +5596,7 @@ export class AdminComponent implements OnInit {
       .createPosCashCut({ stockId: this.currentPosStock.id, cashToKeep })
       .pipe(finalize(() => (this.isCuttingPosCash = false)))
       .subscribe({
-        next: ({ control }) => {
+        next: ({ cut, control }) => {
           this.posCashControl = {
             stockId: control.stockId,
             attendantUserId: control.attendantUserId ?? null,
@@ -4873,9 +5611,16 @@ export class AdminComponent implements OnInit {
             lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
             lastSaleAt: control.lastSaleAt
           };
+          this.posSales = this.posSales.map((s) =>
+            (cut.sales ?? []).some((cs) => cs.id === s.id) ? { ...s, cashCutId: cut.id } : s
+          );
+          this.lastCompletedCut = cut as unknown as PosCashCut;
           this.closePosCashCutModal();
           this.setPosFeedback('Corte de caja registrado.', 'success');
           this.showSnackbar('Corte de caja registrado.');
+          if (this.isPosCashCutsOpen) {
+            this.loadPosCashCuts();
+          }
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.posCashCutError = error?.error?.message || error?.message || 'No se pudo registrar el corte.';
@@ -5284,6 +6029,25 @@ export class AdminComponent implements OnInit {
     if (d > 0) return 'text-green-600';
     if (d < 0) return 'text-red-500';
     return 'text-gray-400';
+  }
+
+  savePosAuthCode(): void {
+    if (!this.hasPermission('config_manage') || this.isSavingPosAuthCode) return;
+    const code = (this.posAuthCodeDraft || '').trim();
+    if (code.length < 4) return;
+    this.isSavingPosAuthCode = true;
+    this.posAuthCodeMessage = '';
+    this.adminControl.savePosAuthCode(code).pipe(finalize(() => (this.isSavingPosAuthCode = false))).subscribe({
+      next: () => {
+        this.posAuthCodeDraft = '';
+        this.posAuthCodeIsError = false;
+        this.posAuthCodeMessage = 'Codigo actualizado correctamente.';
+      },
+      error: (err: { error?: { message?: string }; message?: string }) => {
+        this.posAuthCodeIsError = true;
+        this.posAuthCodeMessage = err?.error?.message || 'No se pudo actualizar el codigo.';
+      }
+    });
   }
 
   saveBusinessConfig(): void {

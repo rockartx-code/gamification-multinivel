@@ -76,6 +76,7 @@ def _catalog_product_payload(item):
         "inOnlineStore": bool(item.get("inOnlineStore", True)),
         "inPOS": bool(item.get("inPOS", True)),
         "commissionable": bool(item.get("commissionable", True)),
+        "vpPoints": float(utils._to_decimal(item["vpPoints"])) if item.get("vpPoints") is not None else None,
     }
 
 
@@ -213,6 +214,7 @@ def handle_products(method, body, product_id=None):
             "inOnlineStore": bool(body["inOnlineStore"]) if "inOnlineStore" in body else True,
             "inPOS": bool(body["inPOS"]) if "inPOS" in body else True,
             "commissionable": bool(body["commissionable"]) if "commissionable" in body else True,
+            "vpPoints": utils._to_decimal(body["vpPoints"]) if body.get("vpPoints") is not None else None,
             "sku": body.get("sku") or "",
             "hook": body.get("hook") or "",
             "description": body.get("description") or "",

@@ -24,6 +24,7 @@ import {
   PosCashControl,
   PosCashCut,
   PosSale,
+  PosWithdrawal,
   StockTransfer,
   UpdateOrderStatusPayload,
   ProductAssetUpload,
@@ -47,7 +48,8 @@ import {
   AdminReturnInspectResponse,
   OrderCancelResponse,
   OrderReturnRequestPayload,
-  OrderReturnRequestResponse
+  OrderReturnRequestResponse,
+  MonthlyStatsResult
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
@@ -361,6 +363,11 @@ export class ApiService {
     paymentStatus?: 'paid_branch';
     deliveryStatus?: 'delivered_branch';
     items: Array<Pick<AdminOrderItem, 'productId' | 'name' | 'price' | 'quantity'>>;
+    cashierDiscountMode?: 'percent' | 'amount';
+    cashierDiscountValue?: number;
+    paymentType?: 'full' | 'partial' | 'credit';
+    amountPaid?: number;
+    authCode?: string;
   }): Observable<{ sale: PosSale }> {
     return this.resolveApi().registerPosSale(payload);
   }
@@ -371,6 +378,26 @@ export class ApiService {
 
   createPosCashCut(payload: { stockId: string; cashToKeep?: number }): Observable<{ cut: PosCashCut; control: PosCashControl }> {
     return this.resolveApi().createPosCashCut(payload);
+  }
+
+  savePosAuthCode(code: string): Observable<{ ok: boolean }> {
+    return this.resolveApi().savePosAuthCode(code);
+  }
+
+  validatePosAuth(code: string): Observable<{ ok: boolean }> {
+    return this.resolveApi().validatePosAuth(code);
+  }
+
+  registerPosWithdrawal(payload: { stockId: string; amount: number; reason: string; authCode: string }): Observable<{ withdrawal: PosWithdrawal; control: PosCashControl }> {
+    return this.resolveApi().registerPosWithdrawal(payload);
+  }
+
+  listPosCashCuts(stockId?: string): Observable<PosCashCut[]> {
+    return this.resolveApi().listPosCashCuts(stockId);
+  }
+
+  getMonthlyStats(month: string): Observable<MonthlyStatsResult> {
+    return this.resolveApi().getMonthlyStats(month);
   }
 
   updateCustomerPrivileges(customerId: number, payload: UpdateCustomerPrivilegesPayload): Observable<AdminCustomer> {
