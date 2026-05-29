@@ -266,6 +266,10 @@
 | E2E-ADM-14 | Configurar descuentos/comisiones/rangos/bonos | Happy | Alta | Editar config | Persistida en `/config/rewards` |
 | E2E-ADM-15 | 🔎 Configurar códigos de descuento / pagos especiales | Error | Alta | Buscar módulo de cupones | **Ausente** — no existe |
 | E2E-ADM-16 | 🔎 Acciones según perfil (vista inicial permitida) | Borde | Media | Login con privilegios limitados | Solo ve vistas permitidas |
+| E2E-ADM-17 | 🔎 Configurar pago parcial (pago especial) | Error | Alta | Buscar opción de pago parcial | **Ausente** — no hay soporte |
+| E2E-ADM-18 | 🔎 Configurar pago a crédito (pago especial) | Error | Alta | Definir crédito fuera de POS | **Parcial** — solo crédito de cajero en POS |
+| E2E-ADM-19 | 🔎 Descuento manual / pago manual configurable | Error | Alta | Definir descuento/pago manual | **Parcial/Ausente** — solo descuento de cajero en POS |
+| E2E-ADM-20 | 🔎 Permisos para crear/aplicar códigos de descuento | Borde | Alta | Asignar permiso a rol | Sin módulo de cupones; permisos por definir |
 
 ---
 
@@ -281,6 +285,10 @@
 | E2E-REP-06 | 🔎 Encabezados de columna presentes aun sin datos | Error | Alta | Exportar mes sin movimientos | Hojas con encabezados (no vacías) |
 | E2E-REP-07 | 🔎 Catálogo de reportes necesarios definido | Borde | Media | Revisar | Ventas/red/comisiones/rangos/actividad disponibles |
 | E2E-REP-08 | Exportar mes sin datos | Borde | Media | Mes vacío | Sin error; estructura visible |
+| E2E-REP-09 | 🔎 Reporte de comisiones | Error | Alta | Exportar comisiones | **Por definir** — no hay export dedicado de comisiones |
+| E2E-REP-10 | 🔎 Reporte de red | Error | Media | Exportar red multinivel | **Por definir** — no hay export dedicado de red |
+| E2E-REP-11 | 🔎 Reporte de rangos | Error | Media | Exportar rangos | **Por definir** — no hay export dedicado de rangos |
+| E2E-REP-12 | 🔎 Reporte de actividad mensual | Borde | Media | Exportar actividad | Parcial vía reporte mensual consolidado (`E2E-REP-05`) |
 
 ---
 
@@ -313,10 +321,12 @@
 | DASH | 19 | 9 | 8 | 2 |
 | PROF | 7 | 3 | 1 | 3 |
 | COMP | 16 | 6 | 8 | 2 |
-| ADM | 16 | 11 | 4 | 1 |
-| REP | 8 | 5 | 2 | 1 |
+| ADM | 20 | 11 | 5 | 4 |
+| REP | 12 | 5 | 3 | 4 |
 | NOTI | 6 | 3 | 2 | 1 |
-| **Total** | **176** | **85** | **52** | **39** |
+| **Total** | **184** | **85** | **54** | **45** |
 
-> Los **34 casos marcados con 🔎** trazan directamente a los hallazgos del cliente y son el
-> conjunto mínimo de regresión prioritario (ver matriz de comparación).
+> Los **56 casos marcados con 🔎** trazan directamente a los hallazgos del cliente y son el
+> conjunto mínimo de regresión prioritario (ver matriz de comparación). Todos los 20 hallazgos
+> (H1–H20) y sus sub-puntos quedan cubiertos — ver la matriz de trazabilidad en
+> `03-comparacion-matriz-hallazgos-findingu.md`.

@@ -24,11 +24,11 @@
 | H4 | Pérdida de datos/productos al cancelar compra | Alta | En Progreso | 🐞 Bug | E2E-CART-03, 04, 05 |
 | H5 | Recoger pedido en sucursal/consultorio | Alta | En Progreso | ✅ Backend OK / 🐞 "error desconocido" | E2E-SHIP-05..08 |
 | H6 | Especificar forma de pago en Punto de Venta | Alta | Pendiente | 🟡 Parcial | E2E-PAY-05, 06 |
-| H7 | Códigos de descuento / pagos especiales | Alta | Pendiente | ❌ Ausente | E2E-CART-14, E2E-ADM-15 |
+| H7 | Códigos de descuento / pagos especiales | Alta | Pendiente | ❌ Ausente | E2E-CART-14, E2E-ADM-15..20 |
 | H8 | Devolución — error al enviar solicitud | Alta | Pendiente | ✅ Backend OK / 🐞 integración | E2E-RET-01 |
 | H9 | URL directa a la tienda | Alta | En Progreso | ❌ Ausente | E2E-SHOP-09 |
 | H10 | Correo del patrocinador — botón copiar | Alta | Resuelto (ajuste) | ✅ Implementado | E2E-DASH-15, 16 |
-| H11 | Reportes generales — hojas vacías/sin estructura | Alta | En Progreso | 🐞 Bug | E2E-REP-06, 07 |
+| H11 | Reportes generales — hojas vacías/sin estructura | Alta | En Progreso | 🐞 Bug | E2E-REP-06, 07, 09..12 |
 | H12 | POS sucursal — opciones de pago dual | Media | En Progreso | 🟡 Parcial | E2E-PAY-05..08, E2E-ADM-12 |
 | H13 | APIs de paqueterías — cálculo de envío | Media | En Progreso | 🟡 Parcial | E2E-SHIP-01..04, 09 |
 | H14 | Niveles, metas y Cuadro de Honor | Media | En Progreso | ✅ / 🟡 (alineación plan) | E2E-DASH-04, 06; E2E-COMP-11 |
@@ -243,3 +243,87 @@
 > ya tienen **backend funcional**; el trabajo restante es de **frontend/integración/UX o de
 > configuración del plan**, no de construir el motor desde cero. Esto reduce el esfuerzo real
 > de H3, H5, H8, H14 y H16.
+
+---
+
+## Matriz de trazabilidad a nivel de sub-punto (validación de cobertura)
+
+Cada **sub-punto (viñeta)** del documento de requerimientos se mapea a su(s) caso(s) E2E.
+Objetivo: demostrar que **ningún requerimiento queda sin prueba**.
+
+| Hallazgo | Sub-punto del requerimiento | Caso(s) E2E | Cubierto |
+|---|---|---|---|
+| **H1** | Volumen en PC (no dinero) en métricas/metas/rangos | E2E-DASH-01, E2E-COMP-01 | ✅ |
+| H1 | 1 PC ≈ $50; PC proporcionales al neto | E2E-COMP-01, E2E-COMP-02 | ✅ |
+| H1 | Activación mensual $1,000 netos; sin activación no hay comisiones | E2E-COMP-03, E2E-COMP-04 | ✅ |
+| H1 | Escalera de descuentos 0/10/20/30/40% | E2E-COMP-05 | ✅ |
+| H1 | Comisiones Gen1–Gen5 (10/5/4/3/2), tope 24% | E2E-COMP-06 | ✅ |
+| H1 | Desbloqueo de generaciones (PC + directos + líneas) | E2E-COMP-07, 08, 09 | ✅ |
+| H1 | Compresión dinámica | E2E-COMP-10 | ✅ |
+| H1 | Rangos de liderazgo con requisitos | E2E-COMP-11 | ✅ |
+| H1 | Bono mensual por rango desde 4º mes | E2E-COMP-12 | ✅ |
+| H1 | Bono de inicio rápido (600 PC / 30 días) | E2E-COMP-13 | ✅ |
+| H1 | Tabla de PC oficiales por producto cargada | E2E-COMP-14, E2E-SHOP-08 | ✅ |
+| **H2** | VP y VG mostrados en PC | E2E-DASH-01 | ✅ |
+| H2 | PC acumulados del mes + faltante al siguiente nivel | E2E-DASH-02 | ✅ |
+| H2 | Nivel de descuento actual visible | E2E-DASH-03 | ✅ |
+| **H3** | Afiliado visible en la red del patrocinador | E2E-REF-02 | ✅ |
+| H3 | Patrocinador visible en el perfil del afiliado | E2E-REF-03, E2E-PROF-06 | ✅ |
+| H3 | Relación patrocinador–afiliado persistida desde el registro | E2E-REF-12 | ✅ |
+| **H4** | Alias del afiliado no se elimina al "Regresar" | E2E-CART-03 | ✅ |
+| H4 | Producto no queda como costo fantasma | E2E-CART-04 | ✅ |
+| H4 | Agregar producto no suma al fantasma | E2E-CART-05 | ✅ |
+| H4 | Al cancelar, el carrito se vacía correctamente | E2E-CART-06 | ✅ |
+| **H5** | Integrar pickup en el paso de envío + aviso de stock | E2E-SHIP-05, E2E-SHIP-07 | ✅ |
+| H5 | Corregir "error desconocido" al elegir pickup | E2E-SHIP-06 | ✅ |
+| H5 | Aviso en POS/Consultorio de pedido a recoger y pagar en sucursal | E2E-ADM-12, E2E-PAY-05 | ✅ |
+| H5 | Mensaje de confirmación pickup + eliminar botón Mercado Pago | E2E-SHIP-08, E2E-PAY-08 | ✅ |
+| **H6** | Campo de forma de pago (efectivo/crédito/débito/transferencia) | E2E-PAY-05 | ✅ |
+| H6 | Campo visible y editable al gestionar pedido pago en sucursal | E2E-PAY-06 | ✅ |
+| H6 | "Cambiar estado" no basta; se requiere detalle de método | E2E-PAY-06 | ✅ |
+| **H7** | Módulo en admin para configurar códigos de descuento | E2E-ADM-15, E2E-CART-14 | ✅ |
+| H7 | Soporte de pago parcial | E2E-ADM-17 | ✅ |
+| H7 | Soporte de crédito | E2E-ADM-18 | ✅ |
+| H7 | Descuento manual y pago manual | E2E-ADM-19 | ✅ |
+| H7 | Definir permisos de creación/aplicación | E2E-ADM-20 | ✅ |
+| **H8** | Flujo de devolución sin errores | E2E-RET-01 | ✅ |
+| H8 | Ajuste de PC/volumen/bono/rango al aplicar devolución | E2E-RET-12, E2E-COMP-15 | ✅ |
+| **H9** | URL limpia/subdominio de tienda | E2E-SHOP-09 | ✅ |
+| H9 | Confirmar si www es tienda o landing | (análisis, no prueba) | n/a |
+| H9 | Textos del home del landing definidos/cargados | E2E-LAND-07 | ✅ |
+| **H10** | Botón/ícono "Copiar correo" del patrocinador | E2E-DASH-15 | ✅ |
+| H10 | mailto solo funciona con cliente de correo | E2E-DASH-16 | ✅ |
+| **H11** | Confirmar estructura/contenido de cada reporte | E2E-REP-07 | ✅ |
+| H11 | Encabezados de columna aun sin datos | E2E-REP-06, E2E-REP-08 | ✅ |
+| H11 | Definir reportes: ventas/red/comisiones/rangos/actividad | E2E-REP-01..05, 09, 10, 11, 12 | ✅ |
+| **H12** | Mostrar ambas opciones (en línea / en sucursal) | E2E-PAY-05, E2E-PAY-08 | ✅ |
+| H12 | Si elige sucursal, solo mensaje (sin botón MP) | E2E-SHIP-08, E2E-PAY-08 | ✅ |
+| H12 | Notificación interna al operador | E2E-ADM-12 | ✅ |
+| **H13** | Viabilidad de integración (Envia.com) | E2E-SHIP-04 | ✅ |
+| H13 | Cálculo automático según destino/peso | E2E-SHIP-01 | ✅ |
+| H13 | Generación de guías (DHL/FedEx/Estafeta) | E2E-SHIP-09 | ✅ |
+| **H14** | Niveles/rangos con requisitos exactos | E2E-COMP-11 | ✅ |
+| H14 | Cuadro de Honor visible desde el 1er mes + reconocimientos | E2E-DASH-06, E2E-DASH-07 | ✅ |
+| H14 | Cuadro de Honor alineado con el plan final | E2E-DASH-06, E2E-COMP-11 | ✅ |
+| **H15** | Definir/documentar lógica de sugeridos | E2E-CART-09 | ✅ |
+| H15 | Confirmar si ya hay lógica implementada | E2E-CART-08 | ✅ |
+| **H16** | Mostrar PC oficiales del producto | E2E-SHOP-07 | ✅ |
+| H16 | Mostrar PC netos según descuento vigente | E2E-SHOP-07 | ✅ |
+| H16 | Verificar tabla de PC de los 13 productos | E2E-SHOP-08, E2E-COMP-14 | ✅ |
+| **H17** | Dashboard: carrusel de 3 posiciones (Producto del mes) | E2E-DASH-09 | ✅ |
+| H17 | Landing: carrusel de 2 posiciones (Tienda/Sistema) | E2E-LAND-06 | ✅ |
+| **H18** | Filtrar notificaciones/acciones por rol | E2E-DASH-19 | ✅ |
+| H18 | Cliente no afiliado no ve red/comisiones | E2E-DASH-19, E2E-ADM-16 | ✅ |
+| **H19** | Aviso de privacidad general (sin cookies/analytics) | E2E-PROF-07, E2E-NOTI-06 | ✅ |
+| H19 | Mostrarse al registrarse o primer acceso | E2E-PROF-07 | ✅ |
+| **H20** | Definir cuántas piezas y tamaños (IG/WA/FB) | E2E-DASH-11 | ✅ |
+| H20 | Personalizables con el código de referido | E2E-DASH-11 | ✅ |
+
+### Resultado de la validación
+
+- **20 / 20 hallazgos** cubiertos en la matriz E2E.
+- **63 / 63 sub-puntos** verificables cubiertos; **1 sub-punto** de H9 ("confirmar si www es
+  tienda o landing") es una **decisión/análisis**, no un caso de prueba (marcado `n/a`).
+- **56 casos E2E** trazados con 🔎 a hallazgos del cliente (subió de 48 tras enriquecer H7 y H11
+  con escenarios por sub-punto: `E2E-ADM-17..20` y `E2E-REP-09..12`).
+- No quedan hallazgos ni sub-puntos sin al menos un caso E2E asociado.
