@@ -19,6 +19,8 @@ export type ProductCardModel = {
   description?: string;
   img: string;
   price: number;
+  /** Puntos Comisionables (PC) oficiales que aporta el producto a los logros. */
+  vpPoints?: number;
   variants?: ProductVariantCard[];
 };
 
@@ -35,6 +37,8 @@ export class UiProductCardComponent {
   @Input() discountLabel = '';
   @Input() qty = 0;
   @Input() mode: 'detailed' | 'compact' = 'detailed';
+  /** Descuento vigente del asociado (0..1). Si > 0 se muestran también los PC netos. */
+  @Input() discountRate = 0;
 
   @Input() variantQtys: Record<string, number> = {};
   @Output() variantQtyChange = new EventEmitter<{ variantId: string; qty: number }>();
@@ -47,6 +51,26 @@ export class UiProductCardComponent {
 
   get hasDiscount(): boolean {
     return !!this.originalPriceLabel && this.originalPriceLabel !== this.discountedPriceLabel;
+  }
+
+  /** PC oficiales del producto (puntos que aporta a los logros sin descuento). */
+  get officialPc(): number {
+    return Number(this.product.vpPoints ?? 0);
+  }
+
+  get hasPc(): boolean {
+    return this.officialPc > 0;
+  }
+
+  /** PC netos = PC oficiales × (1 − % descuento). Se redondea a 1 decimal. */
+  get netPc(): number {
+    const factor = 1 - Math.min(Math.max(this.discountRate, 0), 1);
+    return Math.round(this.officialPc * factor * 10) / 10;
+  }
+
+  /** True cuando el descuento reduce los PC respecto a los oficiales. */
+  get hasNetPc(): boolean {
+    return this.hasPc && this.discountRate > 0 && this.netPc !== this.officialPc;
   }
 
   get activeVariants(): ProductVariantCard[] {

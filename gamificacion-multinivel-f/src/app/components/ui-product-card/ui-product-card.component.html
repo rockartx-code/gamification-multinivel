@@ -26,6 +26,19 @@
           </div>
         </div>
 
+        <!-- Puntos Comisionables (PC) que aporta a los logros -->
+        <div *ngIf="hasPc" class="mt-1 flex flex-wrap items-center justify-end gap-1.5">
+          <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent"
+                title="Puntos Comisionables que suma este producto a tus logros (PV/PG)">
+            <i class="fa-solid fa-star text-[9px]" aria-hidden="true"></i>
+            {{ officialPc }} PC
+          </span>
+          <span *ngIf="hasNetPc" class="inline-flex items-center gap-1 rounded-full bg-olive-30/40 px-2 py-0.5 text-[10px] font-semibold text-gray-700"
+                title="PC netos según tu descuento vigente (proporcionales al neto pagado)">
+            {{ netPc }} PC netos
+          </span>
+        </div>
+
         <!-- Título -->
         <h4 class="mt-2 text-sm sm:text-base font-extrabold leading-snug tracking-tight line-clamp-2">
           {{ product.name }}
@@ -130,8 +143,12 @@
         {{ product.badge }}
       </div>
 
-      <div class="mt-1 text-sm font-extrabold">
-        {{ discountedPriceLabel }}
+      <div class="mt-1 flex items-center gap-2">
+        <span class="text-sm font-extrabold">{{ discountedPriceLabel }}</span>
+        <span *ngIf="hasPc" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent"
+              title="Puntos Comisionables que suma a tus logros (PV/PG)">
+          <i class="fa-solid fa-star text-[8px]" aria-hidden="true"></i>{{ officialPc }} PC
+        </span>
       </div>
     </div>
 

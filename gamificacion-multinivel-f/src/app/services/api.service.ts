@@ -49,7 +49,10 @@ import {
   OrderCancelResponse,
   OrderReturnRequestPayload,
   OrderReturnRequestResponse,
-  MonthlyStatsResult
+  MonthlyStatsResult,
+  CouponValidation,
+  Coupon,
+  SaveCouponPayload
 } from '../models/admin.model';
 import { AdminEmployee, CreateEmployeePayload, UpdateEmployeePrivilegesPayload } from '../models/employee.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
@@ -466,6 +469,22 @@ export class ApiService {
 
   getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {
     return this.resolveApi().getShippingQuote(payload);
+  }
+
+  validateCoupon(code: string, subtotal: number, customerId?: string | number): Observable<CouponValidation> {
+    return this.resolveApi().validateCoupon(code, subtotal, customerId);
+  }
+
+  listCoupons(): Observable<Coupon[]> {
+    return this.resolveApi().listCoupons();
+  }
+
+  saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
+    return this.resolveApi().saveCoupon(payload);
+  }
+
+  deleteCoupon(code: string): Observable<{ message: string; code: string }> {
+    return this.resolveApi().deleteCoupon(code);
   }
 
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {

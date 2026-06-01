@@ -180,6 +180,7 @@
       mode="compact"
       [product]="product"
       [discountedPriceLabel]="formatMoney(discountedPrice(product.price))"
+      [discountRate]="discountPercent / 100"
       (viewDetails)="openProductDetails(product)"
       (add)="addSuggestedProduct(product)"></ui-product-card>
   </div>
@@ -560,6 +561,31 @@
               <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
                 {{ discountUpgradeMessage }}
               </div>
+
+              <!-- Cupón / código de descuento (H7) -->
+              <div class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
+                <div class="flex items-center gap-2">
+                  <input type="text" placeholder="Código de descuento"
+                    class="flex-1 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
+                    [ngModel]="couponCode" (ngModelChange)="couponCode = $event"
+                    [disabled]="!!appliedCoupon?.valid" />
+                  <button *ngIf="!appliedCoupon?.valid" type="button"
+                    class="rounded-lg bg-accent px-3 py-1 text-xs font-bold text-white disabled:opacity-50"
+                    [disabled]="couponChecking" (click)="applyCoupon()">
+                    {{ couponChecking ? '...' : 'Aplicar' }}
+                  </button>
+                  <button *ngIf="appliedCoupon?.valid" type="button"
+                    class="rounded-lg border border-olive-30 px-3 py-1 text-xs font-semibold text-gray-600"
+                    (click)="removeCoupon()">Quitar</button>
+                </div>
+                <p *ngIf="couponMessage" class="mt-1 text-[11px]"
+                  [ngClass]="appliedCoupon?.valid ? 'text-green-600' : 'text-red-500'">{{ couponMessage }}</p>
+              </div>
+              <div *ngIf="couponDiscount > 0" class="flex items-center justify-between text-muted">
+                <span>Cupón {{ appliedCoupon?.code }}</span>
+                <span class="text-gold">-{{ formatMoney(couponDiscount) }}</span>
+              </div>
+
               <div class="my-2 border-t border-olive-20"></div>
               <div class="flex items-center justify-between">
                 <span class="font-semibold text-main">Total</span>

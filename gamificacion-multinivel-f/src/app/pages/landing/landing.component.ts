@@ -23,6 +23,36 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
 })
 export class LandingComponent implements OnInit {
   readonly currentYear = new Date().getFullYear();
+
+  // Carrusel del home: 2 posiciones (Tienda / Conoce el sistema). H17.
+  readonly homeSlides: ReadonlyArray<{
+    key: string; icon: string; title: string; text: string; ctaText: string; route?: string; anchor?: string;
+  }> = [
+    {
+      key: 'tienda', icon: 'fa-store', title: 'Explora la Tienda',
+      text: 'Descubre el catálogo completo de productos de bienestar y los Puntos Comisionables (PC) que suma cada uno a tus logros.',
+      ctaText: 'Ir a la tienda', route: '/tienda'
+    },
+    {
+      key: 'sistema', icon: 'fa-diagram-project', title: 'Conoce el sistema',
+      text: 'Aprende cómo funciona el plan de compensación: niveles de descuento, comisiones por generación, rangos y bonos.',
+      ctaText: 'Ver cómo funciona', anchor: 'plan'
+    }
+  ];
+  homeSlideIndex = 0;
+
+  nextHomeSlide(): void {
+    this.homeSlideIndex = (this.homeSlideIndex + 1) % this.homeSlides.length;
+  }
+
+  prevHomeSlide(): void {
+    this.homeSlideIndex = (this.homeSlideIndex - 1 + this.homeSlides.length) % this.homeSlides.length;
+  }
+
+  goHomeSlide(index: number): void {
+    this.homeSlideIndex = Math.min(Math.max(index, 0), this.homeSlides.length - 1);
+  }
+
   readonly defaultHero = {
     id: '',
     name: 'COLAGENO',

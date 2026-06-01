@@ -9,7 +9,8 @@ export type AdminViewId =
   | 'honor_board'
   | 'notifications'
   | 'settings'
-  | 'employees';
+  | 'employees'
+  | 'coupons';
 
 export type AppPrivilege =
   | 'access_screen_orders'
@@ -90,7 +91,8 @@ export const SCREEN_PRIVILEGE_BY_VIEW: Record<AdminViewId, AppPrivilege> = {
   honor_board: 'access_screen_honor_board',
   notifications: 'config_manage',
   settings: 'access_screen_settings',
-  employees: 'access_screen_employees'
+  employees: 'access_screen_employees',
+  coupons: 'config_manage'
 };
 
 export function normalizePrivileges(raw: unknown): UserPrivileges {

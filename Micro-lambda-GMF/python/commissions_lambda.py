@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 import core_utils as utils # Importado desde la Lambda Layer
 
 # --- CONSTANTES ---
-MAX_COMMISSION_LEVELS = 3
+# Plan abril 2026: 5 generaciones (Gen1..Gen5) con compresión dinámica.
+MAX_COMMISSION_LEVELS = 5
+# Profundidad máxima de ancestros a recorrer al comprimir (saltar no calificados).
+MAX_COMPRESSION_DEPTH = 50
 PK_MONTH = "COMMISSION_MONTH"
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 
@@ -162,12 +165,133 @@ def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: in
     return total_vp
 
 def _get_rank(vg: float, rank_thresholds: list) -> str:
-    """Determina el rango del asociado por VG."""
+    """Determina el rango del asociado por VG (gate simple, retrocompatibilidad)."""
     rank = ""
     for rt in sorted(rank_thresholds, key=lambda x: float(x.get("vgMin", 0))):
         if vg >= float(rt.get("vgMin", 0)):
             rank = rt.get("rank", "")
     return rank
+
+def _network_descendant_ids(customer_id: str, max_levels: int) -> list:
+    """IDs de toda la descendencia (sin incluirse) hasta `max_levels` niveles."""
+    all_customers = _load_network_customers(customer_id)
+    id_map = {str(c.get("customerId") or c.get("id", "")): c for c in all_customers}
+    visited: set = set()
+    queue: list = [(str(customer_id), 0)]
+    result: list = []
+    while queue:
+        cid, depth = queue.pop(0)
+        if cid in visited or depth > max_levels:
+            continue
+        visited.add(cid)
+        if depth > 0:
+            result.append(cid)
+        if depth < max_levels:
+            for sid, c in id_map.items():
+                if str(c.get("leaderId", "")) == cid and sid not in visited:
+                    queue.append((sid, depth + 1))
+    return result
+
+def _compute_rank(customer_id: str, month_key: str, vp: float, vg: float,
+                  mxn_per_vp: float, max_levels: int, rank_thresholds: list) -> str:
+    """
+    Rango con gating completo del Plan abril 2026 §6: VG mín., PC personal mín. (vpMin),
+    líneas calificadas (minLines × pcMinPerLine) y `requiredLeaders` (N líderes del rango
+    inferior `requiredLeaderRank` en la red, evaluado recursivamente).
+
+    Usa memoización por cliente y un guard de ciclos: durante el cálculo del rango de un
+    cliente, este se considera provisionalmente "sin rango" para evitar recursión infinita.
+    """
+    tiers = sorted(rank_thresholds, key=lambda x: float(x.get("vgMin", 0)))
+    rank_index = {str(rt.get("rank", "")): i for i, rt in enumerate(tiers)}
+    memo: dict = {}
+
+    def rank_at(cid: str, known_vp=None, known_vg=None) -> str:
+        cid = str(cid)
+        if cid in memo:
+            return memo[cid]
+        memo[cid] = ""  # guard de ciclos
+        cvp = known_vp if known_vp is not None else _calc_vp(cid, month_key, mxn_per_vp)
+        cvg = known_vg if known_vg is not None else _calc_vg(cid, month_key, mxn_per_vp, max_levels)
+
+        achieved = ""
+        for rt in tiers:
+            if cvg < float(rt.get("vgMin", 0) or 0):
+                continue
+            if cvp < float(rt.get("vpMin", 0) or 0):
+                continue
+            min_lines   = int(rt.get("minLines", 0) or 0)
+            pc_per_line = float(rt.get("pcMinPerLine", 0) or 0)
+            if min_lines > 0 and _count_qualifying_lines(cid, month_key, mxn_per_vp, max_levels, pc_per_line) < min_lines:
+                continue
+
+            req_leaders = int(rt.get("requiredLeaders", 0) or 0)
+            req_rank    = str(rt.get("requiredLeaderRank", "") or "")
+            if req_leaders > 0 and req_rank:
+                needed_idx = rank_index.get(req_rank, -1)
+                if needed_idx >= 0:
+                    count = 0
+                    for did in _network_descendant_ids(cid, max_levels):
+                        if rank_index.get(rank_at(did), -1) >= needed_idx:
+                            count += 1
+                            if count >= req_leaders:
+                                break
+                    if count < req_leaders:
+                        continue
+            achieved = str(rt.get("rank", ""))
+        memo[cid] = achieved
+        return achieved
+
+    return rank_at(customer_id, vp, vg)
+
+def _is_active(customer_id: str, month_key: str, mxn_per_vp: float, activation_vp: float) -> bool:
+    """Activo = acumuló al menos `activation_vp` PC netos personales en el mes (Plan §3)."""
+    return _calc_vp(customer_id, month_key, mxn_per_vp) >= activation_vp
+
+def _count_active_directs(customer_id: str, month_key: str, mxn_per_vp: float, activation_vp: float) -> int:
+    """Número de referidos directos activos en el mes."""
+    return sum(
+        1 for d in _get_direct_reports(customer_id)
+        if _is_active(d, month_key, mxn_per_vp, activation_vp)
+    )
+
+def _count_qualifying_lines(customer_id: str, month_key: str, mxn_per_vp: float,
+                            max_levels: int, pc_per_line: float) -> int:
+    """
+    Número de líneas (cada directo + su descendencia) cuyo VG de línea alcanza `pc_per_line`.
+    Una "línea" es la subred que cuelga de un directo, incluyéndolo.
+    """
+    if pc_per_line <= 0:
+        return len(_get_direct_reports(customer_id))
+    count = 0
+    for d in _get_direct_reports(customer_id):
+        if _calc_vg(d, month_key, mxn_per_vp, max_levels) >= pc_per_line:
+            count += 1
+    return count
+
+def _generation_qualified(beneficiary_id: str, gen_cfg: dict, month_key: str,
+                          mxn_per_vp: float, max_levels: int, activation_vp: float) -> bool:
+    """
+    True si el beneficiario califica para cobrar la generación descrita por `gen_cfg`
+    (Plan abril 2026 §4). Requiere estar activo y cumplir los umbrales de directos
+    activos, PC personales y líneas calificadas de esa generación.
+    """
+    # Requisito base de toda generación: estar activo.
+    if not _is_active(beneficiary_id, month_key, mxn_per_vp, activation_vp):
+        return False
+
+    req_directs   = int(gen_cfg.get("reqActiveDirects", 0) or 0)
+    req_personal  = float(gen_cfg.get("reqPersonalPC", 0) or 0)
+    req_lines     = int(gen_cfg.get("reqLines", 0) or 0)
+    req_pc_line   = float(gen_cfg.get("reqPCPerLine", 0) or 0)
+
+    if req_personal > 0 and _calc_vp(beneficiary_id, month_key, mxn_per_vp) < req_personal:
+        return False
+    if req_directs > 0 and _count_active_directs(beneficiary_id, month_key, mxn_per_vp, activation_vp) < req_directs:
+        return False
+    if req_lines > 0 and _count_qualifying_lines(beneficiary_id, month_key, mxn_per_vp, max_levels, req_pc_line) < req_lines:
+        return False
+    return True
 
 def _has_bonus_award(customer_id: str, rule_id: str, month_key: str, cooldown: str) -> bool:
     """Verifica si ya existe un award según el cooldown."""
@@ -290,7 +414,8 @@ def handle_evaluate_bonuses(customer_id: str, month_key: str) -> dict:
 
     vp            = _calc_vp(customer_id, month_key, mxn_per_vp)
     vg            = _calc_vg(customer_id, month_key, mxn_per_vp, max_levels)
-    rank          = _get_rank(vg, bonus_cfg.get("rankThresholds", []))
+    rank          = _compute_rank(customer_id, month_key, vp, vg, mxn_per_vp, max_levels,
+                                  bonus_cfg.get("rankThresholds", []))
     customer_data = utils._get_by_id("CUSTOMER", customer_id) or {}
 
     awarded = []
@@ -330,15 +455,30 @@ def _default_app_config() -> dict:
     return {
         "version": "app-v1",
         "rewards": {
-            # activationNetMin ahora en VP (unidad de volumen personal)
-            "activationNetMin": utils.Decimal("50"),
+            # Activación mensual: $1,000 MXN netos = 20 PC (con mxnPerVp=50). Plan abril 2026 §3.
+            "activationNetMin": utils.Decimal("20"),
             "payoutDay": utils.Decimal("10"),
-            "cutRule": "hard_cut_no_pass",
-            "discountTiers": [],
+            # Compresión dinámica activa: salta posiciones no calificadas y paga al
+            # siguiente ascendente calificado (Plan abril 2026 §4).
+            "cutRule": "dynamic_compression",
+            # Escalera de descuentos por MPN (Monto Personal Neto) acumulado en el mes
+            # calendario. Importes en MXN. Plan abril 2026 §3.
+            "discountTiers": [
+                {"min": utils.Decimal("0"),    "max": utils.Decimal("1000"), "rate": utils.Decimal("0.00")},
+                {"min": utils.Decimal("1000"), "max": utils.Decimal("2000"), "rate": utils.Decimal("0.10")},
+                {"min": utils.Decimal("2000"), "max": utils.Decimal("3000"), "rate": utils.Decimal("0.20")},
+                {"min": utils.Decimal("3000"), "max": utils.Decimal("6000"), "rate": utils.Decimal("0.30")},
+                {"min": utils.Decimal("6000"), "max": None,                  "rate": utils.Decimal("0.40")},
+            ],
+            # Comisiones por generación con requisitos de desbloqueo. Plan abril 2026 §4.
+            # reqActiveDirects = directos activos; reqPersonalPC = PC netos personales;
+            # reqLines = líneas calificadas; reqPCPerLine = PC netos mínimos por línea.
             "commissionLevels": [
-                {"rate": utils.Decimal("0.10"), "minActiveUsers": 0, "minIndividualPurchase": 0, "minGroupPurchase": 0},
-                {"rate": utils.Decimal("0.05"), "minActiveUsers": 0, "minIndividualPurchase": 0, "minGroupPurchase": 0},
-                {"rate": utils.Decimal("0.03"), "minActiveUsers": 0, "minIndividualPurchase": 0, "minGroupPurchase": 0},
+                {"gen": 1, "rate": utils.Decimal("0.10"), "reqActiveDirects": 0, "reqPersonalPC": 0,   "reqLines": 0, "reqPCPerLine": 0},
+                {"gen": 2, "rate": utils.Decimal("0.05"), "reqActiveDirects": 2, "reqPersonalPC": 0,   "reqLines": 0, "reqPCPerLine": 0},
+                {"gen": 3, "rate": utils.Decimal("0.04"), "reqActiveDirects": 3, "reqPersonalPC": 80,  "reqLines": 2, "reqPCPerLine": 300},
+                {"gen": 4, "rate": utils.Decimal("0.03"), "reqActiveDirects": 4, "reqPersonalPC": 120, "reqLines": 3, "reqPCPerLine": 450},
+                {"gen": 5, "rate": utils.Decimal("0.02"), "reqActiveDirects": 5, "reqPersonalPC": 160, "reqLines": 3, "reqPCPerLine": 750},
             ],
         },
         "orders": {"requireStockOnShipped": True, "requireDispatchLinesOnShipped": True},
@@ -369,58 +509,93 @@ def _default_app_config() -> dict:
         ],
         "bonuses": {
             "vpConfig": {"mxnPerVp": 50, "maxNetworkLevels": 5},
+            # Rangos de liderazgo. Plan abril 2026 §6. PC netos (proporcionales al neto pagado).
+            # vpMin = PC personal mín.; vgMin = VG mín.; minLines = líneas activas;
+            # pcMinPerLine = PC mín. por línea; requiredLeaders/requiredLeaderRank = líderes
+            # del rango inferior requeridos en la red.
             "rankThresholds": [
-                {"rank": "ORO",      "vgMin": 700},
-                {"rank": "PLATINO",  "vgMin": 2000},
-                {"rank": "DIAMANTE", "vgMin": 6000},
+                {"rank": "BRONCE",   "vpMin": 60,  "vgMin": 4500,  "minLines": 3, "pcMinPerLine": 900,  "requiredLeaders": 0, "requiredLeaderRank": "",        "monthlyBonus": 500,   "annualBonus": 6000},
+                {"rank": "PLATA",    "vpMin": 90,  "vgMin": 9000,  "minLines": 4, "pcMinPerLine": 1500, "requiredLeaders": 2, "requiredLeaderRank": "BRONCE",  "monthlyBonus": 1500,  "annualBonus": 18000},
+                {"rank": "ORO",      "vpMin": 140, "vgMin": 15000, "minLines": 4, "pcMinPerLine": 2500, "requiredLeaders": 2, "requiredLeaderRank": "PLATA",   "monthlyBonus": 3000,  "annualBonus": 36000},
+                {"rank": "PLATINO",  "vpMin": 200, "vgMin": 21000, "minLines": 5, "pcMinPerLine": 3000, "requiredLeaders": 2, "requiredLeaderRank": "ORO",     "monthlyBonus": 6000,  "annualBonus": 72000},
+                {"rank": "DIAMANTE", "vpMin": 280, "vgMin": 25000, "minLines": 5, "pcMinPerLine": 4000, "requiredLeaders": 2, "requiredLeaderRank": "PLATINO", "monthlyBonus": 10000, "annualBonus": 120000},
             ],
             "rules": [
                 {
+                    # §7.1 Bono de Inicio Rápido: 600 PC grupales en los primeros 30 días, una sola vez.
                     "id": "inicio_rapido", "name": "Bono de Inicio Rápido", "active": True,
-                    "conditions": [{"type": "first_30_days"}, {"type": "direct_vg_min", "value": 600}],
+                    "conditions": [{"type": "first_30_days"}, {"type": "vg_min", "value": 600}],
                     "rewards": [{"type": "cash_mxn", "amount": 5000}],
                     "cooldown": "once",
-                    "notes": "Primeros 30 días: VG directos ≥ 600 VP → $5,000 MXN",
+                    "notes": "Primeros 30 días: 600 PC grupales del equipo → $5,000 MXN (una vez).",
+                },
+                # §7.2 Bono Mensual por Rango: se mantiene el rango 3 meses (calificación, no cobra)
+                # y se cobra a partir del 4º mes consecutivo. consecutive_months=4 sobre el vgMin del rango.
+                {
+                    "id": "bono_rango_bronce", "name": "Bono Mensual BRONCE", "active": True, "rank": "BRONCE",
+                    "conditions": [{"type": "vg_min", "value": 4500}, {"type": "consecutive_months", "value": 4}],
+                    "rewards": [{"type": "monthly_cash", "amount": 500}],
+                    "cooldown": "monthly",
+                    "notes": "$500/mes desde el 4º mes consecutivo en BRONCE.",
                 },
                 {
-                    "id": "oro_smart_tv", "name": "Bono ORO — Smart TV", "active": True, "rank": "ORO",
-                    "conditions": [{"type": "vg_min", "value": 700}, {"type": "consecutive_months", "value": 2}],
-                    "rewards": [{"type": "item", "itemLabel": "Smart TV", "triggerMonths": 2}],
+                    "id": "bono_rango_plata", "name": "Bono Mensual PLATA", "active": True, "rank": "PLATA",
+                    "conditions": [{"type": "vg_min", "value": 9000}, {"type": "consecutive_months", "value": 4}],
+                    "rewards": [{"type": "monthly_cash", "amount": 1500}],
+                    "cooldown": "monthly",
+                    "notes": "$1,500/mes desde el 4º mes consecutivo en PLATA.",
+                },
+                {
+                    "id": "bono_rango_oro", "name": "Bono Mensual ORO", "active": True, "rank": "ORO",
+                    "conditions": [{"type": "vg_min", "value": 15000}, {"type": "consecutive_months", "value": 4}],
+                    "rewards": [{"type": "monthly_cash", "amount": 3000}],
+                    "cooldown": "monthly",
+                    "notes": "$3,000/mes desde el 4º mes consecutivo en ORO.",
+                },
+                {
+                    "id": "bono_rango_platino", "name": "Bono Mensual PLATINO", "active": True, "rank": "PLATINO",
+                    "conditions": [{"type": "vg_min", "value": 21000}, {"type": "consecutive_months", "value": 4}],
+                    "rewards": [{"type": "monthly_cash", "amount": 6000}],
+                    "cooldown": "monthly",
+                    "notes": "$6,000/mes desde el 4º mes consecutivo en PLATINO.",
+                },
+                {
+                    "id": "bono_rango_diamante", "name": "Bono Mensual DIAMANTE", "active": True, "rank": "DIAMANTE",
+                    "conditions": [{"type": "vg_min", "value": 25000}, {"type": "consecutive_months", "value": 4}],
+                    "rewards": [{"type": "monthly_cash", "amount": 10000}],
+                    "cooldown": "monthly",
+                    "notes": "$10,000/mes desde el 4º mes consecutivo en DIAMANTE.",
+                },
+                # §7.3 Premios físicos por sostenimiento de rango (una sola vez por rango).
+                {
+                    "id": "premio_bronce_3m", "name": "Premio BRONCE (3 meses)", "active": True, "rank": "BRONCE",
+                    "conditions": [{"type": "vg_min", "value": 4500}, {"type": "consecutive_months", "value": 3}],
+                    "rewards": [{"type": "item", "itemLabel": "Licuadora o Air Fryer", "triggerMonths": 3}],
                     "cooldown": "once",
                 },
                 {
-                    "id": "oro_viaje", "name": "Bono ORO — Viaje Nacional", "active": True, "rank": "ORO",
-                    "conditions": [{"type": "vg_min", "value": 700}, {"type": "consecutive_months", "value": 3}],
-                    "rewards": [{"type": "item", "itemLabel": "Viaje nacional", "triggerMonths": 3}],
+                    "id": "premio_plata_3m", "name": "Premio PLATA (3 meses)", "active": True, "rank": "PLATA",
+                    "conditions": [{"type": "vg_min", "value": 9000}, {"type": "consecutive_months", "value": 3}],
+                    "rewards": [{"type": "item", "itemLabel": "Microondas o equivalente", "triggerMonths": 3}],
                     "cooldown": "once",
                 },
                 {
-                    "id": "platino_primera_vez", "name": "Bono PLATINO — Primera Vez", "active": True, "rank": "PLATINO",
-                    "conditions": [{"type": "vg_min", "value": 2000}, {"type": "first_time"}],
-                    "rewards": [{"type": "cash_mxn", "amount": 10000}],
+                    "id": "premio_oro_3m", "name": "Premio ORO (3 meses)", "active": True, "rank": "ORO",
+                    "conditions": [{"type": "vg_min", "value": 15000}, {"type": "consecutive_months", "value": 3}],
+                    "rewards": [{"type": "item", "itemLabel": "Pantalla Smart TV", "triggerMonths": 3}],
                     "cooldown": "once",
-                    "notes": "Bono único al alcanzar PLATINO por primera vez",
                 },
                 {
-                    "id": "platino_apoyo_auto", "name": "Bono PLATINO — Apoyo Mensual Auto", "active": True, "rank": "PLATINO",
-                    "conditions": [{"type": "vg_min", "value": 2000}, {"type": "consecutive_months", "value": 4}],
-                    "rewards": [{"type": "monthly_cash", "amount": 8000}],
-                    "cooldown": "monthly",
-                    "notes": "Requiere 4 meses consecutivos en PLATINO",
+                    "id": "premio_platino_3m", "name": "Premio PLATINO (3 meses)", "active": True, "rank": "PLATINO",
+                    "conditions": [{"type": "vg_min", "value": 21000}, {"type": "consecutive_months", "value": 3}],
+                    "rewards": [{"type": "item", "itemLabel": "Experiencia premium", "triggerMonths": 3}],
+                    "cooldown": "once",
                 },
                 {
-                    "id": "diamante_platinos", "name": "Bono DIAMANTE — Por Platinos Directos", "active": True, "rank": "DIAMANTE",
-                    "conditions": [{"type": "vg_min", "value": 6000}, {"type": "direct_rank_count", "value": 3, "rank": "PLATINO"}],
-                    "rewards": [{"type": "cash_mxn", "amount": 25000}],
-                    "cooldown": "monthly",
-                    "notes": "$25,000 por cada 3 Platinos directos",
-                },
-                {
-                    "id": "diamante_fondo_anual", "name": "Bono DIAMANTE — Fondo Anual", "active": True, "rank": "DIAMANTE",
-                    "conditions": [{"type": "vg_min", "value": 6000}],
-                    "rewards": [{"type": "annual_fund_pct", "pct": 2}],
-                    "cooldown": "monthly",
-                    "notes": "2% mensual acumulado al fondo anual DIAMANTE",
+                    "id": "premio_diamante_6m", "name": "Premio DIAMANTE (6 meses)", "active": True, "rank": "DIAMANTE",
+                    "conditions": [{"type": "vg_min", "value": 25000}, {"type": "consecutive_months", "value": 6}],
+                    "rewards": [{"type": "item", "itemLabel": "Viaje internacional elite", "triggerMonths": 6}],
+                    "cooldown": "once",
                 },
             ],
         },
@@ -555,41 +730,60 @@ def handle_apply_rewards(order_id):
         utils._increment_associate_month_net_volume(buyer_id, month_key, commissionable_net)
         utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
 
-    # 2. Repartir comisiones al upline
-    chain = _get_upline_chain(order['customerId'])
-    levels_cfg = cfg.get("commissionLevels", [])
-    # Extraer tasas de la configuración; fallback a valores por defecto
-    default_rates = {1: utils.Decimal("0.10"), 2: utils.Decimal("0.05"), 3: utils.Decimal("0.03")}
-    rates = {}
+    # 2. Repartir comisiones al upline con compresión dinámica (Plan abril 2026 §4).
+    max_levels    = int(vp_cfg.get("maxNetworkLevels", 5))
+    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 20)))
+    cut_rule      = cfg.get("cutRule", "dynamic_compression")
+    levels_cfg    = cfg.get("commissionLevels", [])
+
+    # Mapa generación -> config (tasa + requisitos de desbloqueo).
+    default_rates = {1: "0.10", 2: "0.05", 3: "0.04", 4: "0.03", 5: "0.02"}
+    gens: dict = {}
     for i, lvl in enumerate(levels_cfg[:MAX_COMMISSION_LEVELS]):
-        rates[i + 1] = utils._to_decimal(lvl.get("rate", default_rates.get(i + 1, 0)))
-    for k, v in default_rates.items():
-        rates.setdefault(k, v)
+        g = int(lvl.get("gen", i + 1))
+        gens[g] = dict(lvl)
+        gens[g].setdefault("rate", utils.Decimal(default_rates.get(g, "0")))
+    for g, r in default_rates.items():
+        gens.setdefault(g, {"gen": g, "rate": utils.Decimal(r)})
 
-    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 50)))
+    # Cadena completa de ancestros (no limitada a 5) para poder comprimir.
+    chain = utils._get_customer_upline_ids(order['customerId'], MAX_COMPRESSION_DEPTH)
 
-    for idx, b_id in enumerate(chain):
-        level  = idx + 1
-        rate   = rates.get(level, utils.D_ZERO)
-        amount = (commissionable_net * rate).quantize(utils.D_CENT)
-
-        # Verificar activación usando VP directos (netVP si existe, sino convierte netVolume)
-        m_state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(b_id, month_key))
-        beneficiary_vp = _state_to_vp(m_state, mxn_per_vp)
-        is_active = beneficiary_vp >= activation_vp
-
+    def _write_row(b_id, gen, amount, status, reason=None):
         item   = _get_ledger_month(b_id, month_key)
-        row_id = f"{order_id}#L{level}"
-
+        row_id = f"{order_id}#G{gen}"
         new_row = {
             "rowId": row_id, "orderId": order_id, "amount": amount,
-            "level": level, "status": "pending" if is_active else "blocked",
-            "createdAt": utils._now_iso()
+            "level": gen, "generation": gen, "status": status,
+            "createdAt": utils._now_iso(),
         }
-        ledger = [r for r in item['ledger'] if r['rowId'] != row_id]
-        ledger.append(new_row)
-        item['ledger'] = ledger
+        if reason:
+            new_row["reason"] = reason
+        item['ledger'] = [r for r in item['ledger'] if r['rowId'] != row_id]
+        item['ledger'].append(new_row)
         _save_ledger_month(item)
+
+    gen = 1  # siguiente generación a cubrir
+    for b_id in chain:
+        if gen > MAX_COMMISSION_LEVELS:
+            break
+        gen_cfg = gens.get(gen, {})
+        rate    = utils._to_decimal(gen_cfg.get("rate", 0))
+        amount  = (commissionable_net * rate).quantize(utils.D_CENT)
+
+        if _generation_qualified(b_id, gen_cfg, month_key, mxn_per_vp, max_levels, activation_vp):
+            # Califica: cobra esta generación y avanza el contador.
+            _write_row(b_id, gen, amount, "pending")
+            gen += 1
+        elif cut_rule == "dynamic_compression":
+            # No califica: se registra informativo 'blocked' y la posición se brinca
+            # (la generación la tomará el siguiente ascendente calificado).
+            _write_row(b_id, gen, amount, "blocked", reason="no_califica_gen")
+            # No se avanza `gen`: compresión dinámica.
+        else:
+            # Modo legado sin traspaso: bloquea y avanza igual.
+            _write_row(b_id, gen, amount, "blocked", reason="inactivo")
+            gen += 1
 
 def handle_confirm_commissions(order_id):
     """Acción: ORDER_DELIVERED. Cambia 'pending' -> 'confirmed' y evalúa bonos."""

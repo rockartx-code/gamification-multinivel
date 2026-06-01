@@ -18,7 +18,7 @@ ORDER_SFN_ARN = utils.os.getenv("ORDER_FULFILLMENT_SFN_ARN")
 ML_TOKEN = utils.os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 
-MAX_COMMISSION_LEVELS = 3
+MAX_COMMISSION_LEVELS = 5  # Plan abril 2026: 5 generaciones
 DEFAULT_ORDER_HISTORY_PAGE_SIZE = 10
 MAX_ORDER_HISTORY_PAGE_SIZE = 50        # clientes
 MAX_ADMIN_ORDER_PAGE_SIZE = 500         # admins
@@ -47,6 +47,23 @@ def _enrich_items_commissionable(items: list) -> list:
     return enriched
 
 
+def _resolve_discount_rate(discount_tiers, basis) -> utils.Decimal:
+    """
+    Devuelve la tasa de descuento de la escalera (Plan abril 2026 §3) para un MPN `basis`.
+    `basis` = MPN acumulado del mes + monto de la compra actual. Sin retroactividad:
+    el nivel resultante aplica a TODA la compra actual.
+    """
+    rate = utils.Decimal("0.0")
+    for tier in sorted(discount_tiers, key=lambda t: float(utils._to_decimal(t.get("min", 0)))):
+        t_min = utils._to_decimal(tier.get("min", 0))
+        t_max = tier.get("max")
+        t_max_d = utils._to_decimal(t_max) if t_max is not None else None
+        if basis >= t_min and (t_max_d is None or basis < t_max_d):
+            rate = utils._to_decimal(tier.get("rate", 0))
+            break
+    return rate
+
+
 def _calculate_totals(items, customer_id, buyer_type):
     gross = utils.D_ZERO
     for it in items:
@@ -56,9 +73,18 @@ def _calculate_totals(items, customer_id, buyer_type):
 
     cfg = utils._load_app_config().get("rewards", {})
     rate = utils.Decimal("0.0")
-    if buyer_type in ["associate", "registered"]:
-        if gross >= 3600:
-            rate = utils.Decimal("0.30")
+
+    if buyer_type in ["associate", "registered"] and customer_id:
+        discount_tiers = cfg.get("discountTiers") or []
+        # MPN previo acumulado del mes (neto pagado en compras personales).
+        month_key = utils._month_key()
+        m_state = utils._get_by_id(
+            "ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key)
+        ) or {}
+        prior_mpn = utils._to_decimal(m_state.get("netVolume", 0))
+        # El nivel se determina sumando el acumulado previo + la compra actual (bruto).
+        basis = prior_mpn + gross
+        rate = _resolve_discount_rate(discount_tiers, basis)
 
     discount_amount = (gross * rate).quantize(utils.D_CENT)
     return {
@@ -465,6 +491,8 @@ def handle_create_order(body, headers):
     # Enriquecer ítems con la bandera commissionable del catálogo
     enriched_items = _enrich_items_commissionable(raw_items)
     totals = _calculate_totals(enriched_items, customer_id, buyer_type)
+    # Cupón / código de descuento (H7): reduce el neto pagado (y por tanto PC/comisiones).
+    coupon_fields = _apply_coupon_to_totals(body.get("couponCode"), totals, customer_id)
     order_id = f"ORD-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
 
@@ -491,6 +519,7 @@ def handle_create_order(body, headers):
         "shippingAddressLabel": body.get("shippingAddressLabel") or shipping_address.get("label"),
         "monthKey": utils._month_key(), "createdAt": now, "updatedAt": now,
         **totals,
+        **coupon_fields,
     }
     if delivery_type == "pickup":
         if body.get("pickupStockId"):
@@ -1178,6 +1207,151 @@ def handle_mp_webhook(query, body):
 # LAMBDA ROUTER
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# CUPONES / CÓDIGOS DE DESCUENTO (H7)
+# ---------------------------------------------------------------------------
+
+def _coupon_code(raw) -> str:
+    return str(raw or "").strip().upper()
+
+
+def _evaluate_coupon(coupon: dict, subtotal, customer_id=None) -> dict:
+    """
+    Devuelve {'valid': bool, 'message': str, 'discount': Decimal} para un cupón.
+    `subtotal` es la base (neto tras descuento por volumen) sobre la que aplica el cupón.
+    """
+    if not coupon:
+        return {"valid": False, "message": "Cupón no encontrado", "discount": utils.D_ZERO}
+    if not coupon.get("active", True):
+        return {"valid": False, "message": "Cupón inactivo", "discount": utils.D_ZERO}
+
+    now = utils._now_iso()
+    valid_from = coupon.get("validFrom")
+    valid_to = coupon.get("validTo")
+    if valid_from and now < str(valid_from):
+        return {"valid": False, "message": "Cupón aún no vigente", "discount": utils.D_ZERO}
+    if valid_to and now > str(valid_to):
+        return {"valid": False, "message": "Cupón expirado", "discount": utils.D_ZERO}
+
+    subtotal_d = utils._to_decimal(subtotal)
+    min_subtotal = utils._to_decimal(coupon.get("minSubtotal", 0))
+    if subtotal_d < min_subtotal:
+        return {"valid": False, "message": f"Requiere subtotal mínimo de ${min_subtotal}", "discount": utils.D_ZERO}
+
+    max_red = coupon.get("maxRedemptions")
+    if max_red is not None and int(coupon.get("redemptions", 0)) >= int(max_red):
+        return {"valid": False, "message": "Cupón agotado", "discount": utils.D_ZERO}
+
+    ctype = (coupon.get("type") or "percent").lower()
+    value = utils._to_decimal(coupon.get("value", 0))
+    if ctype == "percent":
+        discount = (subtotal_d * value / utils.Decimal("100")).quantize(utils.D_CENT)
+    else:  # fixed
+        discount = value.quantize(utils.D_CENT)
+    # Nunca descontar más que el subtotal.
+    if discount > subtotal_d:
+        discount = subtotal_d
+    if discount <= utils.D_ZERO:
+        return {"valid": False, "message": "Cupón sin descuento aplicable", "discount": utils.D_ZERO}
+
+    return {"valid": True, "message": "Cupón aplicado", "discount": discount}
+
+
+def handle_validate_coupon(body) -> dict:
+    """POST /coupons/validate — valida un cupón sin consumirlo."""
+    code = _coupon_code(body.get("code"))
+    if not code:
+        return utils._json_response(400, {"valid": False, "message": "Código requerido"})
+    subtotal = body.get("subtotal", 0)
+    coupon = utils._get_by_id("COUPON", code)
+    result = _evaluate_coupon(coupon, subtotal, body.get("customerId"))
+    status = 200 if result["valid"] else 200  # siempre 200; el front lee 'valid'
+    return utils._json_response(status, {
+        "valid": result["valid"],
+        "message": result["message"],
+        "discount": float(result["discount"]),
+        "code": code,
+        "type": (coupon or {}).get("type"),
+        "value": float(utils._to_decimal((coupon or {}).get("value", 0))),
+    })
+
+
+def handle_list_coupons() -> dict:
+    """GET /coupons — listado (admin)."""
+    coupons = utils._query_bucket("COUPON")
+    return utils._json_response(200, {"coupons": coupons})
+
+
+def handle_save_coupon(body) -> dict:
+    """POST /coupons — crear/actualizar (admin)."""
+    code = _coupon_code(body.get("code"))
+    if not code:
+        return utils._json_response(400, {"message": "Código requerido"})
+    ctype = (body.get("type") or "percent").lower()
+    if ctype not in ("percent", "fixed"):
+        return utils._json_response(400, {"message": "type debe ser 'percent' o 'fixed'"})
+
+    existing = utils._get_by_id("COUPON", code) or {}
+    now = utils._now_iso()
+    item = {
+        "entityType": "coupon",
+        "code": code,
+        "type": ctype,
+        "value": utils._to_decimal(body.get("value", 0)),
+        "active": bool(body.get("active", True)),
+        "minSubtotal": utils._to_decimal(body.get("minSubtotal", 0)),
+        "maxRedemptions": int(body["maxRedemptions"]) if body.get("maxRedemptions") not in (None, "") else None,
+        "redemptions": int(existing.get("redemptions", 0)),
+        "validFrom": body.get("validFrom") or existing.get("validFrom"),
+        "validTo": body.get("validTo") or existing.get("validTo"),
+        "description": body.get("description") or "",
+        "updatedAt": now,
+    }
+    saved = utils._put_entity("COUPON", code, item, created_at_iso=existing.get("createdAt"))
+    utils._audit_event("coupon.save", None, body, {"code": code})
+    return utils._json_response(201, {"coupon": saved})
+
+
+def handle_delete_coupon(code) -> dict:
+    """DELETE /coupons/{code} (admin)."""
+    code = _coupon_code(code)
+    existing = utils._get_by_id("COUPON", code)
+    if not existing:
+        return utils._json_response(404, {"message": "Cupón no encontrado"})
+    item = dict(existing)
+    item["active"] = False
+    item["updatedAt"] = utils._now_iso()
+    utils._put_entity("COUPON", code, item, created_at_iso=existing.get("createdAt"))
+    return utils._json_response(200, {"message": "Cupón desactivado", "code": code})
+
+
+def _apply_coupon_to_totals(coupon_code: str, totals: dict, customer_id=None) -> dict:
+    """
+    Aplica un cupón sobre el neto (tras descuento por volumen). Reduce `netTotal`
+    porque los PC y comisiones se calculan sobre el neto efectivamente pagado
+    (Plan abril 2026 §2). Devuelve campos extra para la orden.
+    """
+    code = _coupon_code(coupon_code)
+    if not code:
+        return {}
+    coupon = utils._get_by_id("COUPON", code)
+    base = totals.get("netTotal", utils.D_ZERO)
+    result = _evaluate_coupon(coupon, base, customer_id)
+    if not result["valid"]:
+        return {"couponCode": code, "couponDiscount": utils.D_ZERO, "couponMessage": result["message"]}
+    discount = result["discount"]
+    totals["netTotal"] = (utils._to_decimal(base) - discount).quantize(utils.D_CENT)
+    # Consumir una redención.
+    try:
+        item = dict(coupon)
+        item["redemptions"] = int(coupon.get("redemptions", 0)) + 1
+        item["updatedAt"] = utils._now_iso()
+        utils._put_entity("COUPON", code, item, created_at_iso=coupon.get("createdAt"))
+    except Exception as e:
+        print(f"[COUPON_REDEEM_WARN] {code}: {e}")
+    return {"couponCode": code, "couponDiscount": discount, "couponMessage": result["message"]}
+
+
 def lambda_handler(event, context):
     path = event.get("path", "")
     method = event.get("httpMethod", "")
@@ -1191,6 +1365,27 @@ def lambda_handler(event, context):
     try:
         if "webhooks" in segments:
             return handle_mp_webhook(query, body)
+
+        if "coupons" in segments:
+            # POST /coupons/validate — público (cliente en checkout)
+            if len(segments) == 2 and segments[1] == "validate" and method == "POST":
+                return handle_validate_coupon(body)
+            # GET /coupons — admin
+            if len(segments) == 1 and method == "GET":
+                err = utils._require_admin(headers, "config_manage")
+                if err: return err
+                return handle_list_coupons()
+            # POST /coupons — admin
+            if len(segments) == 1 and method == "POST":
+                err = utils._require_admin(headers, "config_manage")
+                if err: return err
+                return handle_save_coupon(body)
+            # DELETE /coupons/{code} — admin
+            if len(segments) == 2 and method == "DELETE":
+                err = utils._require_admin(headers, "config_manage")
+                if err: return err
+                return handle_delete_coupon(segments[1])
+            return utils._json_response(404, {"message": "Ruta de cupones no encontrada"})
 
         if "orders" in segments:
             # /orders (legacy alias) and /orders/find

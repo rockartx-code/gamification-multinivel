@@ -124,7 +124,7 @@ export interface AssociateMonth {
   vp?: number;
   currentDiscount?: { rate: number; min: number; max: number | null } | null;
   nextGoal?: { min: number; rate: number; label: string } | null;
-  commissionLevels?: { rate: number; minActiveUsers: number; minIndividualPurchase: number; minGroupPurchase: number }[];
+  commissionLevels?: CommissionLevel[];
 }
 
 export interface AdminOrderItem {
@@ -460,11 +460,55 @@ export interface AdminWarning {
   severity: 'high' | 'medium' | 'low';
 }
 
+export interface Coupon {
+  code: string;
+  type: 'percent' | 'fixed';
+  value: number;
+  active: boolean;
+  minSubtotal?: number;
+  maxRedemptions?: number | null;
+  redemptions?: number;
+  validFrom?: string | null;
+  validTo?: string | null;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SaveCouponPayload {
+  code: string;
+  type: 'percent' | 'fixed';
+  value: number;
+  active: boolean;
+  minSubtotal?: number;
+  maxRedemptions?: number | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  description?: string;
+}
+
+export interface CouponValidation {
+  valid: boolean;
+  message: string;
+  discount: number;
+  code: string;
+  type?: string;
+  value?: number;
+}
+
 export interface CommissionLevel {
+  /** Número de generación (1..5). Plan abril 2026. */
+  gen?: number;
   rate: number;
-  minActiveUsers: number;
-  minIndividualPurchase: number;
-  minGroupPurchase: number;
+  /** Requisitos de desbloqueo de la generación (Plan abril 2026 §4). */
+  reqActiveDirects?: number;
+  reqPersonalPC?: number;
+  reqLines?: number;
+  reqPCPerLine?: number;
+  /** Campos legados (configuraciones anteriores). Mantener para compatibilidad. */
+  minActiveUsers?: number;
+  minIndividualPurchase?: number;
+  minGroupPurchase?: number;
 }
 
 export interface RewardsConfig {
@@ -811,8 +855,21 @@ export interface BonusRule {
 
 export interface RankThreshold {
   rank: string;
-  /** VG mínimo (en puntos VP) para alcanzar este rango */
+  /** VG mínimo (en puntos VP/PC) para alcanzar este rango */
   vgMin: number;
+  /** PC personal mínimo (Plan abril 2026 §6). */
+  vpMin?: number;
+  /** Líneas activas requeridas. */
+  minLines?: number;
+  /** PC mínimos por línea calificada. */
+  pcMinPerLine?: number;
+  /** Líderes del rango inferior requeridos en la red. */
+  requiredLeaders?: number;
+  requiredLeaderRank?: string;
+  /** Bono mensual del rango (desde el 4º mes consecutivo). */
+  monthlyBonus?: number;
+  /** Bono anual si mantiene el rango 12 meses. */
+  annualBonus?: number;
 }
 
 export interface VpConfig {

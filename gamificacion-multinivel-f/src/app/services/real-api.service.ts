@@ -45,6 +45,9 @@ import {
   SaveProductCategoryPayload,
   ShippingRate,
   ShippingQuoteRequest,
+  CouponValidation,
+  Coupon,
+  SaveCouponPayload,
   AdminRefundPayload,
   AdminRefundResponse,
   AdminReturnInspectPayload,
@@ -419,6 +422,7 @@ export class RealApiService {
       badge: String(tags[0] ?? p['badge'] ?? ''),
       img: miniatura || landing || fallback,
       images,
+      vpPoints: p['vpPoints'] != null ? Number(p['vpPoints']) : undefined,
       hook: String(p['hook'] ?? ''),
       description: p['description'] != null ? String(p['description']) : undefined,
       copyFacebook: p['copyFacebook'] != null ? String(p['copyFacebook']) : undefined,
@@ -1148,6 +1152,33 @@ export class RealApiService {
     return this.http
       .put<{ config: AppBusinessConfig }>(`${this.baseUrl}/commissions/config/app`, payload, { headers: this.actorHeaders() })
       .pipe(map((response) => response.config));
+  }
+
+  validateCoupon(code: string, subtotal: number, customerId?: string | number): Observable<CouponValidation> {
+    return this.http.post<CouponValidation>(
+      `${this.baseUrl}/coupons/validate`,
+      { code, subtotal, customerId },
+      { headers: this.actorHeaders() }
+    );
+  }
+
+  listCoupons(): Observable<Coupon[]> {
+    return this.http
+      .get<{ coupons: Coupon[] }>(`${this.baseUrl}/coupons`, { headers: this.actorHeaders() })
+      .pipe(map((r) => r.coupons ?? []));
+  }
+
+  saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
+    return this.http
+      .post<{ coupon: Coupon }>(`${this.baseUrl}/coupons`, payload, { headers: this.actorHeaders() })
+      .pipe(map((r) => r.coupon));
+  }
+
+  deleteCoupon(code: string): Observable<{ message: string; code: string }> {
+    return this.http.delete<{ message: string; code: string }>(
+      `${this.baseUrl}/coupons/${encodeURIComponent(code)}`,
+      { headers: this.actorHeaders() }
+    );
   }
 
   getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {

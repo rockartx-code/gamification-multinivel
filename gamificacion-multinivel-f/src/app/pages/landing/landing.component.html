@@ -161,6 +161,53 @@
       </div>
     </section>
 
+    <!-- ── CARRUSEL HOME: 2 posiciones (Tienda / Conoce el sistema) ──────── -->
+    <section class="mx-auto max-w-6xl px-4 pb-6 sm:px-6">
+      <div class="relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80">
+        <div class="grain pointer-events-none absolute inset-0 bg-olive-10"></div>
+        <div *ngFor="let slide of homeSlides; let i = index"
+          class="relative transition-opacity duration-300"
+          [class.hidden]="i !== homeSlideIndex">
+          <div class="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div class="flex items-start gap-4">
+              <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-olive-30 bg-white/70 text-accent">
+                <i class="fa-solid {{ slide.icon }} text-lg" aria-hidden="true"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-extrabold text-main">{{ slide.title }}</h3>
+                <p class="mt-1 max-w-xl text-sm text-gray-600 leading-relaxed">{{ slide.text }}</p>
+              </div>
+            </div>
+            <ui-button *ngIf="slide.route" variant="primary" size="lg" [routerLink]="[slide.route]">
+              {{ slide.ctaText }}
+            </ui-button>
+            <ui-button *ngIf="!slide.route && slide.anchor" variant="primary" size="lg"
+              (pressed)="scrollTo(slide.anchor || '', $event)">
+              {{ slide.ctaText }}
+            </ui-button>
+          </div>
+        </div>
+
+        <!-- Controles -->
+        <button type="button" aria-label="Anterior" (click)="prevHomeSlide()"
+          class="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-olive-30 bg-white/80 text-main hover:bg-white">
+          <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
+        </button>
+        <button type="button" aria-label="Siguiente" (click)="nextHomeSlide()"
+          class="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-olive-30 bg-white/80 text-main hover:bg-white">
+          <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
+        </button>
+
+        <!-- Indicadores -->
+        <div class="relative flex justify-center gap-2 pb-4">
+          <button *ngFor="let slide of homeSlides; let i = index" type="button"
+            [attr.aria-label]="'Ir a posición ' + (i + 1)" (click)="goHomeSlide(i)"
+            class="h-2 rounded-full transition-all"
+            [ngClass]="i === homeSlideIndex ? 'w-6 bg-accent' : 'w-2 bg-olive-30'"></button>
+        </div>
+      </div>
+    </section>
+
     <!-- ── VISIÓN ────────────────────────────────────────────────────────── -->
     <section class="bg-ivory-80 py-20">
       <div class="mx-auto max-w-5xl px-4 text-center sm:px-6">
@@ -227,20 +274,22 @@
               <table class="w-full text-left text-sm">
                 <thead>
                   <tr class="border-b border-olive-20">
-                    <th class="pb-2 text-xs font-semibold text-gray-500">Nivel</th>
+                    <th class="pb-2 text-xs font-semibold text-gray-500">Generación</th>
                     <th class="pb-2 text-xs font-semibold text-gray-500">Comisión</th>
-                    <th class="pb-2 text-xs font-semibold text-gray-500">VP mín. individual</th>
-                    <th class="pb-2 text-xs font-semibold text-gray-500">VP mín. grupo</th>
+                    <th class="pb-2 text-xs font-semibold text-gray-500">Directos activos</th>
+                    <th class="pb-2 text-xs font-semibold text-gray-500">PC personales</th>
+                    <th class="pb-2 text-xs font-semibold text-gray-500">Líneas</th>
                   </tr>
                 </thead>
                 <tbody>
                   <ng-container>
                     <tr *ngFor="let lvl of commissionLevels; let i = index"
                       class="border-b border-olive-10 last:border-none">
-                      <td class="py-2.5 text-gray-700">Nivel {{ i + 1 }}</td>
+                      <td class="py-2.5 text-gray-700">Gen {{ i + 1 }}</td>
                       <td class="py-2.5 font-bold text-accent">{{ (lvl.rate * 100) | number:'1.0-1' }}%</td>
-                      <td class="py-2.5 text-gray-600">{{ lvl.minIndividualPurchase > 0 ? (lvl.minIndividualPurchase + ' VP') : 'Activo' }}</td>
-                      <td class="py-2.5 text-gray-600">{{ lvl.minGroupPurchase > 0 ? (lvl.minGroupPurchase + ' VP') : '—' }}</td>
+                      <td class="py-2.5 text-gray-600">{{ (lvl.reqActiveDirects || 0) > 0 ? lvl.reqActiveDirects : 'Activo' }}</td>
+                      <td class="py-2.5 text-gray-600">{{ (lvl.reqPersonalPC || 0) > 0 ? (lvl.reqPersonalPC + ' PC') : '—' }}</td>
+                      <td class="py-2.5 text-gray-600">{{ (lvl.reqLines || 0) > 0 ? (lvl.reqLines + ' × ' + lvl.reqPCPerLine + ' PC') : '—' }}</td>
                     </tr>
                   </ng-container>
                 </tbody>
