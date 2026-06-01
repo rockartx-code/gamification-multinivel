@@ -56,6 +56,7 @@ export class TiendaComponent implements OnInit {
     img: string;
     tags: string[];
     price?: number;
+    vpPoints?: number;
     copyWhatsapp?: string;
     copyInstagram?: string;
     copyFacebook?: string;

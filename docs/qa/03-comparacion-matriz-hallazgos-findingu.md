@@ -11,6 +11,11 @@
 > - ❌ **Ausente** — no existe en el código revisado.
 >
 > Estado del cliente = columna "Status" del documento de hallazgos.
+>
+> **Actualización (jun 2026):** parte de estos hallazgos ya fue resuelta o construida en la rama
+> `feat/plan-abril-2026-alineacion`. Ver detalle de validación contra el PDF y cambios aplicados en
+> `04-cambios-aplicados-y-validacion-plan.md`. La columna **Veredicto código** abajo refleja el
+> estado **tras** esos cambios.
 
 ---
 
@@ -18,28 +23,30 @@
 
 | # | Hallazgo (cliente) | Prioridad | Status cliente | **Veredicto código** | Casos E2E |
 |---|---|---|---|---|---|
-| H1 | Plan de Compensación — implementación completa | Crítica | En Progreso | 🟡 Parcial | E2E-COMP-01..16 |
-| H2 | Puntos en lugar de dinero (visualización) | Crítica | En Progreso | 🟡 Parcial | E2E-DASH-01..03 |
+| H1 | Plan de Compensación — implementación completa | Crítica | En Progreso | ✅ Config+motor alineados (abril 2026); ver doc 04 | E2E-COMP-01..16 |
+| H2 | Puntos en lugar de dinero (visualización) | Crítica | En Progreso | ✅ PC por producto en front; backend en puntos | E2E-DASH-01..03 |
 | H3 | Registro por código de referido — red no vincula | Alta | En Progreso | ✅ Backend OK / 🐞 verificar UI | E2E-REF-02, 03, 12 |
-| H4 | Pérdida de datos/productos al cancelar compra | Alta | En Progreso | 🐞 Bug | E2E-CART-03, 04, 05 |
+| H4 | Pérdida de datos/productos al cancelar compra | Alta | En Progreso | ✅ No reproducible en código actual (alias intacto, getters puros); regresión E2E | E2E-CART-03, 04, 05 |
 | H5 | Recoger pedido en sucursal/consultorio | Alta | En Progreso | ✅ Backend OK / 🐞 "error desconocido" | E2E-SHIP-05..08 |
 | H6 | Especificar forma de pago en Punto de Venta | Alta | Pendiente | 🟡 Parcial | E2E-PAY-05, 06 |
-| H7 | Códigos de descuento / pagos especiales | Alta | Pendiente | ❌ Ausente | E2E-CART-14, E2E-ADM-15..20 |
+| H7 | Códigos de descuento / pagos especiales | Alta | Pendiente | ✅ Cupones completos: backend + checkout + pantalla admin | E2E-CART-14, E2E-ADM-15..20 |
 | H8 | Devolución — error al enviar solicitud | Alta | Pendiente | ✅ Backend OK / 🐞 integración | E2E-RET-01 |
 | H9 | URL directa a la tienda | Alta | En Progreso | ❌ Ausente | E2E-SHOP-09 |
 | H10 | Correo del patrocinador — botón copiar | Alta | Resuelto (ajuste) | ✅ Implementado | E2E-DASH-15, 16 |
-| H11 | Reportes generales — hojas vacías/sin estructura | Alta | En Progreso | 🐞 Bug | E2E-REP-06, 07, 09..12 |
+| H11 | Reportes generales — hojas vacías/sin estructura | Alta | En Progreso | ✅ Encabezados forzados (helper `buildSheet`); export de comisiones ya existe | E2E-REP-06, 07, 09..12 |
 | H12 | POS sucursal — opciones de pago dual | Media | En Progreso | 🟡 Parcial | E2E-PAY-05..08, E2E-ADM-12 |
 | H13 | APIs de paqueterías — cálculo de envío | Media | En Progreso | 🟡 Parcial | E2E-SHIP-01..04, 09 |
 | H14 | Niveles, metas y Cuadro de Honor | Media | En Progreso | ✅ / 🟡 (alineación plan) | E2E-DASH-04, 06; E2E-COMP-11 |
 | H15 | Módulo de Productos Sugeridos | Media | Pendiente | 🟡 Parcial (solo frontend) | E2E-CART-08, 09 |
-| H16 | Agregar PC a cada producto en catálogo | Media | Pendiente | 🟡 Parcial | E2E-SHOP-07, 08 |
-| H17 | Carruseles en Dashboard y Landing | Media | Pendiente | 🟡 Dashboard / ❌ Landing | E2E-DASH-09, E2E-LAND-06 |
+| H16 | Agregar PC a cada producto en catálogo | Media | Pendiente | ✅ PC en tarjeta (oficiales+netos); falta cargar dato de 13 productos | E2E-SHOP-07, 08 |
+| H17 | Carruseles en Dashboard y Landing | Media | Pendiente | ✅ Dashboard / ✅ Landing (carrusel 2 posiciones añadido) | E2E-DASH-09, E2E-LAND-06 |
 | H18 | Acciones según perfil de usuario | Media | Pendiente | 🟡 Parcial | E2E-DASH-19, E2E-ADM-16 |
-| H19 | Aviso de Privacidad del Usuario | Baja | Pendiente | ❌ Ausente | E2E-PROF-07, E2E-NOTI-06 |
+| H19 | Aviso de Privacidad del Usuario | Baja | Pendiente | ✅ Implementado (modal primer acceso) | E2E-PROF-07, E2E-NOTI-06 |
 | H20 | Imágenes para compartir en Redes Sociales | Media | Pendiente | 🟡 Parcial | E2E-DASH-10, 11 |
 
-**Conteo:** ✅ 4 · 🟡 9 · 🐞 4 · ❌ 3 (con solapes donde backend OK pero UI/integración falla).
+**Conteo (tras cambios de jun 2026):** resueltos/construidos H1, H2, H4, H10, H11, H16, H17, H19
+(✅). Pendientes principales: **H7** (cupones, no construido), alineación del editor admin de
+`commissionLevels`, y endurecimiento del gating de rango. Ver `04-cambios-aplicados-y-validacion-plan.md`.
 
 ---
 

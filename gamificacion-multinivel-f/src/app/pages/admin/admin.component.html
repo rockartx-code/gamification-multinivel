@@ -2841,6 +2841,130 @@
             </div>
           </div>
 
+          <!-- ════════════ CUPONES (H7) ════════════ -->
+          <div class="space-y-4" *ngIf="currentView === 'coupons' && canAccessView('coupons')">
+            <div class="grid gap-4 lg:grid-cols-3">
+              <!-- Formulario -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4 lg:col-span-1">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-sm font-semibold text-main">
+                    {{ couponEditingCode ? 'Editar cupón' : 'Nuevo cupón' }}
+                  </div>
+                  <ui-button *ngIf="couponEditingCode" size="sm" variant="ghost" type="button" (pressed)="newCoupon()">
+                    <i class="fa-solid fa-plus mr-1" aria-hidden="true"></i> Nuevo
+                  </ui-button>
+                </div>
+
+                <div class="mt-3 space-y-3">
+                  <label class="block text-xs text-gray-500">Código
+                    <input type="text" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
+                      [ngModel]="couponDraft.code" (ngModelChange)="couponDraft.code = $event"
+                      [disabled]="!!couponEditingCode" placeholder="BIENVENIDA10" />
+                  </label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-xs text-gray-500">Tipo
+                      <select class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="couponDraft.type" (ngModelChange)="couponDraft.type = $event">
+                        <option value="percent">Porcentaje (%)</option>
+                        <option value="fixed">Monto fijo ($)</option>
+                      </select>
+                    </label>
+                    <label class="block text-xs text-gray-500">{{ couponDraft.type === 'percent' ? 'Valor (%)' : 'Valor ($)' }}
+                      <input type="number" min="0" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="couponDraft.value" (ngModelChange)="couponDraft.value = +$event || 0" />
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-xs text-gray-500">Subtotal mínimo ($)
+                      <input type="number" min="0" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="couponDraft.minSubtotal" (ngModelChange)="couponDraft.minSubtotal = +$event || 0" />
+                    </label>
+                    <label class="block text-xs text-gray-500">Usos máximos
+                      <input type="number" min="0" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="couponDraft.maxRedemptions" (ngModelChange)="couponDraft.maxRedemptions = $event !== '' ? (+$event || 0) : null"
+                        placeholder="Ilimitado" />
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-xs text-gray-500">Válido desde
+                      <input type="date" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="couponDraft.validFrom" (ngModelChange)="couponDraft.validFrom = $event || null" />
+                    </label>
+                    <label class="block text-xs text-gray-500">Válido hasta
+                      <input type="date" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="couponDraft.validTo" (ngModelChange)="couponDraft.validTo = $event || null" />
+                    </label>
+                  </div>
+                  <label class="block text-xs text-gray-500">Descripción
+                    <input type="text" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="couponDraft.description" (ngModelChange)="couponDraft.description = $event" />
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-gray-600">
+                    <input type="checkbox" [ngModel]="couponDraft.active" (ngModelChange)="couponDraft.active = $event" />
+                    Activo
+                  </label>
+                  <p *ngIf="couponFeedback" class="text-xs text-accent">{{ couponFeedback }}</p>
+                  <ui-button size="sm" variant="primary" type="button" class="w-full" (pressed)="saveCoupon()">
+                    <i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i> Guardar cupón
+                  </ui-button>
+                </div>
+              </div>
+
+              <!-- Listado -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4 lg:col-span-2">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-sm font-semibold text-main">Cupones</div>
+                  <ui-button size="sm" variant="ghost" type="button" (pressed)="loadCoupons()">
+                    <i class="fa-solid fa-rotate mr-1" aria-hidden="true"></i> Recargar
+                  </ui-button>
+                </div>
+                <p *ngIf="couponsError" class="mt-2 text-xs text-red-500">{{ couponsError }}</p>
+                <p *ngIf="couponsLoading" class="mt-3 text-xs text-gray-400">Cargando…</p>
+                <div *ngIf="!couponsLoading && coupons.length === 0" class="mt-3 rounded-xl border border-dashed border-olive-30 px-4 py-6 text-center text-xs text-gray-400">
+                  No hay cupones. Crea el primero con el formulario.
+                </div>
+                <div class="mt-3 overflow-x-auto" *ngIf="coupons.length > 0">
+                  <table class="w-full text-left text-sm">
+                    <thead>
+                      <tr class="border-b border-olive-20 text-xs text-gray-500">
+                        <th class="pb-2">Código</th>
+                        <th class="pb-2">Descuento</th>
+                        <th class="pb-2">Mín.</th>
+                        <th class="pb-2">Usos</th>
+                        <th class="pb-2">Vigencia</th>
+                        <th class="pb-2">Estado</th>
+                        <th class="pb-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let c of coupons" class="border-b border-olive-10 last:border-none">
+                        <td class="py-2 font-semibold text-main">{{ c.code }}</td>
+                        <td class="py-2">{{ c.type === 'percent' ? (c.value + '%') : formatMoney(c.value) }}</td>
+                        <td class="py-2 text-gray-600">{{ c.minSubtotal ? formatMoney(c.minSubtotal) : '—' }}</td>
+                        <td class="py-2 text-gray-600">{{ c.redemptions || 0 }}{{ c.maxRedemptions != null ? ('/' + c.maxRedemptions) : '' }}</td>
+                        <td class="py-2 text-gray-500 text-xs">{{ (c.validFrom || '—') }} → {{ (c.validTo || '—') }}</td>
+                        <td class="py-2">
+                          <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                            [ngClass]="c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+                            {{ c.active ? 'Activo' : 'Inactivo' }}
+                          </span>
+                        </td>
+                        <td class="py-2 text-right whitespace-nowrap">
+                          <button type="button" class="mr-2 text-gray-600 hover:text-main" (click)="editCoupon(c)" title="Editar">
+                            <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
+                          </button>
+                          <button type="button" class="text-red-400 hover:text-red-600" (click)="deleteCoupon(c)" title="Desactivar">
+                            <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="space-y-4" *ngIf="currentView === 'settings' && canAccessView('settings')">
             <div class="rounded-2xl border border-olive-30 surface-soft p-4">
               <div class="flex items-center justify-between gap-3">
@@ -3049,14 +3173,33 @@
               </div>
               <div class="mt-3 flex flex-col gap-2" *ngIf="bonusConfig.rankThresholds.length > 0">
                 <div *ngFor="let rt of bonusConfig.rankThresholds; let ri = index; trackBy: trackByIndex"
-                  class="flex items-center gap-3 rounded-xl border border-olive-30 bg-white/60 px-3 py-2">
-                  <input class="w-32 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" placeholder="Nombre (ORO…)" [ngModel]="rt.rank" (ngModelChange)="bonusConfig.rankThresholds[ri].rank = $event; businessConfigDraft.bonuses = bonusConfig" />
-                  <span class="text-xs text-gray-500">VG min:</span>
-                  <input type="number" class="w-24 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.vgMin" (ngModelChange)="bonusConfig.rankThresholds[ri].vgMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                  <span class="text-xs text-gray-400">VP</span>
-                  <ui-button size="sm" variant="ghost" type="button" (pressed)="removeRankThreshold(ri)">
-                    <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
-                  </ui-button>
+                  class="rounded-xl border border-olive-30 bg-white/60 px-3 py-3">
+                  <div class="flex items-center gap-2">
+                    <input class="w-40 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm font-semibold" placeholder="Nombre (BRONCE…)" [ngModel]="rt.rank" (ngModelChange)="bonusConfig.rankThresholds[ri].rank = $event; businessConfigDraft.bonuses = bonusConfig" />
+                    <ui-button size="sm" variant="ghost" type="button" class="ml-auto" (pressed)="removeRankThreshold(ri)">
+                      <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                    </ui-button>
+                  </div>
+                  <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">PC personal mín.
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.vpMin" (ngModelChange)="bonusConfig.rankThresholds[ri].vpMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">VG mín. (PC)
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.vgMin" (ngModelChange)="bonusConfig.rankThresholds[ri].vgMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Líneas activas
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.minLines" (ngModelChange)="bonusConfig.rankThresholds[ri].minLines = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">PC mín./línea
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.pcMinPerLine" (ngModelChange)="bonusConfig.rankThresholds[ri].pcMinPerLine = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Bono mensual ($)
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.monthlyBonus" (ngModelChange)="bonusConfig.rankThresholds[ri].monthlyBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Bono anual ($)
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.annualBonus" (ngModelChange)="bonusConfig.rankThresholds[ri].annualBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                  </div>
                 </div>
               </div>
               <div *ngIf="bonusConfig.rankThresholds.length === 0" class="mt-3 rounded-xl border border-dashed border-olive-30 px-4 py-3 text-xs text-gray-400">
@@ -3250,33 +3393,37 @@
               <div class="grid gap-3">
                 <div *ngFor="let lvl of businessConfigDraft.rewards.commissionLevels; let i = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
                   <div class="flex items-center justify-between gap-2">
-                    <div class="text-sm font-semibold text-main">Nivel {{ i + 1 }}</div>
+                    <div class="text-sm font-semibold text-main">Generación {{ i + 1 }}</div>
                     <ui-button size="sm" variant="ghost" type="button" (pressed)="removeCommissionLevel(i)" [disabled]="businessConfigDraft.rewards.commissionLevels.length <= 1">
                       <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
                     </ui-button>
                   </div>
-                  <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <ui-form-field type="number" [min]="0" [max]="100" [step]="0.1" label="Comision (%)"
+                  <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                    <ui-form-field type="number" [min]="0" [max]="100" [step]="0.1" label="Comisión (%)"
                       [ngModel]="commissionLevelPercentValue(lvl)"
                       (ngModelChange)="updateCommissionLevelRate(i, $event)">
                     </ui-form-field>
-                    <ui-form-field type="number" [min]="0" [step]="1" label="Usuarios activos min."
-                      [ngModel]="lvl.minActiveUsers"
-                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minActiveUsers = +$event || 0">
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Directos activos mín."
+                      [ngModel]="lvl.reqActiveDirects"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].reqActiveDirects = +$event || 0">
                     </ui-form-field>
-                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra individual min. (VP)"
-                      [ngModel]="lvl.minIndividualPurchase"
-                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minIndividualPurchase = +$event || 0">
+                    <ui-form-field type="number" [min]="0" [step]="1" label="PC personales mín."
+                      [ngModel]="lvl.reqPersonalPC"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].reqPersonalPC = +$event || 0">
                     </ui-form-field>
-                    <ui-form-field type="number" [min]="0" [step]="1" label="Compra grupal min. (VP)"
-                      [ngModel]="lvl.minGroupPurchase"
-                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].minGroupPurchase = +$event || 0">
+                    <ui-form-field type="number" [min]="0" [step]="1" label="Líneas calificadas mín."
+                      [ngModel]="lvl.reqLines"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].reqLines = +$event || 0">
+                    </ui-form-field>
+                    <ui-form-field type="number" [min]="0" [step]="1" label="PC mín. por línea"
+                      [ngModel]="lvl.reqPCPerLine"
+                      (ngModelChange)="businessConfigDraft.rewards.commissionLevels[i].reqPCPerLine = +$event || 0">
                     </ui-form-field>
                   </div>
                 </div>
                 <ui-button size="sm" variant="ghost" type="button" class="w-full" (pressed)="addCommissionLevel()">
                   <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                  Agregar nivel de comision
+                  Agregar generación
                 </ui-button>
               </div>
             </div>
@@ -4092,6 +4239,10 @@
         <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('notifications')" [variant]="currentView === 'notifications' ? 'primary' : 'ghost'" (click)="setView('notifications')">
           <i class="fa-solid fa-bell" aria-hidden="true"></i>
           Avisos
+        </ui-button>
+        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('coupons')" [variant]="currentView === 'coupons' ? 'primary' : 'ghost'" (click)="setView('coupons')">
+          <i class="fa-solid fa-ticket" aria-hidden="true"></i>
+          Cupones
         </ui-button>
         <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('settings')" [variant]="currentView === 'settings' ? 'primary' : 'ghost'" (click)="setView('settings')">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>

@@ -43,6 +43,9 @@ import {
   SaveProductCategoryPayload,
   ShippingRate,
   ShippingQuoteRequest,
+  CouponValidation,
+  Coupon,
+  SaveCouponPayload,
   AdminRefundPayload,
   AdminRefundResponse,
   AdminReturnInspectPayload,
@@ -87,19 +90,23 @@ export class MockApiService {
     version: 'app-v1',
     rewards: {
       version: 'v1',
-      activationNetMin: 2500,
+      activationNetMin: 20,
       discountTiers: [
-        { min: 3600, max: 8000, rate: 0.3 },
-        { min: 8001, max: 12000, rate: 0.4 },
-        { min: 12001, max: null, rate: 0.5 }
+        { min: 0, max: 999, rate: 0 },
+        { min: 1000, max: 1999, rate: 0.1 },
+        { min: 2000, max: 2999, rate: 0.2 },
+        { min: 3000, max: 5999, rate: 0.3 },
+        { min: 6000, max: null, rate: 0.4 }
       ],
       commissionLevels: [
-        { rate: 0.1, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
-        { rate: 0.05, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
-        { rate: 0.03, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 }
+        { gen: 1, rate: 0.1, reqActiveDirects: 0, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 },
+        { gen: 2, rate: 0.05, reqActiveDirects: 2, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 },
+        { gen: 3, rate: 0.04, reqActiveDirects: 3, reqPersonalPC: 80, reqLines: 2, reqPCPerLine: 300 },
+        { gen: 4, rate: 0.03, reqActiveDirects: 4, reqPersonalPC: 120, reqLines: 3, reqPCPerLine: 450 },
+        { gen: 5, rate: 0.02, reqActiveDirects: 5, reqPersonalPC: 160, reqLines: 3, reqPCPerLine: 750 }
       ],
       payoutDay: 10,
-      cutRule: 'hard_cut_no_pass'
+      cutRule: 'dynamic_compression'
     },
     orders: {
       requireStockOnShipped: true,
@@ -2155,6 +2162,23 @@ export class MockApiService {
   deleteCategory(id: string): Observable<{ ok: boolean }> {
     this.categories = this.categories.filter((c) => c.id !== id && c.parentId !== id);
     return of({ ok: true }).pipe(delay(80));
+  }
+
+  validateCoupon(code: string, _subtotal: number, _customerId?: string | number): Observable<CouponValidation> {
+    // Mock: no hay cupones configurados.
+    return of({ valid: false, message: 'Cupón no válido', discount: 0, code: String(code || '').toUpperCase() });
+  }
+
+  listCoupons(): Observable<Coupon[]> {
+    return of([]);
+  }
+
+  saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
+    return of({ ...payload, redemptions: 0, code: payload.code.toUpperCase() });
+  }
+
+  deleteCoupon(code: string): Observable<{ message: string; code: string }> {
+    return of({ message: 'Cupón desactivado', code: String(code || '').toUpperCase() });
   }
 
   getShippingQuote(payload: ShippingQuoteRequest): Observable<ShippingRate[]> {

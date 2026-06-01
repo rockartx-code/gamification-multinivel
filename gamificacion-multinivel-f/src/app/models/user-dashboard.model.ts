@@ -58,6 +58,8 @@ export interface DashboardProduct {
   price: number;
   badge: string;
   img: string;
+  /** Puntos Comisionables (PC) oficiales que aporta el producto a los logros. */
+  vpPoints?: number;
   images?: Array<{ section: string; url: string; assetId?: string }>;
   description?: string;
   copyFacebook?: string;

@@ -13,6 +13,8 @@ import {
   AdminData,
   AdminCampaign,
   AppBusinessConfig,
+  Coupon,
+  SaveCouponPayload,
   AdminOrder,
   AdminOrderItem,
   AssociateMonth,
@@ -278,9 +280,14 @@ export class AdminComponent implements OnInit {
   ];
   readonly rewardCutRuleOptions: Array<ExplainedSelectOption<string>> = [
     {
+      value: 'dynamic_compression',
+      label: 'Compresión dinámica',
+      description: 'Salta posiciones no calificadas y paga la comisión al siguiente ascendente calificado (Plan abril 2026).'
+    },
+    {
       value: 'hard_cut_no_pass',
       label: 'Corte estricto mensual',
-      description: 'El descuento se calcula dentro del mes actual y no se arrastra al siguiente periodo.'
+      description: 'Bloquea la comisión si el beneficiario no califica, sin traspasarla a otro ascendente.'
     }
   ];
   readonly posPaymentStatusConfigOptions: Array<ExplainedSelectOption<string>> = [
@@ -356,6 +363,14 @@ export class AdminComponent implements OnInit {
   }
 
   currentView: AdminViewId = 'orders';
+
+  // --- Cupones (H7) ---
+  coupons: Coupon[] = [];
+  couponsLoading = false;
+  couponsError = '';
+  couponFeedback = '';
+  couponDraft: SaveCouponPayload = this.emptyCouponDraft();
+  couponEditingCode: string | null = null;
   currentOrderStatus: AdminOrder['status'] = 'pending';
   orderStockFilter: string = '';
   expandedOrderDetailId: string | null = null;
@@ -720,6 +735,9 @@ export class AdminComponent implements OnInit {
       case 'notifications':
         this.adminControl.loadNotifications().subscribe();
         break;
+      case 'coupons':
+        this.loadCoupons();
+        break;
       case 'stocks':
       case 'pos':
         this.loadStocksAndPosState();
@@ -917,15 +935,16 @@ export class AdminComponent implements OnInit {
     for (let i = 1; i < levels.length; i++) {
       const prev = levels[i - 1];
       const curr = levels[i];
-      const label = `Nivel ${i} → Nivel ${i + 1}`;
-      if (curr.minActiveUsers < prev.minActiveUsers) {
-        errors.push(`${label}: usuarios activos debe ser ≥ ${prev.minActiveUsers}`);
+      const label = `Gen ${i} → Gen ${i + 1}`;
+      // Los requisitos de cada generación deben ser ≥ a los de la anterior.
+      if ((curr.reqActiveDirects ?? 0) < (prev.reqActiveDirects ?? 0)) {
+        errors.push(`${label}: directos activos debe ser ≥ ${prev.reqActiveDirects ?? 0}`);
       }
-      if (curr.minIndividualPurchase < prev.minIndividualPurchase) {
-        errors.push(`${label}: compra individual debe ser ≥ ${prev.minIndividualPurchase}`);
+      if ((curr.reqPersonalPC ?? 0) < (prev.reqPersonalPC ?? 0)) {
+        errors.push(`${label}: PC personales debe ser ≥ ${prev.reqPersonalPC ?? 0}`);
       }
-      if (curr.minGroupPurchase < prev.minGroupPurchase) {
-        errors.push(`${label}: compra grupal debe ser ≥ ${prev.minGroupPurchase}`);
+      if ((curr.reqLines ?? 0) < (prev.reqLines ?? 0)) {
+        errors.push(`${label}: líneas calificadas debe ser ≥ ${prev.reqLines ?? 0}`);
       }
     }
     return errors;
@@ -944,6 +963,7 @@ export class AdminComponent implements OnInit {
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
       { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
       { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
+      { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' },
       { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
     ];
     return links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
@@ -1001,6 +1021,7 @@ export class AdminComponent implements OnInit {
       { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
       { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
       { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
+      { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' },
       { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
     ];
     const resolved = links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
@@ -1779,6 +1800,19 @@ export class AdminComponent implements OnInit {
   }
 
   // EXCEL DOWNLOADS
+
+  /**
+   * Construye una hoja garantizando los encabezados de columna AUNQUE no haya datos.
+   * `XLSX.utils.json_to_sheet([])` produce una hoja vacía sin títulos; este helper
+   * emite siempre la fila de encabezados (H11). Con datos, fija además el orden de columnas.
+   */
+  private buildSheet(rows: Array<Record<string, unknown>>, headers: string[]): XLSX.WorkSheet {
+    if (!rows.length) {
+      return XLSX.utils.aoa_to_sheet([headers]);
+    }
+    return XLSX.utils.json_to_sheet(rows, { header: headers });
+  }
+
   downloadOrdersReport(): void {
     const month = this.activeReportMonth;
     const orders = this.reportOrders;
@@ -1803,13 +1837,13 @@ export class AdminComponent implements OnInit {
       'Total': r.total
     }));
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(rows);
+    const ws1 = this.buildSheet(rows, ['Folio', 'Fecha', 'Cliente', 'Estado', 'Método pago', 'Subtotal', 'Descuento', 'Total']);
     ws1['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws1, 'Pedidos');
-    const ws2 = XLSX.utils.json_to_sheet(wsByStatus);
+    const ws2 = this.buildSheet(wsByStatus, ['Estado', 'Pedidos', 'Total']);
     ws2['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws2, 'Por estado');
-    const ws3 = XLSX.utils.json_to_sheet(wsTop);
+    const ws3 = this.buildSheet(wsTop, ['Cliente', 'Pedidos', 'Total']);
     ws3['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Top clientes');
     XLSX.writeFile(wb, `pedidos-${month}.xlsx`);
@@ -1841,10 +1875,10 @@ export class AdminComponent implements OnInit {
       'Total compras': a.total
     }));
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(allRows);
+    const ws1 = this.buildSheet(allRows, ['ID', 'Nombre', 'Email', 'Nivel', 'Descuento', 'Pedidos en periodo', 'Compras en periodo', 'Comisiones pendientes', 'Comisiones confirmadas', 'CLABE']);
     ws1['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 30 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 22 }];
     XLSX.utils.book_append_sheet(wb, ws1, 'Todos los clientes');
-    const ws2 = XLSX.utils.json_to_sheet(activeRows);
+    const ws2 = this.buildSheet(activeRows, ['Nombre', 'Email', 'Nivel', 'Pedidos', 'Total compras']);
     ws2['!cols'] = [{ wch: 28 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws2, `Activos ${month}`);
     XLSX.writeFile(wb, `clientes-${month}.xlsx`);
@@ -1876,10 +1910,10 @@ export class AdminComponent implements OnInit {
       };
     });
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(salesRows);
+    const ws1 = this.buildSheet(salesRows, ['ID', 'Producto', 'SKU', 'Precio unitario', 'Unidades vendidas', 'Ingresos']);
     ws1['!cols'] = [{ wch: 8 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws1, `Ventas ${month}`);
-    const ws2 = XLSX.utils.json_to_sheet(catalogRows);
+    const ws2 = this.buildSheet(catalogRows, ['ID', 'Producto', 'SKU', 'Precio', 'Activo', 'En tienda', 'En POS', 'Unidades vendidas', 'Ingresos']);
     ws2['!cols'] = [{ wch: 8 }, { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 18 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws2, 'Catálogo');
     XLSX.writeFile(wb, `productos-${month}.xlsx`);
@@ -1904,13 +1938,13 @@ export class AdminComponent implements OnInit {
       'Ventas POS ($)': s.sales
     }));
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(invRows.map((r) => ({ 'Almacén': r.stock, 'Producto': r.product, 'Stock actual': r.qty })));
+    const ws1 = this.buildSheet(invRows.map((r) => ({ 'Almacén': r.stock, 'Producto': r.product, 'Stock actual': r.qty })), ['Almacén', 'Producto', 'Stock actual']);
     ws1['!cols'] = [{ wch: 24 }, { wch: 30 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws1, 'Inventario actual');
-    const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+    const ws2 = this.buildSheet(summaryRows, ['Almacén', 'Ubicación', 'Entradas (uds)', 'Salidas (uds)', 'Ventas POS ($)']);
     ws2['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws2, `Resumen ${month}`);
-    const ws3 = XLSX.utils.json_to_sheet(mvRows);
+    const ws3 = this.buildSheet(mvRows, ['Fecha', 'Almacén', 'Tipo', 'Producto ID', 'Cantidad', 'Referencia']);
     ws3['!cols'] = [{ wch: 20 }, { wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 18 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Movimientos');
     XLSX.writeFile(wb, `stocks-${month}.xlsx`);
@@ -1932,7 +1966,7 @@ export class AdminComponent implements OnInit {
       { 'Indicador': 'Productos con ventas', 'Valor': this.reportProductSales.length },
       { 'Indicador': 'Unidades vendidas', 'Valor': this.reportTotalUnitsSold }
     ];
-    const wsResumen = XLSX.utils.json_to_sheet(resumeRows);
+    const wsResumen = this.buildSheet(resumeRows, ['Indicador', 'Valor']);
     wsResumen['!cols'] = [{ wch: 28 }, { wch: 18 }];
     XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
 
@@ -1944,7 +1978,7 @@ export class AdminComponent implements OnInit {
       'Estado': o.status,
       'Total': o.total
     }));
-    const wsOrders = XLSX.utils.json_to_sheet(ordersRows);
+    const wsOrders = this.buildSheet(ordersRows, ['Folio', 'Fecha', 'Cliente', 'Estado', 'Total']);
     wsOrders['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, wsOrders, 'Pedidos');
 
@@ -1955,7 +1989,7 @@ export class AdminComponent implements OnInit {
       'Pedidos': c.orderCount,
       'Total': c.total
     }));
-    const wsCust = XLSX.utils.json_to_sheet(custRows);
+    const wsCust = this.buildSheet(custRows, ['Nombre', 'Email', 'Pedidos', 'Total']);
     wsCust['!cols'] = [{ wch: 28 }, { wch: 30 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsCust, 'Clientes activos');
 
@@ -1966,7 +2000,7 @@ export class AdminComponent implements OnInit {
       'Unidades': p.units,
       'Ingresos': p.revenue
     }));
-    const wsProd = XLSX.utils.json_to_sheet(prodRows);
+    const wsProd = this.buildSheet(prodRows, ['Producto', 'SKU', 'Unidades', 'Ingresos']);
     wsProd['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsProd, 'Productos');
 
@@ -1976,7 +2010,7 @@ export class AdminComponent implements OnInit {
       'Producto': r.product,
       'Stock actual': r.qty
     }));
-    const wsStock = XLSX.utils.json_to_sheet(stockRows);
+    const wsStock = this.buildSheet(stockRows, ['Almacén', 'Producto', 'Stock actual']);
     wsStock['!cols'] = [{ wch: 24 }, { wch: 30 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsStock, 'Inventario');
 
@@ -2374,7 +2408,7 @@ export class AdminComponent implements OnInit {
 
   addCommissionLevel(): void {
     const levels = this.businessConfigDraft.rewards.commissionLevels ?? [];
-    levels.push({ rate: 0, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 });
+    levels.push({ gen: levels.length + 1, rate: 0, reqActiveDirects: 0, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 });
     this.businessConfigDraft.rewards.commissionLevels = [...levels];
   }
 
@@ -2491,29 +2525,54 @@ export class AdminComponent implements OnInit {
       return result;
     };
 
-    // Determine qualification for each commission level
+    // Equivalencias en MXN para evaluar requisitos en PC (Plan abril 2026).
+    const mxnPerVp = this.businessConfig?.bonuses?.vpConfig?.mxnPerVp ?? 50;
+    const activationMxn = (this.businessConfig?.rewards?.activationNetMin ?? 20) * mxnPerVp;
+    // Gasto de una "línea" (un directo + toda su descendencia) en MXN.
+    const lineSpend = (rootId: number): number => {
+      let total = 0;
+      const queue = [rootId];
+      const seen = new Set<number>();
+      while (queue.length) {
+        const id = queue.shift() as number;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const node = enrichedCustomers.find((c) => c.id === id);
+        if (node) total += memberSpend(node.name);
+        for (const child of referralMap.get(id) ?? []) queue.push(child.id);
+      }
+      return total;
+    };
+
+    // Determine qualification for each commission level (generación)
     const checkQualification = (
       leader: AdminCustomer,
       treeMembers: Array<{ member: AdminCustomer; treeLevel: number }>,
       levelIndex: number
     ): { qualified: boolean; reason: string } => {
       const lvl = commissionLevels[levelIndex];
-      if (!lvl) return { qualified: false, reason: 'Nivel no configurado' };
+      if (!lvl) return { qualified: false, reason: 'Generación no configurada' };
 
       const leaderSpend = memberSpend(leader.name);
+      const leaderPc = leaderSpend / mxnPerVp;
       const l1Members = treeMembers.filter((e) => e.treeLevel === 1);
-      const activeL1 = l1Members.filter((e) => memberSpend(e.member.name) >= (lvl.minIndividualPurchase || 0));
-      const groupSpend = leaderSpend + treeMembers.reduce((s, e) => s + memberSpend(e.member.name), 0);
+      const activeDirects = l1Members.filter((e) => memberSpend(e.member.name) >= activationMxn).length;
+      const reqPcLineMxn = (lvl.reqPCPerLine ?? 0) * mxnPerVp;
+      const qualifyingLines = l1Members.filter((e) => lineSpend(e.member.id) >= reqPcLineMxn).length;
 
       const reasons: string[] = [];
-      if (lvl.minIndividualPurchase > 0 && leaderSpend < lvl.minIndividualPurchase) {
-        reasons.push(`compra propia $${leaderSpend.toFixed(2)} < mín $${lvl.minIndividualPurchase}`);
+      // Base: estar activo ($1,000 netos / mes).
+      if (leaderSpend < activationMxn) {
+        reasons.push(`inactivo: $${leaderSpend.toFixed(0)} < $${activationMxn.toFixed(0)} netos`);
       }
-      if (lvl.minActiveUsers > 0 && activeL1.length < lvl.minActiveUsers) {
-        reasons.push(`${activeL1.length} miembros L1 activos < mín ${lvl.minActiveUsers}`);
+      if ((lvl.reqActiveDirects ?? 0) > 0 && activeDirects < (lvl.reqActiveDirects ?? 0)) {
+        reasons.push(`${activeDirects} directos activos < mín ${lvl.reqActiveDirects}`);
       }
-      if (lvl.minGroupPurchase > 0 && groupSpend < lvl.minGroupPurchase) {
-        reasons.push(`volumen grupal $${groupSpend.toFixed(2)} < mín $${lvl.minGroupPurchase}`);
+      if ((lvl.reqPersonalPC ?? 0) > 0 && leaderPc < (lvl.reqPersonalPC ?? 0)) {
+        reasons.push(`${leaderPc.toFixed(1)} PC personales < mín ${lvl.reqPersonalPC}`);
+      }
+      if ((lvl.reqLines ?? 0) > 0 && qualifyingLines < (lvl.reqLines ?? 0)) {
+        reasons.push(`${qualifyingLines} líneas de ${lvl.reqPCPerLine} PC < mín ${lvl.reqLines}`);
       }
       return reasons.length === 0
         ? { qualified: true, reason: '' }
@@ -2539,7 +2598,7 @@ export class AdminComponent implements OnInit {
         'CLABE': c.clabeInterbancaria || ''
       }));
 
-    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    const wsSummary = this.buildSheet(summaryRows, ['Nombre', 'Email', 'Nivel', 'Descuento', 'Período', 'Comisión a pagar', 'Estado', 'CLABE']);
     wsSummary['!cols'] = [
       { wch: 28 }, { wch: 30 }, { wch: 8 }, { wch: 12 },
       { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 22 }
@@ -2664,7 +2723,7 @@ export class AdminComponent implements OnInit {
       });
     }
 
-    const wsDesgloce = XLSX.utils.json_to_sheet(desgloceRows);
+    const wsDesgloce = this.buildSheet(desgloceRows, ['Líder', 'Email líder', 'CLABE líder', 'Comisión registrada', 'Estado pago', 'Miembro del árbol', 'Nivel en árbol', 'Compra del miembro ($)', 'Tasa comisión (%)', 'Comisión ganada ($)', 'Comisión perdida ($)', 'Motivo de pérdida']);
     wsDesgloce['!cols'] = [
       { wch: 28 }, { wch: 30 }, { wch: 22 }, { wch: 22 }, { wch: 18 },
       { wch: 28 }, { wch: 14 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 45 }
@@ -5892,8 +5951,93 @@ export class AdminComponent implements OnInit {
 
   addRankThreshold(): void {
     const cfg = this.bonusConfig;
-    cfg.rankThresholds = [...cfg.rankThresholds, { rank: '', vgMin: 0 }];
+    cfg.rankThresholds = [...cfg.rankThresholds, { rank: '', vgMin: 0, vpMin: 0, minLines: 0, pcMinPerLine: 0, monthlyBonus: 0 }];
     this.businessConfigDraft.bonuses = { ...cfg };
+  }
+
+  // --- Cupones (H7) ---
+  private emptyCouponDraft(): SaveCouponPayload {
+    return { code: '', type: 'percent', value: 0, active: true, minSubtotal: 0, maxRedemptions: null, validFrom: null, validTo: null, description: '' };
+  }
+
+  loadCoupons(): void {
+    this.couponsLoading = true;
+    this.couponsError = '';
+    this.api.listCoupons().subscribe({
+      next: (list) => {
+        this.coupons = [...list].sort((a, b) => a.code.localeCompare(b.code));
+        this.couponsLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.couponsError = 'No se pudieron cargar los cupones.';
+        this.couponsLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  newCoupon(): void {
+    this.couponEditingCode = null;
+    this.couponDraft = this.emptyCouponDraft();
+    this.couponFeedback = '';
+  }
+
+  editCoupon(c: Coupon): void {
+    this.couponEditingCode = c.code;
+    this.couponDraft = {
+      code: c.code,
+      type: c.type,
+      value: c.value,
+      active: c.active,
+      minSubtotal: c.minSubtotal ?? 0,
+      maxRedemptions: c.maxRedemptions ?? null,
+      validFrom: c.validFrom ?? null,
+      validTo: c.validTo ?? null,
+      description: c.description ?? ''
+    };
+    this.couponFeedback = '';
+  }
+
+  saveCoupon(): void {
+    const code = (this.couponDraft.code || '').trim().toUpperCase();
+    if (!code) {
+      this.couponFeedback = 'El código es obligatorio.';
+      return;
+    }
+    if (!(this.couponDraft.value > 0)) {
+      this.couponFeedback = 'El valor debe ser mayor a 0.';
+      return;
+    }
+    const payload: SaveCouponPayload = { ...this.couponDraft, code };
+    this.api.saveCoupon(payload).subscribe({
+      next: () => {
+        this.couponFeedback = 'Cupón guardado.';
+        this.couponEditingCode = null;
+        this.couponDraft = this.emptyCouponDraft();
+        this.loadCoupons();
+      },
+      error: () => {
+        this.couponFeedback = 'No se pudo guardar el cupón.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  deleteCoupon(c: Coupon): void {
+    if (!confirm(`¿Desactivar el cupón ${c.code}?`)) {
+      return;
+    }
+    this.api.deleteCoupon(c.code).subscribe({
+      next: () => {
+        this.couponFeedback = `Cupón ${c.code} desactivado.`;
+        this.loadCoupons();
+      },
+      error: () => {
+        this.couponFeedback = 'No se pudo desactivar el cupón.';
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   removeRankThreshold(index: number): void {
@@ -6139,16 +6283,11 @@ export class AdminComponent implements OnInit {
   }
 
   private normalizeCommissionLevels(raw: unknown): CommissionLevelDraft[] {
-    const def: CommissionLevelDraft = { rate: 0, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 };
+    const def: CommissionLevelDraft = { gen: 1, rate: 0, reqActiveDirects: 0, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 };
     if (Array.isArray(raw) && raw.length) {
-      return raw.map((lvl) => ({ ...def, ...lvl }));
+      return raw.map((lvl, i) => ({ ...def, gen: i + 1, ...lvl }));
     }
-    // backward compat: if old format with commissionByDepth dict exists on the raw object
-    return [
-      { ...def, rate: 0.1 },
-      { ...def, rate: 0.05 },
-      { ...def, rate: 0.03 }
-    ];
+    return this.getDefaultBusinessConfig().rewards.commissionLevels;
   }
 
   private normalizeDiscountTiers(tiers: DiscountTierDraft[], sortByMin: boolean): DiscountTierDraft[] {
@@ -6208,19 +6347,23 @@ export class AdminComponent implements OnInit {
       version: 'app-v1',
       rewards: {
         version: 'v1',
-        activationNetMin: 2500,
+        activationNetMin: 20,
         discountTiers: [
-          { min: 3600, max: 8000, rate: 0.3 },
-          { min: 8001, max: 12000, rate: 0.4 },
-          { min: 12001, max: null, rate: 0.5 }
+          { min: 0, max: 999, rate: 0 },
+          { min: 1000, max: 1999, rate: 0.1 },
+          { min: 2000, max: 2999, rate: 0.2 },
+          { min: 3000, max: 5999, rate: 0.3 },
+          { min: 6000, max: null, rate: 0.4 }
         ],
         commissionLevels: [
-          { rate: 0.1, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
-          { rate: 0.05, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 },
-          { rate: 0.03, minActiveUsers: 0, minIndividualPurchase: 0, minGroupPurchase: 0 }
+          { gen: 1, rate: 0.1, reqActiveDirects: 0, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 },
+          { gen: 2, rate: 0.05, reqActiveDirects: 2, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 },
+          { gen: 3, rate: 0.04, reqActiveDirects: 3, reqPersonalPC: 80, reqLines: 2, reqPCPerLine: 300 },
+          { gen: 4, rate: 0.03, reqActiveDirects: 4, reqPersonalPC: 120, reqLines: 3, reqPCPerLine: 450 },
+          { gen: 5, rate: 0.02, reqActiveDirects: 5, reqPersonalPC: 160, reqLines: 3, reqPCPerLine: 750 }
         ],
         payoutDay: 10,
-        cutRule: 'hard_cut_no_pass'
+        cutRule: 'dynamic_compression'
       },
       orders: {
         requireStockOnShipped: true,
@@ -6262,10 +6405,13 @@ export class AdminComponent implements OnInit {
   private getDefaultBonusConfig(): BonusConfig {
     return {
       vpConfig: { mxnPerVp: 50, maxNetworkLevels: 5 },
+      // Rangos de liderazgo del Plan abril 2026 §6.
       rankThresholds: [
-        { rank: 'ORO', vgMin: 700 },
-        { rank: 'PLATINO', vgMin: 2000 },
-        { rank: 'DIAMANTE', vgMin: 6000 }
+        { rank: 'BRONCE', vpMin: 60, vgMin: 4500, minLines: 3, pcMinPerLine: 900, requiredLeaders: 0, requiredLeaderRank: '', monthlyBonus: 500, annualBonus: 6000 },
+        { rank: 'PLATA', vpMin: 90, vgMin: 9000, minLines: 4, pcMinPerLine: 1500, requiredLeaders: 2, requiredLeaderRank: 'BRONCE', monthlyBonus: 1500, annualBonus: 18000 },
+        { rank: 'ORO', vpMin: 140, vgMin: 15000, minLines: 4, pcMinPerLine: 2500, requiredLeaders: 2, requiredLeaderRank: 'PLATA', monthlyBonus: 3000, annualBonus: 36000 },
+        { rank: 'PLATINO', vpMin: 200, vgMin: 21000, minLines: 5, pcMinPerLine: 3000, requiredLeaders: 2, requiredLeaderRank: 'ORO', monthlyBonus: 6000, annualBonus: 72000 },
+        { rank: 'DIAMANTE', vpMin: 280, vgMin: 25000, minLines: 5, pcMinPerLine: 4000, requiredLeaders: 2, requiredLeaderRank: 'PLATINO', monthlyBonus: 10000, annualBonus: 120000 }
       ],
       rules: [
         {
@@ -6274,88 +6420,61 @@ export class AdminComponent implements OnInit {
           active: true,
           conditions: [
             { type: 'first_30_days' },
-            { type: 'direct_vg_min', value: 600 }
+            { type: 'vg_min', value: 600 }
           ],
           rewards: [{ type: 'cash_mxn', amount: 5000 }],
           cooldown: 'once',
-          notes: 'Primeros 30 días: VG directos ≥ 600 VP → $5,000 MXN'
+          notes: 'Primeros 30 días: 600 PC grupales del equipo → $5,000 MXN (una vez).'
         },
         {
-          id: 'oro_smart_tv',
-          name: 'Bono ORO — Smart TV',
+          id: 'bono_rango_bronce',
+          name: 'Bono Mensual BRONCE',
+          active: true,
+          rank: 'BRONCE',
+          conditions: [{ type: 'vg_min', value: 4500 }, { type: 'consecutive_months', value: 4 }],
+          rewards: [{ type: 'monthly_cash', amount: 500 }],
+          cooldown: 'monthly',
+          notes: '$500/mes desde el 4º mes consecutivo en BRONCE.'
+        },
+        {
+          id: 'bono_rango_plata',
+          name: 'Bono Mensual PLATA',
+          active: true,
+          rank: 'PLATA',
+          conditions: [{ type: 'vg_min', value: 9000 }, { type: 'consecutive_months', value: 4 }],
+          rewards: [{ type: 'monthly_cash', amount: 1500 }],
+          cooldown: 'monthly',
+          notes: '$1,500/mes desde el 4º mes consecutivo en PLATA.'
+        },
+        {
+          id: 'bono_rango_oro',
+          name: 'Bono Mensual ORO',
           active: true,
           rank: 'ORO',
-          conditions: [
-            { type: 'vg_min', value: 700 },
-            { type: 'consecutive_months', value: 2 }
-          ],
-          rewards: [{ type: 'item', itemLabel: 'Smart TV', triggerMonths: 2 }],
-          cooldown: 'once',
-          notes: '700 VG por 2 meses consecutivos'
+          conditions: [{ type: 'vg_min', value: 15000 }, { type: 'consecutive_months', value: 4 }],
+          rewards: [{ type: 'monthly_cash', amount: 3000 }],
+          cooldown: 'monthly',
+          notes: '$3,000/mes desde el 4º mes consecutivo en ORO.'
         },
         {
-          id: 'oro_viaje',
-          name: 'Bono ORO — Viaje Nacional',
-          active: true,
-          rank: 'ORO',
-          conditions: [
-            { type: 'vg_min', value: 700 },
-            { type: 'consecutive_months', value: 3 }
-          ],
-          rewards: [{ type: 'item', itemLabel: 'Viaje nacional', triggerMonths: 3 }],
-          cooldown: 'once',
-          notes: '700 VG por 3 meses consecutivos'
-        },
-        {
-          id: 'platino_primera_vez',
-          name: 'Bono PLATINO — Primera Vez',
+          id: 'bono_rango_platino',
+          name: 'Bono Mensual PLATINO',
           active: true,
           rank: 'PLATINO',
-          conditions: [
-            { type: 'vg_min', value: 2000 },
-            { type: 'first_time' }
-          ],
-          rewards: [{ type: 'cash_mxn', amount: 10000 }],
-          cooldown: 'once',
-          notes: 'Bono único al alcanzar PLATINO por primera vez'
-        },
-        {
-          id: 'platino_apoyo_auto',
-          name: 'Bono PLATINO — Apoyo Mensual Auto',
-          active: true,
-          rank: 'PLATINO',
-          conditions: [
-            { type: 'vg_min', value: 2000 },
-            { type: 'consecutive_months', value: 4 }
-          ],
-          rewards: [{ type: 'monthly_cash', amount: 8000 }],
+          conditions: [{ type: 'vg_min', value: 21000 }, { type: 'consecutive_months', value: 4 }],
+          rewards: [{ type: 'monthly_cash', amount: 6000 }],
           cooldown: 'monthly',
-          notes: 'Requiere 4 meses consecutivos en PLATINO'
+          notes: '$6,000/mes desde el 4º mes consecutivo en PLATINO.'
         },
         {
-          id: 'diamante_platinos',
-          name: 'Bono DIAMANTE — Por Platinos Directos',
+          id: 'bono_rango_diamante',
+          name: 'Bono Mensual DIAMANTE',
           active: true,
           rank: 'DIAMANTE',
-          conditions: [
-            { type: 'vg_min', value: 6000 },
-            { type: 'direct_rank_count', value: 3, rank: 'PLATINO' }
-          ],
-          rewards: [{ type: 'cash_mxn', amount: 25000 }],
+          conditions: [{ type: 'vg_min', value: 25000 }, { type: 'consecutive_months', value: 4 }],
+          rewards: [{ type: 'monthly_cash', amount: 10000 }],
           cooldown: 'monthly',
-          notes: '$25,000 por cada 3 Platinos directos'
-        },
-        {
-          id: 'diamante_fondo_anual',
-          name: 'Bono DIAMANTE — Fondo Anual',
-          active: true,
-          rank: 'DIAMANTE',
-          conditions: [
-            { type: 'vg_min', value: 6000 }
-          ],
-          rewards: [{ type: 'annual_fund_pct', pct: 2 }],
-          cooldown: 'monthly',
-          notes: '2% mensual acumulado al fondo anual DIAMANTE'
+          notes: '$10,000/mes desde el 4º mes consecutivo en DIAMANTE.'
         }
       ]
     };

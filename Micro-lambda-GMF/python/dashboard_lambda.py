@@ -170,6 +170,8 @@ def _get_product_summary(item: dict) -> dict:
         "inOnlineStore": bool(item.get("inOnlineStore", True)),
         "inPOS":         bool(item.get("inPOS", True)),
         "commissionable": bool(item.get("commissionable", True)),
+        # PC oficiales del producto (puntos que aporta a los logros del asociado).
+        "vpPoints": float(utils._to_decimal(item["vpPoints"])) if item.get("vpPoints") is not None else None,
     }
 
 def _campaign_payload(item: dict) -> dict:
@@ -275,11 +277,18 @@ def _calc_vg_from_tree(root_tree: dict, mxn_per_vp: float) -> float:
         total_mxn += float(n.get("monthSpend", 0))
     return _mxn_to_vp_dash(total_mxn, mxn_per_vp)
 
-def _get_rank_dash(vg: float, rank_thresholds: list) -> str:
+def _get_rank_dash(vg: float, rank_thresholds: list, vp: float = None) -> str:
+    """
+    Rango para el dashboard. Si se pasa `vp` (PC personales), exige también `vpMin`
+    (Plan abril 2026 §6). No evalúa líneas ni líderes (display aproximado).
+    """
     rank = ""
     for rt in sorted(rank_thresholds, key=lambda x: float(x.get("vgMin", 0))):
-        if vg >= float(rt.get("vgMin", 0)):
-            rank = rt.get("rank", "")
+        if vg < float(rt.get("vgMin", 0) or 0):
+            continue
+        if vp is not None and vp < float(rt.get("vpMin", 0) or 0):
+            continue
+        rank = rt.get("rank", "")
     return rank
 
 def _get_direct_vg_dash(cid: str, month_key: str, customers_raw: list, mxn_per_vp: float) -> float:
@@ -918,7 +927,7 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
         my_net = float(utils._to_decimal(st.get("netVolume", 0)))
         vp_val = _mxn_to_vp_dash(my_net, mxn_per_vp)
         vg_val = _calc_vg_from_tree(tree, mxn_per_vp)
-        rank_val = _get_rank_dash(vg_val, rank_thresh)
+        rank_val = _get_rank_dash(vg_val, rank_thresh, vp=vp_val)
 
         # Bonos del mes
         all_awards = utils._query_bucket("BONUS_AWARD")

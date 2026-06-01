@@ -1115,6 +1115,103 @@ paths:
   # ════════════════════════════════════════════════════════════
   # ÓRDENES
   # ════════════════════════════════════════════════════════════
+  # ════════════════════════════════════════════════════════════
+  # CUPONES / CÓDIGOS DE DESCUENTO (H7) — order_lambda
+  # ════════════════════════════════════════════════════════════
+  /coupons/validate:
+    post:
+      summary: "Validar un cupón (cliente en checkout)"
+      operationId: validateCoupon
+      tags: [Coupons]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                subtotal: { type: number }
+                customerId: { type: string }
+      responses:
+        "200":
+          description: "Resultado de validación del cupón"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /coupons:
+    get:
+      summary: "Listar cupones (admin)"
+      operationId: listCoupons
+      tags: [Coupons]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista de cupones"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Crear/actualizar cupón (admin)"
+      operationId: saveCoupon
+      tags: [Coupons]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                type: { type: string, enum: [percent, fixed] }
+                value: { type: number }
+                active: { type: boolean }
+                minSubtotal: { type: number }
+                maxRedemptions: { type: integer, nullable: true }
+                validFrom: { type: string, nullable: true }
+                validTo: { type: string, nullable: true }
+                description: { type: string }
+      responses:
+        "201":
+          description: "Cupón guardado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /coupons/{code}:
+    delete:
+      summary: "Desactivar cupón (admin)"
+      operationId: deleteCoupon
+      tags: [Coupons]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Cupón desactivado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
   /orders:
     get:
       summary: "Listar órdenes (legacy alias)"

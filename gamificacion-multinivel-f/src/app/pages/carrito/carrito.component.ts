@@ -7,7 +7,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ESTADOS_MX_CODES, ESTADOS_MX_OPTIONS } from '../../constants/states-mx';
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
-import { AdminOrderItem, CustomerShippingAddress, ShippingRate, ShippingQuoteItem } from '../../models/admin.model';
+import { AdminOrderItem, CustomerShippingAddress, ShippingRate, ShippingQuoteItem, CouponValidation } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
@@ -45,6 +45,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
   toastMessage = 'Actualizado.';
   isSummaryOpen = false;
   isPlacingOrder = false;
+  // Cupón / código de descuento (H7)
+  couponCode = '';
+  appliedCoupon: CouponValidation | null = null;
+  couponMessage = '';
+  couponChecking = false;
   deliveryType: 'delivery' | 'pickup' = 'delivery';
   pickupPaymentMethod: 'online' | 'at_store' = 'online';
   pickupStocks: Array<{ id: string; name: string; location: string }> = [];
@@ -383,12 +388,52 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return Math.round(this.subtotal * (this.discountPercentValue / 100));
   }
 
+  /** Descuento por cupón aplicado (sobre el neto tras descuento por volumen). */
+  get couponDiscount(): number {
+    return this.appliedCoupon?.valid ? Math.round(this.appliedCoupon.discount) : 0;
+  }
+
+  /** Base sobre la que aplica el cupón: neto tras descuento por volumen. */
+  private get netAfterVolumeDiscount(): number {
+    return Math.max(0, this.subtotal - this.discount);
+  }
+
+  applyCoupon(): void {
+    const code = this.couponCode.trim().toUpperCase();
+    if (!code) {
+      this.couponMessage = 'Ingresa un código.';
+      return;
+    }
+    this.couponChecking = true;
+    this.couponMessage = '';
+    this.api.validateCoupon(code, this.netAfterVolumeDiscount, this.resolveOrderCustomerId()).subscribe({
+      next: (res) => {
+        this.couponChecking = false;
+        this.appliedCoupon = res;
+        this.couponMessage = res.message;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.couponChecking = false;
+        this.appliedCoupon = null;
+        this.couponMessage = 'No se pudo validar el cupón.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeCoupon(): void {
+    this.appliedCoupon = null;
+    this.couponCode = '';
+    this.couponMessage = '';
+  }
+
   get total(): number {
     if (this.deliveryType === 'pickup') {
-      return Math.max(0, this.subtotal - this.discount);
+      return Math.max(0, this.subtotal - this.discount - this.couponDiscount);
     }
     const shippingCost = this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping;
-    return Math.max(0, this.subtotal + shippingCost - this.discount);
+    return Math.max(0, this.subtotal + shippingCost - this.discount - this.couponDiscount);
   }
 
   get shippingLabel(): string {
@@ -609,6 +654,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
         shippingCost: this.selectedShippingRate?.displayPrice ?? undefined,
         deliveryType: 'delivery'
       };
+    }
+    if (this.appliedCoupon?.valid) {
+      payload['couponCode'] = this.couponCode.trim().toUpperCase();
     }
     this.isPlacingOrder = true;
     this.api
