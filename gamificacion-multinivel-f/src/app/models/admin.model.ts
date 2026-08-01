@@ -31,7 +31,7 @@ export interface AdminOrder {
   items?: AdminOrderItem[];
   stockId?: string;
   attendantUserId?: number | null;
-  paymentMethod?: 'cash' | 'card' | 'transfer';
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'mercadopago';
   paymentStatus?: string;
   paymentTransactionId?: string;
   paymentRawStatus?: string;
@@ -202,7 +202,7 @@ export interface UpdateOrderStatusPayload {
   deliveryPlace?: string;
   deliveryDate?: string;
   stockId?: string;
-  paymentMethod?: 'cash' | 'card' | 'transfer';
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'mercadopago';
   attendantUserId?: number | null;
   dispatchLines?: Array<{ productId: number; quantity: number }>;
 }
@@ -866,6 +866,13 @@ export interface RankThreshold {
   /** Líderes del rango inferior requeridos en la red. */
   requiredLeaders?: number;
   requiredLeaderRank?: string;
+  /**
+   * Referidos directos (total, no solo activos) requeridos para alcanzar/mantener
+   * este rango. 0 o ausente = sin restricción (retrocompatible). Ver contrato en
+   * Micro-lambda-GMF/python/commissions_lambda.py `_default_app_config` /
+   * `_compute_rank`. Editable en admin.component.html (sección Rangos de la Red).
+   */
+  requiredDirects?: number;
   /** Bono mensual del rango (desde el 4º mes consecutivo). */
   monthlyBonus?: number;
   /** Bono anual si mantiene el rango 12 meses. */

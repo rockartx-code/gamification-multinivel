@@ -13,11 +13,12 @@ import { FeatureBadgeComponent } from '../../components/feature-badge/feature-ba
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { ImgFallbackDirective } from '../../directives/img-fallback.directive';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent, ImgFallbackDirective],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -132,14 +133,36 @@ export class LandingComponent implements OnInit {
     this.loadBusinessConfig();
   }
 
+  // ─── Fallbacks (se usan si /catalog/config/public falla o llega incompleto) ──
+  // Reflejan los defaults de negocio actuales (Micro-lambda-GMF/python/
+  // commissions_lambda.py `_default_app_config`, Plan abril 2026 §3/§4), para que
+  // la landing nunca muestre tablas vacías si el API público no responde.
+  private readonly defaultDiscountTiers: Array<{ min: number; max: number | null; rate: number }> = [
+    { min: 0, max: 1000, rate: 0.0 },
+    { min: 1000, max: 2000, rate: 0.1 },
+    { min: 2000, max: 3000, rate: 0.2 },
+    { min: 3000, max: 6000, rate: 0.3 },
+    { min: 6000, max: null, rate: 0.4 }
+  ];
+
+  private readonly defaultCommissionLevels: AppBusinessConfig['rewards']['commissionLevels'] = [
+    { rate: 0.1, reqActiveDirects: 0, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 },
+    { rate: 0.05, reqActiveDirects: 2, reqPersonalPC: 0, reqLines: 0, reqPCPerLine: 0 },
+    { rate: 0.04, reqActiveDirects: 3, reqPersonalPC: 80, reqLines: 2, reqPCPerLine: 300 },
+    { rate: 0.03, reqActiveDirects: 4, reqPersonalPC: 120, reqLines: 3, reqPCPerLine: 450 },
+    { rate: 0.02, reqActiveDirects: 5, reqPersonalPC: 160, reqLines: 3, reqPCPerLine: 750 }
+  ];
+
   // ─── Business config derived getters ────────────────────────────────────────
 
   get discountTiers(): Array<{ min: number; max: number | null; rate: number }> {
-    return this.businessConfig?.rewards?.discountTiers ?? [];
+    const tiers = this.businessConfig?.rewards?.discountTiers;
+    return tiers && tiers.length ? tiers : this.defaultDiscountTiers;
   }
 
   get commissionLevels(): AppBusinessConfig['rewards']['commissionLevels'] {
-    return this.businessConfig?.rewards?.commissionLevels ?? [];
+    const levels = this.businessConfig?.rewards?.commissionLevels;
+    return levels && levels.length ? levels : this.defaultCommissionLevels;
   }
 
   get mxnPerVp(): number {
@@ -345,7 +368,13 @@ export class LandingComponent implements OnInit {
           this.businessConfig = config;
           this.cdr.detectChanges();
         },
-        error: () => { this.businessConfig = null; }
+        error: () => {
+          // Fallback: los getters (discountTiers/commissionLevels/rankThresholds/
+          // mxnPerVp) devuelven los valores de negocio actuales aunque
+          // businessConfig quede en null. App zoneless: forzar render.
+          this.businessConfig = null;
+          this.cdr.detectChanges();
+        }
       });
   }
 

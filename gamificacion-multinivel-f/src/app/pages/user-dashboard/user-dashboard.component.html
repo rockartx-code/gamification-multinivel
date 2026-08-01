@@ -129,6 +129,16 @@
 
 
   <main class="mx-auto max-w-6xl space-y-16 px-6 py-10">
+    <!-- Resumen "at a glance": el dashboard es una sola página con ~4270-6320px de scroll (8
+         secciones ancladas); sin este resumen fijo arriba, encontrar comisiones/red/meta obliga a
+         desplazarse mucho o depender de que el usuario note el nav superior (ver
+         docs/ux/analisis-ui-ux-2026-08.md, Dashboard hallazgo Alta). -->
+    <section *ngIf="!isGuest" class="grid grid-cols-2 gap-3 md:grid-cols-3" aria-label="Resumen del mes">
+      <ui-kpi-card iconClass="fa-solid fa-coins text-accent" label="Comisiones del mes" [value]="formatMoney(commissionSummary?.monthTotal || 0)"></ui-kpi-card>
+      <ui-kpi-card iconClass="fa-solid fa-bullseye text-accent" label="Meta activa" [value]="activeGoal ? (goalBasePercent(activeGoal) + '%') : 'Sin meta activa'"></ui-kpi-card>
+      <ui-kpi-card iconClass="fa-solid fa-users text-accent" label="Tamaño de tu red" [value]="networkMembers.length"></ui-kpi-card>
+    </section>
+
     <section class="space-y-4">
       <div class="flex items-center justify-between" *ngIf="!isGuest">
         <div class="flex items-center gap-2 text-sm text-gray-600">
@@ -303,7 +313,7 @@
           <div
             class="order-1 md:order-1 relative h-[260px] overflow-hidden rounded-3xl border border-olive-30 md:h-[360px]">
 
-            <img [src]="heroImage" [alt]="pom.name" class="hero-image absolute inset-0 h-full w-full object-cover" />
+            <img [src]="heroImage" [alt]="pom.name" class="hero-image absolute inset-0 h-full w-full object-cover" imgFallback />
 
             <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gold-12 blur-3xl"></div>
 
@@ -630,6 +640,10 @@
             <ui-button size="sm" variant="ghost" type="button" (pressed)="toggleCommissionLedger()">
               <i class="fa-solid" [ngClass]="showCommissionLedger ? 'fa-eye-slash' : 'fa-table'" aria-hidden="true"></i>
               {{ showCommissionLedger ? 'Ocultar detalles' : 'Ver detalles' }}
+            </ui-button>
+            <ui-button size="sm" variant="primary" type="button" [disabled]="!canRequestCommissionPayout"
+              iconClass="fa-solid fa-hand-holding-dollar" (pressed)="openCommissionModal()">
+              Solicitar retiro
             </ui-button>
           </div>
 
@@ -1522,7 +1536,7 @@
 
       <div class="mt-5 grid gap-4 sm:grid-cols-[120px_1fr]">
         <div class="h-28 w-28 overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80">
-          <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+          <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" imgFallback />
         </div>
         <div>
           <div class="text-xs text-gray-600">Precio</div>

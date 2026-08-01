@@ -16,7 +16,13 @@ export class UiHeaderComponent {
     if (this.variant === 'landing') {
       return `sticky top-0 z-40 ${base}`;
     }
-    if (this.variant === 'dashboard') {
+    if (this.variant === 'dashboard' || this.variant === 'admin') {
+      // `backdrop-blur` crea un stacking context propio (backdrop-filter, como filter, aísla su
+      // contenido); sin `position` + `z-index` explícitos en el propio <header>, ese contexto
+      // queda "atrapado" al nivel de un elemento estático y cualquier hijo posicionado dentro de
+      // <main> (p. ej. la sección de contenido, position:relative con z-index:auto) lo pinta
+      // encima sin importar el z-index interno del dropdown móvil — el menú hamburguesa de Admin
+      // quedaba inclickeable detrás del contenido. Mismo z-50 que ya usa el header del Dashboard.
       return `sticky top-0 z-50 ${base}`;
     }
     return base;

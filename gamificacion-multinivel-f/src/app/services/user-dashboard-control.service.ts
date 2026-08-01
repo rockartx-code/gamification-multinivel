@@ -114,6 +114,7 @@ export class UserDashboardControlService {
         vg: dashboard.vg,
         rank: dashboard.rank,
         bonuses: dashboard.bonuses ?? [],
+        honorBoard: dashboard.honorBoard,
       } satisfies UserDashboardData)),
       tap((data) => {
         const safeNetworkMembers = Array.isArray(data.networkMembers) ? data.networkMembers : [];

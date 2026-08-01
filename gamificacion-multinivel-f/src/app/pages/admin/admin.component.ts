@@ -217,6 +217,21 @@ type PosCustomerRecommendation = {
 type DiscountTierDraft = AppBusinessConfig['rewards']['discountTiers'][number];
 type CommissionLevelDraft = AppBusinessConfig['rewards']['commissionLevels'][number];
 
+/**
+ * Mapea cada `AdminWarning.type` ("Acciones pendientes") al privilegio requerido para
+ * resolverla. Un usuario no-superusuario solo debe ver en el widget las acciones que
+ * efectivamente puede atender (ver warningsStable). Tipos sin mapeo explícito quedan
+ * visibles por defecto para no ocultar avisos nuevos que el backend agregue a futuro.
+ */
+const WARNING_TYPE_PRIVILEGE: Record<string, AppPrivilege> = {
+  commissions: 'commissions_register_payment',
+  shipping: 'order_mark_shipped',
+  payments: 'order_mark_paid',
+  assets: 'product_update',
+  stocks: 'stock_add_inventory',
+  pos: 'pos_register_sale'
+};
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -266,7 +281,7 @@ export class AdminComponent implements OnInit {
         >;
       }
     | null = null;
-  private warningsCache: { warningsRef: AdminWarning[]; warnings: AdminWarning[] } | null = null;
+  private warningsCache: { warningsRef: AdminWarning[]; user: AuthUser | null; warnings: AdminWarning[] } | null = null;
   private readonly orderStatusOptionsValue: Array<SelectOption<AdminOrder['status']>> = [
     { value: 'pending', label: 'Pendiente' },
     { value: 'paid', label: 'Pagado' },
@@ -363,6 +378,15 @@ export class AdminComponent implements OnInit {
   }
 
   currentView: AdminViewId = 'orders';
+
+  /**
+   * Navegación admin en móvil: antes la única alternativa a la `<aside>` de desktop era una
+   * barra inferior fija con 11-12 botones que ocupaba ~41% del viewport permanentemente (ver
+   * docs/ux/analisis-ui-ux-2026-08.md, "Hallazgo transversal: navegación admin en móvil").
+   * Reemplazada por el mismo patrón hamburguesa + ui-sidebar-nav compacto que ya usa
+   * user-dashboard.component.ts (toggleMobileNav/closeMobileNav).
+   */
+  isMobileNavOpen = false;
 
   // --- Cupones (H7) ---
   coupons: Coupon[] = [];
@@ -539,6 +563,17 @@ export class AdminComponent implements OnInit {
   shippingDeliveryPlace = '';
   shippingDeliveryDate = '';
   shippingError = '';
+  /** Modal "forma de pago" al marcar una orden como pagada (feature: solicitar forma de pago). */
+  isMarkPaidModalOpen = false;
+  markPaidTargetOrder: AdminOrder | null = null;
+  markPaidMethod: 'cash' | 'card' | 'transfer' | 'mercadopago' = 'cash';
+  markPaidError = '';
+  readonly markPaidMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer' | 'mercadopago'>> = [
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'transfer', label: 'Transferencia' },
+    { value: 'card', label: 'Tarjeta' },
+    { value: 'mercadopago', label: 'Mercado Pago' }
+  ];
   receiptFile: File | null = null;
   receiptError = '';
   receiptTargetCustomer: AdminCustomer | null = null;
@@ -646,6 +681,9 @@ export class AdminComponent implements OnInit {
   isPosCashCutsOpen = false;
   expandedCutId: string | null = null;
   lastCompletedCut: PosCashCut | null = null;
+  /** Ticket imprimible del corte (feature: Ticket del corte de caja). */
+  isCutTicketOpen = false;
+  ticketCut: PosCashCut | null = null;
 
   posAuthCodeDraft = '';
   isSavingPosAuthCode = false;
@@ -997,13 +1035,25 @@ export class AdminComponent implements OnInit {
     return this.orderStatusOptionsValue;
   }
 
+  /**
+   * Acciones pendientes visibles para el usuario actual: un superusuario ve todas; el resto
+   * solo ve las que puede atender según WARNING_TYPE_PRIVILEGE (feature: "Acciones pendientes
+   * filtradas por privilegios").
+   */
   get warningsStable(): AdminWarning[] {
     const warnings = this.adminData()?.warnings ?? [];
-    if (this.warningsCache?.warningsRef === warnings) {
+    const user = this.currentUser;
+    if (this.warningsCache?.warningsRef === warnings && this.warningsCache.user === user) {
       return this.warningsCache.warnings;
     }
-    this.warningsCache = { warningsRef: warnings, warnings };
-    return warnings;
+    const filtered = this.authService.isSuperUser(user)
+      ? warnings
+      : warnings.filter((warning) => {
+          const privilege = WARNING_TYPE_PRIVILEGE[warning.type];
+          return !privilege || this.hasPermission(privilege);
+        });
+    this.warningsCache = { warningsRef: warnings, user, warnings: filtered };
+    return filtered;
   }
 
   get adminNavLinksStable(): SidebarLink[] {
@@ -1121,7 +1171,7 @@ export class AdminComponent implements OnInit {
   get accessibleStockOptionsStable(): Array<SelectOption<string>> {
     const operatorId = this.currentOperatorId;
     const accessible = operatorId != null && !this.hasPermission('config_manage')
-      ? this.stocks.filter((s) => s.linkedUserIds.map(Number).includes(operatorId))
+      ? this.stocks.filter((s) => s.linkedUserIds.map(String).includes(operatorId))
       : this.stocks;
     return accessible.map((stock) => ({
       value: stock.id,
@@ -1303,9 +1353,16 @@ export class AdminComponent implements OnInit {
       }));
   }
 
-  get currentOperatorId(): number | null {
-    const raw = Number(this.currentUser?.userId ?? NaN);
-    return Number.isFinite(raw) ? raw : null;
+  /**
+   * ID del operador actual. Antes se forzaba `Number(userId)`, lo que devolvía `NaN` (y por lo
+   * tanto `null`) para IDs no numéricos como el del superusuario por defecto (`admin-001`),
+   * dejando `linkedPosStocks` siempre vacío para ese operador. El matching de operador/stock se
+   * hace ahora por string de forma consistente (ver linkedPosStocks) en vez de forzar un tipo
+   * numérico que no todos los userId cumplen.
+   */
+  get currentOperatorId(): string | null {
+    const raw = this.currentUser?.userId;
+    return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
   }
 
   get currentOperatorName(): string {
@@ -1313,11 +1370,18 @@ export class AdminComponent implements OnInit {
   }
 
   get linkedPosStocks(): AdminStock[] {
+    // Superusuarios (p. ej. admin-001) no están dados de alta como empleados vinculados a un
+    // stock puntual: operan cualquiera, igual que ya hace accessibleStockOptionsStable con
+    // config_manage. Sin este bypass, un superusuario con userId no numérico nunca podría
+    // operar el POS.
+    if (this.authService.isSuperUser(this.currentUser)) {
+      return this.stocks;
+    }
     const operatorId = this.currentOperatorId;
     if (operatorId == null) {
       return [];
     }
-    return this.stocks.filter((stock) => stock.linkedUserIds.includes(operatorId));
+    return this.stocks.filter((stock) => stock.linkedUserIds.map(String).includes(operatorId));
   }
 
   get hasLinkedPosStock(): boolean {
@@ -1370,10 +1434,12 @@ export class AdminComponent implements OnInit {
   get visiblePosSales(): PosSale[] {
     const stockId = this.currentPosStock?.id;
     const operatorId = this.currentOperatorId;
+    // Un superusuario ve todas las ventas del stock (no solo las suyas), igual que linkedPosStocks.
+    const bypassOperatorFilter = operatorId == null || this.authService.isSuperUser(this.currentUser);
     return this.posSales.filter(
       (sale) =>
         (!stockId || sale.stockId === stockId) &&
-        (operatorId == null || sale.attendantUserId === operatorId) &&
+        (bypassOperatorFilter || String(sale.attendantUserId ?? '') === operatorId) &&
         !sale.cashCutId
     );
   }
@@ -2527,7 +2593,8 @@ export class AdminComponent implements OnInit {
 
     // Equivalencias en MXN para evaluar requisitos en PC (Plan abril 2026).
     const mxnPerVp = this.businessConfig?.bonuses?.vpConfig?.mxnPerVp ?? 50;
-    const activationMxn = (this.businessConfig?.rewards?.activationNetMin ?? 20) * mxnPerVp;
+    // activationNetMin ya es un monto en MXN (no en VP): no se multiplica por mxnPerVp.
+    const activationMxn = this.businessConfig?.rewards?.activationNetMin ?? 2500;
     // Gasto de una "línea" (un directo + toda su descendencia) en MXN.
     const lineSpend = (rootId: number): number => {
       let total = 0;
@@ -2769,6 +2836,25 @@ export class AdminComponent implements OnInit {
 
   onAdminNavSelect(viewId: string): void {
     this.setView(viewId as AdminViewId);
+    this.closeMobileNav();
+  }
+
+  toggleMobileNav(): void {
+    this.isMobileNavOpen = !this.isMobileNavOpen;
+  }
+
+  closeMobileNav(): void {
+    this.isMobileNavOpen = false;
+  }
+
+  /**
+   * Sub-navegación por anclas dentro de Configuración (la vista más densa del panel): en vez de
+   * reestructurar ~450 líneas de formulario en tabs con show/hide (alto riesgo de regresión en
+   * un componente ya muy grande), se agrega un índice de pills que hace scroll suave a cada
+   * bloque via id. Ver docs/ux/analisis-ui-ux-2026-08.md, Admin Configuración hallazgo Alta.
+   */
+  scrollToConfigSection(sectionId: string): void {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   setView(view: AdminViewId): void {
@@ -3080,8 +3166,12 @@ export class AdminComponent implements OnInit {
       this.openShippingModal(order);
       return;
     }
-    const nextStatus =
-      order.status === 'pending' ? 'paid' : order.status === 'shipped' ? 'delivered' : order.status;
+    if (order.status === 'pending') {
+      // Feature: solicitar forma de pago antes de confirmar el cambio a "pagado".
+      this.openMarkPaidModal(order);
+      return;
+    }
+    const nextStatus = order.status === 'shipped' ? 'delivered' : order.status;
     if (nextStatus === order.status) {
       return;
     }
@@ -3098,6 +3188,49 @@ export class AdminComponent implements OnInit {
         next: () => this.showSnackbar('Orden actualizada.'),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
+        }
+      });
+  }
+
+  openMarkPaidModal(order: AdminOrder): void {
+    if (!this.hasPermission('order_mark_paid')) {
+      return;
+    }
+    this.markPaidTargetOrder = order;
+    this.markPaidMethod = order.paymentMethod ?? 'cash';
+    this.markPaidError = '';
+    this.isMarkPaidModalOpen = true;
+  }
+
+  closeMarkPaidModal(): void {
+    this.isMarkPaidModalOpen = false;
+    this.markPaidTargetOrder = null;
+    this.markPaidMethod = 'cash';
+    this.markPaidError = '';
+  }
+
+  confirmMarkPaid(): void {
+    const order = this.markPaidTargetOrder;
+    if (!order || !this.hasPermission('order_mark_paid') || this.updatingOrderIds.has(order.id)) {
+      return;
+    }
+    this.markPaidError = '';
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .updateOrderStatus(order.id, { status: 'paid', paymentMethod: this.markPaidMethod })
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.closeMarkPaidModal();
+          this.showSnackbar('Orden marcada como pagada.');
+        },
+        error: (error: unknown) => {
+          this.markPaidError = this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.');
         }
       });
   }
@@ -3290,8 +3423,9 @@ export class AdminComponent implements OnInit {
     if (currentStockId && order.pickupStockId !== currentStockId) {
       return false;
     }
-    const stock = this.stocks.find((s) => s.id === order.pickupStockId);
-    return Boolean(stock?.linkedUserIds?.includes(operatorId));
+    // Reutiliza linkedPosStocks (ya contempla el bypass de superusuario y compara por string)
+    // en vez de repetir aquí el chequeo crudo de linkedUserIds.
+    return this.linkedPosStocks.some((stock) => stock.id === order.pickupStockId);
   }
 
   openReceivePickupPaymentModal(order: AdminOrder): void {
@@ -5284,11 +5418,15 @@ export class AdminComponent implements OnInit {
     return this.customers.find((customer) => customer.id === customerId)?.name ?? `Usuario ${customerId}`;
   }
 
-  employeeName(employeeId: number | null | undefined): string {
+  employeeName(employeeId: number | string | null | undefined): string {
     if (!employeeId) {
       return '-';
     }
-    return this.employees.find((emp) => emp.id === employeeId)?.name ?? `Empleado ${employeeId}`;
+    // currentOperatorId ahora es string (ver nota ahí); los empleados reales siguen indexados
+    // por id numérico, así que normalizamos aquí para no romper esa búsqueda.
+    const numericId = typeof employeeId === 'number' ? employeeId : Number(employeeId);
+    const match = Number.isFinite(numericId) ? this.employees.find((emp) => emp.id === numericId) : undefined;
+    return match?.name ?? `Empleado ${employeeId}`;
   }
 
   productName(productId: number): string {
@@ -5519,6 +5657,28 @@ export class AdminComponent implements OnInit {
 
   toggleCutExpansion(cutId: string): void {
     this.expandedCutId = this.expandedCutId === cutId ? null : cutId;
+  }
+
+  /** Nombre del operador que realizó un corte (o el operador actual si aún no tiene id resuelto). */
+  cutOperatorName(cut: PosCashCut): string {
+    return cut.attendantUserId != null ? this.employeeName(cut.attendantUserId) : this.currentOperatorName;
+  }
+
+  openCutTicket(cut: PosCashCut | null): void {
+    if (!cut) {
+      return;
+    }
+    this.ticketCut = cut;
+    this.isCutTicketOpen = true;
+  }
+
+  closeCutTicket(): void {
+    this.isCutTicketOpen = false;
+    this.ticketCut = null;
+  }
+
+  printCutTicket(): void {
+    window.print();
   }
 
   downloadCutReport(cut: PosCashCut): void {
@@ -5951,7 +6111,7 @@ export class AdminComponent implements OnInit {
 
   addRankThreshold(): void {
     const cfg = this.bonusConfig;
-    cfg.rankThresholds = [...cfg.rankThresholds, { rank: '', vgMin: 0, vpMin: 0, minLines: 0, pcMinPerLine: 0, monthlyBonus: 0 }];
+    cfg.rankThresholds = [...cfg.rankThresholds, { rank: '', vgMin: 0, vpMin: 0, minLines: 0, pcMinPerLine: 0, requiredDirects: 0, monthlyBonus: 0 }];
     this.businessConfigDraft.bonuses = { ...cfg };
   }
 
@@ -6234,6 +6394,8 @@ export class AdminComponent implements OnInit {
     this.adminControl.getBusinessConfig().subscribe({
       next: (config) => {
         this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
+        // App zoneless: la respuesta HTTP async no dispara CD por si sola.
+        this.cdr.detectChanges();
       }
     });
   }
@@ -6347,7 +6509,7 @@ export class AdminComponent implements OnInit {
       version: 'app-v1',
       rewards: {
         version: 'v1',
-        activationNetMin: 20,
+        activationNetMin: 2500,
         discountTiers: [
           { min: 0, max: 999, rate: 0 },
           { min: 1000, max: 1999, rate: 0.1 },
@@ -6555,6 +6717,23 @@ export class AdminComponent implements OnInit {
       return 'Transferencia';
     }
     return 'Efectivo';
+  }
+
+  /** Etiqueta de forma de pago de una orden (incluye Mercado Pago, a diferencia de POS). */
+  orderPaymentMethodLabel(method?: AdminOrder['paymentMethod']): string {
+    if (method === 'card') {
+      return 'Tarjeta';
+    }
+    if (method === 'transfer') {
+      return 'Transferencia';
+    }
+    if (method === 'mercadopago') {
+      return 'Mercado Pago';
+    }
+    if (method === 'cash') {
+      return 'Efectivo';
+    }
+    return '-';
   }
 
   private movementSignedQty(movement: InventoryMovement): number {

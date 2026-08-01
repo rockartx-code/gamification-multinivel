@@ -41,7 +41,7 @@
       <button
         *ngIf="isPasswordField"
         type="button"
-        class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-xs text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
+        class="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-xs text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
         [disabled]="disabled"
         (click)="togglePasswordVisibility()"
         [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"

@@ -37,6 +37,7 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
+import { ImgFallbackDirective } from '../../directives/img-fallback.directive';
 
 type GraphNode = {
   id: string;
@@ -58,7 +59,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, ImgFallbackDirective],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -353,6 +354,16 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   get commissionSummary(): UserDashboardData['commissions'] {
     return this.dashboardControl.data?.commissions ?? null;
+  }
+
+  /**
+   * HU-DASH-10: habilita el botón que dispara openCommissionModal(). Solo requiere que haya
+   * comisiones confirmadas del mes (> 0) — la CLABE se valida al enviar (submitCommissionRequest()
+   * ya bloquea con "Ingresa tu CLABE interbancaria." si no hay CLABE en archivo ni capturada en
+   * el modal), así que el trigger debe seguir alcanzable aunque falte CLABE registrada.
+   */
+  get canRequestCommissionPayout(): boolean {
+    return Boolean(this.commissionSummary?.hasConfirmed);
   }
 
   get vpPoints(): number {
@@ -1834,10 +1845,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: () => {
           this.showToast('Solicitud enviada. Te contactaremos por el deposito.');
           this.closeCommissionModal();
+          // App zoneless (sin zone.js): el subscribe() de HttpClient no repinta la vista por sí
+          // solo aquí; forzamos render igual que tienda.component.ts#createAccount.
+          this.cdr.detectChanges();
           this.dashboardControl.load({ force: true }).subscribe();
         },
         error: () => {
           this.showToast('No se pudo solicitar el pago.');
+          this.cdr.detectChanges();
         }
       });
   }
@@ -1861,10 +1876,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         next: () => {
           this.showToast('CLABE actualizada.');
           this.closeClabeConfirm();
+          // App zoneless (sin zone.js): el subscribe() de HttpClient no repinta la vista por sí
+          // solo aquí (el modal quedaría visible y el toast oculto); forzamos render igual que
+          // tienda.component.ts#createAccount.
+          this.cdr.detectChanges();
           this.dashboardControl.load({ force: true }).subscribe();
         },
         error: () => {
           this.showToast('No se pudo actualizar la CLABE.');
+          this.cdr.detectChanges();
         }
       });
   }
@@ -2165,11 +2185,15 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         const item = new ClipboardItem({ [blob.type || 'image/png']: blob });
         return navigator.clipboard.write([item]);
       })
-      .then(() => this.showToast(toastMessage))
+      .then(() => {
+        this.showToast(toastMessage);
+        this.cdr.detectChanges();
+      })
       .catch((error) => {
         this.lastClipboardError = this.formatClipboardError(error);
         console.log('Clipboard image error:', this.lastClipboardError);
         this.showToast('No se pudo copiar la imagen.');
+        this.cdr.detectChanges();
       });
   }
 
@@ -2339,11 +2363,18 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (navigator.clipboard?.writeText) {
       navigator.clipboard
         .writeText(text)
-        .then(() => this.showToast(toastMessage))
+        .then(() => {
+          this.showToast(toastMessage);
+          // App zoneless (sin zone.js): el .then() de una Promise nativa (Clipboard API) no
+          // dispara una pasada de detección de cambios por sí solo. Forzamos render aquí,
+          // igual que tienda.component.ts#createAccount.
+          this.cdr.detectChanges();
+        })
         .catch((error) => {
           this.lastClipboardError = this.formatClipboardError(error);
           console.log('Clipboard text error:', this.lastClipboardError);
           this.showToast('No se pudo copiar.');
+          this.cdr.detectChanges();
         });
       return;
     }

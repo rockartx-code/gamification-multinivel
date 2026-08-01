@@ -317,6 +317,16 @@ export class ApiService {
     return request;
   }
 
+  /**
+   * Variante de listPickupStocks() que conserva `inventory` por sucursal. Sin cache propio
+   * (se usa solo en el carrito, una vez por carga) para no duplicar la lógica de
+   * pickup-stocks-cache-v1. Usada para filtrar el selector de "recoger en sucursal" mostrando
+   * solo (o priorizando) las sucursales con stock suficiente para el carrito actual.
+   */
+  listPickupStocksWithInventory(): Observable<Array<{ id: string; name: string; location: string; inventory: Record<string, number> }>> {
+    return this.resolveApi().listPickupStocksWithInventory();
+  }
+
   createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.resolveApi().createStock(payload);
   }

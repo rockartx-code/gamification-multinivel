@@ -32,7 +32,7 @@
             ></ui-form-field>
 
             <label class="block">
-              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">contraseña</span>
+              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">Contraseña</span>
               <div class="relative">
                 <i
                   class="fa-solid fa-key pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-500"
@@ -51,7 +51,7 @@
                 />
                 <button
                   type="button"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
+                  class="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
                   (click)="togglePasswordVisibility()"
                   [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
                   [title]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"

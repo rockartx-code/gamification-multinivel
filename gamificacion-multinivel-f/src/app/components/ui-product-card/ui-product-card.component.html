@@ -6,7 +6,7 @@
     <div class="flex gap-3 sm:gap-4">
       <!-- Imagen -->
       <div class="h-32 w-24 sm:h-40 sm:w-28 shrink-0 overflow-hidden rounded-2xl border border-olive-30 bg-ivory-80">
-        <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+        <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" imgFallback />
       </div>
 
       <!-- Contenido -->
@@ -130,7 +130,7 @@
 
     <!-- Imagen -->
     <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-olive-30 bg-white">
-      <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" />
+      <img [src]="product.img" [alt]="product.name" class="h-full w-full object-cover" imgFallback />
     </div>
 
     <!-- Info -->

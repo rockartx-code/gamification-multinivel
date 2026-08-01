@@ -21,10 +21,19 @@ Mantener una UI cálida (arena/dorado/oliva), consistente y reusable desde `src/
 ## Primitivas reutilizables
 
 - Superficies: `surface-soft`, `modal-backdrop`, `modal-card`, `grain`, `bg-ambient`.
-- Botones: `btn`, `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-linkish`, `btn-disabled`.
-- Badges: `badge`, `badge-compact`, `badge-active`, `badge-inactive`, `badge-pending`, variantes `level-*` y `status-*`.
-- Datos y estado: `progress*`, `table-soft`, `callout`, `kpi-*`.
+- Botones: `btn`, `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-ghost-danger`, `btn-linkish`, `btn-disabled`.
+- Badges: `badge`, `badge-compact`, `badge-active`, `badge-inactive`, `badge-pending`, `badge-danger`, variantes `level-*` y `status-*`.
+- Datos y estado: `progress*`, `table-soft`, `callout`, `empty-state`, `kpi-*`.
+- Imágenes: `img-fallback` (usar junto con la directiva `[imgFallback]` sobre cualquier `<img>` de producto para mostrar un placeholder neutro si el `src` falla).
 - Utilidades semánticas: familias `text-*`, `bg-*`, `border-*`, `ring-*`, `icon-*`.
+
+### Estados negativos / destructivos
+
+`--color-danger` (y su par `--rgb-danger`/`--text-on-danger`) alimenta `badge-danger` y
+`btn-ghost-danger`. Usarlos para estados de error o acciones irreversibles (Cancelado, Devuelto,
+Dev. rechazada, "Cancelar orden", "Eliminar") en vez de reutilizar `badge-active`/`btn-ghost`
+neutros. `ui-status-badge` ya resuelve `tone="danger"` automáticamente para esos estados de orden;
+para badges o botones ad-hoc, usar `tone="danger"`/`variant="danger"` en `ui-badge`/`ui-button`.
 
 ## Criterios de uso
 

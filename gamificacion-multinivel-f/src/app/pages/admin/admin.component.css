@@ -1,1 +1,16 @@
-
+/* Ticket del corte de caja: al imprimir, solo se muestra el contenido del ticket. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .pos-ticket-print,
+  .pos-ticket-print * {
+    visibility: visible;
+  }
+  .pos-ticket-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 300px;
+  }
+}

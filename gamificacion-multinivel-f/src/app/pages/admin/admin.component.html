@@ -1,5 +1,32 @@
 <section class="antialiased">
   <ui-header variant="admin" containerClass="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+    <!-- Navegación admin en móvil: hamburguesa + panel flotante con ui-sidebar-nav compacto,
+         mismo patrón que user-dashboard.component.html (antes: barra inferior fija con 11-12
+         botones que tapaba ~41% del viewport de forma permanente). -->
+    <div header-left class="relative lg:hidden shrink-0">
+      <ui-button size="lg" variant="ghost" type="button" aria-label="Navegación" (pressed)="toggleMobileNav()">
+        <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
+      </ui-button>
+
+      <div
+        class="absolute left-0 top-full z-50 mt-2 max-h-[75vh] w-72 overflow-y-auto rounded-2xl border border-olive-30 bg-sand-200-90 p-3 shadow-xl backdrop-blur"
+        [class.hidden]="!isMobileNavOpen">
+        <div class="px-1 text-xs text-gray-600">Navegación</div>
+        <ui-sidebar-nav [links]="adminNavLinksStable" [activeId]="currentView" [compact]="true" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
+
+        <!-- Sustituto móvil del panel "Estado del mes" (antes solo visible en el <aside> de
+             desktop; en móvil no existía ningún equivalente). -->
+        <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-80 p-3">
+          <div class="text-xs text-muted">Estado del mes</div>
+          <div class="mt-2 text-lg font-extrabold">{{ formatMoney(ordersTotal) }}</div>
+          <div class="mt-1 text-xs text-gray-600">Pedidos: {{ ordersCount }}</div>
+          <div class="mt-1 text-xs text-gray-600">Pendientes: {{ pendingCount }}</div>
+          <div class="mt-1 text-xs text-gray-600">Pagados: {{ paidCount }}</div>
+          <div class="mt-1 text-xs text-gray-600">Pendientes enví­o: {{ pendingShippingCount }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="flex shrink-0 flex-wrap items-center gap-2">
         <div class="hidden items-center gap-3 rounded-2xl border border-olive-30 surface-soft px-4 py-2 lg:flex"
           *ngIf="currentUser">
@@ -13,10 +40,14 @@
           </span>
         </div>
 
+        <!-- min-w-0 en móvil (antes min-w-[148px] fijo): con el hamburguesa nuevo compitiendo por
+             el mismo header estrecho, un ancho mínimo forzado en los tres botones de la derecha
+             hacía que el conjunto no cupiera en 390px y forzaba overflow (ver
+             docs/ux/analisis-ui-ux-2026-08.md, hallazgo Alta "navegación admin en móvil"). -->
         <ui-button
           size="sm"
           variant="ghost"
-          class="min-w-[148px]"
+          class="min-w-0 sm:min-w-[148px]"
           [stacked]="true"
           (pressed)="showActions()">
           <span btnTitle>
@@ -32,13 +63,16 @@
             </span>
           </span>
         </ui-button>
+        <!-- Texto visualmente oculto en móvil (sr-only, no "hidden") para liberar espacio en el
+             header estrecho sin cambiar el nombre accesible del botón (mismo texto que ya usan
+             las pruebas E2E: "Logout" / "Nuevo"). -->
         <ui-button size="sm" variant="ghost" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          Logout
+          <span class="sr-only sm:not-sr-only">Logout</span>
         </ui-button>
         <ui-button size="sm" variant="primary" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          Nuevo
+          <span class="sr-only sm:not-sr-only">Nuevo</span>
         </ui-button>
       </div>
   </ui-header>
@@ -187,14 +221,17 @@
                             Pago en línea
                           </span>
                         </div>
+                        <!-- min-h-11 (44px): tamaño táctil mínimo — fila de acciones en móvil (ver
+                             docs/ux/analisis-ui-ux-2026-08.md, quick win a11y "Tamaño táctil en
+                             tablas admin densas"). -->
                         <div class="mt-3 flex flex-wrap gap-2">
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
+                          <ui-button variant="ghost" size="sm" extraClass="min-h-11" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
                             {{ expandedOrderDetailId === order.id ? 'Ocultar detalle' : 'Ver detalle' }}
                           </ui-button>
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (click)="advanceOrder(order)">
+                          <ui-button variant="ghost" size="sm" extraClass="min-h-11" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (click)="advanceOrder(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
                           </ui-button>
-                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
+                          <ui-button variant="primary" size="sm" extraClass="min-h-11" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar en sucursal' }}
                           </ui-button>
                         </div>
@@ -207,6 +244,10 @@
                             </div>
                           </div>
                           <div *ngIf="!order.items?.length" class="text-xs text-gray-500">Sin detalle de productos.</div>
+                          <div *ngIf="order.paymentMethod" class="text-xs text-gray-600">
+                            <span class="font-semibold text-gray-600"><i class="fa-solid fa-money-bill-wave text-accent mr-1" aria-hidden="true"></i>Forma de pago:</span>
+                            <span class="text-main">{{ orderPaymentMethodLabel(order.paymentMethod) }}</span>
+                          </div>
                           <div class="space-y-1 text-xs text-gray-600">
                             <div class="font-semibold text-gray-600">
                               <i class="fa-solid fa-location-dot text-accent mr-1" aria-hidden="true"></i>
@@ -310,6 +351,10 @@
                             <ng-template #noItemsAdmin>
                               <p class="mt-2 text-xs text-gray-500">Sin detalle de productos disponible.</p>
                             </ng-template>
+                            <div *ngIf="order.paymentMethod" class="mt-2 text-xs text-gray-600">
+                              <span class="font-semibold text-gray-600"><i class="fa-solid fa-money-bill-wave text-accent mr-1" aria-hidden="true"></i>Forma de pago:</span>
+                              <span class="text-main">{{ orderPaymentMethodLabel(order.paymentMethod) }}</span>
+                            </div>
                           </div>
                           <div>
                             <div class="text-xs font-semibold text-gray-600">
@@ -762,7 +807,6 @@
                     </ui-button>
                   </div>
 
-                  <div class="mt-1 text-xs text-gray-600">Mock. En producción: pintar con datos reales.</div>
                   <ui-networkgraph class="block w-full mt-3 h-[220px]" [nodes]="structureGraphStable.nodes"
                     [links]="structureGraphStable.links" [viewBoxWidth]="700" [viewBoxHeight]="220" linkStyle="straight"
                     labelMode="short">
@@ -980,20 +1024,23 @@
                         {{ product.vpPoints != null ? (product.vpPoints + ' VP/u') : 'VP automático' }}
                       </span>
                     </div>
+                    <!-- min-h-11 (44px): tamaño táctil mínimo recomendado — a diferencia de la fila
+                         desktop de abajo, esta es la fila usada en móvil (ver docs/ux/analisis-ui-ux-2026-08.md,
+                         quick win a11y "Tamaño táctil en tablas admin densas"). -->
                     <div class="mt-3 flex flex-wrap gap-2">
-                      <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
+                      <ui-button size="sm" extraClass="min-h-11" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
                         <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                         Editar
                       </ui-button>
-                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (pressed)="toggleProductActive(product)">
+                      <ui-button size="sm" extraClass="min-h-11" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (pressed)="toggleProductActive(product)">
                         <i class="fa-solid" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
                         {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
                       </ui-button>
-                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)">
+                      <ui-button size="sm" extraClass="min-h-11" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)">
                         <i class="fa-solid fa-star" aria-hidden="true"></i>
                         Producto del mes
                       </ui-button>
-                      <ui-button size="sm" variant="ghost" class="text-red-600 disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_delete')" (pressed)="confirmDeleteProduct(product)">
+                      <ui-button size="sm" extraClass="min-h-11 text-danger-deep" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_delete')" (pressed)="confirmDeleteProduct(product)">
                         <i class="fa-solid fa-trash" aria-hidden="true"></i>
                         Eliminar
                       </ui-button>
@@ -1018,7 +1065,7 @@
                           {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
                         </ui-button>
                         <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
-                        <ui-button size="sm" variant="ghost" class="text-red-600" *ngIf="hasPermission('product_delete')" (pressed)="confirmDeleteProduct(product)"><i class="fa-solid fa-trash" aria-hidden="true"></i>Eliminar</ui-button>
+                        <ui-button size="sm" variant="ghost" class="text-danger-deep" *ngIf="hasPermission('product_delete')" (pressed)="confirmDeleteProduct(product)"><i class="fa-solid fa-trash" aria-hidden="true"></i>Eliminar</ui-button>
                       </div>
                     </div>
                   </div>
@@ -1720,8 +1767,16 @@
                 <div class="text-sm font-semibold text-main">Nueva venta en sucursal</div>
                 <div class="mt-1 text-xs text-gray-600">El operador es el usuario logeado, el stock queda fijo a sus ligas y las ventas de clientes registrados aplican a metas y descuentos.</div>
 
-                <div *ngIf="!hasLinkedPosStock" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  No tienes un stock ligado. Vincula este usuario a un stock para poder registrar ventas.
+                <!-- Antes era un callejón sin salida: solo texto informativo, sin acceso directo a
+                     dónde resolverlo (ver docs/ux/analisis-ui-ux-2026-08.md, Admin POS hallazgo Alta). -->
+                <div *ngIf="!hasLinkedPosStock" class="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                  <span>No tienes un stock ligado. Vincula este usuario a un stock para poder registrar ventas.</span>
+                  <ui-button *ngIf="canAccessView('employees')" size="sm" variant="secondary" iconClass="fa-solid fa-id-badge" class="shrink-0" (pressed)="setView('employees')">
+                    Ir a Empleados
+                  </ui-button>
+                  <ui-button *ngIf="!canAccessView('employees') && canAccessView('stocks')" size="sm" variant="secondary" iconClass="fa-solid fa-warehouse" class="shrink-0" (pressed)="setView('stocks')">
+                    Ir a Stocks
+                  </ui-button>
                 </div>
 
                 <ng-container *ngIf="hasLinkedPosStock && currentPosStock">
@@ -2039,8 +2094,16 @@
                   </div>
 
                   <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div class="text-[11px] text-gray-500">Ultimo corte</div>
-                    <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastCutAt) }}</div>
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <div class="text-[11px] text-gray-500">Ultimo corte</div>
+                        <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastCutAt) }}</div>
+                      </div>
+                      <ui-button size="sm" variant="ghost" *ngIf="lastCompletedCut" (pressed)="openCutTicket(lastCompletedCut)">
+                        <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                        Ver ticket
+                      </ui-button>
+                    </div>
                     <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-600">
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Monto: {{ formatMoney(posCashControl ? (posCashControl.lastCutTotal || 0) : 0) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas: {{ posCashControl ? (posCashControl.lastCutSalesCount || 0) : 0 }}</span>
@@ -2060,147 +2123,100 @@
                   <div class="mt-3">
                     <ui-button size="sm" variant="ghost" (pressed)="loadPosCashCuts()" [disabled]="isLoadingPosCashCuts">
                       <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-                      {{ isLoadingPosCashCuts ? 'Cargando...' : 'Ver historial de cortes' }}
+                      {{ isLoadingPosCashCuts ? 'Cargando...' : 'Cargar cortes anteriores' }}
                     </ui-button>
                   </div>
                 </div>
 
+                <!-- Histórico de caja agrupado por cortes: el "corte en curso" son las ventas del
+                     turno actual aún no cortadas (sin cashCutId); debajo, los cortes ya cerrados
+                     con sus totales y un "Ver detalles" que despliega todos sus movimientos. -->
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-sm font-semibold text-main">Ventas registradas</div>
-                  <div class="mt-1 text-xs text-gray-600">Solo se muestran las ventas del operador actual sobre su stock ligado, separadas por forma de pago.</div>
-                  <div *ngIf="!visiblePosSales.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4 text-sm text-gray-600">
-                    No hay ventas registradas para esta caja.
-                  </div>
-                  <div *ngIf="visiblePosSales.length" class="mt-3 space-y-4 max-h-[520px] overflow-auto">
-                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="text-xs font-semibold text-main">Efectivo</div>
-                        <div class="text-[11px] text-gray-500">{{ visibleCashPosSales.length }} venta(s)</div>
-                      </div>
-                      <div *ngIf="!visibleCashPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas en efectivo.</div>
-                      <div *ngIf="visibleCashPosSales.length" class="mt-3 space-y-2">
-                        <div *ngFor="let sale of visibleCashPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
-                            </div>
-                            <div class="text-right">
-                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
-                            </div>
+                  <div class="text-sm font-semibold text-main">Histórico de caja</div>
+                  <div class="mt-1 text-xs text-gray-600">Agrupado por cortes de caja. El corte en curso muestra las ventas de este turno todavía sin cortar.</div>
+                  <div class="mt-3 space-y-3 max-h-[560px] overflow-auto">
+                    <div class="rounded-2xl border-2 border-accent bg-ivory-70 p-3">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <span class="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-main">EN CURSO</span>
+                            <div class="text-xs font-semibold text-main">Corte en curso</div>
                           </div>
-                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-1 text-[11px] text-gray-500">Operador: {{ currentOperatorName }}</div>
+                          <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                            <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Total: {{ formatMoney(posSalesTotal) }}</span>
+                            <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Ventas: {{ visiblePosSales.length }}</span>
+                          </div>
+                        </div>
+                        <ui-button size="sm" variant="ghost" *ngIf="visiblePosSales.length" (pressed)="toggleCutExpansion('current')">
+                          {{ expandedCutId === 'current' ? 'Ocultar' : 'Ver detalles' }}
+                          <i class="fa-solid" [ngClass]="expandedCutId === 'current' ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+                        </ui-button>
+                      </div>
+                      <div *ngIf="!visiblePosSales.length" class="mt-3 text-sm text-gray-600">Aún no hay ventas registradas en este turno.</div>
+                      <div *ngIf="expandedCutId === 'current' && visiblePosSales.length" class="mt-3 space-y-2">
+                        <div *ngFor="let sale of visiblePosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-2 text-[11px]">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="font-semibold">{{ sale.orderId }}</span>
+                            <span>{{ formatMoney(sale.total) }}</span>
+                          </div>
+                          <div class="text-gray-500">{{ sale.customerName || 'Publico en General' }} · {{ posPaymentMethodLabel(sale.paymentMethod) }} · {{ formatDateTime(sale.createdAt) }}</div>
                         </div>
                       </div>
                     </div>
 
-                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="text-xs font-semibold text-main">Tarjeta</div>
-                        <div class="text-[11px] text-gray-500">{{ visibleCardPosSales.length }} venta(s)</div>
-                      </div>
-                      <div *ngIf="!visibleCardPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas con tarjeta.</div>
-                      <div *ngIf="visibleCardPosSales.length" class="mt-3 space-y-2">
-                        <div *ngFor="let sale of visibleCardPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
-                            </div>
-                            <div class="text-right">
-                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
-                            </div>
+                    <div *ngIf="isLoadingPosCashCuts" class="text-xs text-gray-500">Cargando cortes...</div>
+                    <div *ngIf="!isLoadingPosCashCuts && isPosCashCutsOpen && !posCashCuts.length" class="rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4 text-sm text-gray-600">
+                      No hay cortes anteriores registrados.
+                    </div>
+                    <div *ngFor="let cut of posCashCuts" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="text-xs font-semibold text-main">{{ cut.id }}</div>
+                          <div class="mt-1 text-[11px] text-gray-500">{{ formatDateTime(cut.createdAt) }} · Operador: {{ cutOperatorName(cut) }}</div>
+                          <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                            <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Total: {{ formatMoney(cut.total) }}</span>
+                            <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Ventas: {{ cut.salesCount }}</span>
+                            <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">En caja: {{ formatMoney(cut.cashToKeep || 0) }}</span>
+                            <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Retirado: {{ formatMoney(cut.withdrawnAmount || 0) }}</span>
                           </div>
-                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                        </div>
+                        <div class="flex gap-2">
+                          <ui-button size="sm" variant="ghost" (pressed)="openCutTicket(cut)">
+                            <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                            Ticket
+                          </ui-button>
+                          <ui-button size="sm" variant="ghost" (pressed)="downloadCutReport(cut)">
+                            <i class="fa-solid fa-download" aria-hidden="true"></i>
+                            CSV
+                          </ui-button>
+                          <ui-button size="sm" variant="ghost" (pressed)="toggleCutExpansion(cut.id)">
+                            {{ expandedCutId === cut.id ? 'Ocultar' : 'Ver detalles' }}
+                            <i class="fa-solid" [ngClass]="expandedCutId === cut.id ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+                          </ui-button>
                         </div>
                       </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="text-xs font-semibold text-main">Transferencia</div>
-                        <div class="text-[11px] text-gray-500">{{ visibleTransferPosSales.length }} venta(s)</div>
-                      </div>
-                      <div *ngIf="!visibleTransferPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas por transferencia.</div>
-                      <div *ngIf="visibleTransferPosSales.length" class="mt-3 space-y-2">
-                        <div *ngFor="let sale of visibleTransferPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
-                            </div>
-                            <div class="text-right">
-                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
-                            </div>
+                      <div *ngIf="expandedCutId === cut.id" class="mt-3 space-y-2">
+                        <div *ngIf="cut.sales?.length" class="text-[11px] font-semibold text-gray-600">Ventas ({{ cut.sales?.length }})</div>
+                        <div *ngFor="let sale of cut.sales" class="rounded-2xl border border-olive-30 bg-white/70 p-2 text-[11px]">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="font-semibold">{{ sale.orderId }}</span>
+                            <span>{{ formatMoney(sale.total) }}</span>
                           </div>
-                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="text-gray-500">{{ sale.customerName }} · {{ formatDateTime(sale.createdAt) }}</div>
+                        </div>
+                        <div *ngIf="cut.withdrawals?.length" class="mt-2 text-[11px] font-semibold text-amber-700">Retiros ({{ cut.withdrawals?.length }})</div>
+                        <div *ngFor="let wdr of cut.withdrawals" class="rounded-2xl border border-amber-200 bg-amber-50 p-2 text-[11px]">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="font-semibold text-amber-800">{{ wdr.reason }}</span>
+                            <span class="text-amber-800">- {{ formatMoney(wdr.amount) }}</span>
+                          </div>
+                          <div class="text-amber-600">{{ formatDateTime(wdr.createdAt) }}</div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-            </div>
-          </div>
-
-          <div *ngIf="isPosCashCutsOpen" class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <div class="text-sm font-semibold text-main">Historial de cortes de caja</div>
-                <div class="mt-1 text-xs text-gray-600">Cortes registrados por este operador.</div>
-              </div>
-              <ui-button size="sm" variant="ghost" (pressed)="isPosCashCutsOpen = false">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                Cerrar
-              </ui-button>
-            </div>
-            <div *ngIf="!posCashCuts.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 p-4 text-sm text-gray-600">
-              No hay cortes registrados.
-            </div>
-            <div *ngIf="posCashCuts.length" class="mt-3 space-y-3 max-h-[480px] overflow-auto">
-              <div *ngFor="let cut of posCashCuts" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <div class="text-xs font-semibold text-main">{{ cut.id }}</div>
-                    <div class="mt-1 text-[11px] text-gray-500">{{ formatDateTime(cut.createdAt) }}</div>
-                    <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Total: {{ formatMoney(cut.total) }}</span>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Ventas: {{ cut.salesCount }}</span>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">En caja: {{ formatMoney(cut.cashToKeep || 0) }}</span>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Retirado: {{ formatMoney(cut.withdrawnAmount || 0) }}</span>
-                    </div>
-                  </div>
-                  <div class="flex gap-2">
-                    <ui-button size="sm" variant="ghost" (pressed)="downloadCutReport(cut)">
-                      <i class="fa-solid fa-download" aria-hidden="true"></i>
-                      CSV
-                    </ui-button>
-                    <ui-button size="sm" variant="ghost" (pressed)="toggleCutExpansion(cut.id)">
-                      <i class="fa-solid" [ngClass]="expandedCutId === cut.id ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
-                    </ui-button>
-                  </div>
-                </div>
-                <div *ngIf="expandedCutId === cut.id" class="mt-3 space-y-2">
-                  <div *ngIf="cut.sales?.length" class="text-[11px] font-semibold text-gray-600">Ventas ({{ cut.sales?.length }})</div>
-                  <div *ngFor="let sale of cut.sales" class="rounded-2xl border border-olive-30 bg-white/70 p-2 text-[11px]">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="font-semibold">{{ sale.orderId }}</span>
-                      <span>{{ formatMoney(sale.total) }}</span>
-                    </div>
-                    <div class="text-gray-500">{{ sale.customerName }} · {{ formatDateTime(sale.createdAt) }}</div>
-                  </div>
-                  <div *ngIf="cut.withdrawals?.length" class="mt-2 text-[11px] font-semibold text-amber-700">Retiros ({{ cut.withdrawals?.length }})</div>
-                  <div *ngFor="let wdr of cut.withdrawals" class="rounded-2xl border border-amber-200 bg-amber-50 p-2 text-[11px]">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="font-semibold text-amber-800">{{ wdr.reason }}</span>
-                      <span class="text-amber-800">- {{ formatMoney(wdr.amount) }}</span>
-                    </div>
-                    <div class="text-amber-600">{{ formatDateTime(wdr.createdAt) }}</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
           </div>
@@ -2984,8 +3000,22 @@
               <div *ngIf="businessConfigMessage" class="mt-2 text-xs text-accent">{{ businessConfigMessage }}</div>
             </div>
 
+            <!-- Sub-navegación por anclas: Configuración es la vista más densa del sistema (reglas
+                 de pedidos, POS, stocks, recompensas, bonos, documentos, todo en un solo scroll
+                 largo). Sin un índice, ubicar una regla puntual obliga a scrollear "a ciegas" (ver
+                 docs/ux/analisis-ui-ux-2026-08.md, Admin Configuración hallazgo Alta). Reutiliza el
+                 mismo patrón de pills que los filtros de estado de Pedidos. -->
+            <div class="sticky top-0 z-10 -mx-1 flex flex-wrap gap-2 bg-sand-200-90 px-1 py-2 backdrop-blur">
+              <ui-button size="sm" variant="ghost" type="button" (pressed)="scrollToConfigSection('cfg-pedidos')">Pedidos</ui-button>
+              <ui-button size="sm" variant="ghost" type="button" (pressed)="scrollToConfigSection('cfg-pos')">POS</ui-button>
+              <ui-button size="sm" variant="ghost" type="button" (pressed)="scrollToConfigSection('cfg-stocks')">Stocks</ui-button>
+              <ui-button size="sm" variant="ghost" type="button" (pressed)="scrollToConfigSection('cfg-documentos')">Documentos</ui-button>
+              <ui-button size="sm" variant="ghost" type="button" (pressed)="scrollToConfigSection('cfg-bonos')">Bonos</ui-button>
+              <ui-button size="sm" variant="ghost" type="button" (pressed)="scrollToConfigSection('cfg-recompensas')">Recompensas</ui-button>
+            </div>
+
             <div class="grid gap-4 xl:grid-cols-2">
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div id="cfg-pedidos" class="scroll-mt-16 rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Pedidos</div>
                 <div class="mt-3 space-y-3 text-sm">
                   <label class="flex items-center justify-between gap-3">
@@ -2999,7 +3029,7 @@
                 </div>
               </div>
 
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('config_manage')">
+              <div id="cfg-pos" class="scroll-mt-16 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('config_manage')">
                 <div class="text-sm font-semibold text-main">Codigo de autorizacion POS</div>
                 <div class="mt-1 text-xs text-gray-600">Codigo requerido para aplicar descuentos de cajero, pagos parciales, credito y retiros de efectivo.</div>
                 <div class="mt-3 grid gap-3">
@@ -3060,7 +3090,7 @@
                 </div>
               </div>
 
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div id="cfg-stocks" class="scroll-mt-16 rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Stocks</div>
                 <div class="mt-3 text-sm">
                   <label class="flex items-center justify-between gap-3">
@@ -3103,7 +3133,7 @@
               </div>
 
               <!-- Documentos requeridos del cliente -->
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4 xl:col-span-2">
+              <div id="cfg-documentos" class="scroll-mt-16 rounded-2xl border border-olive-30 surface-soft p-4 xl:col-span-2">
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <div class="text-sm font-semibold text-main">Documentos requeridos del cliente</div>
@@ -3151,7 +3181,7 @@
             </div>
 
             <!-- VP / VG y Bonos -->
-            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div id="cfg-bonos" class="scroll-mt-16 rounded-2xl border border-olive-30 surface-soft p-4">
               <div class="text-sm font-semibold text-main">Unidades de Volumen (VP / VG)</div>
               <div class="mt-1 text-xs text-gray-500">1 VP = X MXN netos (sin IVA ni envío). VP = compras personales del mes; VG = VP + red hasta N niveles.</div>
               <div class="mt-3 grid gap-3 md:grid-cols-2">
@@ -3192,6 +3222,9 @@
                     </label>
                     <label class="flex flex-col gap-1 text-[11px] text-gray-500">PC mín./línea
                       <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.pcMinPerLine" (ngModelChange)="bonusConfig.rankThresholds[ri].pcMinPerLine = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
+                    </label>
+                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Referidos directos requeridos
+                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.requiredDirects" (ngModelChange)="bonusConfig.rankThresholds[ri].requiredDirects = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
                     </label>
                     <label class="flex flex-col gap-1 text-[11px] text-gray-500">Bono mensual ($)
                       <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.monthlyBonus" (ngModelChange)="bonusConfig.rankThresholds[ri].monthlyBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
@@ -3324,10 +3357,10 @@
             </div>
 
             <!-- Recompensas (comisiones) -->
-            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div id="cfg-recompensas" class="scroll-mt-16 rounded-2xl border border-olive-30 surface-soft p-4">
               <div class="text-sm font-semibold text-main">Recompensas</div>
               <div class="mt-3 grid gap-3 md:grid-cols-2">
-                <ui-form-field type="number" [min]="0" label="Activacion minima (VP)" [ngModel]="businessConfigDraft.rewards.activationNetMin" (ngModelChange)="businessConfigDraft.rewards.activationNetMin = +$event || 0"></ui-form-field>
+                <ui-form-field type="number" [min]="0" label="Activacion minima (MXN)" [ngModel]="businessConfigDraft.rewards.activationNetMin" (ngModelChange)="businessConfigDraft.rewards.activationNetMin = +$event || 0"></ui-form-field>
                 <ui-form-field type="number" [min]="1" label="Dia de pago" [ngModel]="businessConfigDraft.rewards.payoutDay" (ngModelChange)="businessConfigDraft.rewards.payoutDay = +$event || 1"></ui-form-field>
                 <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-4 md:col-span-2">
                   <div class="flex items-start justify-between gap-3">
@@ -3546,7 +3579,46 @@
       </div>
   </ui-modal>
 
-  
+  <ui-modal [isOpen]="isMarkPaidModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeMarkPaidModal()">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-lg font-extrabold text-main">Marcar como pagado</div>
+          <div class="mt-1 text-sm text-gray-600">Selecciona la forma de pago recibida antes de confirmar.</div>
+        </div>
+        <ui-button size="sm" variant="ghost" (pressed)="closeMarkPaidModal()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          Cerrar
+        </ui-button>
+      </div>
+
+      <div *ngIf="markPaidTargetOrder" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4 text-sm">
+        <div class="font-semibold text-main">{{ markPaidTargetOrder.customer }}</div>
+        <div class="mt-1 text-xs text-gray-600">Pedido {{ markPaidTargetOrder.id }} · {{ formatMoney(markPaidTargetOrder.total) }}</div>
+      </div>
+
+      <div class="mt-4">
+        <ui-form-field
+          kind="select"
+          label="Forma de pago"
+          [options]="markPaidMethodOptions"
+          [ngModel]="markPaidMethod"
+          (ngModelChange)="markPaidMethod = $event">
+        </ui-form-field>
+      </div>
+
+      <div *ngIf="markPaidError" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ markPaidError }}
+      </div>
+
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <ui-button size="sm" variant="ghost" (pressed)="closeMarkPaidModal()">Cancelar</ui-button>
+        <ui-button size="sm" variant="primary" [disabled]="markPaidTargetOrder ? isUpdatingOrder(markPaidTargetOrder.id) : false" (pressed)="confirmMarkPaid()">
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          {{ markPaidTargetOrder && isUpdatingOrder(markPaidTargetOrder.id) ? 'Guardando...' : 'Confirmar pago' }}
+        </ui-button>
+      </div>
+  </ui-modal>
+
   <ui-modal [isOpen]="isShippingModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeShippingModal()">
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -3876,19 +3948,60 @@
     {{ posCashCutError }}
   </div>
 
-  <div *ngIf="lastCompletedCut" class="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 flex items-center justify-between gap-3">
-    <span>Ultimo corte registrado.</span>
-    <ui-button size="sm" variant="ghost" (pressed)="downloadCutReport($any(lastCompletedCut))">
-      <i class="fa-solid fa-download" aria-hidden="true"></i>
-      Descargar CSV
-    </ui-button>
-  </div>
+  <!-- Nota: al confirmar, confirmPosCashCut() cierra este modal automáticamente, así que el
+       corte recién registrado (lastCompletedCut) se consulta después desde la tarjeta "Ultimo
+       corte" (botón "Ver ticket"), no desde aquí dentro. -->
 
   <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
     <ui-button size="sm" variant="ghost" (pressed)="closePosCashCutModal()">Cancelar</ui-button>
     <ui-button size="sm" variant="primary" [disabled]="isCuttingPosCash" (pressed)="confirmPosCashCut()">
       <i class="fa-solid fa-scissors" aria-hidden="true"></i>
       {{ isCuttingPosCash ? 'Guardando...' : 'Registrar corte' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- Ticket del corte de caja: vista imprimible (feature: Ticket del corte). -->
+<ui-modal [isOpen]="isCutTicketOpen" maxWidthClass="max-w-sm" contentClass="p-6" (closed)="closeCutTicket()">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-lg font-extrabold text-main">Ticket del corte</div>
+      <div class="mt-1 text-sm text-gray-600">Vista imprimible del corte de caja.</div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="closeCutTicket()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      Cerrar
+    </ui-button>
+  </div>
+
+  <div *ngIf="ticketCut" class="pos-ticket-print mx-auto mt-4 w-[300px] max-w-full rounded-lg border border-dashed border-gray-400 bg-white p-4 font-mono text-[12px] leading-relaxed text-black">
+    <div class="text-center">
+      <div class="text-sm font-extrabold">FINDING'U</div>
+      <div class="text-[10px]">Ticket de corte de caja</div>
+    </div>
+    <div class="mt-2 border-t border-dashed border-gray-400 pt-2">
+      <div>Folio: {{ ticketCut.id }}</div>
+      <div>Fecha: {{ formatDateTime(ticketCut.createdAt) }}</div>
+      <div>Operador: {{ cutOperatorName(ticketCut) }}</div>
+      <div *ngIf="ticketCut.stockId">Sucursal: {{ stockName(ticketCut.stockId) || ticketCut.stockId }}</div>
+    </div>
+    <div class="mt-2 border-t border-dashed border-gray-400 pt-2">
+      <div class="flex justify-between"><span>Ventas ({{ ticketCut.salesCount }})</span><span>{{ formatMoney(ticketCut.total) }}</span></div>
+      <div class="flex justify-between"><span>Retiros</span><span>-{{ formatMoney(ticketCut.withdrawnAmount || 0) }}</span></div>
+      <div class="mt-1 flex justify-between border-t border-dashed border-gray-400 pt-1 font-bold">
+        <span>Efectivo a conservar</span><span>{{ formatMoney(ticketCut.cashToKeep || 0) }}</span>
+      </div>
+    </div>
+    <div class="mt-2 border-t border-dashed border-gray-400 pt-2 text-center text-[10px]">
+      Gracias por su preferencia
+    </div>
+  </div>
+
+  <div class="mt-5 flex justify-end gap-2">
+    <ui-button size="sm" variant="ghost" (pressed)="closeCutTicket()">Cerrar</ui-button>
+    <ui-button size="sm" variant="primary" (pressed)="printCutTicket()">
+      <i class="fa-solid fa-print" aria-hidden="true"></i>
+      Imprimir
     </ui-button>
   </div>
 </ui-modal>
@@ -4201,57 +4314,6 @@
     </div>
   </ui-modal>
 
-  <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-90 backdrop-blur lg:hidden">
-    <div class="mx-auto max-w-7xl px-4 py-3">
-      <div class="grid grid-cols-3 gap-2">
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('orders')" [variant]="currentView === 'orders' ? 'primary' : 'ghost'" (click)="setView('orders')">
-          <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-          Pedidos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('customers')" [variant]="currentView === 'customers' ? 'primary' : 'ghost'" (click)="setView('customers')">
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-          Clientes
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('products')" [variant]="currentView === 'products' ? 'primary' : 'ghost'" (click)="setView('products')">
-          <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-          Productos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stocks')" [variant]="currentView === 'stocks' ? 'primary' : 'ghost'" (click)="setView('stocks')">
-          <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
-          Stocks
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('campaigns')" [variant]="currentView === 'campaigns' ? 'primary' : 'ghost'" (click)="setView('campaigns')">
-          <i class="fa-solid fa-bullhorn" aria-hidden="true"></i>
-          Campanas
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('pos')" [variant]="currentView === 'pos' ? 'primary' : 'ghost'" (click)="setView('pos')">
-          <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
-          PV
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stats')" [variant]="currentView === 'stats' ? 'primary' : 'ghost'" (click)="setView('stats')">
-          <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-          Stats
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('honor_board')" [variant]="currentView === 'honor_board' ? 'primary' : 'ghost'" (click)="setView('honor_board')">
-          <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
-          Honor
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('notifications')" [variant]="currentView === 'notifications' ? 'primary' : 'ghost'" (click)="setView('notifications')">
-          <i class="fa-solid fa-bell" aria-hidden="true"></i>
-          Avisos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('coupons')" [variant]="currentView === 'coupons' ? 'primary' : 'ghost'" (click)="setView('coupons')">
-          <i class="fa-solid fa-ticket" aria-hidden="true"></i>
-          Cupones
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('settings')" [variant]="currentView === 'settings' ? 'primary' : 'ghost'" (click)="setView('settings')">
-          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-          Config
-        </ui-button>
-      </div>
-    </div>
-  </div>
-
   <ui-footer></ui-footer>
 
   <!-- Snackbar global -->
@@ -4275,7 +4337,7 @@
   </div>
   <div class="mt-5 flex justify-end gap-2">
     <ui-button variant="ghost" size="sm" (pressed)="cancelDeleteProduct()">Cancelar</ui-button>
-    <ui-button variant="primary" size="sm" class="hover:text-red-600" [disabled]="isDeletingProduct" (pressed)="removeProduct()">
+    <ui-button variant="danger" size="sm" [disabled]="isDeletingProduct" (pressed)="removeProduct()">
       <i class="fa-solid fa-trash" aria-hidden="true"></i>
       {{ isDeletingProduct ? 'Eliminando...' : 'Eliminar' }}
     </ui-button>

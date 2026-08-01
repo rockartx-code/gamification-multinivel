@@ -35,6 +35,20 @@
       </div>
     </div>
 
+    <!-- Load error -->
+    <div *ngIf="!isLoading && !result && !order && error"
+      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+        <i class="fa-solid fa-circle-exclamation mt-0.5 text-red-500" aria-hidden="true"></i>
+        <div>
+          <p class="text-sm font-semibold text-red-800">{{ error }}</p>
+        </div>
+      </div>
+      <div class="mt-4">
+        <ui-button variant="ghost" size="md" [routerLink]="['/dashboard']">Volver</ui-button>
+      </div>
+    </div>
+
     <!-- Error if not delivered -->
     <div *ngIf="!isLoading && !result && !orderIsDelivered && order"
       class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">

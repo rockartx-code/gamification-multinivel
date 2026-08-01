@@ -90,7 +90,7 @@ export class MockApiService {
     version: 'app-v1',
     rewards: {
       version: 'v1',
-      activationNetMin: 20,
+      activationNetMin: 2500,
       discountTiers: [
         { min: 0, max: 999, rate: 0 },
         { min: 1000, max: 1999, rate: 0.1 },
@@ -1401,6 +1401,24 @@ export class MockApiService {
     const rows = this.stocks
       .filter((stock) => stock.allowPickup)
       .map((stock) => ({ id: stock.id, name: stock.name, location: stock.location }));
+    return of(rows).pipe(delay(120));
+  }
+
+  listPickupStocksWithInventory(): Observable<Array<{ id: string; name: string; location: string; inventory: Record<string, number> }>> {
+    const rows = this.stocks
+      .filter((stock) => stock.allowPickup)
+      .map((stock) => ({
+        id: stock.id,
+        name: stock.name,
+        location: stock.location,
+        inventory: Object.entries(stock.inventory ?? {}).reduce<Record<string, number>>((acc, [productId, qty]) => {
+          const num = Number(qty);
+          if (Number.isFinite(num)) {
+            acc[String(productId)] = num;
+          }
+          return acc;
+        }, {})
+      }));
     return of(rows).pipe(delay(120));
   }
 

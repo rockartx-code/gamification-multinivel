@@ -234,6 +234,7 @@ export interface DashboardData {
   vg?: number;
   rank?: string;
   bonuses?: BonusAward[];
+  honorBoard?: HonorBoard;
 }
 
 export interface CommissionRequestPayload {

@@ -9,6 +9,7 @@
   --color-text-inverse: #f4f4f4;
   --color-success: #5f7f6a;
   --color-danger: #b4533c;
+  --rgb-danger: 180, 83, 60;
 
   --color-surface-1: #fdfbf7;
   --color-surface-2: #f6f3ee;
@@ -22,6 +23,9 @@
   --rgb-surface-3: 239, 232, 220;
 
   --text-on-primary: #6f5622;
+  /* Texto sobre superficies "danger" (badge-danger/btn-ghost-danger): más oscuro que
+     --color-danger puro para mantener contraste AA sobre fondos claros (rgba(--rgb-danger, .1-.35)). */
+  --text-on-danger: #7a2e2e;
   --text-soft-light: var(--color-surface-2);
   --input-border: rgba(var(--rgb-primary), 0.35);
 }
@@ -259,6 +263,19 @@ select:focus {
   background: rgba(var(--rgb-surface-3), 0.9);
 }
 
+/* Variante para acciones destructivas/irreversibles (cancelar orden, eliminar, rechazar).
+   Usa --color-danger (ya declarado en :root) en vez del neutro btn-ghost, para que el
+   usuario perciba el riesgo antes de hacer clic. */
+.btn-ghost-danger {
+  background: rgba(var(--rgb-surface-1), 0.85);
+  color: var(--text-on-danger);
+  border: 1px solid rgba(var(--rgb-danger), 0.4);
+}
+
+.btn-ghost-danger:hover:not(.btn-disabled):not(:disabled) {
+  background: rgba(var(--rgb-danger), 0.1);
+}
+
 .btn:hover:not(.btn-disabled):not(:disabled) {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
@@ -371,13 +388,24 @@ select:focus {
 .badge-inactive {
   background: rgba(var(--rgb-text), 0.06);
   border-color: rgba(var(--rgb-text), 0.12);
-  color: rgba(var(--rgb-text), 0.45);
+  /* Antes rgba(--rgb-text, .45): ~2.6:1 sobre badge claro, bajo el mínimo AA (4.5:1) para
+     texto de 12px. --color-text-muted es un gris sólido con mejor contraste (quick win a11y). */
+  color: var(--color-text-muted);
 }
 
 .badge-pending {
   background: rgba(var(--rgb-primary), 0.16);
   border-color: rgba(var(--rgb-primary), 0.32);
   color: var(--text-on-primary);
+}
+
+/* Variante para estados negativos (Cancelado, Devuelto, Dev. rechazada): usa --color-danger,
+   ya declarado en :root pero antes sin ningún badge/pill que lo aplicara (ver
+   docs/ux/analisis-ui-ux-2026-08.md, hallazgo transversal "Badges de estado"). */
+.badge-danger {
+  background: rgba(var(--rgb-danger), 0.14);
+  border-color: rgba(var(--rgb-danger), 0.38);
+  color: var(--text-on-danger);
 }
 
 .badge.status-active {
@@ -389,7 +417,7 @@ select:focus {
 .badge.status-inactive {
   background: rgba(var(--rgb-text), 0.06);
   border-color: rgba(var(--rgb-text), 0.16);
-  color: rgba(var(--rgb-text), 0.52);
+  color: var(--color-text-muted);
 }
 
 .badge.level-1 {
@@ -419,7 +447,7 @@ select:focus {
 .badge.level-5 {
   background: rgba(var(--rgb-text), 0.06);
   border-color: rgba(var(--rgb-text), 0.14);
-  color: rgba(var(--rgb-text), 0.58);
+  color: var(--color-text-muted);
 }
 
 .icon-muted {
@@ -504,3 +532,21 @@ select:focus {
 .text-stone { color: #8f8673; }
 .text-alert-soft { color: #9a5a4a; }
 .text-sand-200 { color: var(--color-surface-2); }
+
+/* Placeholder de imagen rota/ausente (producto sin foto): aplicado por ImgFallbackDirective
+   ([imgFallback]) cuando el <img> dispara (error). El propio data-URI de reemplazo ya trae
+   el ícono + fondo dibujados; esta clase solo evita que un contenedor no cuadrado lo estire. */
+.img-fallback {
+  object-fit: contain !important;
+  background: var(--bg-sand-100, #f6f1e8);
+  padding: 8%;
+}
+
+/* Estado vacío estandarizado (tablas/paneles sin datos): superficie neutra distinta de
+   `surface-soft`/`kpi-mini` (que se reservan para contenido real), evitando que un "vacío"
+   administrativo compita visualmente con tarjetas accionables. */
+.empty-state {
+  background: rgba(var(--rgb-text), 0.03);
+  border: 1px dashed rgba(var(--rgb-primary), 0.35);
+  color: var(--color-text-muted);
+}

@@ -227,6 +227,10 @@
         No hay sucursales disponibles para recoger en este momento.
       </div>
       <div *ngIf="!isLoadingPickupStocks && pickupStocks.length > 0" class="space-y-2">
+        <div *ngIf="pickupStockAvailabilityNotice" class="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0" aria-hidden="true"></i>
+          <span>{{ pickupStockAvailabilityNotice }}</span>
+        </div>
         <div class="text-xs font-semibold text-main">Selecciona sucursal</div>
         <button
           *ngFor="let branch of pickupStocks"
@@ -352,6 +356,7 @@
       ></ui-form-field>
 
       <ui-form-field
+        id="delivery-field-deliveryStreet"
         label="Calle"
         placeholder="Av. Reforma"
         name="deliveryStreet"
@@ -361,6 +366,7 @@
       ></ui-form-field>
 
       <ui-form-field
+        id="delivery-field-deliveryNumber"
         label="Número"
         placeholder="123"
         name="deliveryNumber"
@@ -370,6 +376,7 @@
       ></ui-form-field>
 
       <ui-form-field
+        id="delivery-field-deliveryCity"
         label="Ciudad"
         placeholder="Monterrey"
         name="deliveryCity"
@@ -379,6 +386,7 @@
       ></ui-form-field>
 
       <ui-form-field
+        id="delivery-field-deliveryPostalCode"
         label="CP"
         placeholder="00000"
         name="deliveryPostalCode"
@@ -388,6 +396,7 @@
       ></ui-form-field>
 
       <ui-form-field
+        id="delivery-field-deliveryState"
         label="Estado"
         kind="select"
         placeholder="Selecciona un estado"
@@ -399,6 +408,7 @@
       ></ui-form-field>
 
       <ui-form-field
+        id="delivery-field-deliveryCountry"
         label="Pais"
         kind="select"
         placeholder="Selecciona un pais"

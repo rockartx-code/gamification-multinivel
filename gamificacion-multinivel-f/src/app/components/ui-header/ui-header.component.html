@@ -6,7 +6,13 @@
       <ng-content select="[header-left]"></ng-content>
     </div>
 
-    <div class="flex shrink-0 items-center gap-2">
+    <!-- Sin shrink-0: en Admin móvil, el grupo header-left (logo + hamburguesa) y este grupo
+         (Acciones/Logout/Nuevo, con un ancho mínimo forzado) suman más que el viewport; con
+         shrink-0 aquí, TODO el encogimiento recaía sobre header-left, cuyo botón terminaba
+         desbordando su caja y pintándose encima de "Acciones" (ver
+         docs/ux/analisis-ui-ux-2026-08.md, hallazgo Alta "navegación admin en móvil"). Con
+         flex-wrap, este grupo pasa a una segunda línea en vez de forzar el colapso del otro. -->
+    <div class="flex flex-wrap items-center justify-end gap-2">
       <ng-content></ng-content>
     </div>
   </div>

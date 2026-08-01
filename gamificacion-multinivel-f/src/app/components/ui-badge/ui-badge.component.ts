@@ -6,7 +6,7 @@ import { Component, Input } from '@angular/core';
   template: `<span [class]="classes"><ng-content></ng-content></span>`
 })
 export class UiBadgeComponent {
-  @Input() tone: 'active' | 'inactive' | 'pending' | 'delivered' = 'inactive';
+  @Input() tone: 'active' | 'inactive' | 'pending' | 'delivered' | 'danger' = 'inactive';
   @Input() size: 'default' | 'mini' = 'default';
   @Input() extraClass = '';
 
@@ -15,7 +15,8 @@ export class UiBadgeComponent {
       active: 'badge-active',
       inactive: 'badge-inactive',
       pending: 'badge-pending',
-      delivered: 'badge-active'
+      delivered: 'badge-active',
+      danger: 'badge-danger'
     };
     const sizeClass = this.size === 'mini' ? 'badge badge-compact' : 'badge';
     return `${sizeClass} ${toneClass[this.tone]} ${this.extraClass}`.trim();

@@ -15,7 +15,7 @@ import { ApiService } from '../../services/api.service';
   styleUrl: './order-status.component.css'
 })
 export class OrderStatusComponent implements OnInit, OnDestroy {
-  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as const;
+  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as const;
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   orderId = '';
   orderReference = '';
@@ -155,6 +155,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (status === 'cancelled') {
       return 'Cancelado';
     }
+    if (status === 'refunded') {
+      return 'Reembolsado';
+    }
     if (status === 'en_devolucion') {
       return 'En devolución';
     }
@@ -167,37 +170,43 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return 'Pago pendiente';
   }
 
+  /**
+   * Clases del badge de estado superior. Los estados negativos (cancelado/rechazado) usan el
+   * token --color-danger del sistema (vía badge-danger) en vez de rojos Tailwind hardcodeados,
+   * consistente con ui-status-badge (ver docs/ux/analisis-ui-ux-2026-08.md, "Badges de estado").
+   */
   get statusClass(): string {
     if (this.redirectStatus === 'failure') {
-      return 'border-red-400/30 bg-red-500/10 text-main';
+      return 'badge-danger';
     }
     const status = this.normalizeStatus(this.order?.status);
-    if (status === 'paid') {
+    if (status === 'paid' || status === 'delivered' || status === 'devuelto_validado') {
       return 'border-emerald-400/30 bg-emerald-400/10 text-main';
     }
     if (status === 'shipped') {
       return 'border-blue-400/30 bg-blue-500/10 text-main';
     }
-    if (status === 'delivered') {
-      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
+    if (status === 'cancelled' || status === 'devolucion_rechazada') {
+      return 'badge-danger';
     }
-    if (status === 'cancelled') {
-      return 'border-red-400/30 bg-red-500/10 text-main';
+    if (status === 'refunded') {
+      return 'badge-danger';
     }
     if (status === 'en_devolucion') {
       return 'border-amber-400/30 bg-amber-400/10 text-main';
-    }
-    if (status === 'devuelto_validado') {
-      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
-    }
-    if (status === 'devolucion_rechazada') {
-      return 'border-red-400/30 bg-red-500/10 text-main';
     }
     return 'border-yellow-400/30 bg-yellow-400/10 text-main';
   }
 
   get statusValue(): (typeof this.allowedStatuses)[number] {
     return this.normalizeStatus(this.order?.status);
+  }
+
+  get canPayWithMercadoPago(): boolean {
+    if (this.statusValue !== 'pending') {
+      return false;
+    }
+    return !(this.order?.deliveryType === 'pickup' && this.order?.pickupPaymentMethod === 'at_store');
   }
 
   get orderSubtotal(): number {

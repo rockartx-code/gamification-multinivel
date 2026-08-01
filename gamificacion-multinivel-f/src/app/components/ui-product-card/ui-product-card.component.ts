@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { UiButtonComponent } from '../ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../ui-form-field/ui-form-field.component';
+import { ImgFallbackDirective } from '../../directives/img-fallback.directive';
 
 export type ProductVariantCard = {
   id: string;
@@ -27,7 +28,7 @@ export type ProductCardModel = {
 @Component({
   selector: 'ui-product-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, ImgFallbackDirective],
   templateUrl: './ui-product-card.component.html'
 })
 export class UiProductCardComponent {

@@ -237,8 +237,10 @@
                 placeholder="Tu contraseña actual"
                 class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
                 [ngClass]="passwordErrors.currentPassword ? 'border-red-400' : 'border-olive-30'" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                (click)="showCurrentPassword = !showCurrentPassword">
+              <button type="button" class="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center text-gray-400 hover:text-main"
+                (click)="showCurrentPassword = !showCurrentPassword"
+                [attr.aria-label]="showCurrentPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                [title]="showCurrentPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                 <i class="fa-solid" [ngClass]="showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
               </button>
             </div>
@@ -258,8 +260,10 @@
                   placeholder="Mínimo 8 caracteres"
                   class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
                   [ngClass]="passwordErrors.newPassword ? 'border-red-400' : 'border-olive-30'" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                  (click)="showNewPassword = !showNewPassword">
+                <button type="button" class="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center text-gray-400 hover:text-main"
+                  (click)="showNewPassword = !showNewPassword"
+                  [attr.aria-label]="showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [title]="showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                   <i class="fa-solid" [ngClass]="showNewPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
                 </button>
               </div>
@@ -278,8 +282,10 @@
                   placeholder="Repite la nueva contraseña"
                   class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
                   [ngClass]="passwordErrors.confirmPassword ? 'border-red-400' : 'border-olive-30'" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                  (click)="showConfirmPassword = !showConfirmPassword">
+                <button type="button" class="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center text-gray-400 hover:text-main"
+                  (click)="showConfirmPassword = !showConfirmPassword"
+                  [attr.aria-label]="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [title]="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                   <i class="fa-solid" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
                 </button>
               </div>
@@ -401,11 +407,18 @@
   </div>
 
   <!-- ── TOAST ──────────────────────────────────────────────────────── -->
+  <!-- Anclado arriba (no abajo): en formularios largos de una sola columna en móvil, un toast
+       "fixed bottom" cae, según la posición de scroll al guardar, encima de cualquier campo que
+       esté al fondo del viewport visible (ver docs/ux/analisis-ui-ux-2026-08.md, hallazgo Alta
+       "overlay sobre CURP en Perfil móvil"). Anclarlo debajo del header, siempre fuera del área
+       de los campos, evita esa colisión sin importar el punto de scroll. -->
   <div
-    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transition-all duration-300"
+    class="fixed left-1/2 top-20 z-50 -translate-x-1/2 transition-all duration-300"
+    role="status"
+    aria-live="polite"
     [class.opacity-0]="!isToastVisible"
     [class.pointer-events-none]="!isToastVisible"
-    [class.translate-y-4]="!isToastVisible">
+    [ngClass]="!isToastVisible ? '-translate-y-4' : ''">
     <div class="flex items-center gap-3 rounded-2xl border border-olive-30 bg-main px-5 py-3 shadow-xl">
       <i class="fa-solid fa-circle-check text-sm text-gold" aria-hidden="true"></i>
       <span class="text-sm font-semibold text-white">{{ toastMessage }}</span>

@@ -645,6 +645,41 @@ export class RealApiService {
       .pipe(map((response) => response.stocks ?? []));
   }
 
+  /**
+   * Igual que listPickupStocks(), pero conserva el campo `inventory` (mapa productId -> qty)
+   * que ya devuelve GET /inventory/pickup-stocks (retorna los items STOCK completos, ver
+   * inventory_lambda.py::lambda_handler root == "pickup-stocks"). Se usa para filtrar en el
+   * carrito las sucursales que sí tienen stock de los productos elegidos.
+   */
+  listPickupStocksWithInventory(): Observable<Array<{ id: string; name: string; location: string; inventory: Record<string, number> }>> {
+    return this.http
+      .get<{ stocks: Array<Record<string, unknown>> }>(`${this.baseUrl}/inventory/pickup-stocks`)
+      .pipe(
+        map((response) =>
+          (response.stocks ?? []).map((s) => ({
+            id: String(s['stockId'] ?? s['id'] ?? ''),
+            name: String(s['name'] ?? ''),
+            location: String(s['location'] ?? ''),
+            inventory: this.normalizePickupInventoryMap(s['inventory'])
+          }))
+        )
+      );
+  }
+
+  private normalizePickupInventoryMap(value: unknown): Record<string, number> {
+    if (!value || typeof value !== 'object') {
+      return {};
+    }
+    const result: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+      const qty = Number(raw);
+      if (Number.isFinite(qty)) {
+        result[String(key)] = qty;
+      }
+    }
+    return result;
+  }
+
   createStock(payload: { name: string; location: string; postalCode?: string; isMainWarehouse?: boolean; allowPickup?: boolean; linkedUserIds?: number[]; inventory?: Record<number, number> }): Observable<AdminStock> {
     return this.http
       .post<{ stock: AdminStock }>(`${this.baseUrl}/inventory/stocks`, payload, { headers: this.actorHeaders() })

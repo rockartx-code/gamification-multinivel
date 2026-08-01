@@ -3,6 +3,8 @@
   [disabled]="disabled"
   [class]="classes"
   [routerLink]="routerLink"
+  [attr.aria-label]="innerAriaLabel"
+  [attr.aria-describedby]="innerAriaDescribedby"
   (click)="onClick($event)"
 >
   <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>

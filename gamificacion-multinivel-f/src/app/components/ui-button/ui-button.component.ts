@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
   selector: 'ui-button',
@@ -9,7 +9,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
   templateUrl: './ui-button.component.html',
   styleUrls: ['./ui-button.component.css']
 })
-export class UiButtonComponent {
+export class UiButtonComponent implements OnInit {
   private static readonly PRIMARY_HINT_PATTERN =
     /\b(?:bg-gradient-to-r|(?:from|to|via)-(?:gold|primary|amber)|btn-primary)\b/;
   private static readonly SECONDARY_HINT_PATTERN =
@@ -19,7 +19,7 @@ export class UiButtonComponent {
 
   @Input('class') hostClass = '';
   @Input() type: 'button' | 'submit' | 'reset' = 'button';
-  @Input() variant: 'primary' | 'secondary' | 'ghost' | 'linkish' = 'ghost';
+  @Input() variant: 'primary' | 'secondary' | 'ghost' | 'linkish' | 'danger' = 'ghost';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() disabled = false;
   @Input() fullWidth = false;
@@ -33,13 +33,33 @@ export class UiButtonComponent {
 
   @Output() pressed = new EventEmitter<MouseEvent>();
 
+  /**
+   * El `aria-label` puesto en `<ui-button aria-label="...">` cae en el HOST (este elemento), no
+   * en el `<button>` nativo interno (que solo tiene un ícono `aria-hidden`) — su nombre accesible
+   * quedaba vacío para lectores de pantalla / `getByRole('button', {name})`. Se lee el atributo
+   * del host y se reexpone en el `<button>` real sin tocar el atributo del host (varias pruebas
+   * lo ubican por `ui-button[aria-label="..."]`).
+   */
+  innerAriaLabel: string | null = null;
+  /** Mismo problema/solución que innerAriaLabel, pero para `aria-describedby` (p. ej. el hint
+   * de confirmación de una acción destructiva como "Cancelar orden"). */
+  innerAriaDescribedby: string | null = null;
+
+  constructor(private readonly elementRef: ElementRef<HTMLElement>) {}
+
+  ngOnInit(): void {
+    this.innerAriaLabel = this.elementRef.nativeElement.getAttribute('aria-label');
+    this.innerAriaDescribedby = this.elementRef.nativeElement.getAttribute('aria-describedby');
+  }
+
   get classes(): string {
     const base = 'btn inline-flex items-center justify-center gap-2';
     const variants = {
       primary: 'btn-primary',
       secondary: 'btn-secondary',
       ghost: 'btn-ghost',
-      linkish: 'btn-linkish'
+      linkish: 'btn-linkish',
+      danger: 'btn-ghost-danger'
     };
     const resolvedVariant = this.resolveVariant();
     const sizes = {
@@ -63,7 +83,7 @@ export class UiButtonComponent {
       .join(' ');
   }
 
-  private resolveVariant(): 'primary' | 'secondary' | 'ghost' | 'linkish' {
+  private resolveVariant(): 'primary' | 'secondary' | 'ghost' | 'linkish' | 'danger' {
     if (this.variant !== 'ghost') {
       return this.variant;
     }

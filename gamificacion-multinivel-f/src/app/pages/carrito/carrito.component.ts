@@ -55,6 +55,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
   pickupStocks: Array<{ id: string; name: string; location: string }> = [];
   selectedPickupStockId = '';
   isLoadingPickupStocks = false;
+  /** Todas las sucursales de pickup con su inventario (mapa productId -> qty), sin filtrar. */
+  private pickupStocksAll: Array<{ id: string; name: string; location: string; inventory: Record<string, number> }> = [];
+  /** Aviso mostrado sobre el selector de sucursal cuando el filtrado por stock hace fallback. */
+  pickupStockAvailabilityNotice = '';
   shippingRates: ShippingRate[] = [];
   isLoadingShippingRates = false;
   selectedShippingRate: ShippingRate | null = null;
@@ -118,6 +122,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.refreshSuggestedProducts();
     this.dataSub = this.cartControl.data$.subscribe(() => {
       this.refreshSuggestedProducts();
+      this.applyPickupStockAvailability();
       this.cdr.markForCheck();
     });
     this.goalControl.load().subscribe();
@@ -233,7 +238,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
 
     const fill = scored
-      .filter((item) => !ordered.some((entry) => entry.id === item.product.id))
+      .filter((item) => !cartIds.has(item.product.id) && !ordered.some((entry) => entry.id === item.product.id))
       .sort((a, b) => a.index - b.index)
       .map((item) => item.product);
 
@@ -658,6 +663,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.appliedCoupon?.valid) {
       payload['couponCode'] = this.couponCode.trim().toUpperCase();
     }
+    const leaderId = localStorage.getItem('leaderId');
+    if (leaderId) {
+      payload['referrerAssociateId'] = leaderId;
+    }
     this.isPlacingOrder = true;
     this.api
       .createOrder(payload as any)
@@ -851,8 +860,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
 
     window.setTimeout(() => {
-      const selector = `[name="${missingField.name}"]`;
-      const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
+      const container = document.getElementById(`delivery-field-${missingField.name}`);
+      const field = container?.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
       if (!field) {
         return;
       }
@@ -1010,22 +1019,122 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   private loadPickupStocks(): void {
     this.isLoadingPickupStocks = true;
-    this.api.listPickupStocks().subscribe({
+    this.api.listPickupStocksWithInventory().subscribe({
       next: (stocks) => {
-        const normalizedStocks = this.normalizePickupStocks(stocks);
-        this.pickupStocks = normalizedStocks;
-        this.selectedPickupStockId = this.resolveSelectedPickupStockId(normalizedStocks, this.selectedPickupStockId);
-        if (!this.selectedPickupStockId && normalizedStocks.length === 1) {
-          this.selectedPickupStockId = normalizedStocks[0].id;
-        }
+        this.pickupStocksAll = this.normalizePickupStocksWithInventory(stocks);
         this.isLoadingPickupStocks = false;
+        this.applyPickupStockAvailability();
         this.cdr.markForCheck();
       },
       error: () => {
+        // No bloquea la compra: el usuario puede seguir con envío a domicilio o, si insiste en
+        // pickup, verá el aviso de "no hay sucursales" ya existente (mismo comportamiento previo
+        // a esta mejora cuando el endpoint fallaba).
+        this.pickupStocksAll = [];
+        this.pickupStocks = [];
+        this.pickupStockAvailabilityNotice = '';
         this.isLoadingPickupStocks = false;
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /**
+   * Filtra `pickupStocksAll` para mostrar solo las sucursales que tienen stock suficiente de
+   * TODOS los productos del carrito. Reglas:
+   * - Si al menos una sucursal cubre el carrito completo, se muestran solo esas.
+   * - Si ninguna sucursal tiene stock completo (o el backend aún no manda `inventory`), se
+   *   muestran todas con un aviso — nunca se bloquea la compra por falta de datos de stock.
+   * - Si la sucursal seleccionada deja de estar en la lista filtrada, se deselecciona y se
+   *   avisa con un toast.
+   */
+  private applyPickupStockAvailability(): void {
+    if (!this.pickupStocksAll.length) {
+      this.pickupStocks = [];
+      this.pickupStockAvailabilityNotice = '';
+      return;
+    }
+
+    const previousSelectedId = this.selectedPickupStockId;
+    const required = this.buildRequiredPickupQtyMap();
+    const hasInventoryData = this.pickupStocksAll.some((stock) => Object.keys(stock.inventory).length > 0);
+
+    let visibleStocks = this.pickupStocksAll;
+    let notice = '';
+
+    if (!required.size) {
+      visibleStocks = this.pickupStocksAll;
+    } else if (!hasInventoryData) {
+      notice = 'No pudimos verificar el stock por sucursal. Selecciona la más cercana; confirmaremos disponibilidad antes de procesar tu pedido.';
+    } else {
+      const fullyStocked = this.pickupStocksAll.filter((stock) => this.hasFullPickupStock(stock.inventory, required));
+      if (fullyStocked.length) {
+        visibleStocks = fullyStocked;
+      } else {
+        notice = 'Ninguna sucursal tiene stock completo para tu carrito. Selecciona la más cercana; confirmaremos disponibilidad antes de procesar tu pedido.';
+      }
+    }
+
+    const normalizedVisible = this.normalizePickupStocks(visibleStocks.map(({ id, name, location }) => ({ id, name, location })));
+    this.pickupStocks = normalizedVisible;
+    this.pickupStockAvailabilityNotice = notice;
+    this.selectedPickupStockId = this.resolveSelectedPickupStockId(normalizedVisible, this.selectedPickupStockId);
+    if (!this.selectedPickupStockId && normalizedVisible.length === 1) {
+      this.selectedPickupStockId = normalizedVisible[0].id;
+    }
+
+    if (previousSelectedId && !this.selectedPickupStockId && this.deliveryType === 'pickup') {
+      this.showToast('La sucursal seleccionada ya no tiene stock suficiente. Elige otra.');
+    }
+  }
+
+  private buildRequiredPickupQtyMap(): Map<string, number> {
+    const required = new Map<string, number>();
+    for (const item of this.cartItems) {
+      if (item.qty <= 0) {
+        continue;
+      }
+      const productId = this.extractProductId(item.id);
+      required.set(productId, (required.get(productId) ?? 0) + item.qty);
+    }
+    return required;
+  }
+
+  private hasFullPickupStock(inventory: Record<string, number>, required: Map<string, number>): boolean {
+    for (const [productId, qty] of required) {
+      const available = Number(inventory[productId] ?? 0);
+      if (!Number.isFinite(available) || available < qty) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private normalizePickupStocksWithInventory(
+    stocks: Array<{ id: string; name: string; location: string; inventory?: Record<string, number> }>
+  ): Array<{ id: string; name: string; location: string; inventory: Record<string, number> }> {
+    return stocks.reduce<Array<{ id: string; name: string; location: string; inventory: Record<string, number> }>>((acc, stock) => {
+      const id = this.normalizePickupStockId(stock?.id);
+      const name = typeof stock?.name === 'string' ? stock.name.trim() : '';
+      const location = typeof stock?.location === 'string' ? stock.location.trim() : '';
+
+      if (!id || !name || !location) {
+        return acc;
+      }
+
+      const inventory: Record<string, number> = {};
+      if (stock?.inventory && typeof stock.inventory === 'object') {
+        for (const [productId, qty] of Object.entries(stock.inventory)) {
+          const num = Number(qty);
+          if (Number.isFinite(num)) {
+            inventory[String(productId)] = num;
+          }
+        }
+      }
+
+      acc.push({ id, name, location, inventory });
+      return acc;
+    }, []);
   }
 
   private resolveSelectedPickupStockId(stocks: Array<{ id: string; name: string; location: string }>, selectedId: unknown): string {
@@ -1169,6 +1278,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
             this.guestRegisterFeedbackType = '';
             this.showGuestRegisterModal = false;
             this.showToast('Solo falta un paso, confirma tu cuenta desde tu correo electrónico.');
+            this.cdr.detectChanges();
             return;
           }
           if (response?.customer) {
@@ -1192,6 +1302,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
             error?.error?.message || error?.error?.Error || error?.message || 'No se pudo crear la cuenta.';
           this.guestRegisterFeedback = apiMessage;
           this.guestRegisterFeedbackType = 'error';
+          this.cdr.detectChanges();
         }
       });
   }

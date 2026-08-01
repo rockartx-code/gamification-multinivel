@@ -155,7 +155,7 @@
           <div class="relative h-72 w-72 overflow-hidden rounded-full border-8 border-white shadow-2xl sm:h-80 sm:w-80">
             <img [src]="heroImage" alt="Bienestar FindingU"
               class="h-full w-full object-cover opacity-90"
-              onerror="this.src='images/Colageno-Clean.png'" />
+              imgFallback />
           </div>
         </div>
       </div>
@@ -188,13 +188,17 @@
           </div>
         </div>
 
-        <!-- Controles -->
+        <!-- Controles: h-11/w-11 = 44px táctil; outline-offset negativo evita que el anillo de
+             foco quede recortado por el overflow-hidden del carrusel (quick win a11y "Foco
+             visible en pills/filtros"). -->
         <button type="button" aria-label="Anterior" (click)="prevHomeSlide()"
-          class="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-olive-30 bg-white/80 text-main hover:bg-white">
+          style="outline-offset: -2px"
+          class="absolute left-2 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full border border-olive-30 bg-white/80 text-main hover:bg-white">
           <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
         </button>
         <button type="button" aria-label="Siguiente" (click)="nextHomeSlide()"
-          class="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-olive-30 bg-white/80 text-main hover:bg-white">
+          style="outline-offset: -2px"
+          class="absolute right-2 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full border border-olive-30 bg-white/80 text-main hover:bg-white">
           <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
         </button>
 
@@ -270,30 +274,35 @@
               Comisiones de Red
             </h3>
             <p class="mb-4 text-xs text-gray-500">1 VP = ${{ mxnPerVp }} MXN netos (sin IVA ni envío)</p>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm">
-                <thead>
-                  <tr class="border-b border-olive-20">
-                    <th class="pb-2 text-xs font-semibold text-gray-500">Generación</th>
-                    <th class="pb-2 text-xs font-semibold text-gray-500">Comisión</th>
-                    <th class="pb-2 text-xs font-semibold text-gray-500">Directos activos</th>
-                    <th class="pb-2 text-xs font-semibold text-gray-500">PC personales</th>
-                    <th class="pb-2 text-xs font-semibold text-gray-500">Líneas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <ng-container>
+            <div class="table-soft">
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[560px] text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-olive-20">
+                      <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold text-gray-500">Generación</th>
+                      <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold text-gray-500">Comisión</th>
+                      <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold text-gray-500">Directos activos</th>
+                      <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold text-gray-500">PC personales</th>
+                      <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold text-gray-500">Líneas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     <tr *ngFor="let lvl of commissionLevels; let i = index"
                       class="border-b border-olive-10 last:border-none">
-                      <td class="py-2.5 text-gray-700">Gen {{ i + 1 }}</td>
-                      <td class="py-2.5 font-bold text-accent">{{ (lvl.rate * 100) | number:'1.0-1' }}%</td>
-                      <td class="py-2.5 text-gray-600">{{ (lvl.reqActiveDirects || 0) > 0 ? lvl.reqActiveDirects : 'Activo' }}</td>
-                      <td class="py-2.5 text-gray-600">{{ (lvl.reqPersonalPC || 0) > 0 ? (lvl.reqPersonalPC + ' PC') : '—' }}</td>
-                      <td class="py-2.5 text-gray-600">{{ (lvl.reqLines || 0) > 0 ? (lvl.reqLines + ' × ' + lvl.reqPCPerLine + ' PC') : '—' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2.5 text-gray-700">Gen {{ i + 1 }}</td>
+                      <td class="whitespace-nowrap px-3 py-2.5 font-bold text-accent">{{ (lvl.rate * 100) | number:'1.0-1' }}%</td>
+                      <td class="whitespace-nowrap px-3 py-2.5 text-gray-600">{{ (lvl.reqActiveDirects || 0) > 0 ? lvl.reqActiveDirects : 'Activo' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2.5 text-gray-600">{{ (lvl.reqPersonalPC || 0) > 0 ? (lvl.reqPersonalPC + ' PC') : '—' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2.5 text-gray-600">{{ (lvl.reqLines || 0) > 0 ? (lvl.reqLines + ' × ' + lvl.reqPCPerLine + ' PC') : '—' }}</td>
                     </tr>
-                  </ng-container>
-                </tbody>
-              </table>
+                    <tr *ngIf="!commissionLevels.length">
+                      <td colspan="5" class="empty-state rounded-xl px-3 py-4 text-center text-xs">
+                        Aún no hay niveles de comisión configurados.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -339,6 +348,9 @@
 
             <h4 class="text-xl font-bold text-main">{{ rb.rank.rank }}</h4>
             <p class="mt-1 text-sm text-gray-500">{{ rb.rank.vgMin | number:'1.0-0' }} puntos VG</p>
+            <p *ngIf="rb.rank.requiredDirects" class="mt-0.5 text-xs text-gray-400">
+              + {{ rb.rank.requiredDirects }} referido{{ rb.rank.requiredDirects === 1 ? '' : 's' }} directo{{ rb.rank.requiredDirects === 1 ? '' : 's' }}
+            </p>
 
             <ul class="mt-5 space-y-2 text-sm text-gray-600">
               <li *ngFor="let rule of rb.rules" class="flex items-start gap-2">
@@ -524,6 +536,7 @@
               iconClass="fa-solid fa-lock" wrapperClass="relative block"
               (ngModelChange)="fieldErrors.password = ''"
               [errorText]="fieldErrors.password"
+              helpText="Mínimo 8 caracteres."
               inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-main placeholder-text-muted-light focus:border-olive-70">
             </ui-form-field>
             <ui-form-field
