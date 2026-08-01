@@ -8,6 +8,7 @@ Mantener cambios consistentes con la arquitectura, el sistema visual y la docume
 
 ## Lectura mínima antes de editar
 
+0. `../CLAUDE.md` (guía de arranque del monorepo: mapa, comandos, trampas conocidas)
 1. `README.md`
 2. `overview.md`
 3. `docs/catalogo-componentes-ui.md`
@@ -15,7 +16,8 @@ Mantener cambios consistentes con la arquitectura, el sistema visual y la docume
 
 Si la tarea toca backend o contratos, revisar además:
 
-5. `lambda/handler.py`
+5. `../docs/backend-architecture.md` (arquitectura backend real: datos, comisiones, split a Micro-lambda-GMF)
+6. `lambda/handler.py`
 6. `src/app/models/*.ts`
 7. `src/app/services/api.service.ts`, `src/app/services/real-api.service.ts`, `src/app/services/mock-api.service.ts`
 

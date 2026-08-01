@@ -1,46 +1,43 @@
-# Plan de almacenamiento en DynamoDB + S3
+# Plan de Almacenamiento en DynamoDB
 
-## Objetivo
-
-Centralizar datos de gamificación en una tabla single-table de DynamoDB y usar S3 para archivos pesados.
+**Actualizado 2026-08-01** para reflejar el código real (handler.py). La versión anterior describía un esquema `USER#<id>` + GSI1/2/3 que nunca se implementó.
 
 ## Tabla
 
-- Nombre lógico: `Gamificacion` (configurable por ambiente).
-- Claves principales:
-  - `PK`: `USER#<userId>` o `ASSET#<assetId>`.
-  - `SK`: `PROFILE`, `DASHBOARD`, `GOAL#<goalId>`, `PRODUCT#<productId>`, `FEATURED#<id>`, `NETWORK#<memberId>`, `METADATA`.
-- Campos comunes: `entityType`, `createdAt`, `updatedAt` y atributos de dominio.
+- Nombre: variable de entorno `TABLE_NAME`, default `"multinivel"`
+- Estrategia: single-table con patrón **bucket + REF**
+- Cada entidad se persiste DOS veces por razones de acceso:
 
-## GSIs
+| Caso | PK | SK | Propósito |
+|------|----|----|-----------|
+| **Bucket** (listados) | `ENTITY` (ej. `CUSTOMER`, `ORDER`) | `<createdAt ISO>#<id>` | Listar por tipo, orden cronológico |
+| **Ref** (lookup) | `ENTITY#<id>` | `REF` | Lectura directa por identificador |
 
-- `GSI1`: búsqueda por `userCode`.
-  - `GSI1PK = USERCODE#<userCode>`
-  - `GSI1SK = USER#<userId>`
-- `GSI2`: miembros de red por nivel.
-  - `GSI2PK = LEVEL#<level>`
-  - `GSI2SK = USER#<userId>#MEMBER#<memberId>`
-- `GSI3`: miembros de red por estado.
-  - `GSI3PK = STATUS#<status>`
-  - `GSI3SK = USER#<userId>#MEMBER#<memberId>`
+**Ejemplo:**
+```
+Bucket:  PK=CUSTOMER, SK=2026-01-15T10:30:00Z#user123
+Ref:     PK=CUSTOMER#user123, SK=REF
+```
 
-Si hiciera falta listar productos por badge, sumar un GSI específico.
+Nota: Las dos escrituras **no son atómicas** (sin `TransactWriteItems`); riesgo aceptado según código handler.py:661-662.
 
-## Access patterns principales
+## Entidades en Uso
 
-1. Dashboard completo por usuario: consultar `PK = USER#<userId>` y prefijos de `SK`.
-2. Usuario por código: consultar `GSI1`.
-3. Red por nivel o estado: consultar `GSI2` o `GSI3`.
-4. Assets: metadata en DynamoDB y archivo en S3.
+ADMIN_EVENT, AUTH, PASSWORD_RESET, CONFIG, ASSOCIATE_MONTH, CUSTOMER, ORDER, PRODUCT_CATEGORY, PRODUCT, CAMPAIGN, ASSET, INVENTORY_MOVEMENT, STOCK, STOCK_DAMAGE, STOCK_TRANSFER, POS_CASH_CUT, POS_SALE, COMMISSION_REQUEST, COMMISSION_RECEIPT, NOTIFICATION, PRODUCT_OF_MONTH, EMPLOYEE.
 
-## Uso de S3
+## Claves Especiales
 
-- Bucket configurable por ambiente.
-- Subida y descarga mediante URLs prefirmadas.
-- Metadata relacionada en DynamoDB (`userId`, `productId`, `featuredId`, etc.).
+- **ASSOCIATE_MONTH**: estado mensual de volumen/actividad por asociado (método `_get_month_state`, handler.py:1656)
+- **COMMISSION_MONTH**: ledger mensual por beneficiario
+  - `PK = "COMMISSION_MONTH"`
+  - `SK = "#BENEFICIARY#<id>#MONTH#<mes>"`
+  - Atributos: `ledger`, `totalPending`, `totalConfirmed`, `totalBlocked`
 
-## Consideraciones
+## Limitaciones Conocidas
 
-- Habilitar TTL para objetos temporales si aplica.
-- Paginar con `LastEvaluatedKey` en colecciones grandes.
-- Usar `TransactWrite` cuando se necesite consistencia fuerte entre items relacionados.
+1. **Sin GSIs**: No existen índices secundarios globales. Una búsqueda por email requiere escaneo de bucket (comentario handler.py:970-972). Oportunidad de optimización pendiente.
+2. **Doble escritura no atómica**: El fallo en la segunda escritura deja bucket/ref inconsistentes. Aceptado por diseño.
+
+## Referencia
+
+Para arquitectura backend completa: `../../docs/backend-architecture.md`
