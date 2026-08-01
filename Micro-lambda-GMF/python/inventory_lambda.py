@@ -2,6 +2,7 @@ import json
 import boto3
 import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime
+from decimal import InvalidOperation
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -378,12 +379,14 @@ def handle_cash_cut(body, headers):
     now = utils._now_iso()
 
     cut_item = {
+        # Decimal, NO float: cut_item se persiste vía _put_entity -> DynamoDB put_item,
+        # que rechaza floats ("Float types are not supported. Use Decimal types instead.").
         "entityType": "posCashCut", "cashCutId": cut_id, "stockId": stock_id,
-        "total": float(net_total),
+        "total": net_total,
         "salesCount": len(pending_sales),
-        "cashToKeep": float(cash_to_keep),
-        "withdrawnAmount": float(available - cash_to_keep),
-        "totalWithdrawals": float(withdrawals_total),
+        "cashToKeep": cash_to_keep,
+        "withdrawnAmount": available - cash_to_keep,
+        "totalWithdrawals": withdrawals_total,
         "withdrawalCount": len(pending_withdrawals),
         "attendantUserId": user_id,
         "startedAt": pending_sales[0].get("createdAt") if pending_sales else now,
@@ -460,7 +463,9 @@ def handle_pos_withdrawal(body, headers):
         "withdrawalId": wdr_id,
         "stockId": stock_id,
         "attendantUserId": user_id,
-        "amount": float(amount),
+        # Decimal, NO float: este item se persiste vía _put_entity -> DynamoDB put_item,
+        # que rechaza floats ("Float types are not supported. Use Decimal types instead.").
+        "amount": amount,
         "reason": reason,
         "createdAt": now,
         "updatedAt": now
@@ -651,6 +656,13 @@ def lambda_handler(event, context):
 
         return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
 
+    except (KeyError, ValueError, TypeError, InvalidOperation) as e:
+        # Errores típicos de payload mal formado (p. ej. monto/campo numérico
+        # faltante o con tipo incorrecto, almacén inexistente): son un problema
+        # de datos del cliente, no una falla interna. Se responde 400 con detalle
+        # de negocio en vez del 500 genérico que antes ocultaba la causa real.
+        print(f"[INVENTORY_ERROR] Bad Request: {str(e)}")
+        return utils._json_response(400, {"message": "No se pudo procesar la operación de inventario: datos inválidos o incompletos.", "error": str(e)})
     except Exception as e:
         print(f"[INVENTORY_ERROR] {str(e)}")
         return utils._json_response(500, {"message": "Internal Inventory Error", "error": str(e)})

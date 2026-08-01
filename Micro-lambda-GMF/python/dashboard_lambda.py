@@ -323,8 +323,10 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     rank_thresh  = bonus_cfg.get("rankThresholds") or []
     bonus_rules  = [r for r in (bonus_cfg.get("rules") or []) if r.get("active")]
 
-    # Unidad de activación ahora en VP
-    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 50)))
+    # Activación = MPN (monto neto en pesos MXN) acumulado en el mes, NO PC/VP
+    # (cambio 2026-08: antes se comparaba `my_vp` puntos contra este umbral en
+    # pesos, lo que dejaba a casi todos como inactivos). Default $2,500 MXN.
+    activation_net_min = float(utils._to_decimal(cfg.get("activationNetMin", 2500)))
     tiers = [{"min": float(utils._to_decimal(t.get("min"))), "rate": float(utils._to_decimal(t.get("rate")))} for t in (cfg.get("discountTiers") or [])]
     tiers.sort(key=lambda x: x["rate"])
     level_rates = [0.30, 0.40, 0.50]
@@ -335,7 +337,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     my_net    = utils._to_decimal(st.get("netVolume", 0))
     my_vp     = _mxn_to_vp_dash(float(my_net), mxn_per_vp)
     my_vg     = _calc_vg_from_tree(root_tree, mxn_per_vp)
-    my_active = my_vp >= activation_vp
+    my_active = float(my_net) >= activation_net_min
 
     now_dt      = datetime.now(timezone.utc)
     month_start = now_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -359,14 +361,14 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
 
     goals = []
 
-    # ── Meta de activación (VP) ──────────────────────────────────────────────
+    # ── Meta de activación (monto neto en pesos MXN) ─────────────────────────
     goals.append({
         "key": "active",
-        "title": "Alcanzar VP mínimo (usuario activo)",
-        "subtitle": f"Meta mensual: {activation_vp:.0f} VP",
-        "target": activation_vp, "base": round(my_vp, 2), "cart": 0,
+        "title": "Alcanzar consumo mínimo (usuario activo)",
+        "subtitle": f"Meta mensual: ${activation_net_min:,.0f} MXN",
+        "target": activation_net_min, "base": float(my_net), "cart": 0,
         "achieved": my_active, "locked": False, "isCountGoal": False,
-        "unit": "vp", "ctaText": "Ir a tienda", "ctaFragment": "merchant",
+        "unit": "mxn", "ctaText": "Ir a tienda", "ctaFragment": "merchant",
     })
 
     # ── Metas de descuento (MXN) — se mantienen para el sistema de descuentos ─
@@ -399,7 +401,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     # ── Meta: miembro activo en red ──────────────────────────────────────────
     goals.insert(4, {
         "key": "network_one_active", "title": "Lograr que un miembro de la red alcance su meta",
-        "subtitle": f"Meta por miembro: {activation_vp:.0f} VP",
+        "subtitle": f"Meta por miembro: ${activation_net_min:,.0f} MXN",
         "target": 1, "base": 1 if any_member_active else 0, "cart": 0,
         "achieved": any_member_active, "locked": False, "isCountGoal": True,
         "unit": "count", "ctaText": "Compartir enlace", "ctaFragment": "links",
@@ -817,7 +819,8 @@ def get_user_performance(user_id):
     bonus_cfg = app_cfg.get("bonuses") or {}
     vp_cfg    = bonus_cfg.get("vpConfig") or {}
     mxn_per_vp    = float(vp_cfg.get("mxnPerVp", 50))
-    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 50)))
+    # Activación = MPN (monto neto en pesos MXN) del mes, no PC/VP. Default $2,500 MXN.
+    activation_net_min = float(utils._to_decimal(cfg.get("activationNetMin", 2500)))
 
     month_key = utils._month_key()
     state     = utils._get_by_id("ASSOCIATE_MONTH", f"{user_id}#{month_key}")
@@ -828,8 +831,10 @@ def get_user_performance(user_id):
         "monthKey": month_key,
         "netVolume": float(net_vol),
         "vp": round(vp, 2),
-        "isActive": vp >= activation_vp,
-        "activationVp": activation_vp,
+        "isActive": float(net_vol) >= activation_net_min,
+        # Se conserva la clave `activationVp` por compatibilidad de shape con el
+        # frontend, pero el valor ahora es el umbral en MXN (no en puntos VP).
+        "activationVp": activation_net_min,
     })
 
 def get_user_commissions(user_id):

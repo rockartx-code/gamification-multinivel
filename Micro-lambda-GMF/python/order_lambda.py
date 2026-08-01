@@ -7,7 +7,7 @@ import urllib.request
 import core_utils as utils  # Importado desde la Layer
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -42,7 +42,9 @@ def _enrich_items_commissionable(items: list) -> list:
                 if "commissionable" not in item:
                     item["commissionable"] = bool(product.get("commissionable", True))
                 if "vpPoints" not in item and product.get("vpPoints") is not None:
-                    item["vpPoints"] = float(utils._to_decimal(product["vpPoints"]))
+                    # Decimal, NO float: este item se persiste tal cual en order["items"]
+                    # vía _put_entity -> DynamoDB put_item, que rechaza floats.
+                    item["vpPoints"] = utils._to_decimal(product["vpPoints"])
         enriched.append(item)
     return enriched
 
@@ -482,7 +484,21 @@ def handle_create_order(body, headers):
     """POST /orders/create"""
     customer_id = body.get("customerId")
     customer_name = body.get("customerName", "Cliente")
-    buyer_type = body.get("buyerType", "guest").lower()
+    raw_buyer_type = str(body.get("buyerType") or "").strip().lower()
+    if raw_buyer_type:
+        buyer_type = raw_buyer_type
+    else:
+        # DIAGNÓSTICO (descuentos por nivel de consumo no aplicaban): el checkout
+        # web (carrito) nunca envía `buyerType` en el payload, así que este siempre
+        # caía en el default "guest". `_calculate_totals` solo calcula descuento si
+        # buyer_type está en ["associate", "registered"], y `handle_apply_rewards`
+        # (commissions_lambda) solo acumula netVolume/VP del comprador bajo la misma
+        # condición — por eso el 100% de las órdenes reales tenían discountRate=0 y
+        # nunca acumulaban MPN, sin importar cuánto hubieran comprado. Causa raíz
+        # corregida aquí: si no viene `buyerType` explícito, se infiere "registered"
+        # cuando hay un `customerId` válido (usuario autenticado; `resolveOrderCustomerId()`
+        # en el frontend manda 0 para invitados), y "guest" en caso contrario.
+        buyer_type = "registered" if customer_id not in (None, "", 0, "0") else "guest"
 
     if customer_id and buyer_type != "guest":
         utils._get_by_id("CUSTOMER", customer_id)
@@ -579,7 +595,7 @@ def handle_update_status(order_id, body, headers):
     extra_updates = {}
     now = utils._now_iso()
     payment_method = (body.get("paymentMethod") or order.get("paymentMethod") or "").strip().lower()
-    if payment_method and payment_method not in ("cash", "card", "transfer"):
+    if payment_method and payment_method not in ("cash", "card", "transfer", "mercadopago"):
         return utils._json_response(400, {"message": "Forma de pago invalida"})
     if payment_method:
         extra_updates["paymentMethod"] = payment_method
@@ -1472,6 +1488,13 @@ def lambda_handler(event, context):
 
         return utils._json_response(404, {"message": "Ruta no encontrada en Order Service"})
 
+    except (KeyError, ValueError, TypeError, InvalidOperation) as e:
+        # Errores típicos de payload mal formado (p. ej. campo numérico faltante/
+        # con tipo incorrecto, id inexistente): son problema de datos del cliente,
+        # no una falla interna del servicio. Se responde 400 con detalle de negocio
+        # en vez del 500 genérico que antes ocultaba la causa real.
+        print(f"[ORDER_ERROR] Bad Request: {str(e)}")
+        return utils._json_response(400, {"message": "No se pudo procesar la orden: datos inválidos o incompletos.", "error": str(e)})
     except Exception as e:
         print(f"[ORDER_ERROR] {str(e)}")
         return utils._json_response(500, {"message": "Critical Error", "error": str(e)})

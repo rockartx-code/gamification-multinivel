@@ -557,7 +557,9 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     rank_thresh = bonus_cfg.get("rankThresholds") or []
     bonus_rules = [rule for rule in (bonus_cfg.get("rules") or []) if rule.get("active")]
 
-    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 50)))
+    # Activación = MPN (monto neto en pesos MXN) del mes, no PC/VP (cambio 2026-08,
+    # alineado con el monolito de producción). Default $2,500 MXN.
+    activation_net_min = float(utils._to_decimal(cfg.get("activationNetMin", 2500)))
     tiers = [{"min": float(utils._to_decimal(tier.get("min"))), "rate": float(utils._to_decimal(tier.get("rate")))} for tier in (cfg.get("discountTiers") or [])]
     tiers.sort(key=lambda item: item["rate"])
     level_rates = [0.30, 0.40, 0.50]
@@ -568,7 +570,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     my_net = utils._to_decimal(state.get("netVolume", 0))
     my_vp = _mxn_to_vp_dash(float(my_net), mxn_per_vp)
     my_vg = _calc_vg_from_tree(root_tree, mxn_per_vp)
-    my_active = my_vp >= activation_vp
+    my_active = float(my_net) >= activation_net_min
 
     now_dt = datetime.now(timezone.utc)
     month_start = now_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -591,15 +593,15 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     goals = []
     goals.append({
         "key": "active",
-        "title": "Alcanzar VP mínimo (usuario activo)",
-        "subtitle": f"Meta mensual: {activation_vp:.0f} VP",
-        "target": activation_vp,
-        "base": round(my_vp, 2),
+        "title": "Alcanzar consumo mínimo (usuario activo)",
+        "subtitle": f"Meta mensual: ${activation_net_min:,.0f} MXN",
+        "target": activation_net_min,
+        "base": float(my_net),
         "cart": 0,
         "achieved": my_active,
         "locked": False,
         "isCountGoal": False,
-        "unit": "vp",
+        "unit": "mxn",
         "ctaText": "Ir a tienda",
         "ctaFragment": "merchant",
     })
@@ -645,7 +647,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
     goals.insert(4, {
         "key": "network_one_active",
         "title": "Lograr que un miembro de la red alcance su meta",
-        "subtitle": f"Meta por miembro: {activation_vp:.0f} VP",
+        "subtitle": f"Meta por miembro: ${activation_net_min:,.0f} MXN",
         "target": 1,
         "base": 1 if any_member_active else 0,
         "cart": 0,

@@ -1,6 +1,7 @@
 import json
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import core_utils as utils # Importado desde la Lambda Layer
 
 # --- CONFIGURACIÓN DE ORIGEN (Env Vars) ---
@@ -8,14 +9,14 @@ ENVIA_API_KEY = utils.os.getenv("ENVIA_API_KEY", "")
 ENVIA_API_URL = "https://api-test.envia.com/ship/rate/" # Cambiar a prod en producción
 
 ORIGIN_DATA = {
-    "name": utils.os.getenv("SHIPPING_ORIGIN_NAME", "Warehouse MX"),
+    "name": utils.os.getenv("SHIPPING_ORIGIN_NAME", "Findingu MX"),
     "phone": utils.os.getenv("SHIPPING_ORIGIN_PHONE", "8180000000"),
     "street": utils.os.getenv("SHIPPING_ORIGIN_STREET", "Av. Principal"),
     "number": utils.os.getenv("SHIPPING_ORIGIN_NUMBER", "1"),
-    "city": utils.os.getenv("SHIPPING_ORIGIN_CITY", "Monterrey"),
-    "state": utils.os.getenv("SHIPPING_ORIGIN_STATE", "NL"),
+    "city": utils.os.getenv("SHIPPING_ORIGIN_CITY", "Leon"),
+    "state": utils.os.getenv("SHIPPING_ORIGIN_STATE", "GT"),
     "country": "MX",
-    "postalCode": utils.os.getenv("SHIPPING_ORIGIN_POSTAL_CODE", "64060")
+    "postalCode": utils.os.getenv("SHIPPING_ORIGIN_POSTAL_CODE", "37358")
 }
 
 # Dimensiones de cajas estándar FindingU (Largo, Ancho, Alto) en cm
@@ -113,6 +114,69 @@ def _pack_items_for_shipping(raw_items):
 
     return packages
 
+# --- CONSULTA A API EXTERNA POR CARRIER ---
+
+def _fetch_rates_for_carrier(carrier, destination, packages, markup):
+    """
+    Ejecuta la cotización para un carrier y devuelve una lista de tarifas.
+    """
+    api_payload = {
+        "origin": ORIGIN_DATA,
+        "destination": destination,
+        "packages": packages,
+        "shipment": {
+            "type": 1,
+            "carrier": carrier
+        }
+    }
+
+    try:
+        req = urllib.request.Request(
+            ENVIA_API_URL,
+            data=json.dumps(api_payload).encode("utf-8"),
+            method="POST"
+        )
+
+        req.add_header("Authorization", f"Bearer {ENVIA_API_KEY}")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("User-Agent", "FindingU/1.0")
+
+        print(f"[REQUEST] {carrier.upper()} - Payload: {json.dumps(api_payload)}")
+        print(f"[REQUEST] {carrier.upper()} - URL: {ENVIA_API_URL}")
+        print(f"[REQUEST] {carrier.upper()} - Headers: {req.header_items()}")
+
+        with urllib.request.urlopen(req, timeout=8) as res:
+            result = json.loads(res.read().decode("utf-8"))
+
+        print(f"[RESPONSE] {carrier.upper()} - Result: {json.dumps(result)}")
+
+        carrier_rates = []
+        for rate_item in result.get("data", []):
+            base_price = float(rate_item.get("totalPrice", 0) or 0)
+            final_price = round(base_price * (1 + markup), 2)
+
+            carrier_rates.append({
+                "carrier": rate_item.get("carrierDescription", carrier),
+                "service": rate_item.get("serviceDescription", ""),
+                "price": base_price,
+                "displayPrice": final_price,
+                "currency": "MXN",
+                "deliveryEstimate": rate_item.get("deliveryEstimate", "")
+            })
+
+        return carrier_rates
+
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        print(f"[shipping_quote] HTTPError carrier={carrier}: {exc.code}")
+        print(f"[shipping_quote] HTTPError details: {error_body}")
+        print(f"[shipping_quote] HTTPError headers: {exc.headers}")
+        return []
+
+    except Exception as exc:
+        print(f"[shipping_quote] Error carrier={carrier}: {exc}")
+        return []
+
 # --- HANDLER DE COTIZACIÓN ---
 
 def handle_get_quote(body):
@@ -161,6 +225,11 @@ def handle_get_quote(body):
         return utils._json_response(200, {"rates": [], "message": "Envíos deshabilitados temporalmente"})
 
     markup = float(ship_cfg.get("markup", 0))
+    # Nota: el código desplegado en AWS trae la lista de carriers hardcodeada
+    # (["dhl", "fedex", "estafeta"]) con la lectura de config comentada. Aquí se
+    # conserva la versión configurable del repo -mejor que el hardcode- porque
+    # respeta la configuración de negocio (ship_cfg.carriers) y cae al mismo
+    # fallback si no está definida.
     carriers = ship_cfg.get("carriers") or ["dhl", "fedex", "estafeta"]
 
     # 2. Ejecutar Packing
@@ -179,52 +248,34 @@ def handle_get_quote(body):
         "postalCode": zip_to
     }
 
+    # 4. Consultar carriers en paralelo
     all_rates = []
-    for carrier in carriers:
-        api_payload = {
-            "origin": ORIGIN_DATA,
-            "destination": destination,
-            "packages": packages,
-            "shipment": {"type": 1, "carrier": carrier}
+    max_workers = min(len(carriers), 5)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_carrier = {
+            executor.submit(
+                _fetch_rates_for_carrier,
+                carrier,
+                destination,
+                packages,
+                markup
+            ): carrier
+            for carrier in carriers
         }
 
-        try:
-            req = urllib.request.Request(ENVIA_API_URL, data=json.dumps(api_payload).encode())
-            print(f"[REQUEST] {carrier.upper()} - Payload: {json.dumps(api_payload)}")
-            req.add_header("Authorization", f"Bearer {ENVIA_API_KEY}")
-            req.add_header("Content-Type", "application/json")
-            req.add_header("User-Agent", "FinfingU/1.0")
-            print(f"[REQUEST] {carrier.upper()} - URL: {ENVIA_API_URL}")
-            print(f"[REQUEST] {carrier.upper()} - Headers: {req.header_items()}")
-            
-            with urllib.request.urlopen(req, timeout=8) as res:
-                result = json.loads(res.read().decode())
-                print(f"[RESPONSE] {carrier.upper()} - Result: {json.dumps(result)}")
-                for rate_item in result.get("data", []):
-                    base_price = float(rate_item.get("totalPrice", 0))
-                    # Aplicar el markup configurado por el dueño del negocio
-                    final_price = round(base_price * (1 + markup), 2)
-                    
-                    all_rates.append({
-                        "carrier": rate_item.get("carrierDescription", carrier),
-                        "service": rate_item.get("serviceDescription", ""),
-                        "price": base_price,
-                        "displayPrice": final_price,
-                        "currency": "MXN",
-                        "deliveryEstimate": rate_item.get("deliveryEstimate", "")
-                    })
-        except urllib.error.HTTPError as exc:
-            print(f"[shipping_quote] HTTPError carrier={carrier}: {exc.code}")
-            print(f"[shipping_quote] HTTPError details: {exc.read().decode()}")
-            print(f"[shipping_quote] HTTPError headers: {exc.headers}")
-            print(f"[shipping_quote] HTTPError body: {exc.read().decode()}")
-        except Exception as exc:
-            print(f"[shipping_quote] Error carrier={carrier}: {exc}")
-            
+        for future in as_completed(future_to_carrier):
+            carrier = future_to_carrier[future]
+            try:
+                carrier_rates = future.result()
+                all_rates.extend(carrier_rates)
+            except Exception as exc:
+                print(f"[shipping_quote] Future error carrier={carrier}: {exc}")
 
-    # Ordenar por precio más bajo
+    # 5. Ordenar por precio más bajo
     all_rates.sort(key=lambda r: r["displayPrice"])
-    
+    print(f"[shipping_quote] Final rates: {json.dumps(all_rates)}")
+
     return utils._json_response(200, {
         "rates": all_rates,
         "packages": len(packages),

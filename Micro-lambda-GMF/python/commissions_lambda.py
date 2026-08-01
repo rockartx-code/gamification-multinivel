@@ -196,8 +196,9 @@ def _compute_rank(customer_id: str, month_key: str, vp: float, vg: float,
                   mxn_per_vp: float, max_levels: int, rank_thresholds: list) -> str:
     """
     Rango con gating completo del Plan abril 2026 §6: VG mín., PC personal mín. (vpMin),
-    líneas calificadas (minLines × pcMinPerLine) y `requiredLeaders` (N líderes del rango
-    inferior `requiredLeaderRank` en la red, evaluado recursivamente).
+    líneas calificadas (minLines × pcMinPerLine), `requiredDirects` (N referidos directos
+    totales, ver contrato en `_default_app_config`) y `requiredLeaders` (N líderes del
+    rango inferior `requiredLeaderRank` en la red, evaluado recursivamente).
 
     Usa memoización por cliente y un guard de ciclos: durante el cálculo del rango de un
     cliente, este se considera provisionalmente "sin rango" para evitar recursión infinita.
@@ -225,6 +226,11 @@ def _compute_rank(customer_id: str, month_key: str, vp: float, vg: float,
             if min_lines > 0 and _count_qualifying_lines(cid, month_key, mxn_per_vp, max_levels, pc_per_line) < min_lines:
                 continue
 
+            # Restricción de referidos por nivel (config): 0/ausente = sin restricción.
+            req_directs = int(rt.get("requiredDirects", 0) or 0)
+            if req_directs > 0 and len(_get_direct_reports(cid)) < req_directs:
+                continue
+
             req_leaders = int(rt.get("requiredLeaders", 0) or 0)
             req_rank    = str(rt.get("requiredLeaderRank", "") or "")
             if req_leaders > 0 and req_rank:
@@ -244,15 +250,30 @@ def _compute_rank(customer_id: str, month_key: str, vp: float, vg: float,
 
     return rank_at(customer_id, vp, vg)
 
-def _is_active(customer_id: str, month_key: str, mxn_per_vp: float, activation_vp: float) -> bool:
-    """Activo = acumuló al menos `activation_vp` PC netos personales en el mes (Plan §3)."""
-    return _calc_vp(customer_id, month_key, mxn_per_vp) >= activation_vp
+def _calc_net_volume(customer_id: str, month_key: str) -> float:
+    """Monto Personal Neto (MXN) acumulado en el mes: compras propias comisionables."""
+    state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key))
+    if state is None:
+        return 0.0
+    return float(utils._to_decimal(state.get("netVolume", 0)))
 
-def _count_active_directs(customer_id: str, month_key: str, mxn_per_vp: float, activation_vp: float) -> int:
+def _is_active(customer_id: str, month_key: str, activation_net_min: float) -> bool:
+    """Activo = acumuló al menos `activation_net_min` MXN netos personales en el mes (Plan §3).
+
+    Regla de negocio (cambio 2026-08): "usuario activo" se mide en MONTO NETO EN
+    PESOS (MPN / netVolume), NO en puntos PC/VP. Antes esta función comparaba
+    `_calc_vp` (puntos) contra `activationNetMin`, pero ese campo de config siempre
+    representó pesos MXN (ver `_default_app_config` y el monolito de producción,
+    default $2,500 MXN) — la comparación en puntos hacía que casi nadie calificara
+    como activo, bloqueando comisiones de generación 2+ vía `_generation_qualified`.
+    """
+    return _calc_net_volume(customer_id, month_key) >= activation_net_min
+
+def _count_active_directs(customer_id: str, month_key: str, activation_net_min: float) -> int:
     """Número de referidos directos activos en el mes."""
     return sum(
         1 for d in _get_direct_reports(customer_id)
-        if _is_active(d, month_key, mxn_per_vp, activation_vp)
+        if _is_active(d, month_key, activation_net_min)
     )
 
 def _count_qualifying_lines(customer_id: str, month_key: str, mxn_per_vp: float,
@@ -270,14 +291,14 @@ def _count_qualifying_lines(customer_id: str, month_key: str, mxn_per_vp: float,
     return count
 
 def _generation_qualified(beneficiary_id: str, gen_cfg: dict, month_key: str,
-                          mxn_per_vp: float, max_levels: int, activation_vp: float) -> bool:
+                          mxn_per_vp: float, max_levels: int, activation_net_min: float) -> bool:
     """
     True si el beneficiario califica para cobrar la generación descrita por `gen_cfg`
     (Plan abril 2026 §4). Requiere estar activo y cumplir los umbrales de directos
     activos, PC personales y líneas calificadas de esa generación.
     """
-    # Requisito base de toda generación: estar activo.
-    if not _is_active(beneficiary_id, month_key, mxn_per_vp, activation_vp):
+    # Requisito base de toda generación: estar activo (monto neto en pesos del mes).
+    if not _is_active(beneficiary_id, month_key, activation_net_min):
         return False
 
     req_directs   = int(gen_cfg.get("reqActiveDirects", 0) or 0)
@@ -287,7 +308,7 @@ def _generation_qualified(beneficiary_id: str, gen_cfg: dict, month_key: str,
 
     if req_personal > 0 and _calc_vp(beneficiary_id, month_key, mxn_per_vp) < req_personal:
         return False
-    if req_directs > 0 and _count_active_directs(beneficiary_id, month_key, mxn_per_vp, activation_vp) < req_directs:
+    if req_directs > 0 and _count_active_directs(beneficiary_id, month_key, activation_net_min) < req_directs:
         return False
     if req_lines > 0 and _count_qualifying_lines(beneficiary_id, month_key, mxn_per_vp, max_levels, req_pc_line) < req_lines:
         return False
@@ -455,8 +476,10 @@ def _default_app_config() -> dict:
     return {
         "version": "app-v1",
         "rewards": {
-            # Activación mensual: $1,000 MXN netos = 20 PC (con mxnPerVp=50). Plan abril 2026 §3.
-            "activationNetMin": utils.Decimal("20"),
+            # Activación mensual: MONTO NETO EN PESOS (MXN) acumulado en el mes, NO
+            # puntos PC/VP (cambio 2026-08, alineado al monolito de producción).
+            # Plan abril 2026 §3.
+            "activationNetMin": utils.Decimal("2500"),
             "payoutDay": utils.Decimal("10"),
             # Compresión dinámica activa: salta posiciones no calificadas y paga al
             # siguiente ascendente calificado (Plan abril 2026 §4).
@@ -513,12 +536,20 @@ def _default_app_config() -> dict:
             # vpMin = PC personal mín.; vgMin = VG mín.; minLines = líneas activas;
             # pcMinPerLine = PC mín. por línea; requiredLeaders/requiredLeaderRank = líderes
             # del rango inferior requeridos en la red.
+            # requiredDirects (NUEVO, 2026-08): número de referidos DIRECTOS (total, no
+            # solo activos) que el asociado debe tener para alcanzar/mantener ese rango.
+            # 0 = sin restricción (retrocompatible). Contrato de API público en
+            # catalog_lambda.handle_public_config y de escritura en costumer_lambda
+            # (PATCH /config/app vía config_manage) — el shape es un array paralelo a
+            # `rankThresholds`, cada entrada trae su propio `requiredDirects`. La UI de
+            # admin para editarlo la implementará otro agente; el campo ya se lee y se
+            # aplica en `_compute_rank` de este archivo.
             "rankThresholds": [
-                {"rank": "BRONCE",   "vpMin": 60,  "vgMin": 4500,  "minLines": 3, "pcMinPerLine": 900,  "requiredLeaders": 0, "requiredLeaderRank": "",        "monthlyBonus": 500,   "annualBonus": 6000},
-                {"rank": "PLATA",    "vpMin": 90,  "vgMin": 9000,  "minLines": 4, "pcMinPerLine": 1500, "requiredLeaders": 2, "requiredLeaderRank": "BRONCE",  "monthlyBonus": 1500,  "annualBonus": 18000},
-                {"rank": "ORO",      "vpMin": 140, "vgMin": 15000, "minLines": 4, "pcMinPerLine": 2500, "requiredLeaders": 2, "requiredLeaderRank": "PLATA",   "monthlyBonus": 3000,  "annualBonus": 36000},
-                {"rank": "PLATINO",  "vpMin": 200, "vgMin": 21000, "minLines": 5, "pcMinPerLine": 3000, "requiredLeaders": 2, "requiredLeaderRank": "ORO",     "monthlyBonus": 6000,  "annualBonus": 72000},
-                {"rank": "DIAMANTE", "vpMin": 280, "vgMin": 25000, "minLines": 5, "pcMinPerLine": 4000, "requiredLeaders": 2, "requiredLeaderRank": "PLATINO", "monthlyBonus": 10000, "annualBonus": 120000},
+                {"rank": "BRONCE",   "vpMin": 60,  "vgMin": 4500,  "minLines": 3, "pcMinPerLine": 900,  "requiredLeaders": 0, "requiredLeaderRank": "",        "requiredDirects": 0, "monthlyBonus": 500,   "annualBonus": 6000},
+                {"rank": "PLATA",    "vpMin": 90,  "vgMin": 9000,  "minLines": 4, "pcMinPerLine": 1500, "requiredLeaders": 2, "requiredLeaderRank": "BRONCE",  "requiredDirects": 0, "monthlyBonus": 1500,  "annualBonus": 18000},
+                {"rank": "ORO",      "vpMin": 140, "vgMin": 15000, "minLines": 4, "pcMinPerLine": 2500, "requiredLeaders": 2, "requiredLeaderRank": "PLATA",   "requiredDirects": 0, "monthlyBonus": 3000,  "annualBonus": 36000},
+                {"rank": "PLATINO",  "vpMin": 200, "vgMin": 21000, "minLines": 5, "pcMinPerLine": 3000, "requiredLeaders": 2, "requiredLeaderRank": "ORO",     "requiredDirects": 0, "monthlyBonus": 6000,  "annualBonus": 72000},
+                {"rank": "DIAMANTE", "vpMin": 280, "vgMin": 25000, "minLines": 5, "pcMinPerLine": 4000, "requiredLeaders": 2, "requiredLeaderRank": "PLATINO", "requiredDirects": 0, "monthlyBonus": 10000, "annualBonus": 120000},
             ],
             "rules": [
                 {
@@ -732,7 +763,8 @@ def handle_apply_rewards(order_id):
 
     # 2. Repartir comisiones al upline con compresión dinámica (Plan abril 2026 §4).
     max_levels    = int(vp_cfg.get("maxNetworkLevels", 5))
-    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 20)))
+    # Activación = MPN (monto neto en pesos MXN) del mes, no PC/VP. Default $2,500 MXN.
+    activation_net_min = float(utils._to_decimal(cfg.get("activationNetMin", 2500)))
     cut_rule      = cfg.get("cutRule", "dynamic_compression")
     levels_cfg    = cfg.get("commissionLevels", [])
 
@@ -771,7 +803,7 @@ def handle_apply_rewards(order_id):
         rate    = utils._to_decimal(gen_cfg.get("rate", 0))
         amount  = (commissionable_net * rate).quantize(utils.D_CENT)
 
-        if _generation_qualified(b_id, gen_cfg, month_key, mxn_per_vp, max_levels, activation_vp):
+        if _generation_qualified(b_id, gen_cfg, month_key, mxn_per_vp, max_levels, activation_net_min):
             # Califica: cobra esta generación y avanza el contador.
             _write_row(b_id, gen, amount, "pending")
             gen += 1
@@ -912,6 +944,8 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
     discount_tiers = rewards.get("discountTiers") or []
     commission_levels = rewards.get("commissionLevels") or []
     mxn_per_vp = float(utils._to_decimal((cfg.get("bonuses") or {}).get("vpConfig", {}).get("mxnPerVp", 50)))
+    # Activación = MPN (monto neto en pesos MXN) del mes, no PC/VP. Default $2,500 MXN.
+    activation_net_min = float(utils._to_decimal(rewards.get("activationNetMin", 2500)))
 
     # Determine current discount tier for this associate
     current_discount = None
@@ -942,7 +976,11 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
         "monthKey": month_key,
         "netVolume": net_volume,
         "vp": vp,
-        "isActive": bool(item.get("isActive")),
+        # Calculado en vivo desde netVolume (MXN) vs. activationNetMin: el flag
+        # persistido `item.isActive` nunca se actualiza a True en ningún flujo de
+        # escritura (siempre queda en False), así que confiar en él dejaba a todos
+        # los asociados marcados como inactivos.
+        "isActive": net_volume >= activation_net_min,
         "updatedAt": item.get("updatedAt"),
         "currentDiscount": current_discount,
         "nextGoal": next_goal,

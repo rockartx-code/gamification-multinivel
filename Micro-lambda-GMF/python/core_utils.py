@@ -84,7 +84,11 @@ def _parse_body(event: dict) -> dict:
     if event.get("isBase64Encoded"):
         body = base64.b64decode(body).decode("utf-8")
     try:
-        return json.loads(body)
+        # parse_float=Decimal evita que precios/montos con decimales (p. ej. 199.99)
+        # lleguen como float de Python: DynamoDB rechaza floats en put_item/update_item
+        # ("Float types are not supported. Use Decimal types instead."), lo que
+        # provocaba 500 genéricos al crear órdenes con ítems que tienen precio decimal.
+        return json.loads(body, parse_float=Decimal)
     except:
         return {}
 

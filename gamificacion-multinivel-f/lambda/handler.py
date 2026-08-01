@@ -26,7 +26,7 @@ SES_REPLY_TO = (os.getenv("SES_REPLY_TO") or "").strip()
 FRONTEND_BASE_URL = (os.getenv("FRONTEND_BASE_URL") or "https://www.findingu.com.mx/").strip().rstrip("/")
 PASSWORD_RESET_OTP_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_OTP_TTL_MINUTES", "15"))
 DEFAULT_SPONSOR_NAME = (os.getenv("DEFAULT_SPONSOR_NAME") or "FindingU").strip() or "FindingU"
-DEFAULT_SPONSOR_EMAIL = (os.getenv("DEFAULT_SPONSOR_EMAIL") or "contacto@findingu.com.mx").strip()
+DEFAULT_SPONSOR_EMAIL = (os.getenv("DEFAULT_SPONSOR_EMAIL") or "coach@findingu.com.mx").strip()
 DEFAULT_SPONSOR_PHONE = (os.getenv("DEFAULT_SPONSOR_PHONE") or "+52 1 55 1498 2351").strip()
 MERCADOLIBRE_ACCESS_TOKEN = (os.getenv("MERCADOLIBRE_ACCESS_TOKEN") or "").strip()
 _MERCADOLIBRE_ENABLED_RAW = (
@@ -1507,7 +1507,7 @@ def _normalize_app_config(raw: Any) -> dict:
         },
         "shipping": {
             "enabled": bool(shipping_raw.get("enabled", True)),
-            "markup": float(shipping_raw.get("markup") or 0),
+            "markup": _to_decimal(shipping_raw.get("markup") or 0),
             "carriers": carriers_list,
         },
     }
@@ -1724,6 +1724,62 @@ def _clean_str(value: Any) -> str:
 def _customer_entity_id(value: Any) -> Optional[Any]:
     normalized = _parse_int_or_str(value)
     return None if normalized in (None, "", 0, "0") else normalized
+
+def _actor_has_admin_access(headers: Optional[dict], payload: Optional[dict] = None) -> bool:
+    actor_user_id, actor_name, actor_role = _resolve_actor(headers, payload or {})
+    if str(actor_user_id) == "admin-001" or str(actor_name).strip().lower() == "admin":
+        return True
+    if str(actor_role).strip().lower() != "admin" or actor_user_id in (None, ""):
+        return False
+
+    employee = _get_by_id("EMPLOYEE", actor_user_id)
+    if employee and bool(employee.get("canAccessAdmin", True)):
+        return True
+
+    customer = _get_by_id("CUSTOMER", actor_user_id)
+    return bool(customer and customer.get("canAccessAdmin"))
+
+def _allowed_customer_document_content_type(content_type: Any) -> bool:
+    normalized = _clean_str(content_type).lower()
+    return normalized == "application/pdf" or normalized.startswith("image/")
+
+def _normalize_customer_documents(raw: Any) -> List[dict]:
+    documents = raw if isinstance(raw, list) else []
+    normalized: List[dict] = []
+    for entry in documents:
+        if not isinstance(entry, dict):
+            continue
+        document_id = _clean_str(entry.get("documentId") or entry.get("id"))
+        asset_id = _clean_str(entry.get("assetId"))
+        name = _clean_str(entry.get("name"))
+        content_type = _clean_str(entry.get("contentType") or entry.get("type"))
+        url = _clean_str(entry.get("url"))
+        if not document_id or not asset_id or not name or not url:
+            continue
+        normalized.append({
+            "documentId": document_id,
+            "assetId": asset_id,
+            "name": name,
+            "contentType": content_type,
+            "url": url,
+            "uploadedAt": entry.get("uploadedAt") or entry.get("createdAt") or _now_iso(),
+            "uploadedByUserId": entry.get("uploadedByUserId"),
+            "uploadedByRole": entry.get("uploadedByRole"),
+        })
+    normalized.sort(key=lambda item: str(item.get("uploadedAt") or ""), reverse=True)
+    return normalized
+
+def _customer_response_payload(item: dict) -> dict:
+    customer_payload = dict(item)
+    shipping_addresses = _normalize_customer_shipping_addresses(item)
+    customer_payload["addresses"] = shipping_addresses
+    customer_payload["shippingAddresses"] = shipping_addresses
+    customer_payload["documents"] = _normalize_customer_documents(item.get("documents"))
+    if shipping_addresses:
+        default_shipping = shipping_addresses[0]
+        customer_payload["defaultAddressId"] = default_shipping.get("addressId")
+        customer_payload["defaultShippingAddressId"] = default_shipping.get("addressId")
+    return customer_payload
 
 def _truthy_flag(value: Any, default: bool = False) -> bool:
     if value is None:
@@ -4130,15 +4186,55 @@ def _get_customer(customer_id: str) -> dict:
     if not item:
         return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
 
-    customer_payload = dict(item)
-    shipping_addresses = _normalize_customer_shipping_addresses(item)
-    customer_payload["addresses"] = shipping_addresses
-    customer_payload["shippingAddresses"] = shipping_addresses
-    if shipping_addresses:
-        default_shipping = shipping_addresses[0]
-        customer_payload["defaultAddressId"] = default_shipping.get("addressId")
-        customer_payload["defaultShippingAddressId"] = default_shipping.get("addressId")
-    return _json_response(200, {"customer": customer_payload})
+    return _json_response(200, {"customer": _customer_response_payload(item)})
+
+def _add_customer_document(customer_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
+    if not _actor_has_admin_access(headers, payload):
+        return _json_response(401, {"message": "No autorizado para cargar documentos de clientes", "Error": "Unauthorized"})
+
+    cid = _customer_entity_id(customer_id)
+    customer = _get_by_id("CUSTOMER", cid) if cid is not None else None
+    if not customer:
+        return _json_response(200, {"message": "Customer no encontrado", "Error": "NoEncontrado"})
+
+    asset_id = _clean_str(payload.get("assetId"))
+    display_name = _clean_str(payload.get("name"))
+    if not asset_id:
+        return _json_response(200, {"message": "assetId es obligatorio", "Error": "BadRequest"})
+
+    asset = _get_by_id("ASSET", asset_id)
+    if not asset:
+        return _json_response(200, {"message": "Asset no encontrado", "Error": "NoEncontrado"})
+
+    content_type = _clean_str(asset.get("contentType") or payload.get("contentType"))
+    if not _allowed_customer_document_content_type(content_type):
+        return _json_response(200, {"message": "Solo se permiten PDF o imagenes", "Error": "BadRequest"})
+
+    now = _now_iso()
+    actor_user_id, _, actor_role = _resolve_actor(headers, payload)
+    documents = _normalize_customer_documents(customer.get("documents"))
+    if any(_clean_str(entry.get("assetId")) == asset_id for entry in documents):
+        return _json_response(200, {"message": "El documento ya esta ligado al cliente", "Error": "BadRequest"})
+    document_item = {
+        "documentId": f"DOC-{uuid.uuid4().hex[:12].upper()}",
+        "assetId": asset_id,
+        "name": display_name or _clean_str(asset.get("name")) or "Documento",
+        "contentType": content_type,
+        "url": asset.get("url"),
+        "uploadedAt": now,
+        "uploadedByUserId": actor_user_id,
+        "uploadedByRole": actor_role,
+    }
+    documents.insert(0, document_item)
+
+    updated = _update_by_id(
+        "CUSTOMER",
+        cid,
+        "SET documents = :d, updatedAt = :u",
+        {":d": documents, ":u": now},
+    )
+    _audit_event("customer.document.add", headers, payload, {"customerId": cid, "documentId": document_item["documentId"], "assetId": asset_id})
+    return _json_response(201, {"customer": _customer_response_payload(updated), "document": document_item})
 
 def _update_customer_privileges(customer_id: str, payload: dict, headers: Optional[dict] = None) -> dict:
     cid = int(customer_id)
@@ -6503,6 +6599,7 @@ def lambda_handler(event, context):
     if route_key == (3, "stocks", "POST") and segments[2] == "entries": return _register_stock_entry(segments[1], _parse_body(event), headers)
     if route_key == (3, "stocks", "POST") and segments[2] == "damages": return _register_stock_damage(segments[1], _parse_body(event), headers)
     if route_key == (3, "customers", "PATCH") and segments[2] == "privileges": return _update_customer_privileges(segments[1], _parse_body(event), headers)
+    if route_key == (3, "customers", "POST") and segments[2] == "documents": return _add_customer_document(segments[1], _parse_body(event), headers)
     if route_key == (2, "employees", "PATCH"): return _update_employee(segments[1], _parse_body(event), headers)
     if route_key == (3, "employees", "PATCH") and segments[2] == "privileges": return _update_employee_privileges(segments[1], _parse_body(event), headers)
     if route_key == (3, "notifications", "POST") and segments[2] == "read": return _mark_notification_read(segments[1], _parse_body(event), headers)

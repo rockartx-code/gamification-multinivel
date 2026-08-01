@@ -266,12 +266,19 @@ def handle_public_config():
                  "minGroupPurchase": float(utils._to_decimal(lvl.get("minGroupPurchase") or 0))}
                 for lvl in (rewards.get("commissionLevels") or [])
             ],
-            "activationNetMin": float(utils._to_decimal(rewards.get("activationNetMin", 50))),
+            # Activación = monto neto en pesos MXN del mes (no PC/VP). Default $2,500 MXN,
+            # ver commissions_lambda._default_app_config.
+            "activationNetMin": float(utils._to_decimal(rewards.get("activationNetMin", 2500))),
         },
         "bonuses": {
             "vpConfig": bonuses.get("vpConfig") or {"mxnPerVp": 50, "maxNetworkLevels": 5},
             "rankThresholds": [
-                {"rank": rt.get("rank"), "vgMin": float(utils._to_decimal(rt.get("vgMin", 0)))}
+                {
+                    "rank": rt.get("rank"),
+                    "vgMin": float(utils._to_decimal(rt.get("vgMin", 0))),
+                    # Restricción de referidos por nivel (config): 0 = sin restricción.
+                    "requiredDirects": int(utils._to_decimal(rt.get("requiredDirects", 0) or 0)),
+                }
                 for rt in (bonuses.get("rankThresholds") or [])
             ],
             "rules": [
