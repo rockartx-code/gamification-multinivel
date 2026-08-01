@@ -1264,8 +1264,11 @@ def lambda_handler(event, context):
         # ── /user-dashboard  ────────────────────────────────────────────────────
         if root == "user-dashboard":
             uid = headers.get("x-user-id") or query.get("userId")
-            err = utils._require_self_or_admin(headers, uid)
-            if err: return err
+            # Visitante anónimo sin userId: get_user_dashboard responde en modo
+            # invitado (solo catálogo/campañas públicos) — lo usa la tienda pública.
+            if uid:
+                err = utils._require_self_or_admin(headers, uid)
+                if err: return err
             return get_user_dashboard(query, headers)
 
         # ── /honor-board  (también /dashboard/honor-board) ──────────────────────

@@ -34,6 +34,16 @@ Todos los `test.fixme` fueron convertidos en tests de regresión del comportamie
 
 `gamificacion-multinivel-f/docs/ux/analisis-ui-ux-2026-08.md`: 12 pantallas × 2 viewports (24 capturas en `docs/ux/img/`), hallazgos con severidad, top 10 priorizado, inconsistencias sistémicas y quick wins de accesibilidad. Top: barra inferior del admin móvil tapa ~41% del viewport; estados negativos sin variante visual (`--color-danger` sin uso); overlay sobre campo CURP en perfil móvil; sin placeholder de imagen de producto; tabla de comisiones del landing vacía/ilegible.
 
+## 4b. Cutover completado (2026-08-01, tarde)
+
+- Monolito **DEPRECADO**: producción ya consumía las microlambdas; lambda `Multinivel` marcada DEPRECATED en AWS (sin tráfico desde 2026-04).
+- Layer `Multinivel-Core` **v19** publicada; las 8 funciones reapuntadas (corrige el bug crítico de Comissions↔layer v16) y 7 funciones con código actualizado.
+- Frontend publicado a `s3://findingu-ventas` + CloudFront (ACL `public-read` requerida — el bucket sirve por website endpoint).
+- Recursos API Gateway creados y desplegados: `/coupons`+`/coupons/{proxy+}`→order, `/user-dashboard`→Dashboard (cupones y tienda pública funcionan por primera vez).
+- `dashboard_lambda`: `/user-dashboard` permite modo invitado anónimo (solo catálogo público); reclamar `userId` sigue exigiendo self-or-admin.
+- `inventory_lambda`: fix de routing de `POST /stocks/transfers/{id}/receive` (desplegado).
+- Webhook Mercado Pago: `notificationUrl` en config → `.../Prod/webhooks/mercadolibre` (order_lambda).
+
 ## 5. Pendientes que requieren decisión/acción
 
 1. **Deploy a dev (AWS)**: los fixes de backend viven solo en el repo. Afectan `core_utils.py` (⚠️ va en la layer compartida `Multinivel-Core` v17 — confirmar empaquetado antes de publicar) y las lambdas order, inventory, commissions, dashboard, costumer, catalog (`aws lambda update-function-code`). Comandos plantilla en el reporte del diagnóstico; sin desplegar, dev seguirá fallando al crear órdenes.
