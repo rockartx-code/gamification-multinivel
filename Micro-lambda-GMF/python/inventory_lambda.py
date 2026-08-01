@@ -523,12 +523,14 @@ def lambda_handler(event, context):
                     if err: return err
                 return handle_stocks(method, body)
 
-            # /stocks/transfers
+            # /stocks/transfers  |  /stocks/transfers/{id}/receive
             if segments[1] == "transfers":
+                transfer_id = segments[2] if len(segments) > 2 else None
                 if method == "POST":
-                    err = utils._require_admin(headers, "stock_create_transfer")
+                    priv = "stock_receive_transfer" if transfer_id else "stock_create_transfer"
+                    err = utils._require_admin(headers, priv)
                     if err: return err
-                return handle_transfers(method, body, query)
+                return handle_transfers(method, body, query, transfer_id)
 
             # /stocks/movements
             if segments[1] == "movements":
