@@ -66,7 +66,7 @@ Capas estrictas (detalle en `gamificacion-multinivel-f/README.md` y reglas en `A
 ## Trampas conocidas
 
 - **El backend vive dentro del repo frontend**: `gamificacion-multinivel-f/lambda/handler.py`. No es un servicio separado ni está solo en `Micro-lambda-GMF/`.
-- **El monolito está DEPRECADO** (2026-08-01): las microlambdas `Multinivel-*` (API `ge2omdgk33`) sirven TODO el tráfico — el bundle publicado en findingu.com.mx ya las consume y el monolito no recibe tráfico desde 2026-04. `lambda/handler.py` se conserva solo como referencia histórica: NO implementar cambios ahí; el backend activo es `Micro-lambda-GMF/`. Detalle en `docs/backend-architecture.md` §2.
+- **El monolito fue ELIMINADO de AWS** (2026-08-01): el único backend son las microlambdas `Multinivel-*` tras el API `ge2omdgk33` (la API legacy `m85v7secp8` y la Lambda `Multinivel` ya no existen). `lambda/handler.py` se conserva en el repo SOLO como referencia histórica: NO implementar cambios ahí; el backend activo es `Micro-lambda-GMF/`. Detalle en `docs/backend-architecture.md` §2.
 - **Rank/VP/VG/honor board son mock-only**: existen en `MockApiService` y en los modelos TS, pero tienen 0 referencias en `handler.py`. No hay datos reales detrás.
 - **`gamificacion-multinivel-f/docs/dynamodb-plan.md` histórico describía GSIs nunca implementados**; el patrón real es bucket+REF y **no hay GSIs** (la búsqueda por email es un bucket scan — limitación conocida).
 - **Refactor de órdenes pendiente**: `docs/order-architecture-refactor-notes.md` — el historial de órdenes vive temporalmente mezclado en `Micro-lambda-GMF/python/core_utils.py`.

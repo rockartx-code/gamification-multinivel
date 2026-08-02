@@ -43,6 +43,7 @@ Todos los `test.fixme` fueron convertidos en tests de regresión del comportamie
 - `dashboard_lambda`: `/user-dashboard` permite modo invitado anónimo (solo catálogo público); reclamar `userId` sigue exigiendo self-or-admin.
 - `inventory_lambda`: fix de routing de `POST /stocks/transfers/{id}/receive` (desplegado).
 - Webhook Mercado Pago: `notificationUrl` en config → `.../Prod/webhooks/mercadolibre` (order_lambda).
+- **Legacy ELIMINADO de AWS**: API `m85v7secp8` y Lambda `Multinivel` borradas tras validar: 87/87 endpoints cubiertos por microlambdas, features exclusivas portadas al repo, sin dominios personalizados mapeados, sin tráfico desde 2026-04, y 0 pagos MP en vuelo con el webhook viejo (23 órdenes pending eran de marzo/abril sin preferencia activa). Producción verificada sana post-borrado.
 
 ## 5. Pendientes que requieren decisión/acción
 
