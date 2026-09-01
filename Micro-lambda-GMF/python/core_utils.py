@@ -225,6 +225,10 @@ def _put_entity(entity: str, entity_id: Any, item: dict, created_at_iso: Optiona
         "refSK": main_item["SK"],
         "updatedAt": main_item["updatedAt"]
     }
+    # Si el item principal expira por TTL, su puntero debe expirar con él;
+    # sin esto las sesiones purgadas dejaban filas REF huérfanas para siempre.
+    if main_item.get("ttl") is not None:
+        ref_item["ttl"] = main_item["ttl"]
 
     _put_entity_atomic(main_item, ref_item)
     return main_item
@@ -397,10 +401,24 @@ def _log(event: str, level: str = "INFO", **fields) -> None:
     payload = {"event": event, "level": level}
     payload.update(fields)
     try:
-        print(json.dumps(payload, default=_json_default))
+        print(json.dumps(payload, default=_log_default))
     except Exception:
         # Un fallo serializando el log jamás debe tumbar la petición.
         print(json.dumps({"event": event, "level": level, "logSerializationFailed": True}))
+
+
+def _log_default(value):
+    """Serializador tolerante SOLO para logs.
+
+    `_json_default` (el de las respuestas HTTP) lanza TypeError ante un valor
+    no serializable, y con él un `_log(..., error=ex)` colapsaba a
+    `logSerializationFailed` perdiendo el mensaje y todo el contexto. En un
+    log, un valor raro convertido a texto siempre es mejor que nada.
+    """
+    try:
+        return _json_default(value)
+    except TypeError:
+        return str(value)
 
 
 def _log_error(event: str, error: Exception, **fields) -> None:
@@ -732,9 +750,16 @@ def _save_ledger_month(item):
 
     try:
         if expected_version == 0:
+            # `expected == 0` cubre dos casos: el item no existe todavía, o
+            # existe de antes de introducir el candado y no tiene `version`.
+            # En DynamoDB `version = :cero` FALLA cuando el atributo no existe
+            # (no lo trata como cero), así que sin el `attribute_not_exists`
+            # ninguna escritura sobre un mes contable legado podría pasar la
+            # condición: comisiones, confirmaciones y anulaciones fallarían
+            # para todos los beneficiarios existentes.
             _table.put_item(
                 Item=item,
-                ConditionExpression="attribute_not_exists(SK) OR version = :expected",
+                ConditionExpression="attribute_not_exists(version) OR version = :expected",
                 ExpressionAttributeValues={":expected": _to_decimal(expected_version)},
             )
         else:

@@ -388,7 +388,9 @@ def _find_effective_sponsor(customer) -> dict:
     leader_id = customer.get("leaderId")
     if leader_id in (None, ""):
         return {**default_sponsor, "whatsapp": DEFAULT_SPONSOR_WHATSAPP}
-    sponsor = utils._get_by_id("CUSTOMER", int(leader_id))
+    # _customer_entity_id tolera IDs legados no numéricos; int() a secas
+    # tumbaba el dashboard entero con un 500 para esos clientes.
+    sponsor = utils._get_by_id("CUSTOMER", utils._customer_entity_id(leader_id))
     if not sponsor:
         return {**default_sponsor, "whatsapp": DEFAULT_SPONSOR_WHATSAPP}
     phone = sponsor.get("phone") or DEFAULT_SPONSOR["phone"]
@@ -820,3 +822,80 @@ def persist_dashboard_cache(customer: dict, goals: list, network: list, buy_agai
         utils._log_error("dashboard_cache_persist_failed", ex,
                          customerId=customer.get("customerId"))
         return False
+
+
+def _build_month_node_index(month_key: str, customers_raw: list, cfg: dict,
+                            month_states: dict = None) -> tuple:
+    """Construye una sola vez el índice `{id: nodo}` + `{líder: [hijos]}` del mes.
+
+    Los estados ASSOCIATE_MONTH se cargan en bloque con `_load_month_states`
+    (BatchGetItem) en lugar de un GetItem secuencial por cliente. El índice es
+    reutilizable para construir el árbol de cualquier raíz sin releer nada.
+    """
+    # `activationNetMin` está en PC (plan abril 2026 §3), no en MXN: comparar
+    # `netVolume` en pesos contra él daba "activo" a cualquiera que comprara
+    # más de 20 pesos. Se convierte el volumen del mes a PC antes de comparar.
+    activation_vp = utils._activation_vp()
+    mxn_per_vp = utils._mxn_per_vp()
+
+    nodes = {}
+    children_by_leader = {}
+    for c in customers_raw:
+        if not isinstance(c, dict):
+            continue
+        cid = utils._customer_id_str(c.get("customerId"))
+        if not cid:
+            continue
+        leader_id = utils._customer_id_str(c.get("leaderId")) or None
+        nodes[cid] = {
+            "id": cid, "name": c.get("name") or "",
+            "level": (c.get("level") or "").strip(),
+            "leaderId": leader_id,
+            "createdAt": c.get("createdAt"),
+            "monthSpend": 0.0, "isActive": False, "children": [],
+        }
+        if leader_id:
+            children_by_leader.setdefault(leader_id, []).append(cid)
+
+    if month_states is None:
+        month_states = utils._load_month_states(list(nodes.keys()), month_key)
+
+    for cid, node in nodes.items():
+        state = month_states.get(cid) or {}
+        net_volume = float(utils._to_decimal(state.get("netVolume")))
+        node["monthSpend"] = net_volume
+        node["isActive"] = bool((net_volume / mxn_per_vp if mxn_per_vp else 0.0) >= activation_vp)
+
+    for leader_id, child_ids in children_by_leader.items():
+        child_ids.sort(key=lambda k: nodes[k]["monthSpend"] if k in nodes else 0.0, reverse=True)
+
+    return nodes, children_by_leader
+
+def _tree_from_node_index(root_id, nodes: dict, children_by_leader: dict, max_depth: int = 3) -> dict:
+    """Materializa el árbol de una raíz a partir del índice, recortado a `max_depth`.
+
+    Copia los nodos en lugar de mutarlos para que el índice pueda reutilizarse
+    en varias raíces (necesario en el cuadro de honor).
+    """
+    root_key = utils._customer_id_str(root_id)
+    if root_key not in nodes:
+        return {"id": str(root_id), "name": "", "level": "", "monthSpend": 0.0, "children": []}
+
+    def _build(cid, depth, visited):
+        node = dict(nodes[cid])
+        if depth >= max_depth:
+            node["children"] = []
+            return node
+        node["children"] = [
+            _build(child_id, depth + 1, visited | {child_id})
+            for child_id in children_by_leader.get(cid, [])
+            if child_id in nodes and child_id not in visited
+        ]
+        return node
+
+    return _build(root_key, 0, {root_key})
+
+def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict,
+                                   max_depth=3, month_states: dict = None) -> dict:
+    nodes, children_by_leader = _build_month_node_index(month_key, customers_raw, cfg, month_states)
+    return _tree_from_node_index(root_id, nodes, children_by_leader, max_depth)

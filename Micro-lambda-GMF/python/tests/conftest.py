@@ -48,9 +48,50 @@ class FakeTable:
         item = self.store.get((str(Key["PK"]), str(Key["SK"])))
         return {"Item": dict(item)} if item else {}
 
-    def put_item(self, Item=None, **kw):
-        self.store[(str(Item["PK"]), str(Item["SK"]))] = dict(Item)
+    def put_item(self, Item=None, ConditionExpression=None,
+                 ExpressionAttributeValues=None, **kw):
+        key = (str(Item["PK"]), str(Item["SK"]))
+        if ConditionExpression is not None:
+            self._check_condition(ConditionExpression, ExpressionAttributeValues or {},
+                                  self.store.get(key))
+        self.store[key] = dict(Item)
         return {}
+
+    @staticmethod
+    def _check_condition(expression, values, current):
+        """Evalúa las condiciones que usa el backend, con semántica REAL.
+
+        En DynamoDB `version = :v` FALLA si el atributo no existe: no lo trata
+        como cero. El fake anterior era más permisivo que DynamoDB y por eso
+        la suite no cazó un candado optimista que jamás podía escribir sobre
+        items legados sin `version`.
+        """
+        import re as _re
+        from botocore.exceptions import ClientError as _ClientError
+
+        def _fail():
+            raise _ClientError(
+                {"Error": {"Code": "ConditionalCheckFailedException",
+                           "Message": "The conditional request failed"}},
+                "PutItem",
+            )
+
+        for disjunct in [p.strip() for p in str(expression).split(" OR ")]:
+            m = _re.fullmatch(r"attribute_not_exists\((\w+)\)", disjunct)
+            if m:
+                attr = m.group(1)
+                if current is None or attr not in current:
+                    return
+                continue
+            m = _re.fullmatch(r"(\w+) = (:\w+)", disjunct)
+            if m:
+                attr, placeholder = m.groups()
+                if (current is not None and attr in current
+                        and str(current[attr]) == str(values.get(placeholder))):
+                    return
+                continue
+            raise AssertionError(f"condición no soportada en el fake: {disjunct}")
+        _fail()
 
     def delete_item(self, Key=None, **kw):
         self.store.pop((str(Key["PK"]), str(Key["SK"])), None)

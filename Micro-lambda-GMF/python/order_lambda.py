@@ -731,10 +731,11 @@ def handle_mercadopago_checkout(order_id, body):
             
     except urllib.error.HTTPError as exc:
         err_msg = exc.read().decode()
-        utils._log("checkout", "ERROR", detail='HTTPError {exc.code}: {err_msg}')
+        utils._log("mercadopago_checkout_http_error", "ERROR",
+                   status=exc.code, body=err_msg)
         return utils._json_response(502, {"message": "Error al comunicarse con Mercado Libre", "provider_error": err_msg})
     except Exception as e:
-        utils._log("checkout", "ERROR", detail='Error: {e}')
+        utils._log_error("mercadopago_checkout_failed", e)
         return utils._json_response(500, {"message": str(e)})
 
 

@@ -3,23 +3,18 @@ import base64
 import time
 import core_utils as utils # Importado desde la Layer
 import dashboard_common
-from dashboard_common import (  # noqa: F401  (reexportado)
-    DEFAULT_SPONSOR,
+from dashboard_common import (
     _active_notifications_for_customer,
-    _bonus_approaching_msg,
-    _build_goal_achieved_email,
     _build_goals,
+    _build_month_node_index,
+    _build_network_tree_with_month,
     _calc_vg_from_tree,
     _campaign_payload,
     _compute_buy_again_ids,
     _find_effective_sponsor,
-    _flatten_tree,
-    _get_direct_vg_dash,
     _get_month_state,
     _get_product_summary,
     _get_rank_dash,
-    _goal_email_shell,
-    _goal_reward_lines,
     _is_product_active,
     _mxn_to_vp_dash,
     _network_members_from_tree,
@@ -59,83 +54,10 @@ except Exception:
 
 
 
-def _build_month_node_index(month_key: str, customers_raw: list, cfg: dict,
-                            month_states: dict = None) -> tuple:
-    """Construye una sola vez el índice `{id: nodo}` + `{líder: [hijos]}` del mes.
-
-    Los estados ASSOCIATE_MONTH se cargan en bloque con `_load_month_states`
-    (BatchGetItem) en lugar de un GetItem secuencial por cliente. El índice es
-    reutilizable para construir el árbol de cualquier raíz sin releer nada.
-    """
-    # `activationNetMin` está en PC (plan abril 2026 §3), no en MXN: comparar
-    # `netVolume` en pesos contra él daba "activo" a cualquiera que comprara
-    # más de 20 pesos. Se convierte el volumen del mes a PC antes de comparar.
-    activation_vp = utils._activation_vp()
-    mxn_per_vp = utils._mxn_per_vp()
-
-    nodes = {}
-    children_by_leader = {}
-    for c in customers_raw:
-        if not isinstance(c, dict):
-            continue
-        cid = utils._customer_id_str(c.get("customerId"))
-        if not cid:
-            continue
-        leader_id = utils._customer_id_str(c.get("leaderId")) or None
-        nodes[cid] = {
-            "id": cid, "name": c.get("name") or "",
-            "level": (c.get("level") or "").strip(),
-            "leaderId": leader_id,
-            "createdAt": c.get("createdAt"),
-            "monthSpend": 0.0, "isActive": False, "children": [],
-        }
-        if leader_id:
-            children_by_leader.setdefault(leader_id, []).append(cid)
-
-    if month_states is None:
-        month_states = utils._load_month_states(list(nodes.keys()), month_key)
-
-    for cid, node in nodes.items():
-        state = month_states.get(cid) or {}
-        net_volume = float(utils._to_decimal(state.get("netVolume")))
-        node["monthSpend"] = net_volume
-        node["isActive"] = bool((net_volume / mxn_per_vp if mxn_per_vp else 0.0) >= activation_vp)
-
-    for leader_id, child_ids in children_by_leader.items():
-        child_ids.sort(key=lambda k: nodes[k]["monthSpend"] if k in nodes else 0.0, reverse=True)
-
-    return nodes, children_by_leader
 
 
-def _tree_from_node_index(root_id, nodes: dict, children_by_leader: dict, max_depth: int = 3) -> dict:
-    """Materializa el árbol de una raíz a partir del índice, recortado a `max_depth`.
-
-    Copia los nodos en lugar de mutarlos para que el índice pueda reutilizarse
-    en varias raíces (necesario en el cuadro de honor).
-    """
-    root_key = utils._customer_id_str(root_id)
-    if root_key not in nodes:
-        return {"id": str(root_id), "name": "", "level": "", "monthSpend": 0.0, "children": []}
-
-    def _build(cid, depth, visited):
-        node = dict(nodes[cid])
-        if depth >= max_depth:
-            node["children"] = []
-            return node
-        node["children"] = [
-            _build(child_id, depth + 1, visited | {child_id})
-            for child_id in children_by_leader.get(cid, [])
-            if child_id in nodes and child_id not in visited
-        ]
-        return node
-
-    return _build(root_key, 0, {root_key})
 
 
-def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict,
-                                   max_depth=3, month_states: dict = None) -> dict:
-    nodes, children_by_leader = _build_month_node_index(month_key, customers_raw, cfg, month_states)
-    return _tree_from_node_index(root_id, nodes, children_by_leader, max_depth)
 
 
 # --- VP / VG HELPERS (inline, sin importar commissions_lambda) ---
@@ -247,7 +169,7 @@ def handle_sync_iceberg(order_id):
     # Aquí se enviaría el dato a un Glue DataBrew o se escribiría directamente
     # como Parquet en la ruta de S3 Tables. 
     # Por ahora, simulamos el éxito de la integración analítica.
-    utils._log("analytics", "INFO", detail='Sincronizando orden {order_id} a S3 Tables...')
+    utils._log("analytics_sync_started", "INFO", orderId=order_id)
     return {"status": "SYNCED", "orderId": order_id}
 
 # --- HELPERS DE ATHENA (REPORTES) ---

@@ -4,28 +4,18 @@ import time
 import boto3
 import core_utils as utils  # Importado desde la Lambda Layer
 import dashboard_common
-from dashboard_common import (  # noqa: F401  (reexportado)
+from dashboard_common import (
     DEFAULT_SPONSOR,
     _active_notifications_for_customer,
-    _bonus_approaching_msg,
-    _build_goal_achieved_email,
     _build_goals,
+    _build_network_tree_with_month,
     _calc_vg_from_tree,
-    _campaign_payload,
     _compute_buy_again_ids,
     _find_effective_sponsor,
-    _flatten_tree,
-    _get_direct_vg_dash,
     _get_month_state,
-    _get_product_summary,
     _get_rank_dash,
-    _goal_email_shell,
-    _goal_reward_lines,
-    _is_product_active,
     _mxn_to_vp_dash,
     _network_members_from_tree,
-    _notify_goal_achievements,
-    _pick_product_image,
     _prev_month_key,
 )
 from datetime import datetime, timezone
@@ -280,56 +270,6 @@ def _load_month_states(associate_ids, month_key: str) -> dict:
 
 
 
-def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict, max_depth=3, month_states=None) -> dict:
-    # `activationNetMin` está en PC (plan abril 2026 §3), no en MXN: comparar
-    # `netVolume` en pesos contra él daba "activo" a cualquiera que comprara
-    # más de 20 pesos. Se convierte el volumen del mes a PC antes de comparar.
-    activation_vp = utils._activation_vp()
-    mxn_per_vp = utils._mxn_per_vp()
-    nodes = {}
-    children_by_leader = {}
-
-    for customer in customers_raw:
-        cid = str(customer.get("customerId"))
-        if not cid:
-            continue
-        nodes[cid] = {
-            "id": cid,
-            "name": customer.get("name") or "",
-            "level": (customer.get("level") or "").strip(),
-            "leaderId": str(customer.get("leaderId")) if customer.get("leaderId") else None,
-            "createdAt": customer.get("createdAt"),
-            "monthSpend": 0.0,
-            "isActive": False,
-            "children": [],
-        }
-        leader_id = nodes[cid]["leaderId"]
-        if leader_id:
-            children_by_leader.setdefault(leader_id, []).append(cid)
-
-    for cid, node in nodes.items():
-        state = _get_month_state(cid, month_key, month_states)
-        net_volume = float(utils._to_decimal(state.get("netVolume")))
-        node["monthSpend"] = net_volume
-        node["isActive"] = bool((net_volume / mxn_per_vp if mxn_per_vp else 0.0) >= activation_vp)
-
-    for leader_id, kids in children_by_leader.items():
-        if leader_id in nodes:
-            child_nodes = sorted([nodes[kid] for kid in kids if kid in nodes], key=lambda item: item["monthSpend"], reverse=True)
-            nodes[leader_id]["children"] = child_nodes
-
-    root = nodes.get(str(root_id))
-    if not root:
-        return {"id": str(root_id), "name": "", "level": "", "monthSpend": 0.0, "children": []}
-
-    def _trim(node, depth):
-        if depth >= max_depth:
-            node["children"] = []
-            return node
-        node["children"] = [_trim(child, depth + 1) for child in (node.get("children") or [])]
-        return node
-
-    return _trim(root, 0)
 
 
 
@@ -504,6 +444,35 @@ def handle_get_customer(customer_id, headers=None):
     return utils._json_response(200, {"customer": _format_customer_output(item)})
 
 
+def handle_update_privileges(customer_id, body: dict, headers: dict) -> dict:
+    """PATCH /customers/{id}/privileges — asigna privilegios de admin/empleado.
+
+    Escritura dedicada, a propósito fuera de `handle_update_customer`: los
+    privilegios no deben poder colarse por el PATCH genérico del perfil (que
+    acepta al propio cliente como actor). Antes esta ruta delegaba en ese
+    handler, que ignoraba el campo: respondía 200 sin escribir nada.
+
+    Las sesiones abiertas conservan su copia de privilegios hasta el próximo
+    login (mismo comportamiento que con los empleados).
+    """
+    cid = utils._customer_entity_id(customer_id)
+    if not utils._get_by_id("CUSTOMER", cid):
+        return utils._json_response(404, {"message": "Cliente no encontrado"})
+
+    normalized = utils._normalize_privileges(body.get("privileges"))
+    updated = utils._update_by_id(
+        "CUSTOMER", cid,
+        "SET privileges = :p, canAccessAdmin = :a, updatedAt = :u",
+        {
+            ":p": normalized,
+            ":a": bool(body.get("canAccessAdmin", any(normalized.values()))),
+            ":u": utils._now_iso(),
+        },
+    )
+    utils._audit_event("customer.privileges.update", headers, body, {"customerId": cid})
+    return utils._json_response(200, {"customer": _format_customer_output(updated)})
+
+
 def handle_update_customer(customer_id, body, headers):
     """PATCH /customers/{id}"""
     cid = utils._customer_entity_id(customer_id)
@@ -595,6 +564,18 @@ def handle_update_profile(body, headers):
             eav[f":{field}"] = str(body[field]).strip()
 
     updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean or None)
+
+    # El rename desde el propio perfil también debe refrescar el índice de
+    # búsqueda por nombre; si no, el panel de admin sigue encontrando (o
+    # dejando de encontrar) al cliente por su nombre viejo.
+    if "name" in body and str(body.get("name") or "").strip() != str(existing.get("name") or "").strip():
+        utils._upsert_customer_name_index(
+            existing.get("customerId", cid), body.get("name"),
+            updated.get("email") if isinstance(updated, dict) else existing.get("email"),
+            created_at_iso=existing.get("createdAt"),
+            previous_name=existing.get("name"),
+        )
+
     return utils._json_response(200, {"customer": _format_customer_output(updated)})
 
 
@@ -987,9 +968,7 @@ def lambda_handler(event, context):
                 if sub == "privileges" and method == "PATCH":
                     err = utils._require_admin(headers, "user_manage_privileges")
                     if err: return err
-                    return handle_update_customer(
-                        target_id, {"privileges": body.get("privileges")}, headers
-                    )
+                    return handle_update_privileges(target_id, body, headers)
 
         # ── /network/{id} ──────────────────────────────────────────────
         if root == "network" and len(segments) > 1:

@@ -862,7 +862,7 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
     """
     order = utils._get_by_id("ORDER", order_id)
     if not order:
-        utils._log("void_comm", "INFO", detail='Orden {order_id} no encontrada')
+        utils._log("void_commissions_order_missing", "INFO", orderId=order_id)
         return {"skipped": True}
 
     month_key = order.get("monthKey") or utils._month_key()

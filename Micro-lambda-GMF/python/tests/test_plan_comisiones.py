@@ -154,3 +154,41 @@ def test_las_comisiones_no_pasan_de_cinco_generaciones(utils, store):
     ]
     assert len(con_comision) == 5
     assert con_comision == [11, 12, 13, 14, 15], "las cobran los 5 ascendentes más cercanos"
+
+
+# --- Compatibilidad del candado optimista con datos anteriores ---------------
+
+def test_el_ledger_legado_sin_version_sigue_siendo_escribible(utils, store):
+    """Regresión del hallazgo bloqueante de la revisión.
+
+    Los meses contables escritos ANTES de introducir el candado no tienen
+    atributo `version`. En DynamoDB real `version = :cero` falla cuando el
+    atributo no existe, así que la condición debe aceptar también
+    `attribute_not_exists(version)`; si no, comisiones, confirmaciones y
+    anulaciones fallan para todos los beneficiarios existentes.
+    """
+    from decimal import Decimal as D
+
+    sk = utils._ledger_sk(55, "2026-09")
+    store[("COMMISSION_MONTH", sk)] = {
+        "PK": "COMMISSION_MONTH", "SK": sk, "entityType": "commissionMonth",
+        "beneficiaryId": 55, "monthKey": "2026-09",
+        "ledger": [{"rowId": "VIEJA#G1", "orderId": "VIEJA",
+                    "amount": D("100"), "status": "pending"}],
+        "totalPending": D("100"), "totalConfirmed": D("0"), "totalBlocked": D("0"),
+        # sin atributo `version`: así están los items previos al despliegue
+    }
+
+    def agregar(item):
+        item["ledger"].append({"rowId": "NUEVA#G1", "orderId": "NUEVA",
+                               "amount": D("50"), "status": "pending"})
+        return True
+
+    resultado = utils._mutate_ledger_month(55, "2026-09", agregar)
+    assert len(resultado["ledger"]) == 2
+    assert resultado["totalPending"] == D("150")
+    assert store[("COMMISSION_MONTH", sk)]["version"] == 1, "el item migra al esquema versionado"
+
+    # Y a partir de ahí el candado protege con normalidad.
+    resultado = utils._mutate_ledger_month(55, "2026-09", agregar)
+    assert store[("COMMISSION_MONTH", sk)]["version"] == 2

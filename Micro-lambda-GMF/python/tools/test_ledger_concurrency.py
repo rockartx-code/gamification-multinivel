@@ -20,11 +20,15 @@ class FakeTable:
             key = (Item["PK"], Item["SK"])
             current = STORE.get(key)
             if ConditionExpression:
+                # Semántica REAL de DynamoDB: `version = :v` falla si el
+                # atributo no existe (no se trata como cero).
                 expected = ExpressionAttributeValues[":expected"]
-                if current is None:
-                    if "attribute_not_exists" not in ConditionExpression:
-                        raise Err("ConditionalCheckFailedException")
-                elif Decimal(str(current.get("version", 0))) != Decimal(str(expected)):
+                cumple = False
+                if "attribute_not_exists(version)" in ConditionExpression:
+                    cumple = current is None or "version" not in current
+                if not cumple and current is not None and "version" in current:
+                    cumple = Decimal(str(current["version"])) == Decimal(str(expected))
+                if not cumple:
                     raise Err("ConditionalCheckFailedException")
             STORE[key] = dict(Item)
     def update_item(self, **kw): return {"Attributes": {}}
@@ -57,7 +61,7 @@ def escribir(order_id, n_hilos=12):
 errores = escribir("ORD", 12)
 item = utils._get_ledger_month("777", "2026-09")
 filas = len(item["ledger"])
-print(f"hilos concurrentes : 12")
+print("hilos concurrentes : 12")
 print(f"filas persistidas  : {filas}   (esperado 12)")
 print(f"totalPending       : {item['totalPending']}   (esperado 1200)")
 print(f"version final      : {item['version']}")
