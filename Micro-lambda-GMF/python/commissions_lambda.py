@@ -122,15 +122,6 @@ def _cached_customer(customer_id) -> dict:
     return _CACHE["customers"][cid]
 
 
-def _prime_customers(customers: list) -> None:
-    for customer in customers or []:
-        if not isinstance(customer, dict):
-            continue
-        cid = utils._customer_id_str(customer.get("customerId"))
-        if cid:
-            _CACHE["customers"][cid] = customer
-
-
 def _cached_month_state(customer_id, month_key: str) -> dict:
     cid = utils._customer_id_str(customer_id)
     key = f"{cid}#{month_key}"
@@ -693,6 +684,9 @@ def _save_app_config(cfg: dict) -> dict:
             {":c": normalized, ":u": now},
             {"#c": "config"},
         )
+    # El contenedor que guarda no debe seguir sirviendo la config vieja los
+    # segundos que le queden de TTL a su caché local.
+    utils._invalidate_app_config_cache()
     return normalized
 
 # --- HELPERS DE ASSETS ---
