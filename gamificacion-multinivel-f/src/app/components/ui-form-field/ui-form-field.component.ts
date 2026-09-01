@@ -81,7 +81,7 @@ export class UiFormFieldComponent implements ControlValueAccessor {
 
   get inputStateClass(): string {
     const baseStateClass = this.hasError
-      ? 'border-danger/70 focus:border-danger focus:ring-danger/20'
+      ? 'input-error'
       : 'border-olive-30 focus:border-olive-70 focus-ring-olive-20';
     const iconPadding = this.resolvedLeadingIconClass ? 'pl-10' : '';
     const passwordPadding = this.isPasswordField ? 'pr-12' : '';

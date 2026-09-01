@@ -9,8 +9,9 @@ import { Component, ContentChild, Input, TemplateRef } from '@angular/core';
 })
 export class UiDataTableComponent<T = unknown> {
   @Input() rows: T[] = [];
-  @Input() mobileDividerClass = 'divide-white/10';
-  @Input() desktopDividerClass = 'divide-white/5';
+  // Divisores visibles en tema claro (antes divide-white/10: invisibles)
+  @Input() mobileDividerClass = 'divide-olive-20';
+  @Input() desktopDividerClass = 'divide-olive-20';
 
   @ContentChild('mobileRow') mobileRowTpl?: TemplateRef<{ $implicit: T }>;
   @ContentChild('desktopHeader') desktopHeaderTpl?: TemplateRef<unknown>;

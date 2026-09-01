@@ -465,6 +465,12 @@ select:focus {
   color: var(--text-on-primary);
 }
 
+.badge-danger {
+  background: rgba(180, 83, 60, 0.1);
+  border-color: rgba(180, 83, 60, 0.3);
+  color: #8c3f2c;
+}
+
 .badge.status-active {
   background: rgba(var(--rgb-primary), 0.2);
   border-color: rgba(var(--rgb-primary), 0.42);
@@ -576,6 +582,15 @@ select:focus {
 
 .focus-border-olive-60:focus { border-color: rgba(var(--rgb-primary), 0.6); }
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
+
+/* Estado de error de campos: borde y foco visibles (antes clases inexistentes) */
+.border-danger { border-color: rgba(180, 83, 60, 0.7); }
+.focus-border-danger:focus { border-color: var(--color-danger); }
+.input-error { border-color: rgba(180, 83, 60, 0.65) !important; }
+.input-error:focus {
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 0 0 2px rgba(180, 83, 60, 0.15);
+}
 
 .hover-bg-cream-90:hover { background-color: rgba(var(--rgb-surface-3), 0.9); }
 

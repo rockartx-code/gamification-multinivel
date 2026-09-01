@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'ui-modal',
@@ -14,6 +14,8 @@ export class UiModalComponent {
   @Input() containerClass = 'fixed inset-0 z-50 flex items-center justify-center modal-backdrop px-4';
   @Input() panelClass = 'modal-card w-full max-h-[90vh] overflow-hidden';
   @Input() closeOnBackdrop = true;
+  /** Etiqueta accesible del diálogo (cuando el contenido no tiene encabezado propio). */
+  @Input() ariaLabel = '';
 
   @Output() closed = new EventEmitter<void>();
 
@@ -23,6 +25,13 @@ export class UiModalComponent {
 
   onBackdropClick(): void {
     if (this.closeOnBackdrop) {
+      this.close();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isOpen && this.closeOnBackdrop) {
       this.close();
     }
   }

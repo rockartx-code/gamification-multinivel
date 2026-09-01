@@ -68,6 +68,11 @@ export const routes: Routes = [
     component: OrderDevolucionComponent
   },
   {
+    // Galería interna de componentes (styleguide); sin enlaces de navegación.
+    path: 'galeria',
+    loadComponent: () => import('./pages/galeria/galeria.component').then((m) => m.GaleriaComponent)
+  },
+  {
     path: 'tienda',
     component: TiendaComponent
   },

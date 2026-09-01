@@ -32,8 +32,9 @@ export class UiOrderTimelineComponent {
   }
 
   stepClass(index: number): string {
-    if (index < this.currentIndex) return 'border-emerald-400/40 bg-emerald-400/20 text-main';
-    if (index === this.currentIndex) return 'border-sky-400/40 bg-sky-400/15 text-main';
+    // Paleta del sistema: completado en verde del sistema, actual en oro.
+    if (index < this.currentIndex) return 'border-forest-20 bg-forest-10 text-main';
+    if (index === this.currentIndex) return 'border-gold-35 bg-gold-20 text-main';
     return 'border-olive-20 bg-ivory-80 text-muted';
   }
 
