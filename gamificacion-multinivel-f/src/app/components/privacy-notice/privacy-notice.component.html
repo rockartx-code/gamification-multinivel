@@ -31,12 +31,9 @@
     </div>
 
     <div class="flex justify-end gap-2 border-t border-olive-30 px-5 py-4">
-      <button type="button"
-        class="btn btn-forest inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold"
-        (click)="accept()">
-        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+      <ui-button variant="forest" size="md" iconClass="fa-solid fa-circle-check" (pressed)="accept()">
         Entendido y acepto
-      </button>
+      </ui-button>
     </div>
   </div>
 </div>

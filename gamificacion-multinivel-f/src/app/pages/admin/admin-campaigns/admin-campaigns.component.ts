@@ -6,6 +6,7 @@ import { Observable, catchError, finalize, forkJoin, of, switchMap } from 'rxjs'
 import { UiButtonComponent } from '../../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-field.component';
 import { UiKpiCardComponent } from '../../../components/ui-kpi-card/ui-kpi-card.component';
+import { UiPaginationComponent } from '../../../components/ui-pagination/ui-pagination.component';
 import { AdminCampaign, AssetResponse, CreateAssetPayload } from '../../../models/admin.model';
 import { AdminControlService } from '../../../services/admin-control.service';
 
@@ -32,7 +33,7 @@ type CampaignAssetField = 'story' | 'feed' | 'banner' | 'heroImage';
 @Component({
   selector: 'app-admin-campaigns',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiKpiCardComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiKpiCardComponent, UiPaginationComponent],
   templateUrl: './admin-campaigns.component.html'
 })
 export class AdminCampaignsComponent {

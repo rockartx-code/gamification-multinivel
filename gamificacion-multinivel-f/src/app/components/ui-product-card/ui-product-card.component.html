@@ -82,24 +82,11 @@
         </button>
 
         <!-- Qty controls (cuando ya hay unidades o está marcada) -->
-        <div *ngIf="isVariantChecked(variant.id)" class="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label="Quitar una unidad"
-            class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5 disabled:opacity-40"
-            [disabled]="getVariantQty(variant.id) === 0"
-            (click)="changeVariantQty(variant.id, -1)">
-            <i class="fa-solid fa-minus text-[10px]" aria-hidden="true"></i>
-          </button>
-          <span class="w-6 text-center text-sm font-semibold">{{ getVariantQty(variant.id) }}</span>
-          <button
-            type="button"
-            aria-label="Agregar una unidad"
-            class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5"
-            (click)="changeVariantQty(variant.id, 1)">
-            <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
-          </button>
-        </div>
+        <ui-qty-stepper *ngIf="isVariantChecked(variant.id)"
+          [qty]="getVariantQty(variant.id)"
+          [itemLabel]="variant.name"
+          (qtyChange)="variantQtyChange.emit({ variantId: variant.id, qty: $event })">
+        </ui-qty-stepper>
 
         <!-- Agregado rápido en un tap para variantes sin seleccionar -->
         <button *ngIf="!isVariantChecked(variant.id)"

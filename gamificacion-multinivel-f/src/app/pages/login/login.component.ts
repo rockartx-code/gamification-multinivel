@@ -31,7 +31,6 @@ export class LoginComponent {
   isSubmitting = false;
   isResendingConfirmation = false;
   isRecovering = false;
-  showPassword = false;
   showRecoveryForm = false;
 
   get shouldShowResendConfirmation(): boolean {
@@ -84,10 +83,6 @@ export class LoginComponent {
           this.cdr.detectChanges();
         }
       });
-  }
-
-  togglePasswordVisibility(): void {
-    this.showPassword = !this.showPassword;
   }
 
   openRecoveryForm(): void {

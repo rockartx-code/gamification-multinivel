@@ -42,9 +42,7 @@
         <ui-button variant="ghost" size="md">Ghost</ui-button>
         <ui-button variant="linkish" size="md">Linkish</ui-button>
         <ui-button variant="primary" size="md" [disabled]="true">Deshabilitado</ui-button>
-        <button type="button" class="btn btn-forest inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold">
-          <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Bosque (CTA clave)
-        </button>
+        <ui-button variant="forest" size="md" iconClass="fa-solid fa-circle-check">Forest (CTA clave)</ui-button>
       </div>
       <div class="mt-3 max-w-sm">
         <ui-button variant="primary" size="lg" [fullWidth]="true">Full width</ui-button>
@@ -162,6 +160,38 @@
       <div class="mt-4 space-y-6 rounded-3xl border border-olive-30 bg-ivory-80 p-6">
         <ui-order-timeline status="paid"></ui-order-timeline>
         <ui-order-timeline status="delivered"></ui-order-timeline>
+      </div>
+    </section>
+
+    <!-- ═══ Selección, cantidad y paginación ═══ -->
+    <section>
+      <h2 class="text-xl font-semibold">Selección, cantidad y paginación</h2>
+      <div class="mt-4 grid max-w-xl grid-cols-2 gap-2">
+        <ui-choice-card layout="stack" [selected]="demoChoice === 'a'" (pressed)="demoChoice = 'a'">
+          <i class="fa-solid fa-truck text-xl" [ngClass]="demoChoice === 'a' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+          <div class="text-sm font-semibold text-main">Opción A</div>
+          <div class="text-[11px] text-gray-500">ui-choice-card stack</div>
+        </ui-choice-card>
+        <ui-choice-card layout="stack" [selected]="demoChoice === 'b'" (pressed)="demoChoice = 'b'">
+          <i class="fa-solid fa-store text-xl" [ngClass]="demoChoice === 'b' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+          <div class="text-sm font-semibold text-main">Opción B</div>
+          <div class="text-[11px] text-gray-500">con pop al seleccionar</div>
+        </ui-choice-card>
+      </div>
+      <div class="mt-4 flex items-center gap-6">
+        <div class="flex items-center gap-3 rounded-2xl border border-olive-30 surface-soft px-4 py-2">
+          <span class="text-xs text-gray-600">ui-qty-stepper</span>
+          <ui-qty-stepper [qty]="demoQty" itemLabel="demo" (qtyChange)="demoQty = $event"></ui-qty-stepper>
+        </div>
+      </div>
+      <div class="mt-4 max-w-xl overflow-hidden rounded-2xl border border-olive-30 surface-soft">
+        <div class="px-4 py-3 text-xs text-gray-600">ui-pagination</div>
+        <ui-pagination [page]="demoPage" [totalPages]="8" (pageChange)="demoPage = $event"></ui-pagination>
+      </div>
+      <div class="mt-4 max-w-xl space-y-2">
+        <div class="text-xs text-gray-600">Skeleton de carga</div>
+        <div class="skeleton h-6 w-56">&nbsp;</div>
+        <div class="skeleton h-16 w-full">&nbsp;</div>
       </div>
     </section>
 

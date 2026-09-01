@@ -13,6 +13,9 @@ import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-
 import { UiProductCardComponent, ProductCardModel } from '../../components/ui-product-card/ui-product-card.component';
 import { UiSidebarNavComponent } from '../../components/ui-sidebar-nav/ui-sidebar-nav.component';
 import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
+import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
+import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
+import { UiChoiceCardComponent } from '../../components/ui-choice-card/ui-choice-card.component';
 
 /**
  * Galería interna de componentes (styleguide vivo).
@@ -35,7 +38,10 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
     UiOrderTimelineComponent,
     UiProductCardComponent,
     UiSidebarNavComponent,
-    UiStatusBadgeComponent
+    UiStatusBadgeComponent,
+    UiPaginationComponent,
+    UiQtyStepperComponent,
+    UiChoiceCardComponent
   ],
   templateUrl: './galeria.component.html'
 })
@@ -44,6 +50,9 @@ export class GaleriaComponent {
   demoText = '';
   demoPassword = '';
   demoVariantQtys: Record<string, number> = { v2: 2 };
+  demoPage = 1;
+  demoQty = 2;
+  demoChoice: 'a' | 'b' = 'a';
 
   readonly orderStatuses = [
     'pending', 'paid', 'shipped', 'delivered', 'cancelled',

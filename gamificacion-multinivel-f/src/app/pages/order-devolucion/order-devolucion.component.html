@@ -109,15 +109,15 @@
           </ng-container>
         </div>
 
-        <div>
-          <label class="mb-1 block text-xs font-semibold text-gray-600">Descripción adicional (opcional)</label>
-          <textarea
-            rows="3"
-            [(ngModel)]="descripcion"
-            placeholder="Describe el problema con más detalle…"
-            class="w-full rounded-xl border border-olive-30 bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20">
-          </textarea>
-        </div>
+        <ui-form-field
+          kind="textarea"
+          [rows]="3"
+          name="descripcion"
+          label="Descripción adicional (opcional)"
+          [(ngModel)]="descripcion"
+          placeholder="Describe el problema con más detalle…"
+          inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-4 py-2.5 text-sm text-main focus:outline-none"
+        ></ui-form-field>
 
         <div class="flex justify-end">
           <ui-button variant="primary" size="md" [disabled]="!canProceedStep1" (pressed)="nextStep()">

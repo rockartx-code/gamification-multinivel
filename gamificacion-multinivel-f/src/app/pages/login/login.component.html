@@ -31,36 +31,17 @@
               inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
             ></ui-form-field>
 
-            <label class="block">
-              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">contraseña</span>
-              <div class="relative">
-                <i
-                  class="fa-solid fa-key pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-500"
-                  aria-hidden="true"
-                ></i>
-                <input
-                  [type]="showPassword ? 'text' : 'password'"
-                  name="password"
-                  placeholder="Tu contraseña"
-                  [(ngModel)]="password"
-                  class="mt-2 w-full rounded-2xl border bg-white/70 px-4 py-3 pl-10 pr-12 text-sm text-main outline-none focus:ring-2 focus-ring-olive-20"
-                  [class.border-danger]="passwordError"
-                  [class.border-olive-30]="!passwordError"
-                  [class.focus-border-danger]="passwordError"
-                  [class.focus-border-olive-60]="!passwordError"
-                />
-                <button
-                  type="button"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
-                  (click)="togglePasswordVisibility()"
-                  [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                  [title]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                >
-                  <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <small *ngIf="passwordError" class="mt-1 block text-xs text-danger">{{ passwordError }}</small>
-            </label>
+            <ui-form-field
+              kind="input"
+              type="password"
+              name="password"
+              label="Contraseña"
+              leadingIconClass="fa-solid fa-key"
+              placeholder="Tu contraseña"
+              [(ngModel)]="password"
+              [errorText]="passwordError"
+              inputClass="mt-2 w-full rounded-2xl border bg-white/70 px-4 py-3 text-sm text-main outline-none focus:ring-2 focus-ring-olive-20"
+            ></ui-form-field>
 
             <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
               {{ errorMessage }}

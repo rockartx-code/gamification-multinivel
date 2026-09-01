@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 
+import { UiButtonComponent } from '../ui-button/ui-button.component';
+
 /**
  * Aviso de Privacidad del Usuario (H19).
  * Se muestra una sola vez en el primer acceso a la aplicación (o registro).
@@ -9,7 +11,7 @@ import { Component, OnInit } from '@angular/core';
 @Component({
   selector: 'app-privacy-notice',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, UiButtonComponent],
   templateUrl: './privacy-notice.component.html'
 })
 export class PrivacyNoticeComponent implements OnInit {

@@ -892,16 +892,7 @@
             </ui-data-table>
           </div>
         </ui-table>
-        <div *ngIf="ordersTotalPages > 1"
-          class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-          <span>Pág. {{ ordersPage + 1 }}</span>
-          <div class="flex gap-1">
-            <button [disabled]="ordersPage === 0 || isOrdersLoading" (click)="loadOrdersPage(ordersPage - 1)"
-              class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-            <button [disabled]="isOrdersLoading || !canNextOrdersPage" (click)="loadOrdersPage(ordersPage + 1)"
-              class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-          </div>
-        </div>
+        <ui-pagination [page]="ordersPage" [totalPages]="ordersTotalPages" [disabled]="isOrdersLoading" (pageChange)="loadOrdersPage($event)"></ui-pagination>
       </div>
     </section>
 

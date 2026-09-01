@@ -162,12 +162,9 @@
                     </ui-button>
                   </div>
                 </div>
-                <div class="relative">
-                  <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
-                  <input type="text" placeholder="Buscar por cliente, guía, teléfono, dirección..."
-                    [ngModel]="orderSearch" (ngModelChange)="onTableSearch('orders', $event)"
-                    class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
-                </div>
+                <ui-form-field leadingIconClass="fa-solid fa-magnifying-glass" placeholder="Buscar por cliente, guía, teléfono, dirección..."
+                  [ngModel]="orderSearch" (ngModelChange)="onTableSearch('orders', $event)"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"></ui-form-field>
               </div>
 
               <div class="overflow-auto">
@@ -387,28 +384,13 @@
                 </div>
               </div>
               <!-- Pagination: orders -->
-              <div *ngIf="ordersTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-                <span>Pág. {{ orderPage + 1 }} de {{ ordersTotalPages }}</span>
-                <div class="flex gap-1">
-                  <button [disabled]="orderPage === 0" (click)="setPage('orders', orderPage - 1)"
-                    class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-                  <button *ngFor="let p of pageRange(ordersTotalPages, orderPage)"
-                    (click)="setPage('orders', p)"
-                    class="rounded-lg border px-2.5 py-1"
-                    [class]="p === orderPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
-                  <button [disabled]="orderPage >= ordersTotalPages - 1" (click)="setPage('orders', orderPage + 1)"
-                    class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-                </div>
-              </div>
+              <ui-pagination [page]="orderPage" [totalPages]="ordersTotalPages" (pageChange)="setPage('orders', $event)"></ui-pagination>
             </div>
           </div>
 
           <div class="space-y-4" *ngIf="currentView === 'customers' && canAccessView('customers')">
             <div class="grid gap-3 md:grid-cols-3">
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Clientes totales</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ customersCount }}</div>
-              </div>
+              <ui-kpi-card label="Clientes totales" [value]="customersCount"></ui-kpi-card>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="flex items-start justify-between gap-2">
                   <div>
@@ -420,10 +402,7 @@
                   </ui-button>
                 </div>
               </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Prom. descuento</div>
-                <div class="mt-1 text-2xl font-extrabold">10%</div>
-              </div>
+              <ui-kpi-card label="Prom. descuento" [value]="averageDiscountLabel"></ui-kpi-card>
             </div>
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
@@ -485,19 +464,7 @@
                   </div>
                 </div>
                 <!-- Pagination: customers -->
-                <div *ngIf="customersTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-                  <span>Pág. {{ customerPage + 1 }} de {{ customersTotalPages }}</span>
-                  <div class="flex gap-1">
-                    <button [disabled]="customerPage === 0" (click)="setPage('customers', customerPage - 1)"
-                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-                    <button *ngFor="let p of pageRange(customersTotalPages, customerPage)"
-                      (click)="setPage('customers', p)"
-                      class="rounded-lg border px-2.5 py-1"
-                      [class]="p === customerPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
-                    <button [disabled]="customerPage >= customersTotalPages - 1" (click)="setPage('customers', customerPage + 1)"
-                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-                  </div>
-                </div>
+                <ui-pagination [page]="customerPage" [totalPages]="customersTotalPages" (pageChange)="setPage('customers', $event)"></ui-pagination>
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -835,12 +802,9 @@
                       <span>Empleados</span>
                       <span class="text-xs text-gray-600">{{ filteredEmployees.length }} empleados</span>
                     </div>
-                    <div class="relative">
-                      <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
-                      <input type="text" placeholder="Buscar por nombre, correo..."
-                        [ngModel]="employeeSearch" (ngModelChange)="onTableSearch('employees', $event)"
-                        class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
-                    </div>
+                    <ui-form-field leadingIconClass="fa-solid fa-magnifying-glass" placeholder="Buscar por nombre, correo..."
+                  [ngModel]="employeeSearch" (ngModelChange)="onTableSearch('employees', $event)"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"></ui-form-field>
                   </div>
 
                   <div *ngIf="filteredEmployees.length === 0" class="p-6 text-center text-xs text-gray-500">
@@ -865,19 +829,7 @@
                     </div>
                   </div>
                   <!-- Pagination: employees -->
-                  <div *ngIf="employeesTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-                    <span>Pág. {{ employeePage + 1 }} de {{ employeesTotalPages }}</span>
-                    <div class="flex gap-1">
-                      <button [disabled]="employeePage === 0" (click)="setPage('employees', employeePage - 1)"
-                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-                      <button *ngFor="let p of pageRange(employeesTotalPages, employeePage)"
-                        (click)="setPage('employees', p)"
-                        class="rounded-lg border px-2.5 py-1"
-                        [class]="p === employeePage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
-                      <button [disabled]="employeePage >= employeesTotalPages - 1" (click)="setPage('employees', employeePage + 1)"
-                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-                    </div>
-                  </div>
+                  <ui-pagination [page]="employeePage" [totalPages]="employeesTotalPages" (pageChange)="setPage('employees', $event)"></ui-pagination>
                 </div>
               </div>
 
@@ -934,18 +886,9 @@
 
           <div class="space-y-4" *ngIf="currentView === 'products' && canAccessView('products')">
             <div class="grid gap-3 md:grid-cols-3">
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Productos activos</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ productsCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Assets faltantes</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ productsMissingAssetsCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Producto del mes</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ productOfMonthName }}</div>
-              </div>
+              <ui-kpi-card label="Productos activos" [value]="productsCount"></ui-kpi-card>
+              <ui-kpi-card label="Assets faltantes" [value]="productsMissingAssetsCount"></ui-kpi-card>
+              <ui-kpi-card label="Producto del mes" [value]="productOfMonthName"></ui-kpi-card>
             </div>
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
@@ -955,12 +898,9 @@
                     <span>Catálogo</span>
                     <span class="text-xs text-gray-600">{{ filteredProducts.length }} productos</span>
                   </div>
-                  <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
-                    <input type="text" placeholder="Buscar por nombre, SKU, estado..."
-                      [ngModel]="productSearch" (ngModelChange)="onTableSearch('products', $event)"
-                      class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
-                  </div>
+                  <ui-form-field leadingIconClass="fa-solid fa-magnifying-glass" placeholder="Buscar por nombre, SKU, estado..."
+                  [ngModel]="productSearch" (ngModelChange)="onTableSearch('products', $event)"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"></ui-form-field>
                 </div>
 
                 <div class="md:hidden divide-y divide-olive-20">
@@ -1058,19 +998,7 @@
                   </div>
                 </div>
                 <!-- Pagination: products -->
-                <div *ngIf="productsTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-                  <span>Pág. {{ productPage + 1 }} de {{ productsTotalPages }}</span>
-                  <div class="flex gap-1">
-                    <button [disabled]="productPage === 0" (click)="setPage('products', productPage - 1)"
-                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-                    <button *ngFor="let p of pageRange(productsTotalPages, productPage)"
-                      (click)="setPage('products', p)"
-                      class="rounded-lg border px-2.5 py-1"
-                      [class]="p === productPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
-                    <button [disabled]="productPage >= productsTotalPages - 1" (click)="setPage('products', productPage + 1)"
-                      class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-                  </div>
-                </div>
+                <ui-pagination [page]="productPage" [totalPages]="productsTotalPages" (pageChange)="setPage('products', $event)"></ui-pagination>
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -2249,9 +2177,14 @@
           <div class="space-y-4" *ngIf="currentView === 'stats' && canAccessView('stats')">
 
             <!-- Cargando indicador -->
-            <div *ngIf="isLoadingStats" class="flex items-center gap-2 text-sm text-gray-500 py-2">
-              <span class="animate-spin inline-block w-4 h-4 border-2 border-olive-50 border-t-transparent rounded-full"></span>
-              Cargando reporte del servidor…
+            <div *ngIf="isLoadingStats" class="space-y-3 py-2" aria-busy="true" aria-label="Cargando reporte del servidor">
+              <div class="skeleton h-8 w-64">&nbsp;</div>
+              <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="skeleton h-20">&nbsp;</div>
+                <div class="skeleton h-20">&nbsp;</div>
+                <div class="skeleton h-20">&nbsp;</div>
+                <div class="skeleton h-20">&nbsp;</div>
+              </div>
             </div>
 
             <!-- Toolbar: mes + descargas -->
@@ -2627,8 +2560,11 @@
           <div class="space-y-4" *ngIf="currentView === 'honor_board' && canAccessView('honor_board')">
 
             <!-- Loading state -->
-            <div *ngIf="isLoadingHonorBoard" class="rounded-2xl border border-olive-30 surface-soft p-8 text-center text-sm text-gray-400">
-              Cargando Cuadro de Honor...
+            <div *ngIf="isLoadingHonorBoard" class="space-y-3 rounded-2xl border border-olive-30 surface-soft p-6" aria-busy="true" aria-label="Cargando Cuadro de Honor">
+              <div class="skeleton h-6 w-52">&nbsp;</div>
+              <div class="skeleton h-10 w-full">&nbsp;</div>
+              <div class="skeleton h-10 w-full">&nbsp;</div>
+              <div class="skeleton h-10 w-3/4">&nbsp;</div>
             </div>
 
             <ng-container *ngIf="!isLoadingHonorBoard && honorBoardData">
@@ -2708,22 +2644,10 @@
 
           <div class="space-y-4" *ngIf="currentView === 'notifications' && canAccessView('notifications')">
             <div class="grid gap-3 md:grid-cols-4">
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Total</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ notifications.length }}</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Activas</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ activeNotificationsCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Programadas</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ scheduledNotificationsCount }}</div>
-              </div>
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-600">Expiradas / inactivas</div>
-                <div class="mt-1 text-2xl font-extrabold">{{ inactiveNotificationsCount }}</div>
-              </div>
+              <ui-kpi-card label="Total" [value]="notifications.length"></ui-kpi-card>
+              <ui-kpi-card label="Activas" [value]="activeNotificationsCount"></ui-kpi-card>
+              <ui-kpi-card label="Programadas" [value]="scheduledNotificationsCount"></ui-kpi-card>
+              <ui-kpi-card label="Expiradas / inactivas" [value]="inactiveNotificationsCount"></ui-kpi-card>
             </div>
 
             <div class="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
@@ -2863,19 +2787,7 @@
                     </div>
                   </div>
                   <!-- Pagination: notifications -->
-                  <div *ngIf="notificationsTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-70 px-4 py-2 text-xs text-gray-600">
-                    <span>Pág. {{ notificationPage + 1 }} de {{ notificationsTotalPages }}</span>
-                    <div class="flex gap-1">
-                      <button [disabled]="notificationPage === 0" (click)="setPage('notifications', notificationPage - 1)"
-                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-                      <button *ngFor="let p of pageRange(notificationsTotalPages, notificationPage)"
-                        (click)="setPage('notifications', p)"
-                        class="rounded-lg border px-2.5 py-1"
-                        [class]="p === notificationPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
-                      <button [disabled]="notificationPage >= notificationsTotalPages - 1" (click)="setPage('notifications', notificationPage + 1)"
-                        class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-                    </div>
-                  </div>
+                  <ui-pagination [page]="notificationPage" [totalPages]="notificationsTotalPages" (pageChange)="setPage('notifications', $event)"></ui-pagination>
                 </div>
               </div>
             </div>

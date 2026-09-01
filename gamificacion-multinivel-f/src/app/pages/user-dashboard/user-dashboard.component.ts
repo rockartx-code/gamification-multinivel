@@ -37,6 +37,7 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
+import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
 
 type GraphNode = {
   id: string;
@@ -58,7 +59,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })

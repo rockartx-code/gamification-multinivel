@@ -212,6 +212,21 @@ select:focus {
   z-index: 1000;
   background: rgba(27, 27, 27, 0.55);
   backdrop-filter: blur(6px);
+  animation: backdropIn var(--dur-fast) var(--ease-swift);
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-backdrop .modal-card {
+  animation: modalPop var(--dur-base) var(--ease-spring);
+}
+
+@keyframes modalPop {
+  0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .modal-card {
@@ -322,6 +337,32 @@ select:focus {
   box-shadow: 0 10px 26px rgba(var(--rgb-forest), 0.36);
 }
 
+/* Brillo que barre el botón primario al pasar el cursor (lujo discreto) */
+.btn-primary,
+.btn-forest {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after,
+.btn-forest::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.btn-primary:hover:not(.btn-disabled):not(:disabled)::after,
+.btn-forest:hover:not(.btn-disabled):not(:disabled)::after {
+  animation: btnShine 0.9s var(--ease-luxe);
+}
+
+@keyframes btnShine {
+  to { transform: translateX(120%); }
+}
+
 .btn-secondary {
   background: rgba(var(--rgb-primary), 0.14);
   color: var(--text-on-primary);
@@ -334,14 +375,22 @@ select:focus {
   border: 1px solid rgba(var(--rgb-primary), 0.3);
 }
 
+/* Linkish: acción terciaria con aspecto de enlace (antes gemelo de ghost) */
 .btn-linkish {
-  background: rgba(var(--rgb-surface-1), 0.9);
-  border: 1px solid rgba(var(--rgb-primary), 0.3);
-  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-on-primary);
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-fast) var(--ease-swift), color var(--dur-fast) var(--ease-swift);
 }
 
-.btn-linkish:hover {
-  background: rgba(var(--rgb-surface-3), 0.9);
+.btn-linkish:hover:not(.btn-disabled):not(:disabled) {
+  color: var(--color-text);
+  text-decoration-color: rgba(var(--rgb-primary), 0.7);
+  box-shadow: none;
+  transform: none;
 }
 
 .btn:hover:not(.btn-disabled):not(:disabled) {
@@ -583,6 +632,88 @@ select:focus {
 .focus-border-olive-60:focus { border-color: rgba(var(--rgb-primary), 0.6); }
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
 
+/* Botones de paginación (ui-pagination) */
+.pg-btn {
+  border: 1px solid rgba(var(--rgb-primary), 0.3);
+  border-radius: 10px;
+  padding: 0.25rem 0.625rem;
+  transition:
+    background-color var(--dur-fast) var(--ease-swift),
+    border-color var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.pg-btn:hover:not(:disabled):not(.pg-btn-active) {
+  background-color: rgba(var(--rgb-primary), 0.1);
+  transform: translateY(-1px);
+}
+
+.pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pg-btn-active {
+  background-color: var(--color-primary);
+  border-color: rgba(var(--rgb-primary), 0.5);
+  color: #241d0d;
+  font-weight: 700;
+}
+
+/* Stepper de cantidad (ui-qty-stepper) */
+.qty-btn {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(var(--rgb-primary), 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  color: #57615a;
+  transition:
+    background-color var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: rgba(var(--rgb-primary), 0.12);
+  transform: scale(1.08);
+}
+
+.qty-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Tarjeta seleccionable (ui-choice-card) */
+.choice-card {
+  transition:
+    border-color var(--dur-fast) var(--ease-swift),
+    background-color var(--dur-fast) var(--ease-swift),
+    box-shadow var(--dur-base) var(--ease-luxe),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.choice-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.choice-card-selected {
+  box-shadow: var(--shadow-lift);
+  animation: choicePop var(--dur-base) var(--ease-spring);
+}
+
+@keyframes choicePop {
+  0% { transform: scale(0.985); }
+  60% { transform: scale(1.01); }
+  100% { transform: scale(1); }
+}
+
 /* Estado de error de campos: borde y foco visibles (antes clases inexistentes) */
 .border-danger { border-color: rgba(180, 83, 60, 0.7); }
 .focus-border-danger:focus { border-color: var(--color-danger); }
@@ -729,6 +860,29 @@ select:focus {
   transform: scale(1.05);
 }
 
+/* Esqueleto de carga con barrido (estados "Cargando…") */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--rgb-text), 0.07);
+  color: transparent !important;
+  user-select: none;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: skeletonSweep 1.4s var(--ease-swift) infinite;
+}
+
+@keyframes skeletonSweep {
+  to { transform: translateX(100%); }
+}
+
 /* Movimiento reducido: todo visible, sin desplazamientos */
 @media (prefers-reduced-motion: reduce) {
   .reveal {
@@ -740,8 +894,23 @@ select:focus {
   .btn,
   .card-lift,
   .icon-orb,
-  .img-zoom {
+  .img-zoom,
+  .choice-card,
+  .qty-btn,
+  .pg-btn {
     transition: none;
+  }
+
+  .modal-backdrop,
+  .modal-backdrop .modal-card,
+  .choice-card-selected {
+    animation: none;
+  }
+
+  .skeleton::after,
+  .btn-primary:hover:not(.btn-disabled):not(:disabled)::after,
+  .btn-forest:hover:not(.btn-disabled):not(:disabled)::after {
+    animation: none;
   }
 
   .card-lift:hover,

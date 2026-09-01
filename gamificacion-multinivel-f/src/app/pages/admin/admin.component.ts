@@ -54,6 +54,7 @@ import { SidebarLink, UiSidebarNavComponent } from '../../components/ui-sidebar-
 import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
+import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
 import { AdminControlService } from '../../services/admin-control.service';
 import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
@@ -220,7 +221,7 @@ type CommissionLevelDraft = AppBusinessConfig['rewards']['commissionLevels'][num
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -1646,6 +1647,15 @@ export class AdminComponent implements OnInit {
 
   get customersCount(): number {
     return this.customers.length;
+  }
+
+  /** Promedio del descuento vigente de los clientes (antes valor fijo en la vista). */
+  get averageDiscountLabel(): string {
+    if (!this.customers.length) {
+      return '—';
+    }
+    const total = this.customers.reduce((sum, c) => sum + (parseFloat(c.discount) || 0), 0);
+    return `${Math.round(total / this.customers.length)}%`;
   }
 
   get productsCount(): number {

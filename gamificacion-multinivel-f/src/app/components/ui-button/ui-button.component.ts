@@ -19,7 +19,7 @@ export class UiButtonComponent {
 
   @Input('class') hostClass = '';
   @Input() type: 'button' | 'submit' | 'reset' = 'button';
-  @Input() variant: 'primary' | 'secondary' | 'ghost' | 'linkish' = 'ghost';
+  @Input() variant: 'primary' | 'secondary' | 'ghost' | 'linkish' | 'forest' = 'ghost';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() disabled = false;
   @Input() fullWidth = false;
@@ -39,7 +39,8 @@ export class UiButtonComponent {
       primary: 'btn-primary',
       secondary: 'btn-secondary',
       ghost: 'btn-ghost',
-      linkish: 'btn-linkish'
+      linkish: 'btn-linkish',
+      forest: 'btn-forest'
     };
     const resolvedVariant = this.resolveVariant();
     const sizes = {
@@ -63,7 +64,7 @@ export class UiButtonComponent {
       .join(' ');
   }
 
-  private resolveVariant(): 'primary' | 'secondary' | 'ghost' | 'linkish' {
+  private resolveVariant(): 'primary' | 'secondary' | 'ghost' | 'linkish' | 'forest' {
     if (this.variant !== 'ghost') {
       return this.variant;
     }

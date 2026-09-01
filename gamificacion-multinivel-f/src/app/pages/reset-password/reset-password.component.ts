@@ -25,8 +25,6 @@ export class ResetPasswordComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   isSubmitting = false;
-  showPassword = false;
-  showConfirmPassword = false;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -75,13 +73,5 @@ export class ResetPasswordComponent implements OnInit {
           this.cdr.detectChanges();
         }
       });
-  }
-
-  togglePasswordVisibility(field: 'password' | 'confirm'): void {
-    if (field === 'password') {
-      this.showPassword = !this.showPassword;
-      return;
-    }
-    this.showConfirmPassword = !this.showConfirmPassword;
   }
 }

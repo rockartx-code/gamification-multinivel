@@ -19,12 +19,9 @@
             Nueva
           </ui-button>
         </div>
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
-          <input type="text" placeholder="Buscar por nombre, tipo, estado..."
-            [ngModel]="campaignSearch" (ngModelChange)="onSearch($event)"
-            class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
-        </div>
+        <ui-form-field leadingIconClass="fa-solid fa-magnifying-glass" placeholder="Buscar por nombre, tipo, estado..."
+                  [ngModel]="campaignSearch" (ngModelChange)="onSearch($event)"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"></ui-form-field>
       </div>
 
       <div *ngIf="filteredCampaigns.length; else emptyCampaigns" class="divide-y divide-olive-20">
@@ -63,19 +60,7 @@
         </div>
       </div>
       <!-- Pagination: campaigns -->
-      <div *ngIf="campaignsTotalPages > 1" class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-        <span>Pág. {{ campaignPage + 1 }} de {{ campaignsTotalPages }}</span>
-        <div class="flex gap-1">
-          <button [disabled]="campaignPage === 0" (click)="campaignPage = campaignPage - 1"
-            class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-          <button *ngFor="let p of pageRange(campaignsTotalPages, campaignPage)"
-            (click)="campaignPage = p"
-            class="rounded-lg border px-2.5 py-1"
-            [class]="p === campaignPage ? 'border-accent bg-accent font-bold text-main' : 'border-olive-30 hover:bg-olive-10'">{{ p + 1 }}</button>
-          <button [disabled]="campaignPage >= campaignsTotalPages - 1" (click)="campaignPage = campaignPage + 1"
-            class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-        </div>
-      </div>
+      <ui-pagination [page]="campaignPage" [totalPages]="campaignsTotalPages" (pageChange)="campaignPage = $event"></ui-pagination>
     </div>
 
     <div class="space-y-4">

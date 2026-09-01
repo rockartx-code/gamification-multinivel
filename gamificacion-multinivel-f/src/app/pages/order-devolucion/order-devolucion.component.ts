@@ -11,13 +11,14 @@ import {
 } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 
 type Step = 1 | 2 | 3;
 
 @Component({
   selector: 'app-order-devolucion',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent],
   templateUrl: './order-devolucion.component.html'
 })
 export class OrderDevolucionComponent implements OnInit {
