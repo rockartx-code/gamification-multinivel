@@ -15,11 +15,12 @@ import { FeatureBadgeComponent } from '../../components/feature-badge/feature-ba
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { RevealOnScrollDirective } from '../../directives/reveal-on-scroll.directive';
 
 @Component({
   selector: 'app-tienda',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent, RevealOnScrollDirective],
   templateUrl: './tienda.component.html'
 })
 export class TiendaComponent implements OnInit {
@@ -128,7 +129,10 @@ export class TiendaComponent implements OnInit {
     }
     return this.featuredProduct?.img || this.defaultHero.img;
   }
-  get heroTags(): string[] { const t = this.featuredProduct?.tags ?? []; return t.length ? t : this.defaultHero.tags; }
+  get heroTags(): string[] {
+    const tags = (this.featuredProduct?.tags ?? []).map((t) => (t || '').trim()).filter(Boolean);
+    return tags.length ? tags : this.defaultHero.tags;
+  }
   get heroPrice(): number { return this.activeVariantPrice; }
   get heroName(): string { return this.featuredProduct?.name || this.defaultHero.name; }
 

@@ -1,13 +1,13 @@
-<section class="min-h-screen bg-sand-200 text-charcoal antialiased">
+<section class="min-h-screen bg-hero-luxe text-charcoal antialiased">
   <ui-header variant="default" containerClass="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
     <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/']">
       Volver
     </ui-button>
   </ui-header>
 
-  <main class="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
-    <div class="grid gap-10 lg:grid-cols-[1.05fr_.95fr]">
-      <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6">
+  <main class="mx-auto flex min-h-[70vh] max-w-5xl flex-col items-center justify-center px-6 py-12">
+    <div class="w-full max-w-md">
+      <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-[0_24px_60px_rgba(31,61,49,0.10)] sm:p-8">
         <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
 
         <div class="relative space-y-4">
@@ -15,10 +15,10 @@
             <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
             {{ showRecoveryForm ? 'Recuperar contraseña' : 'Login' }}
           </div>
-          <div class="flex items-center gap-2 text-2xl font-extrabold">
+          <h1 class="flex items-center gap-2 text-2xl font-semibold">
             <i class="fa-solid fa-gauge-high text-accent" aria-hidden="true"></i>
             {{ showRecoveryForm ? 'Recupera el acceso' : 'Accede a tu panel' }}
-          </div>
+          </h1>
 
           <ng-container *ngIf="!showRecoveryForm; else recoveryForm">
             <ui-form-field
@@ -87,7 +87,7 @@
             </div>
             <div class="mt-2">
               <ui-button
-                variant="secondary"
+                variant="primary"
                 size="lg"
                 iconClass="fa-solid fa-right-to-bracket"
                 [fullWidth]="true"

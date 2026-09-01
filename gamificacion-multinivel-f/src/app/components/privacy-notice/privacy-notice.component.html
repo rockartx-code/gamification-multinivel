@@ -1,10 +1,12 @@
 <div *ngIf="visible"
-  class="fixed inset-0 z-[1000] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+  class="fixed inset-0 z-[1000] flex items-end justify-center bg-black/45 p-0 backdrop-blur-sm sm:items-center sm:p-4"
   role="dialog" aria-modal="true" aria-labelledby="privacy-notice-title">
-  <div class="w-full max-w-2xl overflow-hidden rounded-t-3xl border border-olive-30 bg-ivory-80 shadow-2xl sm:rounded-3xl">
+  <div class="w-full max-w-2xl overflow-hidden rounded-t-3xl border border-olive-30 bg-[color:var(--color-surface-1)] shadow-2xl sm:rounded-3xl">
     <div class="flex items-center gap-3 border-b border-olive-30 px-5 py-4">
-      <i class="fa-solid fa-shield-halved text-accent" aria-hidden="true"></i>
-      <h2 id="privacy-notice-title" class="text-lg font-extrabold text-main">Aviso de Privacidad</h2>
+      <span class="medallion h-9 w-9 text-sm">
+        <i class="fa-solid fa-shield-halved text-accent" aria-hidden="true"></i>
+      </span>
+      <h2 id="privacy-notice-title" class="text-lg font-semibold text-main">Aviso de Privacidad</h2>
     </div>
 
     <div class="max-h-[60vh] space-y-3 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-gray-700">
@@ -30,8 +32,9 @@
 
     <div class="flex justify-end gap-2 border-t border-olive-30 px-5 py-4">
       <button type="button"
-        class="rounded-full bg-accent px-6 py-2 text-sm font-bold text-white hover:opacity-90"
+        class="btn btn-forest inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold"
         (click)="accept()">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
         Entendido y acepto
       </button>
     </div>

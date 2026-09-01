@@ -13,11 +13,12 @@ import { FeatureBadgeComponent } from '../../components/feature-badge/feature-ba
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { RevealOnScrollDirective } from '../../directives/reveal-on-scroll.directive';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent, RevealOnScrollDirective],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
