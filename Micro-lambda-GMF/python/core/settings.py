@@ -35,6 +35,13 @@ COMMISSION_MONTH_PK = "COMMISSION_MONTH"
 
 LEDGER_MAX_ATTEMPTS = 6
 
+#: Esquema de almacenamiento del mes contable de comisiones.
+#:   "off"  — item único con la lista `ledger` dentro (esquema original)
+#:   "dual" — escribe en ambos, lee del original (transición)
+#:   "rows" — un item por fila, totales con ADD atómico
+#: Ver core/ledger.py para el porqué y tools/migrate_ledger_rows.py para poblar.
+LEDGER_ROW_SCHEME = os.getenv("LEDGER_ROW_SCHEME", "off").strip().lower()
+
 PASSWORD_HASH_SCHEME = "pbkdf2_sha256"
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "210000"))

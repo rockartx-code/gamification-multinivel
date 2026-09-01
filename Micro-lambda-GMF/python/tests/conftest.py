@@ -97,8 +97,67 @@ class FakeTable:
         self.store.pop((str(Key["PK"]), str(Key["SK"])), None)
         return {}
 
-    def update_item(self, Key=None, **kw):
-        return {"Attributes": dict(self.store.get((str(Key["PK"]), str(Key["SK"])), {}))}
+    def update_item(self, Key=None, UpdateExpression=None,
+                    ExpressionAttributeValues=None, ExpressionAttributeNames=None, **kw):
+        """Aplica de verdad `SET` y `ADD`, incluido `if_not_exists`.
+
+        La versión anterior solo devolvía el item sin tocarlo, así que las
+        pruebas no veían el efecto de ningún `UpdateItem` — y el camino barato
+        del ledger (`ADD` sobre la cabecera) parecía no escribir nada.
+        """
+        import re as _re
+        from decimal import Decimal as _D
+
+        clave = (str(Key["PK"]), str(Key["SK"]))
+        item = dict(self.store.get(clave, {}))
+        item.setdefault("PK", clave[0])
+        item.setdefault("SK", clave[1])
+        valores = ExpressionAttributeValues or {}
+        nombres = ExpressionAttributeNames or {}
+
+        def _resolver(texto):
+            texto = texto.strip()
+            if texto.startswith(":"):
+                return valores[texto]
+            m = _re.fullmatch(r"if_not_exists\((#?\w+),\s*(:\w+)\)", texto)
+            if m:
+                attr = nombres.get(m.group(1), m.group(1))
+                return item.get(attr, valores[m.group(2)])
+            if texto.startswith("#"):
+                return item.get(nombres.get(texto, texto))
+            return item.get(texto)
+
+        expresion = (UpdateExpression or "").strip()
+        # Separa las cláusulas SET / ADD / REMOVE conservando su orden.
+        partes = _re.split(r"\b(SET|ADD|REMOVE)\b", expresion)
+        clausulas = [(partes[i].upper(), partes[i + 1]) for i in range(1, len(partes) - 1, 2)]
+
+        for tipo, cuerpo in clausulas:
+            for asignacion in _re.split(r",(?![^(]*\))", cuerpo):
+                asignacion = asignacion.strip()
+                if not asignacion:
+                    continue
+                if tipo == "SET":
+                    izq, der = asignacion.split("=", 1)
+                    attr = nombres.get(izq.strip(), izq.strip())
+                    # Soporta `a - :x` y `a + :x` además del valor directo.
+                    m = _re.fullmatch(r"(.+?)\s*([+-])\s*(.+)", der.strip())
+                    if m and (m.group(1).strip().startswith("if_not_exists")
+                              or m.group(1).strip().lstrip("#").isidentifier()):
+                        base = _D(str(_resolver(m.group(1)) or 0))
+                        delta = _D(str(_resolver(m.group(3))))
+                        item[attr] = base + delta if m.group(2) == "+" else base - delta
+                    else:
+                        item[attr] = _resolver(der)
+                elif tipo == "ADD":
+                    attr_txt, valor_txt = asignacion.split(None, 1)
+                    attr = nombres.get(attr_txt, attr_txt)
+                    item[attr] = _D(str(item.get(attr, 0))) + _D(str(_resolver(valor_txt)))
+                elif tipo == "REMOVE":
+                    item.pop(nombres.get(asignacion, asignacion), None)
+
+        self.store[clave] = item
+        return {"Attributes": dict(item)}
 
     def query(self, **kw):
         rows = [
