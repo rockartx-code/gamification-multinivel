@@ -32,6 +32,12 @@ jobs:
       - name: Pruebas
         run: python -m pytest tests -q
 
+      - name: Validar la plantilla de infraestructura
+        # `sam validate` requiere credenciales; aquí basta con comprobar que el
+        # YAML es válido. Las pruebas de tests/test_infraestructura.py son las
+        # que verifican que la plantilla concuerde con el código.
+        run: python -c "import yaml,sys; L=type('L',(yaml.SafeLoader,),{}); L.add_multi_constructor('!', lambda *a: None); yaml.load(open('../template.yaml'), Loader=L); print('template.yaml válido')"
+
       - name: Presupuesto de consultas a DynamoDB
         # El coste de los endpoints no debe crecer con el tamaño del dataset.
         run: python tools/check_query_budget.py
