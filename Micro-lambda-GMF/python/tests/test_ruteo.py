@@ -9,7 +9,10 @@ El handler se identifica interceptando las funciones `handle_*` del módulo y
 registrando cuál se invocó, sin ejecutar su cuerpo.
 """
 import importlib
+import io
 import itertools
+import os
+import re
 
 import pytest
 
@@ -32,9 +35,32 @@ SEGUNDO_NIVEL = [
 METODOS = ["GET", "POST", "PATCH", "DELETE"]
 
 
+def _rutas_del_openapi():
+    """Rutas declaradas en el contrato, con los `{param}` sustituidos.
+
+    El corpus genérico de dos niveles no alcanza rutas como
+    `/commissions/associates/{id}/month/{mes}`. El OpenAPI sí las declara, y
+    además es la fuente independiente de la implementación: si un refactor
+    rompe una ruta del contrato, se ve aquí.
+    """
+    especificacion = os.path.join(os.path.dirname(__file__), "..", "..", "openapi-aws.yaml")
+    if not os.path.exists(especificacion):
+        return []
+    texto = io.open(especificacion, encoding="utf-8").read()
+    rutas = re.findall(r"^  (/[A-Za-z0-9_\-{}/\.]+):", texto, re.M)
+    return [re.sub(r"\{[^}]+\}", "123", r).replace("/+", "/") for r in rutas]
+
+
 def _rutas_del_modulo(raices):
+    vistas = set()
     for raiz, sub in itertools.product(raices, SEGUNDO_NIVEL):
-        yield f"/{raiz}" if not sub else f"/{raiz}/{sub}"
+        ruta = f"/{raiz}" if not sub else f"/{raiz}/{sub}"
+        vistas.add(ruta)
+        yield ruta
+    for ruta in _rutas_del_openapi():
+        if ruta.strip("/").split("/")[0] in raices and ruta not in vistas:
+            vistas.add(ruta)
+            yield ruta
 
 
 @pytest.fixture
@@ -81,11 +107,16 @@ def test_el_ruteo_es_estable(nombre_modulo, espia, snapshot_ruteo):
                 "queryStringParameters": {}, "body": "{}",
             }
             try:
-                modulo.lambda_handler(evento, None)
+                respuesta = modulo.lambda_handler(evento, None)
+                estado = (respuesta or {}).get("statusCode", "<None → 502>")
             except Exception as ex:                      # noqa: BLE001
                 observado[f"{metodo} {ruta}"] = f"<error:{type(ex).__name__}>"
                 continue
-            observado[f"{metodo} {ruta}"] = llamadas[0] if llamadas else "<sin handler>"
+            # Se registra también el estado: en varios lambdas la lógica está
+            # en línea y no invoca ningún `handle_*`, así que solo con el
+            # nombre del handler la instantánea no distinguía 200 de 404.
+            quien = llamadas[0] if llamadas else "<sin handler>"
+            observado[f"{metodo} {ruta}"] = f"{quien} [{estado}]"
 
     snapshot_ruteo(nombre_modulo, observado)
 

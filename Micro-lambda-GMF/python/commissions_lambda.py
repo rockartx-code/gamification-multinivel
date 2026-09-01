@@ -1034,125 +1034,174 @@ def handle_monthly_stats(month: str) -> dict:
 
 # --- LAMBDA HANDLER PRINCIPAL ---
 
-def _route_summary(method: str, segments: list, event: dict, headers: dict):
-    """GET /commissions/summary — export mensual agregado."""
-    root = segments[0] if segments else ""
-    if root == "summary" and method == "GET":
-        err = utils._require_admin(headers, "access_screen_stats")
-        if err: return err
-        month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
-        # COMMISSION_MONTH ordena por beneficiario, no por fecha, así que no
-        # admite recorte por clave; se lee la partición completa (paginada).
-        all_comm = utils._query_bucket("COMMISSION_MONTH")
-        receipts_raw = utils._query_bucket("COMMISSION_RECEIPT", sk_from=str(month or ""))
-        receipt_by_cust = {}
-        for r in receipts_raw:
-            if str(r.get("monthKey")) == str(month):
-                receipt_by_cust[str(r.get("customerId"))] = r.get("assetUrl") or ""
-        summary = {}
-        for item in all_comm:
-            sk = str(item.get("SK") or "")
-            if f"#MONTH#{month}" not in sk:
-                continue
-            bid = str(item.get("beneficiaryId") or "")
-            if not bid:
-                continue
-            confirmed = float(utils._to_decimal(item.get("totalConfirmed", 0)))
-            receipt_url = receipt_by_cust.get(bid, "")
-            if confirmed <= 0:
-                status = "no_moves"
-            elif receipt_url:
-                status = "paid"
-            else:
-                status = "pending"
-            summary[bid] = {
-                "customerId": bid,
-                "monthKey": month,
-                "paidTotal": confirmed,
-                "status": status,
-                "receiptUrl": receipt_url,
-            }
-        return utils._json_response(200, {"summary": summary, "monthKey": month})
 
-    # POST /commissions/request
-    return None
+# ---------------------------------------------------------------------------
+# HANDLERS DE RUTA
+# ---------------------------------------------------------------------------
+
+def handle_commissions_summary(peticion) -> dict:
+    """GET /commissions/summary?month= — estado de pago por beneficiario."""
+    month = peticion.query.get("month") or utils._month_key()
+
+    # COMMISSION_MONTH ordena por beneficiario, no por fecha, así que no admite
+    # recorte por clave; se lee la partición completa (paginada).
+    recibos_por_cliente = {
+        str(r.get("customerId")): r.get("assetUrl") or ""
+        for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=str(month or ""))
+        if str(r.get("monthKey")) == str(month)
+    }
+
+    resumen = {}
+    for item in utils._query_bucket("COMMISSION_MONTH"):
+        if f"#MONTH#{month}" not in str(item.get("SK") or ""):
+            continue
+        beneficiario = str(item.get("beneficiaryId") or "")
+        if not beneficiario:
+            continue
+        confirmado = float(utils._to_decimal(item.get("totalConfirmed", 0)))
+        recibo = recibos_por_cliente.get(beneficiario, "")
+        resumen[beneficiario] = {
+            "customerId": beneficiario,
+            "monthKey": month,
+            "paidTotal": confirmado,
+            "status": "no_moves" if confirmado <= 0 else ("paid" if recibo else "pending"),
+            "receiptUrl": recibo,
+        }
+    return utils._json_response(200, {"summary": resumen, "monthKey": month})
 
 
-def _route_config(method: str, segments: list, body: dict, headers: dict):
-    """Sub-rutas de /commissions/config."""
-    if (segments[0] if segments else "") != "config" or len(segments) <= 1:
-        return None
-    sub = segments[1]
-    if sub == "rewards":
-        if method == "GET":
-            return utils._json_response(200, {"config": utils._load_app_config().get("rewards")})
-        if method == "PUT":
-            err = utils._require_admin(headers, "config_manage")
-            if err: return err
-            current = utils._load_app_config()
-            current["rewards"] = body
-            saved = _save_app_config(current)
-            return utils._json_response(200, {"config": saved.get("rewards")})
-    if sub == "app":
-        if method == "GET":
-            err = utils._require_admin(headers, "access_screen_settings")
-            if err: return err
-            cfg = utils._load_app_config()
-            if not cfg:
-                cfg = _default_app_config()
-            return utils._json_response(200, {"config": cfg})
-        if method == "PUT":
-            err = utils._require_admin(headers, "config_manage")
-            if err: return err
-            if not body:
-                return utils._json_response(400, {"message": "config invalida"})
-            current = utils._load_app_config() or _default_app_config()
-            incoming = body.get("config") if isinstance(body.get("config"), dict) else body
-            merged = utils._merge_dict(current, incoming)
-            saved = _save_app_config(merged)
-            utils._audit_event("config.app.update", headers, body, {"scope": "app"})
-            return utils._json_response(200, {"config": saved})
-    return None
+def handle_get_config(peticion) -> dict:
+    """GET /commissions/config/{ámbito} — `rewards` o `app`."""
+    if peticion.params["ambito"] == "rewards":
+        return utils._json_response(200, {"config": utils._load_app_config().get("rewards")})
+    return utils._json_response(200, {"config": utils._load_app_config()})
 
 
-def _route_bonuses(method: str, segments: list, body: dict, event: dict, headers: dict):
-    """Sub-rutas de /commissions/bonuses."""
-    root = segments[0] if segments else ""
-    if root != "bonuses" or len(segments) != 2:
-        return None
+def handle_put_config(peticion) -> dict:
+    """PUT /commissions/config/{ámbito} — guarda y propaga la configuración."""
+    ambito = peticion.params["ambito"]
+    if ambito == "rewards":
+        actual = utils._load_app_config()
+        actual["rewards"] = peticion.body
+        guardada = _save_app_config(actual)
+        return utils._json_response(200, {"config": guardada.get("rewards")})
 
-    cid = segments[1]
-    if method == "GET":
-        err = utils._require_self_or_admin(headers, cid)
-        if err: return err
-        query_params = event.get("queryStringParameters") or {}
-        month = query_params.get("month")
-        awards = utils._query_bucket("BONUS_AWARD", sk_from=str(month or ""))
-        result = [a for a in awards if str(a.get("customerId")) == str(cid)]
-        if month:
-            result = [a for a in result if a.get("monthKey") == month]
-        # Calcular VP/VG/rango actuales
-        cfg       = utils._load_app_config()
-        bonus_cfg = cfg.get("bonuses") or {}
-        mk        = month or utils._month_key()
-        mxn_per_vp   = utils._mxn_per_vp()
-        max_levels   = utils._max_network_levels()
-        vp   = _calc_vp(cid, mk, mxn_per_vp)
-        vg   = _calc_vg(cid, mk, mxn_per_vp, max_levels)
-        rank = _get_rank(vg, bonus_cfg.get("rankThresholds", []))
-        return utils._json_response(200, {"awards": result, "vp": vp, "vg": vg, "rank": rank})
+    if not peticion.body:
+        return utils._json_response(400, {"message": "config invalida"})
+    entrante = (peticion.body.get("config")
+                if isinstance(peticion.body.get("config"), dict) else peticion.body)
+    guardada = _save_app_config(utils._merge_dict(utils._load_app_config(), entrante))
+    utils._audit_event("config.app.update", peticion.headers, peticion.body, {"scope": "app"})
+    return utils._json_response(200, {"config": guardada})
 
-    # /bonuses/evaluate — dispara la evaluación manual (admin/sistema)
-    if segments[1] == "evaluate" and method == "POST":
-        err = utils._require_admin(headers, "commissions_register_payment")
-        if err: return err
-        cid = body.get("customerId")
-        month_key = body.get("monthKey") or utils._month_key()
-        if not cid:
-            return utils._json_response(400, {"message": "customerId requerido"})
-        return utils._json_response(200, handle_evaluate_bonuses(str(cid), month_key))
 
-    return None
+def handle_associate_commissions(peticion) -> dict:
+    """GET /commissions/associates/{id}/commissions — mes contable del socio."""
+    asociado = peticion.params["id"]
+    error = utils._require_self_or_admin(peticion.headers, asociado)
+    if error:
+        return error
+    mes = peticion.query.get("month") or utils._month_key()
+    return utils._json_response(200, _get_ledger_month(asociado, mes))
+
+
+def handle_associate_month_route(peticion) -> dict:
+    """GET /commissions/associates/{id}/month/{mes}."""
+    asociado = peticion.params["id"]
+    error = utils._require_self_or_admin(peticion.headers, asociado)
+    if error:
+        return error
+    return handle_get_associate_month(asociado, peticion.params["mes"])
+
+
+def handle_customer_bonuses(peticion) -> dict:
+    """GET /commissions/bonuses/{id} — bonos del socio y sus métricas."""
+    cliente = peticion.params["id"]
+    error = utils._require_self_or_admin(peticion.headers, cliente)
+    if error:
+        return error
+
+    mes_filtro = peticion.query.get("month")
+    awards = utils._query_bucket("BONUS_AWARD", sk_from=str(mes_filtro or ""))
+    resultado = [a for a in awards if str(a.get("customerId")) == str(cliente)]
+    if mes_filtro:
+        resultado = [a for a in resultado if a.get("monthKey") == mes_filtro]
+
+    mes = mes_filtro or utils._month_key()
+    mxn_per_vp = utils._mxn_per_vp()
+    vp = _calc_vp(cliente, mes, mxn_per_vp)
+    vg = _calc_vg(cliente, mes, mxn_per_vp, utils._max_network_levels())
+    rangos = (utils._load_app_config().get("bonuses") or {}).get("rankThresholds", [])
+    return utils._json_response(200, {
+        "awards": resultado, "vp": vp, "vg": vg, "rank": _get_rank(vg, rangos),
+    })
+
+
+def handle_evaluate_bonuses_route(peticion) -> dict:
+    """POST /commissions/bonuses/evaluate — evaluación manual."""
+    cliente = peticion.body.get("customerId")
+    if not cliente:
+        return utils._json_response(400, {"message": "customerId requerido"})
+    mes = peticion.body.get("monthKey") or utils._month_key()
+    return utils._json_response(200, handle_evaluate_bonuses(str(cliente), mes))
+
+
+def handle_payout_request_route(peticion) -> dict:
+    """POST /commissions/request — solicitud de pago del socio."""
+    error = utils._require_self_or_admin(peticion.headers, peticion.body.get("customerId"))
+    return error or handle_payout_request(peticion.body)
+
+
+def handle_upload_receipt_route(peticion) -> dict:
+    """POST /commissions/receipt — el socio sube su comprobante."""
+    error = utils._require_self_or_admin(peticion.headers, peticion.body.get("customerId"))
+    return error or handle_upload_receipt(peticion.body)
+
+
+Ruta = utils.routing.Ruta
+
+#: Superficie del motor de comisiones. Rutas con `{}` capturan un segmento.
+#: Donde el privilegio depende del actor (dueño o admin) se resuelve dentro
+#: del handler con `_require_self_or_admin`; el resto se declara aquí.
+RUTAS = [
+    Ruta("GET", "summary", privilegio="access_screen_stats",
+         descripcion="Export mensual por beneficiario", handler=handle_commissions_summary),
+    Ruta("POST", "request", descripcion="Solicitud de pago (dueño o admin)",
+         handler=handle_payout_request_route),
+    Ruta("POST", "receipt", descripcion="Comprobante subido por el socio",
+         handler=handle_upload_receipt_route),
+    Ruta("POST", "admin/receipt", privilegio="commissions_register_payment",
+         descripcion="Comprobante registrado por el admin",
+         handler=lambda p: handle_admin_receipt(p.body)),
+
+    Ruta("GET", "config/{ambito}", privilegio="access_screen_settings",
+         descripcion="Leer configuración (rewards | app)", handler=handle_get_config),
+    Ruta("PUT", "config/{ambito}", privilegio="config_manage",
+         descripcion="Guardar configuración", handler=handle_put_config),
+
+    Ruta("GET", "associates/{id}/commissions", descripcion="Mes contable del socio",
+         handler=handle_associate_commissions),
+    Ruta("GET", "associates/{id}/month/{mes}", descripcion="Estado mensual del socio",
+         handler=handle_associate_month_route),
+
+    Ruta("POST", "bonuses/evaluate", privilegio="commissions_register_payment",
+         descripcion="Disparar evaluación de bonos", handler=handle_evaluate_bonuses_route),
+    Ruta("GET", "bonuses/{id}", descripcion="Bonos y métricas del socio",
+         handler=handle_customer_bonuses),
+
+    Ruta("GET", "monthly-stats", privilegio="access_screen_stats",
+         descripcion="Estadísticas operacionales del mes",
+         handler=lambda p: handle_monthly_stats(p.query.get("month") or utils._month_key())),
+]
+
+#: Acciones que llegan desde Step Functions (no por API Gateway).
+ACCIONES_SFN = {
+    "ORDER_PAID": lambda oid: handle_apply_rewards(oid),
+    "ORDER_DELIVERED": lambda oid: handle_confirm_commissions(oid),
+    "ORDER_CANCELLED": lambda oid: _handle_void_commissions_action(oid, "order_cancelled"),
+    "ORDER_REFUNDED": lambda oid: _handle_void_commissions_action(oid, "order_refunded"),
+    "ORDER_RETURNED": lambda oid: _handle_void_commissions_action(oid, "order_returned"),
+}
 
 
 def lambda_handler(event, context):
@@ -1160,88 +1209,15 @@ def lambda_handler(event, context):
     # arrastrar los datos de un evento al siguiente.
     _reset_request_cache()
 
-    # 1. Detectar si es una invocación de Step Functions
-    if "action" in event:
-        action = event["action"]
-        oid = event.get("orderId")
-        if action == "ORDER_PAID" and oid:
-            handle_apply_rewards(oid)
-        if action == "ORDER_DELIVERED" and oid:
-            handle_confirm_commissions(oid)
-        if action in ("ORDER_CANCELLED", "ORDER_REFUNDED", "ORDER_RETURNED") and oid:
-            _handle_void_commissions_action(oid, action.lower())
-        return {"status": "PROCESSED", "action": action, "orderId": oid}
+    accion = event.get("action")
+    if accion:
+        order_id = event.get("orderId")
+        ejecutar = ACCIONES_SFN.get(accion)
+        if ejecutar and order_id:
+            ejecutar(order_id)
+        return {"status": "PROCESSED", "action": accion, "orderId": order_id}
 
-    # 2. Petición de API Gateway
-    if (event.get("httpMethod") or "").upper() == "OPTIONS":
-        return utils._cors_preflight_response()
-    request = utils._http_request(event, strip_prefix="commissions")
-    method = request.method
-    body, headers, segments = request.body, request.headers, request.segments
-
-    try:
-        if not segments:
-            return utils._json_response(200, {"service": "commissions"})
-
-        root = segments[0]
-
-        # GET /commissions/summary?month={monthKey} — export mensual
-        respuesta = _route_summary(method, segments, event, headers)
-        if respuesta is not None:
-            return respuesta
-
-        # POST /commissions/request
-        if root == "request" and method == "POST":
-            err = utils._require_self_or_admin(headers, body.get("customerId"))
-            if err: return err
-            return handle_payout_request(body)
-
-        # POST /commissions/receipt
-        if root == "receipt" and method == "POST":
-            err = utils._require_self_or_admin(headers, body.get("customerId"))
-            if err: return err
-            return handle_upload_receipt(body)
-
-        # POST /commissions/admin/receipt
-        if root == "admin" and len(segments) >= 2 and segments[1] == "receipt":
-            if method == "POST":
-                err = utils._require_admin(headers, "commissions_register_payment")
-                if err: return err
-                return handle_admin_receipt(body)
-
-        # /commissions/config/rewards  y  /commissions/config/app
-        respuesta = _route_config(method, segments, body, headers)
-        if respuesta is not None:
-            return respuesta
-
-        # /commissions/associates/{id}/commissions  y  .../month/{monthKey}
-        if root == "associates" and len(segments) >= 3:
-            aid = segments[1]
-            sub = segments[2]
-            if sub == "commissions":
-                err = utils._require_self_or_admin(headers, aid)
-                if err: return err
-                month = (event.get("queryStringParameters") or {}).get("month", utils._month_key())
-                return utils._json_response(200, _get_ledger_month(aid, month))
-            if sub == "month" and len(segments) >= 4:
-                err = utils._require_self_or_admin(headers, aid)
-                if err: return err
-                return handle_get_associate_month(aid, segments[3])
-
-        # /commissions/bonuses/{customerId} y /commissions/bonuses/evaluate
-        respuesta = _route_bonuses(method, segments, body, event, headers)
-        if respuesta is not None:
-            return respuesta
-
-        # GET /commissions/monthly-stats?month=YYYY-MM
-        if root == "monthly-stats" and method == "GET":
-            err = utils._require_admin(headers, "access_screen_stats")
-            if err: return err
-            month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
-            return handle_monthly_stats(month)
-
-        return utils._json_response(404, {"message": "Ruta de comisiones no encontrada"})
-
-    except Exception as e:
-        utils._log_error("commissions_unhandled_error", e)
-        return utils._json_response(500, {"message": "Error en motor de comisiones", "error": str(e)})
+    return utils.routing.despachar(
+        RUTAS, event, strip_prefix="commissions", servicio="commissions",
+        requiere_privilegio=utils._require_admin,
+    )
