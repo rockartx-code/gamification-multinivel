@@ -31,7 +31,7 @@ def test_tolera_hashes_corruptos_o_vacios(utils):
 def test_no_hay_token_maestro_sin_variable_de_entorno(utils):
     """El token de superadmin debe venir del entorno, no del código fuente."""
     assert utils._SUPERADMIN_TOKEN == "", "SUPERADMIN_TOKEN no definido → sin puerta trasera"
-    texto = io.open(os.path.join(RAIZ, "core_utils.py"), encoding="utf-8").read()
+    texto = io.open(os.path.join(RAIZ, "core", "settings.py"), encoding="utf-8").read()
     assert 'os.getenv("SUPERADMIN_TOKEN"' in texto
 
 

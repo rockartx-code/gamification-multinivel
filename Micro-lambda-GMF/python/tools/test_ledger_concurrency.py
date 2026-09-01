@@ -38,7 +38,9 @@ import boto3
 boto3.resource = lambda *a, **k: type("R", (), {"Table": lambda s, n: FakeTable()})()
 boto3.client = lambda *a, **k: None
 import core_utils as utils
-utils._table = FakeTable()
+from core import db as core_db
+core_db._table = FakeTable()
+utils._table = core_db._table
 utils.ClientError = Err
 
 def escribir(order_id, n_hilos=12):

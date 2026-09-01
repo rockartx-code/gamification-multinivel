@@ -147,6 +147,12 @@ def utils(store, monkeypatch):
     monkeypatch.setattr(boto3, "resource", lambda *a, **k: FakeResource(store))
     monkeypatch.setattr(boto3, "client", lambda *a, **k: None)
     import core_utils
+    from core import db as core_db
+
+    # La costura está en `core.db`, no en la fachada: `core_utils` reexporta
+    # los bindings, así que sustituirlos ahí no alcanzaría al código real.
+    monkeypatch.setattr(core_db, "_table", FakeTable(store))
+    monkeypatch.setattr(core_db, "_dynamodb", FakeResource(store))
     monkeypatch.setattr(core_utils, "_table", FakeTable(store))
     monkeypatch.setattr(core_utils, "_dynamodb", FakeResource(store))
     core_utils._invalidate_app_config_cache()

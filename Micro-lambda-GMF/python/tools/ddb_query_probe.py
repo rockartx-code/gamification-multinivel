@@ -101,8 +101,12 @@ boto3.client = lambda *a, **k: type("C", (), {"__getattr__": lambda s, n: (lambd
 
 import core_utils as utils  # noqa: E402
 
-utils._table = FakeTable()
-utils._dynamodb = FakeResource()
+from core import db as core_db
+
+core_db._table = FakeTable()
+core_db._dynamodb = FakeResource()
+utils._table = core_db._table
+utils._dynamodb = core_db._dynamodb
 
 
 def seed(n_customers, month=None):

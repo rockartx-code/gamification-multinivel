@@ -65,8 +65,11 @@ import boto3
 boto3.resource = lambda *a, **k: type("R", (), {"Table": lambda s, n: FakeTable()})()
 boto3.client = lambda *a, **k: None
 import core_utils as utils
-utils._table = FakeTable()
-utils._ddb_client = FakeClient()
+from core import db as core_db
+core_db._table = FakeTable()
+utils._table = core_db._table
+core_db._ddb_client = FakeClient()
+utils._ddb_client = core_db._ddb_client
 
 for month in ("2026-06", "2026-07", "2026-08", "2026-09"):
     for i in range(5):
