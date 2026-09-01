@@ -169,6 +169,73 @@
   100% { transform: translateY(-50%) scale(1.15); }
 }
 
+/* ═══ Celebración al agregar al carrito ═══════════════════════════════ */
+
+.cart-bump {
+  animation: cartBump 0.7s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+@keyframes cartBump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35) rotate(-6deg); }
+  60% { transform: scale(0.94) rotate(3deg); }
+  100% { transform: scale(1); }
+}
+
+.cart-burst {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+}
+
+.cart-burst .cb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(200, 162, 74, 0.95);
+  filter: drop-shadow(0 0 6px rgba(200, 162, 74, 0.8));
+  opacity: 0;
+  animation: cartSpark 0.9s var(--ease-luxe, cubic-bezier(0.22, 1, 0.36, 1)) forwards;
+}
+
+.cart-burst .cb-1 { --dx: -20px; --dy: -16px; }
+.cart-burst .cb-2 { --dx: 20px; --dy: -14px; animation-delay: 40ms; }
+.cart-burst .cb-3 { --dx: -24px; --dy: 6px; animation-delay: 80ms; width: 4px; height: 4px; }
+.cart-burst .cb-4 { --dx: 24px; --dy: 8px; animation-delay: 60ms; width: 4px; height: 4px; }
+.cart-burst .cb-5 { --dx: -8px; --dy: -24px; animation-delay: 100ms; }
+.cart-burst .cb-6 { --dx: 10px; --dy: -26px; animation-delay: 20ms; width: 5px; height: 5px; }
+
+@keyframes cartSpark {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); }
+}
+
+.toast-logro {
+  background:
+    radial-gradient(circle at top left, rgba(200, 162, 74, 0.25), transparent 55%),
+    linear-gradient(135deg, rgba(253, 251, 247, 0.98), rgba(239, 232, 220, 0.98));
+  animation: toastPop 0.55s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+@keyframes toastPop {
+  0% { opacity: 0; transform: translateY(16px) scale(0.92); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-bump,
+  .cart-burst .cb,
+  .toast-logro {
+    animation: none;
+  }
+  .cart-burst { display: none; }
+}
+
 .notification-modal-card {
   position: relative;
   overflow: hidden;

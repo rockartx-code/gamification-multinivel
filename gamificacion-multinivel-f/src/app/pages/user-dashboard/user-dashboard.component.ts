@@ -82,6 +82,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   secondaryGoalsVisible = false;
   toastMessage = 'Actualizado.';
   isToastVisible = false;
+  /** 'logro' pinta el toast como celebración (medallón + detalle dorado). */
+  toastKind: 'info' | 'logro' = 'info';
+  toastDetail = '';
+  /** Ráfagas de partículas ancladas al carrito; cada id monta un burst nuevo. */
+  cartBursts: number[] = [];
+  isCartBumping = false;
+  private burstSeq = 0;
+  private cartBumpTimeout: number | null = null;
   captionText = '';
   hasCopiedLink = false;
   hasCopiedCopy = false;
@@ -1590,7 +1598,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const product = this.resolveProduct(productId);
     if (product) {
       const variantId = this.selectedVariantIds.get(productId);
+      const previousQty = this.getCartQty(productId);
       this.cartControl.upsertItem(this.buildCartItem(product, variantId), qty);
+      if (qty > previousQty) {
+        this.celebrateAdd(product, qty - previousQty);
+        this.logGoalProgress();
+        this.maybeShowGoalProgressToast();
+        return;
+      }
     }
     this.logGoalProgress();
     if (this.cartTotal > 0) {
@@ -1618,10 +1633,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!product) {
       return;
     }
+    const previousQty = this.cartControl.getQty(`${productId}::${event.variantId}`);
     const cartItem = this.buildCartItem(product, event.variantId);
     this.cartControl.upsertItem(cartItem, event.qty);
     this.logGoalProgress();
-    if (this.cartTotal > 0) {
+    if (event.qty > previousQty) {
+      this.celebrateAdd(product, event.qty - previousQty);
+    } else if (this.cartTotal > 0) {
       this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
     }
     this.maybeShowGoalProgressToast();
@@ -1650,6 +1668,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (product) {
       const variantId = this.selectedVariantIds.get(productId);
       this.cartControl.addItem(this.buildCartItem(product, variantId), addQty);
+      if (addQty > 0) {
+        this.celebrateAdd(product, addQty);
+      }
     }
     this.logGoalProgress();
     this.maybeShowGoalProgressToast();
@@ -1674,6 +1695,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const product = this.resolveProduct(productId);
     if (product) {
       this.cartControl.addItem(this.buildCartItem(product), 1);
+      this.celebrateAdd(product, 1);
     }
     this.logGoalProgress();
     this.maybeShowGoalProgressToast();
@@ -2094,12 +2116,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const progress = this.goalBasePercent(this.activeGoal);
     if (progress >= 100 && this.goalToastState !== 'done') {
       this.goalToastState = 'done';
-      this.showToast('?? Meta alcanzada');
+      this.presentToast('¡Meta alcanzada!', 'logro', 'Lo lograste con tu constancia');
       return;
     }
     if (progress > 90 && this.goalToastState !== 'near') {
       this.goalToastState = 'near';
-      this.showToast('?? Estás a punto de lograr tu meta');
+      this.presentToast('¡Ya casi!', 'logro', 'Estás a un paso de tu meta del mes');
     }
   }
 
@@ -2174,14 +2196,46 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private showToast(message: string): void {
+    this.presentToast(message, 'info', '');
+  }
+
+  /**
+   * Celebra un agregado al carrito: ráfaga dorada en el icono del carrito,
+   * rebote del badge y toast de logro con los PC que suma la compra.
+   */
+  private celebrateAdd(product: { vpPoints?: number } | null | undefined, qty: number): void {
+    const pc = Math.round(Number(product?.vpPoints ?? 0) * Math.max(qty, 0) * 10) / 10;
+    this.cartBursts = [...this.cartBursts, ++this.burstSeq];
+    this.isCartBumping = false;
+    if (this.cartBumpTimeout) {
+      window.clearTimeout(this.cartBumpTimeout);
+    }
+    // Reinicia la animación de rebote aunque haya otra en curso.
+    window.setTimeout(() => (this.isCartBumping = true), 0);
+    this.cartBumpTimeout = window.setTimeout(() => {
+      this.isCartBumping = false;
+      this.cartBursts = [];
+    }, 1200);
+
+    const detail = pc > 0
+      ? `+${pc} PC hacia tu meta`
+      : this.hasDiscount
+        ? `Tu ${this.discountPercent}% de descuento aplicado`
+        : `Total: ${this.formatMoney(this.cartTotal)}`;
+    this.presentToast('Agregado al carrito', 'logro', detail);
+  }
+
+  private presentToast(message: string, kind: 'info' | 'logro', detail: string): void {
     this.toastMessage = message;
+    this.toastKind = kind;
+    this.toastDetail = detail;
     this.isToastVisible = true;
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
     }
     this.toastTimeout = window.setTimeout(() => {
       this.isToastVisible = false;
-    }, 2200);
+    }, kind === 'logro' ? 2600 : 2200);
   }
 
   loadOrders(page = 0): void {

@@ -758,8 +758,8 @@ export class AdminComponent implements OnInit {
         if (!this.honorBoardData && !this.isLoadingHonorBoard) {
           this.isLoadingHonorBoard = true;
           this.api.getHonorBoard().subscribe({
-            next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; },
-            error: () => { this.isLoadingHonorBoard = false; }
+            next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; this.requestViewUpdate(); },
+            error: () => { this.isLoadingHonorBoard = false; this.requestViewUpdate(); }
           });
         }
         break;
@@ -1075,6 +1075,9 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'notifications') {
       return 'Notificaciones';
     }
+    if (this.currentView === 'coupons') {
+      return 'Cupones';
+    }
     if (this.currentView === 'settings') {
       return 'Configuracion';
     }
@@ -1105,6 +1108,12 @@ export class AdminComponent implements OnInit {
     }
     if (this.currentView === 'notifications') {
       return 'Recordatorios, noticias y avisos programados para los usuarios.';
+    }
+    if (this.currentView === 'coupons') {
+      return 'Crea códigos de descuento y controla su vigencia y usos.';
+    }
+    if (this.currentView === 'honor_board') {
+      return 'Top 10 del mes por volumen de red (VG) y personal (VP).';
     }
     if (this.currentView === 'settings') {
       return 'Variables de negocio para reglas operativas.';
@@ -1562,6 +1571,37 @@ export class AdminComponent implements OnInit {
     return this.orders.filter((order) => order.status === status).length;
   }
 
+  /** Productos activos sin ninguna imagen cargada (KPI "Assets faltantes"). */
+  get productsMissingAssetsCount(): number {
+    return this.products.filter((p) => p.active && !(p.images ?? []).some((img) => (img.url ?? '').trim())).length;
+  }
+
+  /**
+   * Cola de trabajo derivada de los datos reales: le dice al operador qué es
+   * lo siguiente que hay que hacer, en orden del flujo del pedido. Vacía = al día.
+   */
+  get nextActions(): Array<{ icon: string; label: string; count: number; view: AdminViewId; status?: AdminOrder['status'] }> {
+    const actions: Array<{ icon: string; label: string; count: number; view: AdminViewId; status?: AdminOrder['status'] }> = [];
+    const push = (icon: string, label: string, count: number, status: AdminOrder['status']) => {
+      if (count > 0) {
+        actions.push({ icon, label, count, view: 'orders', status });
+      }
+    };
+    push('fa-hourglass-half', 'Confirmar pagos', this.orderCountByStatus('pending'), 'pending');
+    push('fa-box', 'Preparar envíos', this.orderCountByStatus('paid'), 'paid');
+    push('fa-truck', 'Confirmar entregas', this.orderCountByStatus('shipped'), 'shipped');
+    push('fa-rotate-left', 'Recibir devoluciones', this.orderCountByStatus('en_devolucion'), 'en_devolucion');
+    push('fa-money-bill-transfer', 'Resolver devoluciones validadas', this.orderCountByStatus('devuelto_validado'), 'devuelto_validado');
+    return actions.slice(0, 4);
+  }
+
+  runNextAction(action: { view: AdminViewId; status?: AdminOrder['status'] }): void {
+    this.onAdminNavSelect(action.view);
+    if (action.status) {
+      this.setOrderStatus(action.status);
+    }
+  }
+
 
   get ordersCount(): number {
     return this.orders.length;
@@ -1619,12 +1659,19 @@ export class AdminComponent implements OnInit {
     this.isLoadingStats = true;
     this.statsData = null;
     this.adminControl.getMonthlyStats(month).subscribe({
-      next: (data) => { this.statsData = data; this.isLoadingStats = false; },
-      error: () => { this.isLoadingStats = false; }
+      next: (data) => { this.statsData = data; this.isLoadingStats = false; this.requestViewUpdate(); },
+      error: () => { this.isLoadingStats = false; this.requestViewUpdate(); }
     });
   }
 
+  private reportMonthsCache: { ordersRef: AdminOrder[]; months: { value: string; label: string }[] } | null = null;
+
   get availableReportMonths(): { value: string; label: string }[] {
+    // Cachear por referencia de orders: un array nuevo en cada ciclo de
+    // detección de cambios re-renderizaba el select en bucle (NG0103).
+    if (this.reportMonthsCache?.ordersRef === this.orders) {
+      return this.reportMonthsCache.months;
+    }
     const monthSet = new Set<string>();
     const now = new Date();
     for (let i = 0; i < 12; i++) {
@@ -1639,13 +1686,15 @@ export class AdminComponent implements OnInit {
         }
       }
     }
-    return [...monthSet]
+    const months = [...monthSet]
       .sort((a, b) => b.localeCompare(a))
       .map((mk) => {
         const [y, m] = mk.split('-');
         const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-MX', { year: 'numeric', month: 'long' });
         return { value: mk, label: label.charAt(0).toUpperCase() + label.slice(1) };
       });
+    this.reportMonthsCache = { ordersRef: this.orders, months };
+    return months;
   }
 
   get activeReportMonth(): string {

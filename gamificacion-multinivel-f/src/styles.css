@@ -127,7 +127,29 @@ h4 {
   position: absolute;
   inset-block: 0;
   left: 0;
+  overflow: hidden;
   background: rgba(var(--rgb-primary), 0.95);
+  transition: width var(--dur-slow) var(--ease-luxe), left var(--dur-slow) var(--ease-luxe);
+}
+
+/* Brillo que recorre la barra: el progreso se siente vivo, no estático */
+.progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: progressShine 2.6s var(--ease-swift) infinite;
+}
+
+@keyframes progressShine {
+  0% { transform: translateX(-100%); }
+  55%, 100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill { transition: none; }
+  .progress-fill::after { animation: none; opacity: 0; }
 }
 
 .progress-fill-secondary {

@@ -89,6 +89,26 @@
 
           </div>
 
+          <!-- Cola de trabajo: siempre visible, dice qué es lo siguiente -->
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Siguiente</span>
+            <button *ngFor="let action of nextActions; let first = first" type="button"
+              class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:shadow-sm"
+              [ngClass]="first ? 'border-gold-35 bg-gold-20 text-on-gold' : 'border-olive-30 bg-ivory-80 text-main hover:bg-olive-10'"
+              (click)="runNextAction(action)">
+              <i class="fa-solid" [ngClass]="action.icon" aria-hidden="true"></i>
+              {{ action.label }}
+              <span class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full bg-white/60 px-1.5 py-0.5 text-[10px] font-bold leading-none">
+                {{ action.count }}
+              </span>
+            </button>
+            <span *ngIf="nextActions.length === 0"
+              class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-accent">
+              <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+              Operación al día
+            </span>
+          </div>
+
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders' && canAccessView('orders')">
             <ui-button size="sm" class="tabbtn" *ngFor="let tab of [
                 { status: 'pending', label: 'Pendiente' },
@@ -920,7 +940,7 @@
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-[11px] text-gray-600">Assets faltantes</div>
-                <div class="mt-1 text-2xl font-extrabold">2</div>
+                <div class="mt-1 text-2xl font-extrabold">{{ productsMissingAssetsCount }}</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-[11px] text-gray-600">Producto del mes</div>
@@ -1010,14 +1030,29 @@
                       <div>{{ product.name }}</div>
                       <div>{{ formatMoney(product.price) }}</div>
                       <div>{{ product.active ? 'Activo' : 'Retirado' }}</div>
-                      <div class="flex flex-wrap gap-2">
-                        <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>Editar</ui-button>
-                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (pressed)="toggleProductActive(product)">
-                          <i class="fa-solid" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
-                          {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
-                        </ui-button>
-                        <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)"><i class="fa-solid fa-star" aria-hidden="true"></i>Producto del mes</ui-button>
-                        <ui-button size="sm" variant="ghost" class="text-red-600" *ngIf="hasPermission('product_delete')" (pressed)="confirmDeleteProduct(product)"><i class="fa-solid fa-trash" aria-hidden="true"></i>Eliminar</ui-button>
+                      <!-- Acciones compactas: icono + tooltip; el detalle vive en las tarjetas móviles -->
+                      <div class="flex items-center gap-1">
+                        <button type="button" *ngIf="hasPermission('product_update')" (click)="editProduct(product)"
+                          class="flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-gray-600 transition hover:bg-olive-10 hover:text-main"
+                          title="Editar" aria-label="Editar producto">
+                          <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (click)="toggleProductActive(product)"
+                          class="flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-gray-600 transition hover:bg-olive-10 hover:text-main disabled:cursor-not-allowed disabled:opacity-50"
+                          [title]="product.active ? 'Retirar de la tienda' : 'Reactivar'"
+                          [attr.aria-label]="product.active ? 'Retirar producto' : 'Reactivar producto'">
+                          <i class="fa-solid text-xs" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (click)="setProductOfMonth(product)"
+                          class="flex h-8 w-8 items-center justify-center rounded-full border border-gold-35 bg-gold-12 text-on-gold transition hover:bg-gold-20 disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Hacer producto del mes" aria-label="Hacer producto del mes">
+                          <i class="fa-solid fa-star text-xs" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" *ngIf="hasPermission('product_delete')" (click)="confirmDeleteProduct(product)"
+                          class="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                          title="Eliminar" aria-label="Eliminar producto">
+                          <i class="fa-solid fa-trash text-xs" aria-hidden="true"></i>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1719,8 +1754,14 @@
                 <div class="text-sm font-semibold text-main">Nueva venta en sucursal</div>
                 <div class="mt-1 text-xs text-gray-600">El operador es el usuario logeado, el stock queda fijo a sus ligas y las ventas de clientes registrados aplican a metas y descuentos.</div>
 
-                <div *ngIf="!hasLinkedPosStock" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  No tienes un stock ligado. Vincula este usuario a un stock para poder registrar ventas.
+                <div *ngIf="!hasLinkedPosStock"
+                  class="mt-4 flex flex-col items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                  <span>No tienes un stock ligado. Vincula este usuario a un stock para poder registrar ventas.</span>
+                  <ui-button *ngIf="canAccessView('stocks')" size="sm" variant="ghost" class="shrink-0"
+                    (pressed)="onAdminNavSelect('stocks')">
+                    <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
+                    Ir a Stocks
+                  </ui-button>
                 </div>
 
                 <ng-container *ngIf="hasLinkedPosStock && currentPosStock">
@@ -2217,7 +2258,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div class="flex flex-wrap items-center gap-2">
                 <select class="rounded-xl border border-olive-30 bg-ivory-70 px-3 py-1.5 text-sm text-main focus:outline-none"
-                  [ngModel]="statsReportMonth" (ngModelChange)="statsReportMonth = $event; loadMonthlyStats($event || activeReportMonth)">
+                  [ngModel]="statsReportMonth || activeReportMonth" (ngModelChange)="statsReportMonth = $event; loadMonthlyStats($event || activeReportMonth)">
                   <option *ngFor="let m of availableReportMonths" [value]="m.value">{{ m.label }}</option>
                 </select>
                 <span class="text-xs text-gray-500">Periodo analizado</span>
@@ -3042,7 +3083,7 @@
                     (ngModelChange)="businessConfigDraft.pos.defaultDeliveryStatus = $event"></ui-form-field>
                   <ui-form-field
                     kind="select"
-                    label="Mapeo delivered_branch -> orden"
+                    label="Al entregar en sucursal, la orden queda como"
                     [options]="posOrderStatusMappingConfigOptions"
                     [tooltipText]="posOrderStatusMappingConfigTooltip"
                     [helpText]="configOptionDescription(businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch, posOrderStatusMappingConfigOptions)"
@@ -3050,7 +3091,7 @@
                     (ngModelChange)="businessConfigDraft.pos.orderStatusByDeliveryStatus.delivered_branch = $event"></ui-form-field>
                   <ui-form-field
                     kind="select"
-                    label="Mapeo paid_branch -> orden"
+                    label="Al cobrar en sucursal, la orden queda como"
                     [options]="posOrderStatusMappingConfigOptions"
                     [tooltipText]="posOrderStatusMappingConfigTooltip"
                     [helpText]="configOptionDescription(businessConfigDraft.pos.orderStatusByDeliveryStatus.paid_branch, posOrderStatusMappingConfigOptions)"
