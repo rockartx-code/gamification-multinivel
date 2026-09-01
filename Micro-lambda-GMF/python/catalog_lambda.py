@@ -418,151 +418,154 @@ def handle_notifications(method: str, body: dict, segments: list) -> dict:
 
 # --- LAMBDA HANDLER ---
 
-def lambda_handler(event: dict, context) -> dict:
-    if (event.get("httpMethod") or "").upper() == "OPTIONS":
-        return utils._cors_preflight_response()
-    request = utils._http_request(event)
-    method = request.method
-    body, headers, segments = request.body, request.headers, request.segments
-
-    if not segments:
-        return handle_catalog(method)
-
+def _eliminar_producto(peticion) -> dict:
+    """POST /catalog/product/remove — borra el producto y su puntero REF."""
+    raw_id = peticion.body.get("productId") or peticion.body.get("id")
+    if not raw_id:
+        return utils._json_response(400, {"message": "Se requiere productId en el body."})
     try:
-        root = segments[0]
+        product_id = int(raw_id)
+    except (TypeError, ValueError):
+        return utils._json_response(400, {"message": "productId debe ser numérico."})
 
-        if root == "catalog" and len(segments) == 1:
-            return handle_catalog(method)
+    product = utils._get_by_id("PRODUCT", product_id)
+    if not product:
+        return utils._json_response(404, {"message": "Producto no encontrado."})
 
-        # /catalog/catalog  → alias para GET/POST productos con auth de admin
-        if root == "catalog" and len(segments) == 2 and segments[1] == "catalog":
-            p_id = None
-            if method == "POST":
-                err = utils._require_admin(headers, "product_add")
-                if err: return err
-            return handle_products(method, body, p_id)
+    created_at = product.get("createdAt") or ""
+    utils._table.delete_item(Key={"PK": "PRODUCT", "SK": f"{created_at}#{product_id}"})
+    utils._table.delete_item(Key={"PK": f"PRODUCT#{product_id}", "SK": "REF"})
+    utils._audit_event("product.delete", peticion.headers, peticion.body, {"productId": product_id})
+    return utils._json_response(200, {"ok": True, "productId": product_id})
 
-        if root == "catalog" and len(segments) > 2 and segments[1] == "config" and segments[2] == "public" and method == "GET":
-            return handle_public_config()
 
-        # catalog/product — rutas unificadas del admin para productos
-        if root == "catalog" and len(segments) >= 2 and segments[1] == "product":
-            sub = segments[2] if len(segments) > 2 else None
+def _subir_asset_de_producto(peticion) -> dict:
+    """POST /catalog/product/{productId}/assets — sube una imagen a S3."""
+    product_id = peticion.params["productId"]
+    section = str(peticion.body.get("section", "general")).strip()
+    file_name = str(peticion.body.get("fileName", f"{section}.jpg")).strip() or f"{section}.jpg"
+    content_b64 = peticion.body.get("contentBase64", "")
+    content_type = str(peticion.body.get("contentType", "image/jpeg")).strip()
+    if not content_b64:
+        return utils._json_response(400, {"message": "contentBase64 requerido"})
+    try:
+        raw_data = base64.b64decode(content_b64)
+        unique = utils.uuid.uuid4().hex[:8]
+        s3_key = f"products/{product_id}/{section}/{unique}-{file_name}"
+        s3.put_object(Bucket=BUCKET_NAME, Key=s3_key, Body=raw_data,
+                      ContentType=content_type, ACL="public-read")
+        url = f"https://{BUCKET_NAME}.s3.{utils.AWS_REGION}.amazonaws.com/{s3_key}"
+    except Exception as error:                                        # noqa: BLE001
+        utils._log_error("product_asset_upload_failed", error, productId=product_id)
+        return utils._json_response(500, {"message": "Error al subir imagen"})
+    return utils._json_response(201, {"asset": {
+        "assetId": s3_key, "url": url, "section": section,
+        "productId": product_id, "contentType": content_type,
+    }})
 
-            # POST catalog/product/product-of-month → establecer producto del mes
-            if sub == "product-of-month" and method == "POST":
-                err = utils._require_admin(headers, "product_set_month")
-                if err: return err
-                return handle_products(method, body, "product-of-month")
 
-            # POST catalog/product/remove → eliminar producto permanentemente
-            if sub == "remove" and method == "POST":
-                err = utils._require_admin(headers, "product_delete")
-                if err: return err
-                pid = body.get("productId") or body.get("id")
-                if not pid:
-                    return utils._json_response(400, {"message": "Se requiere productId en el body."})
-                try:
-                    pid = int(pid)
-                except (TypeError, ValueError):
-                    return utils._json_response(400, {"message": "productId debe ser numérico."})
-                # Usar _get_by_id (mismo mecanismo que el resto del código) para verificar existencia
-                product = utils._get_by_id("PRODUCT", pid)
-                if not product:
-                    return utils._json_response(404, {"message": "Producto no encontrado."})
-                # Reconstruir las claves del item principal usando createdAt almacenado en el item
-                created_at = product.get("createdAt") or ""
-                main_sk = f"{created_at}#{pid}"
-                # Eliminar item principal del bucket y su referencia
-                utils._table.delete_item(Key={"PK": "PRODUCT", "SK": main_sk})
-                utils._table.delete_item(Key={"PK": f"PRODUCT#{pid}", "SK": "REF"})
-                utils._audit_event("product.delete", headers, body, {"productId": pid})
-                return utils._json_response(200, {"ok": True, "productId": pid})
+def _listar_productos_admin(peticion) -> dict:
+    """GET /catalog/product — catálogo completo, sin filtros de visibilidad."""
+    return utils._json_response(200, {
+        "products": list(utils._query_bucket("PRODUCT")),
+        "productOfMonth": _get_catalog_product_of_month(),
+    })
 
-            # POST catalog/product/{id}/assets → subir imagen de producto
-            if sub is not None and sub not in ("product-of-month", "remove") and len(segments) >= 4 and segments[3] == "assets" and method == "POST":
-                err = utils._require_admin(headers, "product_add")
-                if err: return err
-                product_id = sub
-                section = str(body.get("section", "general")).strip()
-                file_name = str(body.get("fileName", f"{section}.jpg")).strip() or f"{section}.jpg"
-                content_b64 = body.get("contentBase64", "")
-                content_type = str(body.get("contentType", "image/jpeg")).strip()
-                if not content_b64:
-                    return utils._json_response(400, {"message": "contentBase64 requerido"})
-                try:
-                    raw_data = base64.b64decode(content_b64)
-                    unique = utils.uuid.uuid4().hex[:8]
-                    s3_key = f"products/{product_id}/{section}/{unique}-{file_name}"
-                    s3.put_object(Bucket=BUCKET_NAME, Key=s3_key, Body=raw_data, ContentType=content_type, ACL="public-read")
-                    url = f"https://{BUCKET_NAME}.s3.{utils.AWS_REGION}.amazonaws.com/{s3_key}"
-                except Exception as e:
-                    print(f"[S3_ERROR] {e}")
-                    return utils._json_response(500, {"message": "Error al subir imagen"})
-                return utils._json_response(201, {"asset": {
-                    "assetId": s3_key, "url": url, "section": section,
-                    "productId": product_id, "contentType": content_type,
-                }})
 
-            # GET catalog/product → listar TODOS los productos para admin (sin filtros de activo/tienda)
-            if method == "GET" and sub is None:
-                err = utils._require_admin(headers, "product_add")
-                if err: return err
-                all_products = list(utils._query_bucket("PRODUCT"))
-                pom_product = _get_catalog_product_of_month()
-                return utils._json_response(200, {
-                    "products": all_products,
-                    "productOfMonth": pom_product,
-                })
+def _privilegio_de_producto(peticion) -> dict:
+    """POST /products/{id}: `product-of-month` exige un privilegio distinto."""
+    product_id = peticion.params.get("id")
+    privilegio = "product_set_month" if product_id == "product-of-month" else "product_add"
+    error = utils._require_admin(peticion.headers, privilegio)
+    return error or handle_products(peticion.method, peticion.body, product_id)
 
-            # POST catalog/product → crear / actualizar producto
-            if method == "POST" and sub is None:
-                err = utils._require_admin(headers, "product_add")
-                if err: return err
-                return handle_products(method, body, None)
 
-            return utils._json_response(404, {"message": "Ruta de producto no encontrada."})
+Ruta = utils.routing.Ruta
 
-        if root == "products":
-            p_id = segments[1] if len(segments) > 1 else None
-            if method == "POST":
-                # product-of-month requiere product_set_month; demás escrituras requieren product_add
-                priv = "product_set_month" if p_id == "product-of-month" else "product_add"
-                err = utils._require_admin(headers, priv)
-                if err: return err
-            return handle_products(method, body, p_id)
+#: Superficie del servicio de catálogo. El privilegio de cada endpoint se lee
+#: aquí, en una tabla, en vez de estar enterrado en una cascada de `if`.
+RUTAS = [
+    # ── Catálogo público ────────────────────────────────────────────────────
+    Ruta("GET", "catalog", publica=True, descripcion="Catálogo público de la tienda",
+         handler=lambda p: handle_catalog(p.method)),
+    Ruta("GET", "catalog/config/public", publica=True, descripcion="Config pública del negocio",
+         handler=lambda p: handle_public_config()),
+    Ruta("GET", "config/public", publica=True, descripcion="Alias legado de la config pública",
+         handler=lambda p: handle_public_config()),
 
-        if root == "product-categories" or (root == "catalog" and len(segments) > 1 and segments[1] == "categories"):
-            c_id = segments[2] if root == "catalog" and len(segments) > 2 else (segments[1] if root == "product-categories" and len(segments) > 1 else None)
-            if method in ("POST", "DELETE"):
-                err = utils._require_admin(headers, "access_screen_products")
-                if err: return err
-            return handle_categories(method, body, c_id)
+    # ── Productos (admin) ───────────────────────────────────────────────────
+    Ruta("GET", "catalog/catalog", publica=True, descripcion="Alias legado de listado de productos",
+         handler=lambda p: handle_products(p.method, p.body, None)),
+    Ruta("POST", "catalog/catalog", privilegio="product_add",
+         descripcion="Alias legado de alta de producto",
+         handler=lambda p: handle_products(p.method, p.body, None)),
+    Ruta("GET", "catalog/product", privilegio="product_add",
+         descripcion="Listado completo para el panel", handler=_listar_productos_admin),
+    Ruta("POST", "catalog/product", privilegio="product_add",
+         descripcion="Crear o actualizar producto",
+         handler=lambda p: handle_products(p.method, p.body, None)),
+    Ruta("POST", "catalog/product/product-of-month", privilegio="product_set_month",
+         descripcion="Fijar el producto del mes",
+         handler=lambda p: handle_products(p.method, p.body, "product-of-month")),
+    Ruta("POST", "catalog/product/remove", privilegio="product_delete",
+         descripcion="Eliminar un producto", handler=_eliminar_producto),
+    Ruta("POST", "catalog/product/{productId}/assets", privilegio="product_add",
+         descripcion="Subir imagen de producto", handler=_subir_asset_de_producto),
 
-        if root == "campaigns":
-            if method == "POST":
-                err = utils._require_admin(headers, "access_screen_stocks")
-                if err: return err
-            return handle_campaigns(method, body)
+    # ── Productos (rutas legadas sin prefijo) ───────────────────────────────
+    Ruta("GET", "products", publica=True, handler=lambda p: handle_products(p.method, p.body, None)),
+    Ruta("POST", "products", privilegio="product_add",
+         handler=lambda p: handle_products(p.method, p.body, None)),
+    Ruta("GET", "products/{id}", publica=True, handler=lambda p: handle_products(p.method, p.body, p.params["id"])),
+    # El privilegio depende del id (`product-of-month` exige otro), así que se
+    # resuelve dentro del handler; ver `_privilegio_de_producto`.
+    Ruta("POST", "products/{id}", handler=_privilegio_de_producto),
 
-        if root == "assets":
-            a_id = segments[1] if len(segments) > 1 else None
-            if method == "POST":
-                err = utils._require_admin(headers, "product_add")
-                if err: return err
-            return handle_assets(method, body, a_id)
+    # ── Categorías ──────────────────────────────────────────────────────────
+    Ruta("GET", "catalog/categories", publica=True, handler=lambda p: handle_categories(p.method, p.body, None)),
+    Ruta("POST", "catalog/categories", privilegio="access_screen_products",
+         handler=lambda p: handle_categories(p.method, p.body, None)),
+    Ruta("GET", "catalog/categories/{id}", publica=True, handler=lambda p: handle_categories(p.method, p.body, p.params["id"])),
+    Ruta("DELETE", "catalog/categories/{id}", privilegio="access_screen_products",
+         handler=lambda p: handle_categories(p.method, p.body, p.params["id"])),
+    Ruta("GET", "product-categories", publica=True, handler=lambda p: handle_categories(p.method, p.body, None)),
+    # `handle_categories` ignora el id en GET y devuelve la colección completa.
+    # Se conserva tal cual: cambiar esa semántica es una decisión de API, no de
+    # ruteo, y no toca hacerla en este refactor.
+    Ruta("GET", "product-categories/{id}", publica=True,
+         handler=lambda p: handle_categories(p.method, p.body, p.params["id"])),
+    Ruta("POST", "product-categories", privilegio="access_screen_products",
+         handler=lambda p: handle_categories(p.method, p.body, None)),
+    Ruta("DELETE", "product-categories/{id}", privilegio="access_screen_products",
+         handler=lambda p: handle_categories(p.method, p.body, p.params["id"])),
 
-        if root == "notifications":
-            if method == "POST" and not (len(segments) == 3 and segments[2] == "read"):
-                err = utils._require_admin(headers, "config_manage")
-                if err: return err
-            return handle_notifications(method, body, segments)
+    # ── Campañas y assets ───────────────────────────────────────────────────
+    Ruta("GET", "campaigns", publica=True, handler=lambda p: handle_campaigns(p.method, p.body)),
+    Ruta("POST", "campaigns", privilegio="access_screen_stocks",
+         handler=lambda p: handle_campaigns(p.method, p.body)),
+    Ruta("GET", "assets", publica=True, handler=lambda p: handle_assets(p.method, p.body, None)),
+    Ruta("POST", "assets", privilegio="product_add",
+         handler=lambda p: handle_assets(p.method, p.body, None)),
 
-        if root == "config" and len(segments) > 1 and segments[1] == "public" and method == "GET":
-            return handle_public_config()
+    # ── Notificaciones ──────────────────────────────────────────────────────
+    Ruta("GET", "notifications", publica=True, handler=lambda p: handle_notifications(p.method, p.body, p.segments)),
+    # Ídem: el GET con id devuelve la lista completa. Comportamiento preservado.
+    Ruta("GET", "notifications/{id}", publica=True,
+         handler=lambda p: handle_notifications(p.method, p.body, p.segments)),
+    Ruta("POST", "notifications", privilegio="config_manage",
+         handler=lambda p: handle_notifications(p.method, p.body, p.segments)),
+    Ruta("DELETE", "notifications/{id}", privilegio="config_manage",
+         handler=lambda p: handle_notifications(p.method, p.body, p.segments)),
+    # El acuse de lectura lo hace el propio cliente: no exige privilegio de admin.
+    Ruta("POST", "notifications/{id}/read", publica=True,
+         descripcion="Marcar notificación como leída",
+         handler=lambda p: handle_notifications(p.method, p.body, p.segments)),
+]
 
-        return utils._json_response(404, {"message": "Ruta no encontrada en Catalog Service"})
 
-    except Exception as e:
-        utils._log_error("catalog_unhandled_error", e)
-        return utils._json_response(500, {"message": "Error interno", "error": str(e)})
+def lambda_handler(event: dict, context) -> dict:
+    return utils.routing.despachar(
+        RUTAS, event, servicio="catalog",
+        raiz=lambda p: handle_catalog(p.method),
+        requiere_privilegio=utils._require_admin,
+    )

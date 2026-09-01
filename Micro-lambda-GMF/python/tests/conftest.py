@@ -175,7 +175,11 @@ def snapshot_ruteo(utils, request):
         os.makedirs(carpeta, exist_ok=True)
         ruta = os.path.join(carpeta, f"{nombre_modulo}.json")
 
-        if os.environ.get("RUTEO_ACTUALIZAR") or not os.path.exists(ruta):
+        # OJO: `os.environ.get(...)` devuelve "0" como cadena, que es
+        # verdadera. Con eso, un `RUTEO_ACTUALIZAR=0` regeneraba la referencia
+        # en silencio y la prueba pasaba siempre.
+        actualizar = os.environ.get("RUTEO_ACTUALIZAR", "").strip().lower() in ("1", "true", "yes", "on")
+        if actualizar or not os.path.exists(ruta):
             with open(ruta, "w", encoding="utf-8") as fh:
                 json.dump(observado, fh, indent=2, ensure_ascii=False, sort_keys=True)
                 fh.write("\n")

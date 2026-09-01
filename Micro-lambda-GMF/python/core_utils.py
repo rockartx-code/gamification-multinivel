@@ -180,6 +180,7 @@ from core.email import (
     _send_ses_email,
     _ses_client,
 )
+from core import routing
 from core.audit import (
     _audit_event,
 )
@@ -204,6 +205,7 @@ from botocore.exceptions import ClientError
 # `__all__` documenta la superficie de la fachada y evita que el analizador
 # estático marque cada reexportación como import sin usar.
 __all__ = [
+    "routing",
     "_ENTITY_ID_NORMALIZERS",
     "_normalize_associate_month_id",
     "register_entity_id_normalizer",

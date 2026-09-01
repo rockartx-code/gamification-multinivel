@@ -15,7 +15,7 @@ CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core")
 #: Orden de capas. Un módulo solo puede importar de los ANTERIORES.
 CAPAS = ["settings", "domain", "values", "logs", "http", "db",
          "config", "network", "entities", "indexes", "ledger",
-         "security", "email", "audit"]
+         "security", "email", "audit", "routing"]
 NIVEL = {m: i for i, m in enumerate(CAPAS)}
 
 

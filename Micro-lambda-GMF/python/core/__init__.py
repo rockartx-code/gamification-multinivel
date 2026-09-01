@@ -19,6 +19,8 @@ Los lambdas siguen usando `import core_utils as utils`, que reexporta todo esto.
 """
 from . import settings, domain, values, logs, http, db, config, network  # noqa: F401
 from . import entities, indexes, ledger, security, email, audit  # noqa: F401
+from . import routing  # noqa: F401
 
 __all__ = ["settings", "domain", "values", "logs", "http", "db", "config",
-           "network", "entities", "indexes", "ledger", "security", "email", "audit"]
+           "network", "entities", "indexes", "ledger", "security", "email", "audit",
+           "routing"]

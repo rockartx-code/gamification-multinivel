@@ -99,3 +99,56 @@ def test_options_siempre_responde_cors(espia):
         )
         assert respuesta["statusCode"] == 200, nombre_modulo
         assert "Access-Control-Allow-Origin" in respuesta["headers"], nombre_modulo
+
+
+# --- Contrato del ruteador declarativo --------------------------------------
+
+def test_una_ruta_inexistente_responde_404_y_no_502(espia):
+    """Los sub-paths que no existen deben ser 404, no caer en otro handler.
+
+    Antes las cascadas despachaban por prefijo: `/campaigns/loquesea` iba a
+    `handle_campaigns`, que no atiende ese método, devolvía `None`, y API
+    Gateway lo traducía a **502 Bad Gateway**. Un 404 explícito es correcto y
+    además no parece una caída del servicio.
+    """
+    import catalog_lambda
+    espia(catalog_lambda)
+
+    for ruta in ("/campaigns/loquesea", "/catalog/producto-inventado", "/no-existe"):
+        respuesta = catalog_lambda.lambda_handler(
+            {"path": ruta, "httpMethod": "DELETE", "headers": {}, "body": "{}"}, None)
+        assert respuesta["statusCode"] == 404, ruta
+
+
+def test_un_metodo_no_permitido_responde_405(espia):
+    """Si la ruta existe pero no acepta ese método, 405 (no 404 ni 502)."""
+    import catalog_lambda
+    espia(catalog_lambda)
+
+    for metodo, ruta in (("DELETE", "/catalog"), ("PATCH", "/products"),
+                         ("DELETE", "/notifications")):
+        respuesta = catalog_lambda.lambda_handler(
+            {"path": ruta, "httpMethod": metodo, "headers": {}, "body": "{}"}, None)
+        assert respuesta["statusCode"] == 405, f"{metodo} {ruta}"
+
+
+def test_la_tabla_de_rutas_declara_el_privilegio_de_cada_endpoint():
+    """La superficie del lambda debe poder auditarse de un vistazo."""
+    import catalog_lambda
+    import core_utils
+
+    tabla = core_utils.routing.describir(catalog_lambda.RUTAS)
+    assert tabla, "la tabla de rutas está vacía"
+    for fila in tabla:
+        assert fila["metodo"] in ("GET", "POST", "PATCH", "DELETE", "PUT", "ANY")
+        assert fila["patron"].startswith("/")
+        assert fila["privilegio"], f"{fila['metodo']} {fila['patron']} sin privilegio declarado"
+
+    # Ninguna escritura del catálogo puede quedar sin privilegio explícito.
+    escrituras_publicas = [
+        f for f in tabla
+        if f["metodo"] in ("POST", "PATCH", "DELETE") and f["privilegio"] == "público"
+    ]
+    permitidas = {"/notifications/{id}/read"}          # acuse del propio cliente
+    inesperadas = [f["patron"] for f in escrituras_publicas if f["patron"] not in permitidas]
+    assert not inesperadas, f"escrituras sin privilegio: {inesperadas}"

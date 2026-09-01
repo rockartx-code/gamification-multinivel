@@ -76,7 +76,8 @@ def _calcular_todas(utils):
 def test_las_metas_no_cambian(utils):
     observado = _calcular_todas(utils)
 
-    if os.environ.get("METAS_ACTUALIZAR") or not os.path.exists(INSTANTANEA):
+    actualizar = os.environ.get("METAS_ACTUALIZAR", "").strip().lower() in ("1", "true", "yes", "on")
+    if actualizar or not os.path.exists(INSTANTANEA):
         with open(INSTANTANEA, "w", encoding="utf-8") as fh:
             json.dump(observado, fh, indent=2, ensure_ascii=False, sort_keys=True)
             fh.write("\n")
