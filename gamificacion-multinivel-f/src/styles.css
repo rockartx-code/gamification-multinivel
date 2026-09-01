@@ -632,6 +632,76 @@ select:focus {
 .focus-border-olive-60:focus { border-color: rgba(var(--rgb-primary), 0.6); }
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
 
+/* Casilla del sistema (ui-checkbox): el nativo se pintaba con el azul del navegador */
+.ui-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.ui-check-row {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+.ui-check-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.check-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 1.15rem;
+  width: 1.15rem;
+  margin-top: 0.05rem;
+  border-radius: 7px;
+  border: 1px solid rgba(var(--rgb-primary), 0.45);
+  background: rgba(255, 255, 255, 0.75);
+  color: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-swift),
+    border-color var(--dur-fast) var(--ease-swift),
+    color var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.ui-check:hover .check-box {
+  border-color: rgba(var(--rgb-primary), 0.75);
+}
+
+.check-input:checked + .check-box {
+  background: linear-gradient(135deg, #d9bc6d 0%, var(--color-primary) 100%);
+  border-color: rgba(var(--rgb-primary), 0.7);
+  color: #241d0d;
+  animation: checkPop var(--dur-base) var(--ease-spring);
+}
+
+.check-input:focus-visible + .check-box {
+  outline: 2px solid rgba(var(--rgb-primary), 0.85);
+  outline-offset: 2px;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0.86); }
+  60% { transform: scale(1.09); }
+  100% { transform: scale(1); }
+}
+
 /* Botones de paginación (ui-pagination) */
 .pg-btn {
   border: 1px solid rgba(var(--rgb-primary), 0.3);
@@ -903,7 +973,8 @@ select:focus {
 
   .modal-backdrop,
   .modal-backdrop .modal-card,
-  .choice-card-selected {
+  .choice-card-selected,
+  .check-input:checked + .check-box {
     animation: none;
   }
 
