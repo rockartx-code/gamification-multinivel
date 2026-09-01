@@ -422,7 +422,7 @@ def _void_commissions_for_order(order_id: str, reason: str) -> list:
         try:
             summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id)
         except Exception as e:
-            print(f"[VOID_COMM_ERROR] beneficiary={beneficiary_id} err={e}")
+            utils._log("void_comm_error", "ERROR", beneficiary=beneficiary_id, err=e)
             continue
         if not summary:
             continue
@@ -539,7 +539,7 @@ def handle_update_status(order_id, body, headers):
                 input=json.dumps({"orderId": order_id, "action": sfn_action, "payload": body}),
             )
         except Exception as e:
-            print(f"[SFN_ERROR] {e}")
+            utils._log_error("step_functions_start_failed", e, orderId=order_id)
 
     extra_updates = {}
     now = utils._now_iso()
@@ -731,10 +731,10 @@ def handle_mercadopago_checkout(order_id, body):
             
     except urllib.error.HTTPError as exc:
         err_msg = exc.read().decode()
-        print(f"[Checkout] HTTPError {exc.code}: {err_msg}")
+        utils._log("checkout", "ERROR", detail='HTTPError {exc.code}: {err_msg}')
         return utils._json_response(502, {"message": "Error al comunicarse con Mercado Libre", "provider_error": err_msg})
     except Exception as e:
-        print(f"[Checkout] Error: {e}")
+        utils._log("checkout", "ERROR", detail='Error: {e}')
         return utils._json_response(500, {"message": str(e)})
 
 
@@ -796,7 +796,7 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
                 input=json.dumps({"orderId": order_id, "action": "ORDER_CANCELLED", "payload": body}),
             )
         except Exception as e:
-            print(f"[SFN_CANCEL_ERROR] {e}")
+            utils._log_error("step_functions_cancel_failed", e, orderId=order_id)
 
     utils._audit_event("order.cancel", headers, body, {"orderId": order_id, "reason": reason, "previousStatus": current_status})
 
@@ -813,127 +813,142 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
 # HANDLER — SOLICITUD DE DEVOLUCIÓN (Reglas 3.1, 3.2, 3.3, 4)
 # ---------------------------------------------------------------------------
 
-def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
-    """POST /orders/{id}/return
+#: Plazos máximos para solicitar devolución, por motivo (Regla 3.1).
+RETURN_MOTIVOS = {
+    "DANADO_DEFECTUOSO": {"limite_horas": 48, "responsable_envio": "empresa"},
+    "ERROR_ENVIO": {"limite_horas": 48, "responsable_envio": "empresa"},
+    "DESISTIMIENTO": {"limite_horas": 7 * 24, "responsable_envio": "cliente"},
+}
+#: Categorías de evidencia obligatorias (Regla 3.3).
+RETURN_EVIDENCIA_REQUERIDA = ("fotos_producto", "fotos_empaque", "fotos_guia_envio")
 
-    Regla 3.1: Validación de tiempo (48h daños/error, 7d desistimiento)
-    Regla 3.3: Evidencia obligatoria (3 categorías)
-    Regla 4:   Costo logístico según motivo
-    """
-    order = utils._get_by_id("ORDER", order_id)
-    if not order:
-        return utils._json_response(404, {"message": "Pedido no encontrado"})
 
-    current_status = (order.get("status") or "").lower()
-    if current_status != "delivered":
+def _horas_desde_entrega(order: dict) -> float:
+    """Horas transcurridas desde que el pedido se marcó entregado."""
+    entregado_en = order.get("deliveredAt") or order.get("updatedAt") or utils._now_iso()
+    try:
+        momento = datetime.fromisoformat(str(entregado_en).replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - momento).total_seconds() / 3600
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, horas: float):
+    """Aplica las reglas 3.1 y 3.3. Devuelve una respuesta de error o None."""
+    if (order.get("status") or "").lower() != utils.OrderStatus.DELIVERED:
         return utils._json_response(409, {
             "message": "Solo se pueden solicitar devoluciones de pedidos entregados.",
             "code": "NOT_DELIVERED",
         })
 
-    # Validar que no haya solicitud activa
     if order.get("returnRequestId"):
         return utils._json_response(409, {
             "message": "Ya existe una solicitud de devolución activa para este pedido.",
             "code": "RETURN_ALREADY_EXISTS",
         })
 
-    motivo = (body.get("motivo") or "").upper().strip()
-    valid_motivos = {"DANADO_DEFECTUOSO", "ERROR_ENVIO", "DESISTIMIENTO"}
-    if motivo not in valid_motivos:
+    regla = RETURN_MOTIVOS.get(motivo)
+    if not regla:
         return utils._json_response(400, {
-            "message": "Motivo inválido. Use: DANADO_DEFECTUOSO, ERROR_ENVIO o DESISTIMIENTO.",
+            "message": "Motivo inválido. Use: " + ", ".join(RETURN_MOTIVOS) + ".",
             "code": "INVALID_MOTIVO",
         })
 
-    # REGLA 3.1 — Validación de tiempo
-    delivered_at = order.get("deliveredAt") or order.get("updatedAt") or utils._now_iso()
-    try:
-        delivered_dt = datetime.fromisoformat(delivered_at.replace("Z", "+00:00"))
-        now_dt = datetime.now(timezone.utc)
-        hours_since = (now_dt - delivered_dt).total_seconds() / 3600
-        days_since = hours_since / 24
-    except Exception:
-        hours_since = 0.0
-        days_since = 0.0
-
-    if motivo in ("DANADO_DEFECTUOSO", "ERROR_ENVIO"):
-        if hours_since > 48:
-            return utils._json_response(409, {
-                "message": f"Han transcurrido {int(hours_since)} horas desde la entrega. El plazo máximo para reportar daños o errores es 48 horas.",
-                "code": "TIME_EXPIRED",
-                "hoursSinceDelivery": float(hours_since),
-            })
-    elif motivo == "DESISTIMIENTO":
-        if days_since > 7:
-            return utils._json_response(409, {
-                "message": f"Han transcurrido {int(days_since)} días desde la entrega. El plazo máximo para desistimiento es 7 días.",
-                "code": "TIME_EXPIRED",
-                "daysSinceDelivery": float(days_since),
-            })
-
-    # REGLA 3.3 — Validación de evidencia
-    evidence_raw = body.get("evidence") or {}
-    fotos_producto = evidence_raw.get("fotos_producto") or []
-    fotos_empaque = evidence_raw.get("fotos_empaque") or []
-    fotos_guia = evidence_raw.get("fotos_guia_envio") or []
-
-    missing = []
-    if not fotos_producto: missing.append("fotos_producto")
-    if not fotos_empaque: missing.append("fotos_empaque")
-    if not fotos_guia: missing.append("fotos_guia_envio")
-
-    if missing:
-        return utils._json_response(400, {
-            "message": f"Evidencia incompleta. Faltan: {', '.join(missing)}",
-            "code": "MISSING_EVIDENCE",
-            "missing": missing,
+    # Regla 3.1 — plazo según el motivo
+    if horas > regla["limite_horas"]:
+        if regla["limite_horas"] >= 24:
+            transcurrido = f"{int(horas / 24)} días"
+            plazo = f"{regla['limite_horas'] // 24} días"
+            campo = {"daysSinceDelivery": float(horas / 24)}
+        else:
+            transcurrido = f"{int(horas)} horas"
+            plazo = f"{regla['limite_horas']} horas"
+            campo = {"hoursSinceDelivery": float(horas)}
+        return utils._json_response(409, {
+            "message": f"Han transcurrido {transcurrido} desde la entrega. "
+                       f"El plazo máximo para este motivo es {plazo}.",
+            "code": "TIME_EXPIRED",
+            **campo,
         })
 
-    # REGLA 4 — Costo logístico
-    shipping_responsibility = "empresa" if motivo in ("DANADO_DEFECTUOSO", "ERROR_ENVIO") else "cliente"
+    # Regla 3.3 — las tres categorías de evidencia son obligatorias
+    faltantes = [c for c in RETURN_EVIDENCIA_REQUERIDA if not (evidencia.get(c) or [])]
+    if faltantes:
+        return utils._json_response(400, {
+            "message": f"Evidencia incompleta. Faltan: {', '.join(faltantes)}",
+            "code": "MISSING_EVIDENCE",
+            "missing": faltantes,
+        })
+    return None
 
-    # Subir evidencias a S3
-    request_id = f"RET-{utils.uuid.uuid4().hex[:8].upper()}"
-    uploaded_evidence = {}
 
-    def _upload_one(category, i, f):
-        if isinstance(f, dict):
-            cb64 = f.get("contentBase64", "")
-            ct = f.get("contentType", "image/jpeg")
-            fname = f.get("fileName", f"{category}_{i + 1}.jpg")
+def _subir_evidencia_devolucion(order_id: str, request_id: str, evidencia: dict) -> dict:
+    """Sube en paralelo las fotos de todas las categorías y devuelve sus URLs."""
+    def _subir_una(categoria, indice, archivo):
+        if isinstance(archivo, dict):
+            contenido = archivo.get("contentBase64", "")
+            tipo = archivo.get("contentType", "image/jpeg")
+            nombre = archivo.get("fileName", f"{categoria}_{indice + 1}.jpg")
         else:
-            cb64, ct, fname = str(f), "image/jpeg", f"{category}_{i + 1}.jpg"
+            contenido, tipo = str(archivo), "image/jpeg"
+            nombre = f"{categoria}_{indice + 1}.jpg"
         try:
             asset = _upload_evidence_s3(
-                fname, cb64, ct,
-                prefix=f"devoluciones/{order_id}/{request_id}/{category}",
+                nombre, contenido, tipo,
+                prefix=f"devoluciones/{order_id}/{request_id}/{categoria}",
             )
-            return category, i, asset["url"]
-        except Exception as e:
-            print(f"[S3_EVIDENCE] {e}")
-            return category, i, None
+            return categoria, asset["url"]
+        except Exception as ex:
+            utils._log_error("return_evidence_upload_failed", ex,
+                             orderId=order_id, requestId=request_id, category=categoria)
+            return categoria, None
 
-    upload_tasks = []
-    for category, files in [
-        ("fotos_producto", fotos_producto),
-        ("fotos_empaque", fotos_empaque),
-        ("fotos_guia_envio", fotos_guia),
-    ]:
-        uploaded_evidence[category] = []
-        for i, f in enumerate(files):
-            upload_tasks.append((category, i, f))
+    subidas = {categoria: [] for categoria in RETURN_EVIDENCIA_REQUERIDA}
+    tareas = [
+        (categoria, indice, archivo)
+        for categoria in RETURN_EVIDENCIA_REQUERIDA
+        for indice, archivo in enumerate(evidencia.get(categoria) or [])
+    ]
+    if not tareas:
+        return subidas
 
     with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {executor.submit(_upload_one, cat, i, f): (cat, i) for cat, i, f in upload_tasks}
-        for future in as_completed(futures):
-            cat, i, url = future.result()
+        futuros = [executor.submit(_subir_una, *tarea) for tarea in tareas]
+        for futuro in as_completed(futuros):
+            categoria, url = futuro.result()
             if url:
-                uploaded_evidence[cat].append(url)
+                subidas[categoria].append(url)
+    return subidas
 
-    # Crear entidad RETURN_REQUEST
+
+def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
+    """POST /orders/{id}/return — registra una solicitud de devolución.
+
+    Reglas: 3.1 plazo según motivo, 3.3 evidencia obligatoria en las tres
+    categorías, 4 responsabilidad del costo logístico. La validación vive en
+    `_validar_solicitud_devolucion` y la subida de fotos en
+    `_subir_evidencia_devolucion`.
+    """
+    order = utils._get_by_id("ORDER", order_id)
+    if not order:
+        return utils._json_response(404, {"message": "Pedido no encontrado"})
+
+    motivo = (body.get("motivo") or "").upper().strip()
+    evidencia = body.get("evidence") or {}
+    horas = _horas_desde_entrega(order)
+
+    error = _validar_solicitud_devolucion(order, motivo, evidencia, horas)
+    if error:
+        return error
+
+    # Regla 4 — quién paga el envío de la devolución
+    responsable = RETURN_MOTIVOS[motivo]["responsable_envio"]
+
+    request_id = f"RET-{utils.uuid.uuid4().hex[:8].upper()}"
+    subidas = _subir_evidencia_devolucion(order_id, request_id, evidencia)
+
     now = utils._now_iso()
-    return_item = {
+    utils._put_entity("RETURN_REQUEST", request_id, {
         "entityType": "returnRequest",
         "requestId": request_id,
         "orderId": order_id,
@@ -941,16 +956,14 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         "motivo": motivo,
         "descripcion": body.get("descripcion") or "",
         "status": "PENDIENTE",
-        "shippingResponsibility": shipping_responsibility,
-        "evidence": uploaded_evidence,
-        "horasDesdEntrega": Decimal(str(round(hours_since, 4))),
+        "shippingResponsibility": responsable,
+        "evidence": subidas,
+        "horasDesdEntrega": Decimal(str(round(horas, 4))),
         "inspection": None,
         "createdAt": now,
         "updatedAt": now,
-    }
-    utils._put_entity("RETURN_REQUEST", request_id, return_item, created_at_iso=now)
+    }, created_at_iso=now)
 
-    # Actualizar orden → EN_DEVOLUCION
     updated_order = utils._update_by_id(
         "ORDER", order_id,
         "SET #s = :s, returnRequestId = :rid, updatedAt = :u",
@@ -958,7 +971,6 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
-
     utils._audit_event("order.return_request", headers, body,
                        {"orderId": order_id, "requestId": request_id, "motivo": motivo})
 
@@ -966,14 +978,15 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         "ok": True,
         "requestId": request_id,
         "status": "PENDIENTE",
-        "shippingResponsibility": shipping_responsibility,
+        "shippingResponsibility": responsable,
         "message": (
             "Solicitud de devolución registrada. Te notificaremos el resultado de la inspección. "
             + ("El costo de envío de la devolución corre a cargo de la empresa."
-               if shipping_responsibility == "empresa"
+               if responsable == "empresa"
                else "El costo de envío de la devolución corre a tu cargo.")
         ),
     })
+
 
 
 # ---------------------------------------------------------------------------
@@ -1313,20 +1326,17 @@ def _apply_coupon_to_totals(coupon_code: str, totals: dict, customer_id=None) ->
         item["updatedAt"] = utils._now_iso()
         utils._put_entity("COUPON", code, item, created_at_iso=coupon.get("createdAt"))
     except Exception as e:
-        print(f"[COUPON_REDEEM_WARN] {code}: {e}")
+        utils._log_error("coupon_redeem_failed", e, code=code)
     return {"couponCode": code, "couponDiscount": discount, "couponMessage": result["message"]}
 
 
 def lambda_handler(event, context):
-    path = event.get("path", "")
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    query = event.get("queryStringParameters") or {}
-    headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
-    print(segments)
+    request = utils._http_request(event)
+    method = request.method
+    body, query, headers = request.body, request.query, request.headers
+    segments = request.segments
     try:
         if "webhooks" in segments:
             return handle_mp_webhook(query, body)
@@ -1438,5 +1448,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": "Ruta no encontrada en Order Service"})
 
     except Exception as e:
-        print(f"[ORDER_ERROR] {str(e)}")
+        utils._log_error("order_unhandled_error", e)
         return utils._json_response(500, {"message": "Critical Error", "error": str(e)})

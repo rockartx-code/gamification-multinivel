@@ -1,5 +1,3 @@
-import json
-import boto3
 import random
 import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime, timedelta, timezone
@@ -163,6 +161,46 @@ def _build_new_network_member_email(
 
 # --- LÓGICA DE NEGOCIO ---
 
+DEMO_LOGIN_ENABLED = str(utils.os.getenv("DEMO_LOGIN_ENABLED", "")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _demo_users() -> list:
+    """Cuentas de demostración, deshabilitadas salvo configuración explícita.
+
+    Requiere `DEMO_LOGIN_ENABLED` **y** que las contraseñas vengan del entorno:
+    antes estaban escritas en el código, de modo que cualquiera con acceso al
+    repositorio conocía unas credenciales de admin válidas en producción.
+    """
+    if not DEMO_LOGIN_ENABLED:
+        return []
+    cuentas = [
+        {"u": "admin", "p": utils.os.getenv("DEMO_ADMIN_PASSWORD", ""),
+         "role": "admin", "id": "admin-001", "name": "Admin"},
+        {"u": "cliente", "p": utils.os.getenv("DEMO_CLIENTE_PASSWORD", ""),
+         "role": "cliente", "id": "client-001", "name": "Valeria Torres"},
+    ]
+    return [c for c in cuentas if c["p"]]
+
+
+def _rehash_password_if_legacy(auth_id: str, auth: dict, password: str) -> None:
+    """Migra al vuelo un hash viejo (SHA-256 sin sal) tras un login correcto.
+
+    El login es el único momento en que se tiene la contraseña en claro, así
+    que la migración es transparente: nadie tiene que cambiar su contraseña.
+    Un fallo aquí no debe impedir el acceso.
+    """
+    if not utils._is_legacy_password_hash(auth.get("passwordHash")):
+        return
+    try:
+        utils._update_by_id(
+            "AUTH", auth_id,
+            "SET passwordHash = :p, updatedAt = :u",
+            {":p": utils._hash_password(str(password)), ":u": utils._now_iso()},
+        )
+    except Exception as ex:
+        utils._log("password_rehash_error", "ERROR", authId=auth_id, error=ex)
+
+
 def handle_login(body):
     """POST /auth/login"""
     identifier = (body.get("email") or body.get("username", "")).strip().lower()
@@ -171,12 +209,11 @@ def handle_login(body):
     if not identifier or not password:
         return utils._json_response(401, {"message": "Credenciales incompletas"})
 
-    # 1. Usuarios Demo (Compatibilidad)
-    demo_users = [
-        {"u": "admin", "p": "admin123", "role": "admin", "id": "admin-001", "name": "Admin"},
-        {"u": "cliente", "p": "cliente123", "role": "cliente", "id": "client-001", "name": "Valeria Torres"}
-    ]
-    for d in demo_users:
+    # 1. Usuarios demo (solo si se habilitan explícitamente por entorno).
+    # Sus contraseñas están en el código, así que en producción DEMO_LOGIN_ENABLED
+    # debe quedar sin definir: de lo contrario cualquiera con acceso al repo
+    # entra como admin.
+    for d in _demo_users():
         if (identifier == d["u"] or identifier == f"{d['u']}@demo.local") and password == d["p"]:
             token = "demo-token-" + utils.uuid.uuid4().hex[:16]
             utils._put_entity("SESSION", token, {
@@ -193,23 +230,26 @@ def handle_login(body):
 
     # 2. Buscar en tabla AUTH
     auth = utils._get_by_id("AUTH", identifier)
-    pass_hash = utils._hash_password(str(password))
 
     if not auth:
-        # Fallback: Buscar cliente por email para crear registro AUTH si existe passHash antiguo
+        # Fallback: cliente con passwordHash antiguo pero sin registro AUTH
         matched_customer_id = utils._find_customer_id_by_email(identifier)
         customer = (utils._get_by_id("CUSTOMER", utils._customer_entity_id(matched_customer_id))
                     if matched_customer_id else None)
-        if customer and customer.get("passwordHash") == pass_hash:
+        if customer and utils._verify_password(password, customer.get("passwordHash")):
             auth = utils._put_entity("AUTH", identifier, {
                 "entityType": "auth", "authId": identifier, "email": identifier,
-                "customerId": customer.get("customerId"), "passwordHash": pass_hash, "role": "cliente"
+                "customerId": customer.get("customerId"),
+                "passwordHash": utils._hash_password(str(password)), "role": "cliente",
             })
         else:
             return utils._json_response(401, {"message": "Credenciales invalidas"})
 
-    if auth.get("passwordHash") != pass_hash:
+    elif not utils._verify_password(password, auth.get("passwordHash")):
         return utils._json_response(401, {"message": "Credenciales invalidas"})
+
+    else:
+        _rehash_password_if_legacy(identifier, auth, password)
 
     if auth.get("emailVerified") is False:
         return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electrónico para iniciar sesión."})
@@ -270,7 +310,7 @@ def handle_create_account(body):
     raw_referral = body.get("referralToken") or body.get("referralCodeInput")
     leader_id = _resolve_leader_from_referral_code(raw_referral) or body.get("leaderId") or None
     if raw_referral and not leader_id:
-        print(f"[REFERRAL_CODE_UNRESOLVED] referralToken={raw_referral} — se registra sin líder")
+        utils._log("referral_code_unresolved", "INFO", referralToken=raw_referral, detail='se registra sin líder')
     
     customer_item = {
         "entityType": "customer", "customerId": customer_id, "name": name,
@@ -290,7 +330,7 @@ def handle_create_account(body):
     try:
         utils._sync_customer_network_metadata()
     except Exception as ex:
-        print(f"[CUSTOMER_NETWORK_SYNC_ERROR] action=create_account customerId={customer_id} error={ex}")
+        utils._log("customer_network_sync_error", "ERROR", customerId=customer_id, error=ex, detail='action=create_account')
 
     utils._put_entity("AUTH", email, {
         "entityType": "auth", "authId": email, "email": email,
@@ -321,7 +361,7 @@ def handle_create_account(body):
                 )
                 utils._send_ses_email(leader.get("email"), l_subj, l_txt, l_html)
         except Exception as ex:
-            print(f"[EMAIL_LEADER_ERROR] {ex}")
+            utils._log_error("email_leader_failed", ex)
 
     return utils._json_response(201, {"customerId": customer_id, "ok": True})
 
@@ -419,7 +459,7 @@ def handle_password_recovery(body):
     
     utils._put_entity("PASSWORD_RESET", email, {
         "entityType": "passwordReset", "email": email, 
-        "otpHash": utils._hash_password(otp), "expiresAt": expires, "used": False
+        "otpHash": utils._hash_token(otp), "expiresAt": expires, "used": False
     })
 
     subj, txt, html = _build_password_recovery_email(otp)
@@ -433,7 +473,8 @@ def handle_password_reset(body):
     new_password = body.get("password")
 
     reset_rec = utils._get_by_id("PASSWORD_RESET", email)
-    if not reset_rec or reset_rec.get("used") or utils._hash_password(otp) != reset_rec.get("otpHash"):
+    if not reset_rec or reset_rec.get("used") or not utils.hmac.compare_digest(
+            utils._hash_token(otp), str(reset_rec.get("otpHash") or "")):
         return utils._json_response(401, {"message": "Código inválido o expirado"})
 
     # Actualizar password en AUTH
@@ -492,7 +533,7 @@ def handle_change_password(body, headers):
         return utils._json_response(404, {"message": "Cuenta no encontrada"})
 
     # Validar contraseña actual
-    if auth.get("passwordHash") != utils._hash_password(str(current_password)):
+    if not utils._verify_password(current_password, auth.get("passwordHash")):
         return utils._json_response(401, {"message": "La contraseña actual es incorrecta"})
 
     # Actualizar contraseña
@@ -505,8 +546,6 @@ def handle_change_password(body, headers):
     return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
 
 
-def _referral_code_pk(code: str) -> str:
-    return f"REFERRAL_CODE#{code.strip().upper()}"
 
 def _build_user_referral_code(name: str) -> str:
     """Genera el código de referido a partir del nombre completo.
@@ -525,7 +564,7 @@ def _resolve_unique_referral_code(base_code: str, customer_id) -> str:
     candidate = base_code
     suffix = 2
     while True:
-        resp = utils._table.get_item(Key={"PK": _referral_code_pk(candidate), "SK": "REFCodeInput"})
+        resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(candidate), "SK": "REFCodeInput"})
         item = resp.get("Item")
         if not item:
             # Libre — usar este
@@ -547,12 +586,12 @@ def _upsert_referral_code_self(customer_id, name: str = "") -> str | None:
     El código se genera desde el nombre; si hay colisión agrega consecutivo (-2, -3…)."""
     base_code = _build_user_referral_code(name)
     if not base_code:
-        print(f"[REFERRAL_CODE_SELF_SKIP] customerId={customer_id} sin nombre — omitido")
+        utils._log("referral_code_self_skip", "INFO", customerId=customer_id, detail='sin nombre — omitido')
         return None
     try:
         code = _resolve_unique_referral_code(base_code, customer_id)
         utils._table.put_item(Item={
-            "PK": _referral_code_pk(code),
+            "PK": utils._referral_code_pk(code),
             "SK": "REFCodeInput",
             "code": code.upper(),
             "leaderId": customer_id,
@@ -560,10 +599,10 @@ def _upsert_referral_code_self(customer_id, name: str = "") -> str | None:
             "createdAt": utils._now_iso(),
         })
         if code != base_code:
-            print(f"[REFERRAL_CODE_COLLISION] customerId={customer_id} base={base_code} asignado={code}")
+            utils._log("referral_code_collision", "INFO", customerId=customer_id, base=base_code, asignado=code)
         return code
     except Exception as ex:
-        print(f"[REFERRAL_CODE_SELF_INSERT_ERROR] customerId={customer_id} error={ex}")
+        utils._log("referral_code_self_insert_error", "ERROR", customerId=customer_id, error=ex)
         return None
 
 def _resolve_leader_from_referral_code(raw_code) -> str | None:
@@ -572,18 +611,23 @@ def _resolve_leader_from_referral_code(raw_code) -> str | None:
         return None
     code = str(raw_code).strip().upper()
     try:
-        resp = utils._table.get_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         item = resp.get("Item")
         if item:
             return str(item["leaderId"])
     except Exception as ex:
-        print(f"[REFERRAL_CODE_LOOKUP_ERROR] code={code} error={ex}")
+        utils._log("referral_code_lookup_error", "ERROR", code=code, error=ex)
     return None
 
-def migrate():
-    inserted = 0
-    skipped = 0
-    errors = 0
+def _migrate_referral_codes(headers, body) -> dict:
+    """Asigna su código de referido propio a todos los clientes que no lo tengan.
+
+    Corrida masiva idempotente. Antes existía dos veces: como función suelta
+    `migrate()` —que además referenciaba `headers`/`body` inexistentes y
+    reventaba con NameError si alguien la llamaba— y como bloque en línea
+    dentro de la ruta.
+    """
+    inserted = skipped = errors = 0
     for customer in utils._query_bucket("CUSTOMER"):
         cid = customer.get("customerId")
         if not cid:
@@ -602,13 +646,14 @@ def migrate():
             )
             inserted += 1
         except Exception as ex:
-            print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
+            utils._log("migrate_referral_code_error", "ERROR", customerId=cid, error=ex)
             errors += 1
+
     utils._audit_event("referral_code.migrate", headers, body, {
-        "inserted": inserted, "skipped": skipped, "errors": errors
+        "inserted": inserted, "skipped": skipped, "errors": errors,
     })
     return utils._json_response(200, {
-        "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors
+        "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors,
     })
 
 def handle_referral_code(method, body, code_segment, headers):
@@ -622,42 +667,14 @@ def handle_referral_code(method, body, code_segment, headers):
     if code_segment == "migrate" and method == "POST":
         err = utils._require_admin(headers, "config_manage")
         if err: return err
-        inserted = 0
-        skipped = 0
-        errors = 0
-        for customer in utils._query_bucket("CUSTOMER"):
-            cid = customer.get("customerId")
-            if not cid:
-                skipped += 1
-                continue
-            try:
-                referral_code = _upsert_referral_code_self(cid, str(customer.get("name") or ""))
-                if not referral_code:
-                    skipped += 1
-                    continue
-                utils._update_by_id(
-                    "CUSTOMER",
-                    cid,
-                    "SET referralCode = :referralCode, updatedAt = :updatedAt",
-                    {":referralCode": referral_code, ":updatedAt": utils._now_iso()},
-                )
-                inserted += 1
-            except Exception as ex:
-                print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
-                errors += 1
-        utils._audit_event("referral_code.migrate", headers, body, {
-            "inserted": inserted, "skipped": skipped, "errors": errors
-        })
-        return utils._json_response(200, {
-            "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors
-        })
+        return _migrate_referral_codes(headers, body)
 
     # ── GET (lookup público para validar código en registro) ─────────────────
     if method == "GET":
         if not code_segment:
             return utils._json_response(400, {"message": "Se requiere el código en la URL."})
         code = code_segment.strip().upper()
-        resp = utils._table.get_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         item = resp.get("Item")
         if not item:
             return utils._json_response(404, {"message": "Código de referido no encontrado."})
@@ -684,6 +701,7 @@ def handle_referral_code(method, body, code_segment, headers):
         try:
             leader_id = int(leader_id)
         except (TypeError, ValueError):
+            # leaderId no numérico: se conserva tal cual (IDs legados en texto).
             pass
         # Verificar que el líder existe
         try:
@@ -694,7 +712,7 @@ def handle_referral_code(method, body, code_segment, headers):
         if not leader:
             return utils._json_response(404, {"message": "Líder no encontrado."})
         utils._table.put_item(Item={
-            "PK": _referral_code_pk(code),
+            "PK": utils._referral_code_pk(code),
             "SK": "REFCodeInput",
             "code": code,
             "leaderId": leader_id,
@@ -711,7 +729,7 @@ def handle_referral_code(method, body, code_segment, headers):
         if not code_segment:
             return utils._json_response(400, {"message": "Se requiere el código en la URL."})
         code = code_segment.strip().upper()
-        utils._table.delete_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        utils._table.delete_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         utils._audit_event("referral_code.delete", headers, body, {"code": code})
         return utils._json_response(200, {"ok": True, "code": code})
 
@@ -722,7 +740,7 @@ def handle_get_referrer(referrer_id):
     # Intentar lookup por ID numérico o string
     try:
         rid = int(referrer_id)
-    except:
+    except (TypeError, ValueError):
         rid = referrer_id
 
     customer = utils._get_by_id("CUSTOMER", rid)
@@ -796,19 +814,13 @@ def handle_employees(method, body, employee_id=None, headers=None):
 # --- LAMBDA HANDLER PRINCIPAL ---
 
 def lambda_handler(event, context):
-    path = event.get("path", "")
-    #if path == "":
-    #    return migrate()
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
+    request = utils._http_request(event, strip_prefix="auth")
+    path, method = request.path, request.method
+    body, headers, segments = request.body, request.headers, request.segments
 
     try:
-        if segments and segments[0] == "auth":
-            segments = segments[1:]
 
         # Enrutamiento Manual (Dispatcher)
         if not segments: return utils._json_response(200, {"service": "auth-identity"})
@@ -867,5 +879,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": f"Ruta {path} no encontrada"})
 
     except Exception as e:
-        print(f"[FATAL_ERROR] {str(e)}")
+        utils._log_error("auth_unhandled_error", e, path=path, method=method)
         return utils._json_response(500, {"message": "Error interno del servidor", "error": str(e)})

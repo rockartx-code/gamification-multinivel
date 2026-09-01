@@ -1,0 +1,8 @@
+# Dependencias de ejecución de las funciones Lambda.
+#
+# boto3/botocore vienen preinstalados en el runtime de AWS Lambda, pero su
+# versión la fija AWS y cambia sin aviso. Se declaran aquí para que la layer y
+# el entorno de pruebas usen la misma, y para que `pip install -r` reproduzca
+# el entorno en local.
+boto3==1.40.*
+botocore==1.40.*

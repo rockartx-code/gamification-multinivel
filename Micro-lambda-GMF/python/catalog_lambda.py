@@ -1,4 +1,3 @@
-import json
 import boto3
 import base64
 import core_utils as utils # Importado desde la Lambda Layer
@@ -12,7 +11,7 @@ BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 
 # --- HELPERS DE ASSETS (S3) ---
 
-def _pick_product_image(images, preferred_sections):
+def _pick_product_image(images: list, preferred_sections: list) -> str:
     if not images or not isinstance(images, list):
         return ""
     for section in preferred_sections:
@@ -25,13 +24,13 @@ def _pick_product_image(images, preferred_sections):
     return ""
 
 
-def _is_product_active(item):
+def _is_product_active(item: dict) -> bool:
     if not item or not isinstance(item, dict):
         return False
     return bool(item.get("active", True))
 
 
-def _catalog_product_payload(item):
+def _catalog_product_payload(item: dict) -> dict:
     images = item.get("images") or []
     tags = item.get("tags") or []
     badge = str(tags[0]) if tags else ""
@@ -80,7 +79,7 @@ def _catalog_product_payload(item):
     }
 
 
-def _catalog_payload():
+def _catalog_payload() -> dict:
     products = []
     for item in utils._query_bucket("PRODUCT"):
         if not _is_product_active(item):
@@ -134,7 +133,7 @@ def _catalog_payload():
         "campaigns": campaigns,
     }
 
-def _upload_to_s3(name, content_base64, content_type):
+def _upload_to_s3(name: str, content_base64: str, content_type: str) -> str:
     """Sube un archivo a S3 y devuelve la URL pública."""
     try:
         raw_data = base64.b64decode(content_base64)
@@ -154,7 +153,7 @@ def _upload_to_s3(name, content_base64, content_type):
 
 # --- HANDLERS DE PRODUCTOS ---
 
-def _get_catalog_product_of_month():
+def _get_catalog_product_of_month() -> dict:
     """Devuelve el producto del mes completo para el catálogo, o None."""
     pom_item = utils._get_by_id("PRODUCT_OF_MONTH", "current")
     if not pom_item or pom_item.get("productId") is None:
@@ -168,7 +167,7 @@ def _get_catalog_product_of_month():
     return product
 
 
-def handle_products(method, body, product_id=None):
+def handle_products(method: str, body: dict, product_id=None) -> dict:
     """GET /products, GET /products/{id}, POST /products"""
     if method == "GET":
         if product_id:
@@ -273,7 +272,7 @@ def handle_products(method, body, product_id=None):
         return utils._json_response(201, {"product": saved})
 
 
-def handle_catalog(method):
+def handle_catalog(method: str) -> dict:
     """GET / - Resumen publico del catalogo para el frontend."""
     if method != "GET":
         return utils._json_response(405, {"message": "Metodo no permitido"})
@@ -281,7 +280,7 @@ def handle_catalog(method):
 
 # --- HANDLER DE CONFIGURACIÓN PÚBLICA (landing sin auth) ---
 
-def handle_public_config():
+def handle_public_config() -> dict:
     """GET /config/public — Devuelve descuentos, comisiones y bonos para el landing."""
     app_cfg = utils._load_app_config()
     rewards = app_cfg.get("rewards") or {}
@@ -302,7 +301,7 @@ def handle_public_config():
                  "minGroupPurchase": float(utils._to_decimal(lvl.get("minGroupPurchase") or 0))}
                 for lvl in (rewards.get("commissionLevels") or [])
             ],
-            "activationNetMin": float(utils._to_decimal(rewards.get("activationNetMin", 50))),
+            "activationNetMin": utils._activation_vp(),
         },
         "bonuses": {
             "vpConfig": bonuses.get("vpConfig") or {"mxnPerVp": 50, "maxNetworkLevels": 5},
@@ -322,7 +321,7 @@ def handle_public_config():
 
 # --- HANDLERS DE CATEGORÍAS ---
 
-def handle_categories(method, body, cat_id=None):
+def handle_categories(method: str, body: dict, cat_id=None) -> dict:
     """GET, POST, DELETE /product-categories"""
     if method == "GET":
         items = utils._query_bucket("PRODUCT_CATEGORY")
@@ -346,7 +345,7 @@ def handle_categories(method, body, cat_id=None):
 
 # --- HANDLERS DE CAMPAÑAS ---
 
-def handle_campaigns(method, body):
+def handle_campaigns(method: str, body: dict) -> dict:
     """GET, POST /campaigns"""
     if method == "GET":
         items = utils._query_bucket("CAMPAIGN")
@@ -365,7 +364,7 @@ def handle_campaigns(method, body):
 
 # --- HANDLERS DE ASSETS (IMÁGENES/PDF) ---
 
-def handle_assets(method, body, asset_id=None):
+def handle_assets(method: str, body: dict, asset_id=None) -> dict:
     """POST /assets, GET /assets/{id}"""
     if method == "GET" and asset_id:
         asset = utils._get_by_id("ASSET", asset_id)
@@ -389,7 +388,7 @@ def handle_assets(method, body, asset_id=None):
 
 # --- HANDLERS DE NOTIFICACIONES ---
 
-def handle_notifications(method, body, segments):
+def handle_notifications(method: str, body: dict, segments: list) -> dict:
     """GET /notifications, POST /notifications, POST /notifications/{id}/read"""
     if method == "GET":
         items = utils._query_bucket("NOTIFICATION")
@@ -419,14 +418,12 @@ def handle_notifications(method, body, segments):
 
 # --- LAMBDA HANDLER ---
 
-def lambda_handler(event, context):
-    path = event.get("path", "")
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+def lambda_handler(event: dict, context) -> dict:
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
+    request = utils._http_request(event)
+    method = request.method
+    body, headers, segments = request.body, request.headers, request.segments
 
     if not segments:
         return handle_catalog(method)
@@ -567,5 +564,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": "Ruta no encontrada en Catalog Service"})
 
     except Exception as e:
-        print(f"[ERROR] {str(e)}")
+        utils._log_error("catalog_unhandled_error", e)
         return utils._json_response(500, {"message": "Error interno", "error": str(e)})

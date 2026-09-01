@@ -1,7 +1,6 @@
 import json
 import boto3
 import core_utils as utils # Importado desde la Lambda Layer
-from datetime import datetime
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -260,7 +259,7 @@ def handle_pos_sale(body, headers):
                 input=json.dumps({"orderId": order_id, "action": "ORDER_DELIVERED"})
             )
         except Exception as e:
-            print(f"[SFN_ERROR] pos_sale={sale_id} err={e}")
+            utils._log("sfn_error", "ERROR", pos_sale=sale_id, err=e)
 
     return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
 
@@ -525,17 +524,166 @@ def handle_list_cash_cuts(stock_id, user_id, limit: int = MAX_CASH_CUTS_PAGE):
 
 # --- LAMBDA ROUTER ---
 
+def _route_stocks(method: str, segments: list, body: dict, query: dict, headers: dict):
+    """Sub-rutas de /inventory/stocks. Devuelve None si ninguna coincide."""
+    root = segments[0] if segments else ""
+    if root == "stocks":
+        if len(segments) == 1:
+            if method in ("POST", "PATCH"):
+                err = utils._require_admin(headers, "stock_create")
+                if err: return err
+            return handle_stocks(method, body)
+
+        # /stocks/transfers
+        if segments[1] == "transfers":
+            if method == "POST":
+                err = utils._require_admin(headers, "stock_create_transfer")
+                if err: return err
+            return handle_transfers(method, body, query)
+
+        # /stocks/movements
+        if segments[1] == "movements":
+            err = utils._require_admin(headers, "access_screen_stocks")
+            if err: return err
+
+            moves = utils._query_bucket("INVENTORY_MOVEMENT")
+
+            # Si el actor es employee (no admin completo), filtrar por sus stocks ligados
+            actor = utils._extract_actor(headers)
+            if actor.get("role") == "employee":
+                actor_user_id = actor.get("user_id")
+                if actor_user_id:
+                    # Obtener los stocks donde este usuario está en linkedUserIds
+                    all_stocks = utils._query_bucket("STOCK")
+                    linked_stock_ids = {
+                        _stock_id_str(s.get("stockId") or s.get("id") or s.get("SK"))
+                        for s in all_stocks
+                        if actor_user_id in [str(u) for u in (s.get("linkedUserIds") or [])]
+                    } - {""}
+                    if linked_stock_ids:
+                        moves = [m for m in moves if _stock_id_str(m.get("stockId")) in linked_stock_ids]
+
+            # Filtrar por stockId explícito si viene en query params (aplicado después del scope de permisos)
+            stock_id_filter = query.get("stockId")
+            if stock_id_filter:
+                moves = [m for m in moves if _stock_id_str(m.get("stockId")) == _stock_id_str(stock_id_filter)]
+
+            return utils._json_response(200, {"movements": moves})
+
+        # /stocks/{id}/...
+        sid = segments[1]
+        if len(segments) == 2:
+            if method in ("POST", "PATCH"):
+                err = utils._require_admin(headers, "stock_create")
+                if err: return err
+            return handle_stocks(method, body, sid)
+
+        sub = segments[2]
+        if sub == "entries" and method == "POST":
+            err = utils._require_admin(headers, "stock_add_inventory")
+            if err: return err
+            _, error = _apply_stock_delta(sid, {str(body['productId']): int(body['qty'])})
+            if error: return utils._json_response(400, {"message": error})
+            _log_movement(sid, "entry", body['productId'], body['qty'], "manual", body.get("userId"))
+            return utils._json_response(200, {"ok": True})
+
+        if sub == "damages" and method == "POST":
+            err = utils._require_admin(headers, "stock_mark_damaged")
+            if err: return err
+            _, error = _apply_stock_delta(sid, {str(body['productId']): -int(body['qty'])})
+            if error: return utils._json_response(400, {"message": error})
+            _log_movement(sid, "damage", body['productId'], body['qty'], "manual", body.get("userId"), body.get("reason") or "")
+            return utils._json_response(200, {"ok": True})
+
+    # /pos
+    return None
+
+
+def _route_pos(method: str, segments: list, body: dict, query: dict, headers: dict):
+    """Sub-rutas de /inventory/pos. Devuelve None si ninguna coincide."""
+    root = segments[0] if segments else ""
+    if root == "pos":
+        if len(segments) < 2:
+            return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
+        if segments[1] == "sales":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            if method == "GET":
+                sid = query.get("stockId")
+                # `from`/`to` (YYYY-MM-DD o YYYY-MM) acotan por clave. Sin
+                # ellos se mantiene el histórico completo: cambiar el rango
+                # por defecto rompería los reportes de meses anteriores.
+                date_from = (query.get("from") or "").strip() or None
+                date_to = (query.get("to") or "").strip() or None
+                sales = utils._query_bucket("POS_SALE", sk_from=date_from,
+                                            sk_to=(date_to + "\uffff") if date_to else None)
+                if sid:
+                    sales = [s for s in sales if str(s.get("stockId") or "") == str(sid)]
+                return utils._json_response(200, {"sales": sales, "from": date_from, "to": date_to})
+            return handle_pos_sale(body, headers)
+        if segments[1] == "cash-cut":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            return handle_cash_cut(body, headers)
+        if segments[1] == "cash-control" and method == "GET":
+            err = utils._require_admin(headers, "access_screen_pos")
+            if err: return err
+            user_id = headers.get("x-user-id")
+            sid = query.get("stockId")
+            if not user_id:
+                return utils._json_response(400, {"message": "Se requiere x-user-id"})
+            if not sid:
+                for stock in utils._query_bucket("STOCK"):
+                    linked = stock.get("linkedUserIds") or []
+                    if str(user_id) in [str(u) for u in linked]:
+                        sid = str(stock.get("stockId"))
+                        break
+            if not sid:
+                return utils._json_response(400, {"message": "El usuario no tiene stock vinculado"})
+            control = _build_pos_cash_control(sid, user_id)
+            return utils._json_response(200, {"control": control})
+        if segments[1] == "validate-auth" and method == "POST":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            return handle_validate_pos_auth(body, headers)
+        if segments[1] == "withdrawal":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            if method == "POST":
+                return handle_pos_withdrawal(body, headers)
+            if method == "GET":
+                user_id = headers.get("x-user-id")
+                sid = query.get("stockId")
+                withdrawals = utils._query_bucket("POS_WITHDRAWAL")
+                if sid:
+                    withdrawals = [w for w in withdrawals if _stock_id_str(w.get("stockId")) == _stock_id_str(sid)]
+                if user_id:
+                    withdrawals = [w for w in withdrawals if str(w.get("attendantUserId")) == str(user_id)]
+                return utils._json_response(200, {"withdrawals": withdrawals})
+        if segments[1] == "cash-cuts":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            if method == "GET":
+                user_id = headers.get("x-user-id")
+                sid = query.get("stockId")
+                return handle_list_cash_cuts(sid, user_id)
+        if segments[1] == "auth-config":
+            err = utils._require_admin(headers, "config_manage")
+            if err: return err
+            return handle_pos_auth_config(method, body, headers)
+
+    # /pickup-stocks
+    return None
+
+
 def lambda_handler(event, context):
-    path = event.get("path", "")
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    query = event.get("queryStringParameters") or {}
-    headers = event.get("headers") or {}
-    raw_segments = [s for s in path.strip("/").split("/") if s]
-    # Strip "inventory" prefix: API Gateway sends /inventory/{proxy+}
-    segments = raw_segments[1:] if raw_segments and raw_segments[0] == "inventory" else raw_segments
+    # API Gateway entrega /inventory/{proxy+}: se quita el prefijo del recurso.
+    request = utils._http_request(event, strip_prefix="inventory")
+    method = request.method
+    body, query, headers = request.body, request.query, request.headers
+    segments = request.segments
 
     try:
         if not segments: return utils._json_response(200, {"service": "inventory-pos"})
@@ -543,146 +691,12 @@ def lambda_handler(event, context):
         root = segments[0]
 
         # /inventory/stocks  →  root == "stocks"
-        if root == "stocks":
-            if len(segments) == 1:
-                if method in ("POST", "PATCH"):
-                    err = utils._require_admin(headers, "stock_create")
-                    if err: return err
-                return handle_stocks(method, body)
+        for enrutador in (_route_stocks, _route_pos):
+            respuesta = enrutador(method, segments, body, query, headers)
+            if respuesta is not None:
+                return respuesta
 
-            # /stocks/transfers
-            if segments[1] == "transfers":
-                if method == "POST":
-                    err = utils._require_admin(headers, "stock_create_transfer")
-                    if err: return err
-                return handle_transfers(method, body, query)
 
-            # /stocks/movements
-            if segments[1] == "movements":
-                err = utils._require_admin(headers, "access_screen_stocks")
-                if err: return err
-
-                moves = utils._query_bucket("INVENTORY_MOVEMENT")
-
-                # Si el actor es employee (no admin completo), filtrar por sus stocks ligados
-                actor = utils._extract_actor(headers)
-                if actor.get("role") == "employee":
-                    actor_user_id = actor.get("user_id")
-                    if actor_user_id:
-                        # Obtener los stocks donde este usuario está en linkedUserIds
-                        all_stocks = utils._query_bucket("STOCK")
-                        linked_stock_ids = {
-                            _stock_id_str(s.get("stockId") or s.get("id") or s.get("SK"))
-                            for s in all_stocks
-                            if actor_user_id in [str(u) for u in (s.get("linkedUserIds") or [])]
-                        } - {""}
-                        if linked_stock_ids:
-                            moves = [m for m in moves if _stock_id_str(m.get("stockId")) in linked_stock_ids]
-
-                # Filtrar por stockId explícito si viene en query params (aplicado después del scope de permisos)
-                stock_id_filter = query.get("stockId")
-                if stock_id_filter:
-                    moves = [m for m in moves if _stock_id_str(m.get("stockId")) == _stock_id_str(stock_id_filter)]
-
-                return utils._json_response(200, {"movements": moves})
-
-            # /stocks/{id}/...
-            sid = segments[1]
-            if len(segments) == 2:
-                if method in ("POST", "PATCH"):
-                    err = utils._require_admin(headers, "stock_create")
-                    if err: return err
-                return handle_stocks(method, body, sid)
-
-            sub = segments[2]
-            if sub == "entries" and method == "POST":
-                err = utils._require_admin(headers, "stock_add_inventory")
-                if err: return err
-                _, error = _apply_stock_delta(sid, {str(body['productId']): int(body['qty'])})
-                if error: return utils._json_response(400, {"message": error})
-                _log_movement(sid, "entry", body['productId'], body['qty'], "manual", body.get("userId"))
-                return utils._json_response(200, {"ok": True})
-
-            if sub == "damages" and method == "POST":
-                err = utils._require_admin(headers, "stock_mark_damaged")
-                if err: return err
-                _, error = _apply_stock_delta(sid, {str(body['productId']): -int(body['qty'])})
-                if error: return utils._json_response(400, {"message": error})
-                _log_movement(sid, "damage", body['productId'], body['qty'], "manual", body.get("userId"), body.get("reason") or "")
-                return utils._json_response(200, {"ok": True})
-
-        # /pos
-        if root == "pos":
-            if len(segments) < 2:
-                return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
-            if segments[1] == "sales":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                if method == "GET":
-                    sid = query.get("stockId")
-                    # `from`/`to` (YYYY-MM-DD o YYYY-MM) acotan por clave. Sin
-                    # ellos se mantiene el histórico completo: cambiar el rango
-                    # por defecto rompería los reportes de meses anteriores.
-                    date_from = (query.get("from") or "").strip() or None
-                    date_to = (query.get("to") or "").strip() or None
-                    sales = utils._query_bucket("POS_SALE", sk_from=date_from,
-                                                sk_to=(date_to + "\uffff") if date_to else None)
-                    if sid:
-                        sales = [s for s in sales if str(s.get("stockId") or "") == str(sid)]
-                    return utils._json_response(200, {"sales": sales, "from": date_from, "to": date_to})
-                return handle_pos_sale(body, headers)
-            if segments[1] == "cash-cut":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                return handle_cash_cut(body, headers)
-            if segments[1] == "cash-control" and method == "GET":
-                err = utils._require_admin(headers, "access_screen_pos")
-                if err: return err
-                user_id = headers.get("x-user-id")
-                sid = query.get("stockId")
-                if not user_id:
-                    return utils._json_response(400, {"message": "Se requiere x-user-id"})
-                if not sid:
-                    for stock in utils._query_bucket("STOCK"):
-                        linked = stock.get("linkedUserIds") or []
-                        if str(user_id) in [str(u) for u in linked]:
-                            sid = str(stock.get("stockId"))
-                            break
-                if not sid:
-                    return utils._json_response(400, {"message": "El usuario no tiene stock vinculado"})
-                control = _build_pos_cash_control(sid, user_id)
-                return utils._json_response(200, {"control": control})
-            if segments[1] == "validate-auth" and method == "POST":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                return handle_validate_pos_auth(body, headers)
-            if segments[1] == "withdrawal":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                if method == "POST":
-                    return handle_pos_withdrawal(body, headers)
-                if method == "GET":
-                    user_id = headers.get("x-user-id")
-                    sid = query.get("stockId")
-                    withdrawals = utils._query_bucket("POS_WITHDRAWAL")
-                    if sid:
-                        withdrawals = [w for w in withdrawals if _stock_id_str(w.get("stockId")) == _stock_id_str(sid)]
-                    if user_id:
-                        withdrawals = [w for w in withdrawals if str(w.get("attendantUserId")) == str(user_id)]
-                    return utils._json_response(200, {"withdrawals": withdrawals})
-            if segments[1] == "cash-cuts":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                if method == "GET":
-                    user_id = headers.get("x-user-id")
-                    sid = query.get("stockId")
-                    return handle_list_cash_cuts(sid, user_id)
-            if segments[1] == "auth-config":
-                err = utils._require_admin(headers, "config_manage")
-                if err: return err
-                return handle_pos_auth_config(method, body, headers)
-
-        # /pickup-stocks
         if root == "pickup-stocks":
             stocks = [s for s in utils._query_bucket("STOCK") if s.get("allowPickup")]
             return utils._json_response(200, {"stocks": stocks})
@@ -690,5 +704,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
 
     except Exception as e:
-        print(f"[INVENTORY_ERROR] {str(e)}")
+        utils._log_error("inventory_unhandled_error", e)
         return utils._json_response(500, {"message": "Internal Inventory Error", "error": str(e)})

@@ -1,0 +1,37 @@
+name: Backend
+
+on:
+  push:
+    paths: ['Micro-lambda-GMF/**', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['Micro-lambda-GMF/**', '.github/workflows/backend.yml']
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Micro-lambda-GMF/python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: Micro-lambda-GMF/python/requirements-dev.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+
+      - name: Análisis estático
+        # pyflakes detecta nombres no definidos: así se descubrió que
+        # auth_utils.migrate() reventaba con NameError al ejecutarse.
+        run: python -m pyflakes .
+
+      - name: Pruebas
+        run: python -m pytest tests -q
+
+      - name: Presupuesto de consultas a DynamoDB
+        # El coste de los endpoints no debe crecer con el tamaño del dataset.
+        run: python tools/check_query_budget.py

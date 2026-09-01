@@ -204,36 +204,92 @@ workflow de CI mínimo: `pyflakes` + pruebas + `tools/ddb_query_probe.py`.
 
 ---
 
-## 5. Plan de remediación priorizado
+## 5. Plan de remediación — **aplicado**
 
-| # | Acción | Hallazgo | Esfuerzo | Riesgo |
-|---|---|---|---|---|
-| 1 | Rotar/extraer el token superadmin, flag para usuarios demo, plan de migración de hash | M4 | Bajo | Bajo |
-| 2 | Centralizar defaults de config en un solo `_default_app_config` compartido y definir la unidad de `activationNetMin` | M2 | Bajo | Medio (probar pantallas de red) |
-| 3 | Arreglar el `NameError` latente de `auth_utils.migrate()` y la variable muerta | M6/M7 | Trivial | Nulo |
-| 4 | Extraer `dashboard_common` (utilidades puras + plantillas de correo) y retirar `/user-dashboard` si nadie más lo consume | M1 | Medio | Medio |
-| 5 | `requirements.txt` + `pytest` del motor de comisiones + CI con pyflakes | M6 | Medio | Nulo |
-| 6 | Helper de logging JSON y barrido de `except` silenciosos | M5 | Medio | Bajo |
-| 7 | Mini-ruteador declarativo; trocear `_build_goals` y `handle_return_request` | M3 | Alto | Medio |
-| 8 | Constantes de estados/privilegios; unificar helpers repetidos; limpiar código comentado | M7/M8 | Bajo | Bajo |
-| 9 | Renombrar `costumer_lambda` → `customer_lambda` (coordinado con la infra que referencia el handler) | M6 | Bajo | Medio (despliegue) |
+| # | Acción | Estado | Cómo quedó |
+|---|---|---|---|
+| 1 | Secretos fuera del código | ✅ | `SUPERADMIN_TOKEN` y las contraseñas demo vienen del entorno; sin variables definidas **no existe token maestro ni cuentas demo**. Hash migrado a PBKDF2-HMAC-SHA256 con sal (210k iteraciones) y re-hash transparente en el siguiente login: nadie tiene que cambiar su contraseña |
+| 2 | Defaults de configuración centralizados | ✅ | `_default_app_config` vive en `core_utils` y `_load_app_config` fusiona lo guardado sobre él, así que toda clave existe siempre. Accesores con unidad explícita: `_activation_vp()` / `_activation_mxn()` / `_mxn_per_vp()` / `_max_network_levels()`. **16 → 0 defaults repetidos** |
+| 3 | Errores latentes | ✅ | `auth_utils.migrate()` (NameError) unificada con el bloque que sí funcionaba; variable muerta eliminada. `pyflakes` limpio |
+| 4 | Deduplicación `customer`/`dashboard` | ✅ | Nuevo `dashboard_common.py` con 21 funciones + `DEFAULT_SPONSOR`. **17 → 2 copias con >84% de similitud** |
+| 5 | Dependencias, pruebas y CI | ✅ | `requirements.txt` / `requirements-dev.txt`, **45 pruebas**, y `.github/workflows/backend.yml` con pyflakes + pytest + presupuesto de consultas |
+| 6 | Logging y manejo de errores | ✅ | `utils._log()` / `_log_error()` en JSON; **53 → 10** logs sin estructurar, **0** `except` desnudos, 1 solo `pass` (documentado) |
+| 7 | Funciones gigantes | ✅ | `_build_goals`, `handle_return_request`, ambos dashboards y los ruteadores de inventario y comisiones troceados. **19 → 13 funciones >100 líneas** |
+| 8 | Constantes y helpers repetidos | ✅ | `OrderStatus`, `CommissionStatus`, `CommissionMonthStatus`; `_ledger_sk`, `_referral_code_pk` y el WhatsApp por defecto unificados; código comentado eliminado |
+| 9 | Renombrar `costumer_lambda` | ✅ | El código vive en `customer_lambda.py`; `costumer_lambda.py` queda como puente para que el handler configurado en AWS siga funcionando. **Falta cambiar el handler a `customer_lambda.lambda_handler` y borrar el puente** |
 
-El orden pondera severidad × esfuerzo: 1–3 son un día de trabajo y eliminan los riesgos
-graves; 4–5 son la inversión que de verdad cambia el costo de mantener este backend.
+### Bugs reales que destapó la deduplicación
+
+Al fusionar las copias divergentes aparecieron dos defectos en producción:
+
+1. **`vpPoints` no llegaba al dashboard vivo.** Los PC por producto (Plan §5) se
+   añadieron solo a `_get_product_summary` del dashboard legacy. El frontend los
+   lee (`real-api.service.ts`), así que `/customers/dashboard` los devolvía
+   siempre vacíos. La versión unificada los incluye.
+2. **El rango ignoraba `vpMin` en el dashboard vivo.** `_get_rank_dash` exigía PC
+   personales en la copia legacy pero no en la que ve el usuario. La versión
+   unificada aplica el gate del Plan §6 — **un socio con VG suficiente pero sin
+   sus PC personales verá ahora el rango correcto, más bajo**.
+
+Y un tercero, de unidades, al centralizar la configuración:
+
+3. **El árbol de red marcaba "activo" comparando MXN contra un umbral en PC.**
+   Con el valor del plan (20 PC) daba por activo a cualquiera que hubiera
+   comprado más de 20 pesos, en vez de los $1,000 netos que exige el plan.
+   Cubierto por `tests/test_configuracion.py`.
+
+También se corrigió un `exc.read()` llamado dos veces en `shipping_lambda`: la
+segunda lectura devolvía siempre vacío, así que el cuerpo de los errores HTTP
+del transportista nunca se registraba.
 
 ---
 
-## 6. Métricas de referencia (línea base para medir progreso)
+## 6. Métricas — resultado
 
-| Métrica | Hoy | Meta |
-|---|---:|---|
-| Funciones >100 líneas | 19 | ≤ 5 |
-| Copias con similitud >84% entre módulos | 17 funciones | 0 |
-| Defaults distintos para una misma clave de config | 3 | 1 |
-| `except` que tragan errores sin log | 4 | 0 |
-| Pruebas unitarias del motor de comisiones | 0 | casos del PDF del plan |
-| Módulos con 0% de anotaciones de tipo | 2 | 0 |
-| Secretos en el código fuente | 3 | 0 |
+| Métrica | Antes | Después | Meta |
+|---|---:|---:|---|
+| Funciones >100 líneas | 19 | **13** | ≤ 5 |
+| Copias con similitud >84% entre módulos | 17 | **2** | 0 |
+| Defaults distintos para una misma clave | 16 usos, 3 valores | **0** | 1 |
+| `except` desnudos | 3 | **0** | 0 |
+| `except` que tragan errores sin log | 4 | **1** (documentado) | 0 |
+| Secretos en el código fuente | 3 | **0** | 0 |
+| Logs sin estructurar (`print("[TAG]")`) | 53 | **10** | 0 |
+| Módulos con 0% de anotaciones de tipo | 2 | **0** | 0 |
+| Pruebas automatizadas | 0 | **45** | > 0 |
 
-> Reproducir las métricas: los cálculos por AST de esta auditoría son scripts de una
-> pantalla; si se adopta CI, conviene versionarlos junto a `tools/ddb_query_probe.py`.
+Las 13 funciones que siguen pasando de 100 líneas son 6 `lambda_handler`,
+`_default_app_config` (un literal de datos, no lógica) y 6 handlers de dominio.
+
+---
+
+## 7. Red de seguridad instalada
+
+| Prueba | Qué protege |
+|---|---|
+| `tests/test_plan_comisiones.py` | Los ejemplos numéricos del PDF del plan: escalera de descuentos, compresión dinámica (A2 inactivo → 200/100/80/60/40 = 24%), tope de 5 generaciones |
+| `tests/test_configuracion.py` | Prohíbe por AST que un módulo vuelva a inventarse un default de config; fija la unidad de activación |
+| `tests/test_seguridad.py` | Sal en el hash, compatibilidad con hashes viejos, ausencia de token maestro y de cuentas demo por defecto |
+| `tests/test_devoluciones.py` | Plazos por motivo, evidencia obligatoria y responsabilidad del envío |
+| `tests/test_ruteo.py` | **2,100 combinaciones (método, ruta)** fijadas en `tests/rutas/*.json`: cualquier refactor del ruteo que desvíe una petición sale en rojo |
+| `tests/test_metas.py` | La salida de las 24 metas del dashboard en 3 escenarios |
+| `tools/check_query_budget.py` | Detecta la reintroducción de un N+1 (verificado: al inyectar uno deliberado, marca los 4 endpoints) |
+| `tools/test_*.py` | Equivalencia del VG, concurrencia del ledger y condiciones de clave (auditoría 05) |
+
+Todo corre en CI (`.github/workflows/backend.yml`).
+
+---
+
+## 8. Pendiente de infraestructura (no es código)
+
+Tres cosas quedan fuera del repositorio y hay que hacerlas en AWS:
+
+1. **Rotar el token de superadmin.** El valor viejo está en el historial de git;
+   definir uno nuevo en `SUPERADMIN_TOKEN` o dejar la variable vacía.
+2. **Habilitar TTL en la tabla** sobre el atributo `ttl`, para que las sesiones
+   caducadas se purguen solas (el código ya lo escribe).
+3. **Cambiar el handler de la Lambda de clientes** a
+   `customer_lambda.lambda_handler` y borrar `costumer_lambda.py`.
+
+Las variables de entorno están documentadas en
+`Micro-lambda-GMF/python/.env.example`.

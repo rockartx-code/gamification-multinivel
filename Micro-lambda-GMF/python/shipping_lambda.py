@@ -5,7 +5,9 @@ import core_utils as utils # Importado desde la Lambda Layer
 
 # --- CONFIGURACIÓN DE ORIGEN (Env Vars) ---
 ENVIA_API_KEY = utils.os.getenv("ENVIA_API_KEY", "")
-ENVIA_API_URL = "https://api-test.envia.com/ship/rate/" # Cambiar a prod en producción
+# El endpoint viene del entorno: dejarlo quemado obligaba a editar código para
+# pasar a producción (el comentario decía literalmente "cambiar a prod").
+ENVIA_API_URL = utils.os.getenv("ENVIA_API_URL", "https://api-test.envia.com/ship/rate/")
 
 ORIGIN_DATA = {
     "name": utils.os.getenv("SHIPPING_ORIGIN_NAME", "Warehouse MX"),
@@ -27,7 +29,7 @@ _STANDARD_BOXES = [
 
 # --- ALGORITMO DE EMPAQUETADO (PACKING) ---
 
-def _pack_items_for_shipping(raw_items):
+def _pack_items_for_shipping(raw_items: list) -> list:
     """
     Algoritmo Greedy Bin-Packing:
     Determina cuántas cajas y de qué tamaño se necesitan basándose en las dimensiones
@@ -115,7 +117,7 @@ def _pack_items_for_shipping(raw_items):
 
 # --- HANDLER DE COTIZACIÓN ---
 
-def handle_get_quote(body):
+def handle_get_quote(body: dict) -> dict:
     """POST /shipping/quote"""
     name = str(body.get("name") or body.get("recipientName") or "").strip()
     phone = str(body.get("phone") or "").strip()
@@ -190,16 +192,16 @@ def handle_get_quote(body):
 
         try:
             req = urllib.request.Request(ENVIA_API_URL, data=json.dumps(api_payload).encode())
-            print(f"[REQUEST] {carrier.upper()} - Payload: {json.dumps(api_payload)}")
+            utils._log("shipping_request", "INFO", carrier=carrier.upper(), payload=api_payload)
             req.add_header("Authorization", f"Bearer {ENVIA_API_KEY}")
             req.add_header("Content-Type", "application/json")
             req.add_header("User-Agent", "FinfingU/1.0")
-            print(f"[REQUEST] {carrier.upper()} - URL: {ENVIA_API_URL}")
-            print(f"[REQUEST] {carrier.upper()} - Headers: {req.header_items()}")
+            utils._log("shipping_request_url", "INFO", carrier=carrier.upper(), url=ENVIA_API_URL)
+            utils._log("shipping_request_headers", "INFO", carrier=carrier.upper())
             
             with urllib.request.urlopen(req, timeout=8) as res:
                 result = json.loads(res.read().decode())
-                print(f"[RESPONSE] {carrier.upper()} - Result: {json.dumps(result)}")
+                utils._log("shipping_response", "INFO", carrier=carrier.upper(), result=result)
                 for rate_item in result.get("data", []):
                     base_price = float(rate_item.get("totalPrice", 0))
                     # Aplicar el markup configurado por el dueño del negocio
@@ -214,13 +216,17 @@ def handle_get_quote(body):
                         "deliveryEstimate": rate_item.get("deliveryEstimate", "")
                     })
         except urllib.error.HTTPError as exc:
-            print(f"[shipping_quote] HTTPError carrier={carrier}: {exc.code}")
-            print(f"[shipping_quote] HTTPError details: {exc.read().decode()}")
-            print(f"[shipping_quote] HTTPError headers: {exc.headers}")
-            print(f"[shipping_quote] HTTPError body: {exc.read().decode()}")
+            # El cuerpo del error solo se puede leer UNA vez: el código anterior
+            # llamaba a exc.read() dos veces y la segunda salía siempre vacía.
+            try:
+                cuerpo = exc.read().decode("utf-8", "replace")[:2000]
+            except Exception:
+                cuerpo = ""
+            utils._log("shipping_quote_http_error", "ERROR",
+                       carrier=carrier, status=exc.code, body=cuerpo)
         except Exception as exc:
-            print(f"[shipping_quote] Error carrier={carrier}: {exc}")
-            
+            utils._log_error("shipping_quote_failed", exc, carrier=carrier)
+
 
     # Ordenar por precio más bajo
     all_rates.sort(key=lambda r: r["displayPrice"])
@@ -233,12 +239,11 @@ def handle_get_quote(body):
 
 # --- LAMBDA HANDLER ---
 
-def lambda_handler(event, context):
-    path = event.get("path", "")
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+def lambda_handler(event: dict, context) -> dict:
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
+    request = utils._http_request(event)
+    path, method, body = request.path, request.method, request.body
 
     if "/shipping/quote" in path and method == "POST":
         return handle_get_quote(body)

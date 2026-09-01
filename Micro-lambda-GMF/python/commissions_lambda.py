@@ -1,6 +1,4 @@
-import json
 import base64
-import time
 import boto3
 from datetime import datetime, timezone
 import core_utils as utils # Importado desde la Lambda Layer
@@ -10,7 +8,8 @@ import core_utils as utils # Importado desde la Lambda Layer
 MAX_COMMISSION_LEVELS = 5
 # Profundidad máxima de ancestros a recorrer al comprimir (saltar no calificados).
 MAX_COMPRESSION_DEPTH = 50
-PK_MONTH = "COMMISSION_MONTH"
+# Alias local del PK definido en core_utils (única fuente de verdad).
+PK_MONTH = utils.COMMISSION_MONTH_PK
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
 
 # Cliente S3
@@ -386,9 +385,8 @@ def _evaluate_bonus_rule(rule: dict, customer_id: str, month_key: str,
                           vp: float, vg: float, bonus_cfg: dict,
                           customer_data: dict) -> bool:
     """True si el cliente cumple todas las condiciones de la regla."""
-    vp_cfg       = bonus_cfg.get("vpConfig", {})
-    mxn_per_vp   = float(vp_cfg.get("mxnPerVp", 50))
-    max_levels   = int(vp_cfg.get("maxNetworkLevels", 5))
+    mxn_per_vp   = utils._mxn_per_vp()
+    max_levels   = utils._max_network_levels()
     rank_thresh  = bonus_cfg.get("rankThresholds", [])
 
     for cond in rule.get("conditions", []):
@@ -451,9 +449,8 @@ def handle_evaluate_bonuses(customer_id: str, month_key: str) -> dict:
     if not rules:
         return {"awarded": [], "vp": 0, "vg": 0, "rank": ""}
 
-    vp_cfg     = bonus_cfg.get("vpConfig", {})
-    mxn_per_vp = float(vp_cfg.get("mxnPerVp", 50))
-    max_levels = int(vp_cfg.get("maxNetworkLevels", 5))
+    mxn_per_vp = utils._mxn_per_vp()
+    max_levels = utils._max_network_levels()
 
     vp            = _calc_vp(customer_id, month_key, mxn_per_vp)
     vg            = _calc_vg(customer_id, month_key, mxn_per_vp, max_levels)
@@ -489,173 +486,20 @@ def handle_evaluate_bonuses(customer_id: str, month_key: str) -> dict:
             utils._put_entity("BONUS_AWARD", award_id, award)
             awarded.append(award)
 
-    print(f"[BONUSES] customer={customer_id} month={month_key} vp={vp:.1f} vg={vg:.1f} rank={rank} awarded={len(awarded)}")
+    utils._log("bonuses_evaluated", "INFO", customerId=customer_id, monthKey=month_key,
+               vp=round(vp, 1), vg=round(vg, 1), rank=rank, awarded=len(awarded))
     return {"awarded": awarded, "vp": vp, "vg": vg, "rank": rank}
 
 # --- HELPERS DE CONFIGURACIÓN ---
 
 def _default_app_config() -> dict:
-    return {
-        "version": "app-v1",
-        "rewards": {
-            # Activación mensual: $1,000 MXN netos = 20 PC (con mxnPerVp=50). Plan abril 2026 §3.
-            "activationNetMin": utils.Decimal("20"),
-            "payoutDay": utils.Decimal("10"),
-            # Compresión dinámica activa: salta posiciones no calificadas y paga al
-            # siguiente ascendente calificado (Plan abril 2026 §4).
-            "cutRule": "dynamic_compression",
-            # Escalera de descuentos por MPN (Monto Personal Neto) acumulado en el mes
-            # calendario. Importes en MXN. Plan abril 2026 §3.
-            "discountTiers": [
-                {"min": utils.Decimal("0"),    "max": utils.Decimal("1000"), "rate": utils.Decimal("0.00")},
-                {"min": utils.Decimal("1000"), "max": utils.Decimal("2000"), "rate": utils.Decimal("0.10")},
-                {"min": utils.Decimal("2000"), "max": utils.Decimal("3000"), "rate": utils.Decimal("0.20")},
-                {"min": utils.Decimal("3000"), "max": utils.Decimal("6000"), "rate": utils.Decimal("0.30")},
-                {"min": utils.Decimal("6000"), "max": None,                  "rate": utils.Decimal("0.40")},
-            ],
-            # Comisiones por generación con requisitos de desbloqueo. Plan abril 2026 §4.
-            # reqActiveDirects = directos activos; reqPersonalPC = PC netos personales;
-            # reqLines = líneas calificadas; reqPCPerLine = PC netos mínimos por línea.
-            "commissionLevels": [
-                {"gen": 1, "rate": utils.Decimal("0.10"), "reqActiveDirects": 0, "reqPersonalPC": 0,   "reqLines": 0, "reqPCPerLine": 0},
-                {"gen": 2, "rate": utils.Decimal("0.05"), "reqActiveDirects": 2, "reqPersonalPC": 0,   "reqLines": 0, "reqPCPerLine": 0},
-                {"gen": 3, "rate": utils.Decimal("0.04"), "reqActiveDirects": 3, "reqPersonalPC": 80,  "reqLines": 2, "reqPCPerLine": 300},
-                {"gen": 4, "rate": utils.Decimal("0.03"), "reqActiveDirects": 4, "reqPersonalPC": 120, "reqLines": 3, "reqPCPerLine": 450},
-                {"gen": 5, "rate": utils.Decimal("0.02"), "reqActiveDirects": 5, "reqPersonalPC": 160, "reqLines": 3, "reqPCPerLine": 750},
-            ],
-        },
-        "orders": {"requireStockOnShipped": True, "requireDispatchLinesOnShipped": True},
-        "pos": {
-            "defaultCustomerName": "Publico en General",
-            "defaultPaymentStatus": "paid_branch",
-            "defaultDeliveryStatus": "delivered_branch",
-            "orderStatusByDeliveryStatus": {"delivered_branch": "delivered", "paid_branch": "paid"},
-        },
-        "stocks": {"requireLinkedUserForTransferReceive": True},
-        "payments": {
-            "mercadoLibre": {
-                "enabled": False, "accessToken": "", "currencyId": "MXN",
-                "checkoutPreferencesUrl": "https://api.mercadopago.com/checkout/preferences",
-                "paymentInfoUrlTemplate": "https://api.mercadopago.com/v1/payments/{payment_id}",
-                "notificationUrl": "", "successUrl": "", "failureUrl": "", "pendingUrl": "", "webhookSecret": "",
-            }
-        },
-        "adminWarnings": {
-            "showCommissions": True, "showShipping": True, "showPendingPayments": True,
-            "showPendingTransfers": True, "showPosSalesToday": True,
-        },
-        "shipping": {"enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"]},
-        "customerDocumentTypes": [
-            {"key": "constancia", "label": "Constancia de situación fiscal", "required": True},
-            {"key": "ine",        "label": "INE (frente y reverso)",          "required": True},
-            {"key": "curp",       "label": "CURP",                            "required": True},
-        ],
-        "bonuses": {
-            "vpConfig": {"mxnPerVp": 50, "maxNetworkLevels": 5},
-            # Rangos de liderazgo. Plan abril 2026 §6. PC netos (proporcionales al neto pagado).
-            # vpMin = PC personal mín.; vgMin = VG mín.; minLines = líneas activas;
-            # pcMinPerLine = PC mín. por línea; requiredLeaders/requiredLeaderRank = líderes
-            # del rango inferior requeridos en la red.
-            "rankThresholds": [
-                {"rank": "BRONCE",   "vpMin": 60,  "vgMin": 4500,  "minLines": 3, "pcMinPerLine": 900,  "requiredLeaders": 0, "requiredLeaderRank": "",        "monthlyBonus": 500,   "annualBonus": 6000},
-                {"rank": "PLATA",    "vpMin": 90,  "vgMin": 9000,  "minLines": 4, "pcMinPerLine": 1500, "requiredLeaders": 2, "requiredLeaderRank": "BRONCE",  "monthlyBonus": 1500,  "annualBonus": 18000},
-                {"rank": "ORO",      "vpMin": 140, "vgMin": 15000, "minLines": 4, "pcMinPerLine": 2500, "requiredLeaders": 2, "requiredLeaderRank": "PLATA",   "monthlyBonus": 3000,  "annualBonus": 36000},
-                {"rank": "PLATINO",  "vpMin": 200, "vgMin": 21000, "minLines": 5, "pcMinPerLine": 3000, "requiredLeaders": 2, "requiredLeaderRank": "ORO",     "monthlyBonus": 6000,  "annualBonus": 72000},
-                {"rank": "DIAMANTE", "vpMin": 280, "vgMin": 25000, "minLines": 5, "pcMinPerLine": 4000, "requiredLeaders": 2, "requiredLeaderRank": "PLATINO", "monthlyBonus": 10000, "annualBonus": 120000},
-            ],
-            "rules": [
-                {
-                    # §7.1 Bono de Inicio Rápido: 600 PC grupales en los primeros 30 días, una sola vez.
-                    "id": "inicio_rapido", "name": "Bono de Inicio Rápido", "active": True,
-                    "conditions": [{"type": "first_30_days"}, {"type": "vg_min", "value": 600}],
-                    "rewards": [{"type": "cash_mxn", "amount": 5000}],
-                    "cooldown": "once",
-                    "notes": "Primeros 30 días: 600 PC grupales del equipo → $5,000 MXN (una vez).",
-                },
-                # §7.2 Bono Mensual por Rango: se mantiene el rango 3 meses (calificación, no cobra)
-                # y se cobra a partir del 4º mes consecutivo. consecutive_months=4 sobre el vgMin del rango.
-                {
-                    "id": "bono_rango_bronce", "name": "Bono Mensual BRONCE", "active": True, "rank": "BRONCE",
-                    "conditions": [{"type": "vg_min", "value": 4500}, {"type": "consecutive_months", "value": 4}],
-                    "rewards": [{"type": "monthly_cash", "amount": 500}],
-                    "cooldown": "monthly",
-                    "notes": "$500/mes desde el 4º mes consecutivo en BRONCE.",
-                },
-                {
-                    "id": "bono_rango_plata", "name": "Bono Mensual PLATA", "active": True, "rank": "PLATA",
-                    "conditions": [{"type": "vg_min", "value": 9000}, {"type": "consecutive_months", "value": 4}],
-                    "rewards": [{"type": "monthly_cash", "amount": 1500}],
-                    "cooldown": "monthly",
-                    "notes": "$1,500/mes desde el 4º mes consecutivo en PLATA.",
-                },
-                {
-                    "id": "bono_rango_oro", "name": "Bono Mensual ORO", "active": True, "rank": "ORO",
-                    "conditions": [{"type": "vg_min", "value": 15000}, {"type": "consecutive_months", "value": 4}],
-                    "rewards": [{"type": "monthly_cash", "amount": 3000}],
-                    "cooldown": "monthly",
-                    "notes": "$3,000/mes desde el 4º mes consecutivo en ORO.",
-                },
-                {
-                    "id": "bono_rango_platino", "name": "Bono Mensual PLATINO", "active": True, "rank": "PLATINO",
-                    "conditions": [{"type": "vg_min", "value": 21000}, {"type": "consecutive_months", "value": 4}],
-                    "rewards": [{"type": "monthly_cash", "amount": 6000}],
-                    "cooldown": "monthly",
-                    "notes": "$6,000/mes desde el 4º mes consecutivo en PLATINO.",
-                },
-                {
-                    "id": "bono_rango_diamante", "name": "Bono Mensual DIAMANTE", "active": True, "rank": "DIAMANTE",
-                    "conditions": [{"type": "vg_min", "value": 25000}, {"type": "consecutive_months", "value": 4}],
-                    "rewards": [{"type": "monthly_cash", "amount": 10000}],
-                    "cooldown": "monthly",
-                    "notes": "$10,000/mes desde el 4º mes consecutivo en DIAMANTE.",
-                },
-                # §7.3 Premios físicos por sostenimiento de rango (una sola vez por rango).
-                {
-                    "id": "premio_bronce_3m", "name": "Premio BRONCE (3 meses)", "active": True, "rank": "BRONCE",
-                    "conditions": [{"type": "vg_min", "value": 4500}, {"type": "consecutive_months", "value": 3}],
-                    "rewards": [{"type": "item", "itemLabel": "Licuadora o Air Fryer", "triggerMonths": 3}],
-                    "cooldown": "once",
-                },
-                {
-                    "id": "premio_plata_3m", "name": "Premio PLATA (3 meses)", "active": True, "rank": "PLATA",
-                    "conditions": [{"type": "vg_min", "value": 9000}, {"type": "consecutive_months", "value": 3}],
-                    "rewards": [{"type": "item", "itemLabel": "Microondas o equivalente", "triggerMonths": 3}],
-                    "cooldown": "once",
-                },
-                {
-                    "id": "premio_oro_3m", "name": "Premio ORO (3 meses)", "active": True, "rank": "ORO",
-                    "conditions": [{"type": "vg_min", "value": 15000}, {"type": "consecutive_months", "value": 3}],
-                    "rewards": [{"type": "item", "itemLabel": "Pantalla Smart TV", "triggerMonths": 3}],
-                    "cooldown": "once",
-                },
-                {
-                    "id": "premio_platino_3m", "name": "Premio PLATINO (3 meses)", "active": True, "rank": "PLATINO",
-                    "conditions": [{"type": "vg_min", "value": 21000}, {"type": "consecutive_months", "value": 3}],
-                    "rewards": [{"type": "item", "itemLabel": "Experiencia premium", "triggerMonths": 3}],
-                    "cooldown": "once",
-                },
-                {
-                    "id": "premio_diamante_6m", "name": "Premio DIAMANTE (6 meses)", "active": True, "rank": "DIAMANTE",
-                    "conditions": [{"type": "vg_min", "value": 25000}, {"type": "consecutive_months", "value": 6}],
-                    "rewards": [{"type": "item", "itemLabel": "Viaje internacional elite", "triggerMonths": 6}],
-                    "cooldown": "once",
-                },
-            ],
-        },
-    }
+    """Configuración por defecto del plan (definida en core_utils)."""
+    return utils._default_app_config()
 
-def _merge_dict(base, override):
-    if isinstance(base, dict) and isinstance(override, dict):
-        merged = dict(base)
-        for k, v in override.items():
-            merged[k] = _merge_dict(merged.get(k), v)
-        return merged
-    return override if override is not None else base
 
 def _normalize_app_config(raw) -> dict:
-    base = _default_app_config()
-    merged = _merge_dict(base, raw if isinstance(raw, dict) else {})
-    return merged
+    return utils._normalize_app_config(raw)
+
 
 def _decimal_clean(obj):
     """Recursively convert float → Decimal so DynamoDB doesn't throw."""
@@ -754,11 +598,8 @@ def handle_apply_rewards(order_id):
     order = utils._get_by_id("ORDER", order_id)
     if not order: return {"error": "Order not found"}
 
-    app_cfg   = utils._load_app_config()
-    cfg       = app_cfg.get("rewards", {})
-    bonus_cfg = app_cfg.get("bonuses") or {}
-    vp_cfg    = bonus_cfg.get("vpConfig", {})
-    mxn_per_vp  = float(vp_cfg.get("mxnPerVp", 50))
+    cfg        = utils._load_app_config().get("rewards", {})
+    mxn_per_vp = utils._mxn_per_vp()
 
     month_key  = order.get("monthKey") or utils._month_key()
     net_amount = utils._to_decimal(order.get("netTotal"))
@@ -777,8 +618,8 @@ def handle_apply_rewards(order_id):
         utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
 
     # 2. Repartir comisiones al upline con compresión dinámica (Plan abril 2026 §4).
-    max_levels    = int(vp_cfg.get("maxNetworkLevels", 5))
-    activation_vp = float(utils._to_decimal(cfg.get("activationNetMin", 20)))
+    max_levels    = utils._max_network_levels()
+    activation_vp = utils._activation_vp()
     cut_rule      = cfg.get("cutRule", "dynamic_compression")
     levels_cfg    = cfg.get("commissionLevels", [])
 
@@ -859,7 +700,7 @@ def handle_confirm_commissions(order_id):
         try:
             handle_evaluate_bonuses(buyer_id, month_key)
         except Exception as e:
-            print(f"[BONUS_EVAL_ERROR] buyer={buyer_id} err={e}")
+            utils._log("bonus_eval_error", "ERROR", buyer=buyer_id, err=e)
 
 # --- HANDLERS DE API ---
 
@@ -917,8 +758,9 @@ def handle_admin_receipt(body):
             ExpressionAttributeNames={"#s": "status"},
             ExpressionAttributeValues={":p": "PAID", ":now": now, ":one": utils._to_decimal(1)},
         )
-    except Exception:
-        pass
+    except Exception as ex:
+        utils._log_error("commission_month_mark_paid_failed", ex,
+                         customerId=cid, monthKey=month_key)
     return utils._json_response(201, {"receipt": receipt_item, "asset": asset})
 
 
@@ -961,11 +803,11 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
     net_volume = float(utils._to_decimal(item.get("netVolume")))
 
     # Load config for discount tiers and goals
-    cfg = utils._load_app_config() or _default_app_config()
+    cfg = utils._load_app_config()
     rewards = cfg.get("rewards") or {}
     discount_tiers = rewards.get("discountTiers") or []
     commission_levels = rewards.get("commissionLevels") or []
-    mxn_per_vp = float(utils._to_decimal((cfg.get("bonuses") or {}).get("vpConfig", {}).get("mxnPerVp", 50)))
+    mxn_per_vp = utils._mxn_per_vp(cfg)
 
     # Determine current discount tier for this associate
     current_discount = None
@@ -1020,7 +862,7 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
     """
     order = utils._get_by_id("ORDER", order_id)
     if not order:
-        print(f"[VOID_COMM] Orden {order_id} no encontrada")
+        utils._log("void_comm", "INFO", detail='Orden {order_id} no encontrada')
         return {"skipped": True}
 
     month_key = order.get("monthKey") or utils._month_key()
@@ -1041,12 +883,12 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
         try:
             summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id)
         except Exception as e:
-            print(f"[VOID_SFN_ERROR] beneficiary={beneficiary_id} err={e}")
+            utils._log("void_sfn_error", "ERROR", beneficiary=beneficiary_id, err=e)
             continue
         if summary:
             voided.append({**summary, "reason": reason})
 
-    print(f"[VOID_COMM] order={order_id} reason={reason} voided={len(voided)}")
+    utils._log("void_comm", "INFO", order=order_id, reason=reason, voided=len(voided))
     return {"voided": voided, "count": len(voided)}
 
 
@@ -1186,11 +1028,132 @@ def handle_monthly_stats(month: str) -> dict:
         },
     }
 
-    print(f"[MONTHLY_STATS] month={month} orders={orders_count} pos={pos_count} customers_new={new_customer_count}")
+    utils._log("monthly_stats", "INFO", month=month, orders=orders_count, pos=pos_count, customers_new=new_customer_count)
     return utils._json_response(200, result)
 
 
 # --- LAMBDA HANDLER PRINCIPAL ---
+
+def _route_summary(method: str, segments: list, event: dict, headers: dict):
+    """GET /commissions/summary — export mensual agregado."""
+    root = segments[0] if segments else ""
+    if root == "summary" and method == "GET":
+        err = utils._require_admin(headers, "access_screen_stats")
+        if err: return err
+        month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
+        # COMMISSION_MONTH ordena por beneficiario, no por fecha, así que no
+        # admite recorte por clave; se lee la partición completa (paginada).
+        all_comm = utils._query_bucket("COMMISSION_MONTH")
+        receipts_raw = utils._query_bucket("COMMISSION_RECEIPT", sk_from=str(month or ""))
+        receipt_by_cust = {}
+        for r in receipts_raw:
+            if str(r.get("monthKey")) == str(month):
+                receipt_by_cust[str(r.get("customerId"))] = r.get("assetUrl") or ""
+        summary = {}
+        for item in all_comm:
+            sk = str(item.get("SK") or "")
+            if f"#MONTH#{month}" not in sk:
+                continue
+            bid = str(item.get("beneficiaryId") or "")
+            if not bid:
+                continue
+            confirmed = float(utils._to_decimal(item.get("totalConfirmed", 0)))
+            receipt_url = receipt_by_cust.get(bid, "")
+            if confirmed <= 0:
+                status = "no_moves"
+            elif receipt_url:
+                status = "paid"
+            else:
+                status = "pending"
+            summary[bid] = {
+                "customerId": bid,
+                "monthKey": month,
+                "paidTotal": confirmed,
+                "status": status,
+                "receiptUrl": receipt_url,
+            }
+        return utils._json_response(200, {"summary": summary, "monthKey": month})
+
+    # POST /commissions/request
+    return None
+
+
+def _route_config(method: str, segments: list, body: dict, headers: dict):
+    """Sub-rutas de /commissions/config."""
+    if (segments[0] if segments else "") != "config" or len(segments) <= 1:
+        return None
+    sub = segments[1]
+    if sub == "rewards":
+        if method == "GET":
+            return utils._json_response(200, {"config": utils._load_app_config().get("rewards")})
+        if method == "PUT":
+            err = utils._require_admin(headers, "config_manage")
+            if err: return err
+            current = utils._load_app_config()
+            current["rewards"] = body
+            saved = _save_app_config(current)
+            return utils._json_response(200, {"config": saved.get("rewards")})
+    if sub == "app":
+        if method == "GET":
+            err = utils._require_admin(headers, "access_screen_settings")
+            if err: return err
+            cfg = utils._load_app_config()
+            if not cfg:
+                cfg = _default_app_config()
+            return utils._json_response(200, {"config": cfg})
+        if method == "PUT":
+            err = utils._require_admin(headers, "config_manage")
+            if err: return err
+            if not body:
+                return utils._json_response(400, {"message": "config invalida"})
+            current = utils._load_app_config() or _default_app_config()
+            incoming = body.get("config") if isinstance(body.get("config"), dict) else body
+            merged = utils._merge_dict(current, incoming)
+            saved = _save_app_config(merged)
+            utils._audit_event("config.app.update", headers, body, {"scope": "app"})
+            return utils._json_response(200, {"config": saved})
+    return None
+
+
+def _route_bonuses(method: str, segments: list, body: dict, event: dict, headers: dict):
+    """Sub-rutas de /commissions/bonuses."""
+    root = segments[0] if segments else ""
+    if root != "bonuses" or len(segments) != 2:
+        return None
+
+    cid = segments[1]
+    if method == "GET":
+        err = utils._require_self_or_admin(headers, cid)
+        if err: return err
+        query_params = event.get("queryStringParameters") or {}
+        month = query_params.get("month")
+        awards = utils._query_bucket("BONUS_AWARD", sk_from=str(month or ""))
+        result = [a for a in awards if str(a.get("customerId")) == str(cid)]
+        if month:
+            result = [a for a in result if a.get("monthKey") == month]
+        # Calcular VP/VG/rango actuales
+        cfg       = utils._load_app_config()
+        bonus_cfg = cfg.get("bonuses") or {}
+        mk        = month or utils._month_key()
+        mxn_per_vp   = utils._mxn_per_vp()
+        max_levels   = utils._max_network_levels()
+        vp   = _calc_vp(cid, mk, mxn_per_vp)
+        vg   = _calc_vg(cid, mk, mxn_per_vp, max_levels)
+        rank = _get_rank(vg, bonus_cfg.get("rankThresholds", []))
+        return utils._json_response(200, {"awards": result, "vp": vp, "vg": vg, "rank": rank})
+
+    # /bonuses/evaluate — dispara la evaluación manual (admin/sistema)
+    if segments[1] == "evaluate" and method == "POST":
+        err = utils._require_admin(headers, "commissions_register_payment")
+        if err: return err
+        cid = body.get("customerId")
+        month_key = body.get("monthKey") or utils._month_key()
+        if not cid:
+            return utils._json_response(400, {"message": "customerId requerido"})
+        return utils._json_response(200, handle_evaluate_bonuses(str(cid), month_key))
+
+    return None
+
 
 def lambda_handler(event, context):
     # La caché de red/estados es por invocación: un contenedor tibio no debe
@@ -1209,16 +1172,12 @@ def lambda_handler(event, context):
             _handle_void_commissions_action(oid, action.lower())
         return {"status": "PROCESSED", "action": action, "orderId": oid}
 
-    # 2. Detectar si es una petición de API Gateway
-    path = event.get("path", "")
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+    # 2. Petición de API Gateway
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    headers = event.get("headers") or {}
-    # API GW está configurado como ANY /commissions/{proxy+}; el path llega con el prefijo
-    raw_segments = [s for s in path.strip("/").split("/") if s]
-    segments = raw_segments[1:] if raw_segments and raw_segments[0] == "commissions" else raw_segments
+    request = utils._http_request(event, strip_prefix="commissions")
+    method = request.method
+    body, headers, segments = request.body, request.headers, request.segments
 
     try:
         if not segments:
@@ -1226,45 +1185,10 @@ def lambda_handler(event, context):
 
         root = segments[0]
 
-        # GET /commissions/summary?month={monthKey}  — batch export helper
-        if root == "summary" and method == "GET":
-            err = utils._require_admin(headers, "access_screen_stats")
-            if err: return err
-            month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
-            prev_month = (event.get("queryStringParameters") or {}).get("prevMonth")
-            # Query all COMMISSION_MONTH records and filter in memory
-            # COMMISSION_MONTH ordena por beneficiario, no por fecha, así que no
-            # admite recorte por clave; se lee la partición completa (paginada).
-            all_comm = utils._query_bucket("COMMISSION_MONTH")
-            receipts_raw = utils._query_bucket("COMMISSION_RECEIPT", sk_from=str(month or ""))
-            receipt_by_cust = {}
-            for r in receipts_raw:
-                if str(r.get("monthKey")) == str(month):
-                    receipt_by_cust[str(r.get("customerId"))] = r.get("assetUrl") or ""
-            summary = {}
-            for item in all_comm:
-                sk = str(item.get("SK") or "")
-                if f"#MONTH#{month}" not in sk:
-                    continue
-                bid = str(item.get("beneficiaryId") or "")
-                if not bid:
-                    continue
-                confirmed = float(utils._to_decimal(item.get("totalConfirmed", 0)))
-                receipt_url = receipt_by_cust.get(bid, "")
-                if confirmed <= 0:
-                    status = "no_moves"
-                elif receipt_url:
-                    status = "paid"
-                else:
-                    status = "pending"
-                summary[bid] = {
-                    "customerId": bid,
-                    "monthKey": month,
-                    "paidTotal": confirmed,
-                    "status": status,
-                    "receiptUrl": receipt_url,
-                }
-            return utils._json_response(200, {"summary": summary, "monthKey": month})
+        # GET /commissions/summary?month={monthKey} — export mensual
+        respuesta = _route_summary(method, segments, event, headers)
+        if respuesta is not None:
+            return respuesta
 
         # POST /commissions/request
         if root == "request" and method == "POST":
@@ -1286,39 +1210,11 @@ def lambda_handler(event, context):
                 return handle_admin_receipt(body)
 
         # /commissions/config/rewards  y  /commissions/config/app
-        if root == "config" and len(segments) > 1:
-            sub = segments[1]
-            if sub == "rewards":
-                if method == "GET":
-                    return utils._json_response(200, {"config": utils._load_app_config().get("rewards")})
-                if method == "PUT":
-                    err = utils._require_admin(headers, "config_manage")
-                    if err: return err
-                    current = utils._load_app_config()
-                    current["rewards"] = body
-                    saved = _save_app_config(current)
-                    return utils._json_response(200, {"config": saved.get("rewards")})
-            if sub == "app":
-                if method == "GET":
-                    err = utils._require_admin(headers, "access_screen_settings")
-                    if err: return err
-                    cfg = utils._load_app_config()
-                    if not cfg:
-                        cfg = _default_app_config()
-                    return utils._json_response(200, {"config": cfg})
-                if method == "PUT":
-                    err = utils._require_admin(headers, "config_manage")
-                    if err: return err
-                    if not body:
-                        return utils._json_response(400, {"message": "config invalida"})
-                    current = utils._load_app_config() or _default_app_config()
-                    incoming = body.get("config") if isinstance(body.get("config"), dict) else body
-                    merged = _merge_dict(current, incoming)
-                    saved = _save_app_config(merged)
-                    utils._audit_event("config.app.update", headers, body, {"scope": "app"})
-                    return utils._json_response(200, {"config": saved})
+        respuesta = _route_config(method, segments, body, headers)
+        if respuesta is not None:
+            return respuesta
 
-        # /commissions/associates/{id}/commissions  y  /commissions/associates/{id}/month/{monthKey}
+        # /commissions/associates/{id}/commissions  y  .../month/{monthKey}
         if root == "associates" and len(segments) >= 3:
             aid = segments[1]
             sub = segments[2]
@@ -1332,40 +1228,10 @@ def lambda_handler(event, context):
                 if err: return err
                 return handle_get_associate_month(aid, segments[3])
 
-        # /commissions/bonuses/{customerId}  — lista de awards del cliente
-        if root == "bonuses" and len(segments) == 2:
-            cid = segments[1]
-            if method == "GET":
-                err = utils._require_self_or_admin(headers, cid)
-                if err: return err
-                query_params = event.get("queryStringParameters") or {}
-                month = query_params.get("month")
-                awards = utils._query_bucket("BONUS_AWARD", sk_from=str(month or ""))
-                result = [a for a in awards if str(a.get("customerId")) == str(cid)]
-                if month:
-                    result = [a for a in result if a.get("monthKey") == month]
-                # Calcular VP/VG/rango actuales
-                cfg       = utils._load_app_config()
-                bonus_cfg = cfg.get("bonuses") or {}
-                vp_cfg    = bonus_cfg.get("vpConfig", {})
-                mk        = month or utils._month_key()
-                mxn_per_vp   = float(vp_cfg.get("mxnPerVp", 50))
-                max_levels   = int(vp_cfg.get("maxNetworkLevels", 5))
-                vp   = _calc_vp(cid, mk, mxn_per_vp)
-                vg   = _calc_vg(cid, mk, mxn_per_vp, max_levels)
-                rank = _get_rank(vg, bonus_cfg.get("rankThresholds", []))
-                return utils._json_response(200, {"awards": result, "vp": vp, "vg": vg, "rank": rank})
-
-        # /bonuses/evaluate  — dispara evaluación manual (admin/sistema)
-        if root == "bonuses" and len(segments) == 2 and segments[1] == "evaluate" and method == "POST":
-            err = utils._require_admin(headers, "commissions_register_payment")
-            if err: return err
-            cid       = body.get("customerId")
-            month_key = body.get("monthKey") or utils._month_key()
-            if not cid:
-                return utils._json_response(400, {"message": "customerId requerido"})
-            result = handle_evaluate_bonuses(str(cid), month_key)
-            return utils._json_response(200, result)
+        # /commissions/bonuses/{customerId} y /commissions/bonuses/evaluate
+        respuesta = _route_bonuses(method, segments, body, event, headers)
+        if respuesta is not None:
+            return respuesta
 
         # GET /commissions/monthly-stats?month=YYYY-MM
         if root == "monthly-stats" and method == "GET":
@@ -1377,5 +1243,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": "Ruta de comisiones no encontrada"})
 
     except Exception as e:
-        print(f"[COMMISSION_ERROR] {str(e)}")
+        utils._log_error("commissions_unhandled_error", e)
         return utils._json_response(500, {"message": "Error en motor de comisiones", "error": str(e)})
