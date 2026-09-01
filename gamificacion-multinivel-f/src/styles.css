@@ -14,8 +14,18 @@
   --color-text: #26312b;
   --color-text-muted: #66706a;
   --color-text-inverse: #f6f4ee;
-  --color-success: #5f7f6a;
+  --color-success: #51705f;
   --color-danger: #b4533c;
+
+  /* Escala de elevación: una sola voz para todas las sombras */
+  --shadow-rest: 0 1px 2px rgba(31, 61, 49, 0.05), 0 4px 12px rgba(31, 61, 49, 0.05);
+  --shadow-lift: 0 8px 20px rgba(31, 61, 49, 0.09), 0 2px 6px rgba(31, 61, 49, 0.05);
+  --shadow-float: 0 24px 48px rgba(31, 61, 49, 0.12), 0 6px 16px rgba(31, 61, 49, 0.06);
+
+  /* Escala de radios */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
 
   --color-surface-1: #fdfbf7;
   --color-surface-2: #f6f3ee;
@@ -102,7 +112,7 @@ h4 {
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
   mix-blend-mode: soft-light;
-  opacity: 0.18;
+  opacity: 0.12;
   pointer-events: none;
   border-radius: inherit;
 }
@@ -208,8 +218,8 @@ select:focus {
   background: var(--color-surface-1);
   color: var(--color-text);
   border: 1px solid rgba(var(--rgb-primary), 0.3);
-  border-radius: 28px;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
   backdrop-filter: none;
 }
 
@@ -294,7 +304,7 @@ select:focus {
   background: linear-gradient(135deg, #d9bc6d 0%, var(--color-primary) 55%, #b18c3a 115%);
   color: #241d0d;
   border: 1px solid rgba(var(--rgb-primary), 0.4);
-  box-shadow: 0 6px 18px rgba(var(--rgb-primary), 0.28);
+  box-shadow: 0 6px 18px rgba(var(--rgb-primary), 0.24);
 }
 
 .btn-primary:hover:not(.btn-disabled):not(:disabled) {
@@ -347,8 +357,8 @@ select:focus {
 .kpi-mini {
   background: rgba(var(--rgb-surface-1), 0.88);
   border: 1px solid rgba(var(--rgb-primary), 0.3);
-  border-radius: 18px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-rest);
 }
 
 .kpi-mini .label {
@@ -374,7 +384,7 @@ select:focus {
 .progress-card {
   background: rgba(var(--rgb-surface-1), 0.88);
   border: 1px solid rgba(var(--rgb-primary), 0.28);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
 }
 
 .progress-card .title {
@@ -398,7 +408,7 @@ select:focus {
 
 .table-soft {
   border: 1px solid rgba(var(--rgb-primary), 0.3);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -532,10 +542,10 @@ select:focus {
 }
 
 .ring-status-active {
-  border-color: rgba(95, 127, 106, 0.45);
+  border-color: rgba(81, 112, 95, 0.45);
   box-shadow:
-    0 0 0 2px rgba(95, 127, 106, 0.2),
-    0 12px 28px rgba(95, 127, 106, 0.12);
+    0 0 0 2px rgba(81, 112, 95, 0.2),
+    0 12px 28px rgba(81, 112, 95, 0.12);
 }
 
 .ring-status-inactive {
@@ -570,20 +580,25 @@ select:focus {
 .hover-bg-cream-90:hover { background-color: rgba(var(--rgb-surface-3), 0.9); }
 
 .placeholder-text-muted-strong::placeholder { color: var(--color-text-muted); }
-.placeholder-text-muted-light::placeholder { color: #b4aea3; }
+/* Antes #b4aea3 (2.1:1 sobre marfil): ilegible como pista de campo */
+.placeholder-text-muted-light::placeholder { color: #7c766c; }
 
 .text-ink { color: #1b1b1b; }
+/* Tailwind gray-400 (#9ca3af) da 2.5:1 sobre crema: se colapsa al muted del sistema */
+.text-gray-400 { color: var(--color-text-muted); }
+.text-gold-70 { color: rgba(107, 83, 32, 0.85); }
 .text-forest { color: var(--color-forest); }
 .bg-forest { background-color: var(--color-forest); }
 .bg-forest-05 { background-color: rgba(var(--rgb-forest), 0.05); }
 .bg-forest-10 { background-color: rgba(var(--rgb-forest), 0.1); }
 .border-forest-20 { border-color: rgba(var(--rgb-forest), 0.2); }
 .text-charcoal { color: var(--color-text); }
-.text-gray-700 { color: #4e4e4e; }
-.text-gray-600 { color: #5a5a5a; }
+/* Grises entonados al verde del sistema (antes neutros fríos que desentonaban) */
+.text-gray-700 { color: #47514b; }
+.text-gray-600 { color: #57615a; }
 .text-gray-500 { color: var(--color-text-muted); }
 .text-danger-deep { color: #7a2e2e; }
-.text-stone { color: #8f8673; }
+.text-stone { color: #746b5a; }
 .text-alert-soft { color: #9a5a4a; }
 .text-sand-200 { color: var(--color-surface-2); }
 

@@ -111,7 +111,7 @@
 
           <ui-button size="sm" variant="ghost" *ngIf="!isGuest" type="button" class="mt-3 w-full" (pressed)="logout()">
             <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            Cerrar sesion
+            Cerrar sesión
           </ui-button>
         </div>
       </div>
@@ -251,7 +251,7 @@
     <section id="merchant" class="scroll-mt-10">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
             <i class="fa-solid fa-store hidden text-gold md:inline" aria-hidden="true"></i>
             Tienda
           </h2>
@@ -286,7 +286,7 @@
         </div>
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="productOfMonth as pom">
           <div class="order-2 md:order-2">
-            <h3 class="text-3xl font-extrabold tracking-tight md:text-4xl">{{ pom.name }}</h3>
+            <h3 class="text-3xl font-semibold tracking-tight md:text-4xl">{{ pom.name }}</h3>
             <p *ngIf="heroGoalHint" class="mt-2 text-sm text-gold">{{ heroGoalHint }}</p>
             <p class="mt-1 max-w-xl text-muted">
               {{ pom.hook || 'Producto recomendado para avanzar en tus metas.' }}
@@ -401,7 +401,7 @@
     <section id="red" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-users hidden text-accent md:inline" aria-hidden="true"></i>
             Red
@@ -584,7 +584,7 @@
 
     <!-- ─── VP / VG / RANGO / BONOS ──────────────────────────────────────── -->
     <section id="volumen" class="scroll-mt-10" *ngIf="!isGuest && (vpPoints > 0 || vgPoints > 0 || hasBonuses)">
-      <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+      <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
         <i class="fa-solid fa-trophy hidden text-gold md:inline" aria-hidden="true"></i>
         Volumen &amp; Rangos
       </h2>
@@ -634,7 +634,7 @@
     <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && commissionSummary as commissions">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-coins hidden text-gold md:inline" aria-hidden="true"></i>
             Comisiones
@@ -766,10 +766,10 @@
     <section id="ordenes" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-receipt hidden text-accent md:inline" aria-hidden="true"></i>
-            Ordenes
+            Órdenes
             <span class="relative inline-flex">
               <button type="button"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-sm text-gray-600 transition hover:bg-olive-10 hover:text-main"
@@ -782,7 +782,7 @@
                 <div class="mt-3 space-y-3">
                   <div class="flex items-start gap-3">
                     <ui-status-badge status="pending"></ui-status-badge>
-                    <div>La orden fue creada y el pago aun no se confirma.</div>
+                    <div>La orden fue creada y el pago aún no se confirma.</div>
                   </div>
                   <div class="flex items-start gap-3">
                     <ui-status-badge status="paid"></ui-status-badge>
@@ -805,9 +805,9 @@
       </div>
 
       <div class="mt-6 rounded-3xl border border-olive-30 bg-ivory-80 p-6">
-        <div *ngIf="isOrdersLoading" class="text-sm text-gray-600">Cargando ordenes...</div>
+        <div *ngIf="isOrdersLoading" class="text-sm text-gray-600">Cargando órdenes...</div>
         <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-gray-600">
-          Aun no tienes ordenes registradas.
+          Aún no tienes órdenes registradas.
         </div>
         <ui-table *ngIf="!isOrdersLoading && orders.length > 0">
           <div class="table-soft">
@@ -908,7 +908,7 @@
     <section id="links" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-link hidden text-gold md:inline" aria-hidden="true"></i>
             Links de referencia
@@ -1139,7 +1139,7 @@
     <section id="honor" class="scroll-mt-10" *ngIf="!isGuest && honorBoard">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
             <i class="fa-solid fa-ranking-star hidden text-gold md:inline" aria-hidden="true"></i>
             Cuadro de Honor
           </h2>

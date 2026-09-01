@@ -1014,14 +1014,14 @@ export class AdminComponent implements OnInit {
         label: 'Catálogo y oferta',
         links: [
           { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-          { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
+          { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campañas', subtitle: '' },
           { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' }
         ]
       },
       {
         label: 'Seguimiento',
         links: [
-          { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+          { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadísticas', subtitle: '' },
           { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
           { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' }
         ]
@@ -1029,7 +1029,7 @@ export class AdminComponent implements OnInit {
       {
         label: 'Sistema',
         links: [
-          { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
+          { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuración', subtitle: '' }
         ]
       }
     ];
@@ -1061,13 +1061,13 @@ export class AdminComponent implements OnInit {
       return 'Stocks';
     }
     if (this.currentView === 'campaigns') {
-      return 'Campanas';
+      return 'Campañas';
     }
     if (this.currentView === 'pos') {
       return 'Punto de Venta';
     }
     if (this.currentView === 'stats') {
-      return 'Estadisticas';
+      return 'Estadísticas';
     }
     if (this.currentView === 'honor_board') {
       return 'Cuadro de Honor';
@@ -1079,7 +1079,7 @@ export class AdminComponent implements OnInit {
       return 'Cupones';
     }
     if (this.currentView === 'settings') {
-      return 'Configuracion';
+      return 'Configuración';
     }
     return 'Pedidos';
   }
@@ -1092,13 +1092,13 @@ export class AdminComponent implements OnInit {
       return 'Alta, acceso y privilegios de operadores.';
     }
     if (this.currentView === 'products') {
-      return 'Altas, imagenes y CTA.';
+      return 'Altas, imágenes y CTA.';
     }
     if (this.currentView === 'stocks') {
       return 'Inventario por sucursal, transferencias, recepciones y danos.';
     }
     if (this.currentView === 'campaigns') {
-      return 'Campanas, assets y copy comercial para compartir con la red.';
+      return 'Campañas, assets y copy comercial para compartir con la red.';
     }
     if (this.currentView === 'pos') {
       return 'Ventas en sucursal vinculadas a stock y operador.';

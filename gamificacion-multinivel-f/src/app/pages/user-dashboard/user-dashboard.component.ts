@@ -256,7 +256,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       links.push(
         { id: 'red', icon: 'fa-users', label: 'Red' },
         { id: 'links', icon: 'fa-link', label: 'Links' },
-        { id: 'ordenes', icon: 'fa-receipt', label: 'Ordenes' }
+        { id: 'ordenes', icon: 'fa-receipt', label: 'Órdenes' }
       );
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
