@@ -4,6 +4,8 @@
 > validadas; revisión adversarial del diff completo con sus 8 hallazgos corregidos.
 > **Propósito:** qué sigue, en qué orden y por qué — para que la arquitectura siga
 > mejorando en lugar de estabilizarse en el estado actual.
+> **Estado:** los 8 puntos están ejecutados salvo el 5 (asíncrono), que depende
+> de infraestructura nueva. Ver §9.
 > **Fecha:** septiembre 2026 · **Rama:** `claude/ultimos-cambios-integrados-fylhiw`
 
 ---
@@ -25,6 +27,42 @@ existe; en DynamoDB sí) y por eso 45 pruebas no cazaron un bug de despliegue. *
 ahora modelan la semántica real y hay un test que reproduce el caso.** Regla para el
 futuro: cuando un doble de pruebas simule un servicio externo, imitar sus fallos, no solo
 sus éxitos.
+
+---
+
+## Estado de ejecución
+
+| # | Mejora | Estado | Resultado |
+|---|---|---|---|
+| 1 | Infraestructura como código | ✅ | `template.yaml` (SAM) con tabla, TTL, 8 funciones, API, Step Functions y políticas. Los 3 pendientes de AWS pasan a ser un diff revisable. `tests/test_infraestructura.py` la ata al código |
+| 2 | Retirar `/user-dashboard` | ✅ instrumentado | Registra `legacy_user_dashboard_hit` y responde con cabeceras RFC 8594. **Falta el borrado**, que requiere una semana de datos que confirmen que nadie lo llama |
+| 3 | Ledger por filas | ✅ tras bandera | `LEDGER_ROW_SCHEME` (off/dual/rows) + script de migración idempotente. Añadir una comisión a un mes con 200: **201 → 1 fila reescrita** |
+| 4 | `core/` como paquete | ✅ | 14 módulos, dependencias en una dirección, paridad completa de API. Dos violaciones de capa resueltas con registros de entidad |
+| 5 | Trabajo pesado fuera del request | ⏳ Parcial | Streams ya habilitados en la plantilla; falta la función consumidora y la cola de correo. Ver §9 |
+| 6 | Ruteo declarativo | ✅ 2 de 8 lambdas | Motor + `catalog` (148 → 6 líneas) y `commissions` (180 → 17). El resto, al tocarlos |
+| 7 | Un solo camino de autenticación | ✅ corto plazo | Sesiones con clave directa: 1 GetItem por petición en vez de 2, sin punteros huérfanos. El authorizer sigue pendiente (§9) |
+| 8 | Legibilidad continua | ✅ | `ARCHITECTURE.md`, tipos y troceo aplicados; las reglas las hace cumplir el CI |
+
+### Lo que la ejecución destapó
+
+Cada mejora encontró defectos que el código anterior escondía:
+
+- **Fakes más permisivos que DynamoDB.** El de las pruebas no aplicaba
+  `UpdateItem` (solo devolvía el item), así que ningún efecto de un `ADD`/`SET`
+  era visible. Y `version = :0` no fallaba con el atributo ausente, que fue
+  justo el bug bloqueante de la revisión anterior. Ambos corregidos.
+- **`RUTEO_ACTUALIZAR=0` regeneraba la referencia.** `os.environ.get(VAR)`
+  devuelve `"0"`, que es verdadero: la instantánea de ruteo se sobrescribía en
+  silencio y la prueba pasaba siempre.
+- **La instantánea medía lo que no era.** Solo registraba qué `handle_*` se
+  invocaba; en comisiones la lógica era inline y 98 de 100 entradas eran
+  `<sin handler>`. Ahora registra el código de estado.
+- **`STATE_MACHINE_ARN` vs `ORDER_FULFILLMENT_SFN_ARN`.** La plantilla declaraba
+  un nombre que el código no lee: la máquina de estados nunca se habría
+  disparado. Lo encontró el test que exige documentar cada variable.
+- **Rutas que escribían en URLs no declaradas.** `POST /notifications/{id}`
+  creaba una notificación y `POST /product-categories/{id}` una categoría.
+- **Rutas DELETE sobre handlers sin DELETE**, que devolvían 502.
 
 ---
 
@@ -176,3 +214,44 @@ además el cierre correcto del hallazgo de seguridad M4.
 Si solo se hace una cosa este trimestre: **el punto 1**. Todo lo demás se puede hacer con
 más seguridad, y dos pendientes de seguridad reales (TTL y rotación del token) dependen
 de él.
+
+---
+
+## 9. Lo que sigue después de esta ronda
+
+Con los puntos 1-4 y 6-8 ejecutados, el trabajo restante es este:
+
+**Corto plazo, sin infraestructura nueva**
+
+1. **Borrar `/user-dashboard`** cuando una semana de `legacy_user_dashboard_hit`
+   confirme que no hay tráfico. Se lleva por delante el resto de la duplicación
+   `customer`/`dashboard`.
+2. **Migrar los 6 ruteadores restantes** a tabla declarativa, al tocar cada
+   lambda. El patrón está probado y la instantánea verifica cada migración.
+3. **Activar `LEDGER_ROW_SCHEME=dual`** en staging, correr la migración,
+   verificar con `--verify` y pasar a `rows`.
+4. **Desplegar la plantilla en `dev`** y contrastarla con producción; con eso
+   se cierran los tres pendientes de AWS.
+
+**Requiere infraestructura nueva (punto 5)**
+
+5. **Correo por cola.** Hoy `_send_ses_email` se llama dentro de peticiones y de
+   la evaluación de bonos. Con SES caído, la petición se alarga o falla. Una
+   cola SQS y un worker lo desacoplan.
+6. **Árbol de red por Streams.** `_load_network_scope` reconstruye el árbol en
+   línea si detecta desfase: N escrituras dentro de un GET. Los Streams ya están
+   habilitados en la plantilla; falta la función que mantenga el árbol de forma
+   incremental.
+7. **Idempotencia verificada del pipeline de bonos.** `_has_bonus_award` protege
+   contra duplicados, pero no hay ninguna prueba que lo confirme ante un reintento
+   de `ORDER_DELIVERED`. Es barato de añadir y protege dinero.
+
+**Cambio de contrato (decisión de producto, no técnica)**
+
+8. **Authorizer de API Gateway.** Los headers `x-user-id`/`x-user-role` siguen
+   siendo fuente de verdad en las rutas que no exigen Bearer: cualquiera que
+   alcance el API puede declararse admin. Cerrarlo requiere coordinar con el
+   frontend.
+9. **`GET /product-categories/{id}` y `GET /notifications/{id}`** devuelven la
+   colección completa ignorando el id. Se preservó a propósito al migrar el
+   ruteo; corregirlo es una decisión de API.
