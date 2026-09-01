@@ -4,6 +4,7 @@ import time
 import boto3
 import core_utils as utils  # Importado desde la Lambda Layer
 from datetime import datetime, timezone
+from typing import Optional
 
 # Cliente S3 para subida de documentos propios del cliente
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
@@ -173,49 +174,53 @@ class _DashboardTimer:
         self.last_at = now
 
 
-def _load_customer_network_scope(customer: dict) -> tuple:
-    if not customer or not isinstance(customer, dict):
-        return [], {"source": "empty"}
+def _encode_customers_next_token(last_evaluated_key) -> Optional[str]:
+    if not last_evaluated_key:
+        return None
+    sort_key = str(last_evaluated_key.get("SK") or "").strip()
+    if not sort_key:
+        return None
+    raw = json.dumps({"sk": sort_key}).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("utf-8").rstrip("=")
 
-    customer_id = utils._customer_id_str(customer.get("customerId"))
-    source = "network_tree_batch_get"
 
-    def _load_from_tree(tree_payload):
-        descendant_ids = utils._network_tree_descendant_ids(tree_payload, customer_id)
-        batch_ids = [customer_id, *descendant_ids]
-        loaded = utils._batch_get_entities("CUSTOMER", batch_ids)
+def _decode_customers_next_token(token) -> Optional[dict]:
+    token_value = str(token or "").strip()
+    if not token_value:
+        return None
+    try:
+        padded = token_value + ("=" * (-len(token_value) % 4))
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode("utf-8")).decode("utf-8"))
+        sort_key = str((payload or {}).get("sk") or "").strip()
+    except Exception:
+        return None
+    if not sort_key:
+        return None
+    return {"PK": "CUSTOMER", "SK": sort_key}
 
-        by_id = {
-            utils._customer_id_str(item.get("customerId")): item
-            for item in loaded
-            if isinstance(item, dict) and item.get("customerId") not in (None, "")
-        }
-        by_id[customer_id] = customer
 
-        scoped = []
-        for cid in batch_ids:
-            item = by_id.get(cid)
-            if item:
-                scoped.append(item)
-        return descendant_ids, scoped
-
-    tree = utils._ensure_network_tree()
-    descendant_ids, scoped = _load_from_tree(tree)
-    missing = max(0, 1 + len(descendant_ids) - len(scoped))
-
-    if missing and descendant_ids:
-        utils._sync_customer_network_metadata()
-        tree = utils._ensure_network_tree()
-        descendant_ids, scoped = _load_from_tree(tree)
-        missing = max(0, 1 + len(descendant_ids) - len(scoped))
-        source = "network_tree_batch_get_rebuilt"
-
-    return scoped, {
-        "source": source,
-        "requestedCount": len(descendant_ids),
-        "loadedCount": len(scoped),
-        "missingCount": missing,
+def _query_customers_page(limit: int, next_token=None) -> tuple:
+    """Una página real de CUSTOMER, sin leer la colección completa."""
+    query_kwargs = {
+        "KeyConditionExpression": utils.Key("PK").eq("CUSTOMER"),
+        "ScanIndexForward": False,
+        "Limit": limit,
     }
+    start_key = _decode_customers_next_token(next_token)
+    if start_key:
+        query_kwargs["ExclusiveStartKey"] = start_key
+    response = utils._table.query(**query_kwargs)
+    return response.get("Items", []), _encode_customers_next_token(response.get("LastEvaluatedKey"))
+
+
+def _load_customer_network_scope(customer: dict) -> tuple:
+    """Cliente + descendencia vía árbol persistido (implementado en core_utils).
+
+    La misma lógica vivía duplicada aquí, en dashboard_lambda y en
+    commissions_lambda con tres niveles distintos de optimización; ahora las
+    tres comparten `utils._load_network_scope`.
+    """
+    return utils._load_network_scope(customer)
 
 
 # --- HELPERS S3 ---
@@ -404,24 +409,7 @@ def _campaign_payload(item: dict) -> dict:
 
 
 def _load_month_states(associate_ids, month_key: str) -> dict:
-    entity_ids = []
-    seen = set()
-    for associate_id in associate_ids or []:
-        cid = utils._customer_id_str(associate_id)
-        if not cid or cid in seen:
-            continue
-        seen.add(cid)
-        entity_id = utils._associate_month_entity_id(cid, month_key)
-        if not entity_id:
-            continue
-        entity_ids.append(entity_id)
-
-    states = utils._batch_get_entities("ASSOCIATE_MONTH", entity_ids)
-    return {
-        str(item.get("associateId") or ""): item
-        for item in states
-        if isinstance(item, dict) and item.get("associateId") not in (None, "")
-    }
+    return utils._load_month_states(associate_ids, month_key)
 
 
 def _get_month_state(associate_id, month_key: str, states_by_associate=None) -> dict:
@@ -780,10 +768,12 @@ def _active_notifications_for_customer(customer_id) -> list:
     now_str = utils._now_iso()[:10]
 
     try:
-        resp = utils._table.query(
+        # _query_all_pages recorre LastEvaluatedKey: con una sola página, las
+        # notificaciones ya leídas reaparecían como no leídas al pasar de 1 MB.
+        read_items = utils._query_all_pages(
             KeyConditionExpression=utils.Key("PK").eq(f"NOTIFICATION_READ#{customer_id}")
         )
-        read_ids = {item.get("SK") for item in resp.get("Items", [])}
+        read_ids = {item.get("SK") for item in read_items}
     except Exception:
         read_ids = set()
 
@@ -1036,13 +1026,8 @@ def handle_create_customer(body, headers=None):
     if not name:
         return utils._json_response(400, {"message": "name es obligatorio"})
 
-    if email:
-        existing = [
-            item for item in utils._query_bucket("CUSTOMER")
-            if utils._normalize_email(item.get("email")) == email
-        ]
-        if existing:
-            return utils._json_response(409, {"message": "El correo ya esta registrado"})
+    if email and utils._find_customer_id_by_email(email):
+        return utils._json_response(409, {"message": "El correo ya esta registrado"})
 
     customer_id = body.get("customerId") or int(datetime.now(timezone.utc).timestamp() * 1000)
     leader_id = body.get("leaderId")
@@ -1071,6 +1056,10 @@ def handle_create_customer(body, headers=None):
     if body.get("level") is not None:
         item["level"] = body.get("level")
     main = utils._put_entity("CUSTOMER", customer_id, item, created_at_iso=now)
+    # Los clientes dados de alta por un admin no aparecían en la búsqueda del
+    # panel porque el índice de nombres solo lo escribía el auto-registro.
+    utils._upsert_customer_name_index(customer_id, name, email, created_at_iso=now)
+    utils._upsert_customer_email_index(customer_id, email)
     return utils._json_response(201, {"customer": _format_customer_output(main)})
 
 def handle_get_customer(customer_id, headers=None):
@@ -1126,6 +1115,16 @@ def handle_update_customer(customer_id, body, headers):
             eav[":addr"] = body["addresses"]
 
     updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean or None)
+
+    # Sin esto, renombrar a un cliente lo dejaba indexado bajo su inicial vieja
+    # y la búsqueda del panel dejaba de encontrarlo.
+    if "name" in body and str(body.get("name") or "").strip() != str(existing.get("name") or "").strip():
+        utils._upsert_customer_name_index(
+            existing.get("customerId", cid), body.get("name"),
+            updated.get("email") if isinstance(updated, dict) else existing.get("email"),
+            created_at_iso=existing.get("createdAt"),
+            previous_name=existing.get("name"),
+        )
 
     if leader_changed:
         try:
@@ -1420,7 +1419,9 @@ def handle_customer_dashboard(headers):
     rank_val = _get_rank_dash(vg_val, rank_thresh)
     timer.mark("compute_rank_metrics", vp=round(vp_val, 2), vg=round(vg_val, 2), rank=rank_val)
 
-    all_awards = utils._query_bucket("BONUS_AWARD")
+    # SK = "{createdAt}#{id}"; un award de `month_key` no se crea antes de ese
+    # mes, así que `sk_from` acota la lectura sin perder los del cierre.
+    all_awards = utils._query_bucket("BONUS_AWARD", sk_from=month_key)
     bonus_awards = [
         award for award in all_awards
         if str(award.get("customerId", "")) == cid and award.get("monthKey") == month_key
@@ -1453,7 +1454,7 @@ def handle_customer_dashboard(headers):
     timer.mark("load_previous_commissions")
 
     receipt_url = ""
-    receipts_raw = utils._query_bucket("COMMISSION_RECEIPT")
+    receipts_raw = utils._query_bucket("COMMISSION_RECEIPT", sk_from=prev_month_key)
     for receipt in receipts_raw:
         if utils._customer_entity_id(receipt.get("customerId")) != customer_numeric_id:
             continue
@@ -1551,21 +1552,13 @@ def lambda_handler(event, context):
                 limit = max(1, min(int(query.get("limit", 50)), 200))
             except (TypeError, ValueError):
                 limit = 50
-            try:
-                offset = int(query.get("nextToken", 0))
-            except (TypeError, ValueError):
-                offset = 0
 
             if search:
-                # Busca por índice de nombre si la primera letra coincide
+                # Índice por nombre `REF#NOMBRE#<letra>`, leyendo TODAS sus
+                # páginas (antes se quedaba en la primera y omitía coincidencias).
                 letter = search[0].upper()
                 try:
-                    resp = utils._table.query(
-                        KeyConditionExpression=utils.Key("PK").eq(f"REF#NOMBRE#{letter}"),
-                        ScanIndexForward=True,
-                    )
-                    name_refs = resp.get("Items", [])
-                    # Filtro adicional por término completo
+                    name_refs = utils._query_customer_name_index(letter)
                     matched_ids = [
                         r["customerId"] for r in name_refs
                         if search in str(r.get("nameLower") or "").lower()
@@ -1574,29 +1567,35 @@ def lambda_handler(event, context):
                     matched_ids = []
 
                 if matched_ids:
-                    items = [utils._get_by_id("CUSTOMER", cid) for cid in matched_ids]
-                    items = [i for i in items if i]
+                    # BatchGetItem en vez de un _get_by_id (2 GetItem) por resultado.
+                    items = utils._batch_get_entities("CUSTOMER", matched_ids)
                 else:
-                    # Fallback: scan completo con filtro en memoria
-                    all_items = utils._query_bucket("CUSTOMER")
+                    # Sin coincidencias en el índice: barrido completo con filtro.
                     items = [
-                        c for c in all_items
+                        c for c in utils._query_bucket("CUSTOMER")
                         if search in str(c.get("name") or "").lower()
                         or search in str(c.get("email") or "").lower()
                     ]
-            else:
-                items = utils._query_bucket("CUSTOMER", forward=False)
 
-            total = len(items)
-            page = items[offset: offset + limit]
-            next_offset = offset + limit
-            has_more = next_offset < total
+                total = len(items)
+                page = items[:limit]
+                return utils._json_response(200, {
+                    "customers": [_format_customer_output(c) for c in page],
+                    "total": total,
+                    "count": len(page),
+                    "nextToken": None,
+                    "hasMore": False,
+                })
+
+            # Listado sin búsqueda: paginación real por ExclusiveStartKey.
+            # Antes se leía la colección CUSTOMER entera y se cortaba en memoria,
+            # así que cada página costaba lo mismo que la tabla completa.
+            page, next_token = _query_customers_page(limit, query.get("nextToken"))
             return utils._json_response(200, {
                 "customers": [_format_customer_output(c) for c in page],
-                "total": total,
                 "count": len(page),
-                "nextToken": str(next_offset) if has_more else None,
-                "hasMore": has_more,
+                "nextToken": next_token,
+                "hasMore": bool(next_token),
             })
 
         # ── /customers/... ─────────────────────────────────────────────

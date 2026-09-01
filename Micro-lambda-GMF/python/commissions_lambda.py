@@ -1,5 +1,6 @@
 import json
 import base64
+import time
 import boto3
 from datetime import datetime, timezone
 import core_utils as utils # Importado desde la Lambda Layer
@@ -21,34 +22,24 @@ def _get_upline_chain(buyer_id):
     """Busca los patrocinadores hacia arriba en la red."""
     return utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
 
+def _ledger_sk(beneficiary_id, month_key) -> str:
+    return utils._ledger_sk(beneficiary_id, month_key)
+
+
 def _get_ledger_month(beneficiary_id, month_key):
     """Obtiene o inicializa el registro contable mensual del socio."""
-    sk = f"#BENEFICIARY#{beneficiary_id}#MONTH#{month_key}"
-    res = utils._table.get_item(Key={"PK": PK_MONTH, "SK": sk})
-    item = res.get("Item")
-    
-    if not item:
-        item = {
-            "PK": PK_MONTH, "SK": sk, "entityType": "commissionMonth",
-            "beneficiaryId": beneficiary_id, "monthKey": month_key,
-            "ledger": [], "totalPending": utils.D_ZERO, 
-            "totalConfirmed": utils.D_ZERO, "totalBlocked": utils.D_ZERO,
-            "status": "IN_PROGRESS", "createdAt": utils._now_iso()
-        }
-    return item
+    return utils._get_ledger_month(beneficiary_id, month_key)
+
 
 def _save_ledger_month(item):
-    """Recalcula totales y persiste el mes contable."""
-    tp, tc, tb = utils.D_ZERO, utils.D_ZERO, utils.D_ZERO
-    for r in item.get("ledger", []):
-        amt = utils._to_decimal(r.get("amount"))
-        st = r.get("status")
-        if st == "confirmed": tc += amt
-        elif st == "blocked": tb += amt
-        else: tp += amt
+    """Recalcula totales y persiste el mes contable (bloqueo optimista)."""
+    return utils._save_ledger_month(item)
 
-    item.update({"totalPending": tp, "totalConfirmed": tc, "totalBlocked": tb, "updatedAt": utils._now_iso()})
-    utils._table.put_item(Item=item)
+
+def _mutate_ledger_month(beneficiary_id, month_key, mutate) -> dict:
+    """Aplica `mutate(item)` sobre el mes contable reintentando ante conflicto."""
+    return utils._mutate_ledger_month(beneficiary_id, month_key, mutate)
+
 
 # --- MOTOR VP / VG ---
 
@@ -66,8 +57,7 @@ def _state_to_vp(state: dict, mxn_per_vp: float) -> float:
 
 def _calc_vp(customer_id: str, month_key: str, mxn_per_vp: float) -> float:
     """Volumen Personal: compras propias del mes expresadas en VP."""
-    state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key))
-    return _state_to_vp(state, mxn_per_vp)
+    return _state_to_vp(_cached_month_state(customer_id, month_key), mxn_per_vp)
 
 def _compute_order_vp(order: dict, mxn_per_vp: float) -> float:
     """
@@ -105,63 +95,131 @@ def _compute_order_vp(order: dict, mxn_per_vp: float) -> float:
 
     return raw_vp * discount_factor
 
+# ---------------------------------------------------------------------------
+# Caché por invocación
+# ---------------------------------------------------------------------------
+# `_calc_vp` se pedía una y otra vez para el mismo cliente desde `_is_active`,
+# `_count_active_directs` y `_generation_qualified`, y cada llamada era un
+# `_get_by_id` (1-3 GetItem). Estos mapas viven mientras dura la invocación del
+# Lambda y se vacían al empezar cada acción para no arrastrar datos entre
+# eventos distintos de un mismo contenedor tibio.
+_CACHE: dict = {"customers": {}, "states": {}, "children": {}, "vg": {}}
+
+
+def _reset_request_cache() -> None:
+    _CACHE["customers"] = {}
+    _CACHE["states"] = {}
+    _CACHE["children"] = {}
+    _CACHE["vg"] = {}
+
+
+def _cached_customer(customer_id) -> dict:
+    cid = utils._customer_id_str(customer_id)
+    if not cid:
+        return {}
+    if cid not in _CACHE["customers"]:
+        _CACHE["customers"][cid] = utils._get_by_id("CUSTOMER", utils._customer_entity_id(cid)) or {}
+    return _CACHE["customers"][cid]
+
+
+def _prime_customers(customers: list) -> None:
+    for customer in customers or []:
+        if not isinstance(customer, dict):
+            continue
+        cid = utils._customer_id_str(customer.get("customerId"))
+        if cid:
+            _CACHE["customers"][cid] = customer
+
+
+def _cached_month_state(customer_id, month_key: str) -> dict:
+    cid = utils._customer_id_str(customer_id)
+    key = f"{cid}#{month_key}"
+    if key not in _CACHE["states"]:
+        _CACHE["states"][key] = utils._get_by_id(
+            "ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, month_key)
+        ) or {}
+    return _CACHE["states"][key]
+
+
+def _prime_month_states(customer_ids: list, month_key: str) -> None:
+    """Precarga en bloque los estados del mes que aún no estén en caché."""
+    pending = [
+        cid for cid in {utils._customer_id_str(c) for c in customer_ids or []}
+        if cid and f"{cid}#{month_key}" not in _CACHE["states"]
+    ]
+    if not pending:
+        return
+    states = utils._load_month_states(pending, month_key)
+    for cid in pending:
+        _CACHE["states"][f"{cid}#{month_key}"] = states.get(cid) or {}
+
+
+def _children_index() -> dict:
+    """Mapa `{líder: [hijos]}` del árbol de red persistido, cacheado."""
+    if not _CACHE["children"]:
+        tree = utils._ensure_network_tree() or {}
+        children = {
+            str(parent_id): [str(child_id) for child_id in (child_ids or [])]
+            for parent_id, child_ids in (tree.get("childrenByParent") or {}).items()
+        }
+        _CACHE["children"] = children or {"__empty__": []}
+    return _CACHE["children"]
+
+
 def _get_direct_reports(customer_id: str) -> list:
     """IDs de los referidos directos (nivel 1)."""
-    customer = utils._get_by_id("CUSTOMER", customer_id)
+    customer = _cached_customer(customer_id)
     if customer and "directReferralIds" in customer:
         return utils._customer_id_list(customer.get("directReferralIds"))
 
-    all_customers = utils._query_bucket("CUSTOMER")
+    # El árbol persistido evita el barrido de la colección CUSTOMER completa.
     return [
-        str(c.get("customerId") or c.get("id", ""))
-        for c in all_customers
-        if str(c.get("leaderId", "")) == str(customer_id)
+        cid for cid in _children_index().get(utils._customer_id_str(customer_id), [])
+        if cid
     ]
 
 
-def _load_network_customers(customer_id: str) -> list:
-    customer = utils._get_by_id("CUSTOMER", customer_id)
-    if not customer:
-        return []
-
-    has_persisted_descendants = "networkDescendantIds" in customer
-    descendant_ids = utils._customer_id_list(customer.get("networkDescendantIds"))
-    if not has_persisted_descendants:
-        return utils._query_bucket("CUSTOMER")
-
-    scoped = [customer]
-    seen = {str(customer.get("customerId") or "")}
-    for descendant_id in descendant_ids:
-        if descendant_id in seen:
-            continue
-        item = utils._get_by_id("CUSTOMER", utils._customer_entity_id(descendant_id))
-        if not item:
-            continue
-        scoped.append(item)
-        seen.add(descendant_id)
-    return scoped
-
-def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: int = 5) -> float:
-    """Volumen de Grupo: VP propio + VP de toda la red hasta max_levels niveles."""
-    all_customers = _load_network_customers(customer_id)
-    id_map = {str(c.get("customerId") or c.get("id", "")): c for c in all_customers}
-
-    visited: set = set()
-    queue: list = [(str(customer_id), 0)]
-    total_vp = 0.0
-
+def _network_descendant_ids_cached(customer_id: str, max_levels: int) -> list:
+    """Descendencia hasta `max_levels` niveles, desde el árbol persistido."""
+    children = _children_index()
+    root = utils._customer_id_str(customer_id)
+    result: list = []
+    visited = {root}
+    queue = [(root, 0)]
     while queue:
         cid, depth = queue.pop(0)
-        if cid in visited or depth > max_levels:
+        if depth >= max_levels:
             continue
-        visited.add(cid)
-        state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, month_key))
-        total_vp += _state_to_vp(state, mxn_per_vp)
-        if depth < max_levels:
-            for sid, c in id_map.items():
-                if str(c.get("leaderId", "")) == cid and sid not in visited:
-                    queue.append((sid, depth + 1))
+        for child_id in children.get(cid, []):
+            if not child_id or child_id in visited:
+                continue
+            visited.add(child_id)
+            result.append(child_id)
+            queue.append((child_id, depth + 1))
+    return result
 
+
+def _calc_vg(customer_id: str, month_key: str, mxn_per_vp: float, max_levels: int = 5) -> float:
+    """Volumen de Grupo: VP propio + VP de la red hasta `max_levels` niveles.
+
+    Antes recorría la red haciendo un `_get_by_id` de ASSOCIATE_MONTH por nodo
+    (y, sin `networkDescendantIds` persistido, releía la colección CUSTOMER
+    entera en cada llamada). Ahora los ids salen del árbol persistido, los
+    estados se precargan en bloque y el resultado se memoiza.
+    """
+    root = utils._customer_id_str(customer_id)
+    cache_key = f"{root}#{month_key}#{max_levels}"
+    if cache_key in _CACHE["vg"]:
+        return _CACHE["vg"][cache_key]
+
+    member_ids = [root, *_network_descendant_ids_cached(root, max_levels)]
+    _prime_month_states(member_ids, month_key)
+
+    total_vp = sum(
+        _state_to_vp(_cached_month_state(cid, month_key), mxn_per_vp)
+        for cid in member_ids
+    )
+    _CACHE["vg"][cache_key] = total_vp
     return total_vp
 
 def _get_rank(vg: float, rank_thresholds: list) -> str:
@@ -174,23 +232,7 @@ def _get_rank(vg: float, rank_thresholds: list) -> str:
 
 def _network_descendant_ids(customer_id: str, max_levels: int) -> list:
     """IDs de toda la descendencia (sin incluirse) hasta `max_levels` niveles."""
-    all_customers = _load_network_customers(customer_id)
-    id_map = {str(c.get("customerId") or c.get("id", "")): c for c in all_customers}
-    visited: set = set()
-    queue: list = [(str(customer_id), 0)]
-    result: list = []
-    while queue:
-        cid, depth = queue.pop(0)
-        if cid in visited or depth > max_levels:
-            continue
-        visited.add(cid)
-        if depth > 0:
-            result.append(cid)
-        if depth < max_levels:
-            for sid, c in id_map.items():
-                if str(c.get("leaderId", "")) == cid and sid not in visited:
-                    queue.append((sid, depth + 1))
-    return result
+    return _network_descendant_ids_cached(customer_id, max_levels)
 
 def _compute_rank(customer_id: str, month_key: str, vp: float, vg: float,
                   mxn_per_vp: float, max_levels: int, rank_thresholds: list) -> str:
@@ -294,8 +336,18 @@ def _generation_qualified(beneficiary_id: str, gen_cfg: dict, month_key: str,
     return True
 
 def _has_bonus_award(customer_id: str, rule_id: str, month_key: str, cooldown: str) -> bool:
-    """Verifica si ya existe un award según el cooldown."""
-    awards = utils._query_bucket("BONUS_AWARD")
+    """Verifica si ya existe un award según el cooldown.
+
+    El cooldown acota cuánta historia hace falta leer: "monthly" solo mira de
+    ese mes en adelante y "annual" de ese año en adelante. "once" sí necesita
+    el histórico completo, por definición.
+    """
+    if cooldown == "monthly":
+        awards = utils._query_bucket("BONUS_AWARD", sk_from=month_key)
+    elif cooldown == "annual":
+        awards = utils._query_bucket("BONUS_AWARD", sk_from=str(month_key or "")[:4])
+    else:
+        awards = utils._query_bucket("BONUS_AWARD")
     for a in awards:
         if str(a.get("customerId")) != str(customer_id):
             continue
@@ -750,18 +802,21 @@ def handle_apply_rewards(order_id):
     chain = utils._get_customer_upline_ids(order['customerId'], MAX_COMPRESSION_DEPTH)
 
     def _write_row(b_id, gen, amount, status, reason=None):
-        item   = _get_ledger_month(b_id, month_key)
         row_id = f"{order_id}#G{gen}"
-        new_row = {
-            "rowId": row_id, "orderId": order_id, "amount": amount,
-            "level": gen, "generation": gen, "status": status,
-            "createdAt": utils._now_iso(),
-        }
-        if reason:
-            new_row["reason"] = reason
-        item['ledger'] = [r for r in item['ledger'] if r['rowId'] != row_id]
-        item['ledger'].append(new_row)
-        _save_ledger_month(item)
+
+        def _mutate(item):
+            new_row = {
+                "rowId": row_id, "orderId": order_id, "amount": amount,
+                "level": gen, "generation": gen, "status": status,
+                "createdAt": utils._now_iso(),
+            }
+            if reason:
+                new_row["reason"] = reason
+            item['ledger'] = [r for r in item['ledger'] if r.get('rowId') != row_id]
+            item['ledger'].append(new_row)
+            return True
+
+        _mutate_ledger_month(b_id, month_key, _mutate)
 
     gen = 1  # siguiente generación a cubrir
     for b_id in chain:
@@ -792,15 +847,17 @@ def handle_confirm_commissions(order_id):
     month_key = order.get("monthKey") or utils._month_key()
     chain     = _get_upline_chain(order['customerId'])
 
-    for b_id in chain:
-        item    = _get_ledger_month(b_id, month_key)
+    def _confirm(item):
         changed = False
         for r in item['ledger']:
             if r.get('orderId') == order_id and r.get('status') == "pending":
                 r['status'] = "confirmed"
                 changed = True
-        if changed:
-            _save_ledger_month(item)
+        # Devolver False evita una escritura innecesaria cuando no hay cambios.
+        return changed
+
+    for b_id in chain:
+        _mutate_ledger_month(b_id, month_key, _confirm)
 
     # Evaluar bonos para el comprador y su upline al confirmar entrega
     buyer_id = str(order.get("customerId", ""))
@@ -855,13 +912,16 @@ def handle_admin_receipt(body):
     utils._put_entity("COMMISSION_RECEIPT", receipt_id, receipt_item, created_at_iso=now)
 
     # Marcar el mes contable como PAID
-    sk = f"#BENEFICIARY#{cid}#MONTH#{month_key}"
+    sk = utils._ledger_sk(cid, month_key)
     try:
+        # `ADD version :one` participa en el mismo bloqueo optimista: sin él,
+        # una escritura del ledger que hubiera leído el item antes de este
+        # cambio pasaría la comprobación de versión y revertiría el estado PAID.
         utils._table.update_item(
             Key={"PK": PK_MONTH, "SK": sk},
-            UpdateExpression="SET #s = :p, paidAt = :now",
+            UpdateExpression="SET #s = :p, paidAt = :now ADD version :one",
             ExpressionAttributeNames={"#s": "status"},
-            ExpressionAttributeValues={":p": "PAID", ":now": now},
+            ExpressionAttributeValues={":p": "PAID", ":now": now, ":one": utils._to_decimal(1)},
         )
     except Exception:
         pass
@@ -984,56 +1044,13 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
 
     voided = []
     for beneficiary_id in beneficiaries:
-        sk = f"#BENEFICIARY#{beneficiary_id}#MONTH#{month_key}"
-        resp = utils._table.get_item(Key={"PK": PK_MONTH, "SK": sk})
-        item = resp.get("Item")
-        if not item:
-            continue
-
-        ledger = item.get("ledger") or []
-        pending_delta = utils.D_ZERO
-        confirmed_delta = utils.D_ZERO
-        blocked_delta = utils.D_ZERO
-        new_ledger = []
-        removed = 0
-
-        for row in ledger:
-            if row.get("orderId") == order_id:
-                amt = utils._to_decimal(row.get("amount"))
-                st = (row.get("status") or "").lower()
-                if st == "pending":    pending_delta += amt
-                elif st == "confirmed": confirmed_delta += amt
-                elif st in ("blocked",) or row.get("blocked"): blocked_delta += amt
-                removed += 1
-                continue
-            new_ledger.append(row)
-
-        if removed == 0:
-            continue
-
         try:
-            utils._table.update_item(
-                Key={"PK": PK_MONTH, "SK": sk},
-                UpdateExpression=(
-                    "SET ledger = :l, "
-                    "totalPending = if_not_exists(totalPending, :z) - :pd, "
-                    "totalConfirmed = if_not_exists(totalConfirmed, :z) - :cd, "
-                    "totalBlocked = if_not_exists(totalBlocked, :z) - :bd, "
-                    "updatedAt = :u"
-                ),
-                ExpressionAttributeValues={
-                    ":l": new_ledger, ":pd": pending_delta,
-                    ":cd": confirmed_delta, ":bd": blocked_delta,
-                    ":z": utils.D_ZERO, ":u": utils._now_iso(),
-                },
-            )
-            voided.append({
-                "beneficiaryId": beneficiary_id, "orderId": order_id,
-                "pendingRemoved": float(pending_delta),
-                "confirmedRemoved": float(confirmed_delta), "reason": reason,
-            })
+            summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id)
         except Exception as e:
             print(f"[VOID_SFN_ERROR] beneficiary={beneficiary_id} err={e}")
+            continue
+        if summary:
+            voided.append({**summary, "reason": reason})
 
     print(f"[VOID_COMM] order={order_id} reason={reason} voided={len(voided)}")
     return {"voided": voided, "count": len(voided)}
@@ -1045,8 +1062,13 @@ def handle_monthly_stats(month: str) -> dict:
     """Agrega estadísticas operacionales del mes para pedidos, clientes, productos y stocks."""
 
     # --- PEDIDOS ---
-    all_orders = utils._query_bucket("ORDER")
-    month_orders = [o for o in all_orders if str(o.get("monthKey", "")) == month]
+    # `monthKey` de un pedido se deriva de su fecha de creación, así que las
+    # órdenes del mes viven en el tramo `SK >= "<mes>"` de la partición; no hace
+    # falta traer el histórico completo para filtrarlo en memoria.
+    month_orders = [
+        o for o in utils._query_bucket("ORDER", sk_prefix=month)
+        if str(o.get("monthKey", "")) == month
+    ]
 
     orders_count = len(month_orders)
     orders_total = sum(float(utils._to_decimal(o.get("total", 0))) for o in month_orders)
@@ -1100,25 +1122,27 @@ def handle_monthly_stats(month: str) -> dict:
     total_units_sold = sum(p["units"] for p in product_sales_list)
 
     # --- CLIENTES ---
-    all_customers = utils._query_bucket("CUSTOMER")
-    new_customers = [c for c in all_customers if str(c.get("createdAt", "")).startswith(month)]
+    new_customers = utils._query_bucket("CUSTOMER", sk_prefix=month)
     new_customer_count = len(new_customers)
 
-    # Tasa de recompra: clientes activos que tenían al menos 1 pedido en meses anteriores
-    prev_buyer_ids = {str(o.get("customerId", "")) for o in all_orders
-                      if str(o.get("monthKey", "")) < month and o.get("customerId")}
+    # Tasa de recompra: clientes activos con al menos 1 pedido en meses previos.
+    # Solo se necesitan customerId y monthKey, así que se proyectan esos campos.
+    prev_buyer_ids = {
+        str(o.get("customerId", ""))
+        for o in utils._query_bucket("ORDER", sk_to=month,
+                                     projection=["customerId", "monthKey"])
+        if str(o.get("monthKey", "")) < month and o.get("customerId")
+    }
     repurchase_ids = {cid for cid in active_customer_ids if cid in prev_buyer_ids}
     repurchase_rate = (len(repurchase_ids) / active_customer_count * 100) if active_customer_count else 0
 
     # --- POS VENTAS ---
-    all_pos = utils._query_bucket("POS_SALE")
-    month_pos = [p for p in all_pos if str(p.get("createdAt", "")).startswith(month)]
+    month_pos = utils._query_bucket("POS_SALE", sk_prefix=month)
     pos_count = len(month_pos)
     pos_total = sum(float(utils._to_decimal(p.get("total", 0))) for p in month_pos)
 
     # --- MOVIMIENTOS DE INVENTARIO ---
-    all_movements = utils._query_bucket("INVENTORY_MOVEMENT")
-    month_movements = [m for m in all_movements if str(m.get("createdAt", "")).startswith(month)]
+    month_movements = utils._query_bucket("INVENTORY_MOVEMENT", sk_prefix=month)
     movements_by_type: dict = {}
     for mv in month_movements:
         t = mv.get("type", "unknown")
@@ -1175,6 +1199,10 @@ def handle_monthly_stats(month: str) -> dict:
 # --- LAMBDA HANDLER PRINCIPAL ---
 
 def lambda_handler(event, context):
+    # La caché de red/estados es por invocación: un contenedor tibio no debe
+    # arrastrar los datos de un evento al siguiente.
+    _reset_request_cache()
+
     # 1. Detectar si es una invocación de Step Functions
     if "action" in event:
         action = event["action"]
@@ -1211,8 +1239,10 @@ def lambda_handler(event, context):
             month = (event.get("queryStringParameters") or {}).get("month") or utils._month_key()
             prev_month = (event.get("queryStringParameters") or {}).get("prevMonth")
             # Query all COMMISSION_MONTH records and filter in memory
+            # COMMISSION_MONTH ordena por beneficiario, no por fecha, así que no
+            # admite recorte por clave; se lee la partición completa (paginada).
             all_comm = utils._query_bucket("COMMISSION_MONTH")
-            receipts_raw = utils._query_bucket("COMMISSION_RECEIPT")
+            receipts_raw = utils._query_bucket("COMMISSION_RECEIPT", sk_from=str(month or ""))
             receipt_by_cust = {}
             for r in receipts_raw:
                 if str(r.get("monthKey")) == str(month):
@@ -1316,7 +1346,7 @@ def lambda_handler(event, context):
                 if err: return err
                 query_params = event.get("queryStringParameters") or {}
                 month = query_params.get("month")
-                awards = utils._query_bucket("BONUS_AWARD")
+                awards = utils._query_bucket("BONUS_AWARD", sk_from=str(month or ""))
                 result = [a for a in awards if str(a.get("customerId")) == str(cid)]
                 if month:
                     result = [a for a in result if a.get("monthKey") == month]

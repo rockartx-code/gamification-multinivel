@@ -32,6 +32,9 @@ D_ZERO = Decimal("0")
 D_ONE = Decimal("1")
 D_CENT = Decimal("0.01")
 MAX_NETWORK_DEPTH = 3
+MAX_BATCH_GET_RETRIES = 8
+APP_CONFIG_TTL_SECONDS = int(os.getenv("APP_CONFIG_TTL_SECONDS", "60"))
+SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", str(30 * 24 * 3600)))
 NETWORK_TREE_ID = "customers"
 NETWORK_TREE_ROOT_KEY = "__ROOT__"
 NETWORK_TREE_SK = "TREE"
@@ -94,6 +97,14 @@ def _parse_body(event: dict) -> dict:
 def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
+def _ttl_epoch(seconds_from_now: int) -> int:
+    """Epoch en segundos para el atributo TTL de DynamoDB.
+
+    Requiere tener el TTL habilitado en la tabla con el atributo `ttl`; si no
+    lo está, el valor es inocuo y la purga simplemente no ocurre.
+    """
+    return int(time.time()) + int(seconds_from_now)
+
 def _month_key(dt: Optional[datetime] = None) -> str:
     d = dt or datetime.now(timezone.utc)
     return f"{d.year:04d}-{d.month:02d}"
@@ -129,9 +140,36 @@ def _put_entity(entity: str, entity_id: Any, item: dict, created_at_iso: Optiona
         "updatedAt": main_item["updatedAt"]
     }
 
+    _put_entity_atomic(main_item, ref_item)
+    return main_item
+
+def _put_entity_atomic(main_item: dict, ref_item: dict) -> None:
+    """Escribe el item principal y su puntero REF en una sola transacción.
+
+    Sin transacción, un fallo entre ambos `put_item` deja el item principal
+    escrito pero invisible para `_get_by_id` (registro huérfano permanente).
+    Si la tabla o el endpoint no soportan `TransactWriteItems`, cae al modo
+    secuencial escribiendo primero el REF para no dejar punteros colgando.
+    """
+    try:
+        _ddb_client.transact_write_items(TransactItems=[
+            {"Put": {"TableName": TABLE_NAME, "Item": _ddb_serialize_item(main_item)}},
+            {"Put": {"TableName": TABLE_NAME, "Item": _ddb_serialize_item(ref_item)}},
+        ])
+        return
+    except ClientError as ex:
+        error_code = (ex.response or {}).get("Error", {}).get("Code", "")
+        if error_code not in ("ValidationException", "UnknownOperationException", "InternalServerError"):
+            raise
+        print(json.dumps({
+            "event": "transact_write_unavailable_fallback",
+            "table": TABLE_NAME,
+            "errorType": error_code,
+            "key": {"PK": main_item.get("PK"), "SK": main_item.get("SK")},
+        }, default=_json_default))
+
     _table.put_item(Item=main_item)
     _table.put_item(Item=ref_item)
-    return main_item
 
 def _get_by_id(entity: str, entity_id: Any) -> Optional[dict]:
     if str(entity or "").upper() == "ASSOCIATE_MONTH":
@@ -158,11 +196,47 @@ def _update_by_id(entity: str, entity_id: Any, expression: str, values: dict, na
     resp = _table.update_item(**kwargs)
     return resp.get("Attributes")
 
-def _query_bucket(entity: str, limit: Optional[int] = None, forward: bool = False) -> List[dict]:
+def _query_bucket(entity: str, limit: Optional[int] = None, forward: bool = False,
+                  sk_prefix: Optional[str] = None, sk_from: Optional[str] = None,
+                  sk_to: Optional[str] = None, projection: Optional[List[str]] = None) -> List[dict]:
+    """Lee una colección completa (o un tramo de ella) paginando hasta el final.
+
+    Como `SK` es `"{createdAt}#{id}"`, `sk_prefix`/`sk_from`/`sk_to` permiten
+    acotar por fecha **en la condición de clave**, sin traer el histórico
+    entero para filtrarlo en memoria:
+
+        _query_bucket("POS_SALE", sk_prefix="2026-09")        # solo septiembre
+        _query_bucket("ORDER", sk_from="2026-09-01")          # desde esa fecha
+
+    OJO con `sk_to`: es un tope crudo (`SK <= valor`), no un prefijo. Como el SK
+    lleva la hora, `sk_to="2026-08"` deja FUERA todo agosto (`"2026-08-04..."`
+    es mayor que `"2026-08"`). Para incluir un mes o día completo hay que
+    añadir un centinela alto: `sk_to="2026-08\uffff"`. Usado sin centinela
+    equivale a "estrictamente anterior a ese mes", que es justo lo que hace
+    falta para comparar contra meses previos.
+
+    `projection` limita los atributos devueltos (menos RCU consumidos).
+    OJO: `limit` se aplica antes de cualquier filtro posterior en Python; son
+    "N items leídos", no "N resultados tras filtrar".
+    """
     pk = _bucket_pk(entity)
-    query_kwargs = {"KeyConditionExpression": Key("PK").eq(pk), "ScanIndexForward": forward}
+    condition = Key("PK").eq(pk)
+    if sk_prefix:
+        condition = condition & Key("SK").begins_with(str(sk_prefix))
+    elif sk_from and sk_to:
+        condition = condition & Key("SK").between(str(sk_from), str(sk_to))
+    elif sk_from:
+        condition = condition & Key("SK").gte(str(sk_from))
+    elif sk_to:
+        condition = condition & Key("SK").lte(str(sk_to))
+
+    query_kwargs = {"KeyConditionExpression": condition, "ScanIndexForward": forward}
     if limit: query_kwargs["Limit"] = limit
-    
+    if projection:
+        names = {f"#p{i}": attr for i, attr in enumerate(projection)}
+        query_kwargs["ProjectionExpression"] = ", ".join(names)
+        query_kwargs["ExpressionAttributeNames"] = names
+
     items = []
     while True:
         resp = _table.query(**query_kwargs)
@@ -170,6 +244,57 @@ def _query_bucket(entity: str, limit: Optional[int] = None, forward: bool = Fals
         lek = resp.get("LastEvaluatedKey")
         if not lek or (limit and len(items) >= limit): break
         query_kwargs["ExclusiveStartKey"] = lek
+    return items
+
+def _iter_bucket(entity: str, forward: bool = False, sk_prefix: Optional[str] = None,
+                 sk_from: Optional[str] = None, sk_to: Optional[str] = None,
+                 page_size: int = 100):
+    """Itera una colección página a página, permitiendo cortar antes del final.
+
+    Útil cuando solo interesa el elemento más reciente que cumple un filtro:
+    con `forward=False` el primer acierto suele estar en la primera página, así
+    que el consumidor rompe el bucle sin haber leído el histórico entero.
+    """
+    condition = Key("PK").eq(_bucket_pk(entity))
+    if sk_prefix:
+        condition = condition & Key("SK").begins_with(str(sk_prefix))
+    elif sk_from and sk_to:
+        condition = condition & Key("SK").between(str(sk_from), str(sk_to))
+    elif sk_from:
+        condition = condition & Key("SK").gte(str(sk_from))
+    elif sk_to:
+        condition = condition & Key("SK").lte(str(sk_to))
+
+    query_kwargs = {
+        "KeyConditionExpression": condition,
+        "ScanIndexForward": forward,
+        "Limit": max(1, int(page_size)),
+    }
+    while True:
+        resp = _table.query(**query_kwargs)
+        for item in resp.get("Items", []):
+            yield item
+        lek = resp.get("LastEvaluatedKey")
+        if not lek:
+            return
+        query_kwargs["ExclusiveStartKey"] = lek
+
+
+def _query_all_pages(**query_kwargs) -> List[dict]:
+    """Ejecuta un `query` arbitrario recorriendo TODAS las páginas.
+
+    DynamoDB corta cualquier `Query` en 1 MB y devuelve `LastEvaluatedKey`;
+    ignorarlo produce resultados incompletos sin ningún error visible.
+    """
+    kwargs = dict(query_kwargs)
+    items: List[dict] = []
+    while True:
+        resp = _table.query(**kwargs)
+        items.extend(resp.get("Items", []))
+        lek = resp.get("LastEvaluatedKey")
+        if not lek:
+            break
+        kwargs["ExclusiveStartKey"] = lek
     return items
 
 def _log_get_item_failure(event: str, key: dict, error: Exception, **extra) -> None:
@@ -235,6 +360,18 @@ def _get_item_by_key(key: dict) -> Optional[dict]:
 def _ddb_serialize_key(key: dict) -> dict:
     return {key_name: _ddb_serializer.serialize(value) for key_name, value in key.items()}
 
+def _ddb_serialize_item(item: dict) -> dict:
+    """Convierte un item de alto nivel al formato AttributeValue del cliente crudo.
+
+    Usa el mismo `TypeSerializer` que emplea el recurso de boto3 en `put_item`,
+    incluidos los `None` (que viajan como NULL), para que escribir por
+    transacción guarde exactamente lo mismo que escribir por el recurso.
+    """
+    return {
+        attr_name: _ddb_serializer.serialize(value)
+        for attr_name, value in (item or {}).items()
+    }
+
 def _ddb_deserialize_item(item: dict) -> dict:
     return {key_name: _ddb_deserializer.deserialize(value) for key_name, value in item.items()}
 
@@ -294,6 +431,19 @@ def _batch_get_items(keys: List[dict]) -> List[dict]:
                 break
 
             retries += 1
+            if retries > MAX_BATCH_GET_RETRIES:
+                # Sin tope, un throttling sostenido hace girar el Lambda hasta
+                # agotar su timeout en vez de fallar rápido.
+                print(json.dumps({
+                    "event": "ddb_batch_get_unprocessed_exhausted",
+                    "table": TABLE_NAME,
+                    "retries": retries,
+                    "pendingKeys": len(unprocessed_keys),
+                }, default=_json_default))
+                raise RuntimeError(
+                    f"BatchGetItem dejó {len(unprocessed_keys)} claves sin procesar "
+                    f"tras {MAX_BATCH_GET_RETRIES} reintentos"
+                )
             time.sleep(min(0.05 * (2 ** (retries - 1)), 1.0))
             request = {
                 TABLE_NAME: {
@@ -414,6 +564,157 @@ def _upsert_order_customer_history(order: dict) -> Optional[dict]:
         return None
     _table.put_item(Item=item)
     return item
+
+# ---------------------------------------------------------------------------
+# Mes contable de comisiones (ledger) — escritura con bloqueo optimista
+# ---------------------------------------------------------------------------
+COMMISSION_MONTH_PK = "COMMISSION_MONTH"
+
+LEDGER_MAX_ATTEMPTS = 6
+
+
+def _ledger_sk(beneficiary_id, month_key) -> str:
+    return f"#BENEFICIARY#{beneficiary_id}#MONTH#{month_key}"
+
+
+def _get_ledger_month(beneficiary_id, month_key):
+    """Obtiene o inicializa el registro contable mensual del socio."""
+    sk = _ledger_sk(beneficiary_id, month_key)
+    res = _table.get_item(Key={"PK": COMMISSION_MONTH_PK, "SK": sk})
+    item = res.get("Item")
+
+    if not item:
+        item = {
+            "PK": COMMISSION_MONTH_PK, "SK": sk, "entityType": "commissionMonth",
+            "beneficiaryId": beneficiary_id, "monthKey": month_key,
+            "ledger": [], "totalPending": D_ZERO,
+            "totalConfirmed": D_ZERO, "totalBlocked": D_ZERO,
+            "status": "IN_PROGRESS", "createdAt": _now_iso(),
+            "version": 0,
+        }
+    return item
+
+def _recalc_ledger_totals(item: dict) -> dict:
+    tp, tc, tb = D_ZERO, D_ZERO, D_ZERO
+    for r in item.get("ledger", []):
+        amt = _to_decimal(r.get("amount"))
+        st = r.get("status")
+        if st == "confirmed": tc += amt
+        elif st == "blocked": tb += amt
+        else: tp += amt
+    item.update({"totalPending": tp, "totalConfirmed": tc, "totalBlocked": tb,
+                 "updatedAt": _now_iso()})
+    return item
+
+def _save_ledger_month(item):
+    """Recalcula totales y persiste el mes contable con bloqueo optimista.
+
+    El patrón anterior (GetItem → modificar en memoria → PutItem del item
+    completo) perdía escrituras: dos órdenes pagadas a la vez para el mismo
+    beneficiario leían el mismo estado y la segunda borraba la comisión de la
+    primera. Ahora el put exige que `version` no haya cambiado; si cambió, se
+    relee y se reaplica el cambio.
+    """
+    _recalc_ledger_totals(item)
+    expected_version = int(_to_decimal(item.get("version", 0)))
+    item["version"] = expected_version + 1
+
+    try:
+        if expected_version == 0:
+            _table.put_item(
+                Item=item,
+                ConditionExpression="attribute_not_exists(SK) OR version = :expected",
+                ExpressionAttributeValues={":expected": _to_decimal(expected_version)},
+            )
+        else:
+            _table.put_item(
+                Item=item,
+                ConditionExpression="version = :expected",
+                ExpressionAttributeValues={":expected": _to_decimal(expected_version)},
+            )
+        return item
+    except ClientError as ex:
+        if (ex.response or {}).get("Error", {}).get("Code") != "ConditionalCheckFailedException":
+            raise
+        raise _LedgerConflict(item.get("beneficiaryId"), item.get("monthKey"))
+
+
+class _LedgerConflict(Exception):
+    """Otra escritura concurrente modificó el mes contable."""
+
+    def __init__(self, beneficiary_id, month_key):
+        super().__init__(f"ledger_conflict beneficiary={beneficiary_id} month={month_key}")
+        self.beneficiary_id = beneficiary_id
+        self.month_key = month_key
+
+
+def _mutate_ledger_month(beneficiary_id, month_key, mutate) -> dict:
+    """Aplica `mutate(item)` sobre el mes contable, reintentando ante conflicto.
+
+    `mutate` debe ser idempotente respecto al item que recibe: se le vuelve a
+    llamar con el estado recién leído cada vez que otra escritura gana la
+    carrera.
+    """
+    last_error = None
+    for attempt in range(LEDGER_MAX_ATTEMPTS):
+        item = _get_ledger_month(beneficiary_id, month_key)
+        if mutate(item) is False:
+            return item
+        try:
+            return _save_ledger_month(item)
+        except _LedgerConflict as conflict:
+            last_error = conflict
+            time.sleep(min(0.05 * (2 ** attempt), 0.5))
+
+    print(json.dumps({
+        "event": "ledger_conflict_exhausted",
+        "beneficiaryId": str(beneficiary_id),
+        "monthKey": str(month_key),
+        "attempts": LEDGER_MAX_ATTEMPTS,
+    }))
+    raise last_error
+
+def _void_ledger_rows_for_order(beneficiary_id, month_key, order_id) -> Optional[dict]:
+    """Quita del mes contable todas las filas de una orden y recalcula totales.
+
+    Antes esto era un `update_item` con deltas calculados sobre una lectura
+    previa (`SET ledger = :l, totalPending = totalPending - :pd, ...`): una
+    escritura concurrente sobre el mismo mes hacía que se guardara un ledger
+    obsoleto y los totales quedaran descuadrados. Ahora comparte el bloqueo
+    optimista con el resto de escrituras del ledger.
+    """
+    summary = {}
+
+    def _mutate(item):
+        rows = item.get("ledger") or []
+        removed = [r for r in rows if r.get("orderId") == order_id]
+        if not removed:
+            return False
+
+        pending = confirmed = blocked = D_ZERO
+        for row in removed:
+            amount = _to_decimal(row.get("amount"))
+            status = (row.get("status") or "").lower()
+            if status == "pending":
+                pending += amount
+            elif status == "confirmed":
+                confirmed += amount
+            elif status == "blocked" or row.get("blocked"):
+                blocked += amount
+
+        item["ledger"] = [r for r in rows if r.get("orderId") != order_id]
+        summary.update({
+            "beneficiaryId": beneficiary_id,
+            "orderId": order_id,
+            "removedRows": len(removed),
+            "pendingRemoved": float(pending),
+            "confirmedRemoved": float(confirmed),
+            "blockedRemoved": float(blocked),
+        })
+        return True
+
+    _mutate_ledger_month(beneficiary_id, month_key, _mutate)
+    return summary or None
 
 # ---------------------------------------------------------------------------
 # Seguridad y Privilegios
@@ -755,6 +1056,205 @@ def _ensure_network_tree() -> dict:
         "rootIds": [],
     }
 
+def _load_month_states(associate_ids: List[Any], month_key: str) -> Dict[str, dict]:
+    """Estados ASSOCIATE_MONTH de varios asociados en `⌈N/100⌉` BatchGetItem.
+
+    Sustituye al patrón `for cid in ids: _get_by_id("ASSOCIATE_MONTH", ...)`,
+    que hacía 1-3 GetItem secuenciales por asociado.
+    """
+    entity_ids: List[str] = []
+    seen = set()
+    for associate_id in associate_ids or []:
+        cid = _customer_id_str(associate_id)
+        if not cid or cid in seen:
+            continue
+        seen.add(cid)
+        entity_id = _associate_month_entity_id(cid, month_key)
+        if entity_id:
+            entity_ids.append(entity_id)
+
+    if not entity_ids:
+        return {}
+
+    states = _batch_get_entities("ASSOCIATE_MONTH", entity_ids)
+    return {
+        _customer_id_str(item.get("associateId")): item
+        for item in states
+        if isinstance(item, dict) and item.get("associateId") not in (None, "")
+    }
+
+def _load_network_scope(customer: dict, max_depth: Optional[int] = None) -> Tuple[List[dict], dict]:
+    """Carga el cliente y su descendencia usando el árbol de red persistido.
+
+    Resuelve los ids con `_network_tree_descendant_ids` (1 GetItem al singleton
+    del árbol) y trae los items en `BatchGetItem` de 100 en 100, en lugar de
+    leer la colección CUSTOMER entera o hacer un `_get_by_id` por descendiente.
+
+    Devuelve `(items, meta)`; `items[0]` es siempre el propio cliente.
+    """
+    if not customer or not isinstance(customer, dict):
+        return [], {"source": "empty", "requestedCount": 0, "loadedCount": 0, "missingCount": 0}
+
+    customer_id = _customer_id_str(customer.get("customerId"))
+    if not customer_id:
+        return [], {"source": "empty", "requestedCount": 0, "loadedCount": 0, "missingCount": 0}
+
+    def _load_from_tree(tree_payload):
+        descendant_ids = _network_tree_descendant_ids(tree_payload, customer_id, max_depth)
+        batch_ids = [customer_id, *descendant_ids]
+        loaded = _batch_get_entities("CUSTOMER", batch_ids)
+
+        by_id = {
+            _customer_id_str(item.get("customerId")): item
+            for item in loaded
+            if isinstance(item, dict) and item.get("customerId") not in (None, "")
+        }
+        by_id[customer_id] = customer
+
+        scoped = [by_id[cid] for cid in batch_ids if by_id.get(cid)]
+        return descendant_ids, scoped
+
+    source = "network_tree_batch_get"
+    tree = _ensure_network_tree()
+    descendant_ids, scoped = _load_from_tree(tree)
+    missing = max(0, 1 + len(descendant_ids) - len(scoped))
+
+    if missing and descendant_ids:
+        # El árbol quedó desfasado respecto a CUSTOMER: se reconstruye una vez.
+        _sync_customer_network_metadata()
+        tree = _ensure_network_tree()
+        descendant_ids, scoped = _load_from_tree(tree)
+        missing = max(0, 1 + len(descendant_ids) - len(scoped))
+        source = "network_tree_batch_get_rebuilt"
+
+    return scoped, {
+        "source": source,
+        "requestedCount": len(descendant_ids),
+        "loadedCount": len(scoped),
+        "missingCount": missing,
+    }
+
+def _customer_email_index_key(email: Any) -> Optional[dict]:
+    normalized = _normalize_email(email)
+    if not normalized:
+        return None
+    return {"PK": f"REF#EMAIL#{normalized}", "SK": "EMAIL"}
+
+def _upsert_customer_email_index(customer_id: Any, email: Any, previous_email: Any = None) -> None:
+    """Mantiene el índice `REF#EMAIL#<email>` → customerId."""
+    cid = _customer_id_str(customer_id)
+    key = _customer_email_index_key(email)
+    previous_key = _customer_email_index_key(previous_email)
+
+    if previous_key and (not key or previous_key["PK"] != key["PK"]):
+        try:
+            _table.delete_item(Key=previous_key)
+        except Exception as ex:
+            print(json.dumps({
+                "event": "customer_email_index_cleanup_failed",
+                "customerId": cid, "message": str(ex),
+            }, default=_json_default))
+
+    if not cid or not key:
+        return
+    try:
+        _table.put_item(Item={
+            **key,
+            "entityType": "customerEmailIndex",
+            "customerId": customer_id,
+            "email": _normalize_email(email),
+            "updatedAt": _now_iso(),
+        })
+    except Exception as ex:
+        print(json.dumps({
+            "event": "customer_email_index_write_failed",
+            "customerId": cid, "message": str(ex),
+        }, default=_json_default))
+
+def _find_customer_id_by_email(email: Any) -> Optional[str]:
+    """customerId asociado a un email, o None.
+
+    Consulta primero el índice (1 GetItem). Como los clientes anteriores a la
+    creación del índice no tienen entrada, cae al barrido de la colección
+    cuando el índice no acierta: así el resultado sigue siendo correcto
+    durante la transición y se acelera solo a medida que el índice se puebla.
+    """
+    key = _customer_email_index_key(email)
+    if not key:
+        return None
+
+    try:
+        indexed = _table.get_item(Key=key).get("Item")
+    except Exception:
+        indexed = None
+    if indexed and indexed.get("customerId") not in (None, ""):
+        return _customer_id_str(indexed.get("customerId"))
+
+    normalized = _normalize_email(email)
+    for customer in _query_bucket("CUSTOMER"):
+        if _normalize_email(customer.get("email")) == normalized:
+            cid = _customer_id_str(customer.get("customerId"))
+            # Rellena el índice sobre la marcha para no repetir el barrido.
+            _upsert_customer_email_index(customer.get("customerId"), customer.get("email"))
+            return cid
+    return None
+
+def _customer_name_index_pk(name: Any) -> str:
+    letter = (str(name or "").strip()[:1] or "?").upper()
+    return f"REF#NOMBRE#{letter}"
+
+def _upsert_customer_name_index(customer_id: Any, name: Any, email: Any = None,
+                                created_at_iso: Optional[str] = None,
+                                previous_name: Any = None) -> None:
+    """Mantiene el índice de búsqueda por nombre `REF#NOMBRE#<letra>`.
+
+    Antes solo lo escribía el auto-registro, así que los clientes dados de alta
+    por un admin —y los renombrados— no aparecían en la búsqueda del panel.
+    Debe invocarse desde toda alta y toda actualización de nombre de CUSTOMER.
+    """
+    cid = _customer_id_str(customer_id)
+    normalized_name = str(name or "").strip()
+    if not cid or not normalized_name:
+        return
+
+    created_at = str(created_at_iso or _now_iso())
+    new_pk = _customer_name_index_pk(normalized_name)
+    sort_key = f"{created_at}#{cid}"
+
+    previous_pk = _customer_name_index_pk(previous_name) if previous_name else None
+    if previous_pk and previous_pk != new_pk:
+        try:
+            _table.delete_item(Key={"PK": previous_pk, "SK": sort_key})
+        except Exception as ex:
+            print(json.dumps({
+                "event": "customer_name_index_cleanup_failed",
+                "customerId": cid, "message": str(ex),
+            }, default=_json_default))
+
+    try:
+        _table.put_item(Item={
+            "PK": new_pk,
+            "SK": sort_key,
+            "entityType": "customerNameIndex",
+            "customerId": customer_id,
+            "nameLower": normalized_name.lower(),
+            "email": email,
+            "createdAt": created_at,
+            "updatedAt": _now_iso(),
+        })
+    except Exception as ex:
+        print(json.dumps({
+            "event": "customer_name_index_write_failed",
+            "customerId": cid, "message": str(ex),
+        }, default=_json_default))
+
+def _query_customer_name_index(letter: str) -> List[dict]:
+    """Lee TODAS las páginas del índice de nombres de una letra."""
+    return _query_all_pages(
+        KeyConditionExpression=Key("PK").eq(f"REF#NOMBRE#{str(letter or '?').upper()}"),
+        ScanIndexForward=True,
+    )
+
 def _sync_customer_network_metadata() -> dict:
     customers = _query_bucket("CUSTOMER")
     tree_payload = _build_network_tree_payload(customers)
@@ -1042,12 +1542,33 @@ def _require_self_or_admin_from_bearer(headers: dict, resource_customer_id: Any)
 # ---------------------------------------------------------------------------
 # Carga de Configuración (con Cache)
 # ---------------------------------------------------------------------------
-@functools.lru_cache(maxsize=1)
-def _load_app_config() -> dict:
-    # Intenta cargar la configuración global del negocio
+_app_config_cache: Dict[str, Any] = {"value": None, "loadedAt": 0.0}
+
+def _load_app_config(force_reload: bool = False) -> dict:
+    """Configuración global del negocio, cacheada con TTL corto.
+
+    Antes usaba `lru_cache(maxsize=1)` sin invalidación: tras guardar la
+    configuración, los contenedores tibios del resto de lambdas seguían
+    calculando comisiones, descuentos y rangos con los valores viejos hasta
+    que AWS los reciclaba. Con TTL la propagación está acotada a
+    APP_CONFIG_TTL_SECONDS.
+    """
+    now = time.time()
+    if (not force_reload
+            and _app_config_cache["value"] is not None
+            and (now - _app_config_cache["loadedAt"]) < APP_CONFIG_TTL_SECONDS):
+        return _app_config_cache["value"]
+
     cfg = _get_by_id("CONFIG", "app-v1")
-    if cfg: return cfg.get("config", {})
-    return {} # Retornar default si no existe
+    value = cfg.get("config", {}) if cfg else {}
+    _app_config_cache["value"] = value
+    _app_config_cache["loadedAt"] = now
+    return value
+
+def _invalidate_app_config_cache() -> None:
+    """Fuerza la recarga de la configuración en la próxima lectura."""
+    _app_config_cache["value"] = None
+    _app_config_cache["loadedAt"] = 0.0
 
 def _audit_event(action: str, headers, payload=None, target=None) -> None:
     """Registra un evento de auditoría."""

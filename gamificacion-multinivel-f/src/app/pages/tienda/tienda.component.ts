@@ -8,7 +8,7 @@ import { tap } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
-import { UserDashboardData, DashboardCampaign, DashboardProduct } from '../../models/user-dashboard.model';
+import { CatalogData, DashboardCampaign, DashboardProduct } from '../../models/user-dashboard.model';
 import { ProductCategory } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { FeatureBadgeComponent } from '../../components/feature-badge/feature-badge.component';
@@ -248,7 +248,10 @@ export class TiendaComponent implements OnInit {
   }
 
   private loadData(): void {
-    this.api.getUserDashboardData().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    // La tienda solo necesita catálogo. Antes usaba el `/user-dashboard`
+    // monolítico, que además cargaba la red completa del sistema (1 GetItem
+    // por cliente) en la pantalla más visitada de la app.
+    this.api.getCatalogData().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.isLoading = false;
         this.allProducts = (data.products ?? []).filter((p) => p.inOnlineStore !== false);
@@ -266,7 +269,7 @@ export class TiendaComponent implements OnInit {
     });
   }
 
-  private pickFromQuery(data: UserDashboardData, queryId: string): TiendaComponent['featuredProduct'] | null {
+  private pickFromQuery(data: CatalogData, queryId: string): TiendaComponent['featuredProduct'] | null {
     if (queryId.startsWith('campaign:')) {
       const campaignId = queryId.slice('campaign:'.length);
       const campaign = (data.campaigns ?? []).find((c) => c.id === campaignId);
@@ -277,7 +280,7 @@ export class TiendaComponent implements OnInit {
     return null;
   }
 
-  private pickDefaultProduct(data: UserDashboardData): TiendaComponent['featuredProduct'] | null {
+  private pickDefaultProduct(data: CatalogData): TiendaComponent['featuredProduct'] | null {
     if (data.productOfMonth) {
       const p = data.productOfMonth;
       return { id: p.id, name: p.name, badge: p.badge, title: 'Cuida tu cuerpo.', accent: p.name, tail: 'Empieza hoy.', description: p.description || this.defaultHero.description, ctaPrimaryText: 'Agregar al carrito', ctaSecondaryText: 'Ver beneficios', img: p.img, tags: p.tags?.length ? p.tags : [], price: p.price };

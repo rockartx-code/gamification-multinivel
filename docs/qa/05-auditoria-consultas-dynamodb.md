@@ -25,6 +25,11 @@
 
 ### Resultados medidos (operaciones por **una sola** invocación)
 
+**Antes de las correcciones** — todas las cifras son **GetItem secuenciales** (salvo la última
+fila): no hay paralelismo ni `BatchGetItem` en esas rutas, así que el tiempo de pared es
+`nº operaciones × RTT` (≈ 2–5 ms en VPC). 481,200 GetItems ≈ **25–40 minutos**; el límite duro
+de Lambda son 15 minutos.
+
 | Endpoint | N=100 | N=200 | N=400 | N=800 | Crecimiento |
 |---|---:|---:|---:|---:|---|
 | `GET /dashboard/honor-board` | **30,300** | **120,600** | **481,200** | **1,922,400** | **O(N²)** (=3N²) |
@@ -32,9 +37,15 @@
 | `ORDER_PAID` (`handle_apply_rewards`) | 119 | 103 | 143 | 129 | O(profundidad · ancho) |
 | `GET /customers/dashboard` (caliente) | 8 GetItem + 3 BatchGet | 8 + 3 | 8 + 6 | 8 + 12 | **O(1) viajes** ✅ |
 
-Todas las cifras son **GetItem secuenciales** (salvo la última fila): no hay paralelismo ni
-`BatchGetItem` en esas rutas, así que el tiempo de pared es `nº operaciones × RTT` (≈ 2–5 ms
-en VPC). 481,200 GetItems ≈ **25–40 minutos**; el límite duro de Lambda son 15 minutos.
+**Después de las correcciones** (§7). Ya no quedan GetItem por cliente: lo que crece es el
+número de `BatchGetItem`, que agrupa 100 claves por viaje.
+
+| Endpoint | N=100 | N=400 | N=800 | Viajes a DynamoDB |
+|---|---|---|---|---|
+| `GET /dashboard/honor-board` | 3 BatchGet + 1 Query | 12 + 1 | 24 + 1 | **1,922,400 → 25** (N=800) |
+| `GET /user-dashboard` | 11 GetItem + 3 BatchGet + 8 Query | 11 + 6 + 8 | 11 + 12 + 8 | **810 → 31** (N=800) |
+| `ORDER_PAID` | 19 GetItem + 3 BatchGet | 30 + 3 | 31 + 3 | **129 → 34** (N=800) |
+| `GET /customers/dashboard` | 8 GetItem + 3 BatchGet | 8 + 6 | 8 + 12 | sin cambios (ya era correcto) |
 
 ---
 
@@ -359,27 +370,47 @@ petición autenticada.
 
 ---
 
-## 5. Plan de remediación priorizado
+## 5. Verificación
 
-| # | Acción | Archivos | Riesgo | Ganancia medida |
-|---|---|---|---|---|
-| 1 | Apuntar `tienda.component.ts` a `getCatalogData()` | 1 archivo front | Muy bajo | Saca la ruta O(N) de la pantalla más usada |
-| 2 | Reescribir `_compute_ranking` con un solo `_load_month_states` + recorrido post-orden | `dashboard_lambda.py:1043-1101` | Bajo | **1,922,400 → 8 operaciones** (N=800) |
-| 3 | Paginar los 4 `query` de P1-1 | 3 archivos, ~12 líneas | Muy bajo | Corrige comisiones y búsqueda truncadas |
-| 4 | `sk_prefix` en `_query_bucket` + usarlo en stats, alertas, POS e inventario | `core_utils.py` + 3 lambdas | Bajo | Elimina la lectura del histórico completo |
-| 5 | Memoizar `_calc_vp`/`_calc_vg` y usar `_batch_get_entities` en `_load_network_customers` | `commissions_lambda.py` | Medio | ~130 → ~10 operaciones por orden pagada |
-| 6 | Portar `dashboard_lambda` al árbol persistido de `costumer_lambda` y unificar en `core_utils` | 3 lambdas | Medio | Elimina la triplicación y el resto de N+1 |
-| 7 | Ledger de comisiones a un item por fila + `ADD` atómico | `commissions_lambda.py`, `order_lambda.py` | Alto (migración) | Cierra la carrera y el techo de 400 KB |
-| 8 | `transact_write_items` en `_put_entity`; TTL en sesiones; `ProjectionExpression` en listados | `core_utils.py`, `auth_utils.py` | Medio | Integridad y coste de almacenamiento |
-
-Los pasos 1–5 son de bajo riesgo, no requieren migrar datos ni crear GSI, y resuelven los dos
-P0 y los truncados de P1-1.
+La herramienta `Micro-lambda-GMF/python/tools/ddb_query_probe.py` debe reejecutarse tras cada
+cambio: el criterio de aceptación es que el **número de viajes a DynamoDB** no crezca de forma
+lineal ni cuadrática al pasar de 100 a 800 clientes.
 
 ---
 
-## 6. Verificación
+## 6. Estado de las correcciones
 
-La herramienta `Micro-lambda-GMF/python/tools/ddb_query_probe.py` debe reejecutarse tras cada
-corrección: el criterio de aceptación es que el número de operaciones **no crezca** al pasar
-de 100 a 800 clientes en `/user-dashboard`, `/dashboard/honor-board` y `ORDER_PAID`, como ya
-ocurre hoy en `/customers/dashboard`.
+Todos los hallazgos anteriores están corregidos salvo los dos anotados como pendientes.
+
+| Hallazgo | Estado | Cómo se resolvió |
+|---|---|---|
+| **P0-1** honor-board O(N²) | ✅ | `_aggregate_vg_by_node`: los estados del mes se cargan en bloque y el VG de todos los nodos sale de un recorrido post-orden iterativo, O(N × niveles). Verificado contra el algoritmo anterior en 120 árboles aleatorios × 3 profundidades: **0 diferencias**; tolera ciclos y cadenas de 2,000 niveles sin `RecursionError` |
+| **P0-2** `/user-dashboard` O(N) | ✅ | Usa `utils._load_network_scope` (árbol persistido + `BatchGetItem`). `tienda.component.ts` migrado a `getCatalogData()`; `/catalog/catalog` ahora incluye `categories` y `campaigns`, que era lo único que ataba la tienda al endpoint monolítico |
+| **P1-1** 4 `query` truncadas | ✅ | Nuevo `utils._query_all_pages`; aplicado a `COMMISSION_MONTH` (alertas admin), índice de nombres y las dos de `NOTIFICATION_READ` |
+| **P1-2** ledger sin bloqueo | ✅ | Atributo `version` + `ConditionExpression` con reintentos (`utils._mutate_ledger_month`), compartido por comisiones y anulaciones. **Prueba de concurrencia:** con 12 escritores simultáneos la implementación anterior persistía 2 de 12 filas; la nueva persiste 12/12 con totales correctos |
+| **P1-3** `_put_entity` no transaccional | ✅ | `transact_write_items` con respaldo secuencial si el endpoint no lo soporta; serialización verificada idéntica a la del recurso boto3 |
+| **P1-4** índice de nombres parcial | ✅ | `utils._upsert_customer_name_index`, invocado desde el auto-registro, el alta por admin y el renombrado (con borrado de la entrada vieja al cambiar de inicial) |
+| **P1-5** reintento sin tope | ✅ | `MAX_BATCH_GET_RETRIES = 8` y error explícito |
+| **P1-6** config cacheada para siempre | ✅ | Caché con TTL (`APP_CONFIG_TTL_SECONDS`, 60 s) + `_invalidate_app_config_cache()` |
+| **P2-1** lecturas de colección completa | ✅ | `sk_prefix`/`sk_from`/`sk_to` en `_query_bucket` y `_iter_bucket` (con corte anticipado), aplicados a estadísticas mensuales, alertas admin, control y corte de caja POS, bonos y comprobantes. Nuevo índice `REF#EMAIL#<email>` para la comprobación de correo duplicado y `_find_auth_for_customer` para el cambio de contraseña |
+| **P2-3** paginación en memoria | ✅ | `/customers/getall` pagina con `ExclusiveStartKey` y `nextToken` opaco; la búsqueda resuelve los ids con `BatchGetItem` |
+| **P2-4** sin memoización en comisiones | ✅ | Caché por invocación de clientes, estados y VG; la descendencia sale del árbol persistido. Se limpia al inicio de cada invocación |
+| **P2-5** sesiones sin expiración | ⚠️ Parcial | Se escribe el atributo `ttl` (epoch). **Falta habilitar TTL sobre el atributo `ttl` en la tabla** — es configuración de infraestructura, no de código |
+| **P1-2 (techo de 400 KB)** | ⏳ Pendiente | El bloqueo optimista cierra la carrera, pero `ledger` sigue siendo una lista dentro de un item. Pasar a un item por fila requiere migrar datos y no se hizo aquí |
+
+### Notas sobre decisiones tomadas
+
+- **`sk_to` es un tope crudo, no un prefijo.** Como el SK lleva la hora,
+  `sk_to="2026-08"` deja fuera todo agosto. Para incluir un periodo completo hace falta el
+  centinela `"2026-08\uffff"`. Documentado en el docstring y cubierto por pruebas.
+- **Filtros por mes de negocio usan `sk_from`, no `sk_prefix`.** Un bono o un comprobante de
+  un mes puede emitirse al cierre, es decir el mes siguiente; `begins_with` los habría
+  perdido. Solo se usa `sk_prefix` donde el filtro es sobre la propia fecha de creación.
+- **`GET /inventory/pos/sales` mantiene el histórico completo por defecto.** Acepta `from`/`to`
+  para acotar, pero cambiar el rango por defecto habría roto en silencio los reportes de meses
+  anteriores del panel — justo el tipo de truncado que corrige P1-1.
+- **`_find_customer_id_by_email` cae al barrido cuando el índice no acierta**, porque los
+  clientes anteriores al índice no tienen entrada. Rellena el índice sobre la marcha, así que
+  se acelera solo conforme se usa, sin necesidad de una migración previa.
+- **`COMMISSION_MONTH` sigue leyéndose entera** en el reporte admin de comisiones: su SK ordena
+  por beneficiario, no por fecha, así que no admite recorte por clave sin rediseñar la clave.

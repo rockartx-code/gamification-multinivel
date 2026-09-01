@@ -96,7 +96,43 @@ def _catalog_payload():
         if isinstance(product, dict) and _is_product_active(product) and bool(product.get("inOnlineStore", True)):
             product_of_month = _catalog_product_payload(product)
 
-    return {"products": products, "productOfMonth": product_of_month}
+    # Categorías y campañas activas: la tienda las necesitaba y por eso seguía
+    # llamando al monolítico `/user-dashboard`, que cargaba además la red
+    # completa del sistema. Ambas colecciones son pequeñas y públicas.
+    categories = [
+        {
+            "id": str(c.get("categoryId") or c.get("id") or ""),
+            "name": str(c.get("name") or ""),
+            "parentId": c.get("parentId"),
+            "position": int(c.get("position") or 0),
+            "active": True,
+        }
+        for c in utils._query_bucket("PRODUCT_CATEGORY")
+        if bool(c.get("active", True))
+    ]
+    categories.sort(key=lambda c: (c["position"], c["name"]))
+
+    campaigns = [
+        {
+            "id": c.get("campaignId") or c.get("id"),
+            "title": c.get("title"),
+            "description": c.get("description"),
+            "imageUrl": c.get("imageUrl"),
+            "linkUrl": c.get("linkUrl"),
+            "active": True,
+            "startAt": c.get("startAt"),
+            "endAt": c.get("endAt"),
+        }
+        for c in utils._query_bucket("CAMPAIGN")
+        if bool(c.get("active", True))
+    ]
+
+    return {
+        "products": products,
+        "productOfMonth": product_of_month,
+        "categories": categories,
+        "campaigns": campaigns,
+    }
 
 def _upload_to_s3(name, content_base64, content_type):
     """Sube un archivo a S3 y devuelve la URL pública."""

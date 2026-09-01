@@ -184,8 +184,12 @@ def _campaign_payload(item: dict) -> dict:
 
 # --- HELPERS DE RED Y METAS ---
 
-def _get_month_state(associate_id, month_key: str) -> dict:
-    state = utils._get_by_id("ASSOCIATE_MONTH", f"{associate_id}#{month_key}")
+def _get_month_state(associate_id, month_key: str, states_by_associate=None) -> dict:
+    if isinstance(states_by_associate, dict):
+        cached = states_by_associate.get(utils._customer_id_str(associate_id))
+        if cached:
+            return cached
+    state = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(associate_id, month_key))
     if state:
         return state
     now = utils._now_iso()
@@ -202,52 +206,79 @@ def _flatten_tree(root: dict) -> list:
             stack.append((ch, depth + 1))
     return out
 
-def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict, max_depth=3) -> dict:
+def _build_month_node_index(month_key: str, customers_raw: list, cfg: dict,
+                            month_states: dict = None) -> tuple:
+    """Construye una sola vez el índice `{id: nodo}` + `{líder: [hijos]}` del mes.
+
+    Los estados ASSOCIATE_MONTH se cargan en bloque con `_load_month_states`
+    (BatchGetItem) en lugar de un GetItem secuencial por cliente. El índice es
+    reutilizable para construir el árbol de cualquier raíz sin releer nada.
+    """
     activation_min = utils._to_decimal(cfg.get("activationNetMin", 2500))
+
     nodes = {}
     children_by_leader = {}
-
     for c in customers_raw:
-        cid = str(c.get("customerId"))
+        if not isinstance(c, dict):
+            continue
+        cid = utils._customer_id_str(c.get("customerId"))
         if not cid:
             continue
+        leader_id = utils._customer_id_str(c.get("leaderId")) or None
         nodes[cid] = {
             "id": cid, "name": c.get("name") or "",
             "level": (c.get("level") or "").strip(),
-            "leaderId": str(c.get("leaderId")) if c.get("leaderId") else None,
+            "leaderId": leader_id,
             "createdAt": c.get("createdAt"),
             "monthSpend": 0.0, "isActive": False, "children": [],
         }
-        lid = nodes[cid]["leaderId"]
-        if lid:
-            children_by_leader.setdefault(lid, []).append(cid)
+        if leader_id:
+            children_by_leader.setdefault(leader_id, []).append(cid)
 
-    # Rellenar métricas de mes
-    for cid, n in nodes.items():
-        st = _get_month_state(cid, month_key)
-        netv = utils._to_decimal(st.get("netVolume"))
-        n["monthSpend"] = float(netv)
-        n["isActive"] = bool(netv >= activation_min)
+    if month_states is None:
+        month_states = utils._load_month_states(list(nodes.keys()), month_key)
 
-    # Ensamblar árbol
-    for lid, kids in children_by_leader.items():
-        if lid in nodes:
-            child_nodes = sorted([nodes[k] for k in kids if k in nodes], key=lambda x: x["monthSpend"], reverse=True)
-            nodes[lid]["children"] = child_nodes
+    for cid, node in nodes.items():
+        state = month_states.get(cid) or {}
+        net_volume = utils._to_decimal(state.get("netVolume"))
+        node["monthSpend"] = float(net_volume)
+        node["isActive"] = bool(net_volume >= activation_min)
 
-    root = nodes.get(str(root_id))
-    if not root:
+    for leader_id, child_ids in children_by_leader.items():
+        child_ids.sort(key=lambda k: nodes[k]["monthSpend"] if k in nodes else 0.0, reverse=True)
+
+    return nodes, children_by_leader
+
+
+def _tree_from_node_index(root_id, nodes: dict, children_by_leader: dict, max_depth: int = 3) -> dict:
+    """Materializa el árbol de una raíz a partir del índice, recortado a `max_depth`.
+
+    Copia los nodos en lugar de mutarlos para que el índice pueda reutilizarse
+    en varias raíces (necesario en el cuadro de honor).
+    """
+    root_key = utils._customer_id_str(root_id)
+    if root_key not in nodes:
         return {"id": str(root_id), "name": "", "level": "", "monthSpend": 0.0, "children": []}
 
-    # Recortar por profundidad
-    def _trim(node, depth):
+    def _build(cid, depth, visited):
+        node = dict(nodes[cid])
         if depth >= max_depth:
             node["children"] = []
             return node
-        node["children"] = [_trim(ch, depth + 1) for ch in (node.get("children") or [])]
+        node["children"] = [
+            _build(child_id, depth + 1, visited | {child_id})
+            for child_id in children_by_leader.get(cid, [])
+            if child_id in nodes and child_id not in visited
+        ]
         return node
 
-    return _trim(root, 0)
+    return _build(root_key, 0, {root_key})
+
+
+def _build_network_tree_with_month(root_id, month_key: str, customers_raw: list, cfg: dict,
+                                   max_depth=3, month_states: dict = None) -> dict:
+    nodes, children_by_leader = _build_month_node_index(month_key, customers_raw, cfg, month_states)
+    return _tree_from_node_index(root_id, nodes, children_by_leader, max_depth)
 
 def _network_members_from_tree(root: dict, max_rows: int = 30) -> list:
     rows = []
@@ -276,6 +307,59 @@ def _calc_vg_from_tree(root_tree: dict, mxn_per_vp: float) -> float:
     for n in _flatten_tree(root_tree):
         total_mxn += float(n.get("monthSpend", 0))
     return _mxn_to_vp_dash(total_mxn, mxn_per_vp)
+
+def _postorder_node_ids(nodes: dict, children_by_leader: dict) -> list:
+    """Ids en orden post-orden (hijos antes que padres), iterativo y sin ciclos."""
+    order = []
+    visited = set()
+    roots = [
+        cid for cid, node in nodes.items()
+        if not node.get("leaderId") or node["leaderId"] not in nodes
+    ]
+    stack = [(cid, False) for cid in roots]
+    while stack:
+        cid, expanded = stack.pop()
+        if expanded:
+            order.append(cid)
+            continue
+        if cid in visited:
+            continue
+        visited.add(cid)
+        stack.append((cid, True))
+        for child_id in children_by_leader.get(cid, []):
+            if child_id in nodes and child_id not in visited:
+                stack.append((child_id, False))
+
+    # Nodos en un ciclo o con líder inexistente: no se alcanzan desde ninguna raíz.
+    for cid in nodes:
+        if cid not in visited:
+            visited.add(cid)
+            order.append(cid)
+    return order
+
+
+def _aggregate_vg_by_node(nodes: dict, children_by_leader: dict, vp_by_id: dict,
+                          max_levels: int) -> dict:
+    """VG de TODOS los nodos en una sola pasada, O(N × max_levels).
+
+    Para cada nodo se guarda el VP acumulado por nivel de profundidad
+    (`acc[d]` = VP de los descendientes a exactamente `d` niveles). En orden
+    post-orden, el vector de un padre es el de sus hijos desplazado un nivel,
+    así que el VG (suma del vector) sale sin recorrer la subred de cada nodo.
+    """
+    levels = {}
+    for cid in _postorder_node_ids(nodes, children_by_leader):
+        acc = [0.0] * (max_levels + 1)
+        acc[0] = vp_by_id.get(cid, 0.0)
+        for child_id in children_by_leader.get(cid, []):
+            child_acc = levels.get(child_id)
+            if not child_acc:
+                continue
+            for depth in range(1, max_levels + 1):
+                acc[depth] += child_acc[depth - 1]
+        levels[cid] = acc
+    return {cid: sum(acc) for cid, acc in levels.items()}
+
 
 def _get_rank_dash(vg: float, rank_thresholds: list, vp: float = None) -> str:
     """
@@ -316,7 +400,7 @@ def _count_direct_at_rank_dash(cid: str, month_key: str, customers_raw: list,
     return count
 
 def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict,
-                 bonus_cfg=None) -> list:
+                 bonus_cfg=None, month_states=None) -> list:
     bonus_cfg    = bonus_cfg or {}
     vp_cfg       = bonus_cfg.get("vpConfig") or {}
     mxn_per_vp   = float(vp_cfg.get("mxnPerVp", 50))
@@ -331,7 +415,7 @@ def _build_goals(customer: dict, root_tree: dict, customers_raw: list, cfg: dict
 
     cid       = str(customer.get("customerId"))
     month_key = utils._month_key()
-    st        = _get_month_state(cid, month_key)
+    st        = _get_month_state(cid, month_key, month_states)
     my_net    = utils._to_decimal(st.get("netVolume", 0))
     my_vp     = _mxn_to_vp_dash(float(my_net), mxn_per_vp)
     my_vg     = _calc_vg_from_tree(root_tree, mxn_per_vp)
@@ -508,10 +592,12 @@ def _active_notifications_for_customer(customer_id) -> list:
 
     # Leer IDs ya leídas
     try:
-        resp = utils._table.query(
+        # _query_all_pages recorre LastEvaluatedKey: con una sola página, las
+        # notificaciones ya leídas reaparecían como no leídas al pasar de 1 MB.
+        read_items = utils._query_all_pages(
             KeyConditionExpression=utils.Key("PK").eq(f"NOTIFICATION_READ#{customer_id}")
         )
-        read_ids = {item.get("SK") for item in resp.get("Items", [])}
+        read_ids = {item.get("SK") for item in read_items}
     except Exception:
         read_ids = set()
 
@@ -650,11 +736,14 @@ def get_admin_warnings():
     paid_no_ship = sum(1 for o in orders if (o.get("status") or "").lower() == "paid")
     pending_pay = sum(1 for o in orders if (o.get("status") or "").lower() == "pending")
 
-    # Comisiones pendientes de depositar (status CONFIRMED, sin recibo)
+    # Comisiones pendientes de depositar (status CONFIRMED, sin recibo).
+    # Esta query leía UNA sola página: con más de 1 MB de meses contables el
+    # aviso salía corto y se dejaban de pagar comisiones sin ninguna señal.
     from boto3.dynamodb.conditions import Key as _Key
     try:
-        comm_resp = utils._table.query(KeyConditionExpression=_Key("PK").eq("COMMISSION_MONTH"))
-        comm_items = comm_resp.get("Items", [])
+        comm_items = utils._query_all_pages(
+            KeyConditionExpression=_Key("PK").eq("COMMISSION_MONTH")
+        )
     except Exception:
         comm_items = []
     commissions_count = sum(
@@ -668,7 +757,7 @@ def get_admin_warnings():
 
     # Ventas POS de hoy
     pos_sales_today = sum(
-        1 for s in utils._query_bucket("POS_SALE")
+        1 for s in utils._query_bucket("POS_SALE", sk_prefix=now_date)
         if str(s.get("createdAt") or "")[:10] == now_date
     )
 
@@ -911,28 +1000,37 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
     bonus_awards = []
 
     if customer and isinstance(customer, dict):
-        customers_raw = utils._query_bucket("CUSTOMER")
-        # max_depth=5 para capturar hasta nivel 5 en VG
+        # Solo el cliente y su descendencia (árbol persistido + BatchGetItem),
+        # en lugar de leer la colección CUSTOMER completa y hacer un GetItem
+        # de ASSOCIATE_MONTH por cada cliente del sistema.
+        max_network_levels = int(vp_cfg.get("maxNetworkLevels", 5))
+        customers_raw, _scope_meta = utils._load_network_scope(customer, max_depth=max_network_levels)
+        month_states = utils._load_month_states(
+            [c.get("customerId") for c in customers_raw], month_key
+        )
         tree = _build_network_tree_with_month(
-            str(customer.get("customerId")), month_key, customers_raw, cfg, max_depth=5
+            str(customer.get("customerId")), month_key, customers_raw, cfg,
+            max_depth=max_network_levels, month_states=month_states,
         )
         computed_network = _network_members_from_tree(tree, max_rows=30)
-        computed_goals   = _build_goals(customer, tree, customers_raw, cfg, bonus_cfg=bonus_cfg)
+        computed_goals   = _build_goals(customer, tree, customers_raw, cfg,
+                                        bonus_cfg=bonus_cfg, month_states=month_states)
         buy_again_ids    = _compute_buy_again_ids(customer, products_raw)
         active_notifications = _active_notifications_for_customer(customer.get("customerId"))
 
         # Calcular VP, VG, rango
         cid = str(customer.get("customerId", ""))
-        st  = _get_month_state(cid, month_key)
+        st  = _get_month_state(cid, month_key, month_states)
         my_net = float(utils._to_decimal(st.get("netVolume", 0)))
         vp_val = _mxn_to_vp_dash(my_net, mxn_per_vp)
         vg_val = _calc_vg_from_tree(tree, mxn_per_vp)
         rank_val = _get_rank_dash(vg_val, rank_thresh, vp=vp_val)
 
-        # Bonos del mes
-        all_awards = utils._query_bucket("BONUS_AWARD")
+        # Bonos del mes. SK = "{createdAt}#{id}"; un award de `month_key` nunca
+        # se crea antes de ese mes, así que `sk_from` acota sin perder filas
+        # (a diferencia de begins_with, que perdería los emitidos al cierre).
         bonus_awards = [
-            a for a in all_awards
+            a for a in utils._query_bucket("BONUS_AWARD", sk_from=month_key)
             if str(a.get("customerId", "")) == cid and a.get("monthKey") == month_key
         ]
 
@@ -964,7 +1062,8 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
 
         # Comprobante mes anterior
         receipt_url = ""
-        for r in utils._query_bucket("COMMISSION_RECEIPT"):
+        # Un comprobante del mes previo se emite en ese mes o después.
+        for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=prev_month_key):
             if int(r.get("customerId") or 0) != cid:
                 continue
             if str(r.get("monthKey")) != str(prev_month_key):
@@ -1055,35 +1154,39 @@ def get_honor_board() -> dict:
     prev_mk    = _prev_month_key()
 
     customers_raw = utils._query_bucket("CUSTOMER")
+    cfg_rewards = app_cfg.get("rewards") or {}
+    max_levels = int(vp_cfg.get("maxNetworkLevels", 5))
 
     def _compute_ranking(mk: str):
-        """Devuelve [{customerId, name, vp, vg}] para el mes mk."""
+        """Devuelve [{customerId, name, vp, vg, rank}] para el mes `mk`.
+
+        Antes construía el árbol COMPLETO del sistema una vez por cada cliente
+        (y cada construcción hacía un GetItem por cliente): 3N² operaciones,
+        ~1.9 M con 800 clientes, muy por encima del timeout de Lambda.
+
+        Ahora los estados del mes se cargan en un solo bloque y el VG de todos
+        los clientes sale de un único recorrido post-orden del bosque: cada
+        nodo acumula su VP y el de sus descendientes hasta `max_levels`.
+        """
+        month_states = utils._load_month_states(
+            [c.get("customerId") for c in customers_raw if isinstance(c, dict)], mk
+        )
+        nodes, children_by_leader = _build_month_node_index(mk, customers_raw, cfg_rewards, month_states)
+
+        # VP por nodo (mismo criterio que _calc_vg_from_tree: netVolume → VP).
+        vp_by_id = {cid: _mxn_to_vp_dash(node["monthSpend"], mxn_per_vp) for cid, node in nodes.items()}
+
+        vg_by_id = _aggregate_vg_by_node(nodes, children_by_leader, vp_by_id, max_levels)
+
         entries = []
-        for c in customers_raw:
-            if not isinstance(c, dict):
-                continue
-            cid = str(c.get("customerId") or "")
-            if not cid:
-                continue
-            st  = utils._get_by_id("ASSOCIATE_MONTH", f"{cid}#{mk}") or {}
-            net = float(utils._to_decimal(st.get("netVolume", 0)))
-            vp  = _mxn_to_vp_dash(net, mxn_per_vp)
-
-            # VG: red hasta max_network_levels a partir de ASSOCIATE_MONTH records
-            # Para eficiencia usamos suma de sub-árbol directo en lugar de árbol completo
-            # (evita N^2 queries). Se calcula sumando el netVolume de todos los que
-            # pertenecen al árbol del cliente usando una pasada sobre customers_raw.
-            cfg_rewards = app_cfg.get("rewards") or {}
-            tree = _build_network_tree_with_month(cid, mk, customers_raw, cfg_rewards, max_depth=5)
-            vg  = _calc_vg_from_tree(tree, mxn_per_vp)
-
-            rank = _get_rank_dash(vg, rank_thresh)
+        for cid, node in nodes.items():
+            vg = vg_by_id.get(cid, 0.0)
             entries.append({
                 "customerId": cid,
-                "name": str(c.get("name") or ""),
-                "vp": round(vp, 2),
+                "name": node.get("name") or "",
+                "vp": round(vp_by_id.get(cid, 0.0), 2),
                 "vg": round(vg, 2),
-                "rank": rank,
+                "rank": _get_rank_dash(vg, rank_thresh),
             })
         return entries
 

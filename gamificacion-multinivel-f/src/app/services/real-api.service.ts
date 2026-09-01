@@ -77,6 +77,7 @@ import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  DashboardCampaign,
   DashboardData,
   DashboardProduct,
   HonorBoard,
@@ -393,12 +394,19 @@ export class RealApiService {
   }
 
   getCatalogData(): Observable<CatalogData> {
-    return this.http.get<{ products: Record<string, unknown>[]; productOfMonth?: Record<string, unknown> | null }>(
+    return this.http.get<{
+      products: Record<string, unknown>[];
+      productOfMonth?: Record<string, unknown> | null;
+      categories?: ProductCategory[];
+      campaigns?: DashboardCampaign[];
+    }>(
       `${this.baseUrl}/catalog/catalog`
     ).pipe(
       map((raw) => ({
         products: (raw.products ?? []).map((p) => this.normalizeDashboardProduct(p)),
         productOfMonth: raw.productOfMonth ? this.normalizeDashboardProduct(raw.productOfMonth) : null,
+        categories: raw.categories ?? [],
+        campaigns: raw.campaigns ?? [],
       } as CatalogData))
     );
   }

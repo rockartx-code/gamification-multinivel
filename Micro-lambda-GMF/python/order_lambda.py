@@ -415,61 +415,26 @@ def _void_commissions_for_order(order_id: str, reason: str) -> list:
             beneficiaries = [str(referrer_id)] + beneficiaries
 
     out = []
-    pk_month = "COMMISSION_MONTH"
     for beneficiary_id in beneficiaries:
-        sk = f"#BENEFICIARY#{beneficiary_id}#MONTH#{month_key}"
-        resp = utils._table.get_item(Key={"PK": pk_month, "SK": sk})
-        item = resp.get("Item")
-        if not item:
-            continue
-
-        ledger = item.get("ledger") or []
-        pending_delta = utils.D_ZERO
-        confirmed_delta = utils.D_ZERO
-        blocked_delta = utils.D_ZERO
-        new_ledger = []
-        removed = 0
-
-        for row in ledger:
-            if row.get("orderId") == order_id:
-                amt = utils._to_decimal(row.get("amount"))
-                st = (row.get("status") or "").lower()
-                if st == "pending":
-                    pending_delta += amt
-                elif st == "confirmed":
-                    confirmed_delta += amt
-                elif st == "blocked" or row.get("blocked"):
-                    blocked_delta += amt
-                removed += 1
-                continue
-            new_ledger.append(row)
-
-        if removed == 0:
-            continue
-
+        # Mismo bloqueo optimista que el resto de escrituras del ledger: antes
+        # esto era un read-modify-write con deltas que podía descuadrar los
+        # totales si otra orden escribía el mismo mes a la vez.
         try:
-            utils._table.update_item(
-                Key={"PK": pk_month, "SK": sk},
-                UpdateExpression=(
-                    "SET ledger = :l, "
-                    "totalPending = if_not_exists(totalPending, :z) - :pd, "
-                    "totalConfirmed = if_not_exists(totalConfirmed, :z) - :cd, "
-                    "totalBlocked = if_not_exists(totalBlocked, :z) - :bd, "
-                    "updatedAt = :u"
-                ),
-                ExpressionAttributeValues={
-                    ":l": new_ledger, ":pd": pending_delta,
-                    ":cd": confirmed_delta, ":bd": blocked_delta,
-                    ":z": utils.D_ZERO, ":u": utils._now_iso(),
-                },
-            )
+            summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id)
         except Exception as e:
-            print(f"[VOID_COMM_ERROR] {e}")
-
+            print(f"[VOID_COMM_ERROR] beneficiary={beneficiary_id} err={e}")
+            continue
+        if not summary:
+            continue
         out.append({
-            "action": "void", "beneficiaryId": beneficiary_id,
-            "orderId": order_id, "pendingRemoved": float(pending_delta),
-            "confirmedRemoved": float(confirmed_delta), "reason": reason,
+            "action": "void",
+            "beneficiaryId": beneficiary_id,
+            "orderId": order_id,
+            "removed": summary.get("removedRows"),
+            "pendingRemoved": summary.get("pendingRemoved"),
+            "confirmedRemoved": summary.get("confirmedRemoved"),
+            "blockedRemoved": summary.get("blockedRemoved"),
+            "reason": reason,
         })
     return out
 

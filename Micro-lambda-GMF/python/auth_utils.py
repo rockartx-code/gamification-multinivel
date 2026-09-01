@@ -4,6 +4,7 @@ import random
 import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
+from typing import Optional
 
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
 
@@ -184,6 +185,7 @@ def handle_login(body):
                 "userId": str(d["id"]),
                 "role": d["role"],
                 "privileges": {},
+                "ttl": utils._ttl_epoch(utils.SESSION_TTL_SECONDS),
             })
             return utils._json_response(200, {"token": token, "user": {
                 "userId": d["id"], "name": d["name"], "role": d["role"], "canAccessAdmin": (d["role"] == "admin")
@@ -195,8 +197,9 @@ def handle_login(body):
 
     if not auth:
         # Fallback: Buscar cliente por email para crear registro AUTH si existe passHash antiguo
-        customer = next((c for c in utils._query_bucket("CUSTOMER") 
-                        if utils._normalize_email(c.get("email")) == identifier), None)
+        matched_customer_id = utils._find_customer_id_by_email(identifier)
+        customer = (utils._get_by_id("CUSTOMER", utils._customer_entity_id(matched_customer_id))
+                    if matched_customer_id else None)
         if customer and customer.get("passwordHash") == pass_hash:
             auth = utils._put_entity("AUTH", identifier, {
                 "entityType": "auth", "authId": identifier, "email": identifier,
@@ -227,6 +230,10 @@ def handle_login(body):
         "role": auth.get("role"),
         "authId": auth.get("authId") or identifier,
         "privileges": utils._normalize_privileges(profile.get("privileges")),
+        # Atributo TTL (epoch) para que DynamoDB purgue las sesiones vencidas:
+        # `expiresAt` era una cadena ISO comprobada en código, así que la
+        # partición SESSION crecía sin techo y nada se borraba nunca.
+        "ttl": utils._ttl_epoch(utils.SESSION_TTL_SECONDS),
     })
 
     return utils._json_response(200, {
@@ -275,19 +282,10 @@ def handle_create_account(body):
     # Referencia propia: REFERRAL_CODE#{customerId} → leaderId={customerId}
     _upsert_referral_code_self(customer_id, name)
 
-    # Índice por nombre para búsqueda rápida paginada: PK="REF#NOMBRE#{letra}" SK="{createdAt}#{customerId}"
-    try:
-        name_letter = (name[0] if name else "?").upper()
-        utils._table.put_item(Item={
-            "PK": f"REF#NOMBRE#{name_letter}",
-            "SK": f"{now}#{customer_id}",
-            "customerId": customer_id,
-            "nameLower": name.lower(),
-            "email": email,
-            "createdAt": now,
-        })
-    except Exception as ex:
-        print(f"[CUSTOMER_NAME_INDEX_ERROR] customerId={customer_id} error={ex}")
+    # Índices de búsqueda (nombre y email). El helper compartido garantiza que
+    # se escriban igual desde el auto-registro y desde el alta por admin.
+    utils._upsert_customer_name_index(customer_id, name, email, created_at_iso=now)
+    utils._upsert_customer_email_index(customer_id, email)
 
     try:
         utils._sync_customer_network_metadata()
@@ -447,6 +445,31 @@ def handle_password_reset(body):
 
     return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
 
+def _find_auth_for_customer(customer_id) -> Optional[dict]:
+    """Registro AUTH de un cliente/empleado, sin barrer la colección.
+
+    AUTH está indexado por email (`authId`), así que basta con leer el perfil
+    para conocerlo. Solo si el perfil no tiene email —o el AUTH está bajo otro
+    identificador— se recurre al barrido, que además ya no es el camino normal.
+    """
+    cid = str(customer_id or "").strip()
+    if not cid:
+        return None
+
+    profile = utils._get_by_id("CUSTOMER", utils._customer_entity_id(cid)) or utils._get_by_id("EMPLOYEE", cid)
+    email = utils._normalize_email((profile or {}).get("email"))
+    if email:
+        auth = utils._get_by_id("AUTH", email)
+        if auth and str(auth.get("customerId") or auth.get("employeeId") or "") == cid:
+            return auth
+
+    return next(
+        (r for r in utils._query_bucket("AUTH")
+         if str(r.get("customerId") or r.get("employeeId") or "") == cid),
+        None,
+    )
+
+
 def handle_change_password(body, headers):
     """POST /auth/changepassword — Requiere Bearer token; obtiene customerId desde la sesión."""
     actor = utils._extract_actor_from_bearer(headers)
@@ -462,9 +485,9 @@ def handle_change_password(body, headers):
     if len(str(new_password)) < 8:
         return utils._json_response(400, {"message": "La nueva contraseña debe tener al menos 8 caracteres"})
 
-    # Buscar registro AUTH por customerId
-    auth_records = utils._query_bucket("AUTH")
-    auth = next((r for r in auth_records if str(r.get("customerId")) == customer_id), None)
+    # El registro AUTH está indexado por email, así que se resuelve desde el
+    # perfil del cliente (1-2 GetItem) en vez de leer la colección AUTH entera.
+    auth = _find_auth_for_customer(customer_id)
     if not auth:
         return utils._json_response(404, {"message": "Cuenta no encontrada"})
 

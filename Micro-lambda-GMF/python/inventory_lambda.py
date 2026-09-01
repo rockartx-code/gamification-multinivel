@@ -271,23 +271,26 @@ def _stock_id_str(value) -> str:
     return str(value).strip()
 
 def _last_pos_cash_cut(stock_id: str, attendant_user_id) -> dict:
-    """Devuelve el último corte de caja de un operador en un almacén."""
-    cuts = [
-        item for item in utils._query_bucket("POS_CASH_CUT")
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(attendant_user_id)
-    ]
-    if not cuts:
-        return {}
-    cuts.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
-    return cuts[0]
+    """Último corte de caja de un operador en un almacén.
+
+    Recorre la colección de más reciente a más antiguo y corta en el primer
+    acierto, en lugar de traer todos los cortes históricos para ordenarlos.
+    """
+    for item in utils._iter_bucket("POS_CASH_CUT", forward=False):
+        if (_stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
+                and str(item.get("attendantUserId")) == str(attendant_user_id)):
+            return item
+    return {}
 
 def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
     """Calcula el estado actual del control de caja."""
     last_cut = _last_pos_cash_cut(stock_id, attendant_user_id)
     last_cut_at = str(last_cut.get("createdAt") or "") if last_cut else ""
+    # Solo interesan las ventas posteriores al último corte: `sk_from` las acota
+    # en la condición de clave (SK = "{createdAt}#{id}") en vez de leer todo el
+    # histórico de ventas del punto de venta en cada refresco de la pantalla.
     sales = [
-        item for item in utils._query_bucket("POS_SALE")
+        item for item in utils._query_bucket("POS_SALE", sk_from=last_cut_at or None)
         if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
         and str(item.get("attendantUserId")) == str(attendant_user_id)
         and str(item.get("paymentMethod") or "cash").lower() == "cash"
@@ -304,8 +307,10 @@ def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
     )
 
     # Restar retiros desde el ultimo corte
+    # Un retiro anterior al último corte ya lleva `cashCutId`, así que basta con
+    # mirar de esa fecha en adelante.
     withdrawals = [
-        item for item in utils._query_bucket("POS_WITHDRAWAL")
+        item for item in utils._query_bucket("POS_WITHDRAWAL", sk_from=last_cut_at or None)
         if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
         and str(item.get("attendantUserId")) == str(attendant_user_id)
         and not item.get("cashCutId")
@@ -336,19 +341,22 @@ def handle_cash_cut(body, headers):
     user_id = headers.get("x-user-id")
     cash_to_keep = utils._to_decimal(body.get("cashToKeep") or 0)
 
-    all_sales = utils._query_bucket("POS_SALE")
+    # Ventas y retiros pendientes son, por definición, posteriores al último
+    # corte de este operador: acotarlos por esa fecha evita releer todo el
+    # histórico del punto de venta en cada cierre de caja.
+    last_cut = _last_pos_cash_cut(stock_id, user_id)
+    since = str(last_cut.get("createdAt") or "") or None
+
     pending_sales = [
-        s for s in all_sales
+        s for s in utils._query_bucket("POS_SALE", sk_from=since)
         if _stock_id_str(s.get("stockId")) == _stock_id_str(stock_id)
         and str(s.get("attendantUserId")) == str(user_id)
         and str(s.get("paymentMethod") or "cash").lower() == "cash"
         and not s.get("cashCutId")
     ]
 
-    # Retiros pendientes sin corte
-    all_withdrawals = utils._query_bucket("POS_WITHDRAWAL")
     pending_withdrawals = [
-        w for w in all_withdrawals
+        w for w in utils._query_bucket("POS_WITHDRAWAL", sk_from=since)
         if _stock_id_str(w.get("stockId")) == _stock_id_str(stock_id)
         and str(w.get("attendantUserId")) == str(user_id)
         and not w.get("cashCutId")
@@ -471,25 +479,49 @@ def handle_pos_withdrawal(body, headers):
     return utils._json_response(201, {"withdrawal": item, "control": control})
 
 
-def handle_list_cash_cuts(stock_id, user_id):
-    """GET /pos/cash-cuts"""
-    cuts = [
-        item for item in utils._query_bucket("POS_CASH_CUT")
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(user_id)
-    ]
-    cuts.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
+MAX_CASH_CUTS_PAGE = 50
 
-    all_sales = utils._query_bucket("POS_SALE")
-    all_withdrawals = utils._query_bucket("POS_WITHDRAWAL")
+
+def handle_list_cash_cuts(stock_id, user_id, limit: int = MAX_CASH_CUTS_PAGE):
+    """GET /pos/cash-cuts — los `limit` cortes más recientes del operador."""
+    # Se piden limit+1 cortes: el extra marca el límite temporal inferior de la
+    # ventana, y las ventas/retiros de los cortes devueltos son todos
+    # posteriores a él. Así el detalle se acota por clave en vez de leer los
+    # históricos completos de POS_SALE y POS_WITHDRAWAL.
+    window = []
+    for item in utils._iter_bucket("POS_CASH_CUT", forward=False):
+        if (_stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
+                and str(item.get("attendantUserId")) == str(user_id)):
+            window.append(item)
+            if len(window) > limit:
+                break
+
+    boundary_cut = window[limit] if len(window) > limit else None
+    cuts = window[:limit]
+    since = str((boundary_cut or {}).get("createdAt") or "") or None
+
+    if cuts:
+        sales = utils._query_bucket("POS_SALE", sk_from=since)
+        withdrawals = utils._query_bucket("POS_WITHDRAWAL", sk_from=since)
+    else:
+        sales, withdrawals = [], []
+
+    sales_by_cut = {}
+    for sale in sales:
+        sales_by_cut.setdefault(sale.get("cashCutId"), []).append(sale)
+    withdrawals_by_cut = {}
+    for withdrawal in withdrawals:
+        withdrawals_by_cut.setdefault(withdrawal.get("cashCutId"), []).append(withdrawal)
+
     for cut in cuts:
         cut_id = cut.get("cashCutId") or cut.get("cutId")
         if not cut.get("sales"):
-            cut["sales"] = [s for s in all_sales if s.get("cashCutId") == cut_id]
+            cut["sales"] = sales_by_cut.get(cut_id, [])
         if not cut.get("withdrawals"):
-            cut["withdrawals"] = [w for w in all_withdrawals if w.get("cashCutId") == cut_id]
+            cut["withdrawals"] = withdrawals_by_cut.get(cut_id, [])
 
-    return utils._json_response(200, {"cuts": cuts})
+    return utils._json_response(200, {"cuts": cuts, "count": len(cuts),
+                                      "hasMore": boundary_cut is not None})
 
 # --- LAMBDA ROUTER ---
 
@@ -588,10 +620,16 @@ def lambda_handler(event, context):
                 if err: return err
                 if method == "GET":
                     sid = query.get("stockId")
-                    sales = utils._query_bucket("POS_SALE")
+                    # `from`/`to` (YYYY-MM-DD o YYYY-MM) acotan por clave. Sin
+                    # ellos se mantiene el histórico completo: cambiar el rango
+                    # por defecto rompería los reportes de meses anteriores.
+                    date_from = (query.get("from") or "").strip() or None
+                    date_to = (query.get("to") or "").strip() or None
+                    sales = utils._query_bucket("POS_SALE", sk_from=date_from,
+                                                sk_to=(date_to + "\uffff") if date_to else None)
                     if sid:
                         sales = [s for s in sales if str(s.get("stockId") or "") == str(sid)]
-                    return utils._json_response(200, {"sales": sales})
+                    return utils._json_response(200, {"sales": sales, "from": date_from, "to": date_to})
                 return handle_pos_sale(body, headers)
             if segments[1] == "cash-cut":
                 err = utils._require_admin(headers, "pos_register_sale")
