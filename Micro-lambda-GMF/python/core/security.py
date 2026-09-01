@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 from .settings import PASSWORD_HASH_ITERATIONS, PASSWORD_HASH_SCHEME, _ALL_PRIVILEGES, _SUPERADMIN_TOKEN
 from .http import _json_response
-from .db import _get_by_id
+from .network import _get_session
 
 
 def _hash_token(value: str) -> str:
@@ -89,7 +89,7 @@ def _extract_actor(headers: dict) -> dict:
     if token:
         if token == _SUPERADMIN_TOKEN:
             return _superadmin_actor()
-        session = _get_by_id("SESSION", token)
+        session = _get_session(token)
         if isinstance(session, dict):
             return {
                 "user_id": str(session.get("userId") or "").strip() or None,
@@ -118,7 +118,7 @@ def _extract_actor_from_bearer(headers: dict) -> dict:
     if token == _SUPERADMIN_TOKEN:
         return _superadmin_actor()
 
-    session = _get_by_id("SESSION", token)
+    session = _get_session(token)
     if not isinstance(session, dict):
         return {"user_id": None, "role": "", "privileges": _normalize_privileges({})}
 

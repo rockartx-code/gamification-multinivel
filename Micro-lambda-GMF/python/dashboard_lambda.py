@@ -455,7 +455,7 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
         }
         user_payload = None
 
-    return utils._json_response(200, {
+    respuesta = utils._json_response(200, {
         "isGuest": bool(is_guest),
         "settings": {
             "cutoffDay": 25, "cutoffHour": 23, "cutoffMinute": 59,
@@ -478,6 +478,13 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
         "rank": seccion["rank"],
         "bonuses": seccion["bonuses"],
     })
+    # RFC 8594: avisa a cualquier cliente que siga usando el endpoint.
+    respuesta["headers"].update({
+        "Deprecation": "true",
+        "Link": '</catalog>; rel="successor-version", </customers/dashboard>; rel="successor-version"',
+        "Warning": '299 - "Endpoint obsoleto: use GET /catalog y GET /customers/dashboard"',
+    })
+    return respuesta
 
 
 

@@ -216,14 +216,12 @@ def handle_login(body):
     for d in _demo_users():
         if (identifier == d["u"] or identifier == f"{d['u']}@demo.local") and password == d["p"]:
             token = "demo-token-" + utils.uuid.uuid4().hex[:16]
-            utils._put_entity("SESSION", token, {
-                "entityType": "session",
+            utils._put_session(token, {
                 "sessionId": token,
                 "userId": str(d["id"]),
                 "role": d["role"],
                 "privileges": {},
-                "ttl": utils._ttl_epoch(utils.SESSION_TTL_SECONDS),
-            })
+            }, ttl_epoch=utils._ttl_epoch(utils.SESSION_TTL_SECONDS))
             return utils._json_response(200, {"token": token, "user": {
                 "userId": d["id"], "name": d["name"], "role": d["role"], "canAccessAdmin": (d["role"] == "admin")
             }})
@@ -263,18 +261,16 @@ def handle_login(body):
         return utils._json_response(401, {"message": "Perfil no encontrado"})
 
     token = "session-token-" + utils.uuid.uuid4().hex[:16]
-    utils._put_entity("SESSION", token, {
-        "entityType": "session",
+    # Clave directa: validar el Bearer cuesta 1 GetItem en vez de 2, y no deja
+    # un puntero REF por sesión. El TTL (epoch) hace que DynamoDB las purgue;
+    # `expiresAt` era una cadena ISO comprobada en código y no borraba nada.
+    utils._put_session(token, {
         "sessionId": token,
         "userId": str(user_id),
         "role": auth.get("role"),
         "authId": auth.get("authId") or identifier,
         "privileges": utils._normalize_privileges(profile.get("privileges")),
-        # Atributo TTL (epoch) para que DynamoDB purgue las sesiones vencidas:
-        # `expiresAt` era una cadena ISO comprobada en código, así que la
-        # partición SESSION crecía sin techo y nada se borraba nunca.
-        "ttl": utils._ttl_epoch(utils.SESSION_TTL_SECONDS),
-    })
+    }, ttl_epoch=utils._ttl_epoch(utils.SESSION_TTL_SECONDS))
 
     return utils._json_response(200, {
         "token": token,

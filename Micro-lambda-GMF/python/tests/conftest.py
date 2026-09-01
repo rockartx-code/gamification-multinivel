@@ -177,6 +177,25 @@ class FakeTable:
         return out
 
 
+class FakeClient:
+    """Cliente crudo de DynamoDB.
+
+    `transact_write_items` responde ValidationException para ejercitar el
+    camino de respaldo de `_put_entity`, que es el que corre cuando la
+    transacción no está disponible.
+    """
+
+    def __init__(self, store):
+        self.store = store
+
+    def transact_write_items(self, TransactItems=None, **kw):
+        from botocore.exceptions import ClientError
+        raise ClientError(
+            {"Error": {"Code": "ValidationException", "Message": "fake"}},
+            "TransactWriteItems",
+        )
+
+
 class FakeResource:
     def __init__(self, store):
         self.store = store
@@ -212,6 +231,7 @@ def utils(store, monkeypatch):
     # los bindings, así que sustituirlos ahí no alcanzaría al código real.
     monkeypatch.setattr(core_db, "_table", FakeTable(store))
     monkeypatch.setattr(core_db, "_dynamodb", FakeResource(store))
+    monkeypatch.setattr(core_db, "_ddb_client", FakeClient(store))
     monkeypatch.setattr(core_utils, "_table", FakeTable(store))
     monkeypatch.setattr(core_utils, "_dynamodb", FakeResource(store))
     core_utils._invalidate_app_config_cache()

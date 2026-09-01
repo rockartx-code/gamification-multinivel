@@ -448,7 +448,14 @@ export class RealApiService {
     return this.http.get<DashboardData>(`${this.baseUrl}/customers/dashboard`, { headers: this.actorHeaders() });
   }
 
-  /** @deprecated Usar getCatalogData() + getDashboardData() en su lugar */
+  /**
+   * @deprecated Endpoint obsoleto: usar `getCatalogData()` + `getDashboardData()`.
+   *
+   * El backend responde con cabeceras `Deprecation`/`Sunset` y registra cada
+   * uso (`legacy_user_dashboard_hit`) para poder retirarlo con datos. Ningún
+   * componente de la app lo llama ya; se conserva solo por si algún cliente
+   * cacheado sigue vivo.
+   */
   getUserDashboardData(userId?: string): Observable<UserDashboardData> {
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
     return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard${query}`);

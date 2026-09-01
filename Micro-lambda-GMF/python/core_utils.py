@@ -115,6 +115,9 @@ from core.config import (
     _normalize_app_config,
 )
 from core.network import (
+    _get_session,
+    _put_session,
+    _session_key,
     _associate_month_key,
     _batch_get_associate_months,
     _build_network_tree_payload,
@@ -205,6 +208,9 @@ from botocore.exceptions import ClientError
 # `__all__` documenta la superficie de la fachada y evita que el analizador
 # estático marque cada reexportación como import sin usar.
 __all__ = [
+    "_get_session",
+    "_put_session",
+    "_session_key",
     "routing",
     "_ENTITY_ID_NORMALIZERS",
     "_normalize_associate_month_id",

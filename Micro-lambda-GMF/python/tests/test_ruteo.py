@@ -183,3 +183,16 @@ def test_la_tabla_de_rutas_declara_el_privilegio_de_cada_endpoint():
     permitidas = {"/notifications/{id}/read"}          # acuse del propio cliente
     inesperadas = [f["patron"] for f in escrituras_publicas if f["patron"] not in permitidas]
     assert not inesperadas, f"escrituras sin privilegio: {inesperadas}"
+
+
+def test_el_dashboard_legado_anuncia_su_retirada(utils):
+    """`/user-dashboard` debe avisar a cualquier cliente que siga usándolo."""
+    import dashboard_lambda
+
+    # Sin espía: se necesita la respuesta real, no una simulada.
+    respuesta = dashboard_lambda.get_user_dashboard({}, {})
+
+    cabeceras = respuesta.get("headers", {})
+    assert cabeceras.get("Deprecation") == "true"
+    assert "successor-version" in cabeceras.get("Link", "")
+    assert "/customers/dashboard" in cabeceras.get("Link", "")

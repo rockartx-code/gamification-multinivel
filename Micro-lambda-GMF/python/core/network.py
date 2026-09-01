@@ -216,6 +216,43 @@ def _increment_associate_month_net_vp(associate_id: Any, month_key: str, delta_v
     _put_associate_month_ref(entity_id, now)
     return resp.get("Attributes") or {}
 
+def _session_key(token: str) -> dict:
+    """Clave directa de una sesión: `PK="SESSION#<token>", SK="SESSION"`."""
+    return {"PK": f"SESSION#{str(token or '').strip()}", "SK": "SESSION"}
+
+
+def _put_session(token: str, datos: dict, ttl_epoch: Optional[int] = None) -> dict:
+    """Escribe la sesión con clave directa (1 item en vez de 2).
+
+    El patrón bucket+REF obliga a 2 GetItem para validar un Bearer, en CADA
+    petición autenticada, y deja además un puntero REF por sesión que se
+    acumula. Una sesión se busca siempre por su token, nunca se lista ni se
+    ordena por fecha: no necesita el patrón.
+    """
+    item = {**_session_key(token), "entityType": "session", **datos}
+    if ttl_epoch is not None:
+        item["ttl"] = ttl_epoch
+    db._table.put_item(Item=item)
+    return item
+
+
+def _get_session(token: str) -> Optional[dict]:
+    """Lee una sesión por su token.
+
+    Intenta primero la clave directa y, si no está, cae al patrón bucket+REF
+    para no invalidar las sesiones abiertas antes de este cambio. Las sesiones
+    viejas caducan solas por TTL, así que el respaldo se puede retirar pasado
+    `SESSION_TTL_SECONDS`.
+    """
+    token = str(token or "").strip()
+    if not token:
+        return None
+    directa = db._table.get_item(Key=_session_key(token)).get("Item")
+    if directa:
+        return directa
+    return _get_by_id("SESSION", token)
+
+
 def _get_customer_upline_ids(customer_or_id: Any, max_levels: Optional[int] = None) -> List[str]:
     customer = customer_or_id if isinstance(customer_or_id, dict) else _get_by_id("CUSTOMER", customer_or_id)
     if not customer:
