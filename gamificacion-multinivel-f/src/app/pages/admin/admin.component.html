@@ -90,32 +90,25 @@
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders' && canAccessView('orders')">
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'pending' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('pending')">
-              Pendiente
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'paid' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('paid')">
-              Pagado
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'shipped' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('shipped')">
-              Enviado
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'delivered' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('delivered')">
-              Entregado
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'cancelled' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('cancelled')">
-              Cancelado
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'refunded' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('refunded')">
-              Reembolsado
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'en_devolucion' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('en_devolucion')">
-              Por devolver
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'devuelto_validado' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('devuelto_validado')">
-              Devuelto
-            </ui-button>
-            <ui-button size="sm" class="tabbtn" [variant]="currentOrderStatus === 'devolucion_rechazada' ? 'primary' : 'ghost'" (pressed)="setOrderStatus('devolucion_rechazada')">
-              Dev. rechazada
+            <ui-button size="sm" class="tabbtn" *ngFor="let tab of [
+                { status: 'pending', label: 'Pendiente' },
+                { status: 'paid', label: 'Pagado' },
+                { status: 'shipped', label: 'Enviado' },
+                { status: 'delivered', label: 'Entregado' },
+                { status: 'cancelled', label: 'Cancelado' },
+                { status: 'refunded', label: 'Reembolsado' },
+                { status: 'en_devolucion', label: 'Por devolver' },
+                { status: 'devuelto_validado', label: 'Devuelto' },
+                { status: 'devolucion_rechazada', label: 'Dev. rechazada' }
+              ]"
+              [variant]="currentOrderStatus === tab.status ? 'primary' : 'ghost'"
+              (pressed)="setOrderStatus($any(tab.status))">
+              {{ tab.label }}
+              <span *ngIf="orderCountByStatus($any(tab.status)) > 0"
+                class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"
+                [ngClass]="currentOrderStatus === tab.status ? 'bg-white/40 text-ink' : 'bg-gold-20 text-on-gold'">
+                {{ orderCountByStatus($any(tab.status)) }}
+              </span>
             </ui-button>
             <!-- Filtro por stock -->
             <select *ngIf="stocks.length" [(ngModel)]="orderStockFilter"
@@ -365,6 +358,12 @@
                       </div>
                     </ng-template>
                   </ui-data-table>
+                  <div *ngIf="filteredOrdersStable.length === 0"
+                    class="px-6 py-10 text-center text-sm text-gray-500">
+                    <i class="fa-solid fa-inbox mb-2 block text-2xl text-gray-300" aria-hidden="true"></i>
+                    <span *ngIf="orderSearch">Sin resultados para "{{ orderSearch }}" en este estado.</span>
+                    <span *ngIf="!orderSearch">No hay pedidos en este estado. Los contadores de las pestañas muestran dónde hay trabajo.</span>
+                  </div>
                 </div>
               </div>
               <!-- Pagination: orders -->

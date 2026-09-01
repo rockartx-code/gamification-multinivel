@@ -61,7 +61,39 @@ Piezas:
 - `ng build` (producción) exitoso; las dos advertencias de presupuesto (bundle inicial y CSS del networkgraph) son preexistentes.
 - Nota de captura fullPage: los elementos `.reveal` bajo el fold no disparan IntersectionObserver durante capturas headless; el script de validación fuerza `.is-visible` antes de la captura (solo herramienta local, no comprometida).
 
+---
+
+## 5. Ronda 2 · Tienda con sesión activa y back office
+
+Validación visual con sesión sembrada (cliente con 15 % de descuento activo y admin superusuario, vía `localStorage['auth-user']` + API simulada).
+
+### Tienda con sesión (`/dashboard`) — metas: menos fricción, más consumo, sensación de logro
+
+| Hallazgo | Corrección |
+|----------|------------|
+| El descuento vigente del asociado (15 %) no era visible al comprar: solo un mini-badge en el avatar. | Chip "15 % activo en tus compras" en el banner del objetivo del mes; el resumen del carrito vacío ahora dice "Tu 15 % te espera" en lugar de "Sin descuento", y con descuento aplicado dice "Ahorras $X" con check. |
+| Sin producto del mes configurado, el héroe de la tienda era una caja enorme con "Aún no hay un producto del mes configurado" y ninguna acción. | Sustituido por una franja compacta con medallón: "Explora el catálogo — cada producto suma PC a tus metas y tu 15 % ya está activo" + CTA que hace scroll al catálogo (`#productos`). |
+| **Fricción de variantes**: para agregar una variante había que (1) marcarla, (2) esperar a que aparecieran los steppers, (3) pulsar «+». Tres pasos sin ningún botón visible. | Cada variante no seleccionada muestra ahora un botón dorado "Agregar" de un solo tap (pone cantidad 1 y revela los steppers). Botones con `aria-label`. |
+| "Ver detalle" era un punto negro sin significado. | Icono de información + subrayado al hover. |
+| El rango actual (ORO) era texto plano; los bonos, tarjetas neutras. Cero celebración. | Rango con medallón dorado + "Lo lograste con tu constancia" (o "Cada compra te acerca al primero" sin rango); bonos con medallón de regalo; tarjetas con elevación al hover. |
+| El modal de metas cumplidas ("¡Buen trabajo!") ya existía y funciona: se conserva como momento de logro. Detectado además que tras él puede abrirse un segundo modal de avisos (dos interrupciones seguidas al entrar); documentado como mejora futura de orquestación. | — |
+
+Nota: no se añadieron animaciones de aparición (reveals) al dashboard: es una pantalla operativa de uso frecuente y animar cada visita añade fricción, no lujo. Las micro-interacciones (hover, botones) sí aplican.
+
+### Back office (`/admin`) — meta: claridad de procesos
+
+| Hallazgo | Corrección |
+|----------|------------|
+| 13 botones de navegación idénticos sin agrupación: difícil mapear procesos. | Navegación agrupada por proceso con encabezados: **Operación diaria** (Pedidos, Punto de Venta, Stocks), **Personas** (Clientes, Empleados), **Catálogo y oferta** (Productos, Campañas, Cupones), **Seguimiento** (Estadísticas, Cuadro de Honor, Notificaciones), **Sistema** (Configuración). Un grupo desaparece si el operador no tiene acceso a ninguna de sus vistas (`ui-sidebar-nav` soporta ahora `heading`). Se eliminó el getter duplicado muerto `adminNavLinks`. |
+| El subtítulo de Pedidos ("Cambia estado: pendiente, pagado…") no describía el proceso. | "Flujo del pedido: Pendiente → Pagado → Enviado → Entregado. Cancelaciones y devoluciones se atienden en sus propias pestañas." |
+| 9 pestañas de estado sin carga de trabajo visible: había que entrar a cada una para saber dónde había pedidos. | Cada pestaña muestra un contador cuando tiene pedidos (`orderCountByStatus`); las 9 pestañas se generan ahora desde una lista (menos duplicación). |
+| La lista de pedidos vacía no explicaba nada. | Estado vacío con icono y mensaje; distingue "sin resultados para tu búsqueda" de "no hay pedidos en este estado". |
+
+Validado con capturas antes/después (dashboard desktop + móvil, admin desktop) y `ng build` de producción.
+
 ### Deuda pendiente (no bloqueante)
 1. **Font Awesome por CDN**: valorar empaquetarlo (npm `@fortawesome/fontawesome-free`) o migrar iconos críticos a SVG inline para eliminar la dependencia de runtime.
 2. El bundle inicial (1.8 MB) excede el presupuesto desde antes; candidato a lazy-loading por ruta.
 3. El emoji de rango (`rankIcon`) se conserva dentro del medallón dorado; si se quiere un acabado 100 % vectorial, sustituir por SVGs de medalla/diamante.
+4. **Orquestación de modales al entrar al dashboard**: el modal de metas cumplidas y el de avisos pueden abrirse en cadena; valorar una cola que muestre el segundo solo tras cerrar el primero con un respiro, o fusionarlos en un solo resumen del día.
+5. Los KPI de Pedidos en admin duplican los contadores de las pestañas; podrían volverse clicables (filtrar al hacer clic) o retirarse.

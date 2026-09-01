@@ -951,24 +951,6 @@ export class AdminComponent implements OnInit {
   }
 
 
-  get adminNavLinks(): SidebarLink[] {
-    const links: Array<SidebarLink & { view: AdminViewId }> = [
-      { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
-      { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
-      { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' },
-      { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-      { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
-      { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
-      { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
-      { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
-      { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
-      { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
-      { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' },
-      { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
-    ];
-    return links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
-  }
-
   get customerOptionsStable(): Array<SelectOption<number>> {
     if (this.customerOptionsCache?.customersRef === this.customers) {
       return this.customerOptionsCache.options;
@@ -1010,21 +992,57 @@ export class AdminComponent implements OnInit {
     if (this.adminNavLinksCache?.user === this.currentUser) {
       return this.adminNavLinksCache.links;
     }
-    const links: Array<SidebarLink & { view: AdminViewId }> = [
-      { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
-      { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
-      { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' },
-      { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-      { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
-      { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
-      { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
-      { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
-      { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
-      { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
-      { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' },
-      { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
+    // Navegación agrupada por proceso: cada grupo se pinta como encabezado
+    // y desaparece cuando el operador no tiene acceso a ninguna vista suya.
+    const groups: Array<{ label: string; links: Array<SidebarLink & { view: AdminViewId }> }> = [
+      {
+        label: 'Operación diaria',
+        links: [
+          { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
+          { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
+          { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' }
+        ]
+      },
+      {
+        label: 'Personas',
+        links: [
+          { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
+          { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' }
+        ]
+      },
+      {
+        label: 'Catálogo y oferta',
+        links: [
+          { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
+          { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
+          { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' }
+        ]
+      },
+      {
+        label: 'Seguimiento',
+        links: [
+          { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
+          { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
+          { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' }
+        ]
+      },
+      {
+        label: 'Sistema',
+        links: [
+          { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
+        ]
+      }
     ];
-    const resolved = links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
+
+    const resolved: SidebarLink[] = [];
+    for (const group of groups) {
+      const visible = group.links
+        .filter((link) => this.canAccessView(link.view))
+        .map(({ view, ...link }) => link);
+      if (visible.length > 0) {
+        resolved.push({ id: `heading-${group.label}`, icon: '', label: group.label, heading: true }, ...visible);
+      }
+    }
     this.adminNavLinksCache = { user: this.currentUser, links: resolved };
     return resolved;
   }
@@ -1091,7 +1109,7 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'settings') {
       return 'Variables de negocio para reglas operativas.';
     }
-    return 'Cambia estado: pendiente, pagado, enviado, entregado.';
+    return 'Flujo del pedido: Pendiente → Pagado → Enviado → Entregado. Cancelaciones y devoluciones se atienden en sus propias pestañas.';
   }
 
   get stockOptions(): { value: string; label: string }[] {
@@ -1537,6 +1555,11 @@ export class AdminComponent implements OnInit {
 
   get deliveredCount(): number {
     return this.orders.filter((order) => order.status === 'delivered').length;
+  }
+
+  /** Pedidos en un estado dado; alimenta los contadores de las pestañas. */
+  orderCountByStatus(status: AdminOrder['status']): number {
+    return this.orders.filter((order) => order.status === status).length;
   }
 
 

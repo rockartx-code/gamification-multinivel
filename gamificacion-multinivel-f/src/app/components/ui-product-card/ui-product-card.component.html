@@ -1,6 +1,6 @@
 <article
   *ngIf="mode === 'detailed'; else compactCard"
-  class="relative overflow-hidden rounded-3xl border border-olive-30 surface-soft p-4 sm:p-5">
+  class="card-lift relative overflow-hidden rounded-3xl border border-olive-30 surface-soft p-4 sm:p-5">
 
   <div class="flex flex-col gap-4">
     <div class="flex gap-3 sm:gap-4">
@@ -52,9 +52,9 @@
         <!-- Ver detalle -->
         <button
           type="button"
-          class="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-main"
+          class="mt-2 inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 underline-offset-2 hover:text-main hover:underline"
           (click)="viewDetails.emit()">
-          <span class="inline-block h-3 w-3 rounded-full bg-black"></span>
+          <i class="fa-solid fa-circle-info text-accent" aria-hidden="true"></i>
           Ver detalle
         </button>
       </div>
@@ -81,10 +81,11 @@
           {{ variant.name }}
         </button>
 
-        <!-- Qty controls (solo cuando está marcado) -->
+        <!-- Qty controls (cuando ya hay unidades o está marcada) -->
         <div *ngIf="isVariantChecked(variant.id)" class="flex items-center gap-1">
           <button
             type="button"
+            aria-label="Quitar una unidad"
             class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5 disabled:opacity-40"
             [disabled]="getVariantQty(variant.id) === 0"
             (click)="changeVariantQty(variant.id, -1)">
@@ -93,11 +94,22 @@
           <span class="w-6 text-center text-sm font-semibold">{{ getVariantQty(variant.id) }}</span>
           <button
             type="button"
+            aria-label="Agregar una unidad"
             class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5"
             (click)="changeVariantQty(variant.id, 1)">
             <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
           </button>
         </div>
+
+        <!-- Agregado rápido en un tap para variantes sin seleccionar -->
+        <button *ngIf="!isVariantChecked(variant.id)"
+          type="button"
+          [attr.aria-label]="'Agregar ' + variant.name"
+          class="inline-flex items-center gap-1.5 rounded-full border border-gold-35 bg-gold-12 px-3 py-1.5 text-xs font-bold text-on-gold transition hover:bg-gold-20"
+          (click)="changeVariantQty(variant.id, 1)">
+          <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+          Agregar
+        </button>
       </div>
     </div>
 

@@ -159,8 +159,16 @@
           <div class="relative flex flex-col gap-5">
             <!-- Reservar espacio SOLO en md+ para el badge -->
             <div class="md:pr-56">
-              <div class="text-sm font-semibold text-gold">Objetivo principal del mes</div>
-              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="text-sm font-semibold text-gold">Objetivo principal del mes</div>
+                <span *ngIf="hasDiscount"
+                  class="inline-flex items-center gap-1.5 rounded-full border border-gold-35 bg-ivory-80 px-3 py-1 text-xs font-bold text-on-gold"
+                  title="Tu descuento vigente se aplica automáticamente en cada compra">
+                  <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                  {{ discountPercent }}% activo en tus compras
+                </span>
+              </div>
+              <h3 class="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
                 {{ activeGoal.title }}
               </h3>
               <p class="mt-2 text-sm text-muted">{{ activeGoal.subtitle }}</p>
@@ -252,7 +260,13 @@
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
             <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-gray-500'">
-              {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
+              <ng-container *ngIf="cartDiscount > 0">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Ahorras {{ formatMoney(cartDiscount) }} • {{ cartDiscountLabel }}
+              </ng-container>
+              <ng-container *ngIf="cartDiscount === 0">
+                {{ hasDiscount ? ('Tu ' + discountPercent + '% te espera') : 'Agrega tus básicos' }}
+              </ng-container>
             </div>
           </div>
           <ui-button size="lg" variant="primary" type="button" (pressed)="goToCart()">
@@ -310,18 +324,23 @@
 
           </div>
         </div>
-        <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="!productOfMonth">
-          <div>
-            <span
-              class="inline-flex items-center gap-2 rounded-full border border-gold-35 bg-gold-20 px-4 py-2 text-xs font-semibold text-gold">
-              <i class="fa-solid fa-star" aria-hidden="true"></i>
-              Producto del mes
+        <div class="relative flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
+          *ngIf="!productOfMonth">
+          <div class="flex items-center gap-4">
+            <span class="medallion h-12 w-12 text-lg">
+              <i class="fa-solid fa-star text-gold" aria-hidden="true"></i>
             </span>
-            <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">Producto destacado</h3>
-            <p class="mt-3 max-w-xl text-muted">
-              Aún no hay un producto del mes configurado.
-            </p>
+            <div>
+              <h3 class="text-xl font-semibold tracking-tight">Explora el catálogo</h3>
+              <p class="mt-1 text-sm text-muted">
+                Cada producto suma PC a tus metas{{ hasDiscount ? (' y tu ' + discountPercent + '% de descuento ya está activo') : '' }}.
+              </p>
+            </div>
           </div>
+          <ui-button size="lg" variant="primary" type="button" (pressed)="scrollToSection('productos')">
+            <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+            Ver productos
+          </ui-button>
         </div>
       </div>
 
@@ -350,7 +369,7 @@
       </div>
 
 
-      <div class="mt-12">
+      <div id="productos" class="mt-12 scroll-mt-10">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
             <i class="fa-solid fa-layer-group text-accent" aria-hidden="true"></i>
@@ -569,10 +588,17 @@
       <div class="mt-6 grid gap-4 sm:grid-cols-3">
         <ui-kpi-card label="VP (Volumen Personal)" [value]="(vpPoints | number:'1.0-1') ?? ''"></ui-kpi-card>
         <ui-kpi-card label="VG (Volumen de Grupo)" [value]="(vgPoints | number:'1.0-1') ?? ''"></ui-kpi-card>
-        <div class="flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold-35 bg-gold-12 px-5 py-4">
+        <div class="card-lift flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold-35 bg-gold-12 px-5 py-4">
           <div class="text-xs font-semibold uppercase tracking-widest text-gold-70">Rango actual</div>
-          <div *ngIf="currentRank" class="mt-1 text-2xl font-extrabold text-main tracking-wide">{{ currentRank }}</div>
+          <div *ngIf="currentRank" class="mt-1 flex items-center gap-3">
+            <span class="medallion h-11 w-11 text-lg">
+              <i class="fa-solid fa-trophy text-gold" aria-hidden="true"></i>
+            </span>
+            <span class="text-2xl font-extrabold text-main tracking-wide">{{ currentRank }}</span>
+          </div>
+          <div *ngIf="currentRank" class="text-[11px] text-gray-600">Lo lograste con tu constancia</div>
           <div *ngIf="!currentRank" class="mt-1 text-sm text-gray-400 italic">Sin rango aún</div>
+          <div *ngIf="!currentRank" class="text-[11px] text-gray-500">Cada compra te acerca al primero</div>
         </div>
       </div>
 
@@ -583,9 +609,14 @@
           <span class="text-lg font-bold text-main">Bonos del mes</span>
         </div>
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div *ngFor="let award of bonusAwards" class="rounded-2xl border border-olive-30 bg-ivory-80 p-4">
+          <div *ngFor="let award of bonusAwards" class="card-lift rounded-2xl border border-olive-30 bg-ivory-80 p-4">
             <div class="flex items-start justify-between gap-2">
-              <div class="text-sm font-semibold text-main leading-tight">{{ award.ruleName }}</div>
+              <div class="flex items-center gap-2 text-sm font-semibold text-main leading-tight">
+                <span class="medallion h-7 w-7 shrink-0 text-[11px]">
+                  <i class="fa-solid fa-gift text-gold" aria-hidden="true"></i>
+                </span>
+                {{ award.ruleName }}
+              </div>
               <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/70 border border-olive-20" [class]="bonusStatusClass(award.status)">{{ bonusStatusLabel(award.status) }}</span>
             </div>
             <div class="mt-2 text-xl font-extrabold text-main">{{ bonusRewardLabel(award) }}</div>

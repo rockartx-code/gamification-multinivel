@@ -8,6 +8,8 @@ export type SidebarLink = {
   icon: string;
   label: string;
   subtitle?: string;
+  /** Cuando es true, el enlace se pinta como encabezado de grupo (no clicable). */
+  heading?: boolean;
 };
 
 @Component({
