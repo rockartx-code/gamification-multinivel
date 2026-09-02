@@ -1,0 +1,13 @@
+# Diario de Lucía Fernández — Día 2 (miércoles 3 de septiembre de 2026, media mañana)
+
+Estoy en el trabajo, en un rato libre entre cosas, y me llega el WhatsApp de Soporte Finding'U: "Ya quedó resuelto el problema de anoche. Tu carrito debería seguir ahí; si quieres, ya puedes terminar el pedido sin registrarte." Qué bueno, pienso, ya me habían dejado tranquila anoche con su explicación y ahora hasta me avisan proactivamente. Eso se siente bien, como que sí hay alguien del otro lado atendiendo. Aprovecho un momento libre para terminarlo de una vez y no tener que acordarme en la noche.
+
+Entro al carrito desde la laptop. Mi producto sigue ahí —Finding Pro 500g, $800— qué bueno que no se perdió. Pero el formulario de envío está vacío otra vez, tengo que volver a escribir todo: nombre, teléfono, calle, número, ciudad, CP, estado (Jalisco), país, entre calles. Un poco tedioso repetir lo mismo de anoche, pero rápido.
+
+Le doy "Pagar y finalizar" y esta vez sí funciona: me manda a una página de seguimiento, "Orden ORD-8E2E57C2", estatus "Pago pendiente". Se ve razonablemente bien, con una barra de progreso (Orden creada ✓, Pago, Preparación, Envío, Entregada) y una sección de pago que dice "MercadoPago — Realiza tu pago en línea de forma segura" con un botón "Pagar con MercadoPago". Me da tranquilidad ver MercadoPago, es una pasarela que conozco y uso en otras tiendas, así que hasta aquí voy sintiéndome mejor con el sitio. (Eso sí, noto que en el detalle dice "Total $0", raro, pero no le doy tanta importancia, pienso que es de cómo se ve antes de pagar.)
+
+Le doy clic a "Pagar con MercadoPago"... y sale un mensaje: "No se pudo iniciar el pago en MercadoPago." Otra vez. Lo intento una segunda vez, esperando que sea cosa de que se cargó mal la página. Mismo resultado exacto: "No se pudo iniciar el pago en MercadoPago."
+
+Ahí ya me gana la impaciencia. Ayer fue un error al crear la orden, hoy ya se crea la orden pero falla al conectar con la pasarela de pago. Dos días, dos fallas distintas, ambas justo en el paso de pagar. Estoy en el trabajo, no tengo todo el tiempo del mundo para estar reintentando algo que claramente sigue teniendo problemas técnicos. Pienso: "esto no es normal, algo no está bien armado en este sitio." Ya no es solo el tema de que parezca multinivel — ahora es que ni siquiera puedo darles mi dinero aunque quiera.
+
+Decido escribirles otra vez a soporte para avisarles de este nuevo error (por si de verdad quieren vender y no se han dado cuenta), pero no me quedo esperando en la pantalla. Cierro la pestaña y regreso a lo mío. Si me contestan que ya se puede pagar, tal vez lo intento una tercera vez esta noche; si no, mejor pido mi proteína de siempre en Amazon este fin de semana, que ahí nunca me ha fallado un pago.

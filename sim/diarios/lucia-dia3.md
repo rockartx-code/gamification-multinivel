@@ -1,0 +1,11 @@
+# Diario de Lucía Fernández — Día 3 (jueves 4 de septiembre de 2026, 10am)
+
+Sigo en el trabajo. Me llega el WhatsApp: "Ya quedó resuelto también el problema del pago... Entendemos perfectamente si prefieres no seguir; si lo haces, gracias por darnos la oportunidad." Ese último mensaje me cae bien, la verdad. No insistieron, no me presionaron, reconocieron que fallaron dos veces y me dejaron la decisión a mí. Eso es justo lo contrario del rollo de "esquema" que vi el primer día — se siente más humano, más de negocio serio que sabe pedir perdón. Pienso: "bueno, ya until aquí llegué, vamos a intentarlo una vez más, ya fue mucho como para dejarlo a medias."
+
+Entro a la orden ORD-8E2E57C2 desde el link de seguimiento. Esta vez el detalle se ve bien, Total $800 (ya no el "$0" raro que vi antes). Le doy "Pagar con MercadoPago" y por fin pasa algo distinto: me saca de la tienda a una pantalla de "Mercado Pago" — "Estás fuera de la tienda. Este es el checkout de la pasarela" — con el monto $800.00 y un botón para pagar. Reconozco MercadoPago, lo he usado antes en otras compras en línea, así que ya no dudo, le doy "Pagar $800.00" con mi tarjeta.
+
+Me regresa a la tienda y ahora sí: "Pago registrado", con la barra de progreso mostrando "Orden creada" ✓ y "Pago" ✓, y ya pasó a "Preparación — Armando paquete." Se siente bien ver que por fin avanzó. Después de dos días de errores, tres intentos, y tener que volver a escribir mi dirección más de una vez, por fin compré mi Finding Pro 500g.
+
+Reviso mi correo para ver si llegó algún recibo o confirmación — no encuentro nada todavía. Un poco raro que no llegue de inmediato algo así como un ticket de compra, pero no le doy tanta vuelta; asumo que tarda un poco o llega más tarde. Con lo que veo en la página de seguimiento (el estatus actualizado, el ID de orden) me basta por ahora para sentir que sí quedó registrada mi compra.
+
+Cierro la laptop y regreso a lo mío. Al final sí compré, aunque terminé de un modo bastante distinto a como empecé: llegué desconfiada por todo el rollo de comisiones y generaciones, casi me voy por los errores técnicos, y lo que me hizo quedarme fue la manera en que soporte manejó los fallos — rápido, honesto, sin presionarme a "unirme a nada". El producto en sí nunca lo until probé, eso lo sabré cuando llegue.

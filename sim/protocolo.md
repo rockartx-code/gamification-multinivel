@@ -53,3 +53,14 @@ Sus WhatsApp salientes (`📱 A [nombre]:`) los entrego yo al agente-cliente cor
 | Héctor Lara, 52 | sonnet | Anuncio de búsqueda en Google ("omega 3 alta pureza precio") | `/#/tienda` |
 | Rosa Elena Mendoza, 58 | haiku, MÓVIL | Anuncio en Facebook ("Suplementos premium · envío gratis") | `/#/` |
 | Iván Robles, 28 | opus | Anuncio pre-roll de YouTube (Finding Pro, proteína con colágeno) | `/#/tienda` |
+
+## Calendario ejecutado (además del previsto)
+| Fecha | Qué pasó |
+|---|---|
+| 17-sep (Día 15) | Relevos cruzados: Marcela lee a Rodrigo y a Andrés y contesta con sus cifras reales; Andrés hace su punto de equilibrio; Rodrigo cierra a un mes; Iván y Rosa Elena reciben a soporte; Sofía registra las mermas y los envíos (las guías las genera administración, no el almacén); Beto se detiene antes de inventar guías; Lucía envía el paquete de devolución; Patricia vive once días sin paquete. |
+| 22-sep | Estafeta confirma entregas; Beto marca entregados y recibe la devolución con foto ("Recibir paquete" = validada). |
+| 1-oct | Cierre de mes: nadie cobra; Marcela cierra su cuenta; Ivonne cierra su cartera en cero; Sofía no puede dar de baja datos (dos ARCO) ni cancelar un pedido pendiente; reembolsa a Lucía $800 con comprobante subido a mano; Héctor pide cancelar y no ser contactado. Paco (cajero) abre la tienda física: dos ventas de mostrador (público en general y un socio) y un corte de caja que falla. |
+| 2-oct | Lucía reclama los $165 del envío de regreso; Paco reintenta el corte tras la corrección. |
+
+Soporte se presenta a los clientes como "Daniel, Soporte Finding'U" y contesta solo con lo que contestaría un soporte real, sin internos; cuando promete algo fuera del sistema (factura, ficha técnica, envío de retorno) queda registrado como promesa incumplida si el sistema no lo puede sostener.
+
