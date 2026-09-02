@@ -70,7 +70,7 @@ def test_el_invitado_puede_ver_su_pedido_sin_sesion(order_lambda, utils):
     import json
     pedido = json.loads(r["body"])["order"]
     # El seguimiento mostraba "$0": el item crudo no lleva "total".
-    assert float(pedido.get("total") or 0) == 800.0, pedido
+    assert float(pedido.get("total") or 0) == 929.0, pedido  # 800 + 129 de envío
 
 
 def test_el_invitado_puede_iniciar_el_pago_sin_sesion(order_lambda, utils, monkeypatch):
@@ -93,3 +93,21 @@ def test_un_pedido_de_socio_sigue_exigiendo_sesion(order_lambda, utils):
     oid = oid.get("orderId") or oid["order"]["orderId"]
     r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/checkout"), None)
     assert r["statusCode"] in (401, 403)
+
+
+def test_el_envio_se_guarda_y_se_cobra(order_lambda, utils, monkeypatch):
+    """Regresión: el carrito cotizaba $129 de envío, el pedido lo descartaba
+    (total $800 en el seguimiento) y la pasarela cobraba solo los productos."""
+    import json
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    pedido = json.loads(order_lambda.lambda_handler(_evento("GET", f"/orders/{oid}"), None)["body"])["order"]
+    assert float(pedido["shippingCost"]) == 129.0 and float(pedido["total"]) == 929.0, pedido
+    assert float(pedido["netTotal"]) == 800.0, "el envío no debe entrar en la base comisionable"
+
+    enviado = {}
+    def _urlopen(req, *a, **k):
+        enviado.update(json.loads(req.data.decode())); return _RespuestaMP()
+    monkeypatch.setattr(order_lambda.urllib.request, "urlopen", _urlopen)
+    order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/checkout"), None)
+    cobrado = sum(i["unit_price"] * i["quantity"] for i in enviado["items"])
+    assert cobrado == 929.0, enviado["items"]

@@ -487,6 +487,14 @@ def handle_create_order(body, headers):
         "shippingAddressLabel": body.get("shippingAddressLabel") or shipping_address.get("label"),
         "monthKey": utils._month_key(), "createdAt": now, "updatedAt": now,
         **totals,
+        # El frontend cotiza y manda el envío, pero el pedido lo descartaba: el
+        # seguimiento mostraba $960 donde el carrito cobró $1,089 y la
+        # pasarela cobraba solo los productos. netTotal sigue siendo la base
+        # comisionable (el envío no genera comisión); total es lo que se paga.
+        "shippingCost": utils._to_decimal(body.get("shippingCost") or 0),
+        "shippingCarrier": body.get("shippingCarrier") or None,
+        "shippingService": body.get("shippingService") or None,
+        "total": (totals["netTotal"] + utils._to_decimal(body.get("shippingCost") or 0)).quantize(utils.D_CENT),
         **coupon_fields,
     }
     if delivery_type == "pickup":
@@ -686,7 +694,11 @@ def handle_mercadopago_checkout(order_id, body):
                 "currency_id": "MXN"
             }
             for i in order.get("items", [])
-        ],
+        ] + ([{
+            "title": f"Envío ({order.get('shippingCarrier') or 'paquetería'})",
+            "quantity": 1,
+            "unit_price": float(utils._to_decimal(order.get("shippingCost"))),
+        }] if utils._to_decimal(order.get("shippingCost")) > 0 else []),
         "external_reference": order_id,
         "metadata": {
             "orderId": order_id,
