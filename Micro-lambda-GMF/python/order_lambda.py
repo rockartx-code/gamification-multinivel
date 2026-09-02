@@ -5,6 +5,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import core_utils as utils  # Importado desde la Layer
+from core import order_emails
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -478,6 +479,8 @@ def handle_create_order(body, headers):
         "items": enriched_items, "shippingAddress": shipping_address,
         "deliveryType": delivery_type,
         "recipientName": body.get("recipientName") or shipping_address.get("recipientName"),
+        # Sin esto el pedido de un invitado no tenía a quién escribirle.
+        "email": str(body.get("email") or body.get("customerEmail") or shipping_address.get("email") or "").strip().lower() or None,
         "phone": body.get("phone") or shipping_address.get("phone"),
         "street": body.get("street") or shipping_address.get("street"),
         "number": body.get("number") or shipping_address.get("number"),
@@ -652,7 +655,18 @@ def handle_update_status(order_id, body, headers):
 
     updated = utils._update_by_id("ORDER", order_id, update_expr, eav, {"#s": "status"})
     utils._upsert_order_customer_history(updated)
+    if new_status in ("paid", "shipped", "delivered") and (order.get("status") or "").lower() != new_status:
+        _avisar(updated, new_status, body)
     return utils._json_response(200, {"order": updated})
+
+
+def _avisar(order: dict, evento: str, datos: dict | None = None) -> None:
+    """Correo al comprador por cada paso del pedido (docs/qa/18: no existía ninguno)."""
+    order_emails.notificar_pedido(
+        order or {}, evento, datos,
+        lambda cid: utils._get_by_id("CUSTOMER", cid),
+        utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx"),
+    )
 
 
 def _con_totales_visibles(order: dict) -> dict:
@@ -835,6 +849,7 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
             utils._log_error("step_functions_cancel_failed", e, orderId=order_id)
 
     utils._audit_event("order.cancel", headers, body, {"orderId": order_id, "reason": reason, "previousStatus": current_status})
+    _avisar(updated_order, "cancelled", {"pendingRefund": pending_refund})
 
     return utils._json_response(200, {
         "ok": True,
@@ -1009,6 +1024,7 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     utils._upsert_order_customer_history(updated_order)
     utils._audit_event("order.return_request", headers, body,
                        {"orderId": order_id, "requestId": request_id, "motivo": motivo})
+    _avisar(utils._get_by_id("ORDER", order_id) or order, "return_received", {"requestId": request_id})
 
     return utils._json_response(201, {
         "ok": True,
@@ -1120,6 +1136,8 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
         "ORDER", order_id, order_update_expr, order_eav, {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
+    _avisar(updated_order, "return_approved" if approved else "return_rejected",
+            {"reason": body.get("reason") or body.get("motivo") or inspection.get("comentarios")})
 
     commission_actions = []
     if approved:
@@ -1189,6 +1207,7 @@ def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
     utils._upsert_order_customer_history(updated_order)
     actions = _void_commissions_for_order(order_id, reason="refund")
     utils._audit_event("order.refund", headers, body, {"orderId": order_id})
+    _avisar(updated_order, "refunded", {"amount": updated_order.get("refundAmount") or updated_order.get("total") or updated_order.get("netTotal")})
     return utils._json_response(200, {
         "orderId": order_id,
         "status": "refunded",
