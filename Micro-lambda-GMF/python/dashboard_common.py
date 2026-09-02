@@ -540,12 +540,18 @@ def _goals_descuento(ctx: _GoalContext) -> list:
                 return tier["min"]
         return float(ctx.my_net)
 
+    # Las metas salían de una lista fija de tasas (30/40/50%) que no coincide
+    # con la escalera configurada (10/20/30/40%): al socio se le pedía
+    # "nivel 1 (30%)" desde $3,000 y existía un "nivel 3 (50%)" imposible. Se
+    # generan desde la configuración real, numeradas como en el plan.
     metas = []
-    for index, rate in enumerate(_DISCOUNT_GOAL_RATES, start=1):
-        target = minimo_para(rate)
+    escalones = [t for t in ctx.tiers if float(t.get("rate") or 0) > 0]
+    for index, tier in enumerate(escalones, start=1):
+        rate = float(tier["rate"])
+        target = float(tier["min"])
         metas.append({
             "key": f"discount_{index}",
-            "title": f"Alcanzar nivel {index} de descuento ({int(rate * 100)}%)",
+            "title": f"Alcanzar nivel {index} de descuento ({int(round(rate * 100))}%)",
             "subtitle": f"Consumo objetivo desde ${int(target):,} MXN",
             "target": target,
             "base": float(ctx.my_net),

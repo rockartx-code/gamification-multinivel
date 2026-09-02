@@ -27,9 +27,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $3,000 MXN",
-      "target": 3000.0,
-      "title": "Alcanzar nivel 1 de descuento (30%)",
+      "subtitle": "Consumo objetivo desde $1,000 MXN",
+      "target": 1000.0,
+      "title": "Alcanzar nivel 1 de descuento (10%)",
       "unit": "mxn"
     },
     {
@@ -49,7 +49,7 @@
       "unit": "count"
     },
     {
-      "achieved": false,
+      "achieved": true,
       "base": 3200.0,
       "cart": 0,
       "ctaFragment": "merchant",
@@ -59,9 +59,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $6,000 MXN",
-      "target": 6000.0,
-      "title": "Alcanzar nivel 2 de descuento (40%)",
+      "subtitle": "Consumo objetivo desde $2,000 MXN",
+      "target": 2000.0,
+      "title": "Alcanzar nivel 2 de descuento (20%)",
       "unit": "mxn"
     },
     {
@@ -91,9 +91,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $3,200 MXN",
-      "target": 3200.0,
-      "title": "Alcanzar nivel 3 de descuento (50%)",
+      "subtitle": "Consumo objetivo desde $3,000 MXN",
+      "target": 3000.0,
+      "title": "Alcanzar nivel 3 de descuento (30%)",
       "unit": "mxn"
     },
     {
@@ -429,9 +429,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $3,000 MXN",
-      "target": 3000.0,
-      "title": "Alcanzar nivel 1 de descuento (30%)",
+      "subtitle": "Consumo objetivo desde $1,000 MXN",
+      "target": 1000.0,
+      "title": "Alcanzar nivel 1 de descuento (10%)",
       "unit": "mxn"
     },
     {
@@ -461,9 +461,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $6,000 MXN",
-      "target": 6000.0,
-      "title": "Alcanzar nivel 2 de descuento (40%)",
+      "subtitle": "Consumo objetivo desde $2,000 MXN",
+      "target": 2000.0,
+      "title": "Alcanzar nivel 2 de descuento (20%)",
       "unit": "mxn"
     },
     {
@@ -493,9 +493,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $12,000 MXN",
-      "target": 12000.0,
-      "title": "Alcanzar nivel 3 de descuento (50%)",
+      "subtitle": "Consumo objetivo desde $3,000 MXN",
+      "target": 3000.0,
+      "title": "Alcanzar nivel 3 de descuento (30%)",
       "unit": "mxn"
     },
     {
@@ -831,9 +831,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $3,000 MXN",
-      "target": 3000.0,
-      "title": "Alcanzar nivel 1 de descuento (30%)",
+      "subtitle": "Consumo objetivo desde $1,000 MXN",
+      "target": 1000.0,
+      "title": "Alcanzar nivel 1 de descuento (10%)",
       "unit": "mxn"
     },
     {
@@ -863,9 +863,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $6,000 MXN",
-      "target": 6000.0,
-      "title": "Alcanzar nivel 2 de descuento (40%)",
+      "subtitle": "Consumo objetivo desde $2,000 MXN",
+      "target": 2000.0,
+      "title": "Alcanzar nivel 2 de descuento (20%)",
       "unit": "mxn"
     },
     {
@@ -885,7 +885,7 @@
       "unit": "count"
     },
     {
-      "achieved": true,
+      "achieved": false,
       "base": 0.0,
       "cart": 0,
       "ctaFragment": "merchant",
@@ -895,9 +895,9 @@
       "locked": false,
       "primary": false,
       "secondary": true,
-      "subtitle": "Consumo objetivo desde $0 MXN",
-      "target": 0.0,
-      "title": "Alcanzar nivel 3 de descuento (50%)",
+      "subtitle": "Consumo objetivo desde $3,000 MXN",
+      "target": 3000.0,
+      "title": "Alcanzar nivel 3 de descuento (30%)",
       "unit": "mxn"
     },
     {

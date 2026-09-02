@@ -801,7 +801,10 @@ def handle_customer_dashboard(headers: dict) -> dict:
     my_net = float(utils._to_decimal(
         _get_month_state(cid, month_key, month_states).get("netVolume", 0)
     ))
-    vp_val = _mxn_to_vp_dash(my_net, mxn_per_vp)
+    # Misma regla que el motor y que el resto del panel: netVP del catálogo
+    # si existe. Esta ruta seguía convirtiendo pesos ÷ tarifa y el socio veía
+    # "VP 19.2" debajo de "VG 20" en la misma tarjeta.
+    vp_val = dashboard_common._state_vp_dash(_get_month_state(cid, month_key, month_states), mxn_per_vp)
     vg_val = _calc_vg_from_tree(tree, mxn_per_vp)
     rank_val = _get_rank_dash(vg_val, bonus_cfg.get("rankThresholds") or [], vp=vp_val)
     timer.mark("compute_rank_metrics", vp=round(vp_val, 2), vg=round(vg_val, 2), rank=rank_val)
