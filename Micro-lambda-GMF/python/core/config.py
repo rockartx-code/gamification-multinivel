@@ -19,6 +19,9 @@ def _default_app_config() -> dict:
             # Compresión dinámica activa: salta posiciones no calificadas y paga al
             # siguiente ascendente calificado (Plan abril 2026 §4).
             "cutRule": "dynamic_compression",
+            # Al activarse un socio dentro del mes se recalculan las comisiones
+            # que le quedaron bloqueadas por estar inactivo al pagar sus referidos.
+            "reevaluateBlockedOnActivation": True,
             # Escalera de descuentos por MPN (Monto Personal Neto) acumulado en el mes
             # calendario. Importes en MXN. Plan abril 2026 §3.
             "discountTiers": [

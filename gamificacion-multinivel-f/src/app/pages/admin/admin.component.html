@@ -1918,6 +1918,20 @@
                         Efectivo impacta la caja actual. Tarjeta y transferencia se registran aparte y no entran al corte de caja.
                       </div>
                     </div>
+                    <div *ngIf="posSalePaymentMethod === 'cash' && posPaymentTypeMode === 'full'" class="mt-3 grid gap-3 sm:grid-cols-2">
+                      <ui-form-field
+                        type="text"
+                        label="Efectivo recibido"
+                        placeholder="Ej. 1000"
+                        [ngModel]="posCashReceived"
+                        (ngModelChange)="posCashReceived = $event">
+                      </ui-form-field>
+                      <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">
+                        <div *ngIf="posCashShort > 0" class="font-semibold text-red-700">Faltan {{ formatMoney(posCashShort) }}</div>
+                        <div *ngIf="posCashShort === 0" class="font-semibold text-main">Cambio: {{ formatMoney(posChangeDue) }}</div>
+                        <div class="text-mini text-gray-600">Sobre un total de {{ formatMoney(posEffectiveTotal) }}</div>
+                      </div>
+                    </div>
 
                     <div class="mt-3 flex flex-wrap items-center gap-2">
                       <ui-button size="sm" variant="ghost" (pressed)="openPosDiscountModal()" [disabled]="posSubtotal <= 0">

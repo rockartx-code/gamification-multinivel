@@ -603,37 +603,9 @@ def _es_comprador_registrado(order: dict) -> bool:
     return bool(cid) and utils._get_by_id("CUSTOMER", cid) is not None
 
 
-def handle_apply_rewards(order_id):
-    """Acción: ORDER_PAID. Calcula comisiones en estado 'pending'."""
-    order = utils._get_by_id("ORDER", order_id)
-    if not order: return {"error": "Order not found"}
-
-    cfg        = utils._load_app_config().get("rewards", {})
-    mxn_per_vp = utils._mxn_per_vp()
-
-    month_key  = order.get("monthKey") or utils._month_key()
-    net_amount = utils._to_decimal(order.get("netTotal"))
-
-    # Calcular monto comisionable en MXN (para comisiones al upline)
-    commissionable_net = _commissionable_net(order, net_amount)
-
-    # Calcular puntos VP de esta orden (usa vpPoints por producto + descuento)
-    order_vp = _compute_order_vp(order, mxn_per_vp)
-
-    # 1. Actualizar volumen personal del comprador
-    buyer_id = order.get("customerId")
-    if _es_comprador_registrado(order) and buyer_id:
-        # Almacena netVolume en MXN (compatibilidad) y netVP en puntos directos
-        utils._increment_associate_month_net_volume(buyer_id, month_key, commissionable_net)
-        utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
-
-    # 2. Repartir comisiones al upline con compresión dinámica (Plan abril 2026 §4).
-    max_levels    = utils._max_network_levels()
-    activation_vp = utils._activation_vp()
-    cut_rule      = cfg.get("cutRule", "dynamic_compression")
+def _generation_map(cfg: dict) -> dict:
+    """Mapa generación -> config (tasa + requisitos de desbloqueo)."""
     levels_cfg    = cfg.get("commissionLevels", [])
-
-    # Mapa generación -> config (tasa + requisitos de desbloqueo).
     default_rates = {1: "0.10", 2: "0.05", 3: "0.04", 4: "0.03", 5: "0.02"}
     gens: dict = {}
     for i, lvl in enumerate(levels_cfg[:MAX_COMMISSION_LEVELS]):
@@ -642,6 +614,18 @@ def handle_apply_rewards(order_id):
         gens[g].setdefault("rate", utils.Decimal(default_rates.get(g, "0")))
     for g, r in default_rates.items():
         gens.setdefault(g, {"gen": g, "rate": utils.Decimal(r)})
+    return gens
+
+
+def _distribute_commissions(order: dict, order_id: str, month_key: str, commissionable_net) -> None:
+    """Reparte la comisión de una orden a su línea ascendente con compresión
+    dinámica (Plan abril 2026 §4). Escribe filas 'pending' o 'blocked'."""
+    cfg           = utils._load_app_config().get("rewards", {})
+    mxn_per_vp    = utils._mxn_per_vp()
+    max_levels    = utils._max_network_levels()
+    activation_vp = utils._activation_vp()
+    cut_rule      = cfg.get("cutRule", "dynamic_compression")
+    gens          = _generation_map(cfg)
 
     # Cadena completa de ancestros (no limitada a 5) para poder comprimir.
     chain = utils._get_customer_upline_ids(order['customerId'], MAX_COMPRESSION_DEPTH)
@@ -685,6 +669,104 @@ def handle_apply_rewards(order_id):
             _write_row(b_id, gen, amount, "blocked", reason="inactivo")
             gen += 1
 
+
+def _confirm_order_rows(order_id: str, month_key: str, chain: list) -> None:
+    """Cambia a 'confirmed' las filas 'pending' de una orden ya entregada."""
+    def _confirm(item):
+        changed = False
+        for r in item['ledger']:
+            if r.get('orderId') == order_id and r.get('status') == "pending":
+                r['status'] = "confirmed"
+                changed = True
+        return changed
+
+    for b_id in chain:
+        _mutate_ledger_month(b_id, month_key, _confirm)
+
+
+_ESTADOS_ENTREGADOS = ("delivered", "en_devolucion", "devolucion_rechazada")
+_ESTADOS_SIN_COMISION = ("cancelled", "canceled", "refunded", "devuelto_validado")
+
+
+def _reevaluate_blocked_rows(beneficiary_ids: list, month_key: str) -> list:
+    """Vuelve a repartir las órdenes del mes que dejaron filas 'blocked' en los
+    ledgers indicados.
+
+    Las filas 'blocked' se escribían en el instante en que pagaba el referido,
+    según si el patrocinador estaba activo *en ese momento*, y nunca se volvían
+    a mirar: una socia que se activaba el día 20 seguía viendo bloqueadas las
+    comisiones de sus referidos del día 4, y comprar "para desbloquearlas" no
+    servía de nada. El plan habla de estar activo *en el mes*, así que al
+    activarse se recalculan esas órdenes con la situación actual del mes.
+    """
+    orders = {}
+    for b_id in beneficiary_ids:
+        ledger = _get_ledger_month(b_id, month_key)
+        for r in ledger.get("ledger") or []:
+            if (r.get("status") or "").lower() == "blocked" and r.get("orderId"):
+                orders[r["orderId"]] = True
+
+    redistribuidas = []
+    for oid in orders:
+        order = utils._get_by_id("ORDER", oid)
+        if not order or (order.get("status") or "").lower() in _ESTADOS_SIN_COMISION:
+            continue
+        chain = utils._get_customer_upline_ids(order['customerId'], MAX_COMPRESSION_DEPTH)
+        for b_id in chain:
+            try:
+                utils._void_ledger_rows_for_order(b_id, month_key, oid)
+            except Exception as e:
+                utils._log("reeval_void_error", "ERROR", beneficiary=b_id, orderId=oid, err=e)
+        net_amount = utils._to_decimal(order.get("netTotal"))
+        _distribute_commissions(order, oid, month_key, _commissionable_net(order, net_amount))
+        if (order.get("status") or "").lower() in _ESTADOS_ENTREGADOS:
+            _confirm_order_rows(oid, month_key, chain)
+        redistribuidas.append(oid)
+    if redistribuidas:
+        utils._log("blocked_rows_reevaluated", "INFO", month=month_key, orders=redistribuidas)
+    return redistribuidas
+
+
+def handle_apply_rewards(order_id):
+    """Acción: ORDER_PAID. Calcula comisiones en estado 'pending'."""
+    order = utils._get_by_id("ORDER", order_id)
+    if not order: return {"error": "Order not found"}
+
+    cfg        = utils._load_app_config().get("rewards", {})
+    mxn_per_vp = utils._mxn_per_vp()
+    activation_vp = utils._activation_vp()
+
+    month_key  = order.get("monthKey") or utils._month_key()
+    net_amount = utils._to_decimal(order.get("netTotal"))
+
+    # Calcular monto comisionable en MXN (para comisiones al upline)
+    commissionable_net = _commissionable_net(order, net_amount)
+
+    # Calcular puntos VP de esta orden (usa vpPoints por producto + descuento)
+    order_vp = _compute_order_vp(order, mxn_per_vp)
+
+    # 1. Actualizar volumen personal del comprador
+    buyer_id = order.get("customerId")
+    se_activo = False
+    if _es_comprador_registrado(order) and buyer_id:
+        estaba_activo = _is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+        # Almacena netVolume en MXN (compatibilidad) y netVP en puntos directos
+        utils._increment_associate_month_net_volume(buyer_id, month_key, commissionable_net)
+        utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
+        # El estado del mes cambió: que el resto del cálculo lo vea fresco.
+        _CACHE["states"].pop(f"{utils._customer_id_str(buyer_id)}#{month_key}", None)
+        se_activo = (not estaba_activo) and _is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+
+    # 2. Repartir comisiones al upline con compresión dinámica (Plan abril 2026 §4).
+    _distribute_commissions(order, order_id, month_key, commissionable_net)
+
+    # 3. Si con esta compra el comprador se activó, sus comisiones bloqueadas
+    #    del mes (y las de su línea ascendente, cuyos requisitos de directos
+    #    activos pudieron cambiar) se vuelven a evaluar.
+    if se_activo and cfg.get("reevaluateBlockedOnActivation", True):
+        chain = utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
+        _reevaluate_blocked_rows([str(buyer_id), *chain], month_key)
+
 def handle_confirm_commissions(order_id):
     """Acción: ORDER_DELIVERED. Cambia 'pending' -> 'confirmed' y evalúa bonos."""
     order = utils._get_by_id("ORDER", order_id)
@@ -692,17 +774,7 @@ def handle_confirm_commissions(order_id):
     month_key = order.get("monthKey") or utils._month_key()
     chain     = _get_upline_chain(order['customerId'])
 
-    def _confirm(item):
-        changed = False
-        for r in item['ledger']:
-            if r.get('orderId') == order_id and r.get('status') == "pending":
-                r['status'] = "confirmed"
-                changed = True
-        # Devolver False evita una escritura innecesaria cuando no hay cambios.
-        return changed
-
-    for b_id in chain:
-        _mutate_ledger_month(b_id, month_key, _confirm)
+    _confirm_order_rows(order_id, month_key, chain)
 
     # Evaluar bonos para el comprador y su upline al confirmar entrega
     buyer_id = str(order.get("customerId", ""))

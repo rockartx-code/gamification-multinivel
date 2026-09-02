@@ -371,6 +371,11 @@ export class ApiService {
     paymentType?: 'full' | 'partial' | 'credit';
     amountPaid?: number;
     authCode?: string;
+    /** Descuento por escalón del socio, calculado igual que en la tienda en línea. */
+    discountAmount?: number;
+    discountRate?: number;
+    /** Efectivo recibido en mostrador, solo para calcular el cambio. */
+    cashReceived?: number;
   }): Observable<{ sale: PosSale }> {
     return this.resolveApi().registerPosSale(payload);
   }

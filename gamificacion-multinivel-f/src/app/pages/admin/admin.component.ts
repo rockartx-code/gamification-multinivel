@@ -713,6 +713,27 @@ export class AdminComponent implements OnInit {
   isCuttingPosCash = false;
   isPosCashCutModalOpen = false;
   posCashCutKeepAmount = '';
+  /** Efectivo que entrega el cliente en mostrador; el POS no lo pedía y el cajero sacaba el cambio de cabeza. */
+  posCashReceived = '';
+
+  get posCashReceivedNumber(): number {
+    const n = Number(String(this.posCashReceived).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  get posChangeDue(): number {
+    if (this.posSalePaymentMethod !== 'cash' || this.posPaymentTypeMode !== 'full') {
+      return 0;
+    }
+    return this.roundMoney(Math.max(0, this.posCashReceivedNumber - this.posEffectiveTotal));
+  }
+
+  get posCashShort(): number {
+    if (this.posSalePaymentMethod !== 'cash' || this.posPaymentTypeMode !== 'full' || !this.posCashReceived) {
+      return 0;
+    }
+    return this.roundMoney(Math.max(0, this.posEffectiveTotal - this.posCashReceivedNumber));
+  }
   posCashCutError = '';
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
@@ -5872,6 +5893,11 @@ export class AdminComponent implements OnInit {
         paymentStatus: 'paid_branch',
         deliveryStatus: 'delivered_branch',
         items: lineItems,
+        // El escalón de descuento se mostraba en pantalla ("alcanzó meta 10%") pero
+        // no viajaba en la venta: el backend aplicaba 0% y el socio pagaba de más.
+        discountAmount: this.posProjectedDiscountAmount,
+        discountRate: this.posProjectedDiscountRate,
+        cashReceived: this.posSalePaymentMethod === 'cash' && this.posCashReceivedNumber > 0 ? this.posCashReceivedNumber : undefined,
         cashierDiscountMode: this.posAppliedCashierDiscount?.mode,
         cashierDiscountValue: this.posAppliedCashierDiscount?.value,
         paymentType: this.posPaymentTypeMode,
@@ -5884,6 +5910,7 @@ export class AdminComponent implements OnInit {
           this.posItems.clear();
           this.posForm.status = 'delivered';
           this.posSalePaymentMethod = 'cash';
+          this.posCashReceived = '';
           this.posAppliedCashierDiscount = null;
           this.posPaymentTypeMode = 'full';
           this.posPartialAmountPaid = '';
