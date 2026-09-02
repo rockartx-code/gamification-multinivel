@@ -67,3 +67,17 @@ def test_cambiar_la_contrasena_avisa_por_correo(modulos, utils, monkeypatch):
     r = auth_utils.handle_change_password({"currentPassword": "Secreta1!", "newPassword": "Nueva1234!"}, {})
     assert r["statusCode"] == 200, r["body"]
     assert correos == [("karla@test.com", "Tu contraseña de Finding'U cambió")]
+
+
+def test_la_lista_de_clientes_trae_las_comisiones_del_mes_y_del_anterior(modulos, utils, monkeypatch):
+    """El día de pago la gerente veía $0 en todas las fichas con $250.74 confirmados."""
+    customer_lambda, _ = modulos
+    import commissions_lambda
+    cid = _karla(utils)
+    mk = utils._month_key()
+    commissions_lambda._mutate_ledger_month(cid, mk, lambda item: item["ledger"].append({"rowId": "O#G1", "orderId": "O", "amount": 250.74, "level": 1, "status": "confirmed"}) or True)
+    r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/getall", "headers": {}, "queryStringParameters": {"limit": "50"}, "body": ""}, None)
+    assert r["statusCode"] == 200, r["body"]
+    ficha = [c for c in json.loads(r["body"])["customers"] if str(c.get("customerId")) == str(cid)][0]
+    assert abs(ficha["commissionsCurrentConfirmed"] - 250.74) < 0.01
+    assert ficha["commissionsPrevStatus"] in ("no_moves", "pending", "paid")

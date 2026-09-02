@@ -69,6 +69,55 @@ def _format_customer_output(item):
     return out
 
 
+def _prev_month_key(month_key: str) -> str:
+    y, m = [int(x) for x in month_key.split("-")]
+    return f"{y - 1}-12" if m == 1 else f"{y}-{m - 1:02d}"
+
+
+def _con_comisiones(customers: list) -> list:
+    """Añade a cada ficha lo que la gerente necesita el día de pago.
+
+    La lista solo traía `commissions`, un campo histórico que nadie actualiza:
+    el 10 de octubre todas las fichas decían $0 con $250.74 confirmados en el
+    ledger y no se pagó nada. Se leen los meses contables una sola vez.
+    """
+    if not customers:
+        return customers
+    actual = utils._month_key()
+    anterior = _prev_month_key(actual)
+    ledgers = {}
+    try:
+        for item in utils._query_bucket("COMMISSION_MONTH"):
+            sk = str(item.get("SK") or "")
+            mk = actual if f"#MONTH#{actual}" in sk else (anterior if f"#MONTH#{anterior}" in sk else None)
+            if mk:
+                ledgers[(str(item.get("beneficiaryId") or ""), mk)] = item
+        recibos = {
+            str(r.get("customerId")): r.get("assetUrl") or ""
+            for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=anterior)
+            if str(r.get("monthKey")) == anterior
+        }
+    except Exception as ex:
+        utils._log("customer_list_commissions_error", "ERROR", error=ex)
+        return customers
+    out = []
+    for c in customers:
+        cid = str(c.get("customerId") or "")
+        hoy = ledgers.get((cid, actual)) or {}
+        prev = ledgers.get((cid, anterior)) or {}
+        confirmado_prev = float(utils._to_decimal(prev.get("totalConfirmed", 0)))
+        recibo = recibos.get(cid, "")
+        c = dict(c)
+        c["commissionsCurrentConfirmed"] = float(utils._to_decimal(hoy.get("totalConfirmed", 0)))
+        c["commissionsCurrentPending"] = float(utils._to_decimal(hoy.get("totalPending", 0)))
+        c["commissionsPrevMonthKey"] = anterior
+        c["commissionsPrevMonth"] = confirmado_prev
+        c["commissionsPrevStatus"] = "no_moves" if confirmado_prev <= 0 else ("paid" if recibo else "pending")
+        c["commissionsPrevReceiptUrl"] = recibo
+        out.append(c)
+    return out
+
+
 def _normalize_dashboard_customer(customer):
     if not customer or not isinstance(customer, dict):
         return None
@@ -1002,7 +1051,7 @@ def lambda_handler(event, context):
                 total = len(items)
                 page = items[:limit]
                 return utils._json_response(200, {
-                    "customers": [_format_customer_output(c) for c in page],
+                    "customers": _con_comisiones([_format_customer_output(c) for c in page]),
                     "total": total,
                     "count": len(page),
                     "nextToken": None,
@@ -1014,7 +1063,7 @@ def lambda_handler(event, context):
             # así que cada página costaba lo mismo que la tabla completa.
             page, next_token = _query_customers_page(limit, query.get("nextToken"))
             return utils._json_response(200, {
-                "customers": [_format_customer_output(c) for c in page],
+                "customers": _con_comisiones([_format_customer_output(c) for c in page]),
                 "count": len(page),
                 "nextToken": next_token,
                 "hasMore": bool(next_token),
