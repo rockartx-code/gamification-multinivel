@@ -165,6 +165,17 @@ def handle_pos_sale(body, headers):
     _, error = _apply_stock_delta(stock_id, deltas)
     if error: return utils._json_response(400, {"message": error})
 
+    # 1b. Copiar los puntos del catálogo a cada línea, como hace la tienda en
+    # línea: sin vpPoints el motor de comisiones convertía pesos ÷ tarifa y el
+    # socio que compraba en mostrador recibía otros puntos que en la web.
+    for it in items:
+        if it.get("vpPoints") is None:
+            producto = utils._get_by_id("PRODUCT", it.get("productId")) or {}
+            if producto.get("vpPoints") is not None:
+                it["vpPoints"] = producto.get("vpPoints")
+            if producto.get("commissionable") is False:
+                it["commissionable"] = False
+
     # 2. Calcular totales
     gross_subtotal = sum([utils._to_decimal(it['price']) * int(it['quantity']) for it in items])
 
@@ -252,14 +263,22 @@ def handle_pos_sale(body, headers):
         _log_movement(stock_id, "pos_sale", it['productId'], it['quantity'], order_id, user_id, payment_method=payment_method)
 
     # 5. DISPARAR STEP FUNCTION (Motor de Comisiones)
+    # Una venta de mostrador nace pagada y entregada. Antes solo se disparaba
+    # ORDER_DELIVERED, que confirma comisiones "pending" que nunca existieron:
+    # el socio que compraba en tienda física no acumulaba volumen ni VP y su
+    # patrocinador no recibía comisión. ORDER_PAID aplica la activación y las
+    # comisiones (solo cuenta si el comprador es un cliente registrado);
+    # después ORDER_DELIVERED las confirma.
     if ORDER_SFN_ARN:
-        try:
-            sfn.start_execution(
-                stateMachineArn=ORDER_SFN_ARN,
-                input=json.dumps({"orderId": order_id, "action": "ORDER_DELIVERED"})
-            )
-        except Exception as e:
-            utils._log("sfn_error", "ERROR", pos_sale=sale_id, err=e)
+        acciones = ["ORDER_PAID", "ORDER_DELIVERED"] if body.get("customerId") else ["ORDER_DELIVERED"]
+        for accion in acciones:
+            try:
+                sfn.start_execution(
+                    stateMachineArn=ORDER_SFN_ARN,
+                    input=json.dumps({"orderId": order_id, "action": accion})
+                )
+            except Exception as e:
+                utils._log("sfn_error", "ERROR", pos_sale=sale_id, action=accion, err=e)
 
     return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
 
@@ -386,11 +405,13 @@ def handle_cash_cut(body, headers):
 
     cut_item = {
         "entityType": "posCashCut", "cashCutId": cut_id, "stockId": stock_id,
-        "total": float(net_total),
+        # DynamoDB rechaza float ("Float types are not supported"): el corte de
+        # caja respondía 500 y el cajero no podía cerrar. Se guardan Decimal.
+        "total": utils._to_decimal(net_total),
         "salesCount": len(pending_sales),
-        "cashToKeep": float(cash_to_keep),
-        "withdrawnAmount": float(available - cash_to_keep),
-        "totalWithdrawals": float(withdrawals_total),
+        "cashToKeep": utils._to_decimal(cash_to_keep),
+        "withdrawnAmount": utils._to_decimal(available - cash_to_keep),
+        "totalWithdrawals": utils._to_decimal(withdrawals_total),
         "withdrawalCount": len(pending_withdrawals),
         "attendantUserId": user_id,
         "startedAt": pending_sales[0].get("createdAt") if pending_sales else now,
