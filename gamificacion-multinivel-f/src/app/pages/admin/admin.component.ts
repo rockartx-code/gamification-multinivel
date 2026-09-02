@@ -5901,6 +5901,7 @@ export class AdminComponent implements OnInit {
   closePosDiscountModal(): void {
     this.isPosDiscountModalOpen = false;
     this.posDiscountError = '';
+    this.requestViewUpdate();
   }
 
   applyPosDiscount(): void {
@@ -5920,10 +5921,14 @@ export class AdminComponent implements OnInit {
     const displayLabel = this.posDiscountMode === 'percent' ? `${val}%` : this.formatMoney(val);
     this.posAppliedCashierDiscount = { mode: this.posDiscountMode, value: val, displayLabel };
     this.closePosDiscountModal();
+    // 'Aplicar descuento' no procesaba nada: el diálogo seguía abierto y el
+    // total intacto hasta el siguiente evento que refrescara la vista.
+    this.requestViewUpdate();
   }
 
   removePosDiscount(): void {
     this.posAppliedCashierDiscount = null;
+    this.requestViewUpdate();
   }
 
   enablePosPartialPayment(mode: 'full' | 'partial' | 'credit'): void {
