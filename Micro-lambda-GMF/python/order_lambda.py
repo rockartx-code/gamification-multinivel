@@ -641,6 +641,11 @@ def handle_update_status(order_id, body, headers):
     return utils._json_response(200, {"order": updated})
 
 
+def _is_guest_order(order: dict) -> bool:
+    """Pedido creado sin cuenta: buyerType guest o sin customerId."""
+    return str(order.get("buyerType") or "").lower() == "guest" or not order.get("customerId")
+
+
 def handle_mercadopago_checkout(order_id, body):
     """POST /orders/{id}/checkout"""
     order = utils._get_by_id("ORDER", order_id)
@@ -1400,9 +1405,15 @@ def lambda_handler(event, context):
                     order = utils._get_by_id("ORDER", order_id)
                     if not order:
                         return utils._json_response(404, {"message": "Pedido no encontrado"})
-                    err = utils._require_self_or_admin(headers, order.get("customerId"))
-                    if err: return err
-                    return utils._json_response(200, {"order": order})
+                    # Un pedido de invitado no tiene dueño con sesión: su único
+                    # comprobante es el propio ID. Sin esta excepción, el
+                    # invitado no podía ni ver el seguimiento de lo que compró.
+                    if not _is_guest_order(order):
+                        err = utils._require_self_or_admin(headers, order.get("customerId"))
+                        if err: return err
+                    # Se devolvía el item crudo, sin "total": el cálculo guarda
+                    # netTotal y la pantalla de seguimiento mostraba "$0".
+                    return utils._json_response(200, {"order": {**order, **_register_branch_sale_for_pickup_order(order)}})
                 if method == "PATCH":
                     err = utils._require_admin(headers, "order_mark_paid")
                     if err: return err
@@ -1412,9 +1423,12 @@ def lambda_handler(event, context):
             if len(segments) >= 3:
                 sub = segments[2]
                 if sub == "checkout" and method == "POST":
-                    # Checkout: el propio cliente o admin pueden iniciarlo
+                    # Checkout: el propio cliente o admin pueden iniciarlo. Para un
+                    # pedido de invitado no hay sesión que exigir: la tienda ofrece
+                    # comprar sin cuenta y el pedido se creaba bien, pero aquí se
+                    # respondía 401 y el invitado nunca podía pagar.
                     order = utils._get_by_id("ORDER", order_id)
-                    if order:
+                    if order and not _is_guest_order(order):
                         err = utils._require_self_or_admin(headers, order.get("customerId"))
                         if err: return err
                     return handle_mercadopago_checkout(order_id, body)
