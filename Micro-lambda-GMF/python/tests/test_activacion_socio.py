@@ -93,3 +93,27 @@ def test_cancelar_o_reembolsar_resta_el_volumen_acreditado(modulos, utils):
     commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_CANCELLED"}, None)
     estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
     assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+
+def test_la_pasarela_cobra_el_total_con_descuento(modulos, utils, monkeypatch):
+    """Regresión: la preferencia de MercadoPago llevaba precios de lista; el
+    socio veía Total $1,137 y pagaba $1,249."""
+    order_lambda, _ = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    utils._put_entity("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()),
+                      {"entityType": "associateMonth", "associateId": cid, "monthKey": utils._month_key(), "netVolume": Decimal("1000")})
+    pedido = json.loads(order_lambda.handle_create_order({**_pedido(cid, pid, qty=1), "shippingCarrier": "Estafeta", "shippingService": "Terrestre", "shippingCost": 129}, {})["body"])
+    o = pedido.get("order") or pedido
+    assert float(o["discountRate"]) == 0.1 and float(o["netTotal"]) == 432.0 and float(o["total"]) == 561.0
+    capturado = {}
+    class _Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return json.dumps({"id": "pref-1", "init_point": "https://mp/x"}).encode()
+    def _urlopen(req, *a, **k):
+        capturado["pref"] = json.loads(req.data.decode()); return _Resp()
+    monkeypatch.setattr(order_lambda.urllib.request, "urlopen", _urlopen)
+    r = order_lambda.handle_mercadopago_checkout(o["orderId"], {})
+    assert r["statusCode"] == 200, r["body"]
+    cobrado = sum(it["unit_price"] * it["quantity"] for it in capturado["pref"]["items"])
+    assert abs(cobrado - 561.0) < 0.01, capturado["pref"]["items"]

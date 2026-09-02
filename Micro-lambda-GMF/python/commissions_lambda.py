@@ -755,7 +755,13 @@ def handle_apply_rewards(order_id):
         utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
         # El estado del mes cambió: que el resto del cálculo lo vea fresco.
         _CACHE["states"].pop(f"{utils._customer_id_str(buyer_id)}#{month_key}", None)
-        se_activo = (not estaba_activo) and _is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+        ahora_activo = _is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+        se_activo = (not estaba_activo) and ahora_activo
+        try:
+            utils._update_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(buyer_id, month_key),
+                                "SET isActive = :a", {":a": bool(ahora_activo)})
+        except Exception as e:
+            utils._log("is_active_flag_error", "ERROR", buyer=buyer_id, err=e)
 
     # 2. Repartir comisiones al upline con compresión dinámica (Plan abril 2026 §4).
     _distribute_commissions(order, order_id, month_key, commissionable_net)
@@ -920,7 +926,9 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
         "monthKey": month_key,
         "netVolume": net_volume,
         "vp": vp,
-        "isActive": bool(item.get("isActive")),
+        # El flag guardado nunca se recalculaba (nacía False y así se quedaba):
+        # una socia con 25.2 VP aparecía "inactiva" en este endpoint.
+        "isActive": _state_to_vp(item, mxn_per_vp) >= float(utils._activation_vp()),
         "updatedAt": item.get("updatedAt"),
         "currentDiscount": current_discount,
         "nextGoal": next_goal,

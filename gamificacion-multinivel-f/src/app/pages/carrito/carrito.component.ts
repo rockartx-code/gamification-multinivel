@@ -450,7 +450,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.selectedShippingRate) {
       return this.formatMoney(this.selectedShippingRate.displayPrice);
     }
-    return this.shipping === 0 ? 'Gratis' : this.formatMoney(this.shipping);
+    // "Envío Gratis" hasta que el cliente ponía su código postal y aparecían $129.
+    return this.shipping === 0 ? 'Se calcula con tu código postal' : this.formatMoney(this.shipping);
   }
 
   get itemsCount(): number {
@@ -478,10 +479,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
   /** Puntos (PC) que suma el carrito según el catálogo. */
   get cartVp(): number {
     const products = this.dashboardControl.products ?? [];
-    return this.cartItems.reduce((sum, item) => {
+    const bruto = this.cartItems.reduce((sum, item) => {
       const product = products.find((p) => p.id === this.extractProductId(item.id));
       return sum + (Number(product?.vpPoints ?? 0) * item.qty);
     }, 0);
+    // El motor acredita VP netos: PC del producto × (1 − descuento). El carrito
+    // decía "Te faltan 0 VP" con 21 PC y el tablero "18.9 de 20" tras pagar.
+    const factor = 1 - (this.discountPercent || 0) / 100;
+    return Math.round(bruto * factor * 10) / 10;
   }
 
   /** "Te faltan …" con la unidad de la meta activa. */

@@ -683,6 +683,30 @@ def _is_guest_order(order: dict) -> bool:
     return str(order.get("buyerType") or "").lower() == "guest" or not order.get("customerId")
 
 
+def _precios_cobrables(order: dict) -> list:
+    """Precios unitarios con el descuento del pedido ya aplicado.
+
+    La preferencia de pago se armaba con precios de lista: un socio con 10% de
+    descuento veía "Total $1,137" en pantalla y la pasarela le cobraba $1,249.
+    Se reparte el descuento por línea y el residuo de redondeo va a la primera
+    para que la suma cobrada coincida centavo a centavo con netTotal.
+    """
+    items = list(order.get("items") or [])
+    rate = utils._to_decimal(order.get("discountRate") or 0)
+    net_total = utils._to_decimal(order.get("netTotal")) if order.get("netTotal") is not None else None
+    filas = []
+    for i in items:
+        precio = utils._to_decimal(i.get("price", 0))
+        filas.append([i, (precio * (utils.Decimal("1") - rate)).quantize(utils.D_CENT)])
+    if net_total is not None and filas:
+        suma = sum((p * int(i.get("quantity", 1) or 1) for i, p in filas), utils.D_ZERO)
+        residuo = (net_total - suma).quantize(utils.D_CENT)
+        qty0 = int(filas[0][0].get("quantity", 1) or 1)
+        if residuo != utils.D_ZERO and qty0 == 1:
+            filas[0][1] = (filas[0][1] + residuo).quantize(utils.D_CENT)
+    return [(i, p) for i, p in filas]
+
+
 def handle_mercadopago_checkout(order_id, body):
     """POST /orders/{id}/checkout"""
     order = utils._get_by_id("ORDER", order_id)
@@ -710,10 +734,10 @@ def handle_mercadopago_checkout(order_id, body):
                 # Fallback seguro para el título
                 "title": str(i.get("name") or f"Producto {i.get('productId', '')}").strip(), 
                 "quantity": int(i.get("quantity", 1) or 1),
-                "unit_price": float(i.get("price", 0)), 
+                "unit_price": float(precio),
                 "currency_id": "MXN"
             }
-            for i in order.get("items", [])
+            for i, precio in _precios_cobrables(order)
         ] + ([{
             "title": f"Envío ({order.get('shippingCarrier') or 'paquetería'})",
             "quantity": 1,
