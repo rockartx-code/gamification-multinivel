@@ -195,10 +195,6 @@ export class TiendaComponent implements OnInit {
     );
   }
 
-  get cartCount(): number {
-    return this.cartControl.itemsCount;
-  }
-
   goToCart(): void {
     void this.router.navigate(['/carrito']);
   }
