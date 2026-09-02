@@ -235,6 +235,11 @@ class Manejador(BaseHTTPRequestHandler):
             tipos = {}
             for (pk, sk) in store: tipos[pk.split("#")[0]] = tipos.get(pk.split("#")[0], 0) + 1
             return self._responder(200, json.dumps({"items": len(store), "porTipo": tipos, "reloj": ahora_iso(), "pagosPendientes": list(PAGOS)}))
+        if ruta == "/__sim/sfn" and self.command == "POST":
+            # Reprocesar una acción del motor de comisiones (lo que en AWS haría
+            # re-ejecutar la máquina de estados). Uso: soporte reacredita un pedido.
+            ev = json.loads(cuerpo); COLA_SFN.append({"orderId": ev["orderId"], "action": ev["action"]}); drenar_sfn(); guardar()
+            return self._responder(200, b'{"ok":true}')
         if ruta == "/__sim/guardar":
             guardar(); return self._responder(200, b'{"ok":true}')
         m = re.match(r"^/__sim/pago/([^/]+)$", ruta)

@@ -451,6 +451,12 @@ def handle_create_order(body, headers):
     customer_id = body.get("customerId")
     customer_name = body.get("customerName", "Cliente")
     buyer_type = body.get("buyerType", "guest").lower()
+    # El frontend no manda buyerType, así que TODO pedido llegaba como "guest",
+    # también los de socios con sesión: sin descuento por escalera, sin volumen
+    # personal y sin activación mensual. El tipo de comprador se decide por el
+    # customerId, no por lo que diga el cliente.
+    if customer_id and buyer_type == "guest" and utils._get_by_id("CUSTOMER", customer_id):
+        buyer_type = "associate"
 
     if customer_id and buyer_type != "guest":
         utils._get_by_id("CUSTOMER", customer_id)

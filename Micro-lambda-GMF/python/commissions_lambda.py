@@ -593,6 +593,16 @@ def _commissionable_net(order: dict, fallback_net) -> utils.Decimal:
 
 # --- PROCESOS DE ORQUESTACIÓN (STEP FUNCTIONS) ---
 
+def _es_comprador_registrado(order: dict) -> bool:
+    """Socio o cliente con cuenta. Los pedidos anteriores a la corrección de
+    buyerType quedaron como "guest" aunque llevaran customerId; se reconocen
+    por la ficha para poder reacreditar su volumen."""
+    if order.get("buyerType") in ["associate", "registered"]:
+        return True
+    cid = order.get("customerId")
+    return bool(cid) and utils._get_by_id("CUSTOMER", cid) is not None
+
+
 def handle_apply_rewards(order_id):
     """Acción: ORDER_PAID. Calcula comisiones en estado 'pending'."""
     order = utils._get_by_id("ORDER", order_id)
@@ -612,7 +622,7 @@ def handle_apply_rewards(order_id):
 
     # 1. Actualizar volumen personal del comprador
     buyer_id = order.get("customerId")
-    if order.get("buyerType") in ["associate", "registered"] and buyer_id:
+    if _es_comprador_registrado(order) and buyer_id:
         # Almacena netVolume en MXN (compatibilidad) y netVP en puntos directos
         utils._increment_associate_month_net_volume(buyer_id, month_key, commissionable_net)
         utils._increment_associate_month_net_vp(buyer_id, month_key, order_vp)
