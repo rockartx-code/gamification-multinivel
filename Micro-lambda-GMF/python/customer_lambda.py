@@ -69,7 +69,7 @@ def _format_customer_output(item):
     return out
 
 
-def _prev_month_key(month_key: str) -> str:
+def _mes_anterior(month_key: str) -> str:
     y, m = [int(x) for x in month_key.split("-")]
     return f"{y - 1}-12" if m == 1 else f"{y}-{m - 1:02d}"
 
@@ -84,7 +84,7 @@ def _con_comisiones(customers: list) -> list:
     if not customers:
         return customers
     actual = utils._month_key()
-    anterior = _prev_month_key(actual)
+    anterior = _mes_anterior(actual)
     ledgers = {}
     try:
         for item in utils._query_bucket("COMMISSION_MONTH"):

@@ -81,3 +81,13 @@ def test_la_lista_de_clientes_trae_las_comisiones_del_mes_y_del_anterior(modulos
     ficha = [c for c in json.loads(r["body"])["customers"] if str(c.get("customerId")) == str(cid)][0]
     assert abs(ficha["commissionsCurrentConfirmed"] - 250.74) < 0.01
     assert ficha["commissionsPrevStatus"] in ("no_moves", "pending", "paid")
+
+
+def test_el_panel_del_cliente_responde(modulos, utils, monkeypatch):
+    """Regresión: un helper con el mismo nombre que uno importado dejó el panel
+    en 500 y toda la tienda en blanco para los socios el día de pago."""
+    customer_lambda, _ = modulos
+    cid = _karla(utils)
+    monkeypatch.setattr(utils, "_extract_actor_from_bearer", lambda h: {"user_id": str(cid), "role": "cliente", "privileges": {}})
+    r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/dashboard", "headers": {"Authorization": "Bearer x"}, "queryStringParameters": {}, "body": ""}, None)
+    assert r["statusCode"] == 200, r["body"][:300]
