@@ -287,7 +287,7 @@
           </ng-container>
 
           <!-- Cancelar bloqueado - en proceso logístico -->
-          <div *ngIf="cancelBlocked && !canRequestReturn && order.status !== 'cancelled'"
+          <div *ngIf="cancelBlocked && !canRequestReturn && order.status !== 'cancelled' && !inReturnFlow"
             class="flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2.5 text-xs text-gray-500">
             <i class="fa-solid fa-lock text-gray-400" aria-hidden="true"></i>
             Pedido en proceso logístico — solicita una devolución si aplica

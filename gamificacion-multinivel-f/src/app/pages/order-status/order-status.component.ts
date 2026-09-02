@@ -268,6 +268,12 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return s === 'paid' || s === 'pending';
   }
 
+  /** Ya hay una devolución en curso o resuelta: no tiene sentido pedir "solicita una devolución". */
+  get inReturnFlow(): boolean {
+    const s = this.order?.status;
+    return ['en_devolucion', 'devuelto_validado', 'devolucion_rechazada'].includes(s as string);
+  }
+
   get cancelBlocked(): boolean {
     const s = this.normalizeStatus(this.order?.status);
     return ['shipped', 'delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'cancelled'].includes(s as string);
