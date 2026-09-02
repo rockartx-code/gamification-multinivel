@@ -562,6 +562,21 @@
                       (ngModelChange)="saveCustomerOrigin(customer!, $event)">
                     </ui-form-field>
                   </div>
+                  <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end" *ngIf="!customer?.deletedAt">
+                    <div class="flex-1">
+                      <ui-form-field
+                        type="email"
+                        label="Correo de acceso"
+                        placeholder="correo@dominio.com"
+                        [ngModel]="customerEmailDraft"
+                        (ngModelChange)="customerEmailDraft = $event">
+                      </ui-form-field>
+                    </div>
+                    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-envelope" [disabled]="!customerEmailDraft.trim() || customerEmailDraft.trim() === (customer?.email || '') || isSavingCustomerFollowUp" (pressed)="saveCustomerEmail(customer!)">
+                      Guardar correo
+                    </ui-button>
+                  </div>
+                  <div class="text-micro text-gray-500" *ngIf="!customer?.deletedAt">Si la ficha no tenía correo, al guardarlo se crea su acceso y se le manda una contraseña temporal.</div>
                   <div class="mt-3">
                     <div class="text-xs text-gray-600">Bitácora de contactos</div>
                     <div *ngIf="!(customer?.contactNotes?.length)" class="mt-1 text-micro text-gray-400">Sin notas todavía.</div>

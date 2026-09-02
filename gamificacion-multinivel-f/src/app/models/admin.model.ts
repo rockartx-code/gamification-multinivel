@@ -609,6 +609,8 @@ export interface UpdateCustomerPrivilegesPayload {
 export interface UpdateCustomerPayload {
   leaderId?: number | null;
   level?: string;
+  /** Correo de acceso; si la ficha no tenía, el backend crea el acceso y avisa. */
+  email?: string;
   doNotContact?: boolean;
   /** Nota nueva para la bitácora de contactos. */
   note?: string;

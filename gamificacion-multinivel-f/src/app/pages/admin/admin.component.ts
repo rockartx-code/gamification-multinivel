@@ -4165,6 +4165,7 @@ export class AdminComponent implements OnInit {
   selectCustomer(customerId: number): void {
     const selected = this.customers.find((customer) => customer.id === customerId) ?? null;
     this.selectedCustomer = selected;
+    this.customerEmailDraft = selected?.email && !selected.email.endsWith('@anonimizado.local') ? selected.email : '';
     this.isChangingSponsor = false;
     this.syncSelectedCustomerAccessDraft();
     this.resetCustomerDocumentDraft();
@@ -4301,6 +4302,7 @@ export class AdminComponent implements OnInit {
   }
 
   customerNoteDraft = '';
+  customerEmailDraft = '';
   isSavingCustomerFollowUp = false;
   readonly customerOriginOptions = [
     { value: '', label: 'Sin registrar' },
@@ -4338,6 +4340,14 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.saveCustomerFollowUp(customer, { origin }, 'Origen guardado.');
+  }
+
+  saveCustomerEmail(customer: AdminCustomer): void {
+    const email = this.customerEmailDraft.trim().toLowerCase();
+    if (!email || email === (customer.email || '').toLowerCase()) {
+      return;
+    }
+    this.saveCustomerFollowUp(customer, { email }, 'Correo guardado. Si no tenía acceso, ya se le envió su contraseña temporal.');
   }
 
   addCustomerNote(customer: AdminCustomer): void {
