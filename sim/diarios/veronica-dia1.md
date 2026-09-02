@@ -702,3 +702,130 @@ Entonces mi octubre y mi noviembre se ven así:
 4. **Respeto grande** — "9 cuentas, 3 activas, preferimos que lo sepas de nosotros". Eso no lo dice cualquiera. Me dieron el peor número que tenían.
 5. **Tristeza, sinceramente** — porque el producto está bien, la gente está bien, el plan es honesto… y no hay nadie. Es una casa bonita y vacía.
 6. **Paz** — ya sé exactamente qué es esto y qué no es. No me voy enojada ni me quedo ilusionada. Me quedo con los ojos abiertos, chiquito, y con mis dos comadres bien cuidadas. Eso sí lo sé hacer.
+
+---
+
+# Lunes 10 de noviembre — 12:00 · Cierre
+
+Un mes después. Hoy me avisan que ya está mi dinero.
+
+## El correo
+
+> **"Depositamos tus comisiones de 2026-10: $250.74"** — 10 nov 2026, 09:04
+> *"Hola Verónica. Depositamos tus comisiones confirmadas de 2026-10: $250.74. **Comprobante en tu panel.**"*
+
+**Llegaron los $250.74 completos.** No $126: los dos, el de Claudia y el de Bety. Soporte cumplió: me escribieron el 11 de octubre reconociendo que el sistema paga el día 10 **las comisiones del mes anterior** y que ninguna pantalla lo decía —por eso yo entendí mal—, y que el "este 10 cobras" fue error de ellos y no del sistema. Lo dijeron así, sin echarle la culpa a la máquina.
+
+Un mes exacto de la primera compra a la primera comisión en mi cuenta, con la cifra correcta al centavo. **Finding'U me pagó lo que prometió.** Eso, después de todo lo que escribí en este diario, hay que decirlo primero y en negritas.
+
+## Y entonces abrí el panel a buscar el comprobante
+
+El correo dice *"Comprobante en tu panel"*.
+
+Mi menú hoy dice: **Tienda · Red · Links · Órdenes · Cuadro de Honor · Mi perfil.**
+
+**Ya no existe la pestaña "Comisiones".** Desapareció. Busqué "Comisiones", "Total del mes", "Confirmadas", "CLABE", "Comprobante" en toda la página: **ninguna aparece.** El comprobante que el correo me manda a buscar a mi panel **no está en mi panel, porque el panel donde vivía ya no está.**
+
+Y no es lo único:
+
+- **"Progreso mensual"** está **en blanco**. No hay objetivo del mes. Ninguno.
+- **Tienda: "Todos los productos — 0 productos".** No puedo comprar. Ni aunque quisiera reactivarme hoy.
+- **Red: "Nivel 1: 0 · Nivel 2: 0 · Activos: 0"**, y abajo: **"Aún no tienes miembros en tu red — Comparte tu enlace para empezar"**, con la misión **"Invita a 1 persona y actívala este mes — Tu red se activa con tu primer miembro"** y **"Meta de red (este mes) $0 / $0"**.
+- **El Cuadro de Honor ya no abre.** Le pico y no pasa nada.
+
+Pensé que era mi sesión. **Cerré, volví a entrar con mi correo y mi contraseña.** Exactamente igual.
+
+Así que hoy, 10 de noviembre, mi panel me trata como si fuera **el día uno**: sin red, sin tienda, sin metas, sin comisiones. Claudia y Bety, que compraron $1,260 y $1,376.40 y que están en mi árbol desde el 2 de octubre, **no existen en mi pantalla**. Lo único que sobrevivió son mis dos órdenes: ORD-9BADDCB6 $1,137 Pagada y ORD-30280A83 $381 Pagada.
+
+Y Sofía me escribe *"¡Felicidades por el primer lugar en el Cuadro de Honor!"* — un Cuadro de Honor que no abre, de una red que mi panel dice que no tengo.
+
+**El mes cambió y la plataforma se reinició conmigo dentro.** Esa es la frase que me llevo de estos dos meses.
+
+## Mi balance a dos meses
+
+**Lo que puse:** la pasarela me cobró **$1,249** el 2 de octubre. El segundo pedido de $381 nunca me lo cobraron —falla suya— y lo dieron por pagado. Los **$112** de más dicen que se transfirieron el 2 de octubre y que quedó anotado en mi pedido; yo nunca lo vi en pantalla ni me llegó correo, pero después de cómo se han portado, se los creo.
+**Salida real de mi bolsa: ≈ $1,137.**
+
+**Lo que cobré:** **$250.74**, hoy, completos.
+
+**Neto: −$886 en dos meses.**
+
+**Lo que tengo:** $1,400 de producto de lista que sí me estoy tomando y sí me gusta; dos comadres que probaron el colágeno y quedaron contentas; y un aprendizaje que vale más que los $886.
+
+**Y noviembre:** no he comprado, ya pasó el día 10, y aunque quisiera activarme **no puedo, porque la tienda me muestra cero productos.**
+
+## Lo que sentí, 10 de noviembre
+
+1. **Alivio de verdad** — llegó el dinero, completo y al centavo. Después del susto del día 2 con la pasarela, necesitaba que esta empresa me pagara. Y me pagó.
+2. **Respeto, otra vez** — el 11 de octubre me escribieron para decirme "tenías razón, ninguna pantalla decía que se paga el mes anterior, y el 'este 10 cobras' fue error nuestro, no del sistema". Cargar con el error en vez de echárselo a la máquina no lo hace casi nadie.
+3. **Incredulidad** — abrir el panel a buscar el comprobante que el correo me pide buscar ahí, y encontrar que la pestaña ya no existe.
+4. **Un vacío raro** — ver "Aún no tienes miembros en tu red". Yo sé que Claudia y Bety están ahí. Lo comprobé, lo calculé, lo cobré. Y la pantalla me dice que estoy sola otra vez.
+5. **Ternura por Sofía** — me felicita por un primer lugar que no puedo abrir. No es culpa suya. Está leyendo un tablero al que yo ya no tengo acceso.
+6. **Calma, y una decisión firme** — ya no estoy enojada ni ilusionada. Sé exactamente qué es esto.
+
+## Mi veredicto, después de dos meses
+
+**Como negocio:** el plan es honesto y paga lo que dice —lo verifiqué al centavo tres veces—, pero **no hay con quién hacerlo**. Nueve cuentas, tres personas comprando, y esas tres somos yo y mis dos amigas. El primer rango pide 4,500 VG y mi red completa hizo 72.8. No es una empresa que te esté engañando; es una empresa que todavía no existe.
+
+**Como plataforma:** avanzó muchísimo en cinco semanas —los VP en el carrito, el envío honesto, los nombres protegidos, las etiquetas de comisiones— y todo eso pasó porque yo lo peleé por escrito. Pero **el corte de mes le borra la casa a la gente**, y eso es más grave que todos los bugs anteriores juntos: el día que me pagan es el día que dejo de poder ver mi red, mi tienda y mi comprobante.
+
+**Sigo, pero como estaba dicho:** no recluto, no suelto mi empresa actual, cuido a Claudia y a Bety como consumidoras y me tomo mi colágeno. Cuando su plataforma aguante un cambio de mes y su red pase de tres personas, aquí estoy y con gusto. Se los voy a decir de frente, porque ellos a mí me dijeron de frente que eran nueve.
+
+---
+
+# Lunes 10 de noviembre — tarde · "Entra otra vez"
+
+Sofía me contestó en **menos de dos horas**: *"tenías razón y era grave: era una falla nuestra de esta misma mañana (no del cambio de mes), sistemas la corrigió a las 13:30. Tu red sigue registrada completa."*
+
+Menos mal. Entonces no era el corte de mes borrándole la casa a la gente, como yo escribí en la mañana. **Me equivoqué en el diagnóstico y me alegra equivocarme en eso.** Era una falla de unas horas. Muy distinto.
+
+## Entré. Primero, nada
+
+Recargué el tablero y **seguía igual de vacío**: 0 productos, "Nivel 1: 0", "Aún no tienes miembros en tu red", sin pestaña de Comisiones. Y ahora hasta peor: **"Aún no tienes órdenes registradas"** — se me habían borrado también los dos pedidos que sí veía en la mañana.
+
+Ahí sí se me fue el aire un segundo.
+
+## Cerré sesión y volví a entrar. Y apareció todo
+
+Con mi correo y mi contraseña otra vez, de cero:
+
+- **Tienda: "Todos los productos — 11 productos"** ✅
+- **Red: "Nivel 1: 2 · Nivel 2: 0 · Activos: 0"**, con **Claud I. S. | $0** y **Beatr O. L. | $0** ✅ Ahí están mis comadres, donde siempre estuvieron.
+- **La pestaña Comisiones volvió** ✅
+- **Mis órdenes volvieron**: ORD-9BADDCB6 $1,137 Pagada y ORD-30280A83 $381 Pagada ✅
+
+Anoto una cosa para quien venga después: **recargar no bastó. Tuve que salirme y volver a entrar.** Si Sofía me hubiera dicho nada más "entra otra vez", yo habría contestado que seguía roto. Cuando arreglen algo así, díganle a la gente **"cierra sesión y vuelve a entrar"**, porque no es lo mismo.
+
+## Mis comisiones de octubre, por fin completas
+
+Me cambié a **octubre de 2026** en el selector:
+
+> **Total del mes: $250.74**
+> **Confirmadas (se depositan el día de pago): $250.74**
+> **Por confirmar (pedidos aún no entregados): $0**
+> **Bloqueadas: $0**
+> **Mes anterior — Total $250.74 — Estatus: Pagada — [Ver comprobante]**
+
+**Pagada.** Ahí está, en mi pantalla, con esa palabra. Los $124.74 de Bety que el 10 de octubre seguían en "pending" ya están confirmados y cobrados. Cerró el círculo.
+
+Y lo mejor, el renglón que le faltaba a esta plataforma desde el día uno:
+
+> *"Las comisiones confirmadas de un mes se depositan el día 10 del mes siguiente (las de 2026-11 se depositan el 10 del mes que viene)."*
+
+**Eso es exactamente lo que yo no entendí el 10 de octubre y me hizo pensar que me estaban quedando mal.** No me estaban quedando mal: yo estaba leyendo un calendario que nadie había escrito. Ya está escrito. Daniel lo prometió el 11 de octubre y ahí está.
+
+## Dos cosas que siguen sin servir
+
+**1. El botón "Ver comprobante" no hace nada.** Le pico y no abre modal, no cambia de página, no abre pestaña, no descarga archivo. Nada. Revisé si aparecía "Folio", "Referencia", "Depósito" en la pantalla: ninguno. Así que **sigo sin mi comprobante**, que era justo lo que fui a buscar hoy en la mañana. Ahora al menos existe el botón; antes ni eso.
+
+**2. El Cuadro de Honor sigue sin abrir.** Sofía me felicitó por el primer lugar y sigo sin poder verlo.
+
+Y mi red hoy: **Activos 0**. Ni Claudia ni Bety han comprado en noviembre, y yo tampoco. Con el aviso ese que ya conozco: *"tienes directos inactivos este mes... la generación que dejan libre sube al siguiente activo de la línea (compresión dinámica)"*.
+
+## Mi cierre
+
+Esta tarde le da la vuelta a mi mañana. La empresa no me borró la casa: tuvo una falla de unas horas, la reconoció en dos horas, la arregló, y me lo dijo con nombre y hora — *"sistemas la corrigió a las 13:30"*. Ese es el mismo patrón de todo octubre: **la gente de Finding'U responde rápido, admite el error y corrige. Su plataforma es la que va atrás de ellos.**
+
+Me pagaron $250.74, exactos, y hoy lo veo en pantalla con la palabra "Pagada". Con eso me quedo tranquila. El comprobante lo seguiré pidiendo hasta que el botón sirva, porque yo llevo mis números aparte pero mi contador no vive de capturas de pantalla.
+
+**Sigo igual que ayer: adentro, chiquito, sin reclutar, tomándome mi colágeno y esperando a que crezcan.** Con la diferencia de que hoy sé que si algo se rompe, hay alguien del otro lado que contesta en dos horas. En esta industria eso vale más de lo que parece.
