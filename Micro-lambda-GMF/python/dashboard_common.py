@@ -119,11 +119,28 @@ def _network_members_from_tree(root: dict, max_rows: int = 30) -> list:
 def _mxn_to_vp_dash(net_mxn: float, mxn_per_vp: float) -> float:
     return net_mxn / mxn_per_vp if mxn_per_vp > 0 else 0.0
 
+def _state_vp_dash(state: dict, mxn_per_vp: float) -> float:
+    """VP de un estado mensual, con la MISMA regla que el motor de comisiones:
+    netVP (puntos por producto del catálogo) si existe; si no, pesos ÷ tarifa.
+
+    El panel convertía siempre pesos ÷ tarifa e ignoraba netVP, así que un
+    socio que compraba exactamente 20 PC según la tienda veía 19.2 en su panel
+    y "Te faltan $1", mientras el motor ya lo tenía en 20."""
+    if not state:
+        return 0.0
+    if state.get("netVP") is not None:
+        return float(utils._to_decimal(state.get("netVP", 0)))
+    return _mxn_to_vp_dash(float(utils._to_decimal(state.get("netVolume", 0))), mxn_per_vp)
+
 def _calc_vg_from_tree(root_tree: dict, mxn_per_vp: float) -> float:
-    total_mxn = 0.0
+    total_vp = 0.0
     for node in _flatten_tree(root_tree):
-        total_mxn += float(node.get("monthSpend", 0))
-    return _mxn_to_vp_dash(total_mxn, mxn_per_vp)
+        # Nodos construidos por otras rutas traen solo monthSpend (pesos).
+        if node.get("monthVP") is not None:
+            total_vp += float(node.get("monthVP", 0))
+        else:
+            total_vp += _mxn_to_vp_dash(float(node.get("monthSpend", 0)), mxn_per_vp)
+    return total_vp
 
 def _compute_buy_again_ids(customer: dict, products_raw: list) -> list:
     if not customer or not isinstance(customer, dict):
@@ -334,8 +351,8 @@ def _get_direct_vg_dash(cid: str, month_key: str, customers_raw: list, mxn_per_v
     for customer in customers_raw:
         if str(customer.get("leaderId", "")) == str(cid):
             state = _get_month_state(str(customer.get("customerId", "")), month_key, month_states)
-            total += float(utils._to_decimal(state.get("netVolume", 0)))
-    return _mxn_to_vp_dash(total, mxn_per_vp)
+            total += _state_vp_dash(state, mxn_per_vp)
+    return total
 
 
 def _active_notifications_for_customer(customer_id) -> list:
@@ -466,7 +483,7 @@ class _GoalContext:
 
         state = _get_month_state(self.cid, self.month_key, month_states)
         self.my_net = utils._to_decimal(state.get("netVolume", 0))
-        self.my_vp = _mxn_to_vp_dash(float(self.my_net), self.mxn_per_vp)
+        self.my_vp = _state_vp_dash(state, self.mxn_per_vp)
         self.my_vg = _calc_vg_from_tree(root_tree, self.mxn_per_vp)
         self.my_active = self.my_vp >= self.activation_vp
 
@@ -864,7 +881,8 @@ def _build_month_node_index(month_key: str, customers_raw: list, cfg: dict,
         state = month_states.get(cid) or {}
         net_volume = float(utils._to_decimal(state.get("netVolume")))
         node["monthSpend"] = net_volume
-        node["isActive"] = bool((net_volume / mxn_per_vp if mxn_per_vp else 0.0) >= activation_vp)
+        node["monthVP"] = _state_vp_dash(state, mxn_per_vp)
+        node["isActive"] = bool(node["monthVP"] >= activation_vp)
 
     for leader_id, child_ids in children_by_leader.items():
         child_ids.sort(key=lambda k: nodes[k]["monthSpend"] if k in nodes else 0.0, reverse=True)
