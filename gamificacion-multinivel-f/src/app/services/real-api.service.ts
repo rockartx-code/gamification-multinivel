@@ -181,17 +181,10 @@ export class RealApiService {
   }
 
   verifyEmail(token: string): Observable<VerifyEmailResponse> {
-    return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/auth/verify-email`, { token }).pipe(
-      catchError((error) => {
-        const message = String(error?.error?.message ?? '');
-        if (error?.status === 404 && /ruta.*no encontrada/i.test(message)) {
-          return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/verify-email`, { token });
-        }
-
-        return throwError(() => error);
-      })
-    );
+    // Solo /auth/verify-email: el respaldo a /verify-email no tiene ruta en API Gateway.
+    return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/auth/verify-email`, { token });
   }
+
 
   resendEmailConfirmation(payload: ResendEmailConfirmationPayload): Observable<ResendEmailConfirmationResponse> {
     return this.http

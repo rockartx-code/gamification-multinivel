@@ -188,6 +188,7 @@
                           <ui-status-badge [status]="order.status"></ui-status-badge>
                         </div>
                         <div class="mt-2 grid gap-1 text-xs text-gray-600">
+                          <div>Folio: <span class="font-mono text-main">{{ order.id }}</span></div>
                           <div>Cliente: <span class="text-main">{{ order.customer }}</span></div>
                           <div>Total: <span class="text-main">{{ formatMoney(order.total) }}</span></div>
                           <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
@@ -264,7 +265,7 @@
 
                     <ng-template #desktopRow let-order>
                       <div class="grid grid-cols-[1fr_1fr_.8fr_.8fr_1fr_.6fr_.8fr] items-center px-4 py-3">
-                        <div>{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}</div>
+                        <div>{{ order.createdAt ? (order.createdAt | date: 'dd/MM/yyyy') : '-' }}<div class="font-mono text-micro text-gray-500">{{ order.id }}</div></div>
                         <div>{{ order.customer }}</div>
                         <div class="font-semibold">{{ formatMoney(order.total) }}</div>
                         <div class="capitalize"><ui-status-badge [status]="order.status"></ui-status-badge></div>
@@ -1108,6 +1109,12 @@
                           [attr.aria-label]="product.active ? 'Retirar producto' : 'Reactivar producto'">
                           <i class="fa-solid text-xs" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
                         </button>
+                        <!-- "Eliminar" solo vivía al final del modal de edición y nadie lo encontró -->
+                        <button type="button" *ngIf="!product.active && hasPermission('product_delete')" [disabled]="isDeletingProduct" (click)="confirmDeleteProduct(product)"
+                          class="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100"
+                          title="Eliminar definitivamente" aria-label="Eliminar producto definitivamente">
+                          <i class="fa-solid fa-trash text-xs" aria-hidden="true"></i>
+                        </button>
                         <button type="button" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (click)="setProductOfMonth(product)"
                           class="flex h-8 w-8 items-center justify-center rounded-full border border-gold-35 bg-gold-12 text-on-gold transition hover:bg-gold-20 disabled:cursor-not-allowed disabled:opacity-50"
                           title="Hacer producto del mes" aria-label="Hacer producto del mes">
@@ -1643,7 +1650,7 @@
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Transferencias</div>
-                <div class="mt-1 text-xs text-gray-600">El usuario vinculado al destino puede marcar "recibir".</div>
+                <div class="mt-1 text-xs text-gray-600">Elige primero quién recibe (debe estar vinculado al almacén destino); sin eso el botón "Recibir" no responde. Al recibir se pregunta cuántas piezas llegaron de cada producto.</div>
                 <ui-form-field
                   wrapperClass="mt-3 block"
                   kind="select"
@@ -2145,6 +2152,7 @@
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas: {{ posCashControl ? (posCashControl.lastCutSalesCount || 0) : 0 }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">En caja: {{ formatMoney(posCashControl ? (posCashControl.lastCutCashToKeep || 0) : 0) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Retirado: {{ formatMoney(posCashControl ? (posCashControl.lastCutWithdrawnAmount || 0) : 0) }}</span>
+                      <span class="text-mini text-gray-500">"En caja" es lo que dejaste en el cajón para arrancar; "Retirado" es lo que se llevó administración en el último corte.</span>
                     </div>
                   </div>
 

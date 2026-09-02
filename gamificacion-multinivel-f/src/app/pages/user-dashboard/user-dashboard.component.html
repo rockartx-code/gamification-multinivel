@@ -768,7 +768,7 @@
             </div>
             <ui-button *ngIf="commissions.prevStatus === 'paid' && commissions.prevReceiptUrl" variant="linkish"
               size="sm" iconClass="fa-solid fa-file-invoice" [fullWidth]="true" extraClass="mt-3"
-              (click)="openCommissionReceipt(commissions.prevReceiptUrl)">
+              (pressed)="openCommissionReceipt(commissions.prevReceiptUrl)">
               Ver comprobante
             </ui-button>
           </div>
