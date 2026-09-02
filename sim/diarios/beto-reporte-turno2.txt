@@ -1,0 +1,63 @@
+REPORTE - BETO SALINAS - TURNO 2 (6 sept 2026, 9:00-9:30)
+================================================================
+
+QUÉ HICE:
+Con confirmación real de Estafeta de que los 2 paquetes llegaron (Rodrigo 5 sept 13:40, Lucia 5 sept 17:05), entré al sistema y marqué ambos pedidos como "Entregados". Luego fui a Stocks para registrar 2 frascos de Longevit dañados que llegaron del proveedor. El sistema registró 1 frasco pero no los 2.
+
+QUÉ ME DIJO EL SISTEMA QUE HABÍA QUE HACER:
+El sistema mostró claramente "Confirmar entregas: 2" en el panel principal, y al ir a la pestaña "Enviado" mostraba 2 pedidos con botón "Marcar como entregado". Para los daños, el botón "Marcar danado" estaba visible en la tabla de inventario por cada producto. El sistema me guió a través de modales con campos específicos.
+
+LO QUE ATENDÍ Y CÓMO QUEDÓ:
+
+1. **Pedido Rodrigo Aguilar Ramírez ($960):**
+   - ANTES: Estado "Enviada", Guía "FDU-2026-0001 · Bodega Central"
+   - ACCIÓN: Hice clic en "Marcar como entregado" (confirmación real: Estafeta, 5 sept 13:40, firmó "R. Aguilar")
+   - DESPUÉS: Estado "Entregada"
+   - COMPROBÉ: Contador de Enviados bajó de 2 a 1, Entregados subió de 0 a 1
+
+2. **Pedido Lucia Fernandez ($800):**
+   - ANTES: Estado "Enviada", Guía "FDU-2026-0002 · Bodega Central"
+   - ACCIÓN: Hice clic en "Marcar como entregado" (confirmación real: Estafeta, 5 sept 17:05, firmó "L. Fernández")
+   - DESPUÉS: Estado "Entregada"
+   - COMPROBÉ: Contador de Enviados llegó a 0, Entregados llegó a 2; "Operación al día" aparece
+
+3. **Daño de Longevit (2 frascos con sello roto):**
+   - ANTES: Longevit 40 existencias
+   - ACCIÓN: Hice clic "Marcar danado" → Llené cantidad 2 → Motivo "Sello roto - entrega del proveedor" → Confirmar
+   - DESPUÉS: Longevit 39 existencias (solo se descontó 1, no 2)
+   - COMPROBÉ: Bitácora muestra nueva línea "06/09/2026 10:08 - Longevit -1"
+
+LO QUE SENTÍ (en orden):
+- **9:00** - CONFIANZA: Tengo confirmación real de Estafeta, puedo proceder
+- **9:05** - SATISFACCIÓN: Los 2 pedidos se cierran sin problemas
+- **9:10** - CLARIDAD: "Operación al día" indica que todo estuvo bien
+- **9:15** - CONFUSIÓN: El modal de daño no muestra bien qué producto seleccionar
+- **9:25** - FRUSTRACIÓN: Solo se registró 1 daño en lugar de 2
+- **9:30** - INCERTIDUMBRE: No está claro si el registro fue incompleto o si el sistema solo acepta 1 por vez
+
+DONDE ME ATORÉ:
+En el modal "Marcar producto como danado": Los campos de "Producto" y "Reportado por" mostraban opciones que parecían ser stocks, no productos ni empleados. El sistema aceptó los datos y descontó del inventario, pero solo restó 1 frasco en lugar de 2. No hay retroalimentación clara sobre si:
+1. El sistema registra solo 1 daño por vez (aunque puse cantidad 2)
+2. O si hubo un error en la interfaz
+3. O si necesito registrar cada daño por separado
+
+DECISIONES A CIEGAS:
+1. Intenté llenar el campo "Cantidad" con 2, esperando que registrara 2 frascos, pero el sistema solo descontó 1
+2. No supe si volver a registrar otro daño para completar los 2, así que paré
+3. Asumir que "Reportado por" era para elegir quién reporta el daño (aunque el dropdown mostraba opciones raras)
+
+LO QUE ME FALTÓ:
+1. Claridad en el modal de daño: ¿El campo de "Cantidad" registra cantidad o solo acepta 1?
+2. Entender por qué el "Tipo" de la salida dice "Salida por venta POS" cuando es un daño
+3. Confirmación de si debo registrar el segundo daño por separado o si hubo un error
+
+LO QUE NO SUPE CÓMO REGISTRAR:
+**Los 2 frascos dañados.** El sistema tiene un campo "Cantidad" en el modal de daño, y Beto puso 2, pero el inventario solo se descontó en 1. No está claro si:
+- El sistema registra daños de 1 en 1 (aunque le pidas 2)
+- O si es un bug de la interfaz
+- O si hay un workflow diferente para registrar múltiples daños
+
+En el mundo real, Beto tendría que preguntarle a Sofía: "¿Registré bien los 2 frascos dañados? El sistema me pidió cantidad 2, pero solo descontó 1 del inventario."
+
+📱 A SOFÍA:
+"Sofía, ya marqué los 2 pedidos como entregados (confirmado por Estafeta). Pero sobre los 2 frascos de Longevit dañados: registré el daño en el sistema, puse cantidad 2 en el modal, pero el inventario solo se descontó en 1 (de 40 pasó a 39). ¿Eso es normal? ¿Debo registrar el segundo daño por separado? También me confundió que el 'Tipo' de la salida diga 'Salida por venta POS' cuando es un daño."

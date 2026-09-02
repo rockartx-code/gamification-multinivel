@@ -1,0 +1,42 @@
+REPORTE - BETO SALINAS - TURNO 3 (17 sept 2026, 11:30-11:45)
+================================================================
+
+QUÉ HICE:
+Entré al sistema y vi "Preparar envíos: 2". Fui a Stocks, seleccioné "Bodega Central" (como en turnos anteriores), volví a Pedidos y abrí el modal de "Registrar envío" para el primer pedido. Intenté llenar el formulario pero me detuve porque no tenía guía de paquetería.
+
+QUÉ ME DIJO EL SISTEMA QUE HABÍA QUE HACER:
+El sistema mostró "Preparar envíos: 2" en el panel principal y "Registrar envío" en cada pedido pagado. El modal pedía:
+- Stock origen (preseleccionado: Bodega Central)
+- Tipo de entrega (Paquetería o Entrega personal)
+- Número de guía (campo requerido)
+
+El sistema fue claro sobre QUÉ hay que hacer, pero no sobre CÓMO obtener la guía.
+
+LO QUE ATENDÍ Y CÓMO QUEDÓ:
+
+**Pedido 1 - Rosa Elena Mendoza ($829):**
+- ANTES: Estado "Pagada", Guía "-", 17/09/2026
+- ACCIÓN: Intenté registrar envío → Abrí modal → Vi que necesito guía de paquetería → No sabía cómo obtenerla → Cancelé
+- DESPUÉS: Sigue en estado "Pagada", sin envío
+- COMPROBÉ: Contador de "Preparar envíos" sigue en 2, Pagados sigue en 2
+
+**Pedido 2 - Patricia Solís Ek ($829):**
+- ANTES: Estado "Pagada", Guía "-", 06/09/2026
+- ACCIÓN: No intenté (mismo problema que pedido 1)
+- DESPUÉS: Sigue en estado "Pagada", sin envío
+
+LO QUE NO ENTENDÍ:
+1. ¿Cómo obtengo la guía de paquetería? ¿Me la da la paquetería al despachar? ¿La empresa ya tiene contrato y alguien más me la consigue?
+2. ¿Debo registrar el envío PRIMERO y luego actualizar con la guía? ¿O debo tener la guía ANTES de registrar?
+3. Si intento sin guía, ¿qué pasa? ¿El sistema me rechaza o deja el campo vacío?
+4. ¿La opción "Entrega personal" es para cuando no usamos paquetería? ¿Pero entonces quién entrega y cuándo?
+
+LO QUE SENTÍ:
+- 10:50 (leyendo a Sofía) - ALIVIO + SATISFACCIÓN: Sofía confirmó que no me equivoqué en el turno 2
+- 11:30 - RESPONSABILIDAD: Tengo 2 nuevos pedidos para preparar
+- 11:35 - FRUSTRACIÓN: El sistema pide datos que no tengo
+- 11:40 - CONFUSIÓN: ¿Sofía espera guías reales o de prueba?
+- 11:45 - INCERTIDUMBRE: Cancelé porque honestamente no sé cómo proceder
+
+📱 A SOFÍA:
+"Sofía, veo los 2 pedidos de Rosa Elena Mendoza ($829) y Patricia Solís Ek ($829) en la lista de "Preparar envíos". Pero cuando intento registrar envío, el sistema me pide el número de guía de paquetería. Tú me dijiste 'usa la guía que te dé la paquetería', pero yo no tengo acceso a paqueterías. ¿Cómo procedo? ¿Me esperas a que reciba guías de alguien? ¿O hay algo del sistema que no estoy viendo? ¿Debo registrar sin guía y luego actualizar? Estoy parado aquí porque no quiero hacerlo a ciegas como en los turnos anteriores."
