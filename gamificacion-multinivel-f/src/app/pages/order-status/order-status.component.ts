@@ -239,15 +239,30 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return Math.round((this.orderDiscount / subtotal) * 100);
   }
 
+  /** Costo de envío cobrado en el pedido (0 si no aplica). */
+  get orderShipping(): number {
+    const raw = Number((this.order as { shippingCost?: number } | null)?.shippingCost ?? 0);
+    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+  }
+
+  get orderShippingCarrier(): string {
+    return String((this.order as { shippingCarrier?: string } | null)?.shippingCarrier ?? '');
+  }
+
   get orderTotal(): number {
     if (!this.order) {
       return 0;
     }
+    // La lista decía "$829" y este detalle "$700": aquí faltaba sumar el envío.
+    const total = Number(this.order.total ?? 0);
+    if (Number.isFinite(total) && total > 0) {
+      return total;
+    }
     const net = Number(this.order.netTotal ?? 0);
     if (Number.isFinite(net) && net > 0) {
-      return net;
+      return net + this.orderShipping;
     }
-    return Number(this.order.total ?? 0);
+    return 0;
   }
 
   formatMoney(value: number): string {

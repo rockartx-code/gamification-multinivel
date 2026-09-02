@@ -83,6 +83,11 @@
                 </span>
               </div>
 
+              <div class="flex justify-between gap-4" *ngIf="orderShipping > 0">
+                <span class="text-gray-600">Envío{{ orderShippingCarrier ? ' (' + orderShippingCarrier + ')' : '' }}</span>
+                <span class="text-gray-700">{{ formatMoney(orderShipping) }}</span>
+              </div>
+
               <div class="flex justify-between gap-4">
                 <span class="text-gray-600">Total</span>
                 <span class="font-semibold text-gold">
