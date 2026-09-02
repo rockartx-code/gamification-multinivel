@@ -483,9 +483,12 @@ export class CarritoComponent implements OnInit, OnDestroy {
       const product = products.find((p) => p.id === this.extractProductId(item.id));
       return sum + (Number(product?.vpPoints ?? 0) * item.qty);
     }, 0);
-    // El motor acredita VP netos: PC del producto × (1 − descuento). El carrito
-    // decía "Te faltan 0 VP" con 21 PC y el tablero "18.9 de 20" tras pagar.
-    const factor = 1 - (this.discountPercent || 0) / 100;
+    // El motor acredita VP netos: PC × (neto ÷ bruto), y "neto" incluye el
+    // cupón. El carrito decía "Te faltan 0 VP" con 21 PC y el tablero "18.9 de
+    // 20" tras pagar; con cupón la diferencia es mayor y nadie la veía.
+    const bruto$ = this.subtotal || 0;
+    const neto$ = Math.max(0, bruto$ - (this.discount || 0) - (this.couponDiscount || 0));
+    const factor = bruto$ > 0 ? neto$ / bruto$ : 1 - (this.discountPercent || 0) / 100;
     return Math.round(bruto * factor * 10) / 10;
   }
 

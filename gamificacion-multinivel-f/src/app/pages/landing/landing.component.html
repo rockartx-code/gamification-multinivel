@@ -325,6 +325,15 @@
                 </tbody>
               </table>
             </div>
+            <!-- Regla de corte: vivía solo en un cintillo del panel privado -->
+            <p class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-xs text-gray-700">
+              <strong>Si alguien de tu línea no está activo un mes:</strong>
+              <ng-container *ngIf="(businessConfig?.rewards?.cutRule || 'dynamic_compression') === 'dynamic_compression'; else sinCompresion">
+                su generación no se pierde: sube al siguiente activo de la línea (compresión dinámica). Si se activa dentro del mes, se recalcula.
+              </ng-container>
+              <ng-template #sinCompresion>esa generación se bloquea y no pasa a nadie.</ng-template>
+              Lo que quede bloqueado al cerrar el mes no se paga después. Ser activo = 20 VP de compra propia en el mes (1 VP = $50 netos).
+            </p>
           </div>
         </div>
       </div>
