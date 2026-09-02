@@ -111,3 +111,18 @@ def test_el_envio_se_guarda_y_se_cobra(order_lambda, utils, monkeypatch):
     order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/checkout"), None)
     cobrado = sum(i["unit_price"] * i["quantity"] for i in enviado["items"])
     assert cobrado == 929.0, enviado["items"]
+
+
+def test_el_invitado_puede_solicitar_devolucion_sin_sesion(order_lambda, utils):
+    """Regresión: el asistente de devolución dejaba completar los tres pasos y
+    en "Enviar solicitud" respondía "No autenticado"."""
+    import json
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    utils._update_by_id("ORDER", oid, "SET #s = :s, deliveredAt = :d", {":s": "delivered", ":d": utils._now_iso()}, {"#s": "status"}) if False else None
+    pedido = utils._get_by_id("ORDER", oid); pedido["status"] = "delivered"; pedido["deliveredAt"] = utils._now_iso()
+    utils._table.put_item(Item=pedido)
+    cuerpo = {"motivo": "DANADO", "reason": "DANADO", "descripcion": "Tapa rajada",
+              "evidencia": {"fotos_producto": ["a.jpg"], "fotos_empaque": ["b.jpg"], "fotos_guia_envio": ["c.jpg"]},
+              "evidence": {"fotos_producto": ["a.jpg"], "fotos_empaque": ["b.jpg"], "fotos_guia_envio": ["c.jpg"]}}
+    r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/return", cuerpo), None)
+    assert r["statusCode"] not in (401, 403), r["body"]

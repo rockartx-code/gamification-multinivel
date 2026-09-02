@@ -218,6 +218,8 @@ export interface CatalogData {
 
 /** Respuesta de GET /dashboard (sin datos de catálogo) */
 export interface DashboardData {
+  /** Consumo propio del mes en pesos (nodo raíz de la red). */
+  myNetSpend?: number;
   isGuest?: boolean;
   settings: DashboardSettings;
   customer?: DashboardCustomerProfile | null;

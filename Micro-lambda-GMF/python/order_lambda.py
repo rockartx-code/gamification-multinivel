@@ -1475,7 +1475,9 @@ def lambda_handler(event, context):
                         if err: return err
                         return handle_return_inspection(order_id, body, headers)
                     order = utils._get_by_id("ORDER", order_id)
-                    if order:
+                    if order and not _is_guest_order(order):
+                        # Un pedido de invitado no tiene sesión que exigir: el asistente de
+                        # devolución dejaba llenar los tres pasos y respondía "No autenticado".
                         err = utils._require_self_or_admin(headers, order.get("customerId"))
                         if err: return err
                     return handle_return_request(order_id, body, headers)

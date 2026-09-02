@@ -903,7 +903,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       y: rootY,
       label: this.nodeLabel(rootName),
       name: rootName,
-      meta: { spend: 0 }
+      // Estaba fijo en 0: el socio veía "$0" en su propio nodo con la compra ya acreditada.
+      meta: { spend: this.dashboardControl.data?.myNetSpend ?? 0 }
     };
 
     const l1Nodes = l1Members.map((member, idx) => ({
