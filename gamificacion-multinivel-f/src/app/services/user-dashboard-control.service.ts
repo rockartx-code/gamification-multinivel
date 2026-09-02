@@ -283,11 +283,14 @@ export class UserDashboardControlService {
 
   formatMoney(value: number): string {
     const amount = Number.isFinite(value) ? value : 0;
+    // Sin centavos cuando el importe es entero; con dos cuando no lo es
+    // ("$1,376.40", no "$1,376.4" ni "$1,376").
+    const cents = Number.isInteger(Math.round(amount * 100) / 100) ? 0 : 2;
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
+      minimumFractionDigits: cents,
+      maximumFractionDigits: cents
     }).format(amount);
   }
 
