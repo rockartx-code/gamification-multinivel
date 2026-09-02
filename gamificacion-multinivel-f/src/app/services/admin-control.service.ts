@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, forkJoin, map, Observable, of, tap } from 'rxjs';
 
 import {
+  OrderCancelResponse,
   AdminCustomer,
   AdminData,
   AdminCampaign,
@@ -274,6 +275,24 @@ export class AdminControlService {
                 attendantUserId: order.attendantUserId ?? entry.attendantUserId,
                 items: order.items ?? entry.items
               }
+            : entry
+        );
+        this.dataSubject.next({ ...current, orders: updatedOrders });
+      })
+    );
+  }
+
+  /** Cancela un pedido pendiente o pagado desde el back office y lo refleja en la lista. */
+  cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
+    return this.api.cancelOrder(orderId, reason).pipe(
+      tap(() => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const updatedOrders = current.orders.map((entry) =>
+          entry.id === orderId
+            ? { ...entry, status: 'cancelled' as AdminOrder['status'], cancelReason: reason, cancelledAt: new Date().toISOString() }
             : entry
         );
         this.dataSubject.next({ ...current, orders: updatedOrders });

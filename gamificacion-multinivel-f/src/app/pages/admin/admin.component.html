@@ -287,6 +287,10 @@
                           <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar' }}
                           </ui-button>
+                          <!-- Cancelar (pendiente o pagado): antes solo el cliente podía, y un pedido de invitado abandonado quedaba "Pendiente" para siempre -->
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-ban" *ngIf="canCancelOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="cancelOrderFromAdmin(order)">
+                            Cancelar pedido
+                          </ui-button>
                           <!-- Reembolsar (desde cancelado) -->
                           <ui-button variant="primary" size="sm" iconClass="fa-solid fa-money-bill-transfer" *ngIf="order.status === 'cancelled'" (pressed)="openRefundModal(order)">
                             Reembolsar
@@ -317,6 +321,10 @@
                               <div *ngFor="let item of order.items" class="flex items-center justify-between rounded-xl border border-olive-30 surface-soft px-3 py-2 text-xs">
                                 <span class="font-semibold text-main">{{ item.name }}</span>
                                 <span class="text-gray-600">x{{ item.quantity }} · {{ formatMoney(item.price * item.quantity) }}</span>
+                              </div>
+                              <div *ngIf="order.shippingCost" class="flex items-center justify-between px-3 pt-1 text-xs text-gray-600">
+                                <span>Envío{{ order.shippingCarrier ? ' (' + order.shippingCarrier + ')' : '' }}</span>
+                                <span>{{ formatMoney(order.shippingCost) }}</span>
                               </div>
                               <div class="flex items-center justify-between px-3 pt-1 text-xs font-semibold text-main">
                                 <span>Total</span>

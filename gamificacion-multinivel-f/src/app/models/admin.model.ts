@@ -52,6 +52,9 @@ export interface AdminOrder {
   pickupPaymentMethod?: 'online' | 'at_store';
   cancelReason?: string;
   cancelledAt?: string;
+  /** Envío cobrado al cliente y paquetería cotizada. */
+  shippingCost?: number;
+  shippingCarrier?: string;
   returnRequestId?: string;
   rejectionReason?: string;
   rejectedAt?: string;

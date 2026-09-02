@@ -1360,6 +1360,8 @@ export class RealApiService {
       deliveryType: this.readString(order, ['deliveryType']) as AdminOrder['deliveryType'] | undefined,
       pickupStockId: this.readString(order, ['pickupStockId']) || undefined,
       pickupPaymentMethod: this.readString(order, ['pickupPaymentMethod']) as AdminOrder['pickupPaymentMethod'] | undefined,
+      shippingCost: Number(order['shippingCost'] ?? 0) > 0 ? Number(order['shippingCost']) : undefined,
+      shippingCarrier: this.readString(order, ['shippingCarrier']) || undefined,
       cancelReason: this.readString(order, ['cancelReason']) || undefined,
       cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
       returnRequestId: this.readString(order, ['returnRequestId']) || undefined,

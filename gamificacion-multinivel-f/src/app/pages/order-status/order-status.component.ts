@@ -15,7 +15,7 @@ import { ApiService } from '../../services/api.service';
   styleUrl: './order-status.component.css'
 })
 export class OrderStatusComponent implements OnInit, OnDestroy {
-  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as const;
+  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'] as const;
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   orderId = '';
   orderReference = '';
@@ -164,6 +164,10 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (status === 'devolucion_rechazada') {
       return 'Devolución rechazada';
     }
+    if (status === 'refunded') {
+      // Un pedido reembolsado se mostraba como "Pago pendiente".
+      return 'Reembolsado';
+    }
     return 'Pago pendiente';
   }
 
@@ -192,6 +196,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     }
     if (status === 'devolucion_rechazada') {
       return 'border-red-400/30 bg-red-500/10 text-main';
+    }
+    if (status === 'refunded') {
+      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
     }
     return 'border-yellow-400/30 bg-yellow-400/10 text-main';
   }
@@ -286,12 +293,12 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
   /** Ya hay una devolución en curso o resuelta: no tiene sentido pedir "solicita una devolución". */
   get inReturnFlow(): boolean {
     const s = this.order?.status;
-    return ['en_devolucion', 'devuelto_validado', 'devolucion_rechazada'].includes(s as string);
+    return ['en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'].includes(s as string);
   }
 
   get cancelBlocked(): boolean {
     const s = this.normalizeStatus(this.order?.status);
-    return ['shipped', 'delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'cancelled'].includes(s as string);
+    return ['shipped', 'delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded', 'cancelled'].includes(s as string);
   }
 
   get canRequestReturn(): boolean {

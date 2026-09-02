@@ -25,7 +25,8 @@ export class UiOrderTimelineComponent {
 
   get currentIndex(): number {
     const s = String(this.status || '').toLowerCase();
-    if (s === 'delivered') return 4;
+    // Tras la entrega el pedido puede seguir a devolución o reembolso: la línea de tiempo queda completa.
+    if (['delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'].includes(s)) return 4;
     if (s === 'shipped') return 3;
     if (s === 'paid') return 2;
     return 1;

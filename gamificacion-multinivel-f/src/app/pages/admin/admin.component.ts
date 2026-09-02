@@ -3326,6 +3326,35 @@ export class AdminComponent implements OnInit {
       });
   }
 
+  canCancelOrder(order: AdminOrder): boolean {
+    return (order.status === 'pending' || order.status === 'paid') && this.hasPermission('order_mark_paid');
+  }
+
+  cancelOrderFromAdmin(order: AdminOrder): void {
+    if (!this.canCancelOrder(order) || this.updatingOrderIds.has(order.id)) {
+      return;
+    }
+    const aviso = order.status === 'paid' ? ' El pago quedará pendiente de reembolso.' : '';
+    if (!confirm(`¿Cancelar el pedido ${order.id} de ${order.customer}?${aviso}`)) {
+      return;
+    }
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .cancelOrder(order.id, 'admin_request')
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: () => this.showSnackbar(`Pedido ${order.id} cancelado.`),
+        error: (error: unknown) => {
+          this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo cancelar el pedido.'), 'error');
+        }
+      });
+  }
+
   openShippingModal(order: AdminOrder): void {
     this.shippingTargetOrder = order;
     this.shippingType = 'carrier';
