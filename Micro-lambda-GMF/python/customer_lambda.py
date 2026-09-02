@@ -1027,6 +1027,7 @@ def handle_customer_dashboard(headers: dict) -> dict:
             "userCode": str(customer.get("referralCode")
                             or customer.get("customerId") or "").strip().upper(),
             "networkGoal": 300,
+            "freeShippingMin": float(utils._to_decimal((utils._load_app_config().get("shipping") or {}).get("freeShippingMin") or 0)),
         },
         "customer": _normalize_dashboard_customer(customer),
         "user": {

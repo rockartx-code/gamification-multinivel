@@ -439,13 +439,28 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.deliveryType === 'pickup') {
       return Math.max(0, this.subtotal - this.discount - this.couponDiscount);
     }
-    const shippingCost = this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping;
+    const shippingCost = this.isShippingFree ? 0 : (this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping);
     return Math.max(0, this.subtotal + shippingCost - this.discount - this.couponDiscount);
+  }
+
+  /** Regla de envío gratis por importe (misma que aplica el backend al crear el pedido). */
+  get freeShippingMin(): number {
+    return Number(this.dashboardControl.data?.settings?.freeShippingMin ?? 0) || 0;
+  }
+
+  get isShippingFree(): boolean {
+    if (this.deliveryType === 'pickup' || !this.freeShippingMin) {
+      return false;
+    }
+    return Math.max(0, this.subtotal - this.discount - this.couponDiscount) >= this.freeShippingMin;
   }
 
   get shippingLabel(): string {
     if (this.deliveryType === 'pickup') {
       return 'Gratis (recoger en sucursal)';
+    }
+    if (this.isShippingFree) {
+      return `Gratis (pedido de ${this.formatMoney(this.freeShippingMin)} o más)`;
     }
     if (this.selectedShippingRate) {
       return this.formatMoney(this.selectedShippingRate.displayPrice);
@@ -723,7 +738,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
         saveShippingAddress: Boolean(user?.userId && this.saveShippingAddress),
         shippingCarrier: this.selectedShippingRate?.carrier || undefined,
         shippingService: this.selectedShippingRate?.service || undefined,
-        shippingCost: this.selectedShippingRate?.displayPrice ?? undefined,
+        shippingCost: this.isShippingFree ? 0 : (this.selectedShippingRate?.displayPrice ?? undefined),
         deliveryType: 'delivery'
       };
     }

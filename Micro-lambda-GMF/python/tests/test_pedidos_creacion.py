@@ -198,3 +198,19 @@ def test_un_pedido_cerrado_admite_notas_internas(order_lambda, utils, monkeypatc
     notas = json.loads(r["body"])["order"]["adminNotes"]
     assert notas[0]["text"].startswith("Transferí") and notas[0]["by"] == "sofia"
     assert order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/notes", {"text": ""}), None)["statusCode"] == 400
+
+
+def test_envio_gratis_por_importe_segun_configuracion(order_lambda, utils, monkeypatch):
+    """Un aviso prometía envío gratis desde $1,000 y el checkout cobraba $129 igual."""
+    import json
+    cfg = utils._load_app_config()
+    cfg.setdefault("shipping", {})["freeShippingMin"] = Decimal("1000")
+    monkeypatch.setattr(utils, "_load_app_config", lambda *a, **k: cfg)
+    _producto(utils)
+    cuerpo = {**_pedido_invitado(), "items": [{"productId": 101, "name": "Finding Pro 500g", "price": 800, "quantity": 2}]}
+    r = order_lambda.handle_create_order(cuerpo, {})
+    o = json.loads(r["body"]); o = o.get("order") or o
+    assert float(o["shippingCost"]) == 0 and o["shippingFreeApplied"] is True and float(o["total"]) == 1600.0
+    r = order_lambda.handle_create_order(_pedido_invitado(), {})
+    o = json.loads(r["body"]); o = o.get("order") or o
+    assert float(o["shippingCost"]) == 129 and float(o["total"]) == 929.0

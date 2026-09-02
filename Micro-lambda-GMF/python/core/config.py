@@ -62,7 +62,8 @@ def _default_app_config() -> dict:
             "showCommissions": True, "showShipping": True, "showPendingPayments": True,
             "showPendingTransfers": True, "showPosSalesToday": True,
         },
-        "shipping": {"enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"]},
+        # freeShippingMin: neto (tras descuentos) a partir del cual el envío es gratis; 0 = sin regla.
+        "shipping": {"enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"], "freeShippingMin": Decimal("0")},
         "customerDocumentTypes": [
             {"key": "constancia", "label": "Constancia de situación fiscal", "required": True},
             {"key": "ine",        "label": "INE (frente y reverso)",          "required": True},

@@ -472,6 +472,13 @@ def handle_create_order(body, headers):
     now = utils._now_iso()
 
     delivery_type = body.get("deliveryType", "delivery")
+    # Envío gratis por importe (config shipping.freeShippingMin): un aviso masivo
+    # prometía "envío gratis desde $1,000" y el checkout cobraba $129 igual.
+    envio_cobrado = utils._to_decimal(body.get("shippingCost") or 0)
+    minimo_gratis = utils._to_decimal((utils._load_app_config().get("shipping") or {}).get("freeShippingMin") or 0)
+    envio_gratis = bool(minimo_gratis > 0 and totals["netTotal"] >= minimo_gratis and envio_cobrado > 0)
+    if envio_gratis:
+        envio_cobrado = utils.D_ZERO
     shipping_address = body.get("shippingAddress", {}) if isinstance(body.get("shippingAddress"), dict) else {}
     order_item = {
         "entityType": "order", "orderId": order_id, "customerId": customer_id,
@@ -500,10 +507,11 @@ def handle_create_order(body, headers):
         # seguimiento mostraba $960 donde el carrito cobró $1,089 y la
         # pasarela cobraba solo los productos. netTotal sigue siendo la base
         # comisionable (el envío no genera comisión); total es lo que se paga.
-        "shippingCost": utils._to_decimal(body.get("shippingCost") or 0),
+        "shippingCost": envio_cobrado,
         "shippingCarrier": body.get("shippingCarrier") or None,
         "shippingService": body.get("shippingService") or None,
-        "total": (totals["netTotal"] + utils._to_decimal(body.get("shippingCost") or 0)).quantize(utils.D_CENT),
+        "total": (totals["netTotal"] + envio_cobrado).quantize(utils.D_CENT),
+        "shippingFreeApplied": envio_gratis,
         **coupon_fields,
     }
     if delivery_type == "pickup":

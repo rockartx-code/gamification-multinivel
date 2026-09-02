@@ -127,6 +127,8 @@ export interface DashboardCampaign {
 
 export interface DashboardSettings {
   cutoffDay: number;
+  /** Neto a partir del cual el envío es gratis; 0 o ausente = sin regla. */
+  freeShippingMin?: number;
   cutoffHour: number;
   cutoffMinute: number;
   userCode: string;
