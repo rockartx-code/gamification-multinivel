@@ -844,6 +844,9 @@ def handle_customer_dashboard(headers: dict) -> dict:
         "buyAgainIds": buy_again_ids,
         "commissions": commission_summary,
         "vp": round(vp_val, 2),
+        # Consumo propio del mes en pesos: el panel pintaba "$0" en el nodo
+        # raíz de la red porque no tenía de dónde sacarlo.
+        "myNetSpend": round(float(my_net), 2),
         "vg": round(vg_val, 2),
         "rank": rank_val,
         "bonuses": bonus_awards,
