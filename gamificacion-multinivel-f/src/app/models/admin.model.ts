@@ -209,10 +209,12 @@ export interface UpdateOrderStatusPayload {
   status: AdminOrder['status'];
   shippingType?: AdminOrder['shippingType'];
   trackingNumber?: string;
+  shippingCarrier?: string;
   deliveryPlace?: string;
   deliveryDate?: string;
   stockId?: string;
   paymentMethod?: 'cash' | 'card' | 'transfer';
+  cashReceived?: number;
   attendantUserId?: number | null;
   dispatchLines?: Array<{ productId: number; quantity: number }>;
 }

@@ -156,7 +156,7 @@ def _user_can_operate_pickup_stock(user_id, pickup_stock_id) -> bool:
     return str(user_id) in linked_ids
 
 
-def _register_branch_sale_for_pickup_order(order: dict, user_id, now_iso: str, payment_method: str) -> str:
+def _register_branch_sale_for_pickup_order(order: dict, user_id, now_iso: str, payment_method: str, cash_received=None) -> str:
     sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
     pickup_stock_id = order.get("pickupStockId")
     sale_item = {
@@ -170,6 +170,10 @@ def _register_branch_sale_for_pickup_order(order: dict, user_id, now_iso: str, p
         "paymentStatus": "paid_branch",
         "deliveryStatus": "paid_branch",
         "paymentMethod": payment_method,
+        # La cajera necesita saber cuánto cambio dar: la venta de mostrador ya lo guardaba, el cobro de pickup no.
+        "cashReceived": utils._to_decimal(cash_received) if (payment_method == "cash" and cash_received is not None) else None,
+        "changeGiven": (max(utils._to_decimal(cash_received) - utils._to_decimal(order.get("total") or order.get("netTotal") or 0), utils.D_ZERO)
+                        if (payment_method == "cash" and cash_received is not None) else None),
         "grossSubtotal": order.get("grossSubtotal") or order.get("netTotal") or order.get("total") or utils.D_ZERO,
         "discountRate": order.get("discountRate") or utils.D_ZERO,
         "discountAmount": order.get("discountAmount") or utils.D_ZERO,
@@ -236,6 +240,7 @@ def _serialize_order_list_item(item: dict) -> dict:
         "shippingAddressLabel": item.get("shippingAddressLabel"),
         "shippingType": item.get("shippingType"),
         "trackingNumber": item.get("trackingNumber"),
+        "shippingCarrier": item.get("shippingCarrier"),
         "deliveryPlace": item.get("deliveryPlace"),
         "deliveryDate": item.get("deliveryDate"),
         "deliveredAt": item.get("deliveredAt"),
@@ -581,8 +586,14 @@ def handle_update_status(order_id, body, headers):
         extra_updates["stockId"] = pickup_stock_id_str
     if new_status == "paid" and is_pickup_order and order.get("pickupPaymentMethod") == "at_store":
         extra_updates["paymentStatus"] = body.get("paymentStatus") or "paid_branch"
+        extra_updates["paidAt"] = now
         if payment_method and not (order.get("cashSaleId") or order.get("branchSaleId")):
-            branch_sale_id = _register_branch_sale_for_pickup_order(order, actor_user_id, now, payment_method)
+            cash_received = body.get("cashReceived")
+            if payment_method == "cash" and cash_received is not None:
+                if utils._to_decimal(cash_received) < utils._to_decimal(order.get("total") or order.get("netTotal") or 0):
+                    return utils._json_response(400, {"message": "El efectivo recibido es menor al total del pedido"})
+                extra_updates["cashReceived"] = utils._to_decimal(cash_received)
+            branch_sale_id = _register_branch_sale_for_pickup_order(order, actor_user_id, now, payment_method, cash_received)
             extra_updates["branchSaleId"] = branch_sale_id
             if payment_method == "cash":
                 extra_updates["cashSaleId"] = branch_sale_id
@@ -622,7 +633,10 @@ def handle_update_status(order_id, body, headers):
         if body.get("shippingType"):
             extra_updates["shippingType"] = body["shippingType"]
         if body.get("trackingNumber"):
-            extra_updates["trackingNumber"] = body["trackingNumber"]
+            extra_updates["trackingNumber"] = str(body["trackingNumber"]).strip()
+        # El almacén escribía "Estafeta EST-..." en la guía porque no había campo de paquetería.
+        if body.get("shippingCarrier"):
+            extra_updates["shippingCarrier"] = str(body["shippingCarrier"]).strip()
         if body.get("deliveryPlace"):
             extra_updates["deliveryPlace"] = body["deliveryPlace"]
         if body.get("deliveryDate"):

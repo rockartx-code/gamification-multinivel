@@ -640,6 +640,15 @@ export class AdminComponent implements OnInit {
   shippingTargetOrder: AdminOrder | null = null;
   shippingType: 'carrier' | 'personal' = 'carrier';
   shippingTrackingNumber = '';
+  shippingCarrierDraft = '';
+  readonly shippingCarrierOptions = [
+    { value: 'Estafeta', label: 'Estafeta' },
+    { value: 'DHL', label: 'DHL' },
+    { value: 'FedEx', label: 'FedEx' },
+    { value: 'Paquetexpress', label: 'Paquetexpress' },
+    { value: 'Redpack', label: 'Redpack' },
+    { value: 'Otra', label: 'Otra paquetería' }
+  ];
   shippingDeliveryPlace = '';
   shippingDeliveryDate = '';
   shippingError = '';
@@ -3453,6 +3462,7 @@ export class AdminComponent implements OnInit {
 
   openShippingModal(order: AdminOrder): void {
     this.shippingTargetOrder = order;
+    this.shippingCarrierDraft = order.shippingCarrier || 'Estafeta';
     this.shippingType = 'carrier';
     this.shippingTrackingNumber = '';
     this.shippingDeliveryPlace = '';
@@ -3511,6 +3521,7 @@ export class AdminComponent implements OnInit {
       status: 'shipped' as const,
       shippingType: this.shippingType,
       trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
+      shippingCarrier: this.shippingType === 'carrier' ? (this.shippingCarrierDraft || undefined) : undefined,
       deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
       deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined,
       stockId: this.shippingStockId,
@@ -3570,6 +3581,7 @@ export class AdminComponent implements OnInit {
       status: 'shipped' as const,
       shippingType: this.shippingType,
       trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
+      shippingCarrier: this.shippingType === 'carrier' ? (this.shippingCarrierDraft || undefined) : undefined,
       deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
       deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined,
       stockId: this.shippingStockId,
@@ -3679,6 +3691,27 @@ export class AdminComponent implements OnInit {
     this.posPaymentTargetOrder = null;
     this.posPaymentMethod = 'cash';
     this.posPaymentError = '';
+    this.pickupCashReceived = '';
+  }
+
+  /** Efectivo que entregó el cliente al recoger; la cajera lo calculaba de cabeza. */
+  pickupCashReceived = '';
+
+  get pickupCashReceivedNumber(): number {
+    const n = Number(String(this.pickupCashReceived).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  get pickupChangeDue(): number {
+    const total = this.posPaymentTargetOrder?.total ?? 0;
+    if (this.posPaymentMethod !== 'cash' || !this.pickupCashReceived) return 0;
+    return this.roundMoney(Math.max(0, this.pickupCashReceivedNumber - total));
+  }
+
+  get pickupCashShortfall(): number {
+    const total = this.posPaymentTargetOrder?.total ?? 0;
+    if (this.posPaymentMethod !== 'cash' || !this.pickupCashReceived) return 0;
+    return this.roundMoney(Math.max(0, total - this.pickupCashReceivedNumber));
   }
 
   confirmReceivePickupPayment(): void {
@@ -3686,11 +3719,20 @@ export class AdminComponent implements OnInit {
     if (!order || !this.canReceivePickupPayment(order) || this.isSubmittingPosPayment) {
       return;
     }
+    if (this.posPaymentMethod === 'cash' && this.pickupCashReceived && this.pickupCashShortfall > 0) {
+      this.posPaymentError = `Faltan ${this.formatMoney(this.pickupCashShortfall)}: el efectivo recibido es menor al total.`;
+      return;
+    }
     this.isSubmittingPosPayment = true;
     this.posPaymentError = '';
     this.updatingOrderIds.add(order.id);
+    const changeDue = this.pickupChangeDue;
     this.adminControl
-      .updateOrderStatus(order.id, { status: 'paid', paymentMethod: this.posPaymentMethod })
+      .updateOrderStatus(order.id, {
+        status: 'paid',
+        paymentMethod: this.posPaymentMethod,
+        cashReceived: this.posPaymentMethod === 'cash' && this.pickupCashReceivedNumber > 0 ? this.pickupCashReceivedNumber : undefined
+      })
       .pipe(
         finalize(() => {
           this.isSubmittingPosPayment = false;
@@ -3702,7 +3744,7 @@ export class AdminComponent implements OnInit {
         next: () => {
           const successMessage =
             this.posPaymentMethod === 'cash'
-              ? 'Pago recibido y registrado en caja.'
+              ? (changeDue > 0 ? `Pago recibido y registrado en caja. Cambio a entregar: ${this.formatMoney(changeDue)}.` : 'Pago recibido y registrado en caja.')
               : 'Pago recibido correctamente.';
           this.closeReceivePickupPaymentModal();
           this.showSnackbar(successMessage);
