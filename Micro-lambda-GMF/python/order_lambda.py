@@ -1410,6 +1410,12 @@ def lambda_handler(event, context):
             return handle_mp_webhook(query, body)
 
         if "coupons" in segments:
+            # API Gateway solo enruta /orders/{proxy+} a esta Lambda: la ruta
+            # /coupons a secas nunca llegaba en producción y el frontend la
+            # llamaba tal cual (cupones muertos). Se acepta /orders/coupons/...
+            # y se conserva /coupons/... para invocación directa.
+            if segments and segments[0] == "orders":
+                segments = segments[1:]
             # POST /coupons/validate — público (cliente en checkout)
             if len(segments) == 2 and segments[1] == "validate" and method == "POST":
                 return handle_validate_coupon(body)

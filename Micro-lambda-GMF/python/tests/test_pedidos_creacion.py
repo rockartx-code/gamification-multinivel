@@ -170,3 +170,17 @@ def test_el_reembolso_acepta_un_importe_distinto(order_lambda, utils, monkeypatc
     assert r["statusCode"] == 200, r["body"]
     assert utils._get_by_id("ORDER", oid)["refundAmount"] == Decimal("500")
     assert order_lambda.handle_refund_order(oid, {"amount": -1}, {})["statusCode"] in (400, 409)
+
+
+def test_los_cupones_responden_bajo_el_prefijo_que_enruta_api_gateway(order_lambda, utils, monkeypatch):
+    """Regresión: el frontend llamaba /coupons y la Lambda solo recibe
+    /orders/{proxy+}; los cupones eran inalcanzables en producción."""
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    r = order_lambda.lambda_handler(_evento("POST", "/orders/coupons", {"code": "OCTUBRE10", "type": "percent", "value": 10, "active": True}), None)
+    assert r["statusCode"] in (200, 201), r["body"]
+    r = order_lambda.lambda_handler(_evento("GET", "/orders/coupons"), None)
+    assert r["statusCode"] == 200 and "OCTUBRE10" in r["body"]
+    r = order_lambda.lambda_handler(_evento("POST", "/orders/coupons/validate", {"code": "OCTUBRE10", "subtotal": 1000}), None)
+    assert r["statusCode"] == 200, r["body"]
+    r = order_lambda.lambda_handler(_evento("DELETE", "/orders/coupons/OCTUBRE10"), None)
+    assert r["statusCode"] == 200, r["body"]

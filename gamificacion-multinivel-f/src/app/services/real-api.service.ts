@@ -1205,7 +1205,7 @@ export class RealApiService {
 
   validateCoupon(code: string, subtotal: number, customerId?: string | number): Observable<CouponValidation> {
     return this.http.post<CouponValidation>(
-      `${this.baseUrl}/coupons/validate`,
+      `${this.baseUrl}/orders/coupons/validate`,
       { code, subtotal, customerId },
       { headers: this.actorHeaders() }
     );
@@ -1213,19 +1213,19 @@ export class RealApiService {
 
   listCoupons(): Observable<Coupon[]> {
     return this.http
-      .get<{ coupons: Coupon[] }>(`${this.baseUrl}/coupons`, { headers: this.actorHeaders() })
+      .get<{ coupons: Coupon[] }>(`${this.baseUrl}/orders/coupons`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.coupons ?? []));
   }
 
   saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
     return this.http
-      .post<{ coupon: Coupon }>(`${this.baseUrl}/coupons`, payload, { headers: this.actorHeaders() })
+      .post<{ coupon: Coupon }>(`${this.baseUrl}/orders/coupons`, payload, { headers: this.actorHeaders() })
       .pipe(map((r) => r.coupon));
   }
 
   deleteCoupon(code: string): Observable<{ message: string; code: string }> {
     return this.http.delete<{ message: string; code: string }>(
-      `${this.baseUrl}/coupons/${encodeURIComponent(code)}`,
+      `${this.baseUrl}/orders/coupons/${encodeURIComponent(code)}`,
       { headers: this.actorHeaders() }
     );
   }
