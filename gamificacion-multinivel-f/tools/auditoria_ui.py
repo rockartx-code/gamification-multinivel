@@ -152,6 +152,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--breve", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--archivo", default=None, help="filtra los hallazgos de un archivo")
     args = ap.parse_args()
 
     hallazgos = collections.defaultdict(list)
@@ -251,6 +252,12 @@ def main() -> int:
     print("=" * 72)
     print("AUDITORÍA MECÁNICA DEL SISTEMA DE DISEÑO")
     print("=" * 72)
+    if args.archivo:
+        clave_filtro = args.archivo.replace("\\", "/")
+        hallazgos = collections.defaultdict(
+            list,
+            {k: [i for i in v if clave_filtro in i] for k, v in hallazgos.items()},
+        )
     orden = sorted(hallazgos.items(), key=lambda kv: (-len(kv[1]), kv[0]))
     for clave, items in orden:
         presupuesto = PRESUPUESTOS.get(clave)
@@ -264,10 +271,11 @@ def main() -> int:
             estado = f"dentro de presupuesto ({presupuesto})"
         print(f"\n{clave:26s} {n:5d}   {estado}")
         if not args.breve:
-            for it in items[:8]:
+            tope = n if args.archivo else 8
+            for it in items[:tope]:
                 print(f"      {it}")
-            if n > 8:
-                print(f"      … y {n - 8} más")
+            if n > tope:
+                print(f"      … y {n - tope} más")
 
     print("\n" + "-" * 72)
     print("USO DE LA LIBRERÍA")

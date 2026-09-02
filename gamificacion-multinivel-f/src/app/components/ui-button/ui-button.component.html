@@ -3,6 +3,7 @@
   [disabled]="disabled"
   [class]="classes"
   [routerLink]="routerLink"
+  [attr.aria-label]="ariaLabel || null"
   (click)="onClick($event)"
 >
   <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>

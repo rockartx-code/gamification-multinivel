@@ -26,6 +26,8 @@ export class UiButtonComponent {
   @Input() iconClass = '';
   @Input() extraClass = '';
   @Input() routerLink: string | unknown[] | null = null;
+  /** Nombre accesible cuando el botón solo lleva icono. */
+  @Input() ariaLabel = '';
     @Input() stacked = false;
     @Input() title = '';
     @Input() subtitle = '';

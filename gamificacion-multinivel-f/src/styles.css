@@ -632,6 +632,18 @@ select:focus {
 .focus-border-olive-60:focus { border-color: rgba(var(--rgb-primary), 0.6); }
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
 
+/* Utilidades de elevación para plantillas: hasta ahora los tokens
+   --shadow-* solo eran usables desde CSS de componente. */
+.elev-rest { box-shadow: var(--shadow-rest); }
+.elev-lift { box-shadow: var(--shadow-lift); }
+.elev-float { box-shadow: var(--shadow-float); }
+
+/* Escala de micro-tipografía: absorbe los text-[11px]/text-[10px] arbitrarios.
+   Solo declara font-size (igual que el valor arbitrario de Tailwind), así que
+   el renderizado no cambia; lo que cambia es tener un único sitio donde ajustar. */
+.text-mini { font-size: 11px; }
+.text-micro { font-size: 10px; }
+
 /* Casilla del sistema (ui-checkbox): el nativo se pintaba con el azul del navegador */
 .ui-check-host,
 ui-form-field {
