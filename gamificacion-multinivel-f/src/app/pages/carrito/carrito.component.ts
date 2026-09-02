@@ -807,8 +807,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
       }))
       .subscribe({
         next: (rates) => {
-          console.log('Shipping rates received:', rates);
-          this.shippingRates = rates;
+          // La cotización podía traer la misma paquetería dos veces ("Estafeta" duplicada).
+          const vistas = new Set<string>();
+          this.shippingRates = rates.filter((r) => {
+            const clave = `${r.carrier}|${r.service}|${r.displayPrice}`;
+            if (vistas.has(clave)) { return false; }
+            vistas.add(clave); return true;
+          });
+          rates = this.shippingRates;
           this.selectedShippingRate = rates.length > 0 ? rates[0] : null;
           this.cdr.markForCheck();
         },

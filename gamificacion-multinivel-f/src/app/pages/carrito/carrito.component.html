@@ -463,8 +463,8 @@
             </div>
           </div>
           <div class="shrink-0 text-right">
-            <div class="text-sm font-extrabold text-main">{{ formatMoney(rate.displayPrice) }}</div>
-            <div class="text-mini text-gray-500">{{ rate.currency }}</div>
+            <div class="text-sm font-extrabold text-main" [class.line-through]="isShippingFree" [class.text-gray-400]="isShippingFree">{{ formatMoney(rate.displayPrice) }}</div>
+            <div class="text-mini" [class.text-gray-500]="!isShippingFree" [class.text-success]="isShippingFree">{{ isShippingFree ? 'Gratis por promoción' : rate.currency }}</div>
           </div>
           <i class="fa-solid shrink-0 text-base"
             [ngClass]="selectedShippingRate === rate ? 'fa-circle-check text-gold' : 'fa-circle text-gray-400'"
