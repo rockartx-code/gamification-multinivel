@@ -136,12 +136,20 @@ def urlopen_mp(req, timeout=None, **kw):
     m = re.search(r"/v1/payments/sim-(.+)$", url)
     if m: return _Resp({"id": f"sim-{m.group(1)}", "status": "approved", "external_reference": m.group(1)})
     raise RuntimeError("URL externa no simulada: " + url)
-order_lambda.urllib.request.urlopen = urlopen_mp
 def urlopen_envia(req, timeout=None, **kw):
     return _Resp({"data": [
         {"carrierDescription": "Estafeta", "serviceDescription": "Terrestre", "totalPrice": 129.0, "deliveryEstimate": "3 a 5 días hábiles"},
         {"carrierDescription": "DHL", "serviceDescription": "Express", "totalPrice": 219.0, "deliveryEstimate": "1 a 2 días hábiles"}]})
-shipping_lambda.urllib.request.urlopen = urlopen_envia
+# OJO: `order_lambda.urllib.request` y `shipping_lambda.urllib.request` son el
+# MISMO módulo global. Parchear urlopen dos veces dejaba solo el último
+# (Envia), y todo checkout de MercadoPago recibía una cotización de envíos.
+import urllib.request as _ur
+def urlopen_sim(req, timeout=None, **kw):
+    url = req.full_url if hasattr(req, "full_url") else str(req)
+    if "mercadopago" in url: return urlopen_mp(req, timeout, **kw)
+    if "envia" in url: return urlopen_envia(req, timeout, **kw)
+    raise RuntimeError("URL externa no simulada: " + url)
+_ur.urlopen = urlopen_sim
 
 # ── Step Functions: drenar la cola ────────────────────────────────────
 def drenar_sfn():
