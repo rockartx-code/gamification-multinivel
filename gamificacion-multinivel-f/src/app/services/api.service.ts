@@ -416,6 +416,10 @@ export class ApiService {
     return this.resolveApi().updateCustomer(customerId, payload);
   }
 
+  deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
+    return this.resolveApi().deleteCustomerData(customerId, reason);
+  }
+
   changePassword(userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
     return this.resolveApi().changePassword(userId, payload);
   }

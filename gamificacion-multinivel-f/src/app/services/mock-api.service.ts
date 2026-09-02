@@ -1897,7 +1897,29 @@ export class MockApiService {
     const updated: AdminCustomer = {
       ...customer,
       leaderId: payload.leaderId !== undefined ? payload.leaderId : customer.leaderId,
-      level: payload.level !== undefined ? payload.level : customer.level
+      level: payload.level !== undefined ? payload.level : customer.level,
+      doNotContact: payload.doNotContact !== undefined ? payload.doNotContact : customer.doNotContact,
+      origin: payload.origin !== undefined ? payload.origin : customer.origin,
+      contactNotes: payload.note
+        ? [...(customer.contactNotes ?? []), { text: payload.note, by: 'admin', at: new Date().toISOString() }]
+        : customer.contactNotes
+    };
+    this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
+    return of(updated).pipe(delay(120));
+  }
+
+  deleteCustomerData(customerId: number, _reason: string): Observable<AdminCustomer> {
+    const customer = this.customers.find((entry) => entry.id === customerId);
+    if (!customer) {
+      return throwError(() => new Error('Cliente no encontrado'));
+    }
+    const updated: AdminCustomer = {
+      ...customer,
+      name: 'Cliente eliminado',
+      email: `eliminado+${customerId}@anonimizado.local`,
+      phone: undefined,
+      doNotContact: true,
+      deletedAt: new Date().toISOString()
     };
     this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
     return of(updated).pipe(delay(120));

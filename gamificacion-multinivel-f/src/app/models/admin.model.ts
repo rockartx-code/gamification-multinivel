@@ -371,6 +371,20 @@ export interface AdminCustomer {
   clabeInterbancaria?: string;
   bankInstitution?: string;
   documents?: CustomerDocument[];
+  /** Seguimiento: el cliente pidió no ser contactado (o fue dado de baja). */
+  doNotContact?: boolean;
+  /** Bitácora de contactos; solo se añade. */
+  contactNotes?: CustomerContactNote[];
+  /** De dónde llegó: anuncio, red social, referido, orgánico… */
+  origin?: string;
+  /** Fecha de baja de datos (ARCO); la ficha queda anonimizada. */
+  deletedAt?: string;
+}
+
+export interface CustomerContactNote {
+  text: string;
+  by: string;
+  at: string;
 }
 
 export interface CustomerDocumentTypeConfig {
@@ -588,6 +602,10 @@ export interface UpdateCustomerPrivilegesPayload {
 export interface UpdateCustomerPayload {
   leaderId?: number | null;
   level?: string;
+  doNotContact?: boolean;
+  /** Nota nueva para la bitácora de contactos. */
+  note?: string;
+  origin?: string;
 }
 
 export interface SaveAdminCampaignPayload {

@@ -54,6 +54,14 @@ def _format_customer_output(item):
     # Institución bancaria
     out["bankInstitution"] = item.get("bankInstitution") or ""
 
+    # Seguimiento (docs/qa/18): la ejecutiva de recuperación y la gerente no
+    # tenían dónde anotar "no contactar", de dónde llegó el cliente ni qué se
+    # habló con él; la lista vivía fuera del sistema.
+    out["doNotContact"] = bool(item.get("doNotContact"))
+    out["contactNotes"] = item.get("contactNotes") or []
+    out["origin"] = item.get("origin") or ""
+    out["deletedAt"] = item.get("deletedAt")
+
     # Asegurar tipos decimales a float para JSON
     out["commissions"] = float(utils._to_decimal(item.get("commissions", 0)))
     out["discountRate"] = float(utils._to_decimal(item.get("discountRate", 0)))
@@ -498,7 +506,7 @@ def handle_update_customer(customer_id, body, headers):
 
     # 2. Campos básicos (name es reservada en DynamoDB → alias #name)
     _reserved = {"name"}
-    fields = ["name", "phone", "address", "city", "level", "isAssociate"]
+    fields = ["name", "phone", "address", "city", "level", "isAssociate", "origin"]
     for f in fields:
         if f in body:
             if f in _reserved:
@@ -507,6 +515,18 @@ def handle_update_customer(customer_id, body, headers):
             else:
                 updates.append(f"{f} = :{f}")
             eav[f":{f}"] = body[f]
+
+    # Seguimiento: "no contactar" y bitácora de contactos (solo se añade, nunca se borra).
+    if "doNotContact" in body:
+        updates.append("doNotContact = :dnc")
+        eav[":dnc"] = bool(body["doNotContact"])
+    nota = str(body.get("note") or "").strip()
+    if nota:
+        actor = utils._extract_actor_from_bearer(headers or {})
+        notas = list(existing.get("contactNotes") or [])
+        notas.append({"text": nota[:1000], "by": str(actor.get("user_id") or "admin"), "at": utils._now_iso()})
+        updates.append("contactNotes = :notes")
+        eav[":notes"] = notas[-200:]
 
     # 3. Direcciones (Upsert en lista)
     if "shippingAddress" in body:
@@ -535,6 +555,79 @@ def handle_update_customer(customer_id, body, headers):
             utils._log("customer_network_sync_error", "ERROR", customerId=cid, error=ex, detail='action=update_customer')
 
     return utils._json_response(200, {"customer": _format_customer_output(updated)})
+
+
+def handle_delete_customer_data(customer_id, body, headers):
+    """DELETE /customers/{id} — baja de datos (derechos ARCO).
+
+    En un mes simulado tres personas pidieron formalmente borrar sus datos y
+    la gerente no tenía ni botón ni permiso para hacerlo. Los pedidos y las
+    comisiones se conservan como registro contable (obligación fiscal), pero
+    el cliente deja de ser identificable: nombre, correo, teléfono,
+    direcciones, documentos, CLABE y acceso desaparecen, y queda marcado
+    "no contactar". Se le avisa por correo antes de perder la dirección.
+    """
+    err = utils._require_admin(headers, "user_manage_privileges")
+    if err: return err
+    cid = utils._customer_entity_id(customer_id)
+    existing = utils._get_by_id("CUSTOMER", cid)
+    if not existing:
+        return utils._json_response(404, {"message": "Cliente no encontrado"})
+    if existing.get("deletedAt"):
+        return utils._json_response(409, {"message": "Este cliente ya fue dado de baja."})
+
+    correo_anterior = str(existing.get("email") or "").strip().lower()
+    nombre_anterior = existing.get("name") or ""
+    now = utils._now_iso()
+    actor = utils._extract_actor_from_bearer(headers or {})
+    motivo = str((body or {}).get("reason") or "solicitud del titular (ARCO)")[:300]
+
+    if correo_anterior:
+        try:
+            from core.email import _email_shell
+            cuerpo = f"""
+    <div class="icon">🗂️</div>
+    <h1 class="title">Tus datos fueron eliminados</h1>
+    <p class="lead">Hola <strong>{nombre_anterior}</strong>. Atendimos tu solicitud: borramos tu nombre, correo, teléfono, direcciones y documentos de nuestra plataforma, y cerramos tu acceso. No volveremos a contactarte.</p>
+    <p class="lead">Conservamos únicamente el registro contable de tus compras, sin datos que te identifiquen, por obligación fiscal.</p>"""
+            utils._send_ses_email(correo_anterior, "Confirmación de baja de datos · Finding'U",
+                                  f"Hola {nombre_anterior}. Atendimos tu solicitud de baja: borramos tus datos personales y cerramos tu acceso. No volveremos a contactarte.",
+                                  _email_shell(cuerpo))
+        except Exception as ex:
+            utils._log("arco_email_error", "ERROR", customerId=cid, error=ex)
+
+    correo_nuevo = f"eliminado+{existing.get('customerId', cid)}@anonimizado.local"
+    updated = utils._update_by_id(
+        "CUSTOMER", cid,
+        "SET #name = :n, email = :e, phone = :ph, addresses = :vacio, shippingAddresses = :vacio, "
+        "documents = :vacio, ownDocuments = :vacio, clabeInterbancaria = :ph, bankInstitution = :ph, "
+        "doNotContact = :si, deletedAt = :now, deletedBy = :by, deletionReason = :r, updatedAt = :now",
+        {":n": "Cliente eliminado", ":e": correo_nuevo, ":ph": None, ":vacio": [], ":si": True,
+         ":now": now, ":by": str(actor.get("user_id") or "admin"), ":r": motivo},
+        {"#name": "name"},
+    )
+
+    # Índices y acceso: que no aparezca en búsquedas ni pueda entrar.
+    try:
+        utils._upsert_customer_email_index(existing.get("customerId", cid), correo_nuevo, previous_email=correo_anterior)
+    except Exception as ex:
+        utils._log("arco_email_index_error", "ERROR", customerId=cid, error=ex)
+    try:
+        utils._upsert_customer_name_index(existing.get("customerId", cid), "Cliente eliminado", correo_nuevo,
+                                          created_at_iso=existing.get("createdAt"), previous_name=nombre_anterior)
+    except Exception as ex:
+        utils._log("arco_name_index_error", "ERROR", customerId=cid, error=ex)
+    if correo_anterior:
+        auth = utils._get_by_id("AUTH", correo_anterior)
+        if auth and auth.get("PK") and auth.get("SK"):
+            try:
+                utils._table.delete_item(Key={"PK": auth["PK"], "SK": auth["SK"]})
+            except Exception as ex:
+                utils._log("arco_auth_delete_error", "ERROR", customerId=cid, error=ex)
+
+    utils._audit_event("customer.data_deleted", headers, {"reason": motivo},
+                       {"customerId": existing.get("customerId", cid), "previousEmailDomain": correo_anterior.split("@")[-1] if correo_anterior else ""})
+    return utils._json_response(200, {"ok": True, "customer": _format_customer_output(updated)})
 
 
 def handle_update_profile(body, headers):
@@ -961,6 +1054,8 @@ def lambda_handler(event, context):
             if len(segments) == 2:  # /customers/{id}
                 if method == "GET":   return handle_get_customer(target_id, headers)
                 if method == "PATCH": return handle_update_customer(target_id, body, headers)
+                if method == "DELETE" and str(target_id).isdigit():
+                    return handle_delete_customer_data(target_id, body, headers)
 
             if len(segments) == 3:
                 sub = segments[2]

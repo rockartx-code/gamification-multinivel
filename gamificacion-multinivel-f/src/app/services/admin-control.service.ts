@@ -547,6 +547,19 @@ export class AdminControlService {
       })
     );
   }
+  /** Baja de datos (ARCO): la ficha vuelve anonimizada y se refleja en la lista. */
+  deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
+    return this.api.deleteCustomerData(customerId, reason).pipe(
+      tap((customer) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...customer } : entry));
+        this.dataSubject.next({ ...current, customers });
+      })
+    );
+  }
 
   createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
     return this.api.createEmployee(payload).pipe(

@@ -282,7 +282,20 @@ export class RealApiService {
       clabeInterbancaria: raw['clabeInterbancaria'] != null ? String(raw['clabeInterbancaria']) : undefined,
       bankInstitution: raw['bankInstitution'] != null ? String(raw['bankInstitution']) : undefined,
       documents: raw['documents'] as AdminCustomer['documents'],
+      doNotContact: Boolean(raw['doNotContact'] ?? false),
+      contactNotes: Array.isArray(raw['contactNotes']) ? (raw['contactNotes'] as AdminCustomer['contactNotes']) : [],
+      origin: raw['origin'] != null ? String(raw['origin']) : undefined,
+      deletedAt: raw['deletedAt'] != null ? String(raw['deletedAt']) : undefined,
     };
+  }
+
+  deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
+    return this.http
+      .request<{ customer: Record<string, unknown> }>('DELETE', `${this.baseUrl}/customers/${encodeURIComponent(String(customerId))}`, {
+        body: { reason },
+        headers: this.actorHeaders()
+      })
+      .pipe(map((response) => this.normalizeAdminCustomer(response.customer)));
   }
 
   listCustomers(): Observable<AdminCustomer[]> {

@@ -39,7 +39,8 @@ import {
   ProductCategory,
   ProductVariant,
   RankThreshold,
-  VpConfig
+  VpConfig,
+  UpdateCustomerPayload
 } from '../../models/admin.model';
 import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
@@ -4210,6 +4211,76 @@ export class AdminComponent implements OnInit {
     this.selectedCustomerLeaderId = sponsorId;
     this.selectedCustomerSponsorSearch = `${sponsor.name} · ${sponsor.email}`;
     this.refreshSelectedCustomerSponsorState();
+  }
+
+  customerNoteDraft = '';
+  isSavingCustomerFollowUp = false;
+  readonly customerOriginOptions = [
+    { value: '', label: 'Sin registrar' },
+    { value: 'organico', label: 'Búsqueda orgánica' },
+    { value: 'referido', label: 'Referido por un socio' },
+    { value: 'red_social', label: 'Red social de un socio (TikTok, Instagram, YouTube)' },
+    { value: 'anuncio_google', label: 'Anuncio en Google' },
+    { value: 'anuncio_facebook', label: 'Anuncio en Facebook' },
+    { value: 'anuncio_instagram', label: 'Anuncio en Instagram' },
+    { value: 'anuncio_youtube', label: 'Anuncio en YouTube' },
+    { value: 'tienda_fisica', label: 'Tienda física' }
+  ];
+
+  private saveCustomerFollowUp(customer: AdminCustomer, payload: UpdateCustomerPayload, ok: string): void {
+    this.isSavingCustomerFollowUp = true;
+    this.adminControl
+      .updateCustomer(customer.id, payload)
+      .pipe(finalize(() => { this.isSavingCustomerFollowUp = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+          this.showSnackbar(ok);
+        },
+        error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar el seguimiento.'), 'error')
+      });
+  }
+
+  toggleDoNotContact(customer: AdminCustomer): void {
+    const next = !customer.doNotContact;
+    this.saveCustomerFollowUp(customer, { doNotContact: next }, next ? 'Marcado como "no contactar".' : 'Se puede volver a contactar.');
+  }
+
+  saveCustomerOrigin(customer: AdminCustomer, origin: string): void {
+    if ((customer.origin || '') === (origin || '')) {
+      return;
+    }
+    this.saveCustomerFollowUp(customer, { origin }, 'Origen guardado.');
+  }
+
+  addCustomerNote(customer: AdminCustomer): void {
+    const note = this.customerNoteDraft.trim();
+    if (!note) {
+      return;
+    }
+    this.customerNoteDraft = '';
+    this.saveCustomerFollowUp(customer, { note }, 'Nota agregada.');
+  }
+
+  deleteCustomerData(customer: AdminCustomer): void {
+    if (!this.hasPermission('user_manage_privileges') || this.isSavingCustomerFollowUp) {
+      return;
+    }
+    const reason = prompt(`Baja de datos de ${customer.name}. Esto borra nombre, correo, teléfono, direcciones, documentos y acceso, y no se puede deshacer. Escribe el motivo para confirmar:`);
+    if (!reason || !reason.trim()) {
+      return;
+    }
+    this.isSavingCustomerFollowUp = true;
+    this.adminControl
+      .deleteCustomerData(customer.id, reason.trim())
+      .pipe(finalize(() => { this.isSavingCustomerFollowUp = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+          this.showSnackbar('Datos eliminados. Se envió la confirmación al correo anterior.');
+        },
+        error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo dar de baja.'), 'error')
+      });
   }
 
   saveSelectedCustomerPosition(): void {

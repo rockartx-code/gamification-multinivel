@@ -25,7 +25,7 @@
   "DELETE /associates/warnings": "<sin handler> [404]",
   "DELETE /associates/withdrawal": "<sin handler> [404]",
   "DELETE /customers": "<sin handler> [404]",
-  "DELETE /customers/123": "<sin handler> [404]",
+  "DELETE /customers/123": "handle_delete_customer_data [200]",
   "DELETE /customers/cash-control": "<sin handler> [404]",
   "DELETE /customers/cash-cut": "<sin handler> [404]",
   "DELETE /customers/cash-cuts": "<sin handler> [404]",
