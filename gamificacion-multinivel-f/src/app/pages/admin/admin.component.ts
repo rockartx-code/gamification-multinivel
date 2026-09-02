@@ -1787,7 +1787,12 @@ export class AdminComponent implements OnInit {
   get commissionsTotal(): number {
     // `commissions` es un campo histórico de la ficha que nadie actualiza; el
     // tablero decía "$0" con $126 confirmados por pagar este mes.
-    return this.customers.reduce((acc, customer) => acc + (customer.commissionsCurrentConfirmed ?? customer.commissions ?? 0), 0);
+    // "Por depositar" = lo del mes anterior que sigue pendiente de pago (el día
+    // 10 se paga el mes anterior), más lo ya confirmado del mes en curso.
+    return this.customers.reduce((acc, customer) => {
+      const prev = customer.commissionsPrevStatus === 'pending' ? (customer.commissionsPrevMonth ?? 0) : 0;
+      return acc + prev + (customer.commissionsCurrentConfirmed ?? 0);
+    }, 0);
   }
 
   get customersCount(): number {
