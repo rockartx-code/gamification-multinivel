@@ -535,7 +535,7 @@
                         (change)="toggleDoNotContact(customer!)" aria-label="No contactar a este cliente">
                       <span>
                         <span class="block font-semibold" [class.text-red-700]="customer?.doNotContact">No contactar</span>
-                        <span class="text-gray-600">Pidió que no se le escriba. Todo el equipo lo ve aquí.</span>
+                        <span class="text-gray-600">{{ customer?.doNotContact ? 'Pidió que no se le escriba. Todo el equipo lo ve aquí.' : 'Marca la casilla si el cliente pide que no lo contacten.' }}</span>
                       </span>
                     </label>
                     <ui-form-field
