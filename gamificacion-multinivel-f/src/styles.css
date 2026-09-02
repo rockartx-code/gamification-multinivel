@@ -624,6 +624,12 @@ select:focus {
 .bg-olive { background-color: var(--color-primary); }
 .bg-olive-10 { background-color: rgba(var(--rgb-primary), 0.1); }
 .bg-gold-12 { background-color: rgba(var(--rgb-primary), 0.12); }
+
+/* Marca de "esta es la fila abierta en el panel de detalle": una barra dorada
+   en el borde izquierdo. Va como sombra interior para no descuadrar la rejilla. */
+@utility shadow-inset-accent {
+  box-shadow: inset 3px 0 0 0 var(--color-primary);
+}
 .bg-gold-20 { background-color: rgba(var(--rgb-primary), 0.2); }
 .bg-sand-100 { background-color: #f6f1e8; }
 .bg-sand-200 { background-color: var(--color-surface-2); }

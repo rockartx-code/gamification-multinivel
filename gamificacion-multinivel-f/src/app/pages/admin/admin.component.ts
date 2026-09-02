@@ -198,6 +198,12 @@ type InventoryMovement = {
 type CustomerPrivilegeOption = {
   key: AppPrivilege;
   label: string;
+  /** Qué concede en la práctica. Sin esto hay que adivinar por el nombre. */
+  description: string;
+  /** Agrupa la lista por área para no leer 27 casillas seguidas. */
+  group: 'Acceso a pantallas' | 'Pedidos' | 'Catálogo' | 'Inventario' | 'Personas y dinero' | 'Sistema';
+  /** Permiso de pantalla sin el cual este no sirve de nada. */
+  requires?: AppPrivilege;
 };
 
 type SelectOption<T extends string | number> = {
@@ -382,6 +388,8 @@ export class AdminComponent implements OnInit {
   expandedOrderDetailId: string | null = null;
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
+  /** Aviso dentro del modal de nuevo pedido (p. ej. fallo al cargar listas). */
+  newOrderMessage = '';
   isAddStructureModalOpen = false;
   isShippingModalOpen = false;
   isReceiptModalOpen = false;
@@ -445,33 +453,120 @@ export class AdminComponent implements OnInit {
   isSavingCustomerPrivileges = false;
   isSavingCustomerPosition = false;
   readonly customerPrivilegeOptions: CustomerPrivilegeOption[] = [
-    { key: 'access_screen_orders', label: 'Acceso pantalla: Pedidos' },
-    { key: 'access_screen_customers', label: 'Acceso pantalla: Clientes' },
-    { key: 'access_screen_products', label: 'Acceso pantalla: Productos' },
-    { key: 'access_screen_stocks', label: 'Acceso pantalla: Stocks' },
-    { key: 'access_screen_pos', label: 'Acceso pantalla: Punto de Venta' },
-    { key: 'access_screen_stats', label: 'Acceso pantalla: Estadisticas' },
-    { key: 'access_screen_settings', label: 'Acceso pantalla: Configuracion' },
-    { key: 'order_mark_paid', label: 'Cambiar orden a Pagado' },
-    { key: 'order_mark_shipped', label: 'Cambiar orden a Enviado' },
-    { key: 'order_mark_delivered', label: 'Cambiar orden a Entregado' },
-    { key: 'order_create', label: 'Registrar nueva orden' },
-    { key: 'customer_add', label: 'Agregar cliente' },
-    { key: 'commissions_register_payment', label: 'Registrar pago de comisiones' },
-    { key: 'product_add', label: 'Agregar nuevo producto' },
-    { key: 'product_update', label: 'Actualizar producto' },
-    { key: 'product_delete', label: 'Eliminar producto' },
-    { key: 'product_set_month', label: 'Establecer producto del mes' },
-    { key: 'stock_create', label: 'Crear stock' },
-    { key: 'stock_create_transfer', label: 'Crear transferencia' },
-    { key: 'stock_add_inventory', label: 'Agregar inventario a stock' },
-    { key: 'stock_mark_damaged', label: 'Marcar stock como danado' },
-    { key: 'stock_receive_transfer', label: 'Registrar transferencia como entregada' },
-    { key: 'pos_register_sale', label: 'Registrar venta' },
-    { key: 'user_mark_admin', label: 'Marcar usuario como administrador' },
-    { key: 'user_manage_privileges', label: 'Registrar privilegios' },
-    { key: 'config_manage', label: 'Gestionar configuracion de negocio' }
+    // Pantallas: sin estos, los permisos de acción de abajo no se pueden ejercer.
+    { key: 'access_screen_orders', label: 'Ver Pedidos', group: 'Acceso a pantallas',
+      description: 'Entra a la sección Pedidos. Verá el nombre del cliente y el importe.' },
+    { key: 'access_screen_customers', label: 'Ver Clientes', group: 'Acceso a pantallas',
+      description: 'Entra a la sección Clientes: datos de contacto, red y comisiones.' },
+    { key: 'access_screen_products', label: 'Ver Productos', group: 'Acceso a pantallas',
+      description: 'Entra al catálogo. Verá precios y márgenes.' },
+    { key: 'access_screen_stocks', label: 'Ver Stocks', group: 'Acceso a pantallas',
+      description: 'Entra a inventario, transferencias y daños.' },
+    { key: 'access_screen_pos', label: 'Ver Punto de Venta', group: 'Acceso a pantallas',
+      description: 'Entra al mostrador para cobrar en tienda.' },
+    { key: 'access_screen_stats', label: 'Ver Estadísticas', group: 'Acceso a pantallas',
+      description: 'Entra a los informes de ventas de todo el negocio.' },
+    { key: 'access_screen_settings', label: 'Ver Configuración', group: 'Acceso a pantallas',
+      description: 'Entra a las reglas del negocio: comisiones, rangos y bonos.' },
+    { key: 'access_screen_employees', label: 'Ver Empleados', group: 'Acceso a pantallas',
+      description: 'Entra a la sección Empleados y ve quién tiene qué acceso.' },
+    { key: 'access_screen_honor_board', label: 'Ver Cuadro de Honor', group: 'Acceso a pantallas',
+      description: 'Entra al ranking mensual de distribuidores.' },
+
+    { key: 'order_mark_paid', label: 'Marcar pedido como Pagado', group: 'Pedidos',
+      description: 'Confirma que el dinero entró. Es el paso que libera la preparación.',
+      requires: 'access_screen_orders' },
+    { key: 'order_mark_shipped', label: 'Marcar pedido como Enviado', group: 'Pedidos',
+      description: 'Registra la salida del paquete y su número de guía.',
+      requires: 'access_screen_orders' },
+    { key: 'order_mark_delivered', label: 'Marcar pedido como Entregado', group: 'Pedidos',
+      description: 'Cierra el pedido. A partir de aquí cuenta para comisiones.',
+      requires: 'access_screen_orders' },
+    { key: 'order_create', label: 'Crear pedidos a mano', group: 'Pedidos',
+      description: 'Levanta un pedido por teléfono o mostrador a nombre de un cliente.',
+      requires: 'access_screen_orders' },
+
+    { key: 'product_add', label: 'Crear productos', group: 'Catálogo',
+      description: 'Da de alta un producto nuevo, con su precio y sus puntos.',
+      requires: 'access_screen_products' },
+    { key: 'product_update', label: 'Editar productos', group: 'Catálogo',
+      description: 'Cambia precio, descripción e imágenes. El precio afecta a los puntos VP.',
+      requires: 'access_screen_products' },
+    { key: 'product_delete', label: 'Eliminar productos', group: 'Catálogo',
+      description: 'Borra un producto del catálogo. Acción destructiva.',
+      requires: 'access_screen_products' },
+    { key: 'product_set_month', label: 'Elegir el producto del mes', group: 'Catálogo',
+      description: 'Decide qué producto se destaca en la tienda del cliente.',
+      requires: 'access_screen_products' },
+
+    { key: 'stock_create', label: 'Crear almacenes', group: 'Inventario',
+      description: 'Da de alta una bodega o sucursal donde guardar mercancía.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_add_inventory', label: 'Registrar entradas de mercancía', group: 'Inventario',
+      description: 'Suma unidades cuando llega el proveedor.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_create_transfer', label: 'Crear transferencias', group: 'Inventario',
+      description: 'Mueve mercancía de un almacén a otro.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_receive_transfer', label: 'Recibir transferencias', group: 'Inventario',
+      description: 'Confirma que la mercancía llegó al almacén de destino.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_mark_damaged', label: 'Registrar mercancía dañada', group: 'Inventario',
+      description: 'Da de baja unidades rotas o caducadas. Resta del inventario.',
+      requires: 'access_screen_stocks' },
+
+    { key: 'pos_register_sale', label: 'Cobrar en el mostrador', group: 'Personas y dinero',
+      description: 'Registra una venta presencial y descuenta del inventario.',
+      requires: 'access_screen_pos' },
+    { key: 'customer_add', label: 'Dar de alta clientes', group: 'Personas y dinero',
+      description: 'Registra un cliente nuevo y lo cuelga de un patrocinador.',
+      requires: 'access_screen_customers' },
+    { key: 'commissions_register_payment', label: 'Registrar pagos de comisiones', group: 'Personas y dinero',
+      description: 'Marca como pagado el dinero que el negocio debe a un distribuidor.',
+      requires: 'access_screen_customers' },
+    { key: 'employee_add', label: 'Dar de alta empleados', group: 'Personas y dinero',
+      description: 'Crea cuentas de operador y genera su contraseña temporal.',
+      requires: 'access_screen_employees' },
+
+    { key: 'user_mark_admin', label: 'Conceder acceso al panel', group: 'Sistema',
+      description: 'Permite que un cliente entre al back office. Concédelo con cuidado.' },
+    { key: 'user_manage_privileges', label: 'Cambiar permisos de otros', group: 'Sistema',
+      description: 'Quien tenga esto puede darse a sí mismo cualquier otro permiso.' },
+    { key: 'employee_manage_privileges', label: 'Cambiar permisos de empleados', group: 'Sistema',
+      description: 'Edita el acceso de los operadores desde la sección Empleados.',
+      requires: 'access_screen_employees' },
+    { key: 'config_manage', label: 'Cambiar reglas del negocio', group: 'Sistema',
+      description: 'Toca comisiones, rangos, bonos y avisos. Afecta a lo que cobra la red.',
+      requires: 'access_screen_settings' }
   ];
+
+  /** Permisos agrupados por área: 27 casillas seguidas no se pueden revisar. */
+  get privilegeGroups(): Array<{ group: string; options: CustomerPrivilegeOption[] }> {
+    const orden = ['Acceso a pantallas', 'Pedidos', 'Catálogo', 'Inventario', 'Personas y dinero', 'Sistema'];
+    return orden
+      .map((group) => ({ group, options: this.customerPrivilegeOptions.filter((o) => o.group === group) }))
+      .filter((g) => g.options.length > 0);
+  }
+
+  /** Cuántos permisos tiene concedidos el empleado seleccionado. */
+  get selectedEmployeeGrantedCount(): number {
+    return this.customerPrivilegeOptions.filter((o) => this.employeeHasPrivilege(o.key)).length;
+  }
+
+  /**
+   * Un permiso de acción sin su permiso de pantalla no sirve de nada: el
+   * empleado no puede llegar al botón. Antes esto se concedía en silencio.
+   */
+  employeePrivilegeIsInert(option: CustomerPrivilegeOption): boolean {
+    if (!option.requires) return false;
+    return this.employeeHasPrivilege(option.key) && !this.employeeHasPrivilege(option.requires);
+  }
+
+  employeePrivilegeInertHint(option: CustomerPrivilegeOption): string {
+    const pantalla = this.customerPrivilegeOptions.find((o) => o.key === option.requires);
+    return `No tendrá efecto: falta «${pantalla?.label ?? option.requires}».`;
+  }
+
   businessConfigDraft: AppBusinessConfig = this.getDefaultBusinessConfig();
   isSavingBusinessConfig = false;
   businessConfigMessage = '';
@@ -1620,6 +1715,20 @@ export class AdminComponent implements OnInit {
 
   get ordersTotal(): number {
     return this.orders.reduce((acc, order) => acc + (order.total || 0), 0);
+  }
+
+  /** Dinero ya cobrado: excluye los pedidos que siguen pendientes de pago. */
+  get ordersCollectedTotal(): number {
+    return this.orders
+      .filter((order) => order.status !== 'pending' && order.status !== 'cancelled')
+      .reduce((acc, order) => acc + (order.total || 0), 0);
+  }
+
+  /** Dinero comprometido pero aún no cobrado. */
+  get ordersPendingTotal(): number {
+    return this.orders
+      .filter((order) => order.status === 'pending')
+      .reduce((acc, order) => acc + (order.total || 0), 0);
   }
 
   get pendingShippingCount(): number {
@@ -3034,7 +3143,26 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.resetNewOrderForm();
+    this.newOrderMessage = '';
     this.isNewOrderModalOpen = true;
+    // El modal necesita clientes y productos, pero esas listas solo se cargaban
+    // al ENTRAR en sus respectivas secciones. Abriéndolo desde Pedidos —que es
+    // la pantalla de inicio— salía con el desplegable de clientes vacío y la
+    // caja de productos en blanco, sin explicar por qué. Ambos cargadores
+    // devuelven la caché si ya se pidieron, así que esto no repite trabajo.
+    forkJoin({
+      customers: this.adminControl.loadCustomers(),
+      products: this.adminControl.loadProducts()
+    }).subscribe({
+      next: () => {
+        this.newOrderCustomerId ??= this.customers[0]?.id ?? null;
+        this.requestViewUpdate();
+      },
+      error: () => {
+        this.newOrderMessage = 'No se pudieron cargar clientes y productos. Reintenta en unos segundos.';
+        this.requestViewUpdate();
+      }
+    });
   }
 
   openAddStructureModal(): void {
@@ -3187,7 +3315,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Orden actualizada.'),
+        next: () =>
+          this.showSnackbar(
+            `Pedido ${order.id} de ${order.customer}: ahora está ${this.orderStatusLabel(nextStatus)}.`
+          ),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
         }
@@ -3338,6 +3469,21 @@ export class AdminComponent implements OnInit {
 
   isUpdatingOrder(orderId: string): boolean {
     return this.updatingOrderIds.has(orderId);
+  }
+
+  /** Etiqueta legible de un estado de pedido, para avisos y botones. */
+  orderStatusLabel(status: AdminOrder['status']): string {
+    return this.orderStatusOptionsValue.find((o) => o.value === status)?.label ?? String(status);
+  }
+
+  /** Nombra el paso concreto que dará el botón, en vez de "Cambiar estado". */
+  advanceOrderLabel(order: AdminOrder): string {
+    switch (order.status) {
+      case 'pending': return 'Marcar como pagado';
+      case 'paid': return 'Registrar envío';
+      case 'shipped': return 'Marcar como entregado';
+      default: return 'Cambiar estado';
+    }
   }
 
   canAdvanceOrder(order: AdminOrder): boolean {
@@ -6116,6 +6262,29 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  /** Encender un cupón apagado no tenía botón propio: había que editarlo. */
+  activateCoupon(c: Coupon): void {
+    const restantes = c.maxRedemptions != null ? c.maxRedemptions - (c.redemptions ?? 0) : null;
+    const aviso = restantes != null && restantes <= 0
+      ? `\n\nAtención: ya se agotaron sus ${c.maxRedemptions} usos, así que no lo podrá canjear nadie.`
+      : restantes != null
+        ? `\n\nQuedan ${restantes} de ${c.maxRedemptions} usos.`
+        : '';
+    if (!confirm(`¿Activar el cupón ${c.code}?${aviso}`)) {
+      return;
+    }
+    this.api.saveCoupon({ ...c, active: true } as SaveCouponPayload).subscribe({
+      next: () => {
+        this.couponFeedback = `Cupón ${c.code} activado.`;
+        this.loadCoupons();
+      },
+      error: () => {
+        this.couponFeedback = `No se pudo activar el cupón ${c.code}.`;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   deleteCoupon(c: Coupon): void {
     if (!confirm(`¿Desactivar el cupón ${c.code}?`)) {
       return;
@@ -6247,8 +6416,22 @@ export class AdminComponent implements OnInit {
       : [...(this.honorBoardData?.byVg ?? [])];
     if (this.honorBoardSort === 'alpha') {
       list.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      return list;
     }
+    // Ordenar aquí y no confiar en el orden de llegada: la tabla afirma estar
+    // ordenada por una columna concreta y tiene que cumplirlo pase lo que pase.
+    const campo = this.honorBoardSort === 'vp' ? 'vp' : 'vg';
+    list.sort((a, b) => (b[campo] ?? 0) - (a[campo] ?? 0));
     return list;
+  }
+
+  /** Cuánto le falta a esta persona para alcanzar a la de arriba. */
+  honorGapToPrevious(entry: HonorEntry): number | null {
+    const list = this.sortedHonorEntries;
+    const i = list.indexOf(entry);
+    if (i <= 0) return null;
+    const campo = this.honorBoardSort === 'vp' ? 'vp' : 'vg';
+    return (list[i - 1][campo] ?? 0) - (entry[campo] ?? 0);
   }
 
   honorPositionDeltaLabel(entry: HonorEntry): string {

@@ -61,12 +61,17 @@
             class="pointer-events-none absolute inset-0 bg-olive-10">
           </div>
           <div class="relative">
-            <div class="text-xs text-muted">Estado del mes</div>
-            <div class="mt-2 text-lg font-extrabold">{{ formatMoney(ordersTotal) }}</div>
-            <div class="mt-1 text-xs text-gray-600">Pedidos: {{ ordersCount }}</div>
-            <div class="mt-1 text-xs text-gray-600">Pendientes: {{ pendingCount }}</div>
+            <!-- Decía "Estado del mes" y sumaba todos los pedidos cargados, de
+                 cualquier fecha, incluidos los que aún no se han cobrado. -->
+            <div class="text-xs text-muted">Pedidos cargados</div>
+            <div class="mt-2 text-lg font-extrabold">{{ formatMoney(ordersCollectedTotal) }}</div>
+            <div class="text-micro text-gray-500">cobrado · {{ ordersCount }} pedidos</div>
+            <div *ngIf="ordersPendingTotal > 0" class="mt-1 text-xs text-gray-600">
+              + {{ formatMoney(ordersPendingTotal) }} por cobrar
+            </div>
+            <div class="mt-2 border-t border-olive-20 pt-2 text-xs text-gray-600">Pendientes: {{ pendingCount }}</div>
             <div class="mt-1 text-xs text-gray-600">Pagados: {{ paidCount }}</div>
-            <div class="mt-1 text-xs text-gray-600">Pendientes enví­o: {{ pendingShippingCount }}</div>
+            <div class="mt-1 text-xs text-gray-600">Pendientes envío: {{ pendingShippingCount }}</div>
           </div>
         </div>
       </aside>
@@ -203,7 +208,7 @@
                             {{ expandedOrderDetailId === order.id ? 'Ocultar detalle' : 'Ver detalle' }}
                           </ui-button>
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (click)="advanceOrder(order)">
-                            {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
+                            {{ isUpdatingOrder(order.id) ? 'Guardando...' : advanceOrderLabel(order) }}
                           </ui-button>
                           <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar en sucursal' }}
@@ -277,7 +282,7 @@
                             </span>
                           </div>
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
-                            {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Cambiar estado' }}
+                            {{ isUpdatingOrder(order.id) ? 'Guardando...' : advanceOrderLabel(order) }}
                           </ui-button>
                           <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar' }}
@@ -453,12 +458,21 @@
                       <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
                     </div>
                     <div *ngIf="!filteredCustomers.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
-                    <div *ngFor="let customer of pagedCustomers" class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
-                      <div>{{ customer.name }}</div>
+                    <div *ngFor="let customer of pagedCustomers"
+                      class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0 transition"
+                      [class.bg-gold-12]="selectedCustomer?.id === customer.id"
+                      [class.shadow-inset-accent]="selectedCustomer?.id === customer.id">
+                      <div class="flex items-center gap-2">
+                        <i *ngIf="selectedCustomer?.id === customer.id" class="fa-solid fa-caret-right text-accent"
+                          aria-hidden="true"></i>
+                        {{ customer.name }}
+                      </div>
                       <div><span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span></div>
                       <div><span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
                       <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
-                      <div><ui-button size="sm" variant="ghost" (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>Ver</ui-button></div>
+                      <div><ui-button size="sm" [variant]="selectedCustomer?.id === customer.id ? 'primary' : 'ghost'"
+                        [ariaLabel]="'Ver ficha de ' + customer.name"
+                        (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{ selectedCustomer?.id === customer.id ? 'Viendo' : 'Ver' }}</ui-button></div>
                     </div>
                   </div>
                 </div>
@@ -470,7 +484,7 @@
                 <div class="flex items-start justify-between gap-3">
                   <div>
                     <div class="text-sm font-semibold text-main">Detalle del cliente</div>
-                    <div class="mt-1 text-xs text-gray-600">Estructura simulada.</div>
+                    <div class="mt-1 text-xs text-gray-600">Niveles de la red por debajo de este cliente.</div>
                   </div>
                   <ui-button size="sm" variant="ghost">
                     <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
@@ -747,7 +761,7 @@
                     </ui-button>
                   </div>
 
-                  <div class="mt-1 text-xs text-gray-600">Mock. En producción: pintar con datos reales.</div>
+                  <div class="mt-1 text-xs text-gray-600">Consumo de la red del cliente en el periodo.</div>
                   <ui-networkgraph class="block w-full mt-3 h-[220px]" [nodes]="structureGraphStable.nodes"
                     [links]="structureGraphStable.links" [viewBoxWidth]="700" [viewBoxHeight]="220" linkStyle="straight"
                     labelMode="short">
@@ -821,9 +835,11 @@
                           </span>
                         </div>
                       </div>
-                      <ui-button size="sm" variant="ghost" (pressed)="selectEmployee(emp.id)">
+                      <ui-button size="sm" [variant]="selectedEmployee?.id === emp.id ? 'primary' : 'ghost'"
+                        [ariaLabel]="'Ver permisos de ' + emp.name"
+                        (pressed)="selectEmployee(emp.id)">
                         <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                        Ver
+                        {{ selectedEmployee?.id === emp.id ? 'Viendo' : 'Ver' }}
                       </ui-button>
                     </div>
                   </div>
@@ -850,8 +866,15 @@
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('employee_manage_privileges')">
-                  <div class="text-sm font-semibold text-main">Acceso y privilegios</div>
-                  <div class="mt-1 text-xs text-gray-600">Controla acceso admin y permisos por accion.</div>
+                  <!-- El panel decía solo "Acceso y privilegios": no había forma de
+                       saber a quién se le estaban cambiando los permisos. -->
+                  <div class="text-sm font-semibold text-main">
+                    Permisos de <span class="text-accent">{{ emp.name }}</span>
+                  </div>
+                  <div class="mt-1 text-xs text-gray-600">
+                    {{ selectedEmployeeGrantedCount }} de {{ customerPrivilegeOptions.length }} permisos concedidos.
+                    Los cambios se aplican al pulsar «Guardar permisos».
+                  </div>
 
                   <div class="mt-3 flex items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">
                     <div class="text-sm text-main">Acceso a panel admin</div>
@@ -863,18 +886,33 @@
                       (checkedChange)="updateSelectedEmployeeAdminAccess($event)"></ui-checkbox>
                   </div>
 
-                  <div class="mt-3 max-h-64 overflow-auto rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div *ngFor="let option of customerPrivilegeOptions" class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
-                      <ui-checkbox layout="row" compact [label]="option.label"
-                        [checked]="employeeHasPrivilege(option.key)"
-                        (checkedChange)="updateSelectedEmployeePrivilege(option.key, $event)"></ui-checkbox>
+                  <!-- Antes: 27 casillas sin explicación dentro de una caja de 256px
+                       que mostraba 7, con el botón de guardar pegado al borde
+                       inferior comiéndose los clics de la última fila. -->
+                  <div class="mt-3 space-y-3">
+                    <div *ngFor="let grupo of privilegeGroups"
+                      class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="text-micro font-bold uppercase tracking-[0.14em] text-gray-500">{{ grupo.group }}</div>
+                      <div *ngFor="let option of grupo.options"
+                        class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
+                        <ui-checkbox layout="row" compact
+                          [label]="option.label"
+                          [description]="option.description"
+                          [checked]="employeeHasPrivilege(option.key)"
+                          (checkedChange)="updateSelectedEmployeePrivilege(option.key, $event)"></ui-checkbox>
+                        <div *ngIf="employeePrivilegeIsInert(option)"
+                          class="mt-1 flex items-center gap-1.5 pl-7 text-micro font-semibold text-danger">
+                          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                          {{ employeePrivilegeInertHint(option) }}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div class="mt-3 flex justify-end">
                     <ui-button size="sm" variant="primary" [disabled]="isSavingEmployeePrivileges" (pressed)="saveSelectedEmployeePrivileges()">
                       <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                      {{ isSavingEmployeePrivileges ? 'Guardando...' : 'Guardar privilegios' }}
+                      {{ isSavingEmployeePrivileges ? 'Guardando...' : 'Guardar permisos' }}
                     </ui-button>
                   </div>
                 </div>
@@ -1117,7 +1155,7 @@
 
                   <ui-form-field
                     label="Descripción corta (hook)"
-                    placeholder="Beneficio principal en 1 lí­nea..."
+                    placeholder="Beneficio principal en 1 línea..."
                     [ngModel]="productForm.hook"
                     (ngModelChange)="updateProductField('hook', $event)"
                     wrapperClass="block md:col-span-2"
@@ -2593,23 +2631,26 @@
                       <th class="px-4 py-3 text-left w-10">#</th>
                       <th class="px-4 py-3 text-left">Nombre</th>
                       <th class="px-4 py-3 text-center hidden sm:table-cell">Rango</th>
-                      <th class="px-4 py-3 text-right">VG</th>
-                      <th class="px-4 py-3 text-right">VP</th>
-                      <th class="px-4 py-3 text-center w-14">Δ</th>
+                      <th class="px-4 py-3 text-right" title="Volumen de grupo: lo que factura toda su red">VG</th>
+                      <th class="px-4 py-3 text-right" title="Volumen personal: lo que factura él mismo">VP</th>
+                      <!-- Antes: "Falta" no existía y había que restar a mano el
+                           dato que un cuadro de honor existe para responder. -->
+                      <th class="px-4 py-3 text-right hidden sm:table-cell" title="Cuánto le falta para alcanzar al de arriba">Falta</th>
+                      <th class="px-4 py-3 text-center w-14" title="Puestos ganados o perdidos respecto al mes anterior">Δ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let entry of sortedHonorEntries"
+                    <tr *ngFor="let entry of sortedHonorEntries; let i = index"
                       class="border-b border-olive-10 transition hover:bg-ivory-70/60"
-                      [class.bg-gold-12]="entry.position <= 3">
+                      [class.bg-gold-12]="honorBoardSort !== 'alpha' && i < 3">
                       <td class="px-4 py-3 font-extrabold"
-                        [class.text-gold-vivo]="entry.position === 1"
-                        [class.text-gray-400]="entry.position === 2"
-                        [class.text-amber-700]="entry.position === 3"
-                        [class.text-gray-500]="entry.position > 3">
+                        [class.text-gold-vivo]="honorBoardSort !== 'alpha' && i === 0"
+                        [class.text-gray-400]="honorBoardSort !== 'alpha' && i === 1"
+                        [class.text-amber-700]="honorBoardSort !== 'alpha' && i === 2"
+                        [class.text-gray-500]="honorBoardSort === 'alpha' || i > 2">
                         <div class="flex items-center gap-1.5">
-                          <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs" aria-hidden="true"></i>
-                          {{ entry.position }}
+                          <i *ngIf="honorBoardSort !== 'alpha' && i < 3" class="fa-solid fa-medal text-xs" aria-hidden="true"></i>
+                          {{ honorBoardSort === 'alpha' ? entry.position : i + 1 }}
                         </div>
                       </td>
                       <td class="px-4 py-3 font-semibold text-main">{{ entry.name }}</td>
@@ -2621,15 +2662,27 @@
                       </td>
                       <td class="px-4 py-3 text-right text-gray-700">{{ entry.vg | number:'1.0-0' }}</td>
                       <td class="px-4 py-3 text-right text-gray-700">{{ entry.vp | number:'1.0-0' }}</td>
+                      <td class="px-4 py-3 text-right text-xs hidden sm:table-cell"
+                        [class.text-sage]="honorGapToPrevious(entry) !== null"
+                        [class.text-gray-400]="honorGapToPrevious(entry) === null">
+                        {{ honorGapToPrevious(entry) === null ? '—' : '−' + (honorGapToPrevious(entry) | number:'1.0-0') }}
+                      </td>
                       <td class="px-4 py-3 text-center text-xs font-bold" [class]="honorPositionDeltaClass(entry)">
                         {{ honorPositionDeltaLabel(entry) || '—' }}
                       </td>
                     </tr>
                     <tr *ngIf="sortedHonorEntries.length === 0">
-                      <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-400">Sin datos disponibles.</td>
+                      <td colspan="7" class="px-4 py-6 text-center text-sm text-gray-400">Sin datos disponibles.</td>
                     </tr>
                   </tbody>
                 </table>
+                <!-- Ninguna de estas cuatro columnas tenía leyenda en ninguna parte. -->
+                <div class="border-t border-olive-20 bg-ivory-70 px-4 py-2.5 text-micro text-gray-600">
+                  <span class="font-semibold">VG</span> volumen de toda su red ·
+                  <span class="font-semibold">VP</span> volumen que vende él mismo ·
+                  <span class="font-semibold">Falta</span> cuánto necesita para alcanzar al de arriba ·
+                  <span class="font-semibold">Δ</span> puestos ganados o perdidos frente al mes anterior
+                </div>
               </div>
             </ng-container>
 
@@ -2921,13 +2974,23 @@
                             {{ c.active ? 'Activo' : 'Inactivo' }}
                           </span>
                         </td>
+                        <!-- Antes: dos iconos sin texto, y el de "desactivar" era una
+                             papelera roja que decía "Desactivar" también en los cupones
+                             ya inactivos, donde además no hacía nada. Encender un cupón
+                             apagado no tenía botón: había que entrar a editarlo. -->
                         <td class="py-2 text-right whitespace-nowrap">
-                          <button type="button" class="mr-2 text-gray-600 hover:text-main" (click)="editCoupon(c)" title="Editar">
+                          <ui-button size="sm" variant="ghost" class="mr-1" (pressed)="editCoupon(c)">
                             <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
-                          </button>
-                          <button type="button" class="text-danger hover:text-red-600" (click)="deleteCoupon(c)" title="Desactivar">
-                            <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
-                          </button>
+                            Editar
+                          </ui-button>
+                          <ui-button *ngIf="c.active" size="sm" variant="ghost" (pressed)="deleteCoupon(c)">
+                            <i class="fa-solid fa-circle-pause text-xs" aria-hidden="true"></i>
+                            Desactivar
+                          </ui-button>
+                          <ui-button *ngIf="!c.active" size="sm" variant="ghost" (pressed)="activateCoupon(c)">
+                            <i class="fa-solid fa-circle-play text-xs text-success" aria-hidden="true"></i>
+                            Activar
+                          </ui-button>
                         </td>
                       </tr>
                     </tbody>
@@ -3513,7 +3576,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Acciones urgentes</div>
-          <div class="mt-1 text-sm text-gray-600">Resolvé pendientes crí­ticos desde aquí­.</div>
+          <div class="mt-1 text-sm text-gray-600">Resolvé pendientes críticos desde aquí.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeModals()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -3559,6 +3622,12 @@
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           Cerrar
         </ui-button>
+      </div>
+
+      <div *ngIf="newOrderMessage"
+        class="mt-3 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ newOrderMessage }}
       </div>
 
       <div class="mt-4 grid gap-3">
@@ -3654,7 +3723,7 @@
           <div class="mt-3 flex flex-wrap gap-2 text-sm text-main">
             <ui-button size="sm" [variant]="shippingType === 'carrier' ? 'primary' : 'ghost'" (pressed)="shippingType = 'carrier'">
               <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
-              Paqueterí­a (Guí­a)
+              Paquetería (Guía)
             </ui-button>
             <ui-button size="sm" [variant]="shippingType === 'personal' ? 'primary' : 'ghost'" (pressed)="shippingType = 'personal'">
               <i class="fa-solid fa-handshake" aria-hidden="true"></i>
@@ -4149,7 +4218,7 @@
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <ui-form-field
           wrapperClass="block"
-          label="Lí­der asignado"
+          label="Líder asignado"
           [readonly]="true"
           [disabled]="true"
           [ngModel]="structureLeaderLabel"
@@ -4163,7 +4232,7 @@
           inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-sand-200 px-3 py-2 text-sm text-muted"></ui-form-field>
       </div>
       <div *ngIf="!structureLeader" class="mt-2 text-xs text-gray-500">
-        Sin cliente seleccionado: se crea sin lí­der.
+        Sin cliente seleccionado: se crea sin líder.
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">

@@ -406,7 +406,7 @@ export class MockApiService {
   private products: AdminProduct[] = [
     {
       id: 1,
-      name: 'COL?GENO',
+      name: 'COLÁGENO',
       price: 35,
       active: true,
       sku: 'COL-001',
@@ -524,69 +524,74 @@ export class MockApiService {
     }).pipe(delay(160));
   }
 
+  /** Pedidos del back office. Mutable a propósito: getAdminOrders y
+   *  updateOrderStatus operan sobre este mismo estado, así que un cambio
+   *  de estatus hecho desde la UI se refleja al recargar la vista. */
+  private adminOrders: AdminOrder[] = [
+      {
+        id: '#1001',
+        createdAt: '2026-01-16T09:35:00.000Z',
+        customer: 'Ana Lopez',
+        total: 120,
+        status: 'pending',
+        recipientName: 'Ana Lopez',
+        phone: '5512345678',
+        address: 'Av. Insurgentes Sur 1234, Col. Del Valle',
+        postalCode: '03100',
+        state: 'CDMX',
+        betweenStreets: 'Entre Mier y Pesado y Gabriel Mancera',
+        references: 'Edificio azul, departamento 302',
+        items: [
+          { productId: 1, name: 'Producto Alpha', price: 80, quantity: 1 },
+          { productId: 2, name: 'Producto Beta', price: 40, quantity: 1 }
+        ]
+      },
+      {
+        id: '#1002',
+        createdAt: '2026-01-16T11:20:00.000Z',
+        customer: 'Carlos Ruiz',
+        total: 89,
+        status: 'paid',
+        recipientName: 'Carlos Ruiz',
+        address: 'Calle Morelos 45, Col. Centro',
+        postalCode: '06010',
+        state: 'CDMX',
+        items: [
+          { productId: 3, name: 'Producto Gamma', price: 89, quantity: 1 }
+        ]
+      },
+      {
+        id: '#1003',
+        createdAt: '2026-01-15T17:05:00.000Z',
+        customer: 'Maria Perez',
+        total: 210,
+        status: 'paid',
+        recipientName: 'Maria Perez',
+        address: 'Blvd. Adolfo Lopez Mateos 800, Col. San Pedro',
+        postalCode: '72150',
+        state: 'Puebla',
+        betweenStreets: 'Entre Calle 5 de Mayo y Calle 16 de Septiembre',
+        items: [
+          { productId: 1, name: 'Producto Alpha', price: 80, quantity: 2 },
+          { productId: 4, name: 'Producto Delta', price: 50, quantity: 1 }
+        ]
+      },
+      {
+        id: '#1004',
+        createdAt: '2026-01-14T14:50:00.000Z',
+        customer: 'Luis Gomez',
+        total: 60,
+        status: 'delivered',
+        items: [
+          { productId: 2, name: 'Producto Beta', price: 60, quantity: 1 }
+        ]
+      }
+    ];
+
   getAdminData(): Observable<AdminData> {
     const payload: AdminData = {
       productOfMonthId: this.productOfMonthId,
-      orders: [
-        {
-          id: '#1001',
-          createdAt: '2026-01-16T09:35:00.000Z',
-          customer: 'Ana Lopez',
-          total: 120,
-          status: 'pending',
-          recipientName: 'Ana Lopez',
-          phone: '5512345678',
-          address: 'Av. Insurgentes Sur 1234, Col. Del Valle',
-          postalCode: '03100',
-          state: 'CDMX',
-          betweenStreets: 'Entre Mier y Pesado y Gabriel Mancera',
-          references: 'Edificio azul, departamento 302',
-          items: [
-            { productId: 1, name: 'Producto Alpha', price: 80, quantity: 1 },
-            { productId: 2, name: 'Producto Beta', price: 40, quantity: 1 }
-          ]
-        },
-        {
-          id: '#1002',
-          createdAt: '2026-01-16T11:20:00.000Z',
-          customer: 'Carlos Ruiz',
-          total: 89,
-          status: 'paid',
-          recipientName: 'Carlos Ruiz',
-          address: 'Calle Morelos 45, Col. Centro',
-          postalCode: '06010',
-          state: 'CDMX',
-          items: [
-            { productId: 3, name: 'Producto Gamma', price: 89, quantity: 1 }
-          ]
-        },
-        {
-          id: '#1003',
-          createdAt: '2026-01-15T17:05:00.000Z',
-          customer: 'Maria Perez',
-          total: 210,
-          status: 'paid',
-          recipientName: 'Maria Perez',
-          address: 'Blvd. Adolfo Lopez Mateos 800, Col. San Pedro',
-          postalCode: '72150',
-          state: 'Puebla',
-          betweenStreets: 'Entre Calle 5 de Mayo y Calle 16 de Septiembre',
-          items: [
-            { productId: 1, name: 'Producto Alpha', price: 80, quantity: 2 },
-            { productId: 4, name: 'Producto Delta', price: 50, quantity: 1 }
-          ]
-        },
-        {
-          id: '#1004',
-          createdAt: '2026-01-14T14:50:00.000Z',
-          customer: 'Luis Gomez',
-          total: 60,
-          status: 'delivered',
-          items: [
-            { productId: 2, name: 'Producto Beta', price: 60, quantity: 1 }
-          ]
-        }
-      ],
+      orders: this.adminOrders,
       customers: [...this.customers],
       employees: [...this.employees],
       products: [...this.products],
@@ -649,17 +654,22 @@ export class MockApiService {
   }
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
-    const order: AdminOrder = {
-      id: orderId,
-      customer: 'Actualizado',
-      total: 0,
+    const indice = this.adminOrders.findIndex((order) => order.id === orderId);
+    if (indice === -1) {
+      return throwError(() => new Error(`Pedido ${orderId} no encontrado`));
+    }
+    // Conserva el resto del pedido: antes se fabricaba uno nuevo y se perdían
+    // cliente, total y dirección en cuanto se cambiaba el estatus.
+    const actualizado: AdminOrder = {
+      ...this.adminOrders[indice],
       status: payload.status,
-      shippingType: payload.shippingType,
-      trackingNumber: payload.trackingNumber,
-      deliveryPlace: payload.deliveryPlace,
-      deliveryDate: payload.deliveryDate
+      shippingType: payload.shippingType ?? this.adminOrders[indice].shippingType,
+      trackingNumber: payload.trackingNumber ?? this.adminOrders[indice].trackingNumber,
+      deliveryPlace: payload.deliveryPlace ?? this.adminOrders[indice].deliveryPlace,
+      deliveryDate: payload.deliveryDate ?? this.adminOrders[indice].deliveryDate
     };
-    return of(order).pipe(delay(120));
+    this.adminOrders[indice] = actualizado;
+    return of({ ...actualizado }).pipe(delay(120));
   }
 
   getCatalogData(): Observable<CatalogData> {
@@ -1236,11 +1246,19 @@ export class MockApiService {
   }
 
   getAdminOrders(params: { status?: AdminOrder['status']; limit?: number } = {}): Observable<{ orders: AdminOrder[]; total: number }> {
-    return of({ orders: [], total: 0 }).pipe(delay(80));
+    const filtrados = params.status
+      ? this.adminOrders.filter((order) => order.status === params.status)
+      : this.adminOrders;
+    const pagina = filtrados.slice(0, params.limit ?? filtrados.length);
+    return of({ orders: pagina.map((order) => ({ ...order })), total: filtrados.length }).pipe(delay(80));
   }
 
   getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
-    return of([]).pipe(delay(80));
+    return of([
+      { type: 'stock', text: 'Producto Beta por debajo del mínimo en Bodega Central', severity: 'high' },
+      { type: 'shipping', text: '2 pedidos pagados sin número de guía', severity: 'high' },
+      { type: 'assets', text: 'Producto Gamma sin imagen para redes', severity: 'medium' }
+    ]).pipe(delay(80));
   }
 
   listCustomers(): Observable<AdminCustomer[]> {
@@ -2170,12 +2188,23 @@ export class MockApiService {
   }
 
   listCoupons(): Observable<Coupon[]> {
-    return of([]);
+    return of([...this.coupons]).pipe(delay(90));
   }
 
   saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
-    return of({ ...payload, redemptions: 0, code: payload.code.toUpperCase() });
+    const code = payload.code.toUpperCase();
+    const indice = this.coupons.findIndex((coupon) => coupon.code === code);
+    const guardado: Coupon = { ...payload, code, redemptions: this.coupons[indice]?.redemptions ?? 0 };
+    if (indice === -1) this.coupons.push(guardado);
+    else this.coupons[indice] = guardado;
+    return of({ ...guardado }).pipe(delay(120));
   }
+
+  private coupons: Coupon[] = [
+    { code: 'BIENVENIDA10', type: 'percent', value: 10, active: true, redemptions: 34, minSubtotal: 0, description: 'Primera compra' },
+    { code: 'ENVIOGRATIS', type: 'fixed', value: 150, active: true, redemptions: 12, minSubtotal: 1000, description: 'Compensa el envío' },
+    { code: 'VERANO25', type: 'percent', value: 25, active: false, redemptions: 87, minSubtotal: 500, maxRedemptions: 100, description: 'Campaña de temporada' }
+  ];
 
   deleteCoupon(code: string): Observable<{ message: string; code: string }> {
     return of({ message: 'Cupón desactivado', code: String(code || '').toUpperCase() });
