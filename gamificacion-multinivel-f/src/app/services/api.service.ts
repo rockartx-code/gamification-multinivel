@@ -504,6 +504,10 @@ export class ApiService {
     return this.resolveApi().deleteCoupon(code);
   }
 
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    return this.resolveApi().addOrderNote(orderId, text);
+  }
+
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
     return this.resolveApi().cancelOrder(orderId, reason);
   }

@@ -263,7 +263,7 @@ export class LandingComponent implements OnInit {
     this.fieldErrors = {
       firstName: this.form.firstName.trim() ? '' : 'El nombre es obligatorio.',
       apellidoPaterno: this.form.apellidoPaterno.trim() ? '' : 'El apellido paterno es obligatorio.',
-      apellidoMaterno: this.form.apellidoMaterno.trim() ? '' : 'El apellido materno es obligatorio.',
+      apellidoMaterno: '',   // opcional: no todo el mundo lo tiene y bloqueaba altas reales
       email: this.form.email.trim() ? '' : 'El correo electrónico es obligatorio.',
       password: this.form.password ? '' : 'La contraseña es obligatoria.',
       confirmPassword: ''

@@ -282,6 +282,20 @@ export class AdminControlService {
     );
   }
 
+  /** Nota interna en cualquier pedido, cerrado incluido. */
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    return this.api.addOrderNote(orderId, text).pipe(
+      tap((order) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const orders = current.orders.map((entry) => (entry.id === orderId ? { ...entry, adminNotes: order.adminNotes } : entry));
+        this.dataSubject.next({ ...current, orders });
+      })
+    );
+  }
+
   /** Cancela un pedido pendiente o pagado desde el back office y lo refleja en la lista. */
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
     return this.api.cancelOrder(orderId, reason).pipe(

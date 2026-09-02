@@ -371,6 +371,16 @@
                               <div *ngIf="order.stockId" class="text-gray-600">Stock origen: {{ stockName(order.stockId) || order.stockId }}</div>
                             </div>
                             <!-- Cancelación -->
+                            <!-- Notas internas: un pedido cerrado no admitía ninguna acción y el rastro de un ajuste quedaba fuera del sistema -->
+                            <div class="mt-2 rounded-lg border border-olive-30 bg-ivory-70 px-2 py-1.5 text-xs">
+                              <div class="font-semibold text-gray-600"><i class="fa-solid fa-note-sticky text-accent mr-1" aria-hidden="true"></i>Notas internas</div>
+                              <div *ngFor="let n of order.adminNotes" class="mt-1 text-main">{{ n.text }} <span class="text-micro text-gray-500">· {{ n.by }} · {{ n.at | date:'dd/MM HH:mm' }}</span></div>
+                              <div class="mt-1 flex items-center gap-2">
+                                <input type="text" class="flex-1 rounded-lg border border-olive-30 bg-white/70 px-2 py-1 text-xs" placeholder="Agregar nota (ej. transferí \$165 el 3-oct)"
+                                  [value]="orderNoteDrafts[order.id] || ''" (input)="orderNoteDrafts[order.id] = $any($event.target).value" (keydown.enter)="addOrderNote(order)">
+                                <button type="button" class="text-xs font-semibold text-accent hover:underline" [disabled]="!(orderNoteDrafts[order.id] || '').trim()" (click)="addOrderNote(order)">Guardar</button>
+                              </div>
+                            </div>
                             <div *ngIf="order.cancelReason" class="mt-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-800">
                               <i class="fa-solid fa-ban mr-1" aria-hidden="true"></i>
                               <span class="font-semibold">Motivo cancelación:</span> {{ order.cancelReason }}
@@ -4288,7 +4298,7 @@
           (ngModelChange)="updateStructureField('apellidoPaterno', $event)"></ui-form-field>
         <ui-form-field
           wrapperClass="block"
-          label="Apellido materno *"
+          label="Apellido materno (opcional)"
           iconClass="fa-solid fa-user"
           placeholder="Apellido materno"
           [ngModel]="structureForm.apellidoMaterno"
@@ -4369,7 +4379,7 @@
     <div class="mt-4 grid gap-3 sm:grid-cols-2">
       <ui-form-field wrapperClass="block sm:col-span-2" label="Nombre(s) *" [ngModel]="posCustomerForm.firstName" (ngModelChange)="updatePosCustomerField('firstName', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block" label="Apellido paterno *" [ngModel]="posCustomerForm.apellidoPaterno" (ngModelChange)="updatePosCustomerField('apellidoPaterno', $event)"></ui-form-field>
-      <ui-form-field wrapperClass="block" label="Apellido materno *" [ngModel]="posCustomerForm.apellidoMaterno" (ngModelChange)="updatePosCustomerField('apellidoMaterno', $event)"></ui-form-field>
+      <ui-form-field wrapperClass="block" label="Apellido materno (opcional)" [ngModel]="posCustomerForm.apellidoMaterno" (ngModelChange)="updatePosCustomerField('apellidoMaterno', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block" label="Telefono" [ngModel]="posCustomerForm.phone" (ngModelChange)="updatePosCustomerField('phone', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" type="email" label="Email (opcional)" placeholder="correo@dominio.com" [ngModel]="posCustomerForm.email" (ngModelChange)="updatePosCustomerField('email', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" label="Direccion" [ngModel]="posCustomerForm.address" (ngModelChange)="updatePosCustomerField('address', $event)"></ui-form-field>

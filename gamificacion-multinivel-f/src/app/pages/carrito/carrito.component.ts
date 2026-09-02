@@ -1164,7 +1164,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.isGuestRegisterSubmitting) {
       return;
     }
-    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.apellidoMaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
       this.guestRegisterFeedback = 'Completa los campos obligatorios.';
       this.guestRegisterFeedbackType = 'error';
       return;

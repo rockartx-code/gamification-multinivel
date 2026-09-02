@@ -1245,6 +1245,12 @@ export class RealApiService {
       .pipe(map((res) => res.rates ?? []));
   }
 
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    return this.http
+      .post<{ order: Record<string, unknown> }>(`${this.baseUrl}/orders/${encodeURIComponent(orderId)}/notes`, { text }, { headers: this.actorHeaders() })
+      .pipe(map((r) => this.normalizeAdminOrder(r.order)));
+  }
+
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
     return this.http.post<OrderCancelResponse>(
       `${this.baseUrl}/orders/${encodeURIComponent(orderId)}/cancel`,
@@ -1398,6 +1404,7 @@ export class RealApiService {
       shippingCarrier: this.readString(order, ['shippingCarrier']) || undefined,
       returnShippingCost: Number(order['returnShippingCost'] ?? 0) > 0 ? Number(order['returnShippingCost']) : undefined,
       refundAmount: order['refundAmount'] != null ? Number(order['refundAmount']) : undefined,
+      adminNotes: Array.isArray(order['adminNotes']) ? (order['adminNotes'] as AdminOrder['adminNotes']) : [],
       cancelReason: this.readString(order, ['cancelReason']) || undefined,
       cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
       returnRequestId: this.readString(order, ['returnRequestId']) || undefined,

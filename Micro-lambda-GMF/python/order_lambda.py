@@ -660,6 +660,26 @@ def handle_update_status(order_id, body, headers):
     return utils._json_response(200, {"order": updated})
 
 
+def handle_add_order_note(order_id: str, body: dict, headers: dict) -> dict:
+    """POST /orders/{id}/notes — nota interna sobre un pedido, en cualquier estado.
+
+    La gerente transfirió $165 fuera del sistema y no tenía dónde anotarlo:
+    un pedido cerrado no admitía ninguna acción. Las notas solo se añaden.
+    """
+    order = utils._get_by_id("ORDER", order_id)
+    if not order:
+        return utils._json_response(404, {"message": "Pedido no encontrado"})
+    texto = str((body or {}).get("text") or "").strip()
+    if not texto:
+        return utils._json_response(400, {"message": "Escribe la nota"})
+    actor = utils._extract_actor_from_bearer(headers or {})
+    notas = list(order.get("adminNotes") or [])
+    notas.append({"text": texto[:1000], "by": str(actor.get("user_id") or headers.get("x-user-id") or "admin"), "at": utils._now_iso()})
+    updated = utils._update_by_id("ORDER", order_id, "SET adminNotes = :n, updatedAt = :u", {":n": notas[-200:], ":u": utils._now_iso()})
+    utils._audit_event("order.note", headers, {"text": texto[:200]}, {"orderId": order_id})
+    return utils._json_response(200, {"order": _con_totales_visibles(updated)})
+
+
 def _avisar(order: dict, evento: str, datos: dict | None = None) -> None:
     """Correo al comprador por cada paso del pedido (docs/qa/18: no existía ninguno)."""
     order_emails.notificar_pedido(
@@ -1525,6 +1545,10 @@ def lambda_handler(event, context):
                     err = utils._require_admin(headers, "order_mark_paid")
                     if err: return err
                     return handle_refund_order(order_id, body, headers)
+                if sub == "notes" and method == "POST":
+                    err = utils._require_admin(headers, "access_screen_orders")
+                    if err: return err
+                    return handle_add_order_note(order_id, body, headers)
                 if sub == "cancel" and method == "POST":
                     # Un invitado (sin cuenta) también puede cancelar su propio
                     # pedido pendiente: no tiene sesión que exigirle.

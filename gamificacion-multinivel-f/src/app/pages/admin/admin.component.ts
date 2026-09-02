@@ -1515,7 +1515,7 @@ export class AdminComponent implements OnInit {
       this.hasPermission('customer_add') &&
       this.posCustomerForm.firstName.trim() &&
       this.posCustomerForm.apellidoPaterno.trim() &&
-      this.posCustomerForm.apellidoMaterno.trim() &&
+
       !this.isSavingPosCustomer
     );
   }
@@ -2545,7 +2545,7 @@ export class AdminComponent implements OnInit {
   }
 
   get isStructureFormValid(): boolean {
-    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim() && this.structureForm.apellidoMaterno.trim());
+    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim());
   }
 
   get isProductFormValid(): boolean {
@@ -3350,6 +3350,23 @@ export class AdminComponent implements OnInit {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
         }
       });
+  }
+
+  orderNoteDrafts: Record<string, string> = {};
+
+  addOrderNote(order: AdminOrder): void {
+    const text = (this.orderNoteDrafts[order.id] || '').trim();
+    if (!text) {
+      return;
+    }
+    this.adminControl.addOrderNote(order.id, text).subscribe({
+      next: () => {
+        this.orderNoteDrafts[order.id] = '';
+        this.showSnackbar('Nota guardada.');
+        this.requestViewUpdate();
+      },
+      error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la nota.'), 'error')
+    });
   }
 
   canCancelOrder(order: AdminOrder): boolean {

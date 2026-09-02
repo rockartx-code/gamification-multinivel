@@ -184,3 +184,17 @@ def test_los_cupones_responden_bajo_el_prefijo_que_enruta_api_gateway(order_lamb
     assert r["statusCode"] == 200, r["body"]
     r = order_lambda.lambda_handler(_evento("DELETE", "/orders/coupons/OCTUBRE10"), None)
     assert r["statusCode"] == 200, r["body"]
+
+
+def test_un_pedido_cerrado_admite_notas_internas(order_lambda, utils, monkeypatch):
+    """La gerente reembolsó fuera del sistema y no tenía dónde dejar rastro."""
+    import json
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    monkeypatch.setattr(utils, "_extract_actor_from_bearer", lambda h: {"user_id": "sofia"})
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    assert order_lambda.handle_cancel_order(oid, {}, {})["statusCode"] == 200
+    r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/notes", {"text": "Transferí $165 del envío de regreso el 3-oct"}), None)
+    assert r["statusCode"] == 200, r["body"]
+    notas = json.loads(r["body"])["order"]["adminNotes"]
+    assert notas[0]["text"].startswith("Transferí") and notas[0]["by"] == "sofia"
+    assert order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/notes", {"text": ""}), None)["statusCode"] == 400

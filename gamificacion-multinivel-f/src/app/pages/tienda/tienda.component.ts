@@ -201,7 +201,7 @@ export class TiendaComponent implements OnInit {
 
   createAccount(): void {
     if (this.isSubmitting) return;
-    if (!this.form.firstName.trim() || !this.form.apellidoPaterno.trim() || !this.form.apellidoMaterno.trim() || !this.form.email || !this.form.password) {
+    if (!this.form.firstName.trim() || !this.form.apellidoPaterno.trim() || !this.form.email || !this.form.password) {
       this.setFeedback('Completa los campos obligatorios.', 'error');
       return;
     }

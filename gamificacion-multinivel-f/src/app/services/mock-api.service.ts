@@ -2281,6 +2281,16 @@ export class MockApiService {
     return Math.ceil((price * 1.15) / 50) * 50;
   }
 
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    const order = this.adminOrders.find((o) => o.id === orderId);
+    if (!order) {
+      return throwError(() => new Error('Pedido no encontrado'));
+    }
+    const updated: AdminOrder = { ...order, adminNotes: [...(order.adminNotes ?? []), { text, by: 'admin', at: new Date().toISOString() }] };
+    this.adminOrders = this.adminOrders.map((o) => (o.id === orderId ? updated : o));
+    return of(updated).pipe(delay(80));
+  }
+
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
     return of({ ok: true, orderId, status: 'cancelled', pendingRefund: true }).pipe(delay(200));
   }
