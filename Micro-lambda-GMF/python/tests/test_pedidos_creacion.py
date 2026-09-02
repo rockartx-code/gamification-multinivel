@@ -214,3 +214,24 @@ def test_envio_gratis_por_importe_segun_configuracion(order_lambda, utils, monke
     r = order_lambda.handle_create_order(_pedido_invitado(), {})
     o = json.loads(r["body"]); o = o.get("order") or o
     assert float(o["shippingCost"]) == 129 and float(o["total"]) == 929.0
+
+
+def test_la_pasarela_puede_marcar_pagado_un_pickup_con_pago_en_linea(order_lambda, utils, monkeypatch):
+    """Regresión: el webhook de MercadoPago (sin usuario) recibía 403 'no
+    vinculado a la sucursal' en pedidos de recoger en tienda pagados en línea,
+    y el pedido se quedaba pendiente aunque el cliente ya hubiera pagado."""
+    import json as _json
+    utils._put_entity("STOCK", "STK-T1", {"entityType": "stock", "stockId": "STK-T1", "name": "Tienda", "allowPickup": True, "linkedUserIds": [], "inventory": {}})
+    utils._put_entity("ORDER", "ORD-PK1", {"entityType": "order", "orderId": "ORD-PK1", "customerId": 1, "status": "pending",
+                                            "deliveryType": "pickup", "pickupStockId": "STK-T1", "pickupPaymentMethod": "online",
+                                            "netTotal": 350, "total": 350, "items": [], "monthKey": utils._month_key()})
+    monkeypatch.setattr(order_lambda, "ORDER_SFN_ARN", None, raising=False)
+    r = order_lambda.handle_update_status("ORD-PK1", {"status": "paid", "paymentId": "mp-1"}, {})
+    assert r["statusCode"] == 200, r["body"]
+    assert utils._get_by_id("ORDER", "ORD-PK1")["status"] == "paid"
+    # Pago en sucursal sin operador ligado: sigue prohibido.
+    utils._put_entity("ORDER", "ORD-PK2", {"entityType": "order", "orderId": "ORD-PK2", "customerId": 1, "status": "pending",
+                                            "deliveryType": "pickup", "pickupStockId": "STK-T1", "pickupPaymentMethod": "at_store",
+                                            "netTotal": 350, "total": 350, "items": [], "monthKey": utils._month_key()})
+    r = order_lambda.handle_update_status("ORD-PK2", {"status": "paid", "paymentMethod": "cash"}, {})
+    assert r["statusCode"] == 403

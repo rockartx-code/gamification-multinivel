@@ -552,7 +552,12 @@ def handle_update_status(order_id, body, headers):
     pickup_stock_id_str = str(pickup_stock_id or "").strip()
     is_pickup_order = order.get("deliveryType") == "pickup" and pickup_stock_id_str
 
-    if is_pickup_order and new_status in ("paid", "delivered"):
+    # El webhook de la pasarela (sin actor) marcaba 'paid' un pedido de pickup
+    # pagado en línea y chocaba con la regla de "operador ligado a la sucursal":
+    # el cliente pagaba y el pedido se quedaba en 'pending' para siempre.
+    pago_desde_pasarela = (new_status == "paid" and actor_user_id in (None, "")
+                           and bool(body.get("paymentId")) and order.get("pickupPaymentMethod") != "at_store")
+    if is_pickup_order and new_status in ("paid", "delivered") and not pago_desde_pasarela:
         if not _user_can_operate_pickup_stock(actor_user_id, pickup_stock_id_str):
             return utils._json_response(403, {"message": "El usuario logueado no esta vinculado a la sucursal de entrega"})
 
