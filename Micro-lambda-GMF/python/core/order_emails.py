@@ -10,6 +10,18 @@ from decimal import Decimal
 from . import email as _correo
 
 
+
+def _direccion_bodega_principal() -> str:
+    """Nombre y dirección del almacén marcado como principal (para devoluciones)."""
+    try:
+        from core import db as _db
+        for stock in _db._query_bucket("STOCK") or []:
+            if stock.get("isMainWarehouse"):
+                return ", ".join(x for x in (stock.get("name"), stock.get("location")) if x)
+    except Exception:
+        pass
+    return ""
+
 def _mxn(valor) -> str:
     try:
         return f"${Decimal(str(valor or 0)):,.2f}"
@@ -80,7 +92,11 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     elif evento == "return_received":
         asunto = f"Recibimos tu solicitud de devolución · {datos.get('requestId') or oid}"
         titulo, icono = "Solicitud de devolución recibida", "↩️"
-        lead = (f"Folio <strong>{datos.get('requestId') or ''}</strong>. Envía el paquete a nuestro almacén y guarda tu ticket de envío: "
+        # "Envía el paquete a nuestro almacén" sin dirección: la clienta tuvo que
+        # preguntar a soporte a dónde mandarlo y si iba todo el pedido.
+        direccion = datos.get("direccionAlmacen") or _direccion_bodega_principal()
+        lead = (f"Folio <strong>{datos.get('requestId') or ''}</strong>. Envía el producto que reportaste, en su empaque, a "
+                f"<strong>{direccion or 'nuestro almacén'}</strong> con el folio escrito en el paquete, y guarda tu ticket de envío: "
                 "te lo reembolsamos junto con el producto una vez que lo revisemos (1 a 3 días hábiles tras recibirlo).")
         extra = ""
     elif evento == "return_approved":
