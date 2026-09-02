@@ -134,6 +134,8 @@ export interface DashboardSettings {
 }
 
 export interface UserDashboardData {
+  /** Consumo propio del mes en pesos (nodo raíz de la red). */
+  myNetSpend?: number;
   settings: DashboardSettings;
   goals: DashboardGoal[];
   products: DashboardProduct[];
@@ -218,8 +220,6 @@ export interface CatalogData {
 
 /** Respuesta de GET /dashboard (sin datos de catálogo) */
 export interface DashboardData {
-  /** Consumo propio del mes en pesos (nodo raíz de la red). */
-  myNetSpend?: number;
   isGuest?: boolean;
   settings: DashboardSettings;
   customer?: DashboardCustomerProfile | null;
