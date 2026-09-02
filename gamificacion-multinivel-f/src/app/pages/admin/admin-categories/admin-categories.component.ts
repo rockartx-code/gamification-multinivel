@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { UiButtonComponent } from '../../../components/ui-button/ui-button.component';
+import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-field.component';
 import { ProductCategory } from '../../../models/admin.model';
 import { ApiService } from '../../../services/api.service';
 
@@ -15,7 +16,7 @@ interface CategoryNode extends ProductCategory {
 @Component({
   selector: 'app-admin-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent],
   templateUrl: './admin-categories.component.html'
 })
 export class AdminCategoriesComponent implements OnInit {

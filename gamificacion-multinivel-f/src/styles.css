@@ -633,12 +633,17 @@ select:focus {
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
 
 /* Casilla del sistema (ui-checkbox): el nativo se pintaba con el azul del navegador */
+.ui-check-host,
+ui-form-field {
+  display: block;
+}
+
 .ui-check {
   display: inline-flex;
   align-items: flex-start;
   gap: 0.6rem;
   cursor: pointer;
-  color: var(--color-text);
+  color: inherit;
 }
 
 .ui-check-row {

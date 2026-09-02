@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { booleanAttribute, Component, EventEmitter, Input, Output } from '@angular/core';
 
 /**
  * Casilla del sistema. Sustituye a los <input type="checkbox"> nativos
@@ -8,11 +8,16 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
  *
  *   layout 'inline': [casilla] Etiqueta        (por defecto)
  *   layout 'row'   : Etiqueta ............ [casilla]
+ *
+ * Los booleanos usan booleanAttribute, así que admiten tanto la forma
+ * abreviada (<ui-checkbox compact>) como valores opcionales del modelo
+ * (`boolean | undefined` llega como false en lugar de romper strictTemplates).
  */
 @Component({
   selector: 'ui-checkbox',
   standalone: true,
   imports: [CommonModule],
+  host: { class: 'ui-check-host' },
   template: `
     <label class="ui-check" [class.ui-check-row]="layout === 'row'" [class.ui-check-disabled]="disabled">
       <input
@@ -20,6 +25,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
         class="check-input"
         [checked]="checked"
         [disabled]="disabled"
+        [attr.aria-label]="ariaLabel || null"
         (change)="onToggle($event)" />
       <span class="check-box" aria-hidden="true">
         <i class="fa-solid fa-check text-[10px]"></i>
@@ -34,11 +40,13 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
   `
 })
 export class UiCheckboxComponent {
-  @Input() checked = false;
+  @Input({ transform: booleanAttribute }) checked = false;
+  @Input({ transform: booleanAttribute }) disabled = false;
+  @Input({ transform: booleanAttribute }) compact = false;
   @Input() label = '';
   @Input() description = '';
-  @Input() disabled = false;
-  @Input() compact = false;
+  /** Nombre accesible cuando la etiqueta visible vive fuera del componente. */
+  @Input() ariaLabel = '';
   @Input() layout: 'inline' | 'row' = 'inline';
 
   @Output() checkedChange = new EventEmitter<boolean>();

@@ -19,12 +19,13 @@ import { UiProductCardComponent } from '../../components/ui-product-card/ui-prod
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { UiChoiceCardComponent } from '../../components/ui-choice-card/ui-choice-card.component';
+import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })

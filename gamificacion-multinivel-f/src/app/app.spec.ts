@@ -1,10 +1,15 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+
 import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [App]
+      imports: [App],
+      // El shell monta <app-privacy-notice>, que usa ui-button y con él la
+      // directiva RouterLink: sin router no hay ActivatedRoute que inyectar.
+      providers: [provideRouter([])]
     }).compileComponents();
   });
 

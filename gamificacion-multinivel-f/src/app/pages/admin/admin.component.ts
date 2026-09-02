@@ -45,6 +45,7 @@ import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
 import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { UiKpiCardComponent } from '../../components/ui-kpi-card/ui-kpi-card.component';
@@ -221,7 +222,7 @@ type CommissionLevelDraft = AppBusinessConfig['rewards']['commissionLevels'][num
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -372,6 +373,10 @@ export class AdminComponent implements OnInit {
   couponFeedback = '';
   couponDraft: SaveCouponPayload = this.emptyCouponDraft();
   couponEditingCode: string | null = null;
+  readonly couponTypeOptions: ReadonlyArray<{ value: string; label: string }> = [
+    { value: 'percent', label: 'Porcentaje (%)' },
+    { value: 'fixed', label: 'Monto fijo ($)' }
+  ];
   currentOrderStatus: AdminOrder['status'] = 'pending';
   orderStockFilter: string = '';
   expandedOrderDetailId: string | null = null;
@@ -1131,6 +1136,11 @@ export class AdminComponent implements OnInit {
 
   get selectedStock(): AdminStock | null {
     return this.stocks.find((stock) => stock.id === this.selectedStockId) ?? null;
+  }
+
+  /** Opciones del filtro por stock de la lista de pedidos (solo el nombre). */
+  get stockFilterOptions(): Array<SelectOption<string>> {
+    return this.stocks.map((stock) => ({ value: stock.id, label: stock.name }));
   }
 
   get stockOptionsStable(): Array<SelectOption<string>> {

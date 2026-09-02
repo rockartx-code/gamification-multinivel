@@ -158,10 +158,9 @@
           <ui-form-field label="Hook corto" [ngModel]="campaignForm.hook" (ngModelChange)="updateCampaignField('hook', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
           <ui-form-field kind="textarea" [rows]="3" label="Descripcion" [ngModel]="campaignForm.description" (ngModelChange)="updateCampaignField('description', $event)" wrapperClass="block md:col-span-2"></ui-form-field>
           <ui-form-field label="Hero badge" [ngModel]="campaignForm.heroBadge" (ngModelChange)="updateCampaignField('heroBadge', $event)"></ui-form-field>
-          <label class="mt-2 flex items-center gap-2 text-xs text-main">
-            <input type="checkbox" [checked]="campaignForm.active" (change)="campaignForm.active = $any($event.target).checked" />
-            Campana activa
-          </label>
+          <ui-checkbox class="mt-2" compact label="Campaña activa"
+            [checked]="campaignForm.active"
+            (checkedChange)="campaignForm.active = $event"></ui-checkbox>
           <ui-form-field label="Hero titulo (linea 1)" [ngModel]="campaignForm.heroTitle" (ngModelChange)="updateCampaignField('heroTitle', $event)"></ui-form-field>
           <ui-form-field label="Hero acento (linea 2)" [ngModel]="campaignForm.heroAccent" (ngModelChange)="updateCampaignField('heroAccent', $event)"></ui-form-field>
           <ui-form-field label="Hero cola (linea 3)" [ngModel]="campaignForm.heroTail" (ngModelChange)="updateCampaignField('heroTail', $event)"></ui-form-field>

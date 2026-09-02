@@ -12,7 +12,7 @@
 | **login (campo manual)** | ⚠→✓ | — | Usaba las mismas clases muertas `border-danger`/`focus-border-danger`; ahora existen en styles.css. |
 | **ui-badge** | ✓ | ✓ | Añadido tono `danger` (faltaba un tono negativo en todo el sistema). |
 | **ui-status-badge** | ✗→✓ | ⚠→✓ | **Bug real**: `'inactiva'.includes('activa')` es verdadero → el estado de red "Inactiva" se mostraba como **"Activa"** (etiqueta, tono e icono). Reordenados los matches (inact primero). **Cobertura**: solo entendía 4 de los 9 estados de pedido; cancelada/reembolsada/devoluciones caían a texto crudo gris. Ahora: Cancelada y Dev. rechazada en tono peligro, En devolución en pendiente, Devuelta en entregado, con iconos propios; los `level-*` ya no pisan el tono peligro por especificidad. |
-| **ui-modal** | ⚠→✓ | ✓ | Sin semántica ni teclado: añadidos `role="dialog"`, `aria-modal`, `ariaLabel` opcional y **cierre con Escape** (respetando `closeOnBackdrop`). Focus-trap queda como pendiente (abajo). |
+| **ui-modal** | ⚠→✓ | ✓ | Sin semántica ni teclado: añadidos `role="dialog"`, `aria-modal`, `ariaLabel` opcional y **cierre con Escape** (respetando `closeOnBackdrop`). **Focus-trap cerrado**: al abrir se guarda `document.activeElement` y el foco salta al primer enfocable del panel (o al panel con `tabindex="-1"`), el Tab/Shift+Tab circula dentro del diálogo y al cerrar (o destruir) el foco vuelve al disparador. Sin librerías externas y con guardas para SSR/pruebas. |
 | **ui-order-timeline** | ✓ | ✗→✓ | **Fuera de paleta**: esmeralda y azul cielo en un sistema oro/bosque. Ahora: completado en bosque suave, paso actual en oro. |
 | **ui-data-table / ui-table** | ✓ | ⚠→✓ | Divisores por defecto `divide-white/10`: invisibles en tema claro. Default cambiado a `divide-olive-20`. Patrón mobileRow/desktopRow correcto. |
 | **ui-goal-progress** | ✓ | ✓ | Clamp correcto (incluye target=0 y no-finito); el segmento de carrito nunca desborda el 100 %. |
@@ -30,6 +30,6 @@ Nueva página de validación permanente: fundamentos (paleta con hex + escala ti
 
 ## Pendientes
 
-1. **Focus-trap y retorno de foco en ui-modal** (hoy Escape + backdrop; el foco puede escapar con Tab).
+1. ~~**Focus-trap y retorno de foco en ui-modal**~~ — **resuelto** (2026-09-01): implementado dentro del propio componente (setter del `@Input() isOpen`, `@ViewChild` del panel, `keydown` con ciclo de Tab y devolución del foco en el cierre y en `ngOnDestroy`).
 2. `ui-networkgraph`: auditoría propia (tipografía interna del SVG y colores aún pre-sistema).
 3. Los `level-*` de insignias siguen siendo cinco variaciones de oro/gris; si se quiere distinción más fuerte entre "Pagada" y "Enviada", introducir un tono informativo adicional.

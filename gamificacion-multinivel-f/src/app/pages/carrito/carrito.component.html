@@ -403,16 +403,12 @@
       ></ui-form-field>
 
       <div *ngIf="!isGuest" class="space-y-2 sm:col-span-2">
-        <label class="flex items-start gap-3 rounded-2xl border border-olive-30 surface-soft px-3 py-3 text-sm text-main">
-          <input
-            type="checkbox"
-            name="saveShippingAddress"
-            [(ngModel)]="saveShippingAddress"
-            class="mt-0.5 h-4 w-4 rounded border border-olive-30 bg-white/80 text-gold">
-          <span>
-            {{ selectedShippingAddressId ? 'Guardar cambios en esta direccion' : 'Guardar esta direccion para futuras compras' }}
-          </span>
-        </label>
+        <div class="rounded-2xl border border-olive-30 surface-soft px-3 py-3 text-sm text-main">
+          <ui-checkbox
+            [checked]="saveShippingAddress"
+            (checkedChange)="saveShippingAddress = $event"
+            [label]="selectedShippingAddressId ? 'Guardar cambios en esta dirección' : 'Guardar esta dirección para futuras compras'"></ui-checkbox>
+        </div>
 
         <ui-form-field
           *ngIf="saveShippingAddress"
@@ -530,10 +526,11 @@
               <!-- Cupón / código de descuento (H7) -->
               <div class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
                 <div class="flex items-center gap-2">
-                  <input type="text" placeholder="Código de descuento"
-                    class="flex-1 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
+                  <ui-form-field placeholder="Código de descuento"
+                    wrapperClass="flex-1"
+                    inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
                     [ngModel]="couponCode" (ngModelChange)="couponCode = $event"
-                    [disabled]="!!appliedCoupon?.valid" />
+                    [disabled]="!!appliedCoupon?.valid"></ui-form-field>
                   <ui-button *ngIf="!appliedCoupon?.valid" size="sm" variant="primary"
                     [disabled]="couponChecking" (pressed)="applyCoupon()">
                     {{ couponChecking ? '...' : 'Aplicar' }}

@@ -1,6 +1,7 @@
 <div *ngIf="isOpen" [class]="containerClass" (click)="onBackdropClick()">
-  <div role="dialog" aria-modal="true" [attr.aria-label]="ariaLabel || null"
-    [class]="panelClass + ' ' + maxWidthClass + ' ' + contentClass" (click)="$event.stopPropagation()">
+  <div #panel role="dialog" aria-modal="true" tabindex="-1" [attr.aria-label]="ariaLabel || null"
+    [class]="panelClass + ' ' + maxWidthClass + ' ' + contentClass" (click)="$event.stopPropagation()"
+    (keydown)="onPanelKeydown($event)">
     <ng-content></ng-content>
   </div>
 </div>

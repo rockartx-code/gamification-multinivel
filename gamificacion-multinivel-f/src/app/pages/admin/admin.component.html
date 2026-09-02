@@ -131,11 +131,12 @@
               </span>
             </ui-button>
             <!-- Filtro por stock -->
-            <select *ngIf="stocks.length" [(ngModel)]="orderStockFilter"
-              class="ml-2 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70">
-              <option value="">Todos los stocks</option>
-              <option *ngFor="let s of stocks" [value]="s.id">{{ s.name }}</option>
-            </select>
+            <ui-form-field *ngIf="stocks.length" kind="select"
+              placeholder="Todos los stocks"
+              [options]="stockFilterOptions"
+              [(ngModel)]="orderStockFilter"
+              wrapperClass="ml-2 inline-block"
+              inputClass="rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"></ui-form-field>
           </div>
         </div>
 
@@ -414,15 +415,13 @@
                       {{ filteredCustomers.length }}{{ customerSearch ? ' de ' + customersCount : '' }} clientes
                     </span>
                   </div>
-                  <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
-                    <input
-                      type="text"
-                      placeholder="Buscar por nombre o correo..."
-                      [ngModel]="customerSearch" (ngModelChange)="onTableSearch('customers', $event)"
-                      class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"
-                    />
-                  </div>
+                  <ui-form-field
+                    type="text"
+                    placeholder="Buscar por nombre o correo..."
+                    leadingIconClass="fa-solid fa-magnifying-glass"
+                    wrapperClass="block"
+                    inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"
+                    [ngModel]="customerSearch" (ngModelChange)="onTableSearch('customers', $event)"></ui-form-field>
                 </div>
 
                 <div class="md:hidden divide-y divide-olive-20">
@@ -856,16 +855,19 @@
 
                   <div class="mt-3 flex items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">
                     <div class="text-sm text-main">Acceso a panel admin</div>
-                    <label class="inline-flex items-center gap-2 text-xs text-gray-600">
-                      <input type="checkbox" [checked]="selectedEmployeeAdminAccess" (change)="updateSelectedEmployeeAdminAccess($any($event.target).checked)" />
-                      Habilitado
-                    </label>
+                    <ui-checkbox
+                      class="text-xs text-gray-600"
+                      compact
+                      label="Habilitado"
+                      [checked]="selectedEmployeeAdminAccess"
+                      (checkedChange)="updateSelectedEmployeeAdminAccess($event)"></ui-checkbox>
                   </div>
 
                   <div class="mt-3 max-h-64 overflow-auto rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div *ngFor="let option of customerPrivilegeOptions" class="flex items-center justify-between border-b border-olive-20 py-2 text-xs last:border-b-0">
-                      <span class="text-main">{{ option.label }}</span>
-                      <input type="checkbox" [checked]="employeeHasPrivilege(option.key)" (change)="updateSelectedEmployeePrivilege(option.key, $any($event.target).checked)" />
+                    <div *ngFor="let option of customerPrivilegeOptions" class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
+                      <ui-checkbox layout="row" compact [label]="option.label"
+                        [checked]="employeeHasPrivilege(option.key)"
+                        (checkedChange)="updateSelectedEmployeePrivilege(option.key, $event)"></ui-checkbox>
                     </div>
                   </div>
 
@@ -1047,56 +1049,49 @@
                   <!-- Banderas de disponibilidad -->
                   <div class="block md:col-span-2 space-y-2">
                     <div class="rounded-2xl border border-olive-30 bg-white/70 px-4 py-3">
-                      <label class="flex items-center justify-between gap-3 text-sm text-main">
-                        <div>
-                          <div class="font-semibold">{{ productForm.active ? 'Producto activo' : 'Producto retirado' }}</div>
-                          <div class="mt-1 text-xs text-gray-600">Si lo retiras, desaparece de compra, gancho y producto del mes.</div>
-                        </div>
-                        <input type="checkbox" [checked]="productForm.active" (change)="updateProductActive($any($event.target).checked)" />
-                      </label>
+                      <ui-checkbox layout="row" class="block text-sm text-main"
+                        [checked]="productForm.active"
+                        (checkedChange)="updateProductActive($event)"
+                        description="Si lo retiras, desaparece de compra, gancho y producto del mes.">
+                        <span class="font-semibold">{{ productForm.active ? 'Producto activo' : 'Producto retirado' }}</span>
+                      </ui-checkbox>
                     </div>
                     <div class="grid gap-2 sm:grid-cols-3">
                       <div class="rounded-2xl border px-4 py-3 transition"
                         [ngClass]="productForm.inOnlineStore ? 'border-gold bg-amber-50' : 'border-olive-30 bg-white/70'">
-                        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-main">
-                          <div>
-                            <div class="flex items-center gap-2 font-semibold">
-                              <i class="fa-solid fa-globe text-sm" [ngClass]="productForm.inOnlineStore ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
-                              Tienda en línea
-                            </div>
-                            <div class="mt-0.5 text-[11px] text-gray-500">Visible para clientes online</div>
-                          </div>
-                          <input type="checkbox" [checked]="productForm.inOnlineStore"
-                            (change)="productForm = { ...productForm, inOnlineStore: $any($event.target).checked }" />
-                        </label>
+                        <ui-checkbox layout="row" class="block cursor-pointer text-sm text-main"
+                          [checked]="productForm.inOnlineStore"
+                          (checkedChange)="productForm = { ...productForm, inOnlineStore: $event }"
+                          description="Visible para clientes online">
+                          <span class="flex items-center gap-2 font-semibold">
+                            <i class="fa-solid fa-globe text-sm" [ngClass]="productForm.inOnlineStore ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+                            Tienda en línea
+                          </span>
+                        </ui-checkbox>
                       </div>
                       <div class="rounded-2xl border px-4 py-3 transition"
                         [ngClass]="productForm.inPOS ? 'border-gold bg-amber-50' : 'border-olive-30 bg-white/70'">
-                        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-main">
-                          <div>
-                            <div class="flex items-center gap-2 font-semibold">
-                              <i class="fa-solid fa-cash-register text-sm" [ngClass]="productForm.inPOS ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
-                              Punto de Venta
-                            </div>
-                            <div class="mt-0.5 text-[11px] text-gray-500">Disponible en caja / consultorio</div>
-                          </div>
-                          <input type="checkbox" [checked]="productForm.inPOS"
-                            (change)="productForm = { ...productForm, inPOS: $any($event.target).checked }" />
-                        </label>
+                        <ui-checkbox layout="row" class="block cursor-pointer text-sm text-main"
+                          [checked]="productForm.inPOS"
+                          (checkedChange)="productForm = { ...productForm, inPOS: $event }"
+                          description="Disponible en caja / consultorio">
+                          <span class="flex items-center gap-2 font-semibold">
+                            <i class="fa-solid fa-cash-register text-sm" [ngClass]="productForm.inPOS ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+                            Punto de Venta
+                          </span>
+                        </ui-checkbox>
                       </div>
                       <div class="rounded-2xl border px-4 py-3 transition"
                         [ngClass]="productForm.commissionable ? 'border-gold bg-amber-50' : 'border-olive-30 bg-white/70'">
-                        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-main">
-                          <div>
-                            <div class="flex items-center gap-2 font-semibold">
-                              <i class="fa-solid fa-percent text-sm" [ngClass]="productForm.commissionable ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
-                              Comisionable
-                            </div>
-                            <div class="mt-0.5 text-[11px] text-gray-500">Cuenta para metas y comisiones</div>
-                          </div>
-                          <input type="checkbox" [checked]="productForm.commissionable"
-                            (change)="productForm = { ...productForm, commissionable: $any($event.target).checked }" />
-                        </label>
+                        <ui-checkbox layout="row" class="block cursor-pointer text-sm text-main"
+                          [checked]="productForm.commissionable"
+                          (checkedChange)="productForm = { ...productForm, commissionable: $event }"
+                          description="Cuenta para metas y comisiones">
+                          <span class="flex items-center gap-2 font-semibold">
+                            <i class="fa-solid fa-percent text-sm" [ngClass]="productForm.commissionable ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
+                            Comisionable
+                          </span>
+                        </ui-checkbox>
                       </div>
                     </div>
 
@@ -1111,11 +1106,12 @@
                         Si se deja vacío se calculan automáticamente desde el precio
                         (precio ÷ tarifa VP configurada). Los descuentos reducen los puntos proporcionalmente.
                       </div>
-                      <input type="number" min="0" step="0.01"
-                        class="w-full rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70"
+                      <ui-form-field type="number" [min]="0" [step]="0.01"
+                        wrapperClass="block"
+                        inputClass="w-full rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70"
                         placeholder="Ej: 5  (dejar vacío = automático)"
                         [ngModel]="productForm.vpPoints"
-                        (ngModelChange)="productForm = { ...productForm, vpPoints: $event }" />
+                        (ngModelChange)="productForm = { ...productForm, vpPoints: $event }"></ui-form-field>
                     </div>
                   </div>
 
@@ -1289,15 +1285,12 @@
                   <div class="text-sm font-semibold text-main">Categorías</div>
                   <div class="mt-1 text-xs text-gray-600">Selecciona una o más categorías para este producto.</div>
                   <div class="mt-3 grid gap-1 sm:grid-cols-2">
-                    <label *ngFor="let cat of categoriesTree"
-                      class="flex items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-sm text-main hover:bg-olive-10 cursor-pointer"
-                      [style.paddingLeft.px]="8 + cat.depth * 16">
-                      <input type="checkbox"
-                        [checked]="productForm.categoryIds.includes(cat.id)"
-                        (change)="toggleProductCategoryId(cat.id)"
-                        class="rounded" />
-                      <span>{{ cat.name }}</span>
-                    </label>
+                    <ui-checkbox *ngFor="let cat of categoriesTree"
+                      class="block rounded-xl border border-transparent px-2 py-1.5 text-sm text-main hover:bg-olive-10 cursor-pointer"
+                      [style.paddingLeft.px]="8 + cat.depth * 16"
+                      [checked]="productForm.categoryIds.includes(cat.id)"
+                      (checkedChange)="toggleProductCategoryId(cat.id)"
+                      [label]="cat.name"></ui-checkbox>
                     <div *ngIf="categoriesTree.length === 0" class="col-span-2 text-xs text-gray-400">
                       No hay categorías. Agrégalas en el árbol de categorías de abajo.
                     </div>
@@ -1382,12 +1375,16 @@
                     [ngModel]="stockForm.postalCode"
                     (ngModelChange)="stockForm.postalCode = $event"></ui-form-field>
                   <div class="flex items-center gap-2 rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2.5">
-                    <input type="checkbox" [checked]="stockForm.isMainWarehouse" (change)="stockForm.isMainWarehouse = $any($event.target).checked" class="rounded" />
-                    <span class="text-sm text-main">Bodega principal (origen de envíos)</span>
+                    <ui-checkbox
+                      label="Bodega principal (origen de envíos)"
+                      [checked]="stockForm.isMainWarehouse"
+                      (checkedChange)="stockForm.isMainWarehouse = $event"></ui-checkbox>
                   </div>
                   <div class="flex items-center gap-2 rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2.5">
-                    <input type="checkbox" [checked]="stockForm.allowPickup" (change)="stockForm.allowPickup = $any($event.target).checked" class="rounded" />
-                    <span class="text-sm text-main">Permitir recoger en esta sucursal</span>
+                    <ui-checkbox
+                      label="Permitir recoger en esta sucursal"
+                      [checked]="stockForm.allowPickup"
+                      (checkedChange)="stockForm.allowPickup = $event"></ui-checkbox>
                   </div>
                 </div>
                 <ui-button variant="primary" size="sm" class="mt-3" *ngIf="hasPermission('stock_create')" (pressed)="createStock()">
@@ -1412,30 +1409,27 @@
                   <div class="text-sm font-semibold text-main">{{ stock.name }}</div>
                   <div class="text-xs text-gray-600">{{ stock.location }}</div>
                   <div class="mt-3 flex items-center gap-3 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-2.5">
-                    <input
-                      type="checkbox"
+                    <ui-checkbox
+                      [compact]="true"
+                      label="Permitir recoger en esta sucursal"
                       [checked]="stock.allowPickup"
-                      (change)="saveStockAllowPickup(stock.id, $any($event.target).checked)"
-                      class="rounded" />
-                    <span class="text-xs text-main">Permitir recoger en esta sucursal</span>
+                      (checkedChange)="saveStockAllowPickup(stock.id, $event)"></ui-checkbox>
                   </div>
                   <div class="mt-2 flex items-center gap-3 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-2.5">
-                    <input
-                      type="checkbox"
+                    <ui-checkbox
+                      [compact]="true"
+                      label="Bodega principal (origen de envíos)"
                       [checked]="stock.isMainWarehouse"
-                      (change)="saveStockIsMainWarehouse(stock.id, $any($event.target).checked)"
-                      class="rounded" />
-                    <span class="text-xs text-main">Bodega principal (origen de envíos)</span>
+                      (checkedChange)="saveStockIsMainWarehouse(stock.id, $event)"></ui-checkbox>
                   </div>
                   <div class="mt-3 text-xs font-semibold text-main">Empleados vinculados</div>
                   <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                    <label *ngFor="let emp of employees" class="flex items-center gap-2 text-xs text-main">
-                      <input
-                        type="checkbox"
-                        [checked]="isStockUserLinked(emp.id)"
-                        (change)="toggleStockUserLink(emp.id, $any($event.target).checked)" />
-                      {{ emp.name }}
-                    </label>
+                    <ui-checkbox
+                      *ngFor="let emp of employees"
+                      [compact]="true"
+                      [label]="emp.name"
+                      [checked]="isStockUserLinked(emp.id)"
+                      (checkedChange)="toggleStockUserLink(emp.id, $event)"></ui-checkbox>
                   </div>
                   <ui-button size="sm" variant="primary" class="mt-3" (pressed)="saveStockLinks()">
                     <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
@@ -2190,10 +2184,12 @@
             <!-- Toolbar: mes + descargas -->
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div class="flex flex-wrap items-center gap-2">
-                <select class="rounded-xl border border-olive-30 bg-ivory-70 px-3 py-1.5 text-sm text-main focus:outline-none"
-                  [ngModel]="statsReportMonth || activeReportMonth" (ngModelChange)="statsReportMonth = $event; loadMonthlyStats($event || activeReportMonth)">
-                  <option *ngFor="let m of availableReportMonths" [value]="m.value">{{ m.label }}</option>
-                </select>
+                <ui-form-field
+                  kind="select"
+                  wrapperClass="block"
+                  inputClass="rounded-xl border border-olive-30 bg-ivory-70 px-3 py-1.5 text-sm text-main focus:outline-none"
+                  [options]="availableReportMonths"
+                  [ngModel]="statsReportMonth || activeReportMonth" (ngModelChange)="statsReportMonth = $event; loadMonthlyStats($event || activeReportMonth)"></ui-form-field>
                 <span class="text-xs text-gray-500">Periodo analizado</span>
               </div>
               <div class="flex flex-wrap gap-2">
@@ -2720,10 +2716,14 @@
                       (ngModelChange)="updateNotificationField('linkText', $event)"></ui-form-field>
                   </div>
 
-                  <label class="flex items-center justify-between gap-3 rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">
-                    <span class="text-main">Notificacion activa</span>
-                    <input type="checkbox" [checked]="notificationForm.active" (change)="notificationForm.active = $any($event.target).checked" />
-                  </label>
+                  <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">
+                    <ui-checkbox
+                      layout="row"
+                      class="block text-sm text-main"
+                      label="Notificacion activa"
+                      [checked]="notificationForm.active"
+                      (checkedChange)="notificationForm.active = $event"></ui-checkbox>
+                  </div>
 
                   <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-xs text-gray-600">
                     Consejo:
@@ -2741,12 +2741,13 @@
                   <div class="text-xs text-gray-600">{{ filteredNotifications.length }} registradas</div>
                 </div>
 
-                <div class="mt-3 relative">
-                  <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" aria-hidden="true"></i>
-                  <input type="text" placeholder="Buscar por título, descripción, estado..."
-                    [ngModel]="notificationSearch" (ngModelChange)="onTableSearch('notifications', $event)"
-                    class="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pl-8 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20" />
-                </div>
+                <ui-form-field
+                  type="text"
+                  placeholder="Buscar por título, descripción, estado..."
+                  leadingIconClass="fa-solid fa-magnifying-glass"
+                  wrapperClass="mt-3 block"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"
+                  [ngModel]="notificationSearch" (ngModelChange)="onTableSearch('notifications', $event)"></ui-form-field>
 
                 <div *ngIf="!filteredNotifications.length" class="mt-4 rounded-2xl border border-dashed border-olive-30 bg-ivory-70 px-4 py-6 text-sm text-gray-600">
                   {{ notificationSearch ? 'Sin resultados.' : 'Aun no hay notificaciones programadas.' }}
@@ -2808,53 +2809,72 @@
                 </div>
 
                 <div class="mt-3 space-y-3">
-                  <label class="block text-xs text-gray-500">Código
-                    <input type="text" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
-                      [ngModel]="couponDraft.code" (ngModelChange)="couponDraft.code = $event"
-                      [disabled]="!!couponEditingCode" placeholder="BIENVENIDA10" />
-                  </label>
+                  <ui-form-field
+                    type="text"
+                    label="Código"
+                    placeholder="BIENVENIDA10"
+                    wrapperClass="block"
+                    inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
+                    [ngModel]="couponDraft.code" (ngModelChange)="couponDraft.code = $event"
+                    [disabled]="!!couponEditingCode"></ui-form-field>
                   <div class="grid grid-cols-2 gap-2">
-                    <label class="block text-xs text-gray-500">Tipo
-                      <select class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                        [ngModel]="couponDraft.type" (ngModelChange)="couponDraft.type = $event">
-                        <option value="percent">Porcentaje (%)</option>
-                        <option value="fixed">Monto fijo ($)</option>
-                      </select>
-                    </label>
-                    <label class="block text-xs text-gray-500">{{ couponDraft.type === 'percent' ? 'Valor (%)' : 'Valor ($)' }}
-                      <input type="number" min="0" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                        [ngModel]="couponDraft.value" (ngModelChange)="couponDraft.value = +$event || 0" />
-                    </label>
+                    <ui-form-field
+                      kind="select"
+                      label="Tipo"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [options]="couponTypeOptions"
+                      [ngModel]="couponDraft.type" (ngModelChange)="couponDraft.type = $event"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      [min]="0"
+                      [label]="couponDraft.type === 'percent' ? 'Valor (%)' : 'Valor ($)'"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="couponDraft.value" (ngModelChange)="couponDraft.value = +$event || 0"></ui-form-field>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
-                    <label class="block text-xs text-gray-500">Subtotal mínimo ($)
-                      <input type="number" min="0" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                        [ngModel]="couponDraft.minSubtotal" (ngModelChange)="couponDraft.minSubtotal = +$event || 0" />
-                    </label>
-                    <label class="block text-xs text-gray-500">Usos máximos
-                      <input type="number" min="0" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                        [ngModel]="couponDraft.maxRedemptions" (ngModelChange)="couponDraft.maxRedemptions = $event !== '' ? (+$event || 0) : null"
-                        placeholder="Ilimitado" />
-                    </label>
+                    <ui-form-field
+                      type="number"
+                      [min]="0"
+                      label="Subtotal mínimo ($)"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="couponDraft.minSubtotal" (ngModelChange)="couponDraft.minSubtotal = +$event || 0"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      [min]="0"
+                      label="Usos máximos"
+                      placeholder="Ilimitado"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="couponDraft.maxRedemptions" (ngModelChange)="couponDraft.maxRedemptions = $event !== '' ? (+$event || 0) : null"></ui-form-field>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
-                    <label class="block text-xs text-gray-500">Válido desde
-                      <input type="date" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                        [ngModel]="couponDraft.validFrom" (ngModelChange)="couponDraft.validFrom = $event || null" />
-                    </label>
-                    <label class="block text-xs text-gray-500">Válido hasta
-                      <input type="date" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                        [ngModel]="couponDraft.validTo" (ngModelChange)="couponDraft.validTo = $event || null" />
-                    </label>
+                    <ui-form-field
+                      type="date"
+                      label="Válido desde"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="couponDraft.validFrom" (ngModelChange)="couponDraft.validFrom = $event || null"></ui-form-field>
+                    <ui-form-field
+                      type="date"
+                      label="Válido hasta"
+                      wrapperClass="block"
+                      inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="couponDraft.validTo" (ngModelChange)="couponDraft.validTo = $event || null"></ui-form-field>
                   </div>
-                  <label class="block text-xs text-gray-500">Descripción
-                    <input type="text" class="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
-                      [ngModel]="couponDraft.description" (ngModelChange)="couponDraft.description = $event" />
-                  </label>
-                  <label class="flex items-center gap-2 text-xs text-gray-600">
-                    <input type="checkbox" [ngModel]="couponDraft.active" (ngModelChange)="couponDraft.active = $event" />
-                    Activo
-                  </label>
+                  <ui-form-field
+                    type="text"
+                    label="Descripción"
+                    wrapperClass="block"
+                    inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                    [ngModel]="couponDraft.description" (ngModelChange)="couponDraft.description = $event"></ui-form-field>
+                  <ui-checkbox
+                    compact
+                    label="Activo"
+                    [checked]="couponDraft.active"
+                    (checkedChange)="couponDraft.active = $event"></ui-checkbox>
                   <p *ngIf="couponFeedback" class="text-xs text-accent">{{ couponFeedback }}</p>
                   <ui-button size="sm" variant="primary" type="button" class="w-full" (pressed)="saveCoupon()">
                     <i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i> Guardar cupón
@@ -2940,14 +2960,16 @@
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Pedidos</div>
                 <div class="mt-3 space-y-3 text-sm">
-                  <label class="flex items-center justify-between gap-3">
-                    <span>Exigir stock al marcar enviado</span>
-                    <input type="checkbox" [checked]="businessConfigDraft.orders.requireStockOnShipped" (change)="businessConfigDraft.orders.requireStockOnShipped = $any($event.target).checked" />
-                  </label>
-                  <label class="flex items-center justify-between gap-3">
-                    <span>Exigir lineas de salida al marcar enviado</span>
-                    <input type="checkbox" [checked]="businessConfigDraft.orders.requireDispatchLinesOnShipped" (change)="businessConfigDraft.orders.requireDispatchLinesOnShipped = $any($event.target).checked" />
-                  </label>
+                  <ui-checkbox
+                    layout="row"
+                    label="Exigir stock al marcar enviado"
+                    [checked]="businessConfigDraft.orders.requireStockOnShipped"
+                    (checkedChange)="businessConfigDraft.orders.requireStockOnShipped = $event"></ui-checkbox>
+                  <ui-checkbox
+                    layout="row"
+                    label="Exigir lineas de salida al marcar enviado"
+                    [checked]="businessConfigDraft.orders.requireDispatchLinesOnShipped"
+                    (checkedChange)="businessConfigDraft.orders.requireDispatchLinesOnShipped = $event"></ui-checkbox>
                 </div>
               </div>
 
@@ -3015,41 +3037,48 @@
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Stocks</div>
                 <div class="mt-3 text-sm">
-                  <label class="flex items-center justify-between gap-3">
-                    <span>Exigir usuario vinculado para recibir transferencia</span>
-                    <input type="checkbox" [checked]="businessConfigDraft.stocks.requireLinkedUserForTransferReceive" (change)="businessConfigDraft.stocks.requireLinkedUserForTransferReceive = $any($event.target).checked" />
-                  </label>
+                  <ui-checkbox
+                    layout="row"
+                    label="Exigir usuario vinculado para recibir transferencia"
+                    [checked]="businessConfigDraft.stocks.requireLinkedUserForTransferReceive"
+                    (checkedChange)="businessConfigDraft.stocks.requireLinkedUserForTransferReceive = $event"></ui-checkbox>
                 </div>
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="text-sm font-semibold text-main">Advertencias admin</div>
                 <div class="mt-3 space-y-3 text-sm">
-                  <label class="flex items-center justify-between gap-3"><span>Comisiones pendientes</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showCommissions" (change)="businessConfigDraft.adminWarnings.showCommissions = $any($event.target).checked" /></label>
-                  <label class="flex items-center justify-between gap-3"><span>Pedidos pagados sin envio</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showShipping" (change)="businessConfigDraft.adminWarnings.showShipping = $any($event.target).checked" /></label>
-                  <label class="flex items-center justify-between gap-3"><span>Pedidos pendientes de pago</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showPendingPayments" (change)="businessConfigDraft.adminWarnings.showPendingPayments = $any($event.target).checked" /></label>
-                  <label class="flex items-center justify-between gap-3"><span>Transferencias pendientes</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showPendingTransfers" (change)="businessConfigDraft.adminWarnings.showPendingTransfers = $any($event.target).checked" /></label>
-                  <label class="flex items-center justify-between gap-3"><span>Ventas POS del dia</span><input type="checkbox" [checked]="businessConfigDraft.adminWarnings.showPosSalesToday" (change)="businessConfigDraft.adminWarnings.showPosSalesToday = $any($event.target).checked" /></label>
+                  <ui-checkbox layout="row" label="Comisiones pendientes" [checked]="businessConfigDraft.adminWarnings.showCommissions" (checkedChange)="businessConfigDraft.adminWarnings.showCommissions = $event"></ui-checkbox>
+                  <ui-checkbox layout="row" label="Pedidos pagados sin envio" [checked]="businessConfigDraft.adminWarnings.showShipping" (checkedChange)="businessConfigDraft.adminWarnings.showShipping = $event"></ui-checkbox>
+                  <ui-checkbox layout="row" label="Pedidos pendientes de pago" [checked]="businessConfigDraft.adminWarnings.showPendingPayments" (checkedChange)="businessConfigDraft.adminWarnings.showPendingPayments = $event"></ui-checkbox>
+                  <ui-checkbox layout="row" label="Transferencias pendientes" [checked]="businessConfigDraft.adminWarnings.showPendingTransfers" (checkedChange)="businessConfigDraft.adminWarnings.showPendingTransfers = $event"></ui-checkbox>
+                  <ui-checkbox layout="row" label="Ventas POS del dia" [checked]="businessConfigDraft.adminWarnings.showPosSalesToday" (checkedChange)="businessConfigDraft.adminWarnings.showPosSalesToday = $event"></ui-checkbox>
                 </div>
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="flex items-center justify-between gap-3">
                   <div class="text-sm font-semibold text-main">Envío (Envia.com)</div>
-                  <input type="checkbox" [checked]="businessConfigDraft.shipping.enabled" (change)="businessConfigDraft.shipping.enabled = $any($event.target).checked" title="Habilitar cotización de envío" />
+                  <ui-checkbox
+                    ariaLabel="Habilitar cotización de envío"
+                    [checked]="businessConfigDraft.shipping.enabled"
+                    (checkedChange)="businessConfigDraft.shipping.enabled = $event"
+                    title="Habilitar cotización de envío"></ui-checkbox>
                 </div>
                 <div class="mt-3 space-y-3 text-sm">
                   <div class="grid gap-3 md:grid-cols-2">
-                    <ui-form-field type="number" [min]="0" [max]="5" label="Markup (%)" hint="Ej: 10 = 10% sobre precio paquetería" [ngModel]="businessConfigDraft.shipping.markup * 100" (ngModelChange)="businessConfigDraft.shipping.markup = (+$event || 0) / 100"></ui-form-field>
+                    <ui-form-field type="number" [min]="0" [max]="5" label="Markup (%)" helpText="Ej: 10 = 10% sobre precio paquetería" [ngModel]="businessConfigDraft.shipping.markup * 100" (ngModelChange)="businessConfigDraft.shipping.markup = (+$event || 0) / 100"></ui-form-field>
                   </div>
                   <div>
                     <div class="mb-1 text-xs text-gray-600">Paqueterías (una por línea, ej: dhl, fedex, estafeta)</div>
-                    <textarea
-                      rows="3"
-                      class="w-full rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2 text-sm text-main focus:outline-none"
+                    <ui-form-field
+                      kind="textarea"
+                      [rows]="3"
+                      wrapperClass="block"
+                      inputClass="w-full rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2 text-sm text-main focus:outline-none"
                       [ngModel]="businessConfigDraft.shipping.carriers.join('\n')"
                       (ngModelChange)="onShippingCarriersChange($event)"
-                    ></textarea>
+                    ></ui-form-field>
                   </div>
                 </div>
               </div>
@@ -3084,10 +3113,12 @@
                         (ngModelChange)="dt.key = $event">
                       </ui-form-field>
                     </div>
-                    <label class="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-gray-600">
-                      <input type="checkbox" [checked]="dt.required" (change)="dt.required = $any($event.target).checked" />
-                      Obligatorio
-                    </label>
+                    <ui-checkbox
+                      class="shrink-0"
+                      [compact]="true"
+                      label="Obligatorio"
+                      [checked]="dt.required"
+                      (checkedChange)="dt.required = $event"></ui-checkbox>
                     <button type="button" class="shrink-0 rounded-lg p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                       (click)="removeCustomerDocumentType(i)">
                       <i class="fa-solid fa-trash-can text-sm" aria-hidden="true"></i>
@@ -3127,30 +3158,59 @@
                 <div *ngFor="let rt of bonusConfig.rankThresholds; let ri = index; trackBy: trackByIndex"
                   class="rounded-xl border border-olive-30 bg-white/60 px-3 py-3">
                   <div class="flex items-center gap-2">
-                    <input class="w-40 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm font-semibold" placeholder="Nombre (BRONCE…)" [ngModel]="rt.rank" (ngModelChange)="bonusConfig.rankThresholds[ri].rank = $event; businessConfigDraft.bonuses = bonusConfig" />
+                    <ui-form-field
+                      wrapperClass="block w-40"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm font-semibold"
+                      placeholder="Nombre (BRONCE…)"
+                      [ngModel]="rt.rank"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].rank = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     <ui-button size="sm" variant="ghost" type="button" class="ml-auto" (pressed)="removeRankThreshold(ri)">
                       <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
                     </ui-button>
                   </div>
                   <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">PC personal mín.
-                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.vpMin" (ngModelChange)="bonusConfig.rankThresholds[ri].vpMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                    </label>
-                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">VG mín. (PC)
-                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.vgMin" (ngModelChange)="bonusConfig.rankThresholds[ri].vgMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                    </label>
-                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Líneas activas
-                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.minLines" (ngModelChange)="bonusConfig.rankThresholds[ri].minLines = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                    </label>
-                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">PC mín./línea
-                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.pcMinPerLine" (ngModelChange)="bonusConfig.rankThresholds[ri].pcMinPerLine = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                    </label>
-                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Bono mensual ($)
-                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.monthlyBonus" (ngModelChange)="bonusConfig.rankThresholds[ri].monthlyBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                    </label>
-                    <label class="flex flex-col gap-1 text-[11px] text-gray-500">Bono anual ($)
-                      <input type="number" class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rt.annualBonus" (ngModelChange)="bonusConfig.rankThresholds[ri].annualBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig" />
-                    </label>
+                    <ui-form-field
+                      type="number"
+                      label="PC personal mín."
+                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="rt.vpMin"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].vpMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      label="VG mín. (PC)"
+                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="rt.vgMin"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].vgMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      label="Líneas activas"
+                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="rt.minLines"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].minLines = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      label="PC mín./línea"
+                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="rt.pcMinPerLine"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].pcMinPerLine = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      label="Bono mensual ($)"
+                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="rt.monthlyBonus"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].monthlyBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                    <ui-form-field
+                      type="number"
+                      label="Bono anual ($)"
+                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                      [ngModel]="rt.annualBonus"
+                      (ngModelChange)="bonusConfig.rankThresholds[ri].annualBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                   </div>
                 </div>
               </div>
@@ -3177,14 +3237,25 @@
                   <!-- Header de la regla -->
                   <div class="flex flex-wrap items-start justify-between gap-2">
                     <div class="flex flex-1 flex-col gap-1">
-                      <input class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm font-semibold" placeholder="Nombre del bono" [ngModel]="rule.name" (ngModelChange)="bonusConfig.rules[ri].name = $event; businessConfigDraft.bonuses = bonusConfig" />
-                      <input class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs text-gray-500" placeholder="Notas (opcional)" [ngModel]="rule.notes" (ngModelChange)="bonusConfig.rules[ri].notes = $event; businessConfigDraft.bonuses = bonusConfig" />
+                      <ui-form-field
+                        wrapperClass="block"
+                        inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm font-semibold"
+                        placeholder="Nombre del bono"
+                        [ngModel]="rule.name"
+                        (ngModelChange)="bonusConfig.rules[ri].name = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                      <ui-form-field
+                        wrapperClass="block"
+                        inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs text-gray-500"
+                        placeholder="Notas (opcional)"
+                        [ngModel]="rule.notes"
+                        (ngModelChange)="bonusConfig.rules[ri].notes = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     </div>
                     <div class="flex items-center gap-2">
-                      <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-                        <input type="checkbox" [ngModel]="rule.active" (ngModelChange)="bonusConfig.rules[ri].active = $event; businessConfigDraft.bonuses = bonusConfig" />
-                        Activo
-                      </label>
+                      <ui-checkbox
+                        [compact]="true"
+                        label="Activo"
+                        [checked]="rule.active"
+                        (checkedChange)="bonusConfig.rules[ri].active = $event; businessConfigDraft.bonuses = bonusConfig"></ui-checkbox>
                       <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusRule(ri)">
                         <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
                       </ui-button>
@@ -3195,13 +3266,22 @@
                   <div class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
                     <div>
                       <div class="text-xs text-gray-500 mb-1">Rango (opcional)</div>
-                      <input class="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" placeholder="ORO, PLATINO…" [ngModel]="rule.rank" (ngModelChange)="bonusConfig.rules[ri].rank = $event || undefined; businessConfigDraft.bonuses = bonusConfig" />
+                      <ui-form-field
+                        wrapperClass="block"
+                        inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        placeholder="ORO, PLATINO…"
+                        [ngModel]="rule.rank"
+                        (ngModelChange)="bonusConfig.rules[ri].rank = $event || undefined; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     </div>
                     <div>
                       <div class="text-xs text-gray-500 mb-1">Frecuencia de otorgamiento</div>
-                      <select class="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm" [ngModel]="rule.cooldown" (ngModelChange)="bonusConfig.rules[ri].cooldown = $event; businessConfigDraft.bonuses = bonusConfig">
-                        <option *ngFor="let opt of bonusCooldownOptions" [value]="opt.value">{{ opt.label }}</option>
-                      </select>
+                      <ui-form-field
+                        kind="select"
+                        [options]="bonusCooldownOptions"
+                        wrapperClass="block"
+                        inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
+                        [ngModel]="rule.cooldown"
+                        (ngModelChange)="bonusConfig.rules[ri].cooldown = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     </div>
                   </div>
 
@@ -3216,15 +3296,30 @@
                     <div class="flex flex-col gap-2" *ngIf="rule.conditions.length > 0">
                       <div *ngFor="let cond of rule.conditions; let ci = index; trackBy: trackByIndex"
                         class="flex flex-wrap items-center gap-2 rounded-lg border border-olive-20 bg-ivory-50 px-3 py-2">
-                        <select class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" [ngModel]="cond.type" (ngModelChange)="bonusConfig.rules[ri].conditions[ci].type = $event; businessConfigDraft.bonuses = bonusConfig">
-                          <option *ngFor="let opt of bonusConditionTypeOptions" [value]="opt.value">{{ opt.label }}</option>
-                        </select>
+                        <ui-form-field
+                          kind="select"
+                          [options]="bonusConditionTypeOptions"
+                          wrapperClass="block"
+                          inputClass="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                          [ngModel]="cond.type"
+                          (ngModelChange)="bonusConfig.rules[ri].conditions[ci].type = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                         <ng-container *ngIf="conditionNeedsValue(cond.type)">
-                          <input type="number" class="w-24 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Valor" [ngModel]="cond.value" (ngModelChange)="bonusConfig.rules[ri].conditions[ci].value = +$event; businessConfigDraft.bonuses = bonusConfig" />
+                          <ui-form-field
+                            type="number"
+                            wrapperClass="block w-24"
+                            inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                            placeholder="Valor"
+                            [ngModel]="cond.value"
+                            (ngModelChange)="bonusConfig.rules[ri].conditions[ci].value = +$event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                           <span class="text-xs text-gray-400">{{ cond.type === 'consecutive_months' ? 'meses' : cond.type === 'direct_rank_count' ? 'referidos' : 'VP' }}</span>
                         </ng-container>
                         <ng-container *ngIf="conditionNeedsRank(cond.type)">
-                          <input class="w-28 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Rango requerido" [ngModel]="cond.rank" (ngModelChange)="bonusConfig.rules[ri].conditions[ci].rank = $event; businessConfigDraft.bonuses = bonusConfig" />
+                          <ui-form-field
+                            wrapperClass="block w-28"
+                            inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                            placeholder="Rango requerido"
+                            [ngModel]="cond.rank"
+                            (ngModelChange)="bonusConfig.rules[ri].conditions[ci].rank = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                         </ng-container>
                         <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusCondition(ri, ci)">
                           <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
@@ -3245,20 +3340,47 @@
                     <div class="flex flex-col gap-2" *ngIf="rule.rewards.length > 0">
                       <div *ngFor="let rew of rule.rewards; let wi = index; trackBy: trackByIndex"
                         class="flex flex-wrap items-center gap-2 rounded-lg border border-olive-20 bg-ivory-50 px-3 py-2">
-                        <select class="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" [ngModel]="rew.type" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].type = $event; businessConfigDraft.bonuses = bonusConfig">
-                          <option *ngFor="let opt of bonusRewardTypeOptions" [value]="opt.value">{{ opt.label }}</option>
-                        </select>
+                        <ui-form-field
+                          kind="select"
+                          [options]="bonusRewardTypeOptions"
+                          wrapperClass="block"
+                          inputClass="rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                          [ngModel]="rew.type"
+                          (ngModelChange)="bonusConfig.rules[ri].rewards[wi].type = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                         <ng-container *ngIf="rewardNeedsAmount(rew.type)">
-                          <input type="number" class="w-28 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Monto MXN" [ngModel]="rew.amount" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].amount = +$event; businessConfigDraft.bonuses = bonusConfig" />
+                          <ui-form-field
+                            type="number"
+                            wrapperClass="block w-28"
+                            inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                            placeholder="Monto MXN"
+                            [ngModel]="rew.amount"
+                            (ngModelChange)="bonusConfig.rules[ri].rewards[wi].amount = +$event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                           <span class="text-xs text-gray-400">MXN</span>
                         </ng-container>
                         <ng-container *ngIf="rewardNeedsItem(rew.type)">
-                          <input class="w-36 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Descripción artículo" [ngModel]="rew.itemLabel" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].itemLabel = $event; businessConfigDraft.bonuses = bonusConfig" />
-                          <input type="number" class="w-20 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="Mes N" [ngModel]="rew.triggerMonths" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].triggerMonths = +$event || undefined; businessConfigDraft.bonuses = bonusConfig" />
+                          <ui-form-field
+                            wrapperClass="block w-36"
+                            inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                            placeholder="Descripción artículo"
+                            [ngModel]="rew.itemLabel"
+                            (ngModelChange)="bonusConfig.rules[ri].rewards[wi].itemLabel = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
+                          <ui-form-field
+                            type="number"
+                            wrapperClass="block w-20"
+                            inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                            placeholder="Mes N"
+                            [ngModel]="rew.triggerMonths"
+                            (ngModelChange)="bonusConfig.rules[ri].rewards[wi].triggerMonths = +$event || undefined; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                           <span class="text-xs text-gray-400">mes</span>
                         </ng-container>
                         <ng-container *ngIf="rewardNeedsPct(rew.type)">
-                          <input type="number" class="w-20 rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs" placeholder="%" [ngModel]="rew.pct" (ngModelChange)="bonusConfig.rules[ri].rewards[wi].pct = +$event; businessConfigDraft.bonuses = bonusConfig" />
+                          <ui-form-field
+                            type="number"
+                            wrapperClass="block w-20"
+                            inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-xs"
+                            placeholder="%"
+                            [ngModel]="rew.pct"
+                            (ngModelChange)="bonusConfig.rules[ri].rewards[wi].pct = +$event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                           <span class="text-xs text-gray-400">%</span>
                         </ng-container>
                         <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusReward(ri, wi)">
@@ -3652,9 +3774,13 @@
   </div>
   <div class="mt-4 grid gap-3">
     <div>
-      <label class="block text-xs font-semibold text-gray-600 mb-1">Motivo del reembolso (opcional)</label>
-      <input type="text" [(ngModel)]="refundReason" placeholder="Ej. Cancelación por cliente"
-        class="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70" />
+      <ui-form-field
+        wrapperClass="block"
+        label="Motivo del reembolso (opcional)"
+        type="text"
+        placeholder="Ej. Cancelación por cliente"
+        inputClass="mt-1 w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70"
+        [(ngModel)]="refundReason"></ui-form-field>
     </div>
     <div>
       <label class="block text-xs font-semibold text-gray-600 mb-1">Comprobante de depósito <span class="text-red-500">*</span></label>
@@ -3731,9 +3857,14 @@
       Esta acción marcará la devolución como <strong>rechazada</strong> y notificará al cliente.
     </div>
     <div>
-      <label class="block text-xs font-semibold text-gray-600 mb-1">Motivo del rechazo <span class="text-red-500">*</span></label>
-      <textarea [(ngModel)]="rejectReturnReason" rows="3" placeholder="Ej. El producto presenta daños causados por el cliente..."
-        class="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70 resize-none"></textarea>
+      <ui-form-field
+        label="Motivo del rechazo *"
+        wrapperClass="block"
+        kind="textarea"
+        [rows]="3"
+        placeholder="Ej. El producto presenta daños causados por el cliente..."
+        inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70 resize-none"
+        [(ngModel)]="rejectReturnReason"></ui-form-field>
     </div>
     <div *ngIf="rejectReturnError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
       {{ rejectReturnError }}

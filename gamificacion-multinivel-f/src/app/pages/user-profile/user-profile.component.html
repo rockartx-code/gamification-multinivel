@@ -226,65 +226,47 @@
 
         <div class="grid gap-4">
           <!-- Contraseña actual -->
-          <div class="block">
-            <label class="mb-1 block text-xs font-semibold text-gray-600">Contraseña actual</label>
-            <div class="relative">
-              <input
-                [type]="showCurrentPassword ? 'text' : 'password'"
-                name="currentPassword"
-                [(ngModel)]="passwordForm.currentPassword"
-                (ngModelChange)="passwordErrors.currentPassword = ''"
-                placeholder="Tu contraseña actual"
-                class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
-                [ngClass]="passwordErrors.currentPassword ? 'border-red-400' : 'border-olive-30'" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                (click)="showCurrentPassword = !showCurrentPassword">
-                <i class="fa-solid" [ngClass]="showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-              </button>
-            </div>
-            <p *ngIf="passwordErrors.currentPassword" class="mt-1 text-xs text-red-500">{{ passwordErrors.currentPassword }}</p>
-          </div>
+          <ui-form-field
+            kind="input"
+            type="password"
+            name="currentPassword"
+            label="Contraseña actual"
+            placeholder="Tu contraseña actual"
+            wrapperClass="block"
+            inputClass="mt-1 w-full rounded-xl border bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
+            [(ngModel)]="passwordForm.currentPassword"
+            (ngModelChange)="passwordErrors.currentPassword = ''"
+            [errorText]="passwordErrors.currentPassword">
+          </ui-form-field>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <!-- Nueva contraseña -->
-            <div class="block">
-              <label class="mb-1 block text-xs font-semibold text-gray-600">Nueva contraseña</label>
-              <div class="relative">
-                <input
-                  [type]="showNewPassword ? 'text' : 'password'"
-                  name="newPassword"
-                  [(ngModel)]="passwordForm.newPassword"
-                  (ngModelChange)="passwordErrors.newPassword = ''"
-                  placeholder="Mínimo 8 caracteres"
-                  class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
-                  [ngClass]="passwordErrors.newPassword ? 'border-red-400' : 'border-olive-30'" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                  (click)="showNewPassword = !showNewPassword">
-                  <i class="fa-solid" [ngClass]="showNewPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <p *ngIf="passwordErrors.newPassword" class="mt-1 text-xs text-red-500">{{ passwordErrors.newPassword }}</p>
-            </div>
+            <ui-form-field
+              kind="input"
+              type="password"
+              name="newPassword"
+              label="Nueva contraseña"
+              placeholder="Mínimo 8 caracteres"
+              wrapperClass="block"
+              inputClass="mt-1 w-full rounded-xl border bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
+              [(ngModel)]="passwordForm.newPassword"
+              (ngModelChange)="passwordErrors.newPassword = ''"
+              [errorText]="passwordErrors.newPassword">
+            </ui-form-field>
 
             <!-- Confirmar nueva contraseña -->
-            <div class="block">
-              <label class="mb-1 block text-xs font-semibold text-gray-600">Confirmar nueva contraseña</label>
-              <div class="relative">
-                <input
-                  [type]="showConfirmPassword ? 'text' : 'password'"
-                  name="confirmPassword"
-                  [(ngModel)]="passwordForm.confirmPassword"
-                  (ngModelChange)="passwordErrors.confirmPassword = ''"
-                  placeholder="Repite la nueva contraseña"
-                  class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
-                  [ngClass]="passwordErrors.confirmPassword ? 'border-red-400' : 'border-olive-30'" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                  (click)="showConfirmPassword = !showConfirmPassword">
-                  <i class="fa-solid" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <p *ngIf="passwordErrors.confirmPassword" class="mt-1 text-xs text-red-500">{{ passwordErrors.confirmPassword }}</p>
-            </div>
+            <ui-form-field
+              kind="input"
+              type="password"
+              name="confirmPassword"
+              label="Confirmar nueva contraseña"
+              placeholder="Repite la nueva contraseña"
+              wrapperClass="block"
+              inputClass="mt-1 w-full rounded-xl border bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
+              [(ngModel)]="passwordForm.confirmPassword"
+              (ngModelChange)="passwordErrors.confirmPassword = ''"
+              [errorText]="passwordErrors.confirmPassword">
+            </ui-form-field>
           </div>
         </div>
 

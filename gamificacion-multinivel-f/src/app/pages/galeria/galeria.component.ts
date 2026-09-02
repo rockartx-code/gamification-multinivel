@@ -16,6 +16,7 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
 import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
 import { UiChoiceCardComponent } from '../../components/ui-choice-card/ui-choice-card.component';
+import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 
 /**
  * Galería interna de componentes (styleguide vivo).
@@ -41,7 +42,8 @@ import { UiChoiceCardComponent } from '../../components/ui-choice-card/ui-choice
     UiStatusBadgeComponent,
     UiPaginationComponent,
     UiQtyStepperComponent,
-    UiChoiceCardComponent
+    UiChoiceCardComponent,
+    UiCheckboxComponent
   ],
   templateUrl: './galeria.component.html'
 })
@@ -53,6 +55,9 @@ export class GaleriaComponent {
   demoPage = 1;
   demoQty = 2;
   demoChoice: 'a' | 'b' = 'a';
+  demoCheck1 = true;
+  demoCheck2 = false;
+  demoCheck3 = true;
 
   readonly orderStatuses = [
     'pending', 'paid', 'shipped', 'delivered', 'cancelled',

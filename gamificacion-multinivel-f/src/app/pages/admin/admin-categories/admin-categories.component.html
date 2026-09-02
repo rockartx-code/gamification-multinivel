@@ -19,9 +19,10 @@
   <div *ngIf="addingParentId === null" class="border-b border-olive-20 bg-ivory-80/60 px-4 py-3">
     <div class="flex items-center gap-2">
       <span class="text-xs text-gray-400">Raíz /</span>
-      <input [(ngModel)]="draftName" placeholder="Nombre de categoría"
-        class="flex-1 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
-        (keydown.enter)="save()" />
+      <ui-form-field class="flex-1" [(ngModel)]="draftName" placeholder="Nombre de categoría"
+        wrapperClass="block"
+        inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
+        (keydown.enter)="save()"></ui-form-field>
       <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
         {{ isSaving ? '...' : 'Agregar' }}
       </ui-button>
@@ -49,9 +50,10 @@
 
     <!-- Editing inline -->
     <ng-container *ngIf="editingId === node.id">
-      <input [(ngModel)]="draftName"
-        class="flex-1 rounded-xl border border-olive-30 bg-white/70 px-3 py-1 text-sm text-main outline-none focus:border-olive-70"
-        (keydown.enter)="save()" />
+      <ui-form-field class="flex-1" [(ngModel)]="draftName"
+        wrapperClass="block"
+        inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1 text-sm text-main outline-none focus:border-olive-70"
+        (keydown.enter)="save()"></ui-form-field>
       <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
         {{ isSaving ? '...' : 'Guardar' }}
       </ui-button>
@@ -81,9 +83,10 @@
     class="flex items-center gap-2 border-b border-olive-20 bg-ivory-80/60 py-2"
     [style.paddingLeft.px]="16 + (node.depth + 1) * 20">
     <i class="fa-solid fa-corner-down-right text-[10px] text-gray-300" aria-hidden="true"></i>
-    <input [(ngModel)]="draftName" placeholder="Nombre de subcategoría"
-      class="flex-1 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
-      (keydown.enter)="save()" />
+    <ui-form-field class="flex-1" [(ngModel)]="draftName" placeholder="Nombre de subcategoría"
+      wrapperClass="block"
+      inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
+      (keydown.enter)="save()"></ui-form-field>
     <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
       {{ isSaving ? '...' : 'Agregar' }}
     </ui-button>

@@ -67,6 +67,71 @@
         <ui-form-field kind="textarea" [rows]="3" label="Textarea" placeholder="Escribe tu mensaje..."
           [(ngModel)]="demoText" name="g6"></ui-form-field>
       </div>
+
+      <!-- ── Casillas (ui-checkbox) ── -->
+      <h3 class="mt-8 text-sm font-semibold uppercase tracking-wide text-muted">Casillas — ui-checkbox</h3>
+      <p class="mt-1 text-sm text-gray-600">layout="inline" (por defecto): [casilla] Etiqueta.</p>
+      <div class="mt-3 flex max-w-3xl flex-wrap items-start gap-x-8 gap-y-4">
+        <ui-checkbox
+          label="Marcado"
+          [checked]="demoCheck1"
+          (checkedChange)="demoCheck1 = $event"></ui-checkbox>
+        <ui-checkbox
+          label="Sin marcar"
+          [checked]="demoCheck2"
+          (checkedChange)="demoCheck2 = $event"></ui-checkbox>
+        <ui-checkbox
+          label="Con description"
+          description="Texto auxiliar bajo la etiqueta."
+          [checked]="demoCheck3"
+          (checkedChange)="demoCheck3 = $event"></ui-checkbox>
+        <ui-checkbox
+          label="Compact"
+          [compact]="true"
+          [checked]="demoCheck1"
+          (checkedChange)="demoCheck1 = $event"></ui-checkbox>
+        <ui-checkbox
+          label="Deshabilitado (marcado)"
+          [checked]="true"
+          [disabled]="true"></ui-checkbox>
+        <ui-checkbox
+          label="Deshabilitado (sin marcar)"
+          [checked]="false"
+          [disabled]="true"></ui-checkbox>
+      </div>
+
+      <p class="mt-6 text-sm text-gray-600">layout="row": etiqueta a la izquierda, casilla a la derecha, ocupando el ancho del contenedor.</p>
+      <div class="mt-3 max-w-md space-y-3 rounded-2xl border border-olive-30 bg-ivory-80 p-4">
+        <ui-checkbox
+          class="block"
+          layout="row"
+          label="Recibir notificaciones"
+          [checked]="demoCheck1"
+          (checkedChange)="demoCheck1 = $event"></ui-checkbox>
+        <ui-checkbox
+          class="block"
+          layout="row"
+          label="Guardar como dirección predeterminada"
+          description="Se usará en tus próximos pedidos."
+          [checked]="demoCheck2"
+          (checkedChange)="demoCheck2 = $event"></ui-checkbox>
+        <ui-checkbox
+          class="block"
+          layout="row"
+          label="Compact + row"
+          [compact]="true"
+          [checked]="demoCheck3"
+          (checkedChange)="demoCheck3 = $event"></ui-checkbox>
+        <ui-checkbox
+          class="block"
+          layout="row"
+          label="Deshabilitado en row"
+          [checked]="true"
+          [disabled]="true"></ui-checkbox>
+      </div>
+      <p class="mt-2 text-xs text-muted">
+        Estado en vivo — demoCheck1: {{ demoCheck1 }} · demoCheck2: {{ demoCheck2 }} · demoCheck3: {{ demoCheck3 }}
+      </p>
     </section>
 
     <!-- ═══ Insignias y estados ═══ -->
