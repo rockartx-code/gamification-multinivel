@@ -48,3 +48,12 @@ def test_el_link_con_id_numerico_tambien_asigna_patrocinador(auth, utils):
 def test_un_referido_inexistente_no_inventa_lider(auth, utils):
     invitado = _alta(auth, "Karla Méndez", "karla@test.com", referido="999999999")
     assert not _cliente(utils, invitado).get("leaderId")
+
+
+def test_el_codigo_no_lleva_acentos_y_resuelve_tecleado_sin_ellos(auth, utils):
+    """Regresión: "Tomás Ibarra" generaba TOMÁS-TIL; escrito TOMAS-TIL no resolvía."""
+    lider = _alta(auth, "Tomás Ibarra López", "tomas@test.com")
+    codigo = _cliente(utils, lider)["referralCode"]
+    assert codigo == codigo.encode("ascii", "ignore").decode(), codigo
+    invitado = _alta(auth, "Patricia Solís", "pat@test.com", referido=codigo.lower())
+    assert str(_cliente(utils, invitado)["leaderId"]) == str(lider)

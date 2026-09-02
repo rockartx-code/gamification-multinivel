@@ -544,6 +544,10 @@ def handle_change_password(body, headers):
 
 
 def _build_user_referral_code(name: str) -> str:
+    # Sin acentos ni ñ: "TOMÁS-TIL" solo resolvía escrito con acento; quien lo
+    # teclea como "TOMAS-TIL" (lo normal en un código) se registraba sin líder.
+    import unicodedata
+    name = "".join(c for c in unicodedata.normalize("NFD", str(name or "")) if unicodedata.category(c) != "Mn")
     """Genera el código de referido a partir del nombre completo.
     Ej: 'Maria Garcia Lopez' → 'Maria-MGL'
     Idéntico a buildReferralCode() en el frontend."""
@@ -614,7 +618,8 @@ def _resolve_leader_from_referral_code(raw_code) -> str | None:
     """Dada una referralCode, devuelve el leaderId asociado o None si no existe."""
     if not raw_code:
         return None
-    code = str(raw_code).strip().upper()
+    import unicodedata
+    code = "".join(c for c in unicodedata.normalize("NFD", str(raw_code).strip()) if unicodedata.category(c) != "Mn").upper()
     try:
         resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         item = resp.get("Item")
