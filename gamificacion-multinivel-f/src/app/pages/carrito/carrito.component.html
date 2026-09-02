@@ -318,6 +318,15 @@
       ></ui-form-field>
 
       <ui-form-field
+        *ngIf="isGuest"
+        type="email"
+        label="Correo (te avisamos del pago, el envío y la entrega)"
+        placeholder="tucorreo@ejemplo.com"
+        name="deliveryEmail"
+        [(ngModel)]="deliveryEmail"
+      ></ui-form-field>
+
+      <ui-form-field
         label="Calle"
         placeholder="Av. Reforma"
         name="deliveryStreet"

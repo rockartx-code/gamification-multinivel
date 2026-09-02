@@ -11,6 +11,7 @@ export type CartDeliveryState = {
   selectedShippingRateId: string;
   deliveryName: string;
   deliveryPhone: string;
+  deliveryEmail?: string;
   deliveryStreet: string;
   deliveryNumber: string;
   deliveryCity: string;

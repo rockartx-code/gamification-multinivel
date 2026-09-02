@@ -64,6 +64,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
   shippingQuoteError = '';
   deliveryName = '';
   deliveryPhone = '';
+  /** Correo del comprador sin cuenta: sin él, ningún invitado recibía aviso de pago, envío ni entrega. */
+  deliveryEmail = '';
   deliveryStreet = '';
   deliveryNumber = '';
   deliveryAddress = '';
@@ -149,6 +151,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (saved.shippingAddressLabel) { this.shippingAddressLabel = saved.shippingAddressLabel; }
     if (saved.deliveryName) { this.deliveryName = saved.deliveryName; }
     if (saved.deliveryPhone) { this.deliveryPhone = saved.deliveryPhone; }
+    if (saved.deliveryEmail) { this.deliveryEmail = saved.deliveryEmail; }
     if (saved.deliveryStreet) { this.deliveryStreet = saved.deliveryStreet; }
     if (saved.deliveryNumber) { this.deliveryNumber = saved.deliveryNumber; }
     if (saved.deliveryCity) { this.deliveryCity = saved.deliveryCity; }
@@ -189,6 +192,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       selectedShippingRateId: this.selectedShippingRate?.service ?? '',
       deliveryName: this.deliveryName,
       deliveryPhone: this.deliveryPhone,
+      deliveryEmail: this.deliveryEmail,
       deliveryStreet: this.deliveryStreet,
       deliveryNumber: this.deliveryNumber,
       deliveryCity: this.deliveryCity,
@@ -583,6 +587,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
     const pickupStockId = this.resolveSelectedPickupStockId(this.pickupStocks, this.selectedPickupStockId);
+    if (this.isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.deliveryEmail.trim())) {
+      this.showToast('Escribe tu correo: ahí te avisamos del pago, el envío y la entrega.');
+      return;
+    }
     if (this.deliveryType === 'pickup') {
       if (!pickupStockId) {
         this.selectedPickupStockId = '';
@@ -606,6 +614,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       payload = {
         customerId: this.resolveOrderCustomerId(),
         customerName: user?.name || this.deliveryName.trim() || 'Cliente',
+        email: this.isGuest ? this.deliveryEmail.trim() || undefined : undefined,
         status: 'pending' as const,
         items,
         deliveryType: 'pickup',
@@ -656,6 +665,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       payload = {
         customerId: this.resolveOrderCustomerId(),
         customerName: user?.name || recipientName || 'Cliente',
+        email: this.isGuest ? this.deliveryEmail.trim() || undefined : undefined,
         status: 'pending' as const,
         items,
         shippingAddress,
