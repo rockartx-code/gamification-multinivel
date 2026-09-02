@@ -46,3 +46,10 @@ Sus WhatsApp salientes (`📱 A [nombre]:`) los entrego yo al agente-cliente cor
 | Tomás Ibarra, 21 | haiku, MÓVIL | TikTok de Marcela (energía sin café), link en bio | `/#/landing/MARCELA-MO` |
 | Patricia Solís, 47 | sonnet, MÓVIL | Publicación de Instagram de Marcela (colágeno), solo código "MARCELA-MO" | `/#/` y tiene que encontrar dónde va el código |
 | Andrés Quintero, 35 | opus | Video de YouTube de Marcela ("cómo funciona el plan"), link y código en la descripción | `/#/landing/MARCELA-MO` |
+
+## Cuarta ola (Día 5): anuncios pagados por FindingU, sin patrocinador (cartera de Ivonne)
+| Persona | Modelo | Canal | Entra por |
+|---|---|---|---|
+| Héctor Lara, 52 | sonnet | Anuncio de búsqueda en Google ("omega 3 alta pureza precio") | `/#/tienda` |
+| Rosa Elena Mendoza, 58 | haiku, MÓVIL | Anuncio en Facebook ("Suplementos premium · envío gratis") | `/#/` |
+| Iván Robles, 28 | opus | Anuncio pre-roll de YouTube (Finding Pro, proteína con colágeno) | `/#/tienda` |
