@@ -43,7 +43,9 @@ def _lineas(order: dict) -> str:
 
 
 def _seguimiento(order: dict, frontend_url: str) -> str:
-    return f"{frontend_url.rstrip('/')}/#/estatus?orderId={order.get('orderId')}"
+    # La ruta real del seguimiento es /#/orden/{id}; la primera versión
+    # enlazaba a una página que no existe ("link muerto" en el primer correo útil).
+    return f"{frontend_url.rstrip('/')}/#/orden/{order.get('orderId')}"
 
 
 def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):

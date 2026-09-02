@@ -37,6 +37,7 @@ def test_el_invitado_recibe_correo_en_cada_paso(order_lambda, utils, buzon, monk
     assert [p for p, _, _ in buzon] == ["lucia@test.com"] * 3
     assert "Recibimos tu pago" in asuntos[0] and "va en camino" in asuntos[1] and "entregado" in asuntos[2]
     assert "EST-1" in buzon[1][2] and "$929.00" in buzon[1][2]   # guía y total con envío en el cuerpo
+    assert f"/#/orden/{oid}" in buzon[1][2]   # el enlace de seguimiento existe
 
     cuerpo = {"motivo": "DANADO_DEFECTUOSO", "reason": "DANADO_DEFECTUOSO", "descripcion": "Tapa rajada",
               "evidencia": {"fotos_producto": ["a.jpg"], "fotos_empaque": ["b.jpg"], "fotos_guia_envio": ["c.jpg"]},

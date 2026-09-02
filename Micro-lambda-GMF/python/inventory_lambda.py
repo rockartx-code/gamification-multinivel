@@ -338,6 +338,12 @@ def handle_void_pos_sale(sale_id: str, body: dict, headers: dict) -> dict:
     if order_id:
         order = utils._update_by_id("ORDER", order_id, "SET #s = :s, cancelReason = :r, cancelledAt = :t, updatedAt = :t",
                                     {":s": "cancelled", ":r": f"pos_void: {motivo}", ":t": now}, {"#s": "status"})
+        # Sin esto la lista de pedidos del cliente seguía diciendo "Entregada"
+        # mientras el detalle decía "Cancelado".
+        try:
+            utils._upsert_order_customer_history(order)
+        except Exception as e:
+            utils._log("pos_void_history_error", "ERROR", orderId=order_id, err=e)
         if ORDER_SFN_ARN:
             try:
                 sfn.start_execution(stateMachineArn=ORDER_SFN_ARN,
