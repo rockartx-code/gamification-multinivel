@@ -3354,6 +3354,51 @@ export class AdminComponent implements OnInit {
 
   orderNoteDrafts: Record<string, string> = {};
 
+  isChangePasswordModalOpen = false;
+  isSavingPassword = false;
+  passwordError = '';
+  passwordForm = { current: '', next: '', confirm: '' };
+
+  openChangePasswordModal(): void {
+    this.passwordForm = { current: '', next: '', confirm: '' };
+    this.passwordError = '';
+    this.isChangePasswordModalOpen = true;
+  }
+
+  closeChangePasswordModal(): void {
+    this.isChangePasswordModalOpen = false;
+  }
+
+  submitChangePassword(): void {
+    const { current, next, confirm } = this.passwordForm;
+    if (!current || !next) {
+      this.passwordError = 'Escribe tu contraseña actual y la nueva.';
+      return;
+    }
+    if (next.length < 8) {
+      this.passwordError = 'La nueva contraseña debe tener al menos 8 caracteres.';
+      return;
+    }
+    if (next !== confirm) {
+      this.passwordError = 'Las contraseñas no coinciden.';
+      return;
+    }
+    this.passwordError = '';
+    this.isSavingPassword = true;
+    this.api
+      .changePassword(String(this.currentUser?.userId ?? ''), { currentPassword: current, newPassword: next })
+      .pipe(finalize(() => { this.isSavingPassword = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: () => {
+          this.closeChangePasswordModal();
+          this.showSnackbar('Contraseña actualizada. Te llegará un correo de confirmación.');
+        },
+        error: (error: unknown) => {
+          this.passwordError = this.resolveUiErrorMessage(error, 'No se pudo cambiar la contraseña.');
+        }
+      });
+  }
+
   addOrderNote(order: AdminOrder): void {
     const text = (this.orderNoteDrafts[order.id] || '').trim();
     if (!text) {

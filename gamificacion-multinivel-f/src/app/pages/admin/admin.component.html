@@ -32,6 +32,11 @@
             </span>
           </span>
         </ui-button>
+        <!-- Una cajera nueva no tenía dónde cambiar su contraseña temporal -->
+        <ui-button size="sm" variant="ghost" (pressed)="openChangePasswordModal()">
+          <i class="fa-solid fa-key" aria-hidden="true"></i>
+          Contraseña
+        </ui-button>
         <ui-button size="sm" variant="ghost" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           Logout
@@ -1796,7 +1801,7 @@
 
                 <div *ngIf="!hasLinkedPosStock"
                   class="mt-4 flex flex-col items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
-                  <span>No tienes un stock ligado. Vincula este usuario a un stock para poder registrar ventas.</span>
+                  <span>No tienes un almacén ligado a tu usuario, así que no puedes cobrar todavía. Pide a tu gerente que te agregue en Almacenes → tu sucursal → "Usuarios ligados".</span>
                   <ui-button *ngIf="canAccessView('stocks')" size="sm" variant="ghost" class="shrink-0"
                     (pressed)="onAdminNavSelect('stocks')">
                     <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
@@ -3677,6 +3682,23 @@
       </section>
     </div>
   </main>
+
+  <ui-modal [isOpen]="isChangePasswordModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeChangePasswordModal()">
+    <div class="text-lg font-extrabold text-main">Cambiar mi contraseña</div>
+    <div class="mt-1 text-sm text-gray-600">Si entraste con una contraseña temporal, cámbiala aquí.</div>
+    <div class="mt-4 grid gap-3">
+      <ui-form-field type="password" label="Contraseña actual" [ngModel]="passwordForm.current" (ngModelChange)="passwordForm.current = $event"></ui-form-field>
+      <ui-form-field type="password" label="Nueva contraseña (mínimo 8 caracteres)" [ngModel]="passwordForm.next" (ngModelChange)="passwordForm.next = $event"></ui-form-field>
+      <ui-form-field type="password" label="Repite la nueva contraseña" [ngModel]="passwordForm.confirm" (ngModelChange)="passwordForm.confirm = $event"></ui-form-field>
+      <div *ngIf="passwordError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ passwordError }}</div>
+    </div>
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <ui-button size="sm" variant="ghost" (pressed)="closeChangePasswordModal()">Cancelar</ui-button>
+      <ui-button size="sm" variant="primary" [disabled]="isSavingPassword" (pressed)="submitChangePassword()">
+        {{ isSavingPassword ? 'Guardando...' : 'Cambiar contraseña' }}
+      </ui-button>
+    </div>
+  </ui-modal>
 
   <ui-modal [isOpen]="isActionsModalOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeModals()">
       <div class="flex items-start justify-between gap-3">
