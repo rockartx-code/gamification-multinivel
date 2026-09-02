@@ -112,6 +112,7 @@ export class UserDashboardControlService {
         isGuest: dashboard.isGuest,
         vp: dashboard.vp,
         vg: dashboard.vg,
+        myNetSpend: dashboard.myNetSpend,
         rank: dashboard.rank,
         bonuses: dashboard.bonuses ?? [],
       } satisfies UserDashboardData)),
