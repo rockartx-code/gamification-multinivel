@@ -576,7 +576,7 @@
                   [cartValue]="cartPercent"
                   [targetValue]="100">
                   <div class="mt-2 text-xs text-gray-500">
-                    Te faltan <span class="font-semibold text-gold">{{ formatMoney(gapToGoal) }}</span> para
+                    Te faltan <span class="font-semibold text-gold">{{ gapToGoalLabel }}</span> para
                     {{ goalTitle }}
                   </div>
                 </ui-goal-progress>
@@ -679,7 +679,7 @@
       </div>
 
       <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-600">
-        Te faltan <span class="font-semibold text-gold">{{ formatMoney(gapToGoal) }}</span> para {{ goalTitle }}.
+        Te faltan <span class="font-semibold text-gold">{{ gapToGoalLabel }}</span> para {{ goalTitle }}.
       </div>
   </ui-modal>
 

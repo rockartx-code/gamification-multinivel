@@ -465,7 +465,28 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const target = Number(goal.target ?? 0);
     const base = Number(goal.base ?? 0);
     const remaining = Math.max(0, target - base);
-    return Math.max(0, remaining - this.subtotal);
+    // Una meta en VP se descuenta con los puntos del carrito, no con los pesos:
+    // antes "Te faltan $0" con $280 en el carrito y 20 VP de meta.
+    const progress = goal.unit === 'vp' ? this.cartVp : this.subtotal;
+    return Math.max(0, remaining - progress);
+  }
+
+  /** Puntos (PC) que suma el carrito según el catálogo. */
+  get cartVp(): number {
+    const products = this.dashboardControl.products ?? [];
+    return this.cartItems.reduce((sum, item) => {
+      const product = products.find((p) => p.id === this.extractProductId(item.id));
+      return sum + (Number(product?.vpPoints ?? 0) * item.qty);
+    }, 0);
+  }
+
+  /** "Te faltan …" con la unidad de la meta activa. */
+  get gapToGoalLabel(): string {
+    if (this.activeGoal?.unit === 'vp') {
+      const gap = this.gapToGoal;
+      return `${Number.isInteger(gap) ? gap : gap.toFixed(1)} VP`;
+    }
+    return this.formatMoney(this.gapToGoal);
   }
 
   get benefitPercent(): number {
@@ -479,7 +500,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (remaining === 0) {
       return 100;
     }
-    return Math.min(100, (this.subtotal / remaining) * 100);
+    const progress = goal.unit === 'vp' ? this.cartVp : this.subtotal;
+    return Math.min(100, (progress / remaining) * 100);
   }
 
   private get activeGoal(): DashboardGoal | null {
