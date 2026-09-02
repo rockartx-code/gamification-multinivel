@@ -14,13 +14,13 @@
         <!-- Precio -->
         <div class="flex justify-end">
           <div class="text-right">
-            <div *ngIf="hasDiscount" class="text-[10px] text-gray-500 line-through">
+            <div *ngIf="hasDiscount" class="text-micro text-gray-500 line-through">
               {{ originalPriceLabel }}
             </div>
             <div class="text-sm font-extrabold leading-none">
               {{ discountedPriceLabel }}
             </div>
-            <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-accent' : 'text-gray-500'">
+            <div class="text-micro" [ngClass]="hasDiscount ? 'text-accent' : 'text-gray-500'">
               {{ discountLabel }}
             </div>
           </div>
@@ -28,12 +28,12 @@
 
         <!-- Puntos Comisionables (PC) que aporta a los logros -->
         <div *ngIf="hasPc" class="mt-1 flex flex-wrap items-center justify-end gap-1.5">
-          <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent"
+          <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-micro font-bold text-accent"
                 title="Puntos Comisionables que suma este producto a tus logros (PV/PG)">
             <i class="fa-solid fa-star text-[9px]" aria-hidden="true"></i>
             {{ officialPc }} PC
           </span>
-          <span *ngIf="hasNetPc" class="inline-flex items-center gap-1 rounded-full bg-olive-30/40 px-2 py-0.5 text-[10px] font-semibold text-gray-700"
+          <span *ngIf="hasNetPc" class="inline-flex items-center gap-1 rounded-full bg-olive-30/40 px-2 py-0.5 text-micro font-semibold text-gray-700"
                 title="PC netos según tu descuento vigente (proporcionales al neto pagado)">
             {{ netPc }} PC netos
           </span>
@@ -75,8 +75,8 @@
           class="flex items-center gap-1.5 text-xs font-medium"
           [ngClass]="isVariantChecked(variant.id) ? 'text-accent' : 'text-gray-600'"
           (click)="toggleVariant(variant.id)">
-          <i class="fa-solid text-[10px]"
-            [ngClass]="isVariantChecked(variant.id) ? 'fa-circle-check text-accent' : 'fa-circle text-gray-300'"
+          <i class="fa-solid text-micro"
+            [ngClass]="isVariantChecked(variant.id) ? 'fa-circle-check text-accent' : 'fa-circle text-gray-500'"
             aria-hidden="true"></i>
           {{ variant.name }}
         </button>
@@ -94,7 +94,7 @@
           [attr.aria-label]="'Agregar ' + variant.name"
           class="inline-flex items-center gap-1.5 rounded-full border border-gold-35 bg-gold-12 px-3 py-1.5 text-xs font-bold text-on-gold transition hover:bg-gold-20"
           (click)="changeVariantQty(variant.id, 1)">
-          <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+          <i class="fa-solid fa-plus text-micro" aria-hidden="true"></i>
           Agregar
         </button>
       </div>
@@ -144,7 +144,7 @@
 
       <div class="mt-1 flex items-center gap-2">
         <span class="text-sm font-extrabold">{{ discountedPriceLabel }}</span>
-        <span *ngIf="hasPc" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent"
+        <span *ngIf="hasPc" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-micro font-bold text-accent"
               title="Puntos Comisionables que suma a tus logros (PV/PG)">
           <i class="fa-solid fa-star text-[8px]" aria-hidden="true"></i>{{ officialPc }} PC
         </span>
@@ -156,15 +156,17 @@
       <button
         type="button"
         class="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-black/5"
+        [attr.aria-label]="'Ver detalle de ' + product.name"
         (click)="viewDetails.emit()">
-        <i class="fa-solid fa-circle-info text-xs"></i>
+        <i class="fa-solid fa-circle-info text-xs" aria-hidden="true"></i>
       </button>
 
       <button
         type="button"
         class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-white hover:opacity-90"
+        [attr.aria-label]="'Agregar ' + product.name + ' al carrito'"
         (click)="add.emit()">
-        <i class="fa-solid fa-cart-plus text-xs"></i>
+        <i class="fa-solid fa-cart-plus text-xs" aria-hidden="true"></i>
       </button>
     </div>
   </article>

@@ -4,11 +4,11 @@
         <div class="hidden items-center gap-3 rounded-2xl border border-olive-30 surface-soft px-4 py-2 lg:flex"
           *ngIf="currentUser">
           <div class="text-right">
-            <div class="text-[11px] text-gray-600">Usuario</div>
+            <div class="text-mini text-gray-600">Usuario</div>
             <div class="text-sm font-semibold">{{ currentUser.name }}</div>
           </div>
           <span
-            class="rounded-full border border-gold-35 bg-olive-10 px-3 py-1 text-[11px] uppercase text-accent">
+            class="rounded-full border border-gold-35 bg-olive-10 px-3 py-1 text-mini uppercase text-accent">
             {{ currentUser.role }}
           </span>
         </div>
@@ -26,7 +26,7 @@
             </span>
           </span>
           <span btnSubtitle>
-            <span class="inline-flex items-center gap-2 text-[11px]">
+            <span class="inline-flex items-center gap-2 text-mini">
               <i class="fa-solid fa-bell" aria-hidden="true"></i>
               {{ warningsStable.length }} urgentes
             </span>
@@ -91,19 +91,19 @@
 
           <!-- Cola de trabajo: siempre visible, dice qué es lo siguiente -->
           <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Siguiente</span>
+            <span class="text-micro font-bold uppercase tracking-[0.18em] text-gray-500">Siguiente</span>
             <button *ngFor="let action of nextActions; let first = first" type="button"
               class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:shadow-sm"
               [ngClass]="first ? 'border-gold-35 bg-gold-20 text-on-gold' : 'border-olive-30 bg-ivory-80 text-main hover:bg-olive-10'"
               (click)="runNextAction(action)">
               <i class="fa-solid" [ngClass]="action.icon" aria-hidden="true"></i>
               {{ action.label }}
-              <span class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full bg-white/60 px-1.5 py-0.5 text-[10px] font-bold leading-none">
+              <span class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full bg-white/60 px-1.5 py-0.5 text-micro font-bold leading-none">
                 {{ action.count }}
               </span>
             </button>
             <span *ngIf="nextActions.length === 0"
-              class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-accent">
+              class="inline-flex items-center gap-1.5 rounded-full border border-forest-20 bg-forest-10 px-3 py-1.5 text-xs font-semibold text-forest">
               <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
               Operación al día
             </span>
@@ -125,7 +125,7 @@
               (pressed)="setOrderStatus($any(tab.status))">
               {{ tab.label }}
               <span *ngIf="orderCountByStatus($any(tab.status)) > 0"
-                class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"
+                class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full px-1.5 py-0.5 text-micro font-bold leading-none"
                 [ngClass]="currentOrderStatus === tab.status ? 'bg-white/40 text-ink' : 'bg-gold-20 text-on-gold'">
                 {{ orderCountByStatus($any(tab.status)) }}
               </span>
@@ -183,17 +183,17 @@
                           <div>Guia / Entrega: <span class="text-main">{{ getShippingLabel(order) }}</span></div>
                         </div>
                         <div *ngIf="order.deliveryType === 'pickup'" class="mt-2 flex flex-wrap items-center gap-1">
-                          <span class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-main">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro font-semibold text-main">
                             <i class="fa-solid fa-store" aria-hidden="true"></i>
                             Recoger en sucursal
                           </span>
                           <span *ngIf="order.pickupPaymentMethod === 'at_store'"
-                            class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800">
                             <i class="fa-solid fa-coins" aria-hidden="true"></i>
                             Paga en sucursal
                           </span>
                           <span *ngIf="order.pickupPaymentMethod === 'online' || !order.pickupPaymentMethod"
-                            class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                            class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro font-semibold text-gray-600">
                             <i class="fa-solid fa-lock" aria-hidden="true"></i>
                             Pago en línea
                           </span>
@@ -230,7 +230,7 @@
                               <div *ngIf="order.references"><span class="text-gray-500">Referencias:</span> <span class="text-main">{{ order.references }}</span></div>
                               <div *ngIf="order.postalCode || order.state"><span class="text-gray-500">CP:</span> <span class="text-main">{{ order.postalCode }}</span><span *ngIf="order.state"> · <span class="text-gray-500">Estado:</span> <span class="text-main">{{ order.state }}</span></span></div>
                               <div *ngIf="order.phone"><span class="text-gray-500">Tel:</span> <span class="text-main">{{ order.phone }}</span></div>
-                              <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i><span class="font-semibold">Detalles entrega:</span> {{ order.deliveryNotes }}</div>
+                              <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-mini text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i><span class="font-semibold">Detalles entrega:</span> {{ order.deliveryNotes }}</div>
                             </ng-container>
                             <div *ngIf="!order.address && order.shippingType === 'personal' && order.deliveryPlace">
                               <span class="text-gray-500">Entrega personal en:</span> <span class="text-main">{{ order.deliveryPlace }}</span>
@@ -266,12 +266,12 @@
                         </div>
                         <div class="flex flex-col gap-1">
                           <div *ngIf="order.deliveryType === 'pickup'" class="flex flex-wrap gap-1">
-                            <span class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] font-semibold text-main">
+                            <span class="inline-flex items-center gap-1 rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro font-semibold text-main">
                               <i class="fa-solid fa-store" aria-hidden="true"></i>
                               Sucursal
                             </span>
                             <span *ngIf="order.pickupPaymentMethod === 'at_store'"
-                              class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                              class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800">
                               <i class="fa-solid fa-coins" aria-hidden="true"></i>
                               Paga aquí
                             </span>
@@ -335,7 +335,7 @@
                                 <div *ngIf="order.references" class="text-gray-600">Ref: {{ order.references }}</div>
                                 <div *ngIf="order.postalCode || order.state">CP {{ order.postalCode }}<span *ngIf="order.state"> · {{ order.state }}</span></div>
                                 <div *ngIf="order.phone">Tel: {{ order.phone }}</div>
-                                <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>{{ order.deliveryNotes }}</div>
+                                <div *ngIf="order.deliveryNotes" class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-mini text-amber-800"><i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>{{ order.deliveryNotes }}</div>
                               </ng-container>
                               <div *ngIf="!order.address && order.deliveryType === 'pickup'">
                                 <span class="text-gray-500">Sucursal:</span>
@@ -378,7 +378,7 @@
                   </ui-data-table>
                   <div *ngIf="filteredOrdersStable.length === 0"
                     class="px-6 py-10 text-center text-sm text-gray-500">
-                    <i class="fa-solid fa-inbox mb-2 block text-2xl text-gray-300" aria-hidden="true"></i>
+                    <i class="fa-solid fa-inbox mb-2 block text-2xl text-muted" aria-hidden="true"></i>
                     <span *ngIf="orderSearch">Sin resultados para "{{ orderSearch }}" en este estado.</span>
                     <span *ngIf="!orderSearch">No hay pedidos en este estado. Los contadores de las pestañas muestran dónde hay trabajo.</span>
                   </div>
@@ -395,7 +395,7 @@
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="flex items-start justify-between gap-2">
                   <div>
-                    <div class="text-[11px] text-gray-600">Comisiones por depositar</div>
+                    <div class="text-mini text-gray-600">Comisiones por depositar</div>
                     <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissionsTotal) }}</div>
                   </div>
                   <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-excel" (pressed)="downloadCommissionsReport()" title="Descargar reporte Excel">
@@ -632,7 +632,7 @@
                       <!-- Header del documento -->
                       <div class="flex items-center gap-3 px-4 py-3">
                         <i class="fa-solid text-sm text-gray-400"
-                          [ngClass]="doc.type.includes('pdf') ? 'fa-file-pdf text-red-400' : 'fa-file-image text-blue-400'"
+                          [ngClass]="doc.type.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'"
                           aria-hidden="true"></i>
                         <div class="min-w-0 flex-1">
                           <div class="truncate text-sm font-semibold text-main">{{ doc.name }}</div>
@@ -652,7 +652,7 @@
                           <iframe [src]="safeResourceUrl(doc.url)" class="h-64 w-full" title="{{ doc.name }}" loading="lazy"></iframe>
                         </ng-container>
                         <ng-container *ngIf="!doc.type.includes('pdf') && doc.url && (doc.type.includes('image') || doc.url.endsWith('.png') || doc.url.endsWith('.jpg') || doc.url.endsWith('.jpeg') || doc.url.endsWith('.webp') || doc.url.endsWith('.gif'))">
-                          <img [src]="doc.url" [alt]="doc.name" class="max-h-64 w-full object-contain bg-gray-50 p-2" loading="lazy" />
+                          <img [src]="doc.url" [alt]="doc.name" class="max-h-64 w-full object-contain bg-ivory-80 p-2" loading="lazy" />
                         </ng-container>
                       </div>
                     </div>
@@ -672,7 +672,7 @@
                   </div>
 
                   <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div class="text-[11px] text-gray-600">Patrocinador actual</div>
+                    <div class="text-mini text-gray-600">Patrocinador actual</div>
                     <div class="mt-1 text-sm font-semibold text-main">{{ selectedCustomerSponsorName }}</div>
                   </div>
 
@@ -689,11 +689,11 @@
                     <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                       <div class="flex items-center justify-between gap-3">
                         <div>
-                          <div class="text-[11px] text-gray-600">Patrocinador seleccionado</div>
+                          <div class="text-mini text-gray-600">Patrocinador seleccionado</div>
                           <div class="mt-1 text-sm font-semibold text-main">{{ selectedSponsorLabel }}</div>
                         </div>
                         <div class="text-right">
-                          <div class="text-[11px] text-gray-600">Id oculto</div>
+                          <div class="text-mini text-gray-600">Id oculto</div>
                           <div class="mt-1 text-sm font-semibold text-main">{{ selectedCustomerLeaderId || 'FindingU' }}</div>
                         </div>
                       </div>
@@ -919,23 +919,23 @@
                       <div>Precio: <span class="text-main">{{ formatMoney(product.price) }}</span></div>
                     </div>
                     <div class="mt-2 flex flex-wrap gap-1">
-                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
                         [ngClass]="product.inOnlineStore !== false ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-olive-30 bg-white/60 text-gray-400'">
                         <i class="fa-solid fa-globe fa-xs" aria-hidden="true"></i>
                         {{ product.inOnlineStore !== false ? 'Tienda online' : 'Sin tienda online' }}
                       </span>
-                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                        [ngClass]="product.inPOS !== false ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
+                        [ngClass]="product.inPOS !== false ? 'border-sage-30 bg-sage-10 text-sage' : 'border-olive-30 bg-white/60 text-gray-400'">
                         <i class="fa-solid fa-cash-register fa-xs" aria-hidden="true"></i>
                         {{ product.inPOS !== false ? 'En POS' : 'Sin POS' }}
                       </span>
-                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                        [ngClass]="product.commissionable !== false ? 'border-violet-200 bg-violet-50 text-violet-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
+                        [ngClass]="product.commissionable !== false ? 'border-gold-35 bg-gold-12 text-gold' : 'border-olive-30 bg-white/60 text-gray-400'">
                         <i class="fa-solid fa-percent fa-xs" aria-hidden="true"></i>
                         {{ product.commissionable !== false ? 'Comisionable' : 'No comisionable' }}
                       </span>
                       <span *ngIf="product.commissionable !== false"
-                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
                         [ngClass]="product.vpPoints != null ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-olive-30 bg-white/60 text-gray-400'">
                         <i class="fa-solid fa-star fa-xs" aria-hidden="true"></i>
                         {{ product.vpPoints != null ? (product.vpPoints + ' VP/u') : 'VP automático' }}
@@ -1101,7 +1101,7 @@
                         <i class="fa-solid fa-star text-gold text-xs" aria-hidden="true"></i>
                         Puntos VP por unidad
                       </div>
-                      <div class="text-[11px] text-gray-500 mb-2">
+                      <div class="text-mini text-gray-500 mb-2">
                         Puntos de Volumen Personal que otorga este producto por cada unidad vendida.
                         Si se deja vacío se calculan automáticamente desde el precio
                         (precio ÷ tarifa VP configurada). Los descuentos reducen los puntos proporcionalmente.
@@ -1169,7 +1169,7 @@
                     placeholder="bienestar, energia, suplemento"
                     [ngModel]="productForm.tags"
                     (ngModelChange)="updateProductField('tags', $event)"></ui-form-field>
-                  <span class="-mt-1 block text-[10px] text-gray-500">Separados por coma.</span>
+                  <span class="-mt-1 block text-micro text-gray-500">Separados por coma.</span>
                 </div>
 
                 <!-- VARIANTS -->
@@ -1213,8 +1213,8 @@
                           wrapperClass="block"
                           inputClass="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70">
                         </ui-form-field>
-                        <ui-button size="sm" variant="ghost" (pressed)="removeProductVariant(vi)" class="mb-0.5">
-                          <i class="fa-solid fa-trash text-red-400 text-xs" aria-hidden="true"></i>
+                        <ui-button size="sm" variant="ghost" ariaLabel="Eliminar variante del producto" (pressed)="removeProductVariant(vi)" class="mb-0.5">
+                          <i class="fa-solid fa-trash text-danger text-xs" aria-hidden="true"></i>
                         </ui-button>
                       </div>
                       <!-- Imagen de variante -->
@@ -1222,10 +1222,10 @@
                         <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-olive-30 bg-ivory-80">
                           <img *ngIf="variantImagePreviews.get(v.id)" [src]="variantImagePreviews.get(v.id)"
                             alt="Preview" class="h-full w-full object-cover" />
-                          <i *ngIf="!variantImagePreviews.get(v.id)" class="fa-solid fa-image text-gray-300 text-lg" aria-hidden="true"></i>
+                          <i *ngIf="!variantImagePreviews.get(v.id)" class="fa-solid fa-image text-muted text-lg" aria-hidden="true"></i>
                         </div>
                         <label class="flex-1 cursor-pointer">
-                          <span class="text-[11px] font-semibold text-gray-500">Imagen de variante</span>
+                          <span class="text-mini font-semibold text-gray-500">Imagen de variante</span>
                           <input type="file" accept="image/*" class="mt-1 block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-olive-10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-main"
                             (change)="uploadVariantImage($event, v.id)" />
                         </label>
@@ -1309,9 +1309,9 @@
                       <div class="flex items-start justify-between gap-2">
                         <div>
                           <div class="text-xs font-semibold text-main">{{ slot.label }}</div>
-                          <div class="mt-0.5 text-[11px] text-gray-500">{{ slot.hint }}</div>
+                          <div class="mt-0.5 text-mini text-gray-500">{{ slot.hint }}</div>
                         </div>
-                        <span class="text-[11px] text-gray-500">.png/.jpg/.webp</span>
+                        <span class="text-mini text-gray-500">.png/.jpg/.webp</span>
                       </div>
                       <ui-form-field
                         type="file"
@@ -1323,7 +1323,7 @@
                         class="mt-3 flex h-20 items-center justify-center overflow-hidden rounded-2xl border border-olive-30 surface-soft">
                         <img *ngIf="productImagePreviews.get(slot.key)" [src]="productImagePreviews.get(slot.key)"
                           alt="Preview" class="h-full w-full object-cover" />
-                        <div *ngIf="!productImagePreviews.get(slot.key)" class="text-[11px] text-gray-500">
+                        <div *ngIf="!productImagePreviews.get(slot.key)" class="text-mini text-gray-500">
                           {{ productImageUploads.get(slot.key) ? 'Subiendo...' : 'Preview' }}
                         </div>
                       </div>
@@ -1503,7 +1503,7 @@
                   <div *ngFor="let line of stockTransferForm.lines; let i = index" class="grid gap-2 sm:grid-cols-[1fr_.5fr_auto]">
                     <ui-form-field kind="select" label="Producto" [options]="productOptionsStable" [ngModel]="line.productId" (ngModelChange)="line.productId = +$event"></ui-form-field>
                     <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="line.qty" (ngModelChange)="line.qty = +$event || 1"></ui-form-field>
-                    <ui-button size="sm" variant="ghost" class="self-end" [disabled]="stockTransferForm.lines.length === 1" (pressed)="removeTransferLine(i)">
+                    <ui-button size="sm" variant="ghost" class="self-end" ariaLabel="Eliminar línea del traspaso" [disabled]="stockTransferForm.lines.length === 1" (pressed)="removeTransferLine(i)">
                       <i class="fa-solid fa-trash" aria-hidden="true"></i>
                     </ui-button>
                   </div>
@@ -1566,7 +1566,7 @@
                   <div>{{ movement.productName }}</div>
                   <div class="text-xs">
                     {{ movement.typeLabel }}
-                    <span *ngIf="movement.type === 'pos_sale'" class="mt-1 inline-flex rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px]">
+                    <span *ngIf="movement.type === 'pos_sale'" class="mt-1 inline-flex rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro">
                       {{ posPaymentMethodLabel(movement.paymentMethod) }}
                     </span>
                   </div>
@@ -1605,14 +1605,14 @@
                   class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-white/70 px-4 py-3">
                   <div class="min-w-0">
                     <div class="text-sm font-semibold text-main">{{ o.customer }}</div>
-                    <div class="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2 text-mini text-gray-600">
                       <span><i class="fa-solid fa-hashtag fa-xs mr-0.5" aria-hidden="true"></i>{{ o.id }}</span>
                       <span *ngIf="o.createdAt"><i class="fa-solid fa-clock fa-xs mr-0.5" aria-hidden="true"></i>{{ formatDateTime(o.createdAt) }}</span>
                       <span class="font-semibold text-main">{{ formatMoney(o.total) }}</span>
                     </div>
                     <div *ngIf="o.items?.length" class="mt-1 flex flex-wrap gap-1">
                       <span *ngFor="let item of o.items"
-                        class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] text-gray-700">
+                        class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro text-gray-700">
                         {{ item.name }} ×{{ item.quantity }}
                       </span>
                     </div>
@@ -1644,14 +1644,14 @@
                   class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3">
                   <div class="min-w-0">
                     <div class="text-sm font-semibold text-main">{{ o.customer }}</div>
-                    <div class="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2 text-mini text-gray-600">
                       <span><i class="fa-solid fa-hashtag fa-xs mr-0.5" aria-hidden="true"></i>{{ o.id }}</span>
                       <span *ngIf="o.createdAt"><i class="fa-solid fa-clock fa-xs mr-0.5" aria-hidden="true"></i>{{ formatDateTime(o.createdAt) }}</span>
                       <span class="font-semibold text-main">{{ formatMoney(o.total) }}</span>
                     </div>
                     <div *ngIf="o.items?.length" class="mt-1 flex flex-wrap gap-1">
                       <span *ngFor="let item of o.items"
-                        class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-[10px] text-gray-700">
+                        class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro text-gray-700">
                         {{ item.name }} ×{{ item.quantity }}
                       </span>
                     </div>
@@ -1689,9 +1689,9 @@
                 <ng-container *ngIf="hasLinkedPosStock && currentPosStock">
                   <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Operador</div>
+                      <div class="text-mini uppercase tracking-[0.18em] text-gray-500">Operador</div>
                       <div class="mt-1 text-sm font-semibold text-main">{{ currentOperatorName }}</div>
-                      <div class="mt-1 text-[11px] text-gray-600">Usuario ligado a esta caja.</div>
+                      <div class="mt-1 text-mini text-gray-600">Usuario ligado a esta caja.</div>
                     </div>
 
                     <ng-container *ngIf="posStockOptions.length > 1; else fixedPosStock">
@@ -1706,9 +1706,9 @@
 
                     <ng-template #fixedPosStock>
                       <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                        <div class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Stock ligado</div>
+                        <div class="text-mini uppercase tracking-[0.18em] text-gray-500">Stock ligado</div>
                         <div class="mt-1 text-sm font-semibold text-main">{{ currentPosStock.name }}</div>
-                        <div class="mt-1 text-[11px] text-gray-600">{{ currentPosStock.location }}</div>
+                        <div class="mt-1 text-mini text-gray-600">{{ currentPosStock.location }}</div>
                       </div>
                     </ng-template>
                   </div>
@@ -1717,7 +1717,7 @@
                     <div class="flex items-center justify-between gap-3">
                       <div>
                         <div class="text-xs font-semibold text-main">Cliente</div>
-                        <div class="mt-1 text-[11px] text-gray-600">Autocomplete por nombre o correo. Por defecto se usa Publico en General.</div>
+                        <div class="mt-1 text-mini text-gray-600">Autocomplete por nombre o correo. Por defecto se usa Publico en General.</div>
                       </div>
                       <div class="flex flex-wrap gap-2">
                         <ui-button size="sm" variant="ghost" *ngIf="hasPermission('customer_add')" (pressed)="openPosCustomerModal()">
@@ -1741,18 +1741,18 @@
                     </div>
 
                     <div class="mt-3 rounded-2xl border border-olive-30 surface-soft p-3">
-                      <div class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Seleccion actual</div>
+                      <div class="text-mini uppercase tracking-[0.18em] text-gray-500">Seleccion actual</div>
                       <div *ngIf="selectedPosCustomer; else publicCustomerCard" class="mt-2">
                         <div class="text-sm font-semibold text-main">{{ selectedPosCustomer.name }}</div>
-                        <div class="text-[11px] text-gray-600">{{ selectedPosCustomer.email }}</div>
-                        <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                        <div class="text-mini text-gray-600">{{ selectedPosCustomer.email }}</div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-mini">
                           <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Descuento actual: {{ posCurrentDiscountLabel }}</span>
                           <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Meta proyectada: {{ posProjectedDiscountLabel }}</span>
                         </div>
                       </div>
                       <ng-template #publicCustomerCard>
                         <div class="mt-2 text-sm font-semibold text-main">Publico en General</div>
-                        <div class="text-[11px] text-gray-600">Venta mostrador sin metas ni descuentos acumulados.</div>
+                        <div class="text-mini text-gray-600">Venta mostrador sin metas ni descuentos acumulados.</div>
                       </ng-template>
                     </div>
 
@@ -1772,39 +1772,39 @@
                     <div *ngIf="selectedPosCustomer; else publicCustomerNotice" class="mt-4 rounded-2xl border border-olive-30 surface-soft p-3">
                       <div class="flex items-center justify-between gap-2">
                         <div class="text-xs font-semibold text-main">Metas y descuento aplicable</div>
-                        <span *ngIf="isLoadingPosCustomerProjection" class="text-[11px] text-gray-500">Cargando...</span>
+                        <span *ngIf="isLoadingPosCustomerProjection" class="text-mini text-gray-500">Cargando...</span>
                       </div>
                       <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-[11px] text-gray-500">Consumo acumulado del mes</div>
+                          <div class="text-mini text-gray-500">Consumo acumulado del mes</div>
                           <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posCustomerMonthNet) }}</div>
                         </div>
                         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-[11px] text-gray-500">Consumo proyectado con esta venta</div>
+                          <div class="text-mini text-gray-500">Consumo proyectado con esta venta</div>
                           <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedMonthNet) }}</div>
                         </div>
                         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-[11px] text-gray-500">Descuento actual</div>
+                          <div class="text-mini text-gray-500">Descuento actual</div>
                           <div class="mt-1 text-lg font-semibold text-main">{{ posCurrentDiscountLabel }}</div>
                         </div>
                         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-[11px] text-gray-500">Descuento aplicable hoy</div>
+                          <div class="text-mini text-gray-500">Descuento aplicable hoy</div>
                           <div class="mt-1 text-lg font-semibold text-main">{{ posProjectedDiscountLabel }}</div>
                         </div>
                       </div>
                       <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <div class="text-[11px] text-gray-500">Descuento en esta venta</div>
+                            <div class="text-mini text-gray-500">Descuento en esta venta</div>
                             <div class="mt-1 text-sm font-semibold text-main">{{ formatMoney(posProjectedDiscountAmount) }}</div>
                           </div>
                           <div *ngIf="posNextGoal" class="text-right">
-                            <div class="text-[11px] text-gray-500">Siguiente meta</div>
+                            <div class="text-mini text-gray-500">Siguiente meta</div>
                             <div class="mt-1 text-sm font-semibold text-main">{{ posNextGoal.label }}</div>
-                            <div class="text-[11px] text-gray-600">Faltan {{ formatMoney(posRemainingForNextGoal) }}</div>
+                            <div class="text-mini text-gray-600">Faltan {{ formatMoney(posRemainingForNextGoal) }}</div>
                           </div>
                           <div *ngIf="!posNextGoal" class="text-right">
-                            <div class="text-[11px] text-gray-500">Siguiente meta</div>
+                            <div class="text-mini text-gray-500">Siguiente meta</div>
                             <div class="mt-1 text-sm font-semibold text-main">Meta mas alta alcanzada</div>
                           </div>
                         </div>
@@ -1821,7 +1821,7 @@
                   <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                     <div class="flex items-center justify-between gap-2">
                       <div class="text-xs font-semibold text-main">Productos disponibles en stock</div>
-                      <div class="text-[11px] text-gray-600">{{ availablePosProducts.length }} disponibles</div>
+                      <div class="text-mini text-gray-600">{{ availablePosProducts.length }} disponibles</div>
                     </div>
                     <div *ngIf="!availablePosProducts.length" class="mt-3 rounded-2xl border border-dashed border-olive-30 bg-white/60 p-4 text-sm text-gray-600">
                       No hay productos con inventario disponible en este stock.
@@ -1847,7 +1847,7 @@
                             [ngModel]="posItems.get(product.id) || 1"
                             (ngModelChange)="updatePosQty(product.id, $event)">
                           </ui-form-field>
-                          <span class="text-[11px] text-gray-600">Maximo disponible: {{ stockQty(currentPosStock.id, product.id) }}</span>
+                          <span class="text-mini text-gray-600">Maximo disponible: {{ stockQty(currentPosStock.id, product.id) }}</span>
                         </div>
                       </div>
                     </div>
@@ -1872,16 +1872,16 @@
                         <i class="fa-solid fa-tag" aria-hidden="true"></i>
                         {{ posAppliedCashierDiscount ? 'Cambiar descuento' : 'Aplicar descuento' }}
                       </ui-button>
-                      <div *ngIf="posAppliedCashierDiscount" class="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] text-emerald-700">
+                      <div *ngIf="posAppliedCashierDiscount" class="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-mini text-emerald-700">
                         Descuento cajero: {{ posAppliedCashierDiscount.displayLabel }}
-                        <button (click)="removePosDiscount()" class="ml-1 text-emerald-600 hover:text-red-500" type="button">
+                        <button (click)="removePosDiscount()" class="ml-1 text-emerald-600 hover:text-red-500" type="button" aria-label="Quitar el descuento de cajero aplicado">
                           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                         </button>
                       </div>
                     </div>
 
                     <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="text-[11px] font-semibold text-gray-600">Tipo de pago</div>
+                      <div class="text-mini font-semibold text-gray-600">Tipo de pago</div>
                       <div class="mt-2 flex flex-wrap gap-2">
                         <ui-button size="sm" [variant]="posPaymentTypeMode === 'full' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('full')">
                           Pago completo
@@ -1983,27 +1983,27 @@
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="text-[11px] text-gray-500">Caja actual</div>
+                      <div class="text-mini text-gray-500">Caja actual</div>
                       <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posCashControl ? posCashControl.currentTotal : 0) }}</div>
                     </div>
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="text-[11px] text-gray-500">Ventas registradas</div>
+                      <div class="text-mini text-gray-500">Ventas registradas</div>
                       <div class="mt-1 text-lg font-semibold text-main">{{ posCashControl ? posCashControl.salesCount : 0 }}</div>
                     </div>
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="text-[11px] text-gray-500">Inicio de caja</div>
+                      <div class="text-mini text-gray-500">Inicio de caja</div>
                       <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.startedAt) }}</div>
                     </div>
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                      <div class="text-[11px] text-gray-500">Última venta</div>
+                      <div class="text-mini text-gray-500">Última venta</div>
                       <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastSaleAt) }}</div>
                     </div>
                   </div>
 
                   <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div class="text-[11px] text-gray-500">Ultimo corte</div>
+                    <div class="text-mini text-gray-500">Ultimo corte</div>
                     <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastCutAt) }}</div>
-                    <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-600">
+                    <div class="mt-2 flex flex-wrap gap-2 text-mini text-gray-600">
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Monto: {{ formatMoney(posCashControl ? (posCashControl.lastCutTotal || 0) : 0) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas: {{ posCashControl ? (posCashControl.lastCutSalesCount || 0) : 0 }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">En caja: {{ formatMoney(posCashControl ? (posCashControl.lastCutCashToKeep || 0) : 0) }}</span>
@@ -2012,8 +2012,8 @@
                   </div>
 
                   <div *ngIf="(posCashControl?.withdrawalCount || 0) > 0" class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
-                    <div class="text-[11px] text-amber-700">Retiros en este turno</div>
-                    <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                    <div class="text-mini text-amber-700">Retiros en este turno</div>
+                    <div class="mt-1 flex flex-wrap gap-2 text-mini">
                       <span class="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-amber-800">{{ posCashControl?.withdrawalCount }} retiro(s)</span>
                       <span class="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-amber-800">Total retirado: {{ formatMoney(posCashControl?.totalWithdrawn || 0) }}</span>
                     </div>
@@ -2037,7 +2037,7 @@
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                       <div class="flex items-center justify-between gap-2">
                         <div class="text-xs font-semibold text-main">Efectivo</div>
-                        <div class="text-[11px] text-gray-500">{{ visibleCashPosSales.length }} venta(s)</div>
+                        <div class="text-mini text-gray-500">{{ visibleCashPosSales.length }} venta(s)</div>
                       </div>
                       <div *ngIf="!visibleCashPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas en efectivo.</div>
                       <div *ngIf="visibleCashPosSales.length" class="mt-3 space-y-2">
@@ -2045,14 +2045,14 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                              <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
                             </div>
                           </div>
-                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-2 text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
                         </div>
                       </div>
                     </div>
@@ -2060,7 +2060,7 @@
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                       <div class="flex items-center justify-between gap-2">
                         <div class="text-xs font-semibold text-main">Tarjeta</div>
-                        <div class="text-[11px] text-gray-500">{{ visibleCardPosSales.length }} venta(s)</div>
+                        <div class="text-mini text-gray-500">{{ visibleCardPosSales.length }} venta(s)</div>
                       </div>
                       <div *ngIf="!visibleCardPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas con tarjeta.</div>
                       <div *ngIf="visibleCardPosSales.length" class="mt-3 space-y-2">
@@ -2068,14 +2068,14 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                              <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
                             </div>
                           </div>
-                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-2 text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
                         </div>
                       </div>
                     </div>
@@ -2083,7 +2083,7 @@
                     <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                       <div class="flex items-center justify-between gap-2">
                         <div class="text-xs font-semibold text-main">Transferencia</div>
-                        <div class="text-[11px] text-gray-500">{{ visibleTransferPosSales.length }} venta(s)</div>
+                        <div class="text-mini text-gray-500">{{ visibleTransferPosSales.length }} venta(s)</div>
                       </div>
                       <div *ngIf="!visibleTransferPosSales.length" class="mt-3 text-sm text-gray-600">Sin ventas por transferencia.</div>
                       <div *ngIf="visibleTransferPosSales.length" class="mt-3 space-y-2">
@@ -2091,14 +2091,14 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-[11px] text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
-                              <div class="text-[11px] text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                              <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
                             </div>
                           </div>
-                          <div class="mt-2 text-[11px] text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-2 text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
                         </div>
                       </div>
                     </div>
@@ -2126,8 +2126,8 @@
                 <div class="flex items-start justify-between gap-3">
                   <div>
                     <div class="text-xs font-semibold text-main">{{ cut.id }}</div>
-                    <div class="mt-1 text-[11px] text-gray-500">{{ formatDateTime(cut.createdAt) }}</div>
-                    <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                    <div class="mt-1 text-mini text-gray-500">{{ formatDateTime(cut.createdAt) }}</div>
+                    <div class="mt-1 flex flex-wrap gap-2 text-mini">
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Total: {{ formatMoney(cut.total) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Ventas: {{ cut.salesCount }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">En caja: {{ formatMoney(cut.cashToKeep || 0) }}</span>
@@ -2139,22 +2139,22 @@
                       <i class="fa-solid fa-download" aria-hidden="true"></i>
                       CSV
                     </ui-button>
-                    <ui-button size="sm" variant="ghost" (pressed)="toggleCutExpansion(cut.id)">
+                    <ui-button size="sm" variant="ghost" ariaLabel="Mostrar u ocultar el detalle del corte" (pressed)="toggleCutExpansion(cut.id)">
                       <i class="fa-solid" [ngClass]="expandedCutId === cut.id ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
                     </ui-button>
                   </div>
                 </div>
                 <div *ngIf="expandedCutId === cut.id" class="mt-3 space-y-2">
-                  <div *ngIf="cut.sales?.length" class="text-[11px] font-semibold text-gray-600">Ventas ({{ cut.sales?.length }})</div>
-                  <div *ngFor="let sale of cut.sales" class="rounded-2xl border border-olive-30 bg-white/70 p-2 text-[11px]">
+                  <div *ngIf="cut.sales?.length" class="text-mini font-semibold text-gray-600">Ventas ({{ cut.sales?.length }})</div>
+                  <div *ngFor="let sale of cut.sales" class="rounded-2xl border border-olive-30 bg-white/70 p-2 text-mini">
                     <div class="flex items-center justify-between gap-2">
                       <span class="font-semibold">{{ sale.orderId }}</span>
                       <span>{{ formatMoney(sale.total) }}</span>
                     </div>
                     <div class="text-gray-500">{{ sale.customerName }} · {{ formatDateTime(sale.createdAt) }}</div>
                   </div>
-                  <div *ngIf="cut.withdrawals?.length" class="mt-2 text-[11px] font-semibold text-amber-700">Retiros ({{ cut.withdrawals?.length }})</div>
-                  <div *ngFor="let wdr of cut.withdrawals" class="rounded-2xl border border-amber-200 bg-amber-50 p-2 text-[11px]">
+                  <div *ngIf="cut.withdrawals?.length" class="mt-2 text-mini font-semibold text-amber-700">Retiros ({{ cut.withdrawals?.length }})</div>
+                  <div *ngFor="let wdr of cut.withdrawals" class="rounded-2xl border border-amber-200 bg-amber-50 p-2 text-mini">
                     <div class="flex items-center justify-between gap-2">
                       <span class="font-semibold text-amber-800">{{ wdr.reason }}</span>
                       <span class="text-amber-800">- {{ formatMoney(wdr.amount) }}</span>
@@ -2203,24 +2203,24 @@
             <!-- KPIs del periodo -->
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-500">Ventas del periodo</div>
+                <div class="text-mini text-gray-500">Ventas del periodo</div>
                 <div class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(reportOrdersTotal) }}</div>
-                <div class="mt-1 text-[11px] text-gray-400">{{ reportOrdersCount }} pedidos</div>
+                <div class="mt-1 text-mini text-gray-400">{{ reportOrdersCount }} pedidos</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-500">Ticket promedio</div>
+                <div class="text-mini text-gray-500">Ticket promedio</div>
                 <div class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(reportAvgTicket) }}</div>
-                <div class="mt-1 text-[11px] text-gray-400">{{ reportConversionRate | number:'1.0-0' }}% entregados</div>
+                <div class="mt-1 text-mini text-gray-400">{{ reportConversionRate | number:'1.0-0' }}% entregados</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-500">Clientes activos</div>
+                <div class="text-mini text-gray-500">Clientes activos</div>
                 <div class="mt-1 text-2xl font-extrabold text-main">{{ reportActiveCustomersCount }}</div>
-                <div class="mt-1 text-[11px] text-gray-400">{{ reportRepurchaseRate | number:'1.0-0' }}% recompra</div>
+                <div class="mt-1 text-mini text-gray-400">{{ reportRepurchaseRate | number:'1.0-0' }}% recompra</div>
               </div>
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-[11px] text-gray-500">Productos vendidos</div>
+                <div class="text-mini text-gray-500">Productos vendidos</div>
                 <div class="mt-1 text-2xl font-extrabold text-main">{{ reportTotalUnitsSold }}</div>
-                <div class="mt-1 text-[11px] text-gray-400">{{ reportProductSales.length }} SKUs distintos</div>
+                <div class="mt-1 text-mini text-gray-400">{{ reportProductSales.length }} SKUs distintos</div>
               </div>
             </div>
 
@@ -2257,7 +2257,7 @@
                     <div *ngIf="!warningsStable.length" class="text-sm text-gray-500">Sin advertencias activas.</div>
                     <div *ngFor="let warning of warningsStable" class="rounded-2xl border border-olive-30 surface-soft p-3">
                       <div class="text-sm font-semibold">{{ warning.text }}</div>
-                      <div class="mt-0.5 text-[11px] text-gray-500">{{ warning.severity }}</div>
+                      <div class="mt-0.5 text-mini text-gray-500">{{ warning.severity }}</div>
                     </div>
                   </div>
                 </div>
@@ -2269,7 +2269,7 @@
                     <div *ngFor="let row of reportOrdersByStatus" class="flex items-center justify-between gap-2 text-sm">
                       <span class="text-gray-700">{{ row.status }}</span>
                       <div class="flex items-center gap-3">
-                        <span class="rounded-full border border-olive-20 bg-ivory-80 px-2 py-0.5 text-[11px]">{{ row.count }}</span>
+                        <span class="rounded-full border border-olive-20 bg-ivory-80 px-2 py-0.5 text-mini">{{ row.count }}</span>
                         <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
                       </div>
                     </div>
@@ -2285,7 +2285,7 @@
                   <div class="mt-3 overflow-x-auto">
                     <table class="w-full text-sm">
                       <thead>
-                        <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                        <tr class="border-b border-olive-20 text-left text-mini uppercase tracking-wide text-gray-500">
                           <th class="pb-2 pr-4">#</th>
                           <th class="pb-2 pr-4">Cliente</th>
                           <th class="pb-2 pr-4 text-right">Pedidos</th>
@@ -2325,7 +2325,7 @@
                     <div *ngFor="let row of reportOrdersByStatus" class="flex items-center justify-between gap-2 rounded-xl border border-olive-20 bg-ivory-70 px-3 py-2 text-sm">
                       <span class="text-gray-700">{{ row.status }}</span>
                       <div class="flex items-center gap-3">
-                        <span class="text-[11px] text-gray-500">{{ row.count }} pedidos</span>
+                        <span class="text-mini text-gray-500">{{ row.count }} pedidos</span>
                         <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
                       </div>
                     </div>
@@ -2338,7 +2338,7 @@
                     <div *ngFor="let row of reportOrdersByPaymentMethod" class="flex items-center justify-between gap-2 rounded-xl border border-olive-20 bg-ivory-70 px-3 py-2 text-sm">
                       <span class="capitalize text-gray-700">{{ row.method }}</span>
                       <div class="flex items-center gap-3">
-                        <span class="text-[11px] text-gray-500">{{ row.count }} pedidos</span>
+                        <span class="text-mini text-gray-500">{{ row.count }} pedidos</span>
                         <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
                       </div>
                     </div>
@@ -2352,7 +2352,7 @@
                 <div class="mt-3 max-h-96 overflow-auto">
                   <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-ivory-70">
-                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                      <tr class="border-b border-olive-20 text-left text-mini uppercase tracking-wide text-gray-500">
                         <th class="pb-2 pr-3">Folio</th>
                         <th class="pb-2 pr-3">Fecha</th>
                         <th class="pb-2 pr-3">Cliente</th>
@@ -2362,10 +2362,10 @@
                     </thead>
                     <tbody>
                       <tr *ngFor="let o of reportOrders" class="border-b border-olive-10 hover:bg-ivory-70/50">
-                        <td class="py-1.5 pr-3 font-mono text-[11px] text-gray-500">{{ o.id }}</td>
-                        <td class="py-1.5 pr-3 text-[11px] text-gray-500">{{ formatDateTime(o.createdAt) }}</td>
+                        <td class="py-1.5 pr-3 font-mono text-mini text-gray-500">{{ o.id }}</td>
+                        <td class="py-1.5 pr-3 text-mini text-gray-500">{{ formatDateTime(o.createdAt) }}</td>
                         <td class="py-1.5 pr-3 font-medium text-main">{{ o.customer || 'Público General' }}</td>
-                        <td class="py-1.5 pr-3 text-[11px]">{{ o.status }}</td>
+                        <td class="py-1.5 pr-3 text-mini">{{ o.status }}</td>
                         <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(o.total) }}</td>
                       </tr>
                       <tr *ngIf="!reportOrders.length">
@@ -2387,15 +2387,15 @@
               </div>
               <div class="grid gap-4 sm:grid-cols-3">
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-[11px] text-gray-500">Clientes activos en periodo</div>
+                  <div class="text-mini text-gray-500">Clientes activos en periodo</div>
                   <div class="mt-1 text-2xl font-extrabold text-main">{{ reportActiveCustomersCount }}</div>
                 </div>
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-[11px] text-gray-500">Total en base de datos</div>
+                  <div class="text-mini text-gray-500">Total en base de datos</div>
                   <div class="mt-1 text-2xl font-extrabold text-main">{{ customersCount }}</div>
                 </div>
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-[11px] text-gray-500">Tasa de recompra</div>
+                  <div class="text-mini text-gray-500">Tasa de recompra</div>
                   <div class="mt-1 text-2xl font-extrabold text-main">{{ reportRepurchaseRate | number:'1.0-0' }}%</div>
                 </div>
               </div>
@@ -2404,7 +2404,7 @@
                 <div class="mt-3 max-h-96 overflow-auto">
                   <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-ivory-70">
-                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                      <tr class="border-b border-olive-20 text-left text-mini uppercase tracking-wide text-gray-500">
                         <th class="pb-2 pr-3">Cliente</th>
                         <th class="pb-2 pr-3">Email</th>
                         <th class="pb-2 pr-3">Nivel</th>
@@ -2415,8 +2415,8 @@
                     <tbody>
                       <tr *ngFor="let c of reportActiveCustomers" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-3 font-medium text-main">{{ c.name }}</td>
-                        <td class="py-1.5 pr-3 text-[11px] text-gray-500">{{ c.email }}</td>
-                        <td class="py-1.5 pr-3 text-[11px]">{{ c.level }}</td>
+                        <td class="py-1.5 pr-3 text-mini text-gray-500">{{ c.email }}</td>
+                        <td class="py-1.5 pr-3 text-mini">{{ c.level }}</td>
                         <td class="py-1.5 pr-3 text-right text-gray-600">{{ c.orderCount }}</td>
                         <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(c.total) }}</td>
                       </tr>
@@ -2439,15 +2439,15 @@
               </div>
               <div class="grid gap-4 sm:grid-cols-3">
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-[11px] text-gray-500">Productos con ventas</div>
+                  <div class="text-mini text-gray-500">Productos con ventas</div>
                   <div class="mt-1 text-2xl font-extrabold text-main">{{ reportProductSales.length }}</div>
                 </div>
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-[11px] text-gray-500">Unidades vendidas</div>
+                  <div class="text-mini text-gray-500">Unidades vendidas</div>
                   <div class="mt-1 text-2xl font-extrabold text-main">{{ reportTotalUnitsSold }}</div>
                 </div>
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                  <div class="text-[11px] text-gray-500">Ingresos por productos</div>
+                  <div class="text-mini text-gray-500">Ingresos por productos</div>
                   <div class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(reportOrdersTotal) }}</div>
                 </div>
               </div>
@@ -2456,7 +2456,7 @@
                 <div class="mt-3 max-h-96 overflow-auto">
                   <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-ivory-70">
-                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                      <tr class="border-b border-olive-20 text-left text-mini uppercase tracking-wide text-gray-500">
                         <th class="pb-2 pr-3">#</th>
                         <th class="pb-2 pr-3">Producto</th>
                         <th class="pb-2 pr-3">SKU</th>
@@ -2469,7 +2469,7 @@
                       <tr *ngFor="let p of reportProductSales; let i = index" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-3 text-gray-400">{{ i + 1 }}</td>
                         <td class="py-1.5 pr-3 font-medium text-main">{{ p.name }}</td>
-                        <td class="py-1.5 pr-3 text-[11px] text-gray-500">{{ p.sku }}</td>
+                        <td class="py-1.5 pr-3 text-mini text-gray-500">{{ p.sku }}</td>
                         <td class="py-1.5 pr-3 text-right text-gray-600">{{ p.units }}</td>
                         <td class="py-1.5 pr-3 text-right text-gray-600">{{ formatMoney(p.price) }}</td>
                         <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(p.revenue) }}</td>
@@ -2497,7 +2497,7 @@
                 <div class="mt-3 overflow-x-auto">
                   <table class="w-full text-sm">
                     <thead>
-                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                      <tr class="border-b border-olive-20 text-left text-mini uppercase tracking-wide text-gray-500">
                         <th class="pb-2 pr-4">Almacén</th>
                         <th class="pb-2 pr-4">Ubicación</th>
                         <th class="pb-2 pr-4 text-right">Entradas (uds)</th>
@@ -2508,7 +2508,7 @@
                     <tbody>
                       <tr *ngFor="let row of reportStockSummary" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-4 font-medium text-main">{{ row.name }}</td>
-                        <td class="py-1.5 pr-4 text-[11px] text-gray-500">{{ row.location }}</td>
+                        <td class="py-1.5 pr-4 text-mini text-gray-500">{{ row.location }}</td>
                         <td class="py-1.5 pr-4 text-right text-emerald-600">+{{ row.entries }}</td>
                         <td class="py-1.5 pr-4 text-right text-red-500">-{{ row.exits }}</td>
                         <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(row.sales) }}</td>
@@ -2526,7 +2526,7 @@
                 <div class="mt-3 max-h-96 overflow-auto">
                   <table class="w-full text-sm">
                     <thead class="sticky top-0 bg-ivory-70">
-                      <tr class="border-b border-olive-20 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                      <tr class="border-b border-olive-20 text-left text-mini uppercase tracking-wide text-gray-500">
                         <th class="pb-2 pr-4">Almacén</th>
                         <th class="pb-2 pr-4">Producto</th>
                         <th class="pb-2 text-right">Stock actual</th>
@@ -2534,7 +2534,7 @@
                     </thead>
                     <tbody>
                       <tr *ngFor="let row of reportStockInventoryLines" class="border-b border-olive-10 hover:bg-ivory-70/50">
-                        <td class="py-1.5 pr-4 text-[11px] text-gray-600">{{ row.stock }}</td>
+                        <td class="py-1.5 pr-4 text-mini text-gray-600">{{ row.stock }}</td>
                         <td class="py-1.5 pr-4 font-medium text-main">{{ row.product }}</td>
                         <td class="py-1.5 text-right"
                           [ngClass]="row.qty <= 0 ? 'text-red-500 font-bold' : row.qty <= 5 ? 'text-amber-600 font-semibold' : 'text-main'">
@@ -2603,7 +2603,7 @@
                       class="border-b border-olive-10 transition hover:bg-ivory-70/60"
                       [class.bg-gold-12]="entry.position <= 3">
                       <td class="px-4 py-3 font-extrabold"
-                        [class.text-yellow-500]="entry.position === 1"
+                        [class.text-gold-vivo]="entry.position === 1"
                         [class.text-gray-400]="entry.position === 2"
                         [class.text-amber-700]="entry.position === 3"
                         [class.text-gray-500]="entry.position > 3">
@@ -2614,10 +2614,10 @@
                       </td>
                       <td class="px-4 py-3 font-semibold text-main">{{ entry.name }}</td>
                       <td class="px-4 py-3 text-center hidden sm:table-cell">
-                        <span *ngIf="entry.rank" class="rounded-full border border-olive-20 bg-ivory-80 px-2.5 py-0.5 text-[11px] font-semibold text-main">
+                        <span *ngIf="entry.rank" class="rounded-full border border-olive-20 bg-ivory-80 px-2.5 py-0.5 text-mini font-semibold text-main">
                           {{ entry.rank }}
                         </span>
-                        <span *ngIf="!entry.rank" class="text-gray-300">—</span>
+                        <span *ngIf="!entry.rank" class="text-muted">—</span>
                       </td>
                       <td class="px-4 py-3 text-right text-gray-700">{{ entry.vg | number:'1.0-0' }}</td>
                       <td class="px-4 py-3 text-right text-gray-700">{{ entry.vp | number:'1.0-0' }}</td>
@@ -2650,9 +2650,9 @@
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <div class="text-sm font-semibold text-main">Nueva notificacion</div>
+                    <div class="text-sm font-semibold text-main">Nueva notificación</div>
                     <div class="mt-1 text-xs text-gray-600">
-                      Se mostrara al iniciar sesion y se marcara como leida en cuanto el usuario la abra.
+                      Se mostrará al iniciar sesión y se marcará como leída en cuanto el usuario la abra.
                     </div>
                   </div>
                   <div class="flex items-center gap-2">
@@ -2685,7 +2685,7 @@
                     [ngModel]="notificationForm.description"
                     (ngModelChange)="updateNotificationField('description', $event)"></ui-form-field>
 
-                  <div class="flex items-center justify-between text-[11px] text-gray-600">
+                  <div class="flex items-center justify-between text-mini text-gray-600">
                     <span>Maximo 300 caracteres.</span>
                     <span [class.text-danger]="notificationDescriptionLength > 300">
                       {{ notificationDescriptionLength }}/300
@@ -2916,8 +2916,8 @@
                         <td class="py-2 text-gray-600">{{ c.redemptions || 0 }}{{ c.maxRedemptions != null ? ('/' + c.maxRedemptions) : '' }}</td>
                         <td class="py-2 text-gray-500 text-xs">{{ (c.validFrom || '—') }} → {{ (c.validTo || '—') }}</td>
                         <td class="py-2">
-                          <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                            [ngClass]="c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+                          <span class="rounded-full px-2 py-0.5 text-micro font-bold"
+                            [ngClass]="c.active ? 'bg-green-100 text-green-700' : 'bg-sand-200 text-gray-500'">
                             {{ c.active ? 'Activo' : 'Inactivo' }}
                           </span>
                         </td>
@@ -2925,7 +2925,7 @@
                           <button type="button" class="mr-2 text-gray-600 hover:text-main" (click)="editCoupon(c)" title="Editar">
                             <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
                           </button>
-                          <button type="button" class="text-red-400 hover:text-red-600" (click)="deleteCoupon(c)" title="Desactivar">
+                          <button type="button" class="text-danger hover:text-red-600" (click)="deleteCoupon(c)" title="Desactivar">
                             <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
                           </button>
                         </td>
@@ -2941,7 +2941,7 @@
             <div class="rounded-2xl border border-olive-30 surface-soft p-4">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <div class="text-sm font-semibold text-main">Configuracion de negocio</div>
+                  <div class="text-sm font-semibold text-main">Configuración de negocio</div>
                   <div class="mt-1 text-xs text-gray-600">Reglas globales para pedidos, recompensas, stocks, POS y advertencias.</div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -2974,8 +2974,8 @@
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('config_manage')">
-                <div class="text-sm font-semibold text-main">Codigo de autorizacion POS</div>
-                <div class="mt-1 text-xs text-gray-600">Codigo requerido para aplicar descuentos de cajero, pagos parciales, credito y retiros de efectivo.</div>
+                <div class="text-sm font-semibold text-main">Código de autorización POS</div>
+                <div class="mt-1 text-xs text-gray-600">Código requerido para aplicar descuentos de cajero, pagos parciales, crédito y retiros de efectivo.</div>
                 <div class="mt-3 grid gap-3">
                   <ui-form-field
                     kind="input"
@@ -3120,6 +3120,7 @@
                       [checked]="dt.required"
                       (checkedChange)="dt.required = $event"></ui-checkbox>
                     <button type="button" class="shrink-0 rounded-lg p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                      aria-label="Eliminar tipo de documento del cliente"
                       (click)="removeCustomerDocumentType(i)">
                       <i class="fa-solid fa-trash-can text-sm" aria-hidden="true"></i>
                     </button>
@@ -3164,50 +3165,50 @@
                       placeholder="Nombre (BRONCE…)"
                       [ngModel]="rt.rank"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].rank = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
-                    <ui-button size="sm" variant="ghost" type="button" class="ml-auto" (pressed)="removeRankThreshold(ri)">
-                      <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                    <ui-button size="sm" variant="ghost" type="button" class="ml-auto" ariaLabel="Eliminar umbral de rango" (pressed)="removeRankThreshold(ri)">
+                      <i class="fa-solid fa-trash-can text-danger" aria-hidden="true"></i>
                     </ui-button>
                   </div>
                   <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                     <ui-form-field
                       type="number"
                       label="PC personal mín."
-                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      wrapperClass="flex flex-col gap-1 text-mini text-gray-500"
                       inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
                       [ngModel]="rt.vpMin"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].vpMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     <ui-form-field
                       type="number"
                       label="VG mín. (PC)"
-                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      wrapperClass="flex flex-col gap-1 text-mini text-gray-500"
                       inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
                       [ngModel]="rt.vgMin"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].vgMin = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     <ui-form-field
                       type="number"
                       label="Líneas activas"
-                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      wrapperClass="flex flex-col gap-1 text-mini text-gray-500"
                       inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
                       [ngModel]="rt.minLines"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].minLines = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     <ui-form-field
                       type="number"
                       label="PC mín./línea"
-                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      wrapperClass="flex flex-col gap-1 text-mini text-gray-500"
                       inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
                       [ngModel]="rt.pcMinPerLine"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].pcMinPerLine = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     <ui-form-field
                       type="number"
                       label="Bono mensual ($)"
-                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      wrapperClass="flex flex-col gap-1 text-mini text-gray-500"
                       inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
                       [ngModel]="rt.monthlyBonus"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].monthlyBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                     <ui-form-field
                       type="number"
                       label="Bono anual ($)"
-                      wrapperClass="flex flex-col gap-1 text-[11px] text-gray-500"
+                      wrapperClass="flex flex-col gap-1 text-mini text-gray-500"
                       inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm"
                       [ngModel]="rt.annualBonus"
                       (ngModelChange)="bonusConfig.rankThresholds[ri].annualBonus = +$event || 0; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
@@ -3256,8 +3257,8 @@
                         label="Activo"
                         [checked]="rule.active"
                         (checkedChange)="bonusConfig.rules[ri].active = $event; businessConfigDraft.bonuses = bonusConfig"></ui-checkbox>
-                      <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusRule(ri)">
-                        <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                      <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar regla de bono" (pressed)="removeBonusRule(ri)">
+                        <i class="fa-solid fa-trash-can text-danger" aria-hidden="true"></i>
                       </ui-button>
                     </div>
                   </div>
@@ -3321,8 +3322,8 @@
                             [ngModel]="cond.rank"
                             (ngModelChange)="bonusConfig.rules[ri].conditions[ci].rank = $event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                         </ng-container>
-                        <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusCondition(ri, ci)">
-                          <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+                        <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar condición de la regla" (pressed)="removeBonusCondition(ri, ci)">
+                          <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i>
                         </ui-button>
                       </div>
                     </div>
@@ -3383,8 +3384,8 @@
                             (ngModelChange)="bonusConfig.rules[ri].rewards[wi].pct = +$event; businessConfigDraft.bonuses = bonusConfig"></ui-form-field>
                           <span class="text-xs text-gray-400">%</span>
                         </ng-container>
-                        <ui-button size="sm" variant="ghost" type="button" (pressed)="removeBonusReward(ri, wi)">
-                          <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+                        <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar recompensa de la regla" (pressed)="removeBonusReward(ri, wi)">
+                          <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i>
                         </ui-button>
                       </div>
                     </div>
@@ -3417,8 +3418,8 @@
                         <div class="text-sm font-semibold text-main">Nivel {{ index + 1 }}</div>
                         <div class="flex items-center gap-2">
                           <div class="text-xs text-gray-600">{{ discountTierRangeLabel(tier) }}</div>
-                          <ui-button size="sm" variant="ghost" type="button" (pressed)="removeDiscountTier(index)" [disabled]="businessConfigDraft.rewards.discountTiers.length <= 1">
-                            <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                          <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar nivel de descuento" (pressed)="removeDiscountTier(index)" [disabled]="businessConfigDraft.rewards.discountTiers.length <= 1">
+                            <i class="fa-solid fa-trash-can text-danger" aria-hidden="true"></i>
                           </ui-button>
                         </div>
                       </div>
@@ -3426,7 +3427,7 @@
                         <ui-form-field type="number" [min]="0" [step]="1" label="Monto minimo" [ngModel]="tier.min" (ngModelChange)="updateDiscountTierMin(index, $event)"></ui-form-field>
                         <ui-form-field type="number" [min]="0" [max]="100" [step]="0.1" label="Descuento (%)" [ngModel]="discountTierPercentValue(tier)" (ngModelChange)="updateDiscountTierRate(index, $event)"></ui-form-field>
                       </div>
-                      <div class="mt-2 text-[11px] text-gray-600">
+                      <div class="mt-2 text-mini text-gray-600">
                         {{ tier.max == null ? 'Sin tope maximo en este nivel.' : 'Tope automatico: ' + formatMoney(tier.max) }}
                       </div>
                     </div>
@@ -3468,8 +3469,8 @@
                 <div *ngFor="let lvl of businessConfigDraft.rewards.commissionLevels; let i = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
                   <div class="flex items-center justify-between gap-2">
                     <div class="text-sm font-semibold text-main">Generación {{ i + 1 }}</div>
-                    <ui-button size="sm" variant="ghost" type="button" (pressed)="removeCommissionLevel(i)" [disabled]="businessConfigDraft.rewards.commissionLevels.length <= 1">
-                      <i class="fa-solid fa-trash-can text-red-400" aria-hidden="true"></i>
+                    <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar generación de comisión" (pressed)="removeCommissionLevel(i)" [disabled]="businessConfigDraft.rewards.commissionLevels.length <= 1">
+                      <i class="fa-solid fa-trash-can text-danger" aria-hidden="true"></i>
                     </ui-button>
                   </div>
                   <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -3571,7 +3572,7 @@
           [ngModel]="newOrderCustomerId"
           (ngModelChange)="updateNewOrderCustomer(+$event)"></ui-form-field>
         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-          <div class="text-[11px] uppercase tracking-wide text-gray-600">Productos</div>
+          <div class="text-mini uppercase tracking-wide text-gray-600">Productos</div>
           <div class="mt-3 max-h-[46vh] sm:max-h-[40vh] overflow-y-auto pr-1 grid gap-3">
             <div *ngFor="let product of products" class="rounded-2xl border border-olive-30 surface-soft p-3">
               <div class="flex items-center justify-between gap-3">
@@ -3582,7 +3583,7 @@
                 <span class="text-xs text-gray-600">{{ formatMoney(product.price) }}</span>
               </div>
               <div *ngIf="newOrderItems.has(product.id)" class="mt-2 flex items-center gap-2">
-                <span class="text-[11px] text-gray-600">Cantidad</span>
+                <span class="text-mini text-gray-600">Cantidad</span>
                 <ui-form-field
                   type="number"
                   [min]="1"
@@ -3649,7 +3650,7 @@
           (ngModelChange)="shippingStockId = $event"></ui-form-field>
 
         <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-          <div class="text-[11px] uppercase tracking-wide text-gray-600">Tipo de entrega</div>
+          <div class="text-mini uppercase tracking-wide text-gray-600">Tipo de entrega</div>
           <div class="mt-3 flex flex-wrap gap-2 text-sm text-main">
             <ui-button size="sm" [variant]="shippingType === 'carrier' ? 'primary' : 'ghost'" (pressed)="shippingType = 'carrier'">
               <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
@@ -3688,7 +3689,7 @@
         </div>
 
         <div *ngIf="shippingTargetOrder && !shippingTargetOrder.items?.length" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-          <div class="text-[11px] uppercase tracking-wide text-gray-600">Descuento de inventario</div>
+          <div class="text-mini uppercase tracking-wide text-gray-600">Descuento de inventario</div>
           <div class="mt-2 text-xs text-gray-600">
             Esta orden no tiene detalle de productos en memoria. Captura al menos una linea para descontar stock.
           </div>
@@ -3768,7 +3769,7 @@
       <div class="text-lg font-extrabold text-main">Registrar reembolso</div>
       <div class="mt-1 text-sm text-gray-600">Pedido: <span class="font-semibold text-main">{{ refundTargetOrder?.id }}</span></div>
     </div>
-    <ui-button size="sm" variant="ghost" (pressed)="closeRefundModal()">
+    <ui-button size="sm" variant="ghost" ariaLabel="Cerrar el registro de reembolso" (pressed)="closeRefundModal()">
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </ui-button>
   </div>
@@ -3810,7 +3811,7 @@
       <div class="text-lg font-extrabold text-main">Recibir paquete de devolución</div>
       <div class="mt-1 text-sm text-gray-600">Pedido: <span class="font-semibold text-main">{{ receiveReturnOrder?.id }}</span></div>
     </div>
-    <ui-button size="sm" variant="ghost" (pressed)="closeReceiveReturnModal()">
+    <ui-button size="sm" variant="ghost" ariaLabel="Cerrar la recepción de devolución" (pressed)="closeReceiveReturnModal()">
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </ui-button>
   </div>
@@ -3847,7 +3848,7 @@
       <div class="text-lg font-extrabold text-main">Rechazar devolución</div>
       <div class="mt-1 text-sm text-gray-600">Pedido: <span class="font-semibold text-main">{{ rejectReturnOrder?.id }}</span></div>
     </div>
-    <ui-button size="sm" variant="ghost" (pressed)="closeRejectReturnModal()">
+    <ui-button size="sm" variant="ghost" ariaLabel="Cerrar el rechazo de devolución" (pressed)="closeRejectReturnModal()">
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </ui-button>
   </div>
@@ -4305,7 +4306,7 @@
         </ui-button>
         <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('campaigns')" [variant]="currentView === 'campaigns' ? 'primary' : 'ghost'" (click)="setView('campaigns')">
           <i class="fa-solid fa-bullhorn" aria-hidden="true"></i>
-          Campanas
+          Campañas
         </ui-button>
         <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('pos')" [variant]="currentView === 'pos' ? 'primary' : 'ghost'" (click)="setView('pos')">
           <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
@@ -4340,7 +4341,7 @@
   <!-- Snackbar global -->
   <div
     *ngIf="snackbar.visible"
-    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg transition-all"
+    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-semibold elev-float transition-all"
     [style.background]="snackbar.tone === 'success' ? 'var(--color-primary)' : '#dc2626'"
     [style.color]="snackbar.tone === 'success' ? '#1b1b1b' : '#fff'"
     role="status"

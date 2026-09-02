@@ -31,11 +31,11 @@ PRESUPUESTOS = {
     "controles_nativos": 0,      # input/select/textarea de texto en páginas
     "atributos_desconocidos": 0, # atributos que un ui-* ignora en silencio
     "img_sin_alt": 0,
-    # Deuda aceptada y documentada (docs/qa/15).
+    "iconos_sin_nombre": 0,      # botones solo-icono sin nombre accesible
+    "paleta_ajena": 0,           # colores Tailwind fuera de la paleta del sistema
+    # Deuda aceptada y documentada (docs/qa/16).
     "file_inputs": 13,           # disparadores y estilos propios
     "radios_nativos": 2,         # control segmentado con radios ocultos
-    "iconos_sin_nombre": 31,     # botones solo-icono sin nombre accesible
-    "paleta_ajena": 47,          # colores Tailwind fuera de la paleta del sistema
 }
 
 # Familias de color de Tailwind que NO pertenecen a la paleta oro/bosque/crema.
@@ -49,7 +49,7 @@ PALETA_AJENA = re.compile(
 # y los avisos ámbar/rojo/verde de estados operativos del back office.
 PALETA_TOLERADA = re.compile(
     r"\b(?:text-gray-(?:400|500|600|700)|"
-    r"(?:bg|border|text)-(?:red|amber|emerald|green|blue)-(?:50|100|200|300|500|600|700|800))\b"
+    r"(?:bg|border|text)-(?:red|amber|emerald|green|blue)-(?:50|100|200|300|500|600|700|800|900))\b"
 )
 
 PALABRAS_SIN_ACENTO = [
@@ -211,11 +211,16 @@ def main() -> int:
                 continue
             texto = re.sub(r"<[^>]+>", "", cuerpo)
             texto = re.sub(r"\{\{[^}]*\}\}", "X", texto).strip()
-            tiene_nombre = (
-                bool(texto)
-                or re.search(r"\[?(?:attr\.)?aria-?[Ll]abel\]?\s*=", attrs)
-                or re.search(r"\[?title\]?\s*=", attrs)
-            )
+            # El nombre accesible depende de la etiqueta: en <ui-button> el
+            # atributo suelto aria-label se queda en el host (que no es el
+            # <button> real ni recibe el foco), así que NO nombra nada; la
+            # única vía válida es el @Input ariaLabel del componente.
+            if m.group(1) == "ui-button":
+                nombrado = re.search(r"\[?ariaLabel\]?\s*=", attrs)
+            else:
+                nombrado = re.search(r"(?:\[attr\.)?aria-label\]?\s*=", attrs)
+            tiene_nombre = bool(texto) or bool(nombrado) or bool(
+                re.search(r"\[?title\]?\s*=", attrs))
             if not tiene_nombre:
                 hallazgos["iconos_sin_nombre"].append(f"{rel}:{linea(src, m.start())}")
 

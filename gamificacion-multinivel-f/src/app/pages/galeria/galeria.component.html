@@ -17,8 +17,8 @@
             { n: 'Arena', c: '#f6f3ee' }, { n: 'Éxito', c: '#51705f' }, { n: 'Peligro', c: '#b4533c' }
           ]" class="text-center">
           <div class="h-14 w-14 rounded-2xl border border-olive-20" [style.background]="s.c"></div>
-          <div class="mt-1 text-[11px] font-semibold text-main">{{ s.n }}</div>
-          <div class="text-[10px] text-gray-500">{{ s.c }}</div>
+          <div class="mt-1 text-mini font-semibold text-main">{{ s.n }}</div>
+          <div class="text-micro text-gray-500">{{ s.c }}</div>
         </div>
       </div>
       <div class="mt-6 space-y-1">
@@ -235,12 +235,12 @@
         <ui-choice-card layout="stack" [selected]="demoChoice === 'a'" (pressed)="demoChoice = 'a'">
           <i class="fa-solid fa-truck text-xl" [ngClass]="demoChoice === 'a' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
           <div class="text-sm font-semibold text-main">Opción A</div>
-          <div class="text-[11px] text-gray-500">ui-choice-card stack</div>
+          <div class="text-mini text-gray-500">ui-choice-card stack</div>
         </ui-choice-card>
         <ui-choice-card layout="stack" [selected]="demoChoice === 'b'" (pressed)="demoChoice = 'b'">
           <i class="fa-solid fa-store text-xl" [ngClass]="demoChoice === 'b' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
           <div class="text-sm font-semibold text-main">Opción B</div>
-          <div class="text-[11px] text-gray-500">con pop al seleccionar</div>
+          <div class="text-mini text-gray-500">con pop al seleccionar</div>
         </ui-choice-card>
       </div>
       <div class="mt-4 flex items-center gap-6">
@@ -277,7 +277,7 @@
             <h3 class="mt-2 text-xl font-semibold">Modal del sistema</h3>
             <p class="mt-2 text-sm text-muted">Cierra con Escape, clic fuera o el botón.</p>
           </div>
-          <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+          <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar modal de ejemplo"
             (pressed)="demoModalOpen = false"></ui-button>
         </div>
         <div class="mt-5 flex justify-end gap-2">

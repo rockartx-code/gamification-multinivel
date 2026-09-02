@@ -3,7 +3,7 @@
     containerClass="mx-auto max-w-6xl flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
     <!-- IZQUIERDA (hijo directo) -->
     <div header-left class="relative lg:hidden shrink-0">
-      <ui-button size="lg" variant="ghost" type="button" (pressed)="toggleMobileNav()">
+      <ui-button size="lg" variant="ghost" type="button" ariaLabel="Abrir o cerrar el menú de navegación" (pressed)="toggleMobileNav()">
         <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
       </ui-button>
 
@@ -39,7 +39,7 @@
     <div class="flex shrink-0  items-center gap-2 sm:gap-3">
       <ui-button *ngIf="isGuest" size="sm" variant="ghost" class="lg:hidden" [routerLink]="['/login']">
         <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        Iniciar sesion
+        Iniciar sesión
       </ui-button>
 
       <!-- Medal icon — visible only if user is in top 10 -->
@@ -47,7 +47,7 @@
         (pressed)="scrollToSection('honor')" aria-label="Cuadro de Honor">
         <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
           <i class="fa-solid fa-medal text-[15px]" [ngClass]="honorMedalClass" aria-hidden="true"></i>
-          <span class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-[10px] font-bold leading-none text-main">
+          <span class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-micro font-bold leading-none text-main">
             {{ bestHonorPosition }}
           </span>
         </span>
@@ -59,7 +59,7 @@
         <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
           <i class="fa-solid fa-bell text-[13px] text-main" aria-hidden="true"></i>
           <span *ngIf="unreadNotificationsCount > 0"
-            class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-[10px] font-bold leading-none text-main">
+            class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-micro font-bold leading-none text-main">
             {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
           </span>
         </span>
@@ -125,7 +125,7 @@
 
         <ui-button size="sm" variant="ghost" *ngIf="isGuest" [routerLink]="['/login']">
           <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-          Iniciar sesion
+          Iniciar sesión
         </ui-button>
       </nav>
     </div>
@@ -264,7 +264,7 @@
               Carrito
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
-            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-gray-500'">
+            <div class="mt-1 text-mini" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-gray-500'">
               <ng-container *ngIf="cartDiscount > 0">
                 <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                 Ahorras {{ formatMoney(cartDiscount) }} • {{ cartDiscountLabel }}
@@ -308,7 +308,7 @@
                   <span *ngIf="hasDiscount" class="text-xs text-gray-500 line-through">
                     {{ formatMoney(heroProductPrice) }}
                   </span>
-                  <span *ngIf="hasDiscount" class="text-[11px] text-accent">{{ discountAppliedLabel() }}</span>
+                  <span *ngIf="hasDiscount" class="text-mini text-accent">{{ discountAppliedLabel() }}</span>
                 </span>
               </div>
 
@@ -601,9 +601,9 @@
             </span>
             <span class="text-2xl font-extrabold text-main tracking-wide">{{ currentRank }}</span>
           </div>
-          <div *ngIf="currentRank" class="text-[11px] text-gray-600">Lo lograste con tu constancia</div>
+          <div *ngIf="currentRank" class="text-mini text-gray-600">Lo lograste con tu constancia</div>
           <div *ngIf="!currentRank" class="mt-1 text-sm text-gray-400 italic">Sin rango aún</div>
-          <div *ngIf="!currentRank" class="text-[11px] text-gray-500">Cada compra te acerca al primero</div>
+          <div *ngIf="!currentRank" class="text-mini text-gray-500">Cada compra te acerca al primero</div>
         </div>
       </div>
 
@@ -617,7 +617,7 @@
           <div *ngFor="let award of bonusAwards" class="card-lift rounded-2xl border border-olive-30 bg-ivory-80 p-4">
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-2 text-sm font-semibold text-main leading-tight">
-                <span class="medallion h-7 w-7 shrink-0 text-[11px]">
+                <span class="medallion h-7 w-7 shrink-0 text-mini">
                   <i class="fa-solid fa-gift text-gold" aria-hidden="true"></i>
                 </span>
                 {{ award.ruleName }}
@@ -651,11 +651,11 @@
             <ui-kpi-card label="Bloqueadas" [value]="formatMoney(commissions.blockedTotal || 0)">
               <span kpi-label-extra class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
                 <ui-button size="md" variant="ghost" type="button" class="text-main"
-                  aria-label="Info comisiones bloqueadas" (pressed)="toggleBlockedTooltip()">
-                  <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
+                  ariaLabel="Info comisiones bloqueadas" (pressed)="toggleBlockedTooltip()">
+                  <i class="fa-solid fa-circle-info text-mini" aria-hidden="true"></i>
                 </ui-button>
                 <span *ngIf="showBlockedTooltip"
-                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-olive-30 bg-black/90 p-2 text-[11px] text-sand-200 shadow-lg">
+                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-olive-30 bg-black/90 p-2 text-mini text-sand-200 shadow-lg">
                   Las comisiones que pasan por referidos inactivos no llegan a ti.
                 </span>
               </span>
@@ -922,7 +922,7 @@
             <div class="mt-3 space-y-3 text-sm">
               <!--div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="activeFeaturedId ? 'border-olive-30 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
+                  [ngClass]="activeFeaturedId ? 'border-olive-30 bg-forest-10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
                   <i *ngIf="activeFeaturedId" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!activeFeaturedId">1</span>
                 </div>
@@ -933,7 +933,7 @@
               </div-->
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="hasCopiedLink ? 'border-olive-30 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
+                  [ngClass]="hasCopiedLink ? 'border-olive-30 bg-forest-10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
                   <i *ngIf="hasCopiedLink" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!hasCopiedLink">*</span>
                 </div>
@@ -944,7 +944,7 @@
               </div>
               <!--div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-olive-30 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
+                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-olive-30 bg-forest-10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
                   <i *ngIf="hasCopiedCopy || hasCopiedAsset" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!(hasCopiedCopy || hasCopiedAsset)">3</span>
                 </div>
@@ -1158,7 +1158,7 @@
               [class.border-gold-35]="honorEntryIsMe(entry)">
               <!-- Position -->
               <span class="w-6 text-center text-sm font-extrabold"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 [class.text-gray-500]="entry.position > 3">
@@ -1166,7 +1166,7 @@
               </span>
               <!-- Medal for top 3 -->
               <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 aria-hidden="true"></i>
@@ -1174,16 +1174,16 @@
               <!-- Name -->
               <span class="flex-1 truncate text-sm font-semibold text-main">
                 {{ entry.name }}
-                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span>
+                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span>
               </span>
               <!-- Rank badge -->
-              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-main sm:inline">
+              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-micro font-semibold text-main sm:inline">
                 {{ entry.rank }}
               </span>
               <!-- VG value -->
               <span class="text-xs font-bold text-gray-700">{{ entry.vg | number:'1.0-0' }} VG</span>
               <!-- Delta -->
-              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-[11px] font-bold" [class]="positionDeltaClass(entry)">
+              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-mini font-bold" [class]="positionDeltaClass(entry)">
                 {{ positionDeltaLabel(entry) }}
               </span>
             </div>
@@ -1203,27 +1203,27 @@
               [class.border]="honorEntryIsMe(entry)"
               [class.border-gold-35]="honorEntryIsMe(entry)">
               <span class="w-6 text-center text-sm font-extrabold"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 [class.text-gray-500]="entry.position > 3">
                 {{ entry.position }}
               </span>
               <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 aria-hidden="true"></i>
               <span *ngIf="entry.position > 3" class="w-4"></span>
               <span class="flex-1 truncate text-sm font-semibold text-main">
                 {{ entry.name }}
-                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span>
+                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span>
               </span>
-              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-main sm:inline">
+              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-micro font-semibold text-main sm:inline">
                 {{ entry.rank }}
               </span>
               <span class="text-xs font-bold text-gray-700">{{ entry.vp | number:'1.0-0' }} VP</span>
-              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-[11px] font-bold" [class]="positionDeltaClass(entry)">
+              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-mini font-bold" [class]="positionDeltaClass(entry)">
                 {{ positionDeltaLabel(entry) }}
               </span>
             </div>
@@ -1244,8 +1244,8 @@
         <p class="text-sm font-bold text-red-700">Bajaste en el ranking</p>
         <p class="text-xs text-red-500">Tu posición en VP descendió. ¡Sigue comprando para recuperarla!</p>
       </div>
-      <ui-button size="sm" variant="ghost" (pressed)="showRankDownAnim = false">
-        <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+      <ui-button size="sm" variant="ghost" ariaLabel="Cerrar aviso de cambio de ranking" (pressed)="showRankDownAnim = false">
+        <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i>
       </ui-button>
     </div>
   </div>
@@ -1261,7 +1261,7 @@
         </div>
         <p class="mt-1 text-sm text-gray-500">{{ honorBoard?.monthKey }} · Top 10 de la red</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" (pressed)="closeHonorBoardModal()">
+      <ui-button type="button" variant="ghost" size="sm" ariaLabel="Cerrar cuadro de honor" (pressed)="closeHonorBoardModal()">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </ui-button>
     </div>
@@ -1288,12 +1288,12 @@
             [class.bg-gold-20]="honorEntryIsMe(entry)"
             [class.font-bold]="honorEntryIsMe(entry)">
             <span class="w-5 text-center font-extrabold text-xs"
-              [class.text-yellow-500]="entry.position === 1"
+              [class.text-gold-vivo]="entry.position === 1"
               [class.text-gray-400]="entry.position === 2"
               [class.text-amber-700]="entry.position === 3">{{ entry.position }}</span>
-            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span></span>
+            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span></span>
             <span class="text-xs text-gray-500">{{ entry.vg | number:'1.0-0' }}</span>
-            <span *ngIf="positionDeltaLabel(entry)" class="text-[11px] font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
+            <span *ngIf="positionDeltaLabel(entry)" class="text-mini font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
           </div>
         </div>
       </div>
@@ -1306,12 +1306,12 @@
             [class.bg-gold-20]="honorEntryIsMe(entry)"
             [class.font-bold]="honorEntryIsMe(entry)">
             <span class="w-5 text-center font-extrabold text-xs"
-              [class.text-yellow-500]="entry.position === 1"
+              [class.text-gold-vivo]="entry.position === 1"
               [class.text-gray-400]="entry.position === 2"
               [class.text-amber-700]="entry.position === 3">{{ entry.position }}</span>
-            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span></span>
+            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span></span>
             <span class="text-xs text-gray-500">{{ entry.vp | number:'1.0-0' }}</span>
-            <span *ngIf="positionDeltaLabel(entry)" class="text-[11px] font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
+            <span *ngIf="positionDeltaLabel(entry)" class="text-mini font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
           </div>
         </div>
       </div>
@@ -1325,7 +1325,7 @@
         <div class="text-xs font-semibold text-gray-600">Centro de avisos</div>
         <h3 class="mt-2 text-xl font-extrabold text-main">Notificaciones vigentes</h3>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar centro de avisos"
         (pressed)="closeNotificationsCenter()">
       </ui-button>
     </div>
@@ -1380,7 +1380,7 @@
           <div class="text-xs font-semibold text-gray-600">Aviso del portal</div>
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ notification.title }}</h3>
         </div>
-        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar aviso del portal"
           (pressed)="closeNotificationModal()">
         </ui-button>
       </div>
@@ -1410,11 +1410,11 @@
 
   <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div *ngIf="toastKind === 'info'"
-      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main elev-lift">
       {{ toastMessage }}
     </div>
     <div *ngIf="toastKind === 'logro'"
-      class="toast-logro flex items-center gap-3 rounded-full border border-gold-35 px-5 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+      class="toast-logro flex items-center gap-3 rounded-full border border-gold-35 px-5 py-3 elev-float">
       <span class="medallion h-9 w-9 shrink-0 text-sm">
         <i class="fa-solid fa-star text-gold" aria-hidden="true"></i>
       </span>
@@ -1433,7 +1433,7 @@
         <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
         <p class="mt-2 text-sm text-muted">Usaremos esta CLABE para depositar tus comisiones.</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar solicitud de CLABE"
         (pressed)="closeCommissionModal()">
       </ui-button>
     </div>
@@ -1461,11 +1461,11 @@
         <div class="text-xs font-semibold text-gray-600">Confirmacion</div>
         <h3 class="mt-2 text-xl font-extrabold">Actualizar CLABE interbancaria</h3>
         <p class="mt-2 text-sm text-muted">
-          Estas a punto de guardar la CLABE:
+          Estás a punto de guardar la CLABE:
           <span class="text-main">{{ clabePending }}</span>
         </p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" (pressed)="closeClabeConfirm()">
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar confirmación de CLABE" (pressed)="closeClabeConfirm()">
       </ui-button>
     </div>
 
@@ -1484,11 +1484,11 @@
     (closed)="closeGuestRegisterModal()">
     <div class="flex items-start justify-between">
       <div>
-        <div class="text-xs font-semibold text-gray-600">Registro rapido</div>
+        <div class="text-xs font-semibold text-gray-600">Registro rápido</div>
         <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
         <p class="mt-2 text-sm text-muted">Completa tus datos para activar descuentos y red.</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar registro rápido"
         (pressed)="closeGuestRegisterModal()">
       </ui-button>
     </div>
@@ -1552,7 +1552,7 @@
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
           <p class="muted mt-1 text-sm">{{ product.badge }}</p>
         </div>
-        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar detalle del producto"
           (click)="closeProductDetails()">
         </ui-button>
       </div>
@@ -1600,7 +1600,7 @@
     <!-- Header -->
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <div class="text-[11px] font-semibold text-gray-600">
+        <div class="text-mini font-semibold text-gray-600">
           Metas cumplidas del mes
         </div>
         <h3 class="mt-1 text-lg sm:text-xl font-extrabold leading-tight">
@@ -1611,7 +1611,7 @@
         </p>
       </div>
 
-      <ui-button size="sm" variant="ghost" type="button" class="shrink-0" (pressed)="closeGoalsModal()">
+      <ui-button size="sm" variant="ghost" type="button" class="shrink-0" ariaLabel="Cerrar metas cumplidas" (pressed)="closeGoalsModal()">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </ui-button>
     </div>
@@ -1629,7 +1629,7 @@
 
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <div class="text-[11px] sm:text-xs text-gray-600 leading-snug">
+            <div class="text-mini sm:text-xs text-gray-600 leading-snug">
               {{ goal.subtitle }}
             </div>
             <div class="mt-0.5 text-xs sm:text-sm font-semibold text-main
@@ -1641,20 +1641,20 @@
           <!-- Badges compactos + wrap -->
           <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-gold-35
-                     bg-gold-12 px-2 py-0.5 text-[11px] text-gold">
-              <i class="fa-solid fa-star text-[11px]" aria-hidden="true"></i>
+                     bg-gold-12 px-2 py-0.5 text-mini text-gold">
+              <i class="fa-solid fa-star text-mini" aria-hidden="true"></i>
               Nueva
             </span>
 
             <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-olive-30
-                     bg-sand-100 px-2 py-0.5 text-[11px] text-main">
-              <i class="fa-solid fa-eye text-[11px]" aria-hidden="true"></i>
+                     bg-sand-100 px-2 py-0.5 text-mini text-main">
+              <i class="fa-solid fa-eye text-mini" aria-hidden="true"></i>
               Leída
             </span>
 
-            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30
-                     bg-emerald-400/10 px-2 py-0.5 text-[11px] text-accent">
-              <i class="fa-solid fa-check text-[11px]" aria-hidden="true"></i>
+            <span class="inline-flex items-center gap-1 rounded-full border border-forest-20
+                     bg-forest-05 px-2 py-0.5 text-mini text-accent">
+              <i class="fa-solid fa-check text-mini" aria-hidden="true"></i>
               OK
             </span>
           </div>
@@ -1671,7 +1671,7 @@
           Anterior
         </ui-button>
 
-        <div class="text-[11px] text-gray-600">
+        <div class="text-mini text-gray-600">
           {{ achievedGoalsPage + 1 }} / {{ achievedGoalsTotalPages }}
         </div>
 

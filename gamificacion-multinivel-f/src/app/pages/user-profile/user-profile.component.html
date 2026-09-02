@@ -59,7 +59,7 @@
             <div class="flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2.5 text-sm text-main">
               <i class="fa-solid fa-envelope text-xs text-gray-400" aria-hidden="true"></i>
               <span>{{ profile?.email || '—' }}</span>
-              <span class="ml-auto rounded-full bg-olive-10 px-2 py-0.5 text-[10px] font-semibold text-gray-500">Solo lectura</span>
+              <span class="ml-auto rounded-full bg-olive-10 px-2 py-0.5 text-micro font-semibold text-gray-500">Solo lectura</span>
             </div>
           </div>
 
@@ -106,7 +106,7 @@
             <p class="font-mono text-sm tracking-widest text-main">{{ maskedClabe }}</p>
             <p *ngIf="profile?.bankInstitution" class="mt-0.5 text-xs text-gray-500">{{ profile!.bankInstitution }}</p>
           </div>
-          <span class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Registrada</span>
+          <span class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-micro font-semibold text-green-700">Registrada</span>
         </div>
         <div *ngIf="!maskedClabe" class="mb-4 rounded-xl border border-dashed border-olive-30 bg-sand-200-90 px-4 py-3 text-xs text-gray-400">
           No tienes una CLABE registrada todavía.

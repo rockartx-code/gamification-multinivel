@@ -276,6 +276,19 @@ select:focus {
   border-top: 1px solid rgba(var(--rgb-primary), 0.2);
 }
 
+/* Estado positivo fuera del modal: hasta ahora .text-success solo existía
+   anidado en .modal-card, así que las plantillas caían en emerald-*. */
+.text-success { color: var(--color-success); }
+
+/* Salvia informativa: estado "en curso", distinto del bosque (completado). */
+.text-sage { color: var(--color-sage); }
+.bg-sage-10 { background-color: rgba(var(--rgb-sage), 0.1); }
+.border-sage-30 { border-color: rgba(var(--rgb-sage), 0.3); }
+
+/* Oro vivo: reservado al primer puesto del podio, donde el oro plano
+   compite con los chips ámbar de alrededor. */
+.text-gold-vivo { color: #b8860b; }
+
 .text-main { color: var(--color-text); }
 .text-muted { color: var(--color-text-muted); }
 .text-accent { color: var(--text-on-primary); }
@@ -633,16 +646,31 @@ select:focus {
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
 
 /* Utilidades de elevación para plantillas: hasta ahora los tokens
-   --shadow-* solo eran usables desde CSS de componente. */
-.elev-rest { box-shadow: var(--shadow-rest); }
-.elev-lift { box-shadow: var(--shadow-lift); }
-.elev-float { box-shadow: var(--shadow-float); }
+   --shadow-* solo eran usables desde CSS de componente.
+   Se declaran con @utility (Tailwind v4) y no como CSS plano: así entran en
+   la capa de utilidades, admiten variantes (sm:, hover:) y NO ganan por
+   accidente a una utilidad nativa que venga después en la clase. */
+@utility elev-rest { box-shadow: var(--shadow-rest); }
+@utility elev-lift { box-shadow: var(--shadow-lift); }
+@utility elev-float { box-shadow: var(--shadow-float); }
+
+/* Sombra hacia arriba: barras fijas al borde inferior, donde la elevación
+   tiene que leerse por encima del contenido que se desliza debajo. */
+@utility elev-up {
+  box-shadow: 0 -8px 24px rgba(var(--rgb-forest), 0.10), 0 -2px 6px rgba(var(--rgb-forest), 0.05);
+}
+
+/* Halo dorado para el punto de estado del hero: una sombra de tarjeta
+   (elev-rest) es invisible en un punto de 8px; un halo sí se lee. */
+@utility glow-gold {
+  box-shadow: 0 0 0 3px rgba(var(--rgb-primary), 0.22);
+}
 
 /* Escala de micro-tipografía: absorbe los text-[11px]/text-[10px] arbitrarios.
    Solo declara font-size (igual que el valor arbitrario de Tailwind), así que
    el renderizado no cambia; lo que cambia es tener un único sitio donde ajustar. */
-.text-mini { font-size: 11px; }
-.text-micro { font-size: 10px; }
+@utility text-mini { font-size: 11px; }
+@utility text-micro { font-size: 10px; }
 
 /* Casilla del sistema (ui-checkbox): el nativo se pintaba con el azul del navegador */
 .ui-check-host,

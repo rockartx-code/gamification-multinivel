@@ -46,7 +46,7 @@
   <div class="flex items-center gap-2 px-4 py-2.5 hover:bg-olive-10/30 transition-colors"
     [style.paddingLeft.px]="16 + node.depth * 20">
 
-    <i class="fa-solid text-[10px] text-gray-400" [class]="node.children.length ? 'fa-folder' : 'fa-tag'" aria-hidden="true"></i>
+    <i class="fa-solid text-micro text-gray-400" [class]="node.children.length ? 'fa-folder' : 'fa-tag'" aria-hidden="true"></i>
 
     <!-- Editing inline -->
     <ng-container *ngIf="editingId === node.id">
@@ -63,17 +63,17 @@
     <!-- Normal display -->
     <ng-container *ngIf="editingId !== node.id">
       <span class="flex-1 text-sm text-main">{{ node.name }}</span>
-      <span class="text-[11px] text-gray-400">{{ node.children.length ? node.children.length + ' sub' : '' }}</span>
+      <span class="text-mini text-gray-400">{{ node.children.length ? node.children.length + ' sub' : '' }}</span>
 
       <!-- Add subcategory inline form trigger -->
       <ui-button size="sm" variant="ghost" (pressed)="startAdd(node.id)" title="Agregar subcategoría">
-        <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+        <i class="fa-solid fa-plus text-micro" aria-hidden="true"></i>
       </ui-button>
       <ui-button size="sm" variant="ghost" (pressed)="startEdit(node)" title="Renombrar">
-        <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+        <i class="fa-solid fa-pen text-micro" aria-hidden="true"></i>
       </ui-button>
       <ui-button size="sm" variant="ghost" (pressed)="delete(node.id)" [disabled]="isDeleting" title="Eliminar">
-        <i class="fa-solid fa-trash text-[10px] text-red-400" aria-hidden="true"></i>
+        <i class="fa-solid fa-trash text-micro text-danger" aria-hidden="true"></i>
       </ui-button>
     </ng-container>
   </div>
@@ -82,7 +82,7 @@
   <div *ngIf="addingParentId === node.id"
     class="flex items-center gap-2 border-b border-olive-20 bg-ivory-80/60 py-2"
     [style.paddingLeft.px]="16 + (node.depth + 1) * 20">
-    <i class="fa-solid fa-corner-down-right text-[10px] text-gray-300" aria-hidden="true"></i>
+    <i class="fa-solid fa-corner-down-right text-micro text-muted" aria-hidden="true"></i>
     <ui-form-field class="flex-1" [(ngModel)]="draftName" placeholder="Nombre de subcategoría"
       wrapperClass="block"
       inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"

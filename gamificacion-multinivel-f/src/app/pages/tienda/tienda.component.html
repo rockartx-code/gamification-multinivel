@@ -5,10 +5,10 @@
   <ui-header variant="landing"
     containerClass="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
     <div class="flex items-center gap-2 md:hidden">
-      <ui-button size="lg" variant="ghost" [routerLink]="['/login']" aria-label="Entrar">
+      <ui-button size="lg" variant="ghost" [routerLink]="['/login']" ariaLabel="Entrar">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
       </ui-button>
-      <ui-button size="lg" variant="primary" aria-label="Agregar al carrito" (pressed)="addToCart()">
+      <ui-button size="lg" variant="primary" ariaLabel="Agregar al carrito" (pressed)="addToCart()">
         <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
       </ui-button>
     </div>
@@ -35,13 +35,13 @@
 
         <!-- Image -->
         <div class="order-1 md:order-2" revealOnScroll [revealDelay]="150">
-          <div class="relative overflow-hidden rounded-3xl border border-olive-20 bg-ivory-70 shadow-[0_28px_80px_rgba(17,24,39,0.10)]">
+          <div class="relative overflow-hidden rounded-3xl border border-olive-20 bg-ivory-70 elev-float">
             <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_70%_20%,rgba(200,166,90,0.22)_0%,rgba(244,241,234,0)_55%)]"></div>
             <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_55%_at_25%_85%,rgba(122,142,102,0.16)_0%,rgba(244,241,234,0)_60%)]"></div>
             <div class="relative mx-auto flex h-[360px] items-center justify-center p-8 sm:h-[430px] md:h-[560px] md:p-12">
-              <div class="relative rounded-2xl bg-ivory-90/80 ring-1 ring-black/5 backdrop-blur-[2px] shadow-[0_18px_50px_rgba(17,24,39,0.10)] px-6 py-7 sm:px-8 sm:py-9">
+              <div class="relative rounded-2xl bg-ivory-90/80 ring-1 ring-black/5 backdrop-blur-[2px] elev-lift px-6 py-7 sm:px-8 sm:py-9">
                 <img [src]="heroImage" [alt]="heroName"
-                  class="block max-h-[300px] sm:max-h-[350px] md:max-h-[460px] w-auto object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.14)] saturate-[0.98] contrast-[0.98]" />
+                  class="block max-h-[300px] sm:max-h-[350px] md:max-h-[460px] w-auto object-contain drop-shadow-2xl saturate-[0.98] contrast-[0.98]" />
               </div>
             </div>
           </div>
@@ -50,7 +50,7 @@
         <!-- Copy -->
         <div class="order-2 md:order-1" revealOnScroll>
           <p class="inline-flex items-center gap-2 rounded-full border border-olive-30 bg-ivory-80 px-4 py-2 text-xs text-gray-700">
-            <span class="h-2 w-2 rounded-full bg-olive shadow-[0_0_18px_rgba(124,140,114,.55)]"></span>
+            <span class="h-2 w-2 rounded-full bg-olive glow-gold"></span>
             {{ heroBadge }}
           </p>
 
@@ -70,7 +70,7 @@
             <span *ngIf="featuredProduct?.vpPoints"
               class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent"
               title="Puntos Comisionables que suma a tus logros (PV/PG)">
-              <i class="fa-solid fa-star text-[10px]" aria-hidden="true"></i>{{ featuredProduct?.vpPoints }} PC
+              <i class="fa-solid fa-star text-micro" aria-hidden="true"></i>{{ featuredProduct?.vpPoints }} PC
             </span>
           </div>
 
@@ -104,7 +104,7 @@
           <div class="mt-8 grid grid-cols-2 gap-3 text-sm md:mt-10">
             <feature-badge
               *ngFor="let tag of heroTags; let i = index"
-              [icon]="i % 3 === 0 ? 'fa-solid fa-bolt text-accent' : i % 3 === 1 ? 'fa-solid fa-heart-pulse text-rose-200' : 'fa-solid fa-leaf text-accent'"
+              [icon]="i % 3 === 0 ? 'fa-solid fa-bolt text-accent' : i % 3 === 1 ? 'fa-solid fa-heart-pulse text-forest' : 'fa-solid fa-leaf text-accent'"
               [label]="tag">
             </feature-badge>
           </div>
@@ -127,7 +127,7 @@
 
       <div class="mt-10 flex flex-wrap justify-center gap-4">
         <div *ngFor="let tag of heroTags; let i = index"
-          class="card-lift group w-full rounded-2xl border border-olive-30 bg-ivory-80 p-5 text-center shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:w-64"
+          class="card-lift group w-full rounded-2xl border border-olive-30 bg-ivory-80 p-5 text-center elev-rest sm:w-64"
           revealOnScroll [revealDelay]="i * 100">
           <div class="icon-orb mx-auto h-10 w-10">
             <i [class]="i % 3 === 0 ? 'fa-solid fa-bolt' : i % 3 === 1 ? 'fa-solid fa-heart-pulse' : 'fa-solid fa-leaf'"
@@ -178,9 +178,9 @@
           <!-- Product image -->
           <div class="relative flex h-40 items-center justify-center overflow-hidden bg-ivory-70 p-4">
             <img [src]="product.img" [alt]="product.name"
-              class="img-zoom relative max-h-32 w-auto object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.10)]" />
+              class="img-zoom relative max-h-32 w-auto object-contain drop-shadow-md" />
             <span *ngIf="product.badge"
-              class="absolute right-3 top-3 rounded-full bg-olive-10 px-2.5 py-0.5 text-[10px] font-semibold text-main border border-olive-30">
+              class="absolute right-3 top-3 rounded-full bg-olive-10 px-2.5 py-0.5 text-micro font-semibold text-main border border-olive-30">
               {{ product.badge }}
             </span>
           </div>
@@ -190,12 +190,12 @@
             <div class="flex items-center justify-between gap-2 mt-auto">
               <span class="text-base font-extrabold text-main">{{ formatMoney(product.price) }}</span>
               <span *ngIf="product.vpPoints"
-                class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent"
+                class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-micro font-bold text-accent"
                 title="Puntos Comisionables que suma este producto a tus logros (PV/PG)">
                 <i class="fa-solid fa-star text-[8px]" aria-hidden="true"></i>{{ product.vpPoints }} PC
               </span>
               <span *ngIf="!product.vpPoints && product.variants && product.variants.length > 0"
-                class="rounded-full border border-olive-30 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
+                class="rounded-full border border-olive-30 bg-white/60 px-2 py-0.5 text-micro font-semibold text-gray-500">
                 {{ product.variants.length }} tipo{{ product.variants.length !== 1 ? 's' : '' }}
               </span>
             </div>
@@ -298,12 +298,12 @@
 <!-- ══════════════════════════════════════════════════════════════════ -->
 <!-- STICKY CART BAR — always visible at the bottom                   -->
 <!-- ══════════════════════════════════════════════════════════════════ -->
-<div class="fixed bottom-0 left-0 right-0 z-40 border-t border-olive-30 bg-sand-200-90 shadow-[0_-8px_32px_rgba(0,0,0,0.10)] backdrop-blur-md">
+<div class="fixed bottom-0 left-0 right-0 z-40 border-t border-olive-30 bg-sand-200-90 elev-up backdrop-blur-md">
   <div class="mx-auto max-w-4xl px-4 py-3 sm:px-6">
 
     <!-- Goal progress bar (only when a goal target exists) -->
     <div *ngIf="cartHasGoal" class="mb-2.5">
-      <div class="flex items-center justify-between text-[11px] text-gray-500">
+      <div class="flex items-center justify-between text-mini text-gray-500">
         <span class="flex items-center gap-1.5 font-semibold text-main">
           <i class="fa-solid fa-flag-checkered text-accent" aria-hidden="true"></i>
           Meta de consumo
@@ -343,7 +343,7 @@
 
       <!-- Subtotal -->
       <div class="flex min-w-0 flex-1 flex-col">
-        <span class="text-[11px] text-gray-500">Total en carrito</span>
+        <span class="text-mini text-gray-500">Total en carrito</span>
         <span class="text-lg font-extrabold leading-tight text-main">
           {{ cartCount > 0 ? formatMoney(cartSubtotal) : '—' }}
         </span>
