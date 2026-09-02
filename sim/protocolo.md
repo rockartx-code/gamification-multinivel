@@ -34,3 +34,8 @@
 
 ## Cobertura
 `servidor.log` registra cada llamada HTTP. Al final se cruza con las 75 rutas que expone el frontend y con las acciones de cada pantalla para saber qué alcanzó cada persona y qué nunca tocó nadie.
+
+## Añadido a mitad de simulación
+| Ivonne Castro | sonnet | ejecutiva de recuperación de cuentas: "maneja" al patrocinador por defecto FindingU (que no es una cuenta sino un valor fijo del backend). Debe detectar clientes que se enfriaron desde la plataforma y contactarlos por WhatsApp como su coach | back office (Clientes, Pedidos, Estadísticas, Cuadro de Honor) |
+
+Sus WhatsApp salientes (`📱 A [nombre]:`) los entrego yo al agente-cliente correspondiente; las respuestas vuelven a ella.
