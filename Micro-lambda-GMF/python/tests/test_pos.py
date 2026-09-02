@@ -112,3 +112,15 @@ def test_anular_una_venta_regresa_inventario_y_cancela_el_pedido(inventory_lambd
     r = inventory_lambda.lambda_handler({"httpMethod": "POST", "path": f"/inventory/pos/sales/{sale_id}/void",
                                          "headers": {"x-user-id": "sofia"}, "body": "{}"}, None)
     assert r["statusCode"] == 409
+
+
+def test_el_retiro_de_efectivo_se_guarda_sin_floats(inventory_lambda, utils, monkeypatch):
+    """Regresión: "Internal Inventory Error" al retirar $400 para la paquetería."""
+    pid, stock = _mostrador(utils)
+    monkeypatch.setattr(inventory_lambda, "sfn", _SfnFalso([]))
+    monkeypatch.setattr(inventory_lambda, "_validate_pos_auth", lambda code: code == "2468")
+    _venta(inventory_lambda, pid, stock)
+    r = inventory_lambda.handle_pos_withdrawal({"stockId": stock, "amount": 400, "reason": "paquetería", "authCode": "2468"}, {"x-user-id": "paco"})
+    assert r["statusCode"] == 201, r["body"]
+    wid = json.loads(r["body"])["withdrawal"]["withdrawalId"]
+    assert isinstance(utils._get_by_id("POS_WITHDRAWAL", wid)["amount"], Decimal)

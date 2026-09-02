@@ -564,7 +564,8 @@ def handle_pos_withdrawal(body, headers):
         "withdrawalId": wdr_id,
         "stockId": stock_id,
         "attendantUserId": user_id,
-        "amount": float(amount),
+        # Decimal: como float, DynamoDB lo rechazaba y el retiro respondía 500.
+        "amount": utils._to_decimal(amount),
         "reason": reason,
         "createdAt": now,
         "updatedAt": now
