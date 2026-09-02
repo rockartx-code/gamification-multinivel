@@ -5795,9 +5795,14 @@ export class AdminComponent implements OnInit {
         const cb = this.posAuthPendingCallback;
         this.closePosAuthModal();
         if (cb) cb();
+        // El código validaba (200) y el diálogo de descuento no aparecía: la
+        // vista no se refrescaba tras la respuesta y el cajero pulsó Cobrar
+        // tres veces, dejando tres ventas.
+        this.requestViewUpdate();
       },
       error: (err: { error?: { message?: string }; message?: string }) => {
         this.posAuthError = err?.error?.message || 'Codigo incorrecto.';
+        this.requestViewUpdate();
       }
     });
   }
