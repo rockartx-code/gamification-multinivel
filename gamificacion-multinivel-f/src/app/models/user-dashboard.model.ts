@@ -220,6 +220,8 @@ export interface CatalogData {
 
 /** Respuesta de GET /dashboard (sin datos de catálogo) */
 export interface DashboardData {
+  /** Consumo propio del mes en pesos, tal como lo devuelve la API. */
+  myNetSpend?: number;
   isGuest?: boolean;
   settings: DashboardSettings;
   customer?: DashboardCustomerProfile | null;
