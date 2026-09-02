@@ -1898,7 +1898,8 @@ export class AdminComponent implements OnInit {
 
   get reportTopCustomersByOrders(): Array<{ name: string; count: number; total: number }> {
     if (this.statsData) {
-      return this.statsData.orders.topCustomers.map((c) => ({ name: c.customerId, count: c.orders, total: c.total }));
+      // Pintaba el ID como nombre; el resumen ya trae el nombre del cliente.
+      return this.statsData.orders.topCustomers.map((c) => ({ name: (c as { name?: string }).name || String(c.customerId), count: c.orders, total: c.total }));
     }
     const map = new Map<string, { count: number; total: number }>();
     for (const o of this.reportOrders) {
@@ -5518,7 +5519,16 @@ export class AdminComponent implements OnInit {
   }
 
   stockName(stockId: string): string {
-    return this.stocks.find((stock) => stock.id === stockId)?.name ?? 'Sin stock';
+    // Devolvía "Sin stock" cuando la lista de almacenes aún no se había
+    // cargado (solo se carga al entrar en Stocks): el detalle de un pedido
+    // recién enviado decía "Stock origen: Sin stock" y alarmaba a la gerente.
+    const nombre = this.stocks.find((stock) => stock.id === stockId)?.name;
+    if (nombre) return nombre;
+    if (!this.stocks.length && stockId) {
+      this.loadStocksAndPosState();
+      return stockId;
+    }
+    return stockId || 'Sin stock';
   }
 
   customerName(customerId: number | null | undefined): string {
