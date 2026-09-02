@@ -39,3 +39,10 @@
 | Ivonne Castro | sonnet | ejecutiva de recuperación de cuentas: "maneja" al patrocinador por defecto FindingU (que no es una cuenta sino un valor fijo del backend). Debe detectar clientes que se enfriaron desde la plataforma y contactarlos por WhatsApp como su coach | back office (Clientes, Pedidos, Estadísticas, Cuadro de Honor) |
 
 Sus WhatsApp salientes (`📱 A [nombre]:`) los entrego yo al agente-cliente correspondiente; las respuestas vuelven a ella.
+
+## Tercera ola (Día 5): prospectos desde redes, sin conocer a la socia ni al producto
+| Persona | Modelo | Canal | Entra por |
+|---|---|---|---|
+| Tomás Ibarra, 21 | haiku, MÓVIL | TikTok de Marcela (energía sin café), link en bio | `/#/landing/MARCELA-MO` |
+| Patricia Solís, 47 | sonnet, MÓVIL | Publicación de Instagram de Marcela (colágeno), solo código "MARCELA-MO" | `/#/` y tiene que encontrar dónde va el código |
+| Andrés Quintero, 35 | opus | Video de YouTube de Marcela ("cómo funciona el plan"), link y código en la descripción | `/#/landing/MARCELA-MO` |
