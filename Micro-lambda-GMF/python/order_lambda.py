@@ -1009,6 +1009,9 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         "status": "PENDIENTE",
         "shippingResponsibility": responsable,
         "evidence": subidas,
+        # Lo que el cliente pagó por regresar el paquete (ticket de paquetería);
+        # se suma al reembolso por omisión.
+        "returnShippingCost": utils._to_decimal(body.get("returnShippingCost") or 0),
         "horasDesdEntrega": Decimal(str(round(horas, 4))),
         "inspection": None,
         "createdAt": now,
@@ -1017,8 +1020,8 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
 
     updated_order = utils._update_by_id(
         "ORDER", order_id,
-        "SET #s = :s, returnRequestId = :rid, updatedAt = :u",
-        {":s": "en_devolucion", ":rid": request_id, ":u": now},
+        "SET #s = :s, returnRequestId = :rid, returnShippingCost = :rsc, updatedAt = :u",
+        {":s": "en_devolucion", ":rid": request_id, ":rsc": utils._to_decimal(body.get("returnShippingCost") or 0), ":u": now},
         {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
@@ -1197,8 +1200,17 @@ def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
             print(f"[S3_REFUND_RECEIPT] {e}")
             return utils._json_response(400, {"message": "No se pudo procesar el comprobante de depósito.", "detail": str(e)})
 
-    update_expr = "SET #s = :s, refundReason = :r, refundedAt = :ra, updatedAt = :u"
-    eav = {":s": "refunded", ":r": body.get("reason") or "refund", ":ra": now, ":u": now}
+    # Importe reembolsado: por omisión el total cobrado más el envío de regreso
+    # que el cliente haya declarado en su solicitud de devolución. La gerente
+    # reembolsaba "la única cifra que el sistema mostraba" y el cliente
+    # reclamaba después su ticket de paquetería.
+    importe_base = utils._to_decimal(order.get("total") if order.get("total") is not None else order.get("netTotal"))
+    envio_regreso = utils._to_decimal(order.get("returnShippingCost") or 0)
+    refund_amount = utils._to_decimal(body.get("amount")) if body.get("amount") not in (None, "") else importe_base + envio_regreso
+    if refund_amount < utils.D_ZERO:
+        return utils._json_response(400, {"message": "El importe del reembolso no puede ser negativo"})
+    update_expr = "SET #s = :s, refundReason = :r, refundedAt = :ra, refundAmount = :amt, updatedAt = :u"
+    eav = {":s": "refunded", ":r": body.get("reason") or "refund", ":ra": now, ":amt": refund_amount, ":u": now}
     if refund_receipt_url:
         update_expr += ", refundReceiptUrl = :rru"
         eav[":rru"] = refund_receipt_url
@@ -1211,6 +1223,7 @@ def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
     return utils._json_response(200, {
         "orderId": order_id,
         "status": "refunded",
+        "refundAmount": refund_amount,
         "refundReceiptUrl": refund_receipt_url,
         "commissionActions": actions,
     })

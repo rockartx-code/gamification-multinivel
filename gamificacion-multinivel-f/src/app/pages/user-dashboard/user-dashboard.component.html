@@ -641,6 +641,16 @@
           </h2>
           <p class="mt-2 text-sm text-gray-600">Resumen del mes {{ commissions.monthKey }}.</p>
         </div>
+        <div class="w-full sm:w-64">
+          <ui-form-field
+            kind="select"
+            label="Ver mes"
+            [options]="commissionMonthOptions"
+            [ngModel]="selectedCommissionMonth || commissions.monthKey"
+            (ngModelChange)="selectCommissionMonth($event)">
+          </ui-form-field>
+          <p *ngIf="isLoadingCommissionMonth" class="mt-1 text-xs text-gray-500">Cargando…</p>
+        </div>
       </div>
 
       <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
@@ -656,7 +666,7 @@
                 </ui-button>
                 <span *ngIf="showBlockedTooltip"
                   class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-olive-30 bg-black/90 p-2 text-mini text-sand-200 shadow-lg">
-                  Las comisiones que pasan por referidos inactivos no llegan a ti.
+                  Comisiones de tus referidos generadas mientras no estabas activa/o (20 VP en el mes). Si te activas dentro del mismo mes, se recalculan.
                 </span>
               </span>
             </ui-kpi-card>

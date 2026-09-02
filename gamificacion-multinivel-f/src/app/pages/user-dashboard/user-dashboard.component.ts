@@ -360,7 +360,66 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.networkMembers;
   }
 
+  /** Historial: el 1 de octubre "septiembre desapareció" del panel; ahora se puede elegir el mes. */
+  commissionMonthOverride: UserDashboardData['commissions'] | null = null;
+  selectedCommissionMonth = '';
+  isLoadingCommissionMonth = false;
+
+  get commissionMonthOptions(): Array<{ value: string; label: string }> {
+    const base = this.dashboardControl.data?.commissions?.monthKey || this.currentMonthKey();
+    const [y, m] = base.split('-').map(Number);
+    const out: Array<{ value: string; label: string }> = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(Date.UTC(y, m - 1 - i, 1));
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      out.push({ value: key, label: i === 0 ? `${label} (actual)` : label });
+    }
+    return out;
+  }
+
+  private currentMonthKey(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  selectCommissionMonth(monthKey: string): void {
+    const current = this.dashboardControl.data?.commissions;
+    this.selectedCommissionMonth = monthKey;
+    if (!current || !monthKey || monthKey === current.monthKey) {
+      this.commissionMonthOverride = null;
+      return;
+    }
+    const id = String(this.authService.currentUser?.userId ?? '');
+    if (!id) {
+      return;
+    }
+    this.isLoadingCommissionMonth = true;
+    this.api.getCommissionsLedgerMonth(id, monthKey).subscribe({
+      next: (raw) => {
+        const r = raw as Record<string, number | unknown[] | string>;
+        this.commissionMonthOverride = {
+          ...current,
+          monthKey,
+          pendingTotal: Number(r['totalPending'] ?? 0),
+          monthTotal: Number(r['totalConfirmed'] ?? 0),
+          blockedTotal: Number(r['totalBlocked'] ?? 0),
+          ledger: Array.isArray(r['ledger']) ? (r['ledger'] as NonNullable<UserDashboardData['commissions']>['ledger']) : [],
+          hasPending: Number(r['totalPending'] ?? 0) > 0,
+          hasConfirmed: Number(r['totalConfirmed'] ?? 0) > 0
+        };
+        this.isLoadingCommissionMonth = false;
+      },
+      error: () => {
+        this.isLoadingCommissionMonth = false;
+      }
+    });
+  }
+
   get commissionSummary(): UserDashboardData['commissions'] {
+    if (this.commissionMonthOverride) {
+      return this.commissionMonthOverride;
+    }
     return this.dashboardControl.data?.commissions ?? null;
   }
 

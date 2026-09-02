@@ -3930,6 +3930,19 @@
     <div>
       <ui-form-field
         wrapperClass="block"
+        label="Importe a reembolsar"
+        type="text"
+        placeholder="0"
+        inputClass="mt-1 w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70"
+        [(ngModel)]="refundAmount"></ui-form-field>
+      <div class="mt-1 text-xs text-gray-600">
+        Cobrado: {{ formatMoney(refundTargetOrder?.total || 0) }}<span *ngIf="refundTargetOrder?.shippingCost"> (incluye envío {{ formatMoney(refundTargetOrder?.shippingCost || 0) }})</span><span *ngIf="refundTargetOrder?.returnShippingCost"> · el cliente pagó {{ formatMoney(refundTargetOrder?.returnShippingCost || 0) }} por el envío de regreso</span>.
+        Sugerido: {{ formatMoney(refundSuggestedAmount) }}.
+      </div>
+    </div>
+    <div>
+      <ui-form-field
+        wrapperClass="block"
         label="Motivo del reembolso (opcional)"
         type="text"
         placeholder="Ej. Cancelación por cliente"

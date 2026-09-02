@@ -3666,8 +3666,16 @@ export class AdminComponent implements OnInit {
 
   // ── Refund modal ──────────────────────────────────────────────────────────
 
+  refundAmount = '';
+
+  get refundSuggestedAmount(): number {
+    const o = this.refundTargetOrder;
+    return o ? this.roundMoney((o.total || 0) + (o.returnShippingCost || 0)) : 0;
+  }
+
   openRefundModal(order: AdminOrder): void {
     this.refundTargetOrder = order;
+    this.refundAmount = String(this.roundMoney((order.total || 0) + (order.returnShippingCost || 0)));
     this.refundReceiptBase64 = '';
     this.refundReceiptName = '';
     this.refundReason = '';
@@ -3703,8 +3711,14 @@ export class AdminComponent implements OnInit {
     this.refundError = '';
     this.isSavingRefund = true;
     const orderId = this.refundTargetOrder.id;
+    const importe = Number(String(this.refundAmount).replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(importe) || importe < 0) {
+      this.refundError = 'Escribe un importe válido.';
+      return;
+    }
     const payload: AdminRefundPayload = {
       reason: this.refundReason || 'refund',
+      amount: importe,
       receiptBase64: this.refundReceiptBase64,
       receiptName: this.refundReceiptName || 'comprobante.jpg',
       receiptContentType: this.refundReceiptName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',

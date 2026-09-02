@@ -55,6 +55,9 @@ export interface AdminOrder {
   /** Envío cobrado al cliente y paquetería cotizada. */
   shippingCost?: number;
   shippingCarrier?: string;
+  /** Envío de regreso que el cliente declaró en su devolución. */
+  returnShippingCost?: number;
+  refundAmount?: number;
   returnRequestId?: string;
   rejectionReason?: string;
   rejectedAt?: string;
@@ -64,6 +67,8 @@ export interface AdminOrder {
 
 export interface AdminRefundPayload {
   reason?: string;
+  /** Importe reembolsado; por omisión el total más el envío de regreso declarado. */
+  amount?: number;
   receiptBase64?: string;
   receiptName?: string;
   receiptContentType?: string;
@@ -812,6 +817,8 @@ export interface OrderReturnRequestPayload {
   motivo: OrderReturnMotivo;
   descripcion?: string;
   evidence: OrderReturnEvidencePayload;
+  /** Lo que el cliente pagó por regresar el paquete; se suma al reembolso. */
+  returnShippingCost?: number;
 }
 
 export interface OrderReturnRequestResponse {

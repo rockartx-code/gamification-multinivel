@@ -33,6 +33,8 @@ export class OrderDevolucionComponent implements OnInit {
   // Step 1
   motivo: OrderReturnMotivo | '' = '';
   descripcion = '';
+  /** Ticket de paquetería del envío de regreso, si el cliente lo pagó. */
+  returnShippingCost = '';
 
   // Step 2 — evidence files
   fotosProducto: OrderReturnEvidenceFile[] = [];
@@ -133,6 +135,7 @@ export class OrderDevolucionComponent implements OnInit {
     this.api.requestReturn(this.orderId, {
       motivo: this.motivo,
       descripcion: this.descripcion.trim() || undefined,
+      returnShippingCost: Number(this.returnShippingCost) > 0 ? Number(this.returnShippingCost) : undefined,
       evidence: {
         fotos_producto: this.fotosProducto,
         fotos_empaque: this.fotosEmpaque,

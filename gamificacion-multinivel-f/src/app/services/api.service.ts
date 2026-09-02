@@ -220,6 +220,10 @@ export class ApiService {
     return this.resolveApi().getOrderStatus(orderOrPaymentId);
   }
 
+  getCommissionsLedgerMonth(associateId: string, monthKey: string): Observable<Record<string, unknown>> {
+    return this.resolveApi().getCommissionsLedgerMonth(associateId, monthKey);
+  }
+
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
     return this.resolveApi().getAssociateMonth(associateId, monthKey);
   }

@@ -135,3 +135,38 @@ def test_el_invitado_puede_cancelar_su_pedido_pendiente_sin_sesion(order_lambda,
     r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/cancel", {"reason": "customer_request"}), None)
     assert r["statusCode"] == 200, r["body"]
     assert utils._get_by_id("ORDER", oid)["status"] == "cancelled"
+
+
+def _entregado(utils, oid):
+    pedido = utils._get_by_id("ORDER", oid); pedido["status"] = "delivered"; pedido["deliveredAt"] = utils._now_iso()
+    utils._table.put_item(Item=pedido)
+
+
+def test_el_reembolso_suma_el_envio_de_regreso_declarado(order_lambda, utils, monkeypatch):
+    """Lucía pagó $165 en Estafeta para regresar el bote; la gerente reembolsó
+    "la única cifra que el sistema mostraba" ($800) y ella reclamó después."""
+    import json
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    _entregado(utils, oid)
+    cuerpo = {"motivo": "DANADO_DEFECTUOSO", "descripcion": "Tapa rajada", "returnShippingCost": 165,
+              "evidence": {"fotos_producto": ["a.jpg"], "fotos_empaque": ["b.jpg"], "fotos_guia_envio": ["c.jpg"]}}
+    r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/return", cuerpo), None)
+    assert r["statusCode"] == 201, r["body"]
+    assert utils._get_by_id("ORDER", oid)["returnShippingCost"] == Decimal("165")
+    ok = {"inspection": {"empaque_original": True, "sellos_intactos": True, "sin_uso": True, "coincide_con_pedido": True, "trazabilidad_valida": True}}
+    assert order_lambda.handle_return_inspection(oid, ok, {})["statusCode"] == 200
+    r = order_lambda.handle_refund_order(oid, {"reason": "return"}, {})
+    assert r["statusCode"] == 200, r["body"]
+    assert Decimal(str(json.loads(r["body"])["refundAmount"])) == Decimal("1094")   # 929 cobrados + 165 de regreso
+    assert utils._get_by_id("ORDER", oid)["refundAmount"] == Decimal("1094")
+
+
+def test_el_reembolso_acepta_un_importe_distinto(order_lambda, utils, monkeypatch):
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    assert order_lambda.handle_cancel_order(oid, {}, {})["statusCode"] == 200
+    r = order_lambda.handle_refund_order(oid, {"reason": "parcial", "amount": 500}, {})
+    assert r["statusCode"] == 200, r["body"]
+    assert utils._get_by_id("ORDER", oid)["refundAmount"] == Decimal("500")
+    assert order_lambda.handle_refund_order(oid, {"amount": -1}, {})["statusCode"] in (400, 409)

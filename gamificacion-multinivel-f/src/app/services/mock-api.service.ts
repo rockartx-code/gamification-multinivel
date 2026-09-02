@@ -1232,6 +1232,10 @@ export class MockApiService {
     return of(payload).pipe(delay(120));
   }
 
+  getCommissionsLedgerMonth(_associateId: string, monthKey: string): Observable<Record<string, unknown>> {
+    return of({ monthKey, ledger: [], totalPending: 0, totalConfirmed: 0, totalBlocked: 0 }).pipe(delay(80));
+  }
+
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
     return of(
       structuredClone(

@@ -565,6 +565,14 @@ export class RealApiService {
       .pipe(map((r) => (r.summary ?? {}) as Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>));
   }
 
+  /** Mes contable del socio (ledger de comisiones) para el historial del panel. */
+  getCommissionsLedgerMonth(associateId: string, monthKey: string): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(
+      `${this.baseUrl}/commissions/associates/${encodeURIComponent(associateId)}/commissions?month=${encodeURIComponent(monthKey)}`,
+      { headers: this.actorHeaders() }
+    );
+  }
+
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
     return this.http
       .get<{ month: AssociateMonth }>(
@@ -1380,6 +1388,8 @@ export class RealApiService {
       pickupPaymentMethod: this.readString(order, ['pickupPaymentMethod']) as AdminOrder['pickupPaymentMethod'] | undefined,
       shippingCost: Number(order['shippingCost'] ?? 0) > 0 ? Number(order['shippingCost']) : undefined,
       shippingCarrier: this.readString(order, ['shippingCarrier']) || undefined,
+      returnShippingCost: Number(order['returnShippingCost'] ?? 0) > 0 ? Number(order['returnShippingCost']) : undefined,
+      refundAmount: order['refundAmount'] != null ? Number(order['refundAmount']) : undefined,
       cancelReason: this.readString(order, ['cancelReason']) || undefined,
       cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
       returnRequestId: this.readString(order, ['returnRequestId']) || undefined,

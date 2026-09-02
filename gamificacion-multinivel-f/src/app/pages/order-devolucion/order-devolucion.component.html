@@ -211,6 +211,17 @@
               {{ shippingResponsibility === 'empresa' ? 'A cargo de la empresa' : 'A cargo del cliente' }}
             </span>
           </div>
+          <div *ngIf="shippingResponsibility === 'empresa'" class="border-t border-olive-20 pt-3">
+            <ui-form-field
+              type="text"
+              name="returnShippingCost"
+              label="Si ya pagaste el envío de regreso, ¿cuánto te costó? (opcional)"
+              placeholder="Ej. 165"
+              [ngModel]="returnShippingCost"
+              (ngModelChange)="returnShippingCost = $event">
+            </ui-form-field>
+            <p class="mt-1 text-xs text-gray-500">Te lo reembolsamos junto con el producto. Guarda el ticket de la paquetería por si te lo pedimos.</p>
+          </div>
         </div>
 
         <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
