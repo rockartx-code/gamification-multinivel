@@ -1464,8 +1464,10 @@ def lambda_handler(event, context):
                     if err: return err
                     return handle_refund_order(order_id, body, headers)
                 if sub == "cancel" and method == "POST":
+                    # Un invitado (sin cuenta) también puede cancelar su propio
+                    # pedido pendiente: no tiene sesión que exigirle.
                     order = utils._get_by_id("ORDER", order_id)
-                    if order:
+                    if order and not _is_guest_order(order):
                         err = utils._require_self_or_admin(headers, order.get("customerId"))
                         if err: return err
                     return handle_cancel_order(order_id, body, headers)

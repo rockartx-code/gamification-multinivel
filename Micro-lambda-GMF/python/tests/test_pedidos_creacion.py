@@ -126,3 +126,12 @@ def test_el_invitado_puede_solicitar_devolucion_sin_sesion(order_lambda, utils):
               "evidence": {"fotos_producto": ["a.jpg"], "fotos_empaque": ["b.jpg"], "fotos_guia_envio": ["c.jpg"]}}
     r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/return", cuerpo), None)
     assert r["statusCode"] not in (401, 403), r["body"]
+
+
+def test_el_invitado_puede_cancelar_su_pedido_pendiente_sin_sesion(order_lambda, utils):
+    """Regresión: el invitado que se arrepiente en la pasarela pulsa "Cancelar
+    pedido" y recibía "No autenticado"; el pedido pendiente quedaba colgado."""
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    r = order_lambda.lambda_handler(_evento("POST", f"/orders/{oid}/cancel", {"reason": "customer_request"}), None)
+    assert r["statusCode"] == 200, r["body"]
+    assert utils._get_by_id("ORDER", oid)["status"] == "cancelled"

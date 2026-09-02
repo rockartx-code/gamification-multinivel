@@ -544,13 +544,13 @@ def handle_change_password(body, headers):
 
 
 def _build_user_referral_code(name: str) -> str:
+    """Genera el código de referido a partir del nombre completo.
+    Ej: 'Maria Garcia Lopez' → 'Maria-MGL'
+    Idéntico a buildReferralCode() en el frontend."""
     # Sin acentos ni ñ: "TOMÁS-TIL" solo resolvía escrito con acento; quien lo
     # teclea como "TOMAS-TIL" (lo normal en un código) se registraba sin líder.
     import unicodedata
     name = "".join(c for c in unicodedata.normalize("NFD", str(name or "")) if unicodedata.category(c) != "Mn")
-    """Genera el código de referido a partir del nombre completo.
-    Ej: 'Maria Garcia Lopez' → 'Maria-MGL'
-    Idéntico a buildReferralCode() en el frontend."""
     n = (name or "").strip()
     if not n:
         return ""
