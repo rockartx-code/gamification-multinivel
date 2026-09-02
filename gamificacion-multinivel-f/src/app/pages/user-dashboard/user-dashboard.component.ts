@@ -1219,8 +1219,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }, 6000);
     }
     // Show honor board modal once per session if in top 10
-    if (this.isInTop10 && !this.honorBoardModalShown) {
+    // Una vez por mes y por navegador: el modal volvía a saltar en cada recarga.
+    const monthKey = this.honorBoard?.monthKey || '';
+    let yaMostrado = false;
+    try { yaMostrado = localStorage.getItem(`honorBoardModalShown:${monthKey}`) === '1'; } catch { yaMostrado = false; }
+    if (this.isInTop10 && !this.honorBoardModalShown && !yaMostrado) {
       this.honorBoardModalShown = true;
+      try { localStorage.setItem(`honorBoardModalShown:${monthKey}`, '1'); } catch { /* sin almacenamiento */ }
       setTimeout(() => {
         this.isHonorBoardModalOpen = true;
         this.cdr.markForCheck();

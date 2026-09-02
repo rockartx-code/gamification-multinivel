@@ -877,6 +877,24 @@ def handle_admin_receipt(body):
     except Exception as ex:
         utils._log_error("commission_month_mark_paid_failed", ex,
                          customerId=cid, monthKey=month_key)
+    # "Hoy es día de pago y de eso tampoco me entero si no me meto": aviso del depósito.
+    try:
+        cliente = utils._get_by_id("CUSTOMER", cid) or {}
+        para = str(cliente.get("email") or "").strip()
+        if para:
+            from core.email import _email_shell
+            nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
+            ledger = _get_ledger_month(cid, month_key)
+            monto = float(utils._to_decimal(ledger.get("totalConfirmed", 0)))
+            cuerpo = f"""
+    <div class="icon">💸</div>
+    <h1 class="title">Depositamos tus comisiones</h1>
+    <p class="lead">Hola <strong>{nombre}</strong>. Ya está en camino a tu CLABE el depósito de tus comisiones confirmadas de {month_key}: <strong>${monto:,.2f}</strong>. El comprobante lo tienes en tu panel, en Comisiones.</p>"""
+            utils._send_ses_email(para, f"Depositamos tus comisiones de {month_key}: ${monto:,.2f}",
+                                  f"Hola {nombre}. Depositamos tus comisiones confirmadas de {month_key}: ${monto:,.2f}. Comprobante en tu panel.",
+                                  _email_shell(cuerpo))
+    except Exception as e:  # pragma: no cover
+        utils._log("payout_email_error", "ERROR", customer=cid, err=e)
     return utils._json_response(201, {"receipt": receipt_item, "asset": asset})
 
 
