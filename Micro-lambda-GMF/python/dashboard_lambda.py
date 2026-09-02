@@ -503,7 +503,8 @@ def get_honor_board() -> dict:
     month_key  = utils._month_key()
     prev_mk    = _prev_month_key()
 
-    customers_raw = utils._query_bucket("CUSTOMER")
+    # Sin bajas ARCO: "Cliente eliminado" no debe seguir apareciendo en un ranking.
+    customers_raw = [c for c in utils._query_bucket("CUSTOMER") if isinstance(c, dict) and not c.get("deletedAt")]
     cfg_rewards = app_cfg.get("rewards") or {}
     max_levels = utils._max_network_levels()
 

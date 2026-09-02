@@ -98,3 +98,15 @@ def test_una_compra_que_no_activa_no_toca_las_bloqueadas(modulos, utils):
     _pagar(order_lambda, commissions_lambda, marcela, pid, 1)            # 10 PC: sigue inactiva
     filas = {r["orderId"]: r for r in _ledger(utils, marcela)["ledger"]}
     assert filas[oid]["status"] == "blocked"
+
+
+def test_el_patrocinador_recibe_correo_cuando_su_red_compra(modulos, utils, monkeypatch):
+    order_lambda, commissions_lambda = modulos
+    pid = _producto(utils)
+    marcela = _cliente(utils, 1, "Marcela")
+    _pagar(order_lambda, commissions_lambda, marcela, pid, 2)            # activa
+    rodrigo = _cliente(utils, 2, "Rodrigo", leader=marcela)
+    correos = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto)))
+    _pagar(order_lambda, commissions_lambda, rodrigo, pid, 2)
+    assert ("marcela@test.com", "x compró: comisión de $96.00 en camino") in correos or any(p == "marcela@test.com" and "$96.00" in a for p, a in correos)

@@ -435,6 +435,19 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.data?.rank ?? '';
   }
 
+  /** Nombre de pila e inicial para los demás: el ranking mostraba nombres completos de otras líneas. */
+  honorDisplayName(entry: { customerId?: string | number; name?: string }): string {
+    const name = String(entry?.name || '').trim();
+    if (!name) {
+      return 'Socio';
+    }
+    if (String(entry?.customerId ?? '') === String(this.currentUserId ?? '')) {
+      return name;
+    }
+    const parts = name.split(/\s+/);
+    return parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
+  }
+
   get honorBoard(): HonorBoard | null {
     return this.dashboardControl.data?.honorBoard ?? null;
   }
@@ -856,6 +869,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
     this.isNotificationsCenterOpen = true;
+    // El contador se quedaba en "1" aunque la persona ya hubiera visto la lista:
+    // solo se marcaba al abrir cada aviso por separado.
+    for (const notification of this.dashboardControl.data?.notifications ?? []) {
+      if (!notification.isRead) {
+        this.markNotificationAsRead(notification);
+      }
+    }
   }
 
   closeNotificationsCenter(): void {

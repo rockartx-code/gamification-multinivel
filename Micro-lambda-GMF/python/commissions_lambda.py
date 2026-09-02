@@ -658,6 +658,7 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
         if _generation_qualified(b_id, gen_cfg, month_key, mxn_per_vp, max_levels, activation_vp):
             # Califica: cobra esta generación y avanza el contador.
             _write_row(b_id, gen, amount, "pending")
+            _avisar_comision(b_id, order, gen, amount)
             gen += 1
         elif cut_rule == "dynamic_compression":
             # No califica: se registra informativo 'blocked' y la posición se brinca
@@ -668,6 +669,33 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
             # Modo legado sin traspaso: bloquea y avanza igual.
             _write_row(b_id, gen, amount, "blocked", reason="inactivo")
             gen += 1
+
+
+def _avisar_comision(beneficiary_id, order: dict, gen: int, amount) -> None:
+    """Correo al patrocinador cuando alguien de su red compra y le genera comisión.
+
+    "Mis dos referidas compraron el 3 y yo me enteré el 7, sola, hurgando en el
+    panel. Una red se sostiene agradeciendo el mismo día." Nunca interrumpe el reparto.
+    """
+    try:
+        cliente = _cached_customer(beneficiary_id)
+        para = str((cliente or {}).get("email") or "").strip()
+        if not para or (cliente or {}).get("doNotContact"):
+            return
+        comprador = order.get("customerName") or "alguien de tu red"
+        nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
+        from core.email import _email_shell
+        monto = f"${float(amount):,.2f}"
+        cuerpo = f"""
+    <div class="icon">🎉</div>
+    <h1 class="title">{comprador} compró</h1>
+    <p class="lead">Hola <strong>{nombre}</strong>. Una compra de tu red (generación {gen}) te genera una comisión de <strong>{monto}</strong>. Queda pendiente hasta que el pedido se entregue; la ves en tu panel, en Comisiones.</p>
+    <p class="lead">Hoy es buen día para escribirle y darle las gracias.</p>"""
+        utils._send_ses_email(para, f"{comprador} compró: comisión de {monto} en camino",
+                              f"Hola {nombre}. {comprador} compró; te genera una comisión de {monto} (generación {gen}), pendiente hasta la entrega.",
+                              _email_shell(cuerpo))
+    except Exception as e:  # pragma: no cover
+        utils._log("commission_email_error", "ERROR", beneficiary=beneficiary_id, err=e)
 
 
 def _confirm_order_rows(order_id: str, month_key: str, chain: list) -> None:

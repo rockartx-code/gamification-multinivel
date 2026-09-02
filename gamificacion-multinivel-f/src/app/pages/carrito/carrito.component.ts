@@ -516,6 +516,35 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return Math.min(100, (progress / remaining) * 100);
   }
 
+  /** Meta de activación en VP (si la hay): objetivo y hueco con el carrito actual. */
+  get vpGoalTarget(): number {
+    const goal = this.activeGoal;
+    return goal && goal.unit === 'vp' ? Number(goal.target || 0) : 0;
+  }
+
+  get vpGoalGap(): number {
+    const goal = this.activeGoal;
+    if (!goal || goal.unit !== 'vp') {
+      return 0;
+    }
+    return Math.max(0, Math.round((Number(goal.target || 0) - Number(goal.base || 0) - this.cartVp) * 10) / 10);
+  }
+
+  /** El cupón recorta VP: avisa cuando con cupón no se llega a la meta y sin cupón sí. */
+  get couponLeavesBelowVpGoal(): boolean {
+    if (!(this.couponDiscount > 0) || !this.vpGoalTarget) {
+      return false;
+    }
+    const goal = this.activeGoal;
+    const base = Number(goal?.base || 0);
+    const bruto$ = this.subtotal || 0;
+    const sinCupon = bruto$ > 0 ? (bruto$ - (this.discount || 0)) / bruto$ : 1;
+    const products = this.dashboardControl.products ?? [];
+    const pcBrutos = this.cartItems.reduce((sum, item) => sum + Number(products.find((p) => p.id === this.extractProductId(item.id))?.vpPoints ?? 0) * item.qty, 0);
+    const vpSinCupon = Math.round(pcBrutos * sinCupon * 10) / 10;
+    return base + this.cartVp < this.vpGoalTarget && base + vpSinCupon >= this.vpGoalTarget;
+  }
+
   private get activeGoal(): DashboardGoal | null {
     return (
       this.goalControl.goals.find(
