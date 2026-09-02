@@ -45,7 +45,7 @@ def main():
         import base64; img = "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
         cuerpo = {"name": p["name"], "price": p["price"], "vpPoints": p["vpPoints"], "sku": f"FU-{i:03d}",
                   "description": DESC.get(clave, "Suplemento Finding'U de uso diario."), "hook": DESC.get(clave, "").split(".")[0],
-                  "active": True, "img": img, "images": {"thumbnail": img, "hero": img}, "tags": p.get("aliases", [])}
+                  "active": True, "images": [{"section": "miniatura", "url": img}, {"section": "landing", "url": img}], "tags": p.get("aliases", [])}
         st, r = llamar("POST", "/catalog/product", cuerpo, SUPER)
         assert st in (200, 201), (st, r)
         pid = (r.get("product") or r).get("productId") or (r.get("product") or r).get("id")

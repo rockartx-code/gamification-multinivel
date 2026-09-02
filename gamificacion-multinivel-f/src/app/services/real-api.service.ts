@@ -86,6 +86,12 @@ import {
 } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
 
+function normalizeMovementType(raw: string | undefined): InventoryMovement['type'] {
+  const t = (raw || 'entry').toLowerCase();
+  if (t === 'damage' || t === 'damaged' || t === 'merma') return 'damaged';
+  return t as InventoryMovement['type'];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -773,7 +779,8 @@ export class RealApiService {
       .get<{ movements: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/stocks/movements${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => (response.movements ?? []).map((m) => ({
         id: String(m['movementId'] ?? m['id'] ?? ''),
-        type: (m['type'] as InventoryMovement['type']) ?? (m['movementType'] as InventoryMovement['type']) ?? 'entry',
+        // El backend registra las mermas como `damage`; el back office las lee como `damaged`.
+        type: normalizeMovementType((m['type'] as string) ?? (m['movementType'] as string)),
         stockId: String(m['stockId'] ?? ''),
         productId: Number(m['productId'] ?? 0),
         qty: Number(m['qty'] ?? 0),

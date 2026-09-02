@@ -2108,6 +2108,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (goal.isCountGoal) {
       return `${remaining}`;
     }
+    if (goal.unit === 'vp') {
+      // La meta de activación se mide en VP, no en pesos: "Te faltan $20" confundía.
+      return `${Number.isInteger(remaining) ? remaining : remaining.toFixed(1)} VP`;
+    }
     return this.formatMoney(remaining);
   }
 

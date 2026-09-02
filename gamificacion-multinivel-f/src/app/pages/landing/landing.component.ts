@@ -329,7 +329,9 @@ export class LandingComponent implements OnInit {
     const words = all.split(/\s+/).filter(w => w.length > 0);
     if (words.length === 0) return '';
     const initials = words.map(w => w[0].toUpperCase()).join('');
-    return `${words[0]}-${initials}`;
+    // El backend guarda el código sin acentos y en mayúsculas ("TOMAS-TIL");
+    // la vista previa mostraba "Tomás-TIL", que tecleado tal cual no resolvía.
+    return `${words[0]}-${initials}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   }
 
   private setFeedback(message: string, type: 'error' | 'success'): void {
