@@ -917,7 +917,7 @@ def handle_monthly_stats(month: str) -> dict:
     ]
 
     orders_count = len(month_orders)
-    orders_total = sum(float(utils._to_decimal(o.get("total", 0))) for o in month_orders)
+    orders_total = sum(float(utils._to_decimal(o.get("total") or o.get("netTotal") or 0)) for o in month_orders)
     avg_ticket = (orders_total / orders_count) if orders_count else 0
 
     # Por estado
