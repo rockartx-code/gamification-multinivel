@@ -341,7 +341,24 @@ def handle_categories(method: str, body: dict, cat_id=None) -> dict:
         return utils._json_response(200, {"categories": active_cats})
 
     if method == "POST":
-        cid = cat_id or body.get("id") or str(utils.uuid.uuid4())
+        cid = cat_id or body.get("id")
+        existente = utils._get_by_id("PRODUCT_CATEGORY", cid) if cid else None
+        if existente:
+            # Renombrar creaba un segundo registro con el mismo id (put_entity
+            # asigna otra clave) y "eliminar" caía sobre el más reciente: la
+            # gerente vio duplicados y borrados de la fila equivocada.
+            campos = {"name": body.get("name", existente.get("name")),
+                      "parentId": body.get("parentId", existente.get("parentId")),
+                      "position": int(body.get("position", existente.get("position", 0)) or 0),
+                      "active": bool(body.get("active", True))}
+            saved = utils._update_by_id(
+                "PRODUCT_CATEGORY", cid,
+                "SET #n = :n, parentId = :p, #pos = :pos, active = :a, updatedAt = :u",
+                {":n": campos["name"], ":p": campos["parentId"], ":pos": campos["position"], ":a": campos["active"], ":u": utils._now_iso()},
+                {"#n": "name", "#pos": "position"},
+            )
+            return utils._json_response(200, {"category": saved})
+        cid = cid or str(utils.uuid.uuid4())
         item = {
             "entityType": "productCategory", "categoryId": cid,
             "name": body.get("name"), "parentId": body.get("parentId"),

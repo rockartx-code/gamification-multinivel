@@ -1785,7 +1785,9 @@ export class AdminComponent implements OnInit {
   }
 
   get commissionsTotal(): number {
-    return this.customers.reduce((acc, customer) => acc + customer.commissions, 0);
+    // `commissions` es un campo histórico de la ficha que nadie actualiza; el
+    // tablero decía "$0" con $126 confirmados por pagar este mes.
+    return this.customers.reduce((acc, customer) => acc + (customer.commissionsCurrentConfirmed ?? customer.commissions ?? 0), 0);
   }
 
   get customersCount(): number {
