@@ -134,6 +134,8 @@ type PosSale = {
   createdAt: string;
   lines: AdminOrderItem[];
   cashCutId?: string;
+  status?: string;
+  voidReason?: string;
   paymentType?: 'full' | 'partial' | 'credit';
   amountPaid?: number;
   pendingAmount?: number;
@@ -3067,6 +3069,8 @@ export class AdminComponent implements OnInit {
           customerName: sale.customerName,
           grossSubtotal: Number(sale.grossSubtotal ?? sale.total ?? 0),
           discountRate: Number(sale.discountRate ?? 0),
+          status: sale.status ? String(sale.status) : undefined,
+          voidReason: sale.voidReason ? String(sale.voidReason) : undefined,
           discountAmount: Number(sale.discountAmount ?? 0),
           cashierDiscountAmount: sale.cashierDiscountAmount != null ? Number(sale.cashierDiscountAmount) : undefined,
           total: Number(sale.total),
@@ -5952,6 +5956,29 @@ export class AdminComponent implements OnInit {
     link.download = `corte-${cut.id}-${date}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  canVoidPosSale(sale: PosSale): boolean {
+    return sale.status !== 'voided' && this.hasPermission('order_mark_paid');
+  }
+
+  voidPosSale(sale: PosSale): void {
+    if (!this.canVoidPosSale(sale)) {
+      return;
+    }
+    const reason = prompt(`Anular la venta ${sale.orderId} (${this.formatMoney(sale.total)}). Regresa el producto al inventario, cancela el pedido y quita el consumo al cliente ligado. Motivo:`);
+    if (!reason || !reason.trim()) {
+      return;
+    }
+    this.adminControl.voidPosSale(sale.id, reason.trim()).subscribe({
+      next: () => {
+        this.posSales = this.posSales.map((s) => (s.id === sale.id ? { ...s, status: 'voided', voidReason: reason.trim() } : s));
+        this.adminControl.loadOrders().subscribe();
+        this.showSnackbar(`Venta ${sale.orderId} anulada.`);
+        this.requestViewUpdate();
+      },
+      error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo anular la venta.'), 'error')
+    });
   }
 
   registerPosSale(): void {

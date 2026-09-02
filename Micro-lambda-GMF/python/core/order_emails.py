@@ -98,6 +98,17 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         lead = (f"Transferimos <strong>{_mxn(monto)}</strong> a la cuenta que nos indicaste." if monto is not None
                 else "Transferimos el reembolso a la cuenta que nos indicaste.") + " Puede tardar hasta 2 días hábiles en reflejarse."
         extra = ""
+    elif evento == "pos_sale":
+        asunto = f"Registramos una compra a tu nombre en tienda · {oid}"
+        titulo, icono = "Compra en tienda registrada", "🏪"
+        lead = (f"Hoy se registró en nuestra tienda física una compra a tu nombre por <strong>{_mxn(order.get('total') if order.get('total') is not None else order.get('netTotal'))}</strong>, "
+                "que cuenta para tu consumo del mes. <strong>Si no fuiste tú</strong>, responde a este correo o escríbenos por WhatsApp hoy mismo y la anulamos.")
+        extra = ""
+    elif evento == "pos_voided":
+        asunto = f"Anulamos la compra en tienda {oid}"
+        titulo, icono = "Compra en tienda anulada", "↩️"
+        lead = "Retiramos de tu cuenta la compra en tienda que nos reportaste: ya no cuenta para tu consumo ni genera comisiones. Gracias por avisarnos."
+        extra = ""
     elif evento == "cancelled":
         asunto = f"Pedido {oid} cancelado"
         titulo, icono = "Tu pedido quedó cancelado", "🚫"

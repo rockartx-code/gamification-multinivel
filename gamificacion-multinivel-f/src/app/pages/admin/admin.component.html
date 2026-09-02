@@ -2174,7 +2174,11 @@
                               <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
                             </div>
                           </div>
-                          <div class="mt-2 text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                            <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                            <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2197,7 +2201,11 @@
                               <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
                             </div>
                           </div>
-                          <div class="mt-2 text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                            <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                            <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2220,7 +2228,11 @@
                               <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
                             </div>
                           </div>
-                          <div class="mt-2 text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                          <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                            <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
+                            <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
+                          </div>
                         </div>
                       </div>
                     </div>

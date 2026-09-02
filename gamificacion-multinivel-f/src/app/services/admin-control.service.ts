@@ -468,6 +468,12 @@ export class AdminControlService {
     return this.api.listPosSales(stockId);
   }
 
+  /** Anula una venta de mostrador; el componente refresca su lista. */
+  voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return this.api.voidPosSale(saleId, reason);
+  }
+
+
   registerPosSale(payload: {
     stockId: string;
     customerId?: number | null;

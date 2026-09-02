@@ -362,6 +362,10 @@ export class ApiService {
     return this.resolveApi().listPosSales(stockId);
   }
 
+  voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return this.resolveApi().voidPosSale(saleId, reason);
+  }
+
   registerPosSale(payload: {
     stockId: string;
     customerId?: number | null;

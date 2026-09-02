@@ -55,3 +55,15 @@ def test_la_baja_arco_anonimiza_cierra_el_acceso_y_avisa(modulos, utils, monkeyp
 
     # Segunda baja: ya está hecha.
     assert customer_lambda.handle_delete_customer_data(cid, {}, {})["statusCode"] == 409
+
+
+def test_cambiar_la_contrasena_avisa_por_correo(modulos, utils, monkeypatch):
+    _, auth_utils = modulos
+    cid = _karla(utils)
+    monkeypatch.setattr(utils, "_extract_actor_from_bearer", lambda h: {"user_id": str(cid), "role": "cliente", "privileges": {}})
+    monkeypatch.setattr(auth_utils, "_find_auth_for_customer", lambda c: utils._get_by_id("AUTH", "karla@test.com"))
+    correos = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto)))
+    r = auth_utils.handle_change_password({"currentPassword": "Secreta1!", "newPassword": "Nueva1234!"}, {})
+    assert r["statusCode"] == 200, r["body"]
+    assert correos == [("karla@test.com", "Tu contraseña de Finding'U cambió")]

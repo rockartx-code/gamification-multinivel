@@ -970,8 +970,27 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
         if summary:
             voided.append({**summary, "reason": reason})
 
-    utils._log("void_comm", "INFO", order=order_id, reason=reason, voided=len(voided))
-    return {"voided": voided, "count": len(voided)}
+    # El volumen y los VP acreditados al comprador al pagar se quedaban tras
+    # cancelar, reembolsar o anular: un socio seguía "activo" con un pedido
+    # devuelto o una venta de mostrador registrada por error a su nombre.
+    # Se restan una sola vez (marca rewardsVoidedAt en el pedido).
+    volumen_restado = False
+    if _es_comprador_registrado(order) and not order.get("rewardsVoidedAt"):
+        try:
+            mxn_per_vp = utils._mxn_per_vp()
+            net_amount = utils._to_decimal(order.get("netTotal"))
+            commissionable_net = _commissionable_net(order, net_amount)
+            order_vp = _compute_order_vp(order, mxn_per_vp)
+            utils._increment_associate_month_net_volume(buyer_id, month_key, -commissionable_net)
+            utils._increment_associate_month_net_vp(buyer_id, month_key, -order_vp)
+            utils._update_by_id("ORDER", order_id, "SET rewardsVoidedAt = :t", {":t": utils._now_iso()})
+            _CACHE["states"].pop(f"{utils._customer_id_str(buyer_id)}#{month_key}", None)
+            volumen_restado = True
+        except Exception as e:
+            utils._log("void_volume_error", "ERROR", order=order_id, err=e)
+
+    utils._log("void_comm", "INFO", order=order_id, reason=reason, voided=len(voided), volumeVoided=volumen_restado)
+    return {"voided": voided, "count": len(voided), "volumeVoided": volumen_restado}
 
 
 # --- REPORTE MENSUAL DE OPERACIONES ---

@@ -1551,6 +1551,10 @@ export class MockApiService {
     return of([...rows]).pipe(delay(120));
   }
 
+  voidPosSale(saleId: string, _reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return of({ ok: true, saleId }).pipe(delay(80));
+  }
+
   listPosSales(stockId?: string): Observable<PosSale[]> {
     const rows = stockId ? this.posSales.filter((sale) => sale.stockId === stockId) : this.posSales;
     return of([...rows]).pipe(delay(120));

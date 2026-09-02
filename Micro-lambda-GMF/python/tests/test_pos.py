@@ -71,3 +71,44 @@ def test_la_venta_a_publico_en_general_no_activa_a_nadie(inventory_lambda, utils
     r = _venta(inventory_lambda, pid, stock)
     assert r["statusCode"] == 201, r["body"]
     assert disparos == ["ORDER_DELIVERED"]
+
+
+def test_ligar_una_venta_a_un_cliente_le_avisa_por_correo(inventory_lambda, utils, monkeypatch):
+    pid, stock = _mostrador(utils)
+    utils._put_entity("CUSTOMER", 55, {"entityType": "customer", "customerId": 55, "name": "Rodrigo", "email": "r@test.com"})
+    monkeypatch.setattr(inventory_lambda, "sfn", _SfnFalso([]))
+    from core import email as correo
+    enviados = []
+    monkeypatch.setattr(correo, "_send_ses_email", lambda para, asunto, texto, html: enviados.append((para, asunto)))
+    r = _venta(inventory_lambda, pid, stock, customerId=55, customerName="Rodrigo")
+    assert r["statusCode"] == 201, r["body"]
+    assert enviados and enviados[0][0] == "r@test.com" and "a tu nombre" in enviados[0][1]
+
+
+def test_anular_una_venta_regresa_inventario_y_cancela_el_pedido(inventory_lambda, utils, monkeypatch):
+    """Rodrigo: "aparece POS-B68ED084 a mi nombre y yo no compré nada"; no
+    existía forma de quitarla."""
+    pid, stock = _mostrador(utils)
+    utils._put_entity("CUSTOMER", 55, {"entityType": "customer", "customerId": 55, "name": "Rodrigo", "email": "r@test.com"})
+    disparos = []
+    monkeypatch.setattr(inventory_lambda, "sfn", _SfnFalso(disparos))
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    from core import email as correo
+    enviados = []
+    monkeypatch.setattr(correo, "_send_ses_email", lambda para, asunto, texto, html: enviados.append(asunto))
+    r = _venta(inventory_lambda, pid, stock, customerId=55, customerName="Rodrigo")
+    sale_id = json.loads(r["body"])["saleId"]; oid = json.loads(r["body"])["orderId"]
+    assert utils._get_by_id("STOCK", stock)["inventory"][str(pid)] == 39
+
+    r = inventory_lambda.lambda_handler({"httpMethod": "POST", "path": f"/inventory/pos/sales/{sale_id}/void",
+                                         "headers": {"x-user-id": "sofia"}, "body": json.dumps({"reason": "el cliente no la reconoce"})}, None)
+    assert r["statusCode"] == 200, r["body"]
+    assert utils._get_by_id("STOCK", stock)["inventory"][str(pid)] == 40
+    assert utils._get_by_id("POS_SALE", sale_id)["status"] == "voided"
+    assert utils._get_by_id("ORDER", oid)["status"] == "cancelled"
+    assert disparos[-1] == "ORDER_CANCELLED"
+    assert any("Anulamos" in a for a in enviados)
+    # Segunda anulación: ya está.
+    r = inventory_lambda.lambda_handler({"httpMethod": "POST", "path": f"/inventory/pos/sales/{sale_id}/void",
+                                         "headers": {"x-user-id": "sofia"}, "body": "{}"}, None)
+    assert r["statusCode"] == 409

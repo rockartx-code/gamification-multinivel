@@ -699,6 +699,10 @@ export interface PosSale {
   pendingAmount?: number;
   cashierDiscountMode?: 'percent' | 'amount';
   cashierDiscountAmount?: number;
+  /** 'voided' cuando la venta fue anulada (inventario devuelto, pedido cancelado). */
+  status?: string;
+  voidReason?: string;
+  voidedAt?: string;
 }
 
 export interface PosCashControl {

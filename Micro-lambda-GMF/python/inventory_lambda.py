@@ -1,6 +1,7 @@
 import json
 import boto3
-import core_utils as utils # Importado desde la Lambda Layer
+import core_utils as utils
+from core import order_emails # Importado desde la Lambda Layer
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -281,7 +282,75 @@ def handle_pos_sale(body, headers):
             except Exception as e:
                 utils._log("sfn_error", "ERROR", pos_sale=sale_id, action=accion, err=e)
 
+    # Aviso al cliente ligado: el cajero puede ligar una venta a cualquier cuenta
+    # buscando por nombre; el titular debe enterarse y poder objetar.
+    if body.get("customerId"):
+        _avisar_pos(order_item, "pos_sale")
+
     return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
+
+
+def _avisar_pos(order: dict, evento: str) -> None:
+    order_emails.notificar_pedido(
+        order or {}, evento, {},
+        lambda cid: utils._get_by_id("CUSTOMER", cid),
+        utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx"),
+    )
+
+
+def handle_void_pos_sale(sale_id: str, body: dict, headers: dict) -> dict:
+    """POST /pos/sales/{id}/void — anula una venta de mostrador.
+
+    Un cliente encontró en su cuenta una venta de tienda que no hizo y no
+    había forma de quitarla: regresa el inventario, marca la venta y el
+    pedido como anulados, dispara la reversión de comisiones y volumen, y
+    avisa al cliente ligado.
+    """
+    sale = utils._get_by_id("POS_SALE", sale_id)
+    if not sale:
+        return utils._json_response(404, {"message": "Venta no encontrada"})
+    if sale.get("status") == "voided":
+        return utils._json_response(409, {"message": "La venta ya está anulada."})
+    now = utils._now_iso()
+    actor = headers.get("x-user-id") or "admin"
+    motivo = str((body or {}).get("reason") or "anulación").strip()[:300]
+    stock_id = sale.get("stockId")
+    order_id = sale.get("orderId")
+
+    # 1. Regresar inventario
+    deltas = {}
+    for it in sale.get("lines") or sale.get("items") or []:
+        pid = str(it.get("productId") or "").strip()
+        qty = int(it.get("quantity") or it.get("qty") or 0)
+        if pid and qty > 0:
+            deltas[pid] = deltas.get(pid, 0) + qty
+    if deltas:
+        _, error = _apply_stock_delta(stock_id, deltas)
+        if error:
+            return utils._json_response(400, {"message": error})
+        for pid, qty in deltas.items():
+            _log_movement(stock_id, "entry", pid, qty, order_id, actor, payment_method=None)
+
+    # 2. Marcar venta y pedido
+    utils._update_by_id("POS_SALE", sale_id, "SET #s = :s, voidedAt = :t, voidedBy = :by, voidReason = :r, updatedAt = :t",
+                        {":s": "voided", ":t": now, ":by": str(actor), ":r": motivo}, {"#s": "status"})
+    order = None
+    if order_id:
+        order = utils._update_by_id("ORDER", order_id, "SET #s = :s, cancelReason = :r, cancelledAt = :t, updatedAt = :t",
+                                    {":s": "cancelled", ":r": f"pos_void: {motivo}", ":t": now}, {"#s": "status"})
+        if ORDER_SFN_ARN:
+            try:
+                sfn.start_execution(stateMachineArn=ORDER_SFN_ARN,
+                                    input=json.dumps({"orderId": order_id, "action": "ORDER_CANCELLED", "payload": {"reason": motivo}}))
+            except Exception as e:
+                utils._log("sfn_error", "ERROR", pos_void=sale_id, err=e)
+
+    # 3. Avisar al cliente ligado
+    if order and order.get("customerId"):
+        _avisar_pos(order, "pos_voided")
+
+    utils._audit_event("pos.sale_voided", headers, body, {"saleId": sale_id, "orderId": order_id, "reason": motivo})
+    return utils._json_response(200, {"ok": True, "saleId": sale_id, "orderId": order_id, "status": "voided"})
 
 def _stock_id_str(value) -> str:
     """Normaliza stockId a string."""
@@ -627,6 +696,10 @@ def _route_pos(method: str, segments: list, body: dict, query: dict, headers: di
     if root == "pos":
         if len(segments) < 2:
             return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
+        if segments[1] == "sales" and len(segments) == 4 and segments[3] == "void" and method == "POST":
+            err = utils._require_admin(headers, "order_mark_paid")
+            if err: return err
+            return handle_void_pos_sale(segments[2], body, headers)
         if segments[1] == "sales":
             err = utils._require_admin(headers, "pos_register_sale")
             if err: return err

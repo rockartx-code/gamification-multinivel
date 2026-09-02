@@ -502,6 +502,20 @@ def handle_change_password(body, headers):
         ":u": utils._now_iso()
     })
 
+    # Aviso de seguridad: "cambié mi contraseña y no me llegó ningún correo;
+    # si alguien más me la cambiara, nunca me entero" (docs/qa/19).
+    try:
+        from core.email import _email_shell
+        cuerpo = """
+    <div class="icon">🔒</div>
+    <h1 class="title">Tu contraseña cambió</h1>
+    <p class="lead">Acabamos de actualizar la contraseña de tu cuenta Finding&rsquo;U. Si fuiste tú, no tienes que hacer nada.</p>
+    <p class="lead">Si <strong>no</strong> fuiste tú, recupera tu acceso desde "¿Olvidaste tu contraseña?" y escríbenos de inmediato.</p>"""
+        utils._send_ses_email(email, "Tu contraseña de Finding'U cambió",
+                              "Acabamos de actualizar la contraseña de tu cuenta. Si no fuiste tú, recupera tu acceso desde '¿Olvidaste tu contraseña?' y escríbenos.",
+                              _email_shell(cuerpo))
+    except Exception as ex:
+        utils._log("change_password_email_error", "ERROR", error=ex)
     return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
 
 

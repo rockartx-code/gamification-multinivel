@@ -813,6 +813,14 @@ export class RealApiService {
       } as InventoryMovement))));
   }
 
+  voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return this.http.post<{ ok: boolean; saleId: string; orderId?: string }>(
+      `${this.baseUrl}/inventory/pos/sales/${encodeURIComponent(saleId)}/void`,
+      { reason },
+      { headers: this.actorHeaders() }
+    );
+  }
+
   listPosSales(stockId?: string): Observable<PosSale[]> {
     const query = stockId ? `?stockId=${encodeURIComponent(stockId)}` : '';
     return this.http

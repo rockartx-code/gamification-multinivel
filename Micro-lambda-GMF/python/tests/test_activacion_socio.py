@@ -72,3 +72,24 @@ def test_un_invitado_de_verdad_sigue_sin_acreditar(modulos, utils):
     oid = (pedido.get("order") or pedido)["orderId"]
     commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
     assert not [k for k in utils._table.store if k[0].startswith("ASSOCIATE_MONTH")]
+
+
+def test_cancelar_o_reembolsar_resta_el_volumen_acreditado(modulos, utils):
+    """Regresión: un pedido cancelado o reembolsado dejaba al socio con el
+    volumen y los VP de esa compra (seguía "activo" con un pedido devuelto)."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("960")
+
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_REFUNDED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+    assert Decimal(str(estado.get("netVP", 0))) == Decimal("0")
+    # Una segunda anulación no resta dos veces.
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_CANCELLED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
