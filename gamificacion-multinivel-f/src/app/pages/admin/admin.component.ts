@@ -847,6 +847,7 @@ export class AdminComponent implements OnInit {
           if (!this.selectedEmployee) {
             this.selectedEmployee = this.employees[0] ?? null;
             this.syncSelectedEmployeePrivilegeDraft();
+            this.syncEmployeeContactDraft();
           }
           this.stockEntryForm.createdByUserId ??= this.employees[0]?.id ?? null;
           this.stockTransferForm.createdByUserId ??= this.employees[0]?.id ?? null;
@@ -4438,6 +4439,44 @@ export class AdminComponent implements OnInit {
   selectEmployee(employeeId: number): void {
     this.selectedEmployee = this.employees.find((emp) => emp.id === employeeId) ?? null;
     this.syncSelectedEmployeePrivilegeDraft();
+    this.syncEmployeeContactDraft();
+  }
+
+  employeeNameDraft = '';
+  employeePhoneDraft = '';
+  isSavingEmployeeContact = false;
+
+  private syncEmployeeContactDraft(): void {
+    this.employeeNameDraft = this.selectedEmployee?.name ?? '';
+    this.employeePhoneDraft = this.selectedEmployee?.phone ?? '';
+  }
+
+  get employeeContactDirty(): boolean {
+    const emp = this.selectedEmployee;
+    if (!emp) return false;
+    return this.employeeNameDraft.trim() !== (emp.name ?? '') || this.employeePhoneDraft.trim() !== (emp.phone ?? '');
+  }
+
+  saveEmployeeContact(): void {
+    const emp = this.selectedEmployee;
+    if (!emp || this.isSavingEmployeeContact || !this.employeeContactDirty) return;
+    const name = this.employeeNameDraft.trim();
+    if (!name) {
+      this.showSnackbar('El nombre no puede quedar vacío.');
+      return;
+    }
+    this.isSavingEmployeeContact = true;
+    this.adminControl
+      .updateEmployee(emp.id, { name, phone: this.employeePhoneDraft.trim() })
+      .pipe(finalize(() => { this.isSavingEmployeeContact = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedEmployee = { ...emp, ...updated };
+          this.syncEmployeeContactDraft();
+          this.showSnackbar('Datos del empleado guardados.');
+        },
+        error: () => this.showSnackbar('No se pudieron guardar los datos del empleado.')
+      });
   }
 
   updateSelectedEmployeeAdminAccess(enabled: boolean): void {

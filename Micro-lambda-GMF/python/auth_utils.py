@@ -800,7 +800,9 @@ def handle_employees(method, body, employee_id=None, headers=None):
         updates = ["updatedAt = :u"]
         eav = {":u": now}
         
-        if "name" in body: updates.append("#n = :n"); eav[":n"] = body["name"]
+        if "name" in body: updates.append("#n = :n"); eav[":n"] = str(body["name"]).strip()
+        # El panel mandaba `phone` y aquí se ignoraba: el celular del empleado no se podía corregir.
+        if "phone" in body: updates.append("phone = :ph"); eav[":ph"] = str(body.get("phone") or "").strip()
         if "active" in body: updates.append("active = :a"); eav[":a"] = bool(body["active"])
         if "privileges" in body: 
             updates.append("privileges = :p"); eav[":p"] = utils._normalize_privileges(body["privileges"])

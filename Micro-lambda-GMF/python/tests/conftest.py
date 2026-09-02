@@ -123,6 +123,11 @@ class FakeTable:
             if m:
                 attr = nombres.get(m.group(1), m.group(1))
                 return item.get(attr, valores[m.group(2)])
+            m = _re.fullmatch(r"list_append\((.+),\s*(:\w+|\w+|if_not_exists\([^)]*\))\)", texto)
+            if m:
+                izq = _resolver(m.group(1)) or []
+                der = _resolver(m.group(2)) or []
+                return list(izq) + list(der)
             if texto.startswith("#"):
                 return item.get(nombres.get(texto, texto))
             return item.get(texto)
