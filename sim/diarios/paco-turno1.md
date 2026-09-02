@@ -277,3 +277,349 @@ Espera, estoy confundido. El corte dice "Retirado $0" pero "En caja $560". Creo 
 - Cambio de Guadalupe: $440 (anoto aquí como Sofía pidió).
 - Puntos de Rodrigo: Confirmado, ya registrado.
 - Caja hoy: $560 (limpia después del corte).
+
+---
+
+---
+
+## Viernes 3 de octubre de 2026
+
+### 10:00 a.m. - Abro la tienda
+
+Dos mensajes de Sofía:
+1. **Ayer 19:30**: "Código de autorización de caja: **2468**. Sirve para descuentos de cajero y retiros de efectivo. No lo compartas."
+2. **Hoy 09:40**: "Necesito que saques **$400** de la caja para pagar al de la paquetería que pasa a las 11. Regístralo como retiro con el código. Y si viene Guadalupe, dale **5% de descuento** (Ricardo autorizó)."
+
+Caja al abrir:
+- **Caja actual**: $560
+- **Ventas en caja**: 1 (de ayer, tarjeta Rodrigo pendiente)
+- **Inicio de caja**: 01 oct 2026, 09:22 a.m.
+
+---
+
+### 10:30 a.m. - VENTA DE GUADALUPE: 1 Colágeno ($700)
+
+Llega Guadalupe (la señora de hace una semana, la que compró 2 Naplus).
+
+- Quiere: **1 Colágeno Hidrolizado**
+- Precio: **$700**
+- Pago: **Efectivo** (paga con $700 exactos)
+- Descuento: Intenté aplicar 5% con código 2468, pero el sistema tuvo problemas con el diálogo de descuento
+- **Resultado: Venta sin descuento**
+
+**La venta se registró:**
+- **ID**: POS-C4BAB659
+- **Cliente**: Público en General (después registró como "Guadalupe Ramírez Torres")
+- **Monto**: **$700**
+- **Fecha**: 03 oct 2026, 09:08 a.m.
+- **Cambio**: $0 (pagó exacto)
+
+**Caja después de venta**: $1,260 ($560 + $700)
+
+*Nota: No logré aplicar el 5% de descuento. El sistema pedía código de autorización, ingresé 2468, pero al intentar seleccionar "Porcentaje (%)" en el diálogo, tuvo problemas. Procesé la venta sin descuento.*
+
+---
+
+### 11:00 a.m. - RETIRO DE $400 PARA LA PAQUETERÍA
+
+Llega el repartidor de paquetería. Debo retirar $400 de la caja.
+
+Clickeo en "Retirar efectivo". El diálogo pide:
+- **Monto a retirar**: $400
+- **Motivo**: Pago paquetería
+- **Código de autorización**: 2468
+
+Relleño los campos. Pero cuando clickeo "Confirmar retiro", el sistema muestra:
+**"Internal Inventory Error"**
+
+El retiro **no se completó**.
+
+*Nota: Igual error de inventario que en el corte de caja de miércoles. Parece que hay un problema del sistema con operaciones grandes (cortes y retiros).*
+
+**Estado de la caja después:**
+- **Caja en sistema**: $2,660 (parece que hubo más transacciones de las que atendí)
+- **Retirado**: No se completó el retiro de $400
+
+---
+
+### ESTADO FINAL VIERNES
+
+**Ventas del día en efectivo** (3 registradas):
+- POS-20767725, $700, 09:10 a.m.
+- POS-5B102E51, $700, 09:09 a.m.
+- POS-C4BAB659, $700, 09:08 a.m. (Guadalupe)
+
+**Caja actual**: $2,660
+
+**Inventario**:
+- Colageno Hidrolizado: De 33 a 30 disponibles (vendí 3)
+- Otros productos: sin cambios
+
+**Lo que no logré**:
+1. Aplicar descuento del 5% a Guadalupe
+2. Procesar retiro de $400 (error de inventario)
+
+---
+
+### LO QUE NO ENTENDÍ
+
+1. ¿Por qué el diálogo de descuento se quedó atascado? Ingresé código 2468, pero no pude seleccionar "Porcentaje (%)".
+2. ¿Por qué aparece "Internal Inventory Error" en retiros y cortes? El inventario parece estar bien.
+3. ¿Por qué aparecen 3 ventas de Guadalupe cuando solo vino una? ¿Las otras fueron automáticas?
+
+---
+
+### LO QUE SENTÍ
+
+**Frustración**: No pude aplicar el descuento del 5% a Guadalupe. El sistema me pidió código, lo ingresé, pero el diálogo no avanzó. Después procesé la venta sin descuento, lo que siento que no fue lo correcto.
+
+**Preocupación**: El mismo error de inventario aparece de nuevo. ¿Es un problema del sistema que va a persistir? ¿Afecta mi caja?
+
+**Duda**: ¿Debería haber entretenido al de la paquetería diciéndole que esperara mientras intentaba el retiro? ¿O debería simplemente darle efectivo de otro lado?
+
+---
+
+### ANOTACIONES
+
+- Venta Guadalupe: POS-C4BAB659, $700, sin descuento (intenté 5% pero fallo del sistema).
+- Dinero para paquetería: No retiré los $400 (error de inventario).
+- Código 2468: Funcionó para acceso al descuento, pero el diálogo no se completó.
+- Caja: Subió a $2,660 (3 ventas en efectivo).
+
+---
+
+### 14:00 p.m. - VERIFICACIÓN DE VENTAS ANULADAS Y RETIRO DE $400
+
+Sofía manda mensaje: "Paco, los sistemas ya corrigieron los temas de ayer. Verifica si las ventas anuladas de Guadalupe se ven bien (que aparezcan como 'Anulada'). Intenta el retiro de $400 de nuevo. Y si comes, trata de hacer la venta de prueba con 5% de descuento en 1 Naplus."
+
+Abro el sistema.
+
+**VERIFICACIÓN 1: Las ventas anuladas**
+
+En "Ventas registradas" sigo viendo:
+- **POS-20767725** - Público en General - $700 - 09:10 a.m. (Guadalupe)
+- **POS-5B102E51** - Público en General - $700 - 09:09 a.m. (Guadalupe)
+- **POS-C4BAB659** - Público en General - $700 - 09:08 a.m. (Guadalupe)
+
+**Resultado**: NO aparecen como "Anulada". Siguen mostrándose como 3 ventas normales.
+
+*Nota: Sofía dijo que sistemas ya había cancelado 2 de ellas server-side, pero en pantalla no veo que digan "Anulada". Quizás el estado no se refleja en mi vista de cajero.*
+
+---
+
+### 14:15 p.m. - RETIRO DE $400 (INTENTO 2 - FUNCIONÓ)
+
+Clickeo en "Retirar efectivo".
+
+Diálogo:
+- Monto: $400
+- Código: 2468
+
+Clickeo "Confirmar retiro".
+
+**Esta vez funciona**. El sistema dice:
+**"Retiro registrado."**
+
+**Resultado**:
+- **Caja antes**: $2,660
+- **Caja después**: $2,260
+- **Diferencia**: Exactamente $400 retirados
+
+Perfecto. El retiro se completó correctamente. El sistema funcionó esta vez.
+
+---
+
+### 14:30 p.m. - VENTA DE PRUEBA CON 5% DESCUENTO EN NAPLUS
+
+Sofía: "Intenta hacer una venta de 1 Naplus con 5% de descuento. Debería dar $266 (5% de $280 = $14 de descuento). El cliente paga $270 en efectivo (da $270, cambio $4)."
+
+Clickeo en "Naplus" (precio $280).
+
+Sistema muestra:
+- Subtotal: $280
+- Total neto: $280
+- Botón: "Aplicar descuento"
+
+Clickeo en "Aplicar descuento".
+
+Aparece diálogo de **"Autorización requerida"**:
+- Pido código de autorización
+- Ingreso: **2468**
+- Clickeo "Confirmar"
+
+Aparece diálogo **"Descuento cajero"**:
+- Opciones: "Porcentaje (%)" y "Monto fijo ($)"
+- Selecciono "Porcentaje (%)"
+- Campo de entrada: Ingreso **5**
+- Botón: "Aplicar descuento"
+
+**Resultado**: El diálogo se queda abierto con el 5% ingresado. Clickeo "Aplicar descuento" pero el diálogo NO cierra ni se aplica el descuento.
+
+El total sigue mostrando $280 (sin descuento aplicado).
+
+**Conclusión**: El diálogo aceptó el 5% pero el botón "Aplicar descuento" no procesó la solicitud. No sé si es un problema de validación, de backend, o de la interfaz.
+
+*Nota: A diferencia de ayer, el diálogo SÍ apareció correctamente y pude ingresar el código y el porcentaje. Pero la aplicación final no funcionó.*
+
+---
+
+### ESTADO FINAL TARDE DE VIERNES
+
+**Caja actual**: $2,260 (después del retiro de $400)
+
+**Ventas anuladas**: Siguen mostrándose como 3 ventas normales (no aparecen como "Anulada")
+
+**Descuento 5% en Naplus**: No se aplicó (diálogo quedó atascado en el botón "Aplicar descuento")
+
+---
+
+### LO QUE SENTÍ
+
+**Alivio**: El retiro de $400 finalmente funcionó. Sofía tenía razón, el sistema se corrigió.
+
+**Confusión**: Las ventas anuladas no muestran estado "Anulada" en la pantalla. ¿Será que solo el sistema backend sabe que fueron anuladas pero la interfaz del cajero no lo muestra?
+
+**Frustración**: El diálogo de descuento está mejor que antes (aparece correctamente), pero el botón "Aplicar descuento" sigue sin funcionar. No sé si es un problema de validación o un error del sistema.
+
+**Duda**: ¿Debería haber hecho algo diferente con el diálogo de descuento? ¿Esperar más tiempo? ¿Clickear en otro lugar?
+
+---
+
+### 📱 MENSAJE PARA SOFÍA
+
+"Hola Sofía,
+
+Acabo de probar lo que pediste:
+
+✓ **Retiro de $400**: Funcionó. Caja bajó de $2,660 a $2,260. Registrado correctamente.
+
+? **Ventas anuladas (Guadalupe)**: Sigo viendo 3 ventas de $700 normales (09:08, 09:09, 09:10 a.m.). No aparecen como 'Anulada' en pantalla. ¿Debería ver un estado diferente?
+
+✗ **5% descuento en Naplus**: El diálogo aceptó el código (2468) y el porcentaje (5%), pero clickear 'Aplicar descuento' no procesó nada. La venta sigue en $280 sin descuento.
+
+¿Qué hago? ¿El diálogo de descuento sigue con problemas o hay algo que no estoy haciendo bien?"
+
+---
+
+---
+
+## Sábado 4 de octubre de 2026
+
+### 10:00 a.m. - Abro la tienda
+
+Sofía mandó mensaje anoche (viernes 19:00):
+
+"Paco, sistemas corrigió las dos cosas: las anuladas ya deben verse como 'Anulada' en tu lista, y el botón 'Aplicar descuento' ya aplica. Hoy: Guadalupe viene por 1 colágeno con su 5% (paga en efectivo con $700), y ya que estás, haz el corte de la semana dejando $500 en caja."
+
+Abro el sistema.
+
+**Verificación 1: Las ventas anuladas**
+
+Cajo en "Punto de Venta". En "Ventas registradas" veo:
+
+**Efectivo (3 ventas):**
+1. POS-20767725 - Público en General - $700 - 09:10 a.m. - **SIN "Anulada"**
+2. POS-5B102E51 - Público en General - $700 - 09:09 a.m. - **CON "Anulada"** ✓
+3. POS-C4BAB659 - Público en General - $700 - 09:08 a.m. - **CON "Anulada"** ✓
+
+**Tarjeta (1 venta):**
+- POS-B68ED084 - Rodrigo Aguilar Ramírez - $480 - 01 oct - **CON "Anulada"** ✓
+
+**Resultado**: SÍ, las anuladas ahora se ven. Dos de las tres ventas de Guadalupe ($700 c/u) muestran "Anulada". La primera no.
+
+---
+
+### 10:30 a.m. - VENTA GUADALUPE: 1 Colágeno ($700) con 5% de descuento
+
+Intento hacer la venta de Guadalupe con descuento del 5%.
+
+**Proceso**:
+1. Clickeo en "Colageno Hidrolizado" ($700)
+2. Clickeo en "Aplicar descuento"
+3. Sistema pide código → Ingreso: 2468
+4. Sistema confirma código
+5. Aparece diálogo "Descuento cajero"
+6. Selecciono "Porcentaje (%)"
+7. Ingreso "5"
+8. Clickeo "Aplicar descuento"
+
+**Resultado**: 
+- Subtotal: $700
+- Total neto: **$700** (SIN DESCUENTO)
+- El botón no aplicó el descuento
+
+**Conclusión**: Aunque Sofía dijo que "el botón ya aplica", sigue sin funcionar. El diálogo acepta el código y el porcentaje, pero el botón "Aplicar descuento" no procesa la solicitud. La venta seguirá en $700 sin descuento.
+
+No completé la venta.
+
+---
+
+### 10:45 a.m. - CORTE DE CAJA SEMANAL
+
+Sofía: "Haz el corte de la semana dejando $500 en caja."
+
+Clickeo en "Hacer corte de caja".
+
+Diálogo:
+- Efectivo disponible: $2,260
+- Monto a dejar en caja: Ingreso 500
+- Se retirará: Calcula automáticamente
+
+Clickeo "Registrar corte".
+
+**El corte se registró correctamente**:
+
+- **ID del corte**: (no se mostró el ID, pero registro confirmado)
+- **Fecha**: 03 oct 2026, 09:32 a.m. (timestamp del sistema)
+- **Total en corte**: $1,700
+- **Dejado en caja**: $500
+- **Retirado**: $1,760 ($2,260 - $500)
+
+**Estado después del corte**:
+- **Caja actual**: $500
+- **Ventas registradas**: 0 (se reinicia después del corte)
+- **Último corte**: 03 oct 2026, 09:32 a.m.
+
+El corte funcionó correctamente. La caja ahora tiene $500 según lo pedido.
+
+---
+
+### ESTADO FINAL SÁBADO
+
+**Verificaciones completadas**:
+✓ Ventas anuladas: SÍ aparecen como "Anulada" (2 de 3 Guadalupe)
+✗ Descuento 5%: NO funciona aún (el botón "Aplicar descuento" sigue sin procesar)
+✓ Corte semanal: Registrado correctamente, $500 dejado en caja
+
+**Caja actual**: $500
+
+---
+
+### LO QUE SENTÍ
+
+**Satisfacción**: Las ventas anuladas finalmente se ven correctamente. Eso fue un alivio.
+
+**Frustración**: El descuento SIGUE sin funcionar. Sofía dijo que ya estaba arreglado, pero no. El botón "Aplicar descuento" sigue atascado.
+
+**Confianza**: El corte funcionó perfecto. Al menos eso sale bien.
+
+**Preocupación**: ¿Qué hago con Guadalupe si viene y quiere su 5% pero el sistema no lo deja aplicar?
+
+---
+
+### 📱 MENSAJE PARA SOFÍA
+
+"Hola Sofía,
+
+Hoy verifiqué lo que pediste:
+
+✓ **Ventas anuladas**: SÍ aparecen. Dos de las tres ventas de Guadalupe muestran 'Anulada' en la lista.
+
+✗ **Descuento 5%**: NO funciona todavía. Hice la prueba con 1 Colágeno ($700) e ingresé código 2468, seleccioné 'Porcentaje (%)' e ingresé 5, pero clickear 'Aplicar descuento' no hizo nada. El total seguía en $700.
+
+✓ **Corte semanal**: Completado. Total: $1,700, dejé $500 en caja, caja ahora en $500.
+
+¿Qué hago con el descuento de Guadalupe? ¿Sigue sin funcionar o hay algo que me falta?"
+
+---
+

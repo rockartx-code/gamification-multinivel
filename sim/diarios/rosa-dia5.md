@@ -80,3 +80,46 @@ Entro a la app y veo que ahora dice "Pedido enviado" con el número de guía. Es
 **Dónde estoy:** Mi pedido ORD-EBB402A2 está en tránsito con Estafeta, guía EST-MX-77210394, rumbo a Allende 456, Centro, Morelia. Debe llegar entre hoy (miércoles) y el sábado.
 
 **Mensaje para Daniel:** "Daniel, gracias por avisar. Hubiera preferido saber antes, pero entiendo que hay retrasos. El número de guía ya aparece en la app. Espero que llegue pronto. Cualquier cosa te escribo."
+
+## Jueves 2 de octubre
+
+Ya casi se me acaba el colágeno. Las rodillas mejoraron mucho, así que quiero pedir otro frasco. Entro a la tienda en el celular, pero me pide que inicie sesión. Pongo mi correo y contraseña... pero no me acuerdo de la contraseña. La puse hace un mes y la apunté en un papel que no encuentro.
+
+Busco una opción de "Recuperar contraseña" y la encuentro. Le pico.
+
+El sistema me pregunta por mi correo (rosaelena.mendoza58@gmail.com) y me dice que le va a enviar un correo de recuperación. Le pico a "Enviar Correo".
+
+Se abre una nueva pantalla que dice "Cambiar contraseña" y me muestra mi correo ya llenado, pero pide un OTP (un código de 6 dígitos) para verificar que soy yo. Espero a que llegue el correo con el código, pero no llega nada a mi bandeja.
+
+**Lo que pensé:** "¿Por qué no me llega el correo? ¿Será que lo mandaron a spam? ¿O no salió el correo?" Me frustra que el sistema acepte mi correo pero no me envíe nada.
+
+**Lo que sentí:** Confusión y frustración. Quería comprar el colágeno hoy pero me atoro con la contraseña. Otra vez tengo que escribirle al soporte.
+
+**Dónde estoy:** Atrapada en la pantalla de recuperación esperando un código OTP que no llega. Mi correo es rosaelena.mendoza58@gmail.com y conozco la pantalla del formulario (correo, código OTP, nueva contraseña, confirmar contraseña).
+
+**📱 A SOPORTE:** Hola, traté de recuperar mi contraseña. El sistema llenó mi correo (rosaelena.mendoza58@gmail.com) automáticamente, pero no me llegó ningún correo con el código OTP para cambiarla. ¿Pueden reenviarme el código o es otro error?
+
+## Jueves 2 de octubre, después de soporte (11:50)
+
+Daniel me explica todo claramente por WhatsApp. Dice que yo compré la vez pasada sin crear cuenta (como invitada), así que no existe contraseña que recuperar. Me ofrece dos opciones:
+1. Comprar de nuevo sin cuenta, llenando mis datos de entrega (como hice en septiembre)
+2. Crear una cuenta nueva con mi correo para que la próxima vez tenga mis datos guardados
+
+Pienso: "Bueno, la primera compra funcionó sin cuenta, así que ¿por qué complicarme? Hago lo mismo."
+
+Vuelvo a la tienda. Todo se ve igual. Busco el Colágeno ($700), lo agrego al carrito, voy al carrito. Lleno mi nombre (Rosa Elena Mendoza), teléfono (4431234567), calle (Allende), número (456), ciudad (Morelia), código postal (58000), estado (Michoacán) y país (México). Todo exactamente como la vez pasada.
+
+Hago clic en "Pagar". La pantalla muestra mi nueva orden: ORD-0CF9F0B2 con estado "Pago pendiente". Hago clic en "Pagar con MercadoPago" y completo el pago. 
+
+¡Listo! La orden ORD-0CF9F0B2 ahora dice "Pago registrado". Veo:
+- Subtotal: $700 (mi colágeno)
+- Envío (Estafeta): $129
+- Total: $829
+
+**Lo que pensé:** "Gracias a Dios Daniel me explicó. No necesitaba crear una cuenta, solo comprar de la misma forma que antes." Me siento más confiada esta vez porque ya sé cómo es el proceso.
+
+**Lo que sentí:** Alivio. Daniel fue muy claro y amable. Esta compra fue más rápida que la primera porque ya conocía el camino. Me siento capaz de comprar en línea.
+
+**Dónde estoy:** ¡COMPRÉ NUEVAMENTE! Orden ORD-0CF9F0B2 confirmada y pagada por $829. Ya tengo mi segundo colágeno en el camino.
+
+**Decisión sobre la cuenta:** Por ahora compré sin crear cuenta, pero probablemente la próxima vez cree una para tener mis datos guardados. Daniel fue muy paciente explicándome las opciones.
