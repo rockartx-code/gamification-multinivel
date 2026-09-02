@@ -839,8 +839,9 @@
         <ui-button type="button" variant="ghost" size="md" (pressed)="closeProductDetails()">
           Cerrar
         </ui-button>
+        <!-- "Cantidad actual: 1" + "Agregar" se leía como fijar la cantidad, no como sumar una: dos comadres acabaron con 2 frascos. -->
         <ui-button type="button" variant="primary" size="lg" iconClass="fa-solid fa-cart-plus" (pressed)="addSuggestedProduct(product)">
-          Agregar a carrito
+          {{ getCartQty(product.id) > 0 ? 'Agregar otra pieza (+1)' : 'Agregar a carrito' }}
         </ui-button>
       </div>
     </ng-container>
