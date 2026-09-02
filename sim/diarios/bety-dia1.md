@@ -139,3 +139,31 @@ Y lo mejor: me salió una ventanita de "Metas cumplidas del mes" que decía ¡Bu
 ## Lo que sentí
 
 Puro orgullo, se lo dije a Verónica de volada. Al principio sí me dio un poquito de desconfianza que la orden no mostrara los mismos centavos que la pasarela, pero como ya me había explicado bien de dónde salían y nada más era cosa de que la pantalla los redondeaba, sí me animé a terminar. Contenta de haber cumplido mi primera meta del mes sin batallar de más.
+
+---
+
+## 12 de noviembre
+
+Hoy ya no le hablé a Verónica, nomás me dijo "ya sabes cómo, y si algo no cuadra me mandas foto", así que le entré yo solita con la laptop. Ya se me acabó el colágeno y los Naplus del pedido pasado y sí me sentí mejor, así que quise pedir lo mismo otra vez.
+
+Apenas entré me saltó una ventanita de "Aviso del portal": **"Semana del colágeno: del 12 al 19 de noviembre, envío gratis en pedidos de $1,000 o más"**. Qué bueno que me tocó justo esta semana, pensé. La cerré y fui a "Avisos" en el menú de arriba pa' checar que quedara vista: ahí decía "Centro de avisos, Notificaciones vigentes, 1 vigentes, Vista, Vigente desde 12 nov 2026 — Semana del colágeno", con la palabra "Vista" ya puesta, o sea que sí me la marcó como leída.
+
+Fui a la Tienda y agregué otra vez 1 Colágeno Hidrolizado y 3 Naplus, uno por uno como me enseñó Verónica. El carrito me dio Subtotal $1,540, con el mismo descuentito de Nivel base del 10% (-$154), y ahí ya me apareció algo nuevo: "Puntos de este pedido (VP): 27.9 VP". Puse mi dirección de siempre (Av. Patria 3100, Zapopan, Col. Jardines, Jalisco, CP 45027) y ahí fue donde me extrañó: con todo y que el aviso decía envío gratis por pasar de $1,000, me lo siguió cobrando: **Envío (Estafeta) $129**. Mi Total quedó en $1,515. No traía ningún cupón que ponerle esta vez, así que le seguí sin escribir nada en la casilla de descuento.
+
+Le piqué a Pagar y finalizar: se creó la orden **ORD-D138835A** con Total $1,515, "Pago pendiente". Entré a Pagar con MercadoPago y ahí sí, la pasarela me puso exactamente **$1,515.00**, clavadito con lo de mi orden, así que ahora sí le piqué a Pagar sin dudar. Me cambió a "Pago registrado" y la orden quedó en $1,515.
+
+Ya en mi tablero vi hartas cosas buenas: mi meta cambió de "usuario activo" a una nueva, "Alcanzar nivel 2 de descuento (20%), consumo objetivo desde $2,000 MXN, te faltan $614". O sea que con este pedido ya pasé de volada mi primera meta del mes. Mi VP (Volumen Personal) quedó en **27.9** y mi VG igual en 27.9. Y en el Cuadro de Honor me fui hasta el **#1 en Red (VG) con 28** y **#1 en Personal (VP) con 28**.
+
+Y la sorpresononón del día: cuando fui a buscar mi link pa' mandárselo a Lupita, me metí a mi correo primero pa' checar, y ahí ya tenía un mensaje de esta mañana: **"¡Alguien se unió a tu red! — Finding'U"**, diciendo que **Guadalupe Ochoa Lara (lupita.ochoa@hotmail.com) se unió a tu red en Finding'U**. ¡Mi propia hermana ya se había metido solita antes de que yo le mandara nada! La vi también en mi Red del tablero: "Guadalupe Ochoa Lara, L1, $0, Inactiva" — o sea que ya está registrada pero todavía no compra nada, no cuenta como activa.
+
+De todas formas fui a buscar mi link y mi código por si los necesitaba: en la pestaña de Links dice bien clarito **"Tu link: http://localhost:4321/#/landing/BEATRIZ-BOL"** y **"Tu código de referido: BEATRIZ-BOL"**. Los tengo listos por si Lupita me los vuelve a pedir o si quiero compartirlos con alguien más.
+
+Revisé mi correo completo: aparte del de "alguien se unió", me llegó uno nuevo de "Recibimos tu pago · pedido ORD-D138835A", dándome las gracias otra vez.
+
+## ¿Algo salió mal?
+
+Nomás lo del envío: el aviso prometía envío gratis y a mí sí me lo cobraron ($129). No encontré ningún botón de "soporte" o "ayuda" en la página (nomás está el contacto de Verónica, mi patrocinadora, con su correo y WhatsApp). Como no era un error mío de cantidad ni de producto —pedí bien, 1 colágeno y 3 Naplus, como quería— y el total de la orden sí coincidió con la pasarela ($1,515.00 en los dos lados), decidí pagar de todas formas y nomás anotarlo aquí para acordarme de preguntarle a Verónica.
+
+## Lo que sentí
+
+Contenta de haberlo hecho yo sola sin batallar, y doblemente contenta con la sorpresa de que Lupita ya se animó a entrar sin que yo le dijera nada — se ve que de verdad le gustó el bote que le enseñé. Eso sí, un poquito confundida con lo del envío que no salió gratis como decía el aviso; no es que me arruinara el día, pero sí me dejó con la duda.
