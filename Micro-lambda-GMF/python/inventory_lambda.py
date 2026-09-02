@@ -93,7 +93,7 @@ def handle_stocks(method, body, stock_id=None):
 
 # --- HANDLERS: TRANSFERENCIAS ---
 
-def handle_transfers(method, body, query, transfer_id=None):
+def handle_transfers(method, body, query, transfer_id=None, headers=None):
     """POST /stocks/transfers (Crear), POST /transfers/{id}/receive (Recibir)"""
     if method == "GET":
         items = utils._query_bucket("STOCK_TRANSFER")
@@ -122,7 +122,7 @@ def handle_transfers(method, body, query, transfer_id=None):
             _, error = _apply_stock_delta(trf['destinationStockId'], {k: v for k, v in deltas.items() if v > 0})
             if error:
                 return utils._json_response(400, {"message": error})
-            actor = headers.get("x-user-id") or "system"
+            actor = (headers or {}).get("x-user-id") or "system"
             for d in discrepancias:
                 _log_movement(trf.get("sourceStockId"), "damage", d["productId"], d["missing"], transfer_id, actor,
                               reason=f"Faltante en transferencia {transfer_id}: enviados {d['sent']}, recibidos {d['received']}")
@@ -657,7 +657,7 @@ def _route_stocks(method: str, segments: list, body: dict, query: dict, headers:
         if segments[1] == "transfers" and len(segments) >= 4 and segments[3] == "receive" and method == "POST":
             err = utils._require_admin(headers, "stock_receive_transfer")
             if err: return err
-            return handle_transfers(method, body, query, transfer_id=segments[2])
+            return handle_transfers(method, body, query, transfer_id=segments[2], headers=headers)
 
         # /stocks/transfers
         if segments[1] == "transfers":
