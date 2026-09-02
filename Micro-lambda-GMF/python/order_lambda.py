@@ -641,6 +641,15 @@ def handle_update_status(order_id, body, headers):
     return utils._json_response(200, {"order": updated})
 
 
+def _con_totales_visibles(order: dict) -> dict:
+    """El item guarda grossSubtotal/netTotal; las pantallas leen subtotal/total."""
+    return {
+        **order,
+        "subtotal": order.get("subtotal") if order.get("subtotal") is not None else order.get("grossSubtotal"),
+        "total": order.get("total") if order.get("total") is not None else order.get("netTotal"),
+    }
+
+
 def _is_guest_order(order: dict) -> bool:
     """Pedido creado sin cuenta: buyerType guest o sin customerId."""
     return str(order.get("buyerType") or "").lower() == "guest" or not order.get("customerId")
@@ -1413,7 +1422,7 @@ def lambda_handler(event, context):
                         if err: return err
                     # Se devolvía el item crudo, sin "total": el cálculo guarda
                     # netTotal y la pantalla de seguimiento mostraba "$0".
-                    return utils._json_response(200, {"order": {**order, **_register_branch_sale_for_pickup_order(order)}})
+                    return utils._json_response(200, {"order": _con_totales_visibles(order)})
                 if method == "PATCH":
                     err = utils._require_admin(headers, "order_mark_paid")
                     if err: return err
