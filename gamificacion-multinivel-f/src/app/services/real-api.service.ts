@@ -780,7 +780,7 @@ export class RealApiService {
       );
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     return this.http
       .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(
         `${this.baseUrl}/inventory/stocks/transfers/${encodeURIComponent(transferId)}/receive`,

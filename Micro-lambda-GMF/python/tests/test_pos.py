@@ -124,3 +124,24 @@ def test_el_retiro_de_efectivo_se_guarda_sin_floats(inventory_lambda, utils, mon
     assert r["statusCode"] == 201, r["body"]
     wid = json.loads(r["body"])["withdrawal"]["withdrawalId"]
     assert isinstance(utils._get_by_id("POS_WITHDRAWAL", wid)["amount"], Decimal)
+
+
+def test_recibir_una_transferencia_con_faltante_registra_la_merma(inventory_lambda, utils, monkeypatch):
+    """Beto contó 4 de 5 colágenos y solo podía confirmar 5 o nada."""
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    utils._put_entity("PRODUCT", 7, {"entityType": "product", "productId": 7, "name": "Colageno", "price": 700, "vpPoints": 13, "active": True})
+    utils._put_entity("STOCK", "STK-A", {"entityType": "stock", "stockId": "STK-A", "name": "Bodega", "inventory": {"7": 30}})
+    utils._put_entity("STOCK", "STK-B", {"entityType": "stock", "stockId": "STK-B", "name": "Tienda", "inventory": {}})
+    r = inventory_lambda.handle_transfers("POST", {"sourceStockId": "STK-A", "destinationStockId": "STK-B", "lines": [{"productId": 7, "qty": 5}]}, {})
+    assert r["statusCode"] in (200, 201), r["body"]
+    tid = json.loads(r["body"])["transfer"]["transferId"]
+    assert utils._get_by_id("STOCK", "STK-A")["inventory"]["7"] == 25
+
+    r = inventory_lambda.lambda_handler({"httpMethod": "POST", "path": f"/inventory/stocks/transfers/{tid}/receive",
+                                         "headers": {"x-user-id": "beto"}, "body": json.dumps({"received": {"7": 4}})}, None)
+    assert r["statusCode"] == 200, r["body"]
+    assert utils._get_by_id("STOCK", "STK-B")["inventory"]["7"] == 4
+    trf = utils._get_by_id("STOCK_TRANSFER", tid)
+    assert trf["status"] == "received" and trf["discrepancies"][0]["missing"] == 1
+    mermas = [m for m in utils._query_bucket("INVENTORY_MOVEMENT") if m.get("type") == "damage" and m.get("stockId") == "STK-A"]
+    assert mermas and mermas[-1]["quantity"] == 1 if "quantity" in mermas[-1] else mermas[-1].get("qty") == 1

@@ -350,7 +350,7 @@ export class ApiService {
     return this.resolveApi().createStockTransfer(payload);
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     return this.resolveApi().receiveStockTransfer(transferId, payload);
   }
 

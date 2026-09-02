@@ -5614,12 +5614,32 @@ export class AdminComponent implements OnInit {
       return;
     }
 
+    // Cantidades reales: el almacén contó 4 de 5 y solo podía confirmar 5 o nada.
+    const received: Record<string, number> = {};
+    for (const line of transfer.lines) {
+      const sent = Number(line.qty || 0);
+      const answer = prompt(`${this.productName(line.productId)}: enviados ${sent}. ¿Cuántos llegaron?`, String(sent));
+      if (answer === null) {
+        return;
+      }
+      const real = Math.max(0, Math.min(sent, Math.floor(Number(answer))));
+      if (!Number.isFinite(real)) {
+        this.setStockFeedback('Escribe una cantidad válida.', 'error');
+        return;
+      }
+      received[String(line.productId)] = real;
+    }
+    const faltantes = transfer.lines.filter((line) => received[String(line.productId)] < Number(line.qty || 0));
+    if (faltantes.length && !confirm(`Faltan ${faltantes.map((l) => `${Number(l.qty) - received[String(l.productId)]} ${this.productName(l.productId)}`).join(', ')}. Se registrará como merma en el origen. ¿Continuar?`)) {
+      return;
+    }
+
     this.setStockFeedback('', '');
     this.adminControl
-      .receiveStockTransfer(transferId, { receivedByUserId: this.transferReceiverUserId })
+      .receiveStockTransfer(transferId, { receivedByUserId: this.transferReceiverUserId, received })
       .subscribe({
         next: () => {
-          this.setStockFeedback('Transferencia recibida.', 'success');
+          this.setStockFeedback(faltantes.length ? 'Transferencia recibida con faltantes registrados.' : 'Transferencia recibida.', 'success');
           this.loadStocksAndPosState();
           this.showSnackbar('Transferencia recibida.');
         },

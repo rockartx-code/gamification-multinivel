@@ -1531,7 +1531,7 @@ export class MockApiService {
     return of({ transfer }).pipe(delay(120));
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     const transfer = this.stockTransfers.find((item) => item.id === transferId);
     if (!transfer) {
       throw new Error('Transferencia no encontrada');

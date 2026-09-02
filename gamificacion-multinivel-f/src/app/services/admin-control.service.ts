@@ -470,7 +470,7 @@ export class AdminControlService {
     return this.api.createStockTransfer(payload);
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     return this.api.receiveStockTransfer(transferId, payload);
   }
 

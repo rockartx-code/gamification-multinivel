@@ -105,15 +105,34 @@ def handle_transfers(method, body, query, transfer_id=None):
             if not trf or trf.get("status") == "received":
                 return utils._json_response(400, {"message": "Transferencia inválida o ya recibida"})
             
-            # Sumar a destino
-            deltas = {str(line['productId']): int(line['qty']) for line in trf['lines']}
-            _apply_stock_delta(trf['destinationStockId'], deltas)
-            
+            # Recepción con cantidades reales: el almacén contó 4 de 5 y solo
+            # podía "confirmar 5" o no confirmar nada. `received` trae lo que
+            # llegó por producto; lo que falte queda como discrepancia y se
+            # registra como merma en el origen (ya había salido de ahí).
+            recibidas = (body or {}).get("received") or {}
+            deltas, discrepancias, lineas_recibidas = {}, [], []
+            for line in trf['lines']:
+                pid = str(line['productId']); enviado = int(line['qty'])
+                real = int(recibidas.get(pid, enviado)) if isinstance(recibidas, dict) else enviado
+                real = max(0, min(real, enviado))
+                deltas[pid] = real
+                lineas_recibidas.append({"productId": pid, "sent": enviado, "received": real})
+                if real < enviado:
+                    discrepancias.append({"productId": pid, "sent": enviado, "received": real, "missing": enviado - real})
+            _, error = _apply_stock_delta(trf['destinationStockId'], {k: v for k, v in deltas.items() if v > 0})
+            if error:
+                return utils._json_response(400, {"message": error})
+            actor = headers.get("x-user-id") or "system"
+            for d in discrepancias:
+                _log_movement(trf.get("sourceStockId"), "damage", d["productId"], d["missing"], transfer_id, actor,
+                              reason=f"Faltante en transferencia {transfer_id}: enviados {d['sent']}, recibidos {d['received']}")
+
             # Actualizar transferencia
-            updated = utils._update_by_id("STOCK_TRANSFER", transfer_id, 
-                                         "SET #s = :s, receivedAt = :ra", 
-                                         {":s": "received", ":ra": utils._now_iso()}, {"#s": "status"})
-            return utils._json_response(200, {"transfer": updated})
+            updated = utils._update_by_id("STOCK_TRANSFER", transfer_id,
+                                         "SET #s = :s, receivedAt = :ra, receivedBy = :rb, receivedLines = :rl, discrepancies = :d",
+                                         {":s": "received", ":ra": utils._now_iso(), ":rb": str(actor),
+                                          ":rl": lineas_recibidas, ":d": discrepancias}, {"#s": "status"})
+            return utils._json_response(200, {"transfer": updated, "discrepancies": discrepancias})
 
         # Crear transferencia (Salida de origen)
         source_id = body.get("sourceStockId")
@@ -631,6 +650,14 @@ def _route_stocks(method: str, segments: list, body: dict, query: dict, headers:
                 err = utils._require_admin(headers, "stock_create")
                 if err: return err
             return handle_stocks(method, body)
+
+        # /stocks/transfers/{id}/receive — nunca llegaba a handle_transfers con
+        # el id: caía en "crear transferencia" sin origen y respondía "Almacén
+        # no encontrado". Recibir una transferencia estaba roto de raíz.
+        if segments[1] == "transfers" and len(segments) >= 4 and segments[3] == "receive" and method == "POST":
+            err = utils._require_admin(headers, "stock_receive_transfer")
+            if err: return err
+            return handle_transfers(method, body, query, transfer_id=segments[2])
 
         # /stocks/transfers
         if segments[1] == "transfers":
