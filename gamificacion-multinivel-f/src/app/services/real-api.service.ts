@@ -1024,6 +1024,9 @@ export class RealApiService {
       lines: Array.isArray(sale['lines']) ? (sale['lines'] as AdminOrderItem[]) : [],
       createdAt: sale['createdAt'] != null ? String(sale['createdAt']) : undefined,
       cashCutId: sale['cashCutId'] != null ? String(sale['cashCutId']) : undefined,
+      // Sin esto la caja seguía viendo como normales las ventas anuladas.
+      status: sale['status'] != null ? String(sale['status']) : undefined,
+      voidReason: sale['voidReason'] != null ? String(sale['voidReason']) : undefined,
       paymentType: sale['paymentType'] != null ? (String(sale['paymentType']) as PosSale['paymentType']) : undefined,
       amountPaid: sale['amountPaid'] != null ? Number(sale['amountPaid']) : undefined,
       pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
