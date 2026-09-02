@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "audit:ui": "python3 tools/auditoria_ui.py"
   },
   "prettier": {
     "printWidth": 100,
