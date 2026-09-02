@@ -596,6 +596,15 @@ def _upsert_referral_code_self(customer_id, name: str = "") -> str | None:
         })
         if code != base_code:
             utils._log("referral_code_collision", "INFO", customerId=customer_id, base=base_code, asignado=code)
+        # El código también tiene que vivir en la ficha del cliente: es lo que
+        # el frontend usa para armar el link que el socio comparte. Sin esto,
+        # el perfil devolvía referralCode vacío y el link se construía con el
+        # ID numérico, que no resolvía como código.
+        utils._update_by_id(
+            "CUSTOMER", customer_id,
+            "SET referralCode = :referralCode, updatedAt = :updatedAt",
+            {":referralCode": code.upper(), ":updatedAt": utils._now_iso()},
+        )
         return code
     except Exception as ex:
         utils._log("referral_code_self_insert_error", "ERROR", customerId=customer_id, error=ex)
@@ -613,6 +622,16 @@ def _resolve_leader_from_referral_code(raw_code) -> str | None:
             return str(item["leaderId"])
     except Exception as ex:
         utils._log("referral_code_lookup_error", "ERROR", code=code, error=ex)
+    # El link que la propia plataforma genera para el socio lleva su ID numérico
+    # (el frontend cae a settings.userCode porque referralCode no viaja en el
+    # perfil). Sin esta rama, TODOS esos links registraban al invitado sin
+    # líder y el patrocinador se quedaba sin su referido.
+    if code.isdigit():
+        try:
+            if utils._get_by_id("CUSTOMER", int(code)):
+                return code
+        except Exception as ex:
+            utils._log("referral_id_lookup_error", "ERROR", code=code, error=ex)
     return None
 
 def _migrate_referral_codes(headers, body) -> dict:
