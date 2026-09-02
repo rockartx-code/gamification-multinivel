@@ -73,7 +73,7 @@
             <span *ngIf="featuredProduct?.vpPoints"
               class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent"
               title="Puntos Comisionables que suma a tus logros (PV/PG)">
-              <i class="fa-solid fa-star text-micro" aria-hidden="true"></i>{{ featuredProduct?.vpPoints }} PC
+              <i class="fa-solid fa-star text-micro" aria-hidden="true"></i>{{ featuredProduct?.vpPoints }} PC<span *ngIf="featuredProduct?.price && featuredProduct?.vpPoints"> · {{ formatMoney((featuredProduct?.price || 0) / (featuredProduct?.vpPoints || 1)) }} por PC</span>
             </span>
           </div>
 
@@ -195,7 +195,7 @@
               <span *ngIf="product.vpPoints"
                 class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-micro font-bold text-accent"
                 title="Puntos Comisionables que suma este producto a tus logros (PV/PG)">
-                <i class="fa-solid fa-star text-[8px]" aria-hidden="true"></i>{{ product.vpPoints }} PC
+                <i class="fa-solid fa-star text-[8px]" aria-hidden="true"></i>{{ product.vpPoints }} PC · {{ formatMoney(product.price / product.vpPoints) }}/PC
               </span>
               <span *ngIf="!product.vpPoints && product.variants && product.variants.length > 0"
                 class="rounded-full border border-olive-30 bg-white/60 px-2 py-0.5 text-micro font-semibold text-gray-500">

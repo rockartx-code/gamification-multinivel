@@ -294,14 +294,25 @@ def handle_public_config() -> dict:
                  "rate": float(utils._to_decimal(t.get("rate")))}
                 for t in (rewards.get("discountTiers") or [])
             ],
+            # Los requisitos de cada generación (directos activos, PC personales,
+            # líneas) se omitían y la landing los mostraba con guiones: la única
+            # tabla pública del plan no decía qué hay que hacer para cobrar.
             "commissionLevels": [
-                {"rate": float(utils._to_decimal(lvl.get("rate"))),
-                 "minActiveUsers": int(utils._to_decimal(lvl.get("minActiveUsers") or 0)),
+                {"gen": int(utils._to_decimal(lvl.get("gen") or (i + 1))),
+                 "rate": float(utils._to_decimal(lvl.get("rate"))),
+                 "reqActiveDirects": int(utils._to_decimal(lvl.get("reqActiveDirects") or lvl.get("minActiveUsers") or 0)),
+                 "reqPersonalPC": float(utils._to_decimal(lvl.get("reqPersonalPC") or 0)),
+                 "reqLines": int(utils._to_decimal(lvl.get("reqLines") or 0)),
+                 "reqPCPerLine": float(utils._to_decimal(lvl.get("reqPCPerLine") or 0)),
+                 "minActiveUsers": int(utils._to_decimal(lvl.get("reqActiveDirects") or lvl.get("minActiveUsers") or 0)),
                  "minIndividualPurchase": float(utils._to_decimal(lvl.get("minIndividualPurchase") or 0)),
                  "minGroupPurchase": float(utils._to_decimal(lvl.get("minGroupPurchase") or 0))}
-                for lvl in (rewards.get("commissionLevels") or [])
+                for i, lvl in enumerate(rewards.get("commissionLevels") or [])
             ],
             "activationNetMin": utils._activation_vp(),
+            # Regla de corte: con compresión dinámica la generación de un
+            # inactivo sube al siguiente activo; el plan público debe decirlo.
+            "cutRule": rewards.get("cutRule") or "dynamic_compression",
         },
         "bonuses": {
             "vpConfig": bonuses.get("vpConfig") or {"mxnPerVp": 50, "maxNetworkLevels": 5},

@@ -432,8 +432,9 @@
 
           <div *ngIf="hasInactiveIntermediate" class="callout mt-4 rounded-2xl px-4 py-3 text-xs">
             <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i>
-            <strong>Apoya a tu red:</strong> cuando hay inactivos en niveles L1, los beneficios de sus L2 no llegan
-            hasta ti.
+            <strong>Apoya a tu red:</strong> tienes directos inactivos este mes. Sus compras y las de su gente no cuentan
+            para ellos; la generación que dejan libre sube al siguiente activo de la línea (compresión dinámica). Si se activan
+            dentro del mes, se recalcula.
           </div>
 
           <ui-button size="sm" variant="ghost" *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
