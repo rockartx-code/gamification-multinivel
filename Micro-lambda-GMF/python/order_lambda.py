@@ -42,7 +42,10 @@ def _enrich_items_commissionable(items: list) -> list:
                 if "commissionable" not in item:
                     item["commissionable"] = bool(product.get("commissionable", True))
                 if "vpPoints" not in item and product.get("vpPoints") is not None:
-                    item["vpPoints"] = float(utils._to_decimal(product["vpPoints"]))
+                    # Decimal, no float: el serializador de DynamoDB rechaza floats y
+                    # el pedido entero fallaba con "Float types are not supported"
+                    # para cualquier producto con puntos, sea invitado o socio.
+                    item["vpPoints"] = utils._to_decimal(product["vpPoints"])
         enriched.append(item)
     return enriched
 
