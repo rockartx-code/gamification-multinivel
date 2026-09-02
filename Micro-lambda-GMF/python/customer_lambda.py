@@ -444,6 +444,38 @@ def _resolve_clabe_customer_id(customer_id, body, headers):
 
 # --- HANDLERS DE ENDPOINTS ---
 
+def _crear_acceso_temporal(customer_id, name: str, email: str, now: str):
+    """Crea el registro AUTH con contraseña temporal y avisa por correo.
+    Devuelve la contraseña temporal o None si ya había acceso."""
+    if not email or utils._get_by_id("AUTH", email):
+        return None
+    import secrets, string
+    alfabeto = string.ascii_uppercase + string.digits
+    temp_password = "".join(secrets.choice(alfabeto) for _ in range(10))
+    utils._put_entity("AUTH", email, {
+        "entityType": "auth", "authId": email, "email": email,
+        "customerId": customer_id, "passwordHash": utils._hash_password(temp_password),
+        "role": "cliente", "emailVerified": True, "mustChangePassword": True,
+        "createdAt": now, "updatedAt": now,
+    })
+    try:
+        from core.email import _email_shell
+        frontend = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx").rstrip("/")
+        cuerpo = f"""
+    <div class="icon">🔑</div>
+    <h1 class="title">Tu cuenta en Finding&rsquo;U</h1>
+    <p class="lead">Hola <strong>{str(name).split(' ')[0]}</strong>. Te creamos una cuenta para que pidas desde casa y pases a recoger o recibas en tu domicilio.</p>
+    <div class="info-box"><p>Correo: <strong>{email}</strong></p><p>Contraseña temporal: <strong>{temp_password}</strong></p></div>
+    <p class="lead">Entra con esos datos y cámbiala por una tuya desde tu perfil.</p>
+    <a class="btn" href="{frontend}/#/login">Entrar a mi cuenta</a>"""
+        utils._send_ses_email(email, "Tu cuenta en Finding'U y tu contraseña temporal",
+                              f"Hola {name}. Te creamos una cuenta. Correo: {email}. Contraseña temporal: {temp_password}. Entra en {frontend}/#/login y cámbiala desde tu perfil.",
+                              _email_shell(cuerpo))
+    except Exception as ex:
+        utils._log("customer_access_email_error", "ERROR", customerId=customer_id, error=ex)
+    return temp_password
+
+
 def handle_create_customer(body, headers=None):
     """POST /customers and POST /customers/create"""
     err = utils._require_admin(headers or {}, "customer_add")
@@ -489,7 +521,14 @@ def handle_create_customer(body, headers=None):
     # panel porque el índice de nombres solo lo escribía el auto-registro.
     utils._upsert_customer_name_index(customer_id, name, email, created_at_iso=now)
     utils._upsert_customer_email_index(customer_id, email)
-    return utils._json_response(201, {"customer": _format_customer_output(main)})
+
+    # Un cliente dado de alta desde el panel no tenía acceso: sin registro AUTH,
+    # sin contraseña y sin correo. "Nunca me llegó nada para entrar." Se crea
+    # el acceso con una contraseña temporal y se le avisa por correo.
+    temp_password = _crear_acceso_temporal(customer_id, name, email, now) if email else None
+    salida = _format_customer_output(main)
+    salida["accessCreated"] = bool(temp_password)
+    return utils._json_response(201, {"customer": salida})
 
 def handle_get_customer(customer_id, headers=None):
     """GET /customers/{id}"""
@@ -565,6 +604,17 @@ def handle_update_customer(customer_id, body, headers):
                 updates.append(f"{f} = :{f}")
             eav[f":{f}"] = body[f]
 
+    # Correo: la ficha creada desde el panel podía quedar sin correo y no había
+    # forma de ponérselo después; al agregarlo se crea el acceso si no existe.
+    nuevo_correo = utils._normalize_email(body.get("email")) if "email" in body else None
+    correo_cambio = bool(nuevo_correo) and nuevo_correo != str(existing.get("email") or "").strip().lower()
+    if correo_cambio:
+        otro = utils._find_customer_id_by_email(nuevo_correo)
+        if otro and str(otro) != str(existing.get("customerId", cid)):
+            return utils._json_response(409, {"message": "El correo ya esta registrado"})
+        updates.append("email = :email")
+        eav[":email"] = nuevo_correo
+
     # Seguimiento: "no contactar" y bitácora de contactos (solo se añade, nunca se borra).
     if "doNotContact" in body:
         updates.append("doNotContact = :dnc")
@@ -585,6 +635,12 @@ def handle_update_customer(customer_id, body, headers):
             eav[":addr"] = body["addresses"]
 
     updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean or None)
+    if correo_cambio:
+        try:
+            utils._upsert_customer_email_index(existing.get("customerId", cid), nuevo_correo, previous_email=existing.get("email"))
+        except Exception as ex:
+            utils._log("customer_email_index_error", "ERROR", customerId=cid, error=ex)
+        _crear_acceso_temporal(existing.get("customerId", cid), updated.get("name") if isinstance(updated, dict) else existing.get("name"), nuevo_correo, utils._now_iso())
 
     # Sin esto, renombrar a un cliente lo dejaba indexado bajo su inicial vieja
     # y la búsqueda del panel dejaba de encontrarlo.

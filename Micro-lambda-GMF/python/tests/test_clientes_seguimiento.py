@@ -91,3 +91,32 @@ def test_el_panel_del_cliente_responde(modulos, utils, monkeypatch):
     monkeypatch.setattr(utils, "_extract_actor_from_bearer", lambda h: {"user_id": str(cid), "role": "cliente", "privileges": {}})
     r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/dashboard", "headers": {"Authorization": "Bearer x"}, "queryStringParameters": {}, "body": ""}, None)
     assert r["statusCode"] == 200, r["body"][:300]
+
+
+def test_el_alta_desde_el_panel_crea_acceso_y_avisa(modulos, utils, monkeypatch):
+    """La gerente dio de alta a una clienta y nunca le llegó nada para entrar."""
+    customer_lambda, auth_utils = modulos
+    correos = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto, texto)))
+    r = customer_lambda.handle_create_customer({"name": "Guadalupe Ramírez", "email": "lupe@test.com", "phone": "5544332211"}, {})
+    assert r["statusCode"] == 201, r["body"]
+    assert json.loads(r["body"])["customer"]["accessCreated"] is True
+    auth = utils._get_by_id("AUTH", "lupe@test.com")
+    assert auth and auth.get("emailVerified") is True
+    assert correos and correos[0][0] == "lupe@test.com" and "Contraseña temporal" in correos[0][2]
+    temporal = correos[0][2].split("Contraseña temporal: ")[1].split(".")[0]
+    assert utils._verify_password(temporal, auth["passwordHash"])
+
+
+def test_agregar_correo_a_una_ficha_sin_correo_crea_el_acceso(modulos, utils, monkeypatch):
+    customer_lambda, _ = modulos
+    correos = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append(para))
+    r = customer_lambda.handle_create_customer({"name": "Guadalupe Ramírez"}, {})
+    cid = json.loads(r["body"])["customer"]["customerId"]
+    assert utils._get_by_id("AUTH", "lupe2@test.com") is None
+    r = customer_lambda.handle_update_customer(cid, {"email": "lupe2@test.com"}, {})
+    assert r["statusCode"] == 200, r["body"]
+    assert json.loads(r["body"])["customer"]["email"] == "lupe2@test.com"
+    assert utils._get_by_id("AUTH", "lupe2@test.com") and correos == ["lupe2@test.com"]
+    assert utils._find_customer_id_by_email("lupe2@test.com") not in (None, "")
