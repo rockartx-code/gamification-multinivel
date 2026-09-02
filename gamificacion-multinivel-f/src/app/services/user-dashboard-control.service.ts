@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, finalize, forkJoin, Observable, of, shareReplay, tap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, forkJoin, Observable, of, shareReplay, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import {
@@ -90,9 +90,13 @@ export class UserDashboardControlService {
 
     const request = forkJoin([
       this.api.getCatalogData(),
-      dashboardRequest
+      dashboardRequest,
+      // El Cuadro de Honor del panel leía `data.honorBoard`, que el payload del
+      // panel nunca trae: la sección salía vacía para todos los clientes.
+      this.api.getHonorBoard().pipe(catchError(() => of(null)))
     ]).pipe(
-      map(([catalog, dashboard]) => ({
+      map(([catalog, dashboard, honorBoard]) => ({
+        honorBoard: honorBoard ?? undefined,
         // Datos de catálogo (GET /catalog)
         products: catalog.products ?? [],
         productOfMonth: catalog.productOfMonth ?? null,
