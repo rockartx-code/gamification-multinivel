@@ -67,8 +67,16 @@ export class UserDashboardControlService {
       return this.loadRequest;
     }
 
+    // Si el panel falla, la tienda no debe quedarse en blanco: se cae al
+    // mismo esqueleto que ve un invitado (catálogo completo, sin red ni
+    // comisiones) en vez de tumbar la carga conjunta.
+    const esqueleto: DashboardData = {
+      isGuest: true,
+      settings: { cutoffDay: 25, cutoffHour: 23, cutoffMinute: 59, userCode: '', networkGoal: 300 },
+      goals: [], featured: [], campaigns: [], networkMembers: [], buyAgainIds: [], commissions: null, notifications: [], customer: null
+    };
     const dashboardRequest = this.authService.hasSession
-      ? this.api.getDashboardData()
+      ? this.api.getDashboardData().pipe(catchError(() => of<DashboardData>({ ...esqueleto, isGuest: false })))
       : of<DashboardData>({
           isGuest: true,
           settings: {

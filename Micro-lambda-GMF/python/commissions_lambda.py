@@ -886,10 +886,17 @@ def handle_admin_receipt(body):
             nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
             ledger = _get_ledger_month(cid, month_key)
             monto = float(utils._to_decimal(ledger.get("totalConfirmed", 0)))
+            enlace = ""
+            try:
+                enlace = str((locals().get("asset") or {}).get("url") or (locals().get("asset") or {}).get("assetUrl") or "")
+            except Exception:
+                enlace = ""
+            comprobante = f'<p class="lead"><a class="btn" href="{enlace}">Ver comprobante</a></p>' if enlace else '<p class="lead">El comprobante lo tienes en tu panel, en Comisiones.</p>'
             cuerpo = f"""
     <div class="icon">💸</div>
     <h1 class="title">Depositamos tus comisiones</h1>
-    <p class="lead">Hola <strong>{nombre}</strong>. Ya está en camino a tu CLABE el depósito de tus comisiones confirmadas de {month_key}: <strong>${monto:,.2f}</strong>. El comprobante lo tienes en tu panel, en Comisiones.</p>"""
+    <p class="lead">Hola <strong>{nombre}</strong>. Ya está en camino a tu CLABE el depósito de tus comisiones confirmadas de {month_key}: <strong>${monto:,.2f}</strong>.</p>
+    {comprobante}"""
             utils._send_ses_email(para, f"Depositamos tus comisiones de {month_key}: ${monto:,.2f}",
                                   f"Hola {nombre}. Depositamos tus comisiones confirmadas de {month_key}: ${monto:,.2f}. Comprobante en tu panel.",
                                   _email_shell(cuerpo))
