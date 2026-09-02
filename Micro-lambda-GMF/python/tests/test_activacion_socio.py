@@ -95,6 +95,29 @@ def test_cancelar_o_reembolsar_resta_el_volumen_acreditado(modulos, utils):
     assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
 
 
+def test_cancelar_un_pedido_nunca_pagado_no_resta_volumen(modulos, utils):
+    """Regresión: Verónica canceló un carrito de $1,952 que nunca pagó y quedó
+    con -14.6 VP; el motor restaba el volumen aunque jamás se hubiera sumado."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pendiente = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid_pendiente = (pendiente.get("order") or pendiente)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid_pendiente, "action": "ORDER_CANCELLED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert not estado or Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+    pagado = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid_pagado = (pagado.get("order") or pagado)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid_pagado, "action": "ORDER_PAID"}, None)
+    assert utils._get_by_id("ORDER", oid_pagado).get("rewardsAppliedAt")
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("960")
+    # El pedido pagado sí se resta al cancelarse.
+    commissions_lambda.lambda_handler({"orderId": oid_pagado, "action": "ORDER_CANCELLED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+
 def test_la_pasarela_cobra_el_total_con_descuento(modulos, utils, monkeypatch):
     """Regresión: la preferencia de MercadoPago llevaba precios de lista; el
     socio veía Total $1,137 y pagaba $1,249."""

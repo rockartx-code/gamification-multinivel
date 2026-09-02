@@ -584,9 +584,10 @@ def handle_update_status(order_id, body, headers):
     if is_pickup_order and new_status in ("paid", "delivered") and actor_user_id not in (None, ""):
         extra_updates["attendantUserId"] = actor_user_id
         extra_updates["stockId"] = pickup_stock_id_str
+    if new_status == "paid" and not order.get("paidAt"):
+        extra_updates["paidAt"] = now
     if new_status == "paid" and is_pickup_order and order.get("pickupPaymentMethod") == "at_store":
         extra_updates["paymentStatus"] = body.get("paymentStatus") or "paid_branch"
-        extra_updates["paidAt"] = now
         if payment_method and not (order.get("cashSaleId") or order.get("branchSaleId")):
             cash_received = body.get("cashReceived")
             if payment_method == "cash" and cash_received is not None:

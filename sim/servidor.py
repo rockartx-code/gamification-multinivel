@@ -12,6 +12,7 @@ Ejecuta las 8 Lambdas tal cual, sin AWS:
   - S3 → carpeta sim/s3. Athena → sin datos (Estadísticas queda vacía: limitación conocida).
 """
 import json, os, sys, threading, pickle, atexit, base64, time, re
+from decimal import Decimal
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, unquote
 
@@ -242,6 +243,18 @@ class Manejador(BaseHTTPRequestHandler):
             return self._responder(200, b'{"ok":true}')
         if ruta == "/__sim/guardar":
             guardar(); return self._responder(200, b'{"ok":true}')
+        if ruta == "/__sim/patch" and self.command == "POST":
+            # Corrección de datos por "sistemas" (lo que en AWS sería editar el item en la consola).
+            ev = json.loads(cuerpo)
+            item = core_db._update_by_id(ev["entity"], ev["id"], ev["expression"],
+                                         {k: (Decimal(str(v)) if isinstance(v, (int, float)) and not isinstance(v, bool) else v) for k, v in ev["values"].items()},
+                                         ev.get("names"))
+            guardar(); return self._responder(200, json.dumps(item, default=str))
+        if ruta == "/__sim/reevaluar" and self.command == "POST":
+            ev = json.loads(cuerpo)
+            commissions_lambda._reset_request_cache()
+            r = commissions_lambda._reevaluate_blocked_rows([str(b) for b in ev["beneficiaryIds"]], ev["month"])
+            guardar(); return self._responder(200, json.dumps({"reprocesadas": r}))
         m = re.match(r"^/__sim/pago/([^/]+)$", ruta)
         if m and self.command == "GET":
             oid = m.group(1); tot = PAGOS.get(oid, {}).get("total", 0)

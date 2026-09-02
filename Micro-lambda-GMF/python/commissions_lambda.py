@@ -785,6 +785,12 @@ def handle_apply_rewards(order_id):
         _CACHE["states"].pop(f"{utils._customer_id_str(buyer_id)}#{month_key}", None)
         ahora_activo = _is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
         se_activo = (not estaba_activo) and ahora_activo
+        # Deja constancia en el pedido de que su volumen ya se acreditó: al
+        # cancelarlo solo se resta lo que de verdad se sumó.
+        try:
+            utils._update_by_id("ORDER", order_id, "SET rewardsAppliedAt = :t", {":t": utils._now_iso()})
+        except Exception as e:
+            utils._log("rewards_applied_flag_error", "ERROR", order=order_id, err=e)
         try:
             utils._update_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(buyer_id, month_key),
                                 "SET isActive = :a", {":a": bool(ahora_activo)})
@@ -1036,7 +1042,14 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
     # devuelto o una venta de mostrador registrada por error a su nombre.
     # Se restan una sola vez (marca rewardsVoidedAt en el pedido).
     volumen_restado = False
-    if _es_comprador_registrado(order) and not order.get("rewardsVoidedAt"):
+    # Un pedido cancelado antes de pagarse nunca sumó volumen: restarlo dejaba
+    # al socio con VP negativo (Verónica quedó en -14.6 VP tras cancelar un
+    # carrito de $1,952 que nunca pagó). Pedidos anteriores a la marca
+    # rewardsAppliedAt se reconocen por su evidencia de pago.
+    fue_acreditado = bool(order.get("rewardsAppliedAt") or order.get("paidAt") or order.get("paymentId")
+                          or order.get("branchSaleId") or order.get("cashSaleId")
+                          or (order.get("paymentStatus") or "").lower() in ("paid", "paid_branch"))
+    if _es_comprador_registrado(order) and fue_acreditado and not order.get("rewardsVoidedAt"):
         try:
             mxn_per_vp = utils._mxn_per_vp()
             net_amount = utils._to_decimal(order.get("netTotal"))
