@@ -246,7 +246,13 @@
 
 
         <!-- MercadoPago card -->
-        <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
+        <!-- Quien eligió pagar en sucursal veía aquí "Pagar con MercadoPago" -->
+        <div *ngIf="statusValue === 'pending' && order?.deliveryType === 'pickup' && order?.pickupPaymentMethod === 'at_store'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
+          <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Pago</div>
+          <div class="mt-1 text-lg font-extrabold text-main">Pagas al recoger en sucursal</div>
+          <div class="mt-1 text-xs text-gray-500">Tu pedido está reservado. Pasa a la sucursal, paga en caja y ahí mismo te lo entregan.</div>
+        </div>
+        <div *ngIf="statusValue === 'pending' && !(order?.deliveryType === 'pickup' && order?.pickupPaymentMethod === 'at_store')" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Pago</div>
