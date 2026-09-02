@@ -523,8 +523,15 @@ def get_honor_board() -> dict:
         )
         nodes, children_by_leader = _build_month_node_index(mk, customers_raw, cfg_rewards, month_states)
 
-        # VP por nodo (mismo criterio que _calc_vg_from_tree: netVolume → VP).
-        vp_by_id = {cid: _mxn_to_vp_dash(node["monthSpend"], mxn_per_vp) for cid, node in nodes.items()}
+        # VP por nodo con la MISMA regla que el panel del cliente y el motor de
+        # comisiones: puntos del catálogo (monthVP) si existen; si no, pesos ÷ tarifa.
+        # Antes usaba solo pesos ÷ tarifa y el Cuadro de Honor decía "19" para
+        # quien su panel marcaba 20 VP.
+        vp_by_id = {
+            cid: float(node["monthVP"]) if node.get("monthVP") is not None
+            else _mxn_to_vp_dash(node["monthSpend"], mxn_per_vp)
+            for cid, node in nodes.items()
+        }
 
         vg_by_id = _aggregate_vg_by_node(nodes, children_by_leader, vp_by_id, max_levels)
 
