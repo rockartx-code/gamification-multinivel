@@ -243,7 +243,8 @@ export class AdminControlService {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
-      maximumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
     }).format(amount);
   }
 
