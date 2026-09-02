@@ -1958,7 +1958,7 @@
                           </ui-button>
                           <div class="text-right text-xs text-gray-600">
                             <div>{{ formatMoney(product.price) }}</div>
-                            <div>Disp. {{ stockQty(currentPosStock.id, product.id) }}</div>
+                            <div>Disp. {{ stockQty(currentPosStock.id, product.id) }}<span *ngIf="product.vpPoints"> · {{ product.vpPoints }} PC</span></div>
                           </div>
                         </div>
                         <div *ngIf="posItems.has(product.id)" class="mt-2 flex items-center gap-2">
