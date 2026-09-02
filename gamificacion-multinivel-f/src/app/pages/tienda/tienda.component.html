@@ -8,8 +8,11 @@
       <ui-button size="lg" variant="ghost" [routerLink]="['/login']" ariaLabel="Entrar">
         <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
       </ui-button>
-      <ui-button size="lg" variant="primary" ariaLabel="Agregar al carrito" (pressed)="addToCart()">
-        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+      <!-- Antes este icono AGREGABA otra unidad del producto destacado: quien lo
+           tocaba para "ir al carrito" acababa con dos frascos (Héctor, Bety). -->
+      <ui-button size="lg" variant="primary" ariaLabel="Ver carrito" (pressed)="goToCart()">
+        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+        <span *ngIf="cartCount > 0" class="ml-1 text-xs font-bold">{{ cartCount }}</span>
       </ui-button>
     </div>
     <div class="hidden items-center gap-3 md:flex">
@@ -21,9 +24,9 @@
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         Beneficios
       </ui-button>
-      <ui-button size="sm" variant="primary" (pressed)="addToCart()">
-        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-        Agregar al carrito
+      <ui-button size="sm" variant="primary" (pressed)="goToCart()">
+        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+        Ver carrito<span *ngIf="cartCount > 0"> ({{ cartCount }})</span>
       </ui-button>
     </div>
   </ui-header>
