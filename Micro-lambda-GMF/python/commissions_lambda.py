@@ -939,13 +939,22 @@ def handle_monthly_stats(month: str) -> dict:
     # Top clientes por número de pedidos
     cust_order_count: dict = {}
     cust_order_total: dict = {}
+    cust_names: dict = {}
     for o in month_orders:
-        cid = str(o.get("customerId", ""))
+        cid = str(o.get("customerId") or "")
+        # Los invitados llegan con customerId 0/None: se agrupan por correo o
+        # nombre para no colapsarlos todos en una fila "0".
+        if not cid or cid == "0":
+            cid = "invitado:" + str(o.get("email") or o.get("customerName") or "")
         if cid:
             cust_order_count[cid] = cust_order_count.get(cid, 0) + 1
-            cust_order_total[cid] = cust_order_total.get(cid, 0) + float(utils._to_decimal(o.get("total", 0)))
+            cust_order_total[cid] = cust_order_total.get(cid, 0) + float(utils._to_decimal(o.get("total") or o.get("netTotal") or 0))
+            cust_names[cid] = o.get("customerName") or cust_names.get(cid) or ""
+    # La pantalla pintaba "1788340136546", "0" y "None": el resumen solo traía
+    # el ID y el frontend esperaba un nombre.
     top_customers = sorted(
-        [{"customerId": k, "orders": cust_order_count[k], "total": cust_order_total[k]} for k in cust_order_count],
+        [{"customerId": k, "name": cust_names.get(k) or ("Invitado" if k.startswith("invitado:") else k),
+          "orders": cust_order_count[k], "count": cust_order_count[k], "total": cust_order_total[k]} for k in cust_order_count],
         key=lambda x: x["orders"], reverse=True
     )[:10]
 
