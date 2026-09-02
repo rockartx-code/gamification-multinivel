@@ -4601,8 +4601,16 @@ export class AdminComponent implements OnInit {
     this.syncSelectedCustomerAccessDraft();
   }
 
+  isCustomerAccessOpen = false;
+
+  get selectedCustomerGrantedCount(): number {
+    return Object.values(this.selectedCustomerPrivilegeDraft ?? {}).filter(Boolean).length;
+  }
+
   private syncSelectedCustomerAccessDraft(): void {
     const selected = this.selectedCustomer;
+    this.selectedCustomerAdminAccess = Boolean(selected?.canAccessAdmin);
+    this.selectedCustomerPrivilegeDraft = { ...(selected?.privileges ?? {}) };
     this.selectedCustomerLeaderId = selected?.leaderId != null ? String(selected.leaderId) : '';
     if (selected?.leaderId != null) {
       const sponsor = this.customers.find((customer) => customer.id === selected.leaderId);

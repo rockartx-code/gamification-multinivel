@@ -16,7 +16,10 @@ for m in re.finditer(r"`\$\{this\.baseUrl\}([^`]+)`", svc):
     p = re.sub(r"\$\{[^}]+\}", "{x}", p)
     patrones.add(p.rstrip("/"))
 def a_regex(p):
-    return re.compile("^" + re.escape(p).replace(r"\{x\}", r"[^/]+") + "$")
+    # `{x}` puede ser un segmento o una query string interpolada al final (`${qs}`): se acepta vacío.
+    return re.compile("^" + re.escape(p).replace(r"\{x\}", r"[^/]*") + "$")
+# `/x/getall` y `/x/getall{x}` (con `${qs}` opcional) son la misma ruta: nos quedamos con la versión sin sufijo.
+patrones = {p for p in patrones if not (p.endswith("{x}") and p[:-3] in patrones)}
 tabla = [(p, a_regex(p)) for p in sorted(patrones)]
 
 # método por patrón (el que use el frontend): lo inferimos del contexto
@@ -27,7 +30,7 @@ for m in re.finditer(r"this\.http\.(get|post|put|patch|delete)<[^>]*>\(\s*`\$\{t
 
 golpes = collections.Counter(); desconocidas = collections.Counter()
 for linea in open(os.path.join(os.path.dirname(__file__), "servidor.log"), encoding="utf-8", errors="replace"):
-    m = re.match(r"\[http\] (\w+) (\S+)", linea)
+    m = re.match(r"\[http\] (\w+) ([^?\s]+)", linea)
     if not m: continue
     metodo, ruta = m.group(1), m.group(2).split("?")[0].rstrip("/")
     if metodo == "OPTIONS" or ruta.startswith("/__sim"): continue

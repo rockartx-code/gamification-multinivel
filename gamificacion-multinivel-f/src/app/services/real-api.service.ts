@@ -275,6 +275,8 @@ export class RealApiService {
       clabeInterbancaria: raw['clabeInterbancaria'] != null ? String(raw['clabeInterbancaria']) : undefined,
       bankInstitution: raw['bankInstitution'] != null ? String(raw['bankInstitution']) : undefined,
       documents: raw['documents'] as AdminCustomer['documents'],
+      canAccessAdmin: Boolean(raw['canAccessAdmin']),
+      privileges: (raw['privileges'] as AdminCustomer['privileges']) ?? {},
       doNotContact: Boolean(raw['doNotContact'] ?? false),
       contactNotes: Array.isArray(raw['contactNotes']) ? (raw['contactNotes'] as AdminCustomer['contactNotes']) : [],
       origin: raw['origin'] != null ? String(raw['origin']) : undefined,

@@ -379,6 +379,8 @@ export interface AdminCustomer {
   commissionsPrevReceiptUrl?: string;
   clabeInterbancaria?: string;
   bankInstitution?: string;
+  canAccessAdmin?: boolean;
+  privileges?: UserPrivileges;
   documents?: CustomerDocument[];
   /** Seguimiento: el cliente pidió no ser contactado (o fue dado de baja). */
   doNotContact?: boolean;

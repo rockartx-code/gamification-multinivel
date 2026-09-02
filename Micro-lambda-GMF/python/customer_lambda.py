@@ -47,6 +47,9 @@ def _format_customer_output(item):
 
     # Documentos del administrador (los que admin liga al cliente)
     out["documents"] = item.get("documents") or []
+    # El panel necesita ver los permisos actuales para editarlos.
+    out["canAccessAdmin"] = bool(item.get("canAccessAdmin"))
+    out["privileges"] = item.get("privileges") or {}
 
     # Documentos propios del cliente (subidos por él mismo)
     out["ownDocuments"] = item.get("ownDocuments") or []

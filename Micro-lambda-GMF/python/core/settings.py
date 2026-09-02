@@ -61,6 +61,8 @@ _ALL_PRIVILEGES = [
     "customer_add",
     "commissions_register_payment",
     "product_add",
+    # Faltaba en el catálogo: _normalize_privileges lo descartaba y ningún empleado podía borrar productos.
+    "product_delete",
     "product_update",
     "product_set_month",
     "stock_create",
