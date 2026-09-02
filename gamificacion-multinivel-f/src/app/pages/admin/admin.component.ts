@@ -3332,6 +3332,12 @@ export class AdminComponent implements OnInit {
     this.shippingDeliveryPlace = '';
     this.shippingDeliveryDate = '';
     this.shippingStockId = order.stockId ?? this.selectedStockId;
+    // Los almacenes solo se cargaban al entrar en Stocks: desde Pedidos el
+    // desplegable "Stock origen" salía vacío y el operador tenía que
+    // adivinar que había que visitar otra sección primero.
+    if (!this.stocks.length) {
+      this.loadStocksAndPosState();
+    }
     this.shippingFallbackProductId = this.products[0]?.id ?? null;
     this.shippingFallbackQty = 1;
     this.shippingError = '';
