@@ -261,6 +261,7 @@ export class RealApiService {
       id: Number(raw['customerId'] ?? raw['id'] ?? 0),
       name: String(raw['name'] ?? ''),
       email: String(raw['email'] ?? ''),
+      phone: raw['phone'] != null && String(raw['phone']).trim() ? String(raw['phone']).trim() : undefined,
       isSuperUser: Boolean(raw['isSuperUser'] ?? false),
       leaderId: raw['leaderId'] != null ? Number(raw['leaderId']) : null,
       level: String(raw['level'] ?? ''),

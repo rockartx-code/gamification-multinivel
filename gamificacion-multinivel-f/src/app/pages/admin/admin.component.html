@@ -498,6 +498,12 @@
                       <div class="text-xs text-gray-600">Cliente</div>
                       <div class="text-lg font-extrabold">{{ customer?.name }}</div>
                       <div class="mt-1 text-xs text-gray-500">{{ customer?.email }}</div>
+                      <!-- Sin el teléfono en la ficha, quien da seguimiento no tenía cómo contactar al cliente. -->
+                      <div *ngIf="customer?.phone" class="mt-1 flex items-center gap-2 text-xs text-gray-600">
+                        <i class="fa-brands fa-whatsapp text-success" aria-hidden="true"></i>
+                        <a class="hover:underline" [href]="'https://wa.me/' + customer!.phone!.replace('+', '').replace(' ', '')" target="_blank" rel="noopener">{{ customer?.phone }}</a>
+                      </div>
+                      <div *ngIf="!customer?.phone" class="mt-1 text-micro text-gray-400">Sin teléfono registrado</div>
                     </div>
                     <div class="text-right">
                       <div class="text-xs text-gray-600">Descuento</div>

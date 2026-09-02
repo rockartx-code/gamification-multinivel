@@ -351,6 +351,9 @@ export interface AdminCustomer {
   id: number;
   name: string;
   email: string;
+  /** Teléfono de contacto: el backend lo guarda desde el alta, pero el
+   *  back office no lo mostraba y nadie podía escribirle al cliente. */
+  phone?: string;
   isSuperUser?: boolean;
   leaderId?: number | null;
   level: string;
