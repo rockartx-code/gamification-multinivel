@@ -87,5 +87,11 @@ export const routes: Routes = [
   {
     path: 'landing',
     component: LandingComponent
+  },
+  {
+    // Paquete F · coach-seguimiento: "Seguimiento de hoy" (lista priorizada + WhatsApp con nota).
+    path: 'admin/seguimiento',
+    loadComponent: () => import('./pages/admin/seguimiento/admin-seguimiento.component').then((m) => m.AdminSeguimientoComponent),
+    canActivate: [adminGuard]
   }
 ];

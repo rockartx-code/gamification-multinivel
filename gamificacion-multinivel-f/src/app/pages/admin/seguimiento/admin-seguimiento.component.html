@@ -1,0 +1,289 @@
+<section class="antialiased min-h-screen">
+  <ui-header variant="admin" containerClass="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+    <div header-left class="hidden sm:block text-sm text-gray-600">
+      Seguimiento de hoy<span *ngIf="coachName"> · {{ coachName }}</span>
+    </div>
+    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-arrow-left" routerLink="/admin">Volver al panel</ui-button>
+  </ui-header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 space-y-4">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-extrabold text-main">Seguimiento de hoy</h1>
+        <p class="mt-1 text-sm text-gray-600">
+          A quién escribirle hoy, con qué mensaje, y la nota queda sola. Primero las urgentes; después quienes llevan más días sin compra y sin contacto.
+        </p>
+      </div>
+      <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-rotate" [disabled]="isLoading" (pressed)="load()">
+        {{ isLoading ? 'Cargando…' : 'Actualizar' }}
+      </ui-button>
+    </div>
+
+    <!-- Resumen por situación -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <button type="button" class="rounded-2xl border p-3 text-left transition hover:border-gold-35"
+        [class.border-red-300]="situation === 'clabe_pendiente'" [class.border-olive-30]="situation !== 'clabe_pendiente'"
+        (click)="setSituation(situation === 'clabe_pendiente' ? '' : 'clabe_pendiente')" [attr.title]="situationHelp('clabe_pendiente')">
+        <div class="text-mini text-gray-600">CLABE pendiente</div>
+        <div class="mt-1 text-2xl font-extrabold text-red-700">{{ count('clabe_pendiente') }}</div>
+        <div class="text-micro text-gray-500">Comisión lista, sin dónde depositar</div>
+      </button>
+      <button type="button" class="rounded-2xl border p-3 text-left transition hover:border-gold-35"
+        [class.border-red-300]="situation === 'pedido_tardio'" [class.border-olive-30]="situation !== 'pedido_tardio'"
+        (click)="setSituation(situation === 'pedido_tardio' ? '' : 'pedido_tardio')" [attr.title]="situationHelp('pedido_tardio')">
+        <div class="text-mini text-gray-600">Pedido tardío</div>
+        <div class="mt-1 text-2xl font-extrabold text-red-700">{{ count('pedido_tardio') }}</div>
+        <div class="text-micro text-gray-500">Pagado sin despachar o enviado sin entregar</div>
+      </button>
+      <button type="button" class="rounded-2xl border p-3 text-left transition hover:border-gold-35"
+        [class.border-gold-35]="situation === 'bienvenida'" [class.border-olive-30]="situation !== 'bienvenida'"
+        (click)="setSituation(situation === 'bienvenida' ? '' : 'bienvenida')" [attr.title]="situationHelp('bienvenida')">
+        <div class="text-mini text-gray-600">Bienvenida</div>
+        <div class="mt-1 text-2xl font-extrabold text-main">{{ count('bienvenida') }}</div>
+        <div class="text-micro text-gray-500">Recién registradas, sin compra</div>
+      </button>
+      <button type="button" class="rounded-2xl border p-3 text-left transition hover:border-gold-35"
+        [class.border-gold-35]="situation === 'fria'" [class.border-olive-30]="situation !== 'fria'"
+        (click)="setSituation(situation === 'fria' ? '' : 'fria')" [attr.title]="situationHelp('fria')">
+        <div class="text-mini text-gray-600">Frías</div>
+        <div class="mt-1 text-2xl font-extrabold text-main">{{ count('fria') }}</div>
+        <div class="text-micro text-gray-500">{{ thresholds.coldDays }}+ días sin comprar</div>
+      </button>
+      <div class="rounded-2xl border border-olive-30 surface-soft p-3">
+        <div class="text-mini text-gray-600">Invitados sin ficha</div>
+        <div class="mt-1 text-2xl font-extrabold text-main">{{ guestCount }}</div>
+        <div class="text-micro text-gray-500">Compraron sin cuenta; se les puede crear ficha</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <div class="flex flex-wrap items-center gap-2">
+          <ui-button size="sm" [variant]="scope === 'mine' ? 'primary' : 'ghost'" iconClass="fa-solid fa-user-check" (pressed)="setScope('mine')">Mi cartera</ui-button>
+          <ui-button size="sm" [variant]="scope === 'all' ? 'primary' : 'ghost'" iconClass="fa-solid fa-users" (pressed)="setScope('all')">Todas</ui-button>
+        </div>
+        <div class="flex-1">
+          <ui-form-field kind="select" label="Situación" [options]="situationOptions" [ngModel]="situation" (ngModelChange)="setSituation($event)"></ui-form-field>
+        </div>
+        <div class="flex-1">
+          <ui-form-field type="text" label="Buscar en la lista" placeholder="Nombre, correo, teléfono, patrocinadora o folio"
+            leadingIconClass="fa-solid fa-magnifying-glass" [ngModel]="search" (ngModelChange)="onSearch($event)"></ui-form-field>
+        </div>
+      </div>
+      <div class="mt-2 text-xs text-gray-600">
+        <span>"Mi cartera": las personas asignadas a ti y las que nadie tiene asignadas. "Todas": también las de otras ejecutivas.</span>
+        <span *ngIf="excludedText" class="block mt-1 text-gray-500">{{ excludedText }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="loadError" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ loadError }}</div>
+
+    <!-- Lista -->
+    <div class="overflow-hidden rounded-2xl border border-olive-30 surface-soft">
+      <div class="flex items-center justify-between bg-ivory-80 px-4 py-3 text-sm font-semibold text-main">
+        <span>{{ filteredRows.length }} {{ filteredRows.length === 1 ? 'persona' : 'personas' }}<span *ngIf="date" class="font-normal text-gray-600"> · {{ date | date:'dd/MM/yyyy' }}</span></span>
+        <span class="text-xs font-normal text-gray-600" *ngIf="search && filteredRows.length !== rows.length">de {{ rows.length }} en la lista</span>
+      </div>
+
+      <div *ngIf="!isLoading && !filteredRows.length" class="p-6 text-center text-sm text-gray-600">
+        <ng-container *ngIf="rows.length">Nadie coincide con "{{ search }}".</ng-container>
+        <ng-container *ngIf="!rows.length && !loadError">Nadie necesita contacto hoy con estos filtros. Prueba "Todas" o cambia la situación.</ng-container>
+      </div>
+      <div *ngIf="isLoading && !rows.length" class="p-6 text-center text-sm text-gray-600">Cargando la lista…</div>
+
+      <ui-data-table [rows]="filteredRows">
+        <!-- Móvil: una tarjeta por persona -->
+        <ng-template #mobileRow let-row>
+          <div class="p-4 space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="text-sm font-semibold text-main">{{ row.name }}</div>
+                <div class="text-micro text-gray-500">{{ modeLabel(row) }}<span *ngIf="row.origin"> · {{ originLabel(row.origin) }}</span></div>
+              </div>
+              <ui-badge size="mini" [tone]="situationTone(row.situation)" [attr.title]="situationHelp(row.situation)">{{ row.situationLabel }}</ui-badge>
+            </div>
+            <div class="grid gap-1 text-xs text-gray-600">
+              <div>Teléfono: <a *ngIf="row.whatsappUrl" class="font-semibold text-accent" [href]="row.whatsappUrl" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> {{ row.phone }}</a><span *ngIf="!row.whatsappUrl" class="text-main">{{ row.phone || 'sin teléfono' }}</span></div>
+              <div>Patrocinadora: <span class="text-main">{{ row.sponsorName || 'FindingU (sin patrocinadora)' }}</span></div>
+              <div>Ejecutiva: <span class="text-main">{{ row.executiveName || 'sin asignar' }}</span></div>
+              <div>Último pedido:
+                <span class="text-main" *ngIf="row.lastOrder">{{ row.lastOrder.id }} · {{ row.lastOrder.createdAt | date:'dd/MM/yyyy' }} · {{ formatMoney(row.lastOrder.total) }}</span>
+                <ui-status-badge *ngIf="row.lastOrder" [status]="row.lastOrder.status" [showIcon]="false"></ui-status-badge>
+                <span class="text-main" *ngIf="!row.lastOrder">ninguno</span>
+              </div>
+              <div>Sin compra: <span class="text-main">{{ daysLabel(row.daysSinceLastPurchase) }}</span> · Sin contacto: <span class="text-main">{{ daysLabel(row.daysSinceLastContact) }}</span></div>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <ui-button size="sm" variant="primary" iconClass="fa-brands fa-whatsapp" [disabled]="!row.whatsappUrl && !row.email" (pressed)="openWrite(row)">Escribir</ui-button>
+              <ui-button size="sm" variant="ghost" [iconClass]="row.isGuest ? 'fa-solid fa-user-plus' : 'fa-solid fa-id-card'" (pressed)="openFicha(row)">{{ row.isGuest ? 'Crear ficha' : 'Ficha' }}</ui-button>
+            </div>
+            <div *ngIf="writeDisabledReason(row)" class="text-micro text-gray-500">{{ writeDisabledReason(row) }}: se puede anotar una llamada o un correo.</div>
+          </div>
+        </ng-template>
+
+        <!-- Escritorio -->
+        <ng-template #desktopHeader>
+          <div class="grid grid-cols-[1.4fr_1fr_1fr_1fr_1.3fr_.6fr_.6fr_.9fr_1.1fr] gap-2 bg-ivory-80 px-4 py-2 text-mini font-semibold uppercase text-gray-600">
+            <div>Persona</div>
+            <div>Teléfono</div>
+            <div>Patrocinadora</div>
+            <div>Ejecutiva</div>
+            <div>Último pedido</div>
+            <div title="Días desde la última compra pagada">Sin compra</div>
+            <div title="Días desde la última nota de contacto">Sin contacto</div>
+            <div>Situación</div>
+            <div class="text-right">Acciones</div>
+          </div>
+        </ng-template>
+        <ng-template #desktopRow let-row>
+          <div class="grid grid-cols-[1.4fr_1fr_1fr_1fr_1.3fr_.6fr_.6fr_.9fr_1.1fr] items-center gap-2 px-4 py-3 text-xs" [class.bg-red-50]="row.urgent">
+            <div>
+              <div class="text-sm font-semibold text-main">{{ row.name }}</div>
+              <div class="text-micro text-gray-500">{{ modeLabel(row) }}<span *ngIf="row.origin"> · {{ originLabel(row.origin) }}</span></div>
+              <div class="text-micro text-gray-500" *ngIf="row.contactPreference">Prefiere: {{ preferenceLabel(row.contactPreference) }}</div>
+            </div>
+            <div>
+              <a *ngIf="row.whatsappUrl" class="font-semibold text-accent hover:underline" [href]="row.whatsappUrl" target="_blank" rel="noopener" title="Abrir WhatsApp sin mensaje (no deja nota)"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> {{ row.phone }}</a>
+              <span *ngIf="!row.whatsappUrl" class="text-gray-500" [attr.title]="writeDisabledReason(row)">{{ row.phone || 'Sin teléfono' }}</span>
+            </div>
+            <div class="text-main">{{ row.sponsorName || 'FindingU' }}</div>
+            <div class="text-main">{{ row.executiveName || '—' }}</div>
+            <div>
+              <ng-container *ngIf="row.lastOrder; else sinPedido">
+                <div class="text-main font-semibold">{{ row.lastOrder.id }}</div>
+                <div class="text-gray-600">{{ row.lastOrder.createdAt | date:'dd/MM/yyyy' }} · {{ formatMoney(row.lastOrder.total) }}</div>
+                <ui-status-badge [status]="row.lastOrder.status" [showIcon]="false"></ui-status-badge>
+              </ng-container>
+              <ng-template #sinPedido><span class="text-gray-500">Ninguno</span></ng-template>
+            </div>
+            <div class="text-main" [class.text-red-700]="row.daysSinceLastPurchase === null || row.daysSinceLastPurchase >= thresholds.coldDays">{{ daysLabel(row.daysSinceLastPurchase) }}</div>
+            <div class="text-main">{{ daysLabel(row.daysSinceLastContact) }}</div>
+            <div><ui-badge size="mini" [tone]="situationTone(row.situation)" [attr.title]="situationHelp(row.situation)">{{ row.situationLabel }}</ui-badge></div>
+            <div class="flex flex-col items-end gap-1">
+              <div class="flex gap-1">
+                <ui-button size="sm" variant="primary" iconClass="fa-brands fa-whatsapp" [disabled]="!row.whatsappUrl && !row.email" [attr.title]="writeDisabledReason(row)" (pressed)="openWrite(row)">Escribir</ui-button>
+                <ui-button size="sm" variant="ghost" [iconClass]="row.isGuest ? 'fa-solid fa-user-plus' : 'fa-solid fa-id-card'" (pressed)="openFicha(row)">{{ row.isGuest ? 'Crear ficha' : 'Ficha' }}</ui-button>
+              </div>
+              <div *ngIf="writeDisabledReason(row)" class="text-micro text-gray-500 text-right">{{ writeDisabledReason(row) }}</div>
+            </div>
+          </div>
+        </ng-template>
+      </ui-data-table>
+    </div>
+  </main>
+
+  <!-- Snackbar -->
+  <div *ngIf="snackbar.visible"
+    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-semibold elev-float transition-all max-w-[92vw]"
+    [style.background]="snackbar.tone === 'success' ? 'var(--color-primary)' : '#dc2626'"
+    [style.color]="snackbar.tone === 'success' ? '#1b1b1b' : '#fff'"
+    role="status" aria-live="polite">
+    {{ snackbar.message }}
+  </div>
+</section>
+
+<!-- Modal: escribir -->
+<ui-modal [isOpen]="!!writeRow" maxWidthClass="max-w-xl" contentClass="p-6" ariaLabel="Escribir a la persona" (closed)="closeWrite()">
+  <ng-container *ngIf="writeRow as row">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-extrabold text-main">Escribir a {{ row.name }}</h2>
+        <p class="mt-1 text-xs text-gray-600">
+          {{ modeLabel(row) }} · {{ row.situationLabel }}<span *ngIf="row.phone"> · {{ row.phone }}</span><span *ngIf="row.sponsorName"> · Patrocinadora: {{ row.sponsorName }}</span>
+        </p>
+        <p class="mt-1 text-xs text-gray-500">{{ situationHelp(row.situation) }}</p>
+      </div>
+      <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar" [disabled]="isSavingContact" (pressed)="closeWrite()"></ui-button>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <ui-form-field kind="select" label="Por dónde" [options]="channelOptions" [ngModel]="writeChannel" (ngModelChange)="writeChannel = $event"
+        helpText="Con WhatsApp se abre la conversación con el mensaje ya escrito. Llamada y correo solo dejan la nota."></ui-form-field>
+      <ui-form-field kind="select" label="Plantilla" [options]="templateOptions" [ngModel]="writeTemplateKey" (ngModelChange)="changeTemplate($event)"
+        helpText="Se sugiere la de su situación; puedes cambiarla o escribir libre."></ui-form-field>
+    </div>
+    <div class="mt-3">
+      <ui-form-field kind="textarea" [rows]="6" label="Mensaje" placeholder="Escribe aquí lo que le vas a decir"
+        [ngModel]="writeMessage" (ngModelChange)="writeMessage = $event"
+        helpText="Puedes editarlo. Este texto es el que queda en la bitácora de la ficha, con la hora y la plantilla usada."></ui-form-field>
+    </div>
+
+    <div *ngIf="writeChannel === 'whatsapp' && !row.whatsappUrl" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      {{ writeDisabledReason(row) }}. Elige "Llamada" o "Correo" para dejar la nota, o corrige el teléfono en la ficha de Clientes.
+    </div>
+
+    <div *ngIf="blockedLink" class="mt-3 rounded-2xl border border-gold-35 bg-ivory-70 px-3 py-2 text-xs text-main">
+      <div class="font-semibold">El navegador no dejó abrir WhatsApp. La nota ya quedó guardada; abre este enlace a mano:</div>
+      <a class="mt-1 block break-all text-accent underline" [href]="blockedLink" target="_blank" rel="noopener">{{ blockedLink }}</a>
+      <div class="mt-2 flex gap-2">
+        <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-copy" (pressed)="copyBlockedLink()">{{ linkCopied ? 'Copiado' : 'Copiar enlace' }}</ui-button>
+        <ui-button size="sm" variant="ghost" (pressed)="closeWrite()">Cerrar</ui-button>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center justify-end gap-2" *ngIf="!blockedLink">
+      <ui-button size="sm" variant="ghost" [disabled]="isSavingContact" (pressed)="closeWrite()">Cancelar</ui-button>
+      <ui-button size="sm" variant="primary" [iconClass]="writeChannel === 'whatsapp' ? 'fa-brands fa-whatsapp' : 'fa-solid fa-floppy-disk'" [disabled]="!writeCanSend" (pressed)="sendContact()">
+        {{ isSavingContact ? 'Guardando…' : writeButtonLabel }}
+      </ui-button>
+    </div>
+    <p class="mt-2 text-micro text-gray-500" *ngIf="!blockedLink">
+      El mensaje lo mandas tú desde tu WhatsApp; aquí solo se prellena y se anota "{{ channelLabel(writeChannel) }}<ng-container *ngIf="writeTemplateKey"> · plantilla {{ templates[writeTemplateKey]?.title | lowercase }}</ng-container>" con la hora en su ficha.
+    </p>
+  </ng-container>
+</ui-modal>
+
+<!-- Modal: ficha -->
+<ui-modal [isOpen]="!!fichaRow" maxWidthClass="max-w-lg" contentClass="p-6" ariaLabel="Ficha de seguimiento" (closed)="closeFicha()">
+  <ng-container *ngIf="fichaRow as row">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-extrabold text-main">Ficha de {{ row.name }}</h2>
+        <p class="mt-1 text-xs text-gray-600">{{ modeLabel(row) }} · Origen: {{ originLabel(row.origin) }} · Patrocinadora: {{ row.sponsorName || 'FindingU (sin patrocinadora)' }}</p>
+      </div>
+      <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar" [disabled]="isSavingFicha" (pressed)="closeFicha()"></ui-button>
+    </div>
+
+    <div class="mt-4 grid gap-3 text-xs text-gray-600 sm:grid-cols-2">
+      <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">Registro: <span class="text-main">{{ row.registeredAt ? (row.registeredAt | date:'dd/MM/yyyy') : '—' }}</span></div>
+      <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">Último contacto: <span class="text-main">{{ row.lastContactAt ? (row.lastContactAt | date:'dd/MM/yyyy HH:mm') : 'nunca' }}</span></div>
+    </div>
+
+    <div class="mt-4 grid gap-3">
+      <ui-form-field kind="select" label="Preferencia de contacto" [options]="preferenceOptions" [ngModel]="fichaPreference" (ngModelChange)="fichaPreference = $event"
+        helpText="Por dónde pidió que le escriban. No bloquea nada; es para que todo el equipo lo respete."></ui-form-field>
+      <ui-form-field kind="select" label="Ejecutiva asignada" [options]="executiveOptions" [ngModel]="fichaExecutiveId" (ngModelChange)="fichaExecutiveId = $event"
+        helpText="Quien la atiende. Sin asignar, queda en la cartera FindingU y la ve la coach. Si no tiene patrocinadora, en su panel aparece esta ejecutiva como su coach."></ui-form-field>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <ui-button size="sm" variant="ghost" [disabled]="isSavingFicha" (pressed)="closeFicha()">Cancelar</ui-button>
+      <ui-button size="sm" variant="primary" iconClass="fa-solid fa-floppy-disk" [disabled]="!fichaHasChanges || isSavingFicha" (pressed)="saveFicha()">
+        {{ isSavingFicha ? 'Guardando…' : 'Guardar ficha' }}
+      </ui-button>
+    </div>
+    <p class="mt-2 text-micro text-gray-500" *ngIf="!fichaHasChanges">El botón se activa cuando cambias algo. Las notas y "no contactar" se manejan en Clientes → Seguimiento.</p>
+  </ng-container>
+</ui-modal>
+
+<!-- Modal: crear ficha de invitado -->
+<ui-modal [isOpen]="!!guestRow" maxWidthClass="max-w-md" contentClass="p-6" ariaLabel="Crear ficha de invitado" (closed)="closeGuest()">
+  <ng-container *ngIf="guestRow as row">
+    <h2 class="text-lg font-extrabold text-main">Crear ficha para {{ row.name }}</h2>
+    <p class="mt-2 text-sm text-gray-600">
+      Compró {{ row.orderCount || 1 }} {{ (row.orderCount || 1) === 1 ? 'vez' : 'veces' }} como invitado con el correo <span class="font-semibold text-main">{{ row.email }}</span>.
+    </p>
+    <ul class="mt-3 list-disc space-y-1 pl-5 text-xs text-gray-600">
+      <li>Se crea su ficha de cliente (modo cliente, origen "compró como invitado") y sus pedidos quedan ligados a ella.</li>
+      <li>No se le crea acceso ni se le manda ningún correo: si algún día se registra con este correo, su cuenta hereda la ficha.</li>
+      <li>Las notas que ya le tomaste como invitado pasan a la ficha.</li>
+    </ul>
+    <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <ui-button size="sm" variant="ghost" [disabled]="isCreatingGuest" (pressed)="closeGuest()">Cancelar</ui-button>
+      <ui-button size="sm" variant="primary" iconClass="fa-solid fa-user-plus" [disabled]="isCreatingGuest" (pressed)="createGuestProfile()">
+        {{ isCreatingGuest ? 'Creando…' : 'Crear ficha' }}
+      </ui-button>
+    </div>
+  </ng-container>
+</ui-modal>
