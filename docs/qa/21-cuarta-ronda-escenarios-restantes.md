@@ -46,9 +46,18 @@ Verónica le pide a Bety que se active en diciembre; Bety además quiere saber p
 - El endpoint mensual devolvía 19.6 VP (pesos ÷ 50) mientras la activación usa 18 (PC netos). Corregido: un solo valor.
 - Su panel muestra a Lupita "Inactiva" y el aviso de compresión dinámica ya existente.
 
-### 2.5 Ola en curso
+### 2.5 Cupón con mínimo y tope, y compra bajo la patrocinadora reasignada (Patricia, 12-dic, móvil)
 
-_(Patricia: cupón `DIC50` con mínimo y tope, compra bajo la patrocinadora reasignada.)_
+Patricia fue reasignada de Marcela a Verónica en noviembre. Quiere usar `DIC50` (mínimo $1,000, un solo uso) y compra colágeno y un Naplus para su sobrina.
+
+- **Bug**: desde el celular no existía dónde escribir el cupón: el bloque solo estaba en el resumen de escritorio y el cajón "Ver resumen" no lo tenía. Pagó dos pedidos sin cupón ($700 y $280). Corregido: cupón, VP del pedido y aviso de activación también en el resumen móvil.
+- Comisiones tras el cambio de patrocinador, verificadas: Verónica recibe $70 y $28 pendientes (G1) y Marcela no aparece en ningún lado. El panel muestra a Verónica como patrocinadora con su WhatsApp.
+- Quedó a 1 VP de activarse (19 PC sin descuento). El "Recoger en sucursal" le mostró Bodega Central (CDMX); la API devuelve también Tienda Del Valle, así que probablemente no desplazó la lista en el móvil; anotado sin confirmar.
+- El primer código de recuperación de contraseña "inválido": pidió dos y el segundo invalida al primero (diseño; Claudia vivió lo mismo). Propuesta en §4.
+
+### 2.6 Ola en curso
+
+_(Bety y Patricia completan su activación con un Naplus; después Lupita compra para probar la 2ª generación de Verónica.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -62,6 +71,7 @@ _(Patricia: cupón `DIC50` con mínimo y tope, compra bajo la patrocinadora reas
 | 6 | Media | Ledger | Las comisiones anuladas se borraban del mes: "Sin movimientos" donde hubo una comisión avisada | Filas "Anulada" con estado previo, fecha y motivo; fuera de los totales |
 | 7 | Baja | Comisiones | El endpoint mensual derivaba VP de pesos ÷ tarifa; la activación usa PC netos | Un solo cálculo |
 | 8 | Baja | Carrito | Nadie avisaba que los VP netos de la compra no alcanzan la activación | Aviso "llegas a X de 20 VP" sin cupón |
+| 9 | Media | Carrito móvil | No había dónde escribir el cupón desde el celular | Cupón, VP y aviso de activación en el resumen móvil |
 
 ## 4. Hallazgos de negocio
 
@@ -70,7 +80,8 @@ _(Patricia: cupón `DIC50` con mínimo y tope, compra bajo la patrocinadora reas
 3. Las campañas no tienen vigencia. Propuesta: fecha de inicio y fin, activación automática y aviso al vencer.
 5. El catálogo anuncia PC brutos y la activación cuenta VP netos (con descuento): comprar "20 PC" deja 18 VP. Propuesta: o la activación cuenta PC brutos (más simple de explicar) o el catálogo muestra "VP con tu descuento actual".
 6. El mínimo de envío gratis se mide sobre el total con descuento: $1,090 de catálogo pagan envío. Propuesta: medirlo sobre el subtotal, o decirlo en el carrito ("te faltan $19 después del descuento").
-4. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
+7. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
+8. Los códigos de recuperación se invalidan entre sí: quien pide dos (por impaciencia) ve "inválido o expirado" con el primero. Propuesta: aceptar el último código y decir en el correo "usa el código más reciente".
 
 ## 5. Pendiente
 
