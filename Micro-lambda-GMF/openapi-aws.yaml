@@ -2341,6 +2341,154 @@ paths:
     options:
       <<: *cors-options
 
+  # ════════════════════════════════════════════════════════════
+  # ── Paquete D · almacén, despacho y paquetería ──
+  # Rutas atendidas por inventory_lambda (despacho_handlers.atender).
+  # ════════════════════════════════════════════════════════════
+  /inventory/despacho/pendientes:
+    get:
+      summary: "Pedidos pagados a domicilio listos para despachar y enviados sin entrega"
+      description: "Privilegio: order_mark_shipped. Query: stockId (informativo)."
+      operationId: despachoPendientes
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{orders[], staleShipped[], carrierIntegration}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/despacho/surtido:
+    post:
+      summary: "Lista de surtido consolidada por producto contra la bodega, con semáforo"
+      description: "Privilegio: order_mark_shipped. Body: {stockId, orderIds[]}. 400 sin pedidos; 404 bodega."
+      operationId: despachoSurtido
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{stockId, canDispatch, lines[], reasons[], blockedOrders[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/despacho/enviar:
+    post:
+      summary: "Despacho en bloque: marca como enviados con guía capturada, CSV o generada"
+      description: "Privilegio: order_mark_shipped. Body: {stockId, shipments[], csv?, generateLabels?}. 409 STOCK_SHORT si el surtido no alcanza."
+      operationId: despachoEnviar
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{batchId, shipped[], failed[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/despacho/preferencias:
+    get:
+      summary: "Bodega por defecto del empleado con sesión"
+      description: "Sesión de empleado. 401 sin sesión."
+      operationId: despachoPreferenciasGet
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{defaultStockId, stockName}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    put:
+      summary: "Guarda la bodega por defecto del empleado"
+      description: "Sesión de empleado. Body: {defaultStockId}. 404 bodega."
+      operationId: despachoPreferenciasPut
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{defaultStockId, stockName}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/envios/rastrear:
+    post:
+      summary: "Tarea programable: consulta la paquetería y marca entregados con fecha y firma"
+      description: "Privilegio: order_mark_delivered o token de superadmin. Body: {orderIds?, dryRun?}. Idempotente por día."
+      operationId: enviosRastrear
+      tags: [Shipping]
+      responses:
+        "200":
+          description: "{checked, delivered[], inTransit[], errors[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/envios/cerrar:
+    post:
+      summary: "Tarea programable: correo '¿te llegó?' a los askDays y cierre automático a los autoCloseDays"
+      description: "Privilegio: order_mark_delivered o token de superadmin. Body: {dryRun?}. Idempotente por día."
+      operationId: enviosCerrar
+      tags: [Shipping]
+      responses:
+        "200":
+          description: "{asked[], closed[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/envios/{orderId}/confirmar-entrega:
+    get:
+      summary: "Enlace del correo '¿te llegó?': el cliente confirma la entrega (página HTML)"
+      description: "Pública con ?token= de un solo uso. 401 token inválido."
+      operationId: enviosConfirmarEntregaGet
+      tags: [Shipping]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Página de confirmación"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Confirmación de entrega por el cliente (JSON)"
+      description: "Pública con ?token= de un solo uso. 401 token inválido."
+      operationId: enviosConfirmarEntregaPost
+      tags: [Shipping]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "{status: delivered}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/turno/resumen:
+    get:
+      summary: "Resumen automático de turno por empleado y fecha, calculado desde la bitácora"
+      description: "Privilegio: access_screen_stats, o el propio usuario. Query: userId, date=YYYY-MM-DD."
+      operationId: turnoResumen
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{user, date, dispatched[], delivered[], transfers, entries[], damages[], pos, counters, text}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

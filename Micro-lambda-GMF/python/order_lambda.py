@@ -666,6 +666,15 @@ def handle_update_status(order_id, body, headers):
                 extra_updates["cashSaleId"] = branch_sale_id
     if new_status == "delivered":
         extra_updates["deliveredAt"] = now
+        # Paquete D: la paquetería, el cliente ("¿te llegó?") o el cierre
+        # automático entregan con fecha, firma y origen propios. Solo un actor
+        # del back office puede fijarlos; un cliente no puede "firmar" por otro.
+        if actor.get("role") in ("admin", "employee"):
+            if body.get("deliveredAt"):
+                extra_updates["deliveredAt"] = str(body["deliveredAt"]).strip()
+            if body.get("deliverySignedBy"):
+                extra_updates["deliverySignedBy"] = str(body["deliverySignedBy"]).strip()[:200]
+            extra_updates["deliveredBy"] = str(body.get("deliveredBy") or actor_user_id or "admin").strip()[:80]
         if is_pickup_order and not order.get("pickupStockDeductedAt"):
             deltas = {}
             for line in order.get("items") or []:
@@ -697,6 +706,14 @@ def handle_update_status(order_id, body, headers):
             extra_updates["rejectionReason"] = rejection_reason
         extra_updates["rejectedAt"] = now
     if new_status == "shipped":
+        # Paquete D: quién y cuándo despachó; el resumen de turno y el cierre
+        # automático a N días cuentan desde aquí.
+        extra_updates["shippedAt"] = order.get("shippedAt") or now
+        extra_updates["shippedBy"] = str(actor_user_id or body.get("attendantUserId") or "system")
+        if body.get("labelUrl"):
+            extra_updates["labelUrl"] = str(body["labelUrl"]).strip()
+        if body.get("dispatchBatchId"):
+            extra_updates["dispatchBatchId"] = str(body["dispatchBatchId"]).strip()
         if body.get("shippingType"):
             extra_updates["shippingType"] = body["shippingType"]
         if body.get("trackingNumber"):

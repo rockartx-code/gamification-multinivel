@@ -142,6 +142,18 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         lead = ("Como el pago ya estaba confirmado, te reembolsaremos el importe completo y te avisaremos cuando salga."
                 if datos.get("pendingRefund") else "No se hizo ningún cargo. Si fue un error, puedes volver a comprar cuando quieras.")
         extra = ""
+    elif evento == "delivery_check":
+        # Paquete D: a los N días sin confirmación de entrega se le pregunta al
+        # comprador. "Sí, llegó" marca el pedido entregado a su nombre; "Aún no"
+        # abre un correo a soporte con el folio.
+        asunto = f"¿Te llegó tu pedido {oid}?"
+        titulo, icono = "¿Ya recibiste tu paquete?", "📬"
+        lead = (f"Lo enviamos por {paqueteria}{(' con la guía ' + guia) if guia else ''} y no tenemos confirmación de entrega. "
+                "Dinos si ya lo tienes: así cerramos tu pedido y liberamos las comisiones de tu equipo.")
+        confirmar = datos.get("confirmUrl") or url
+        soporte = datos.get("supportUrl") or f"mailto:info@findingu.com.mx?subject=Mi pedido {oid} no ha llegado"
+        extra = (f'<p style="margin:16px 0 0"><a class="btn" href="{confirmar}">Sí, ya llegó</a></p>'
+                 f'<p style="margin:12px 0 0"><a href="{soporte}">Aún no llega, avisar a soporte</a></p>')
     else:
         return None
 
@@ -157,6 +169,8 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     <a class="btn" href="{url}">Ver mi pedido</a>
     """
     texto = f"{titulo}\n\nHola {nombre}. " + lead.replace("<strong>", "").replace("</strong>", "") + f"\n\nPedido {oid}. Seguimiento: {url}\n"
+    if evento == "delivery_check":
+        texto += f"\nSí, ya llegó: {datos.get('confirmUrl') or url}\nAún no llega: {datos.get('supportUrl') or ''}\n"
     return asunto, texto, _correo._email_shell(cuerpo)
 
 
