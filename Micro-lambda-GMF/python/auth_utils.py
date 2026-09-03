@@ -1,4 +1,5 @@
 import random
+import secrets
 import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
@@ -68,7 +69,7 @@ def _create_email_confirmation(email: str, customer_id) -> str:
     return token
 
 
-def _build_password_recovery_email(otp: str) -> tuple:
+def _build_password_recovery_email(otp: str, minutos: int = 15) -> tuple:
     body = f"""
     <div class="icon">🔑</div>
     <h1 class="title">¿Olvidaste tu contraseña?</h1>
@@ -77,14 +78,95 @@ def _build_password_recovery_email(otp: str) -> tuple:
 
     <div class="otp-box">{otp}</div>
 
-    <p style="font-size:13px;color:#999;margin-top:8px;">El código expira en 15 minutos.</p>
+    <p style="font-size:13px;color:#999;margin-top:8px;">El código expira en {minutos} minutos.</p>
+    <p style="font-size:13px;color:#636e72;margin-top:12px;">
+      Si pediste varios códigos, usa el más reciente; los anteriores dejan de valer en cuanto uses uno o pasen {minutos} minutos.
+    </p>
     <p style="font-size:13px;color:#999;margin-top:12px;">
       Si no solicitaste este cambio puedes ignorar este correo.
     </p>
     """
     html = _email_shell(body)
-    text = f"Tu código de recuperación Finding'U es: {otp}. Expira en 15 minutos."
+    text = (f"Tu código de recuperación Finding'U es: {otp}. Expira en {minutos} minutos. "
+            "Si pediste varios códigos, usa el más reciente; los anteriores dejan de valer en cuanto uses uno "
+            f"o pasen {minutos} minutos.")
     return "Recupera tu contraseña — Finding'U", text, html
+
+
+def _build_login_link_email(name: str, url: str, minutos: int) -> tuple:
+    """Enlace de acceso de un solo uso: quien no recuerda su contraseña entra desde el correo."""
+    body = f"""
+    <div class="icon">🔗</div>
+    <h1 class="title">Tu enlace para entrar</h1>
+    <p class="lead">Hola <strong>{name}</strong>, toca el botón y entras a tu panel sin escribir contraseña.</p>
+    <a href="{url}" class="btn">Entrar a Finding&rsquo;U &rarr;</a>
+    <p style="font-size:13px;color:#999;margin-top:16px;">El enlace sirve una sola vez y caduca en {minutos} minutos.</p>
+    <p style="font-size:13px;color:#999;margin-top:12px;">Si no lo pediste, ignora este correo: nadie puede entrar sin él.</p>
+    """
+    html = _email_shell(body)
+    text = f"Hola {name}, entra a Finding'U con este enlace (sirve una vez, caduca en {minutos} minutos): {url}"
+    return "Tu enlace para entrar a Finding'U", text, html
+
+
+def _cfg_auth() -> dict:
+    return utils._load_app_config().get("auth") or {}
+
+
+def _minutos_codigo() -> int:
+    return int(utils._to_decimal(_cfg_auth().get("loginLinkMinutes") or 15))
+
+
+def _ttl_sesion(remember_me: bool) -> int:
+    """30 días con "Recordarme"; sin marcarlo, la sesión corta de config (24 h)."""
+    if remember_me:
+        return int(utils.SESSION_TTL_SECONDS)
+    corta = int(utils._to_decimal(_cfg_auth().get("sessionShortSeconds") or 86400))
+    return min(corta, int(utils.SESSION_TTL_SECONDS))
+
+
+def _remember_me(body: dict) -> bool:
+    """La casilla viene marcada por omisión: solo un `false` explícito la apaga."""
+    valor = body.get("rememberMe", True)
+    if isinstance(valor, str):
+        return valor.strip().lower() not in ("false", "0", "no", "")
+    return bool(valor)
+
+
+def _abrir_sesion(auth: dict, profile: dict, entity_type: str, user_id, remember_me: bool) -> dict:
+    """Crea la sesión y arma la respuesta de login (la usan login y el enlace de acceso)."""
+    token = "session-token-" + utils.uuid.uuid4().hex[:16]
+    ttl = _ttl_sesion(remember_me)
+    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=ttl)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # Clave directa: validar el Bearer cuesta 1 GetItem en vez de 2, y no deja
+    # un puntero REF por sesión. El TTL (epoch) hace que DynamoDB las purgue;
+    # `expiresAt` es informativo para el frontend.
+    utils._put_session(token, {
+        "sessionId": token,
+        "userId": str(user_id),
+        "role": auth.get("role"),
+        "authId": auth.get("authId") or auth.get("email"),
+        "privileges": utils._normalize_privileges(profile.get("privileges")),
+        # Una socia con acceso al back office entra con rol cliente: el backend
+        # necesita saberlo para aplicar sus privilegios.
+        "canAccessAdmin": bool(profile.get("canAccessAdmin")),
+        "rememberMe": bool(remember_me),
+        "expiresAt": expires_at,
+    }, ttl_epoch=utils._ttl_epoch(ttl))
+
+    return utils._json_response(200, {
+        "token": token,
+        "expiresAt": expires_at,
+        "rememberMe": bool(remember_me),
+        "user": {
+            "userId": str(user_id),
+            "name": profile.get("name"),
+            "role": auth.get("role"),
+            "canAccessAdmin": bool(profile.get("canAccessAdmin")),
+            "privileges": utils._normalize_privileges(profile.get("privileges")),
+            "isEmployee": (entity_type == "EMPLOYEE"),
+            "mode": modo_handlers.modo_de(profile) if entity_type == "CUSTOMER" else None,  # paquete B
+        }
+    })
 
 
 def _build_new_network_member_email(
@@ -169,6 +251,7 @@ def handle_login(body):
     """POST /auth/login"""
     identifier = (body.get("email") or body.get("username", "")).strip().lower()
     password = body.get("password")
+    remember_me = _remember_me(body)
 
     if not identifier or not password:
         return utils._json_response(401, {"message": "Credenciales incompletas"})
@@ -185,8 +268,9 @@ def handle_login(body):
                 "userId": str(d["id"]),
                 "role": d["role"],
                 "privileges": {},
-            }, ttl_epoch=utils._ttl_epoch(utils.SESSION_TTL_SECONDS))
-            return utils._json_response(200, {"token": token, "user": {
+                "rememberMe": remember_me,
+            }, ttl_epoch=utils._ttl_epoch(_ttl_sesion(remember_me)))
+            return utils._json_response(200, {"token": token, "rememberMe": remember_me, "user": {
                 "userId": d["id"], "name": d["name"], "role": d["role"], "canAccessAdmin": (d["role"] == "admin")
             }})
 
@@ -225,33 +309,75 @@ def handle_login(body):
     if not profile:
         return utils._json_response(401, {"message": "Perfil no encontrado"})
 
-    token = "session-token-" + utils.uuid.uuid4().hex[:16]
-    # Clave directa: validar el Bearer cuesta 1 GetItem en vez de 2, y no deja
-    # un puntero REF por sesión. El TTL (epoch) hace que DynamoDB las purgue;
-    # `expiresAt` era una cadena ISO comprobada en código y no borraba nada.
-    utils._put_session(token, {
-        "sessionId": token,
-        "userId": str(user_id),
-        "role": auth.get("role"),
-        "authId": auth.get("authId") or identifier,
-        "privileges": utils._normalize_privileges(profile.get("privileges")),
-        # Una socia con acceso al back office entra con rol cliente: el backend
-        # necesita saberlo para aplicar sus privilegios.
-        "canAccessAdmin": bool(profile.get("canAccessAdmin")),
-    }, ttl_epoch=utils._ttl_epoch(utils.SESSION_TTL_SECONDS))
+    return _abrir_sesion({**auth, "authId": auth.get("authId") or identifier}, profile, entity_type, user_id, remember_me)
 
-    return utils._json_response(200, {
-        "token": token,
-        "user": {
-            "userId": str(user_id),
-            "name": profile.get("name"),
-            "role": auth.get("role"),
-            "canAccessAdmin": bool(profile.get("canAccessAdmin")),
-            "privileges": utils._normalize_privileges(profile.get("privileges")),
-            "isEmployee": (entity_type == "EMPLOYEE"),
-            "mode": modo_handlers.modo_de(profile) if entity_type == "CUSTOMER" else None,  # paquete B
-        }
+
+# --- ENLACE DE ACCESO POR CORREO (paquete C) ---
+
+def _respuesta_enlace_generica() -> dict:
+    """Nunca revela si el correo existe."""
+    return utils._json_response(200, {"ok": True, "message": "Si el correo existe, enviamos un enlace para entrar. Revisa tu bandeja (y la de no deseados)."})
+
+
+def handle_login_link_request(body):
+    """POST /auth/enlace-acceso — manda un enlace de un solo uso (config auth.loginLinkMinutes)."""
+    email = utils._normalize_email(body.get("email"))
+    if not email or "@" not in email:
+        return utils._json_response(400, {"message": "Escribe tu correo electrónico para mandarte el enlace."})
+    auth = utils._get_by_id("AUTH", email)
+    # Solo cuentas verificadas: el enlace equivale a una contraseña.
+    if not auth or auth.get("emailVerified") is False:
+        return _respuesta_enlace_generica()
+
+    token = secrets.token_urlsafe(32)
+    minutos = _minutos_codigo()
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=minutos)).isoformat()
+    utils._put_entity("LOGIN_LINK", utils._hash_token(token), {
+        "entityType": "loginLink", "tokenHash": utils._hash_token(token), "email": email,
+        "expiresAt": expires, "used": False, "rememberMe": _remember_me(body),
     })
+    user_id = auth.get("employeeId") or auth.get("customerId")
+    profile = utils._get_by_id("EMPLOYEE" if auth.get("employeeId") else "CUSTOMER", user_id) or {}
+    url = f"{FRONTEND_URL.rstrip('/')}/#/login?enlace={quote(token)}"
+    subj, txt, html = _build_login_link_email(profile.get("name") or "hola", url, minutos)
+    utils._send_ses_email(email, subj, txt, html)
+    return _respuesta_enlace_generica()
+
+
+def handle_login_link_redeem(body):
+    """POST /auth/enlace-acceso/canjear — abre la sesión con un enlace vigente y no usado."""
+    token = str(body.get("token") or "").strip()
+    rechazo = utils._json_response(401, {"message": "El enlace ya no sirve (se usó o caducó). Pide uno nuevo desde el login.",
+                                          "code": "LOGIN_LINK_INVALID"})
+    if not token:
+        return rechazo
+    registro = utils._get_by_id("LOGIN_LINK", utils._hash_token(token))
+    if not registro or registro.get("used"):
+        return rechazo
+    try:
+        expira = datetime.fromisoformat(str(registro.get("expiresAt") or "").replace("Z", "+00:00"))
+    except ValueError:
+        return rechazo
+    if expira.tzinfo is None:
+        expira = expira.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expira:
+        return rechazo
+
+    email = registro.get("email")
+    auth = utils._get_by_id("AUTH", email)
+    if not auth:
+        return rechazo
+    user_id = auth.get("employeeId") or auth.get("customerId")
+    entity_type = "EMPLOYEE" if auth.get("employeeId") else "CUSTOMER"
+    profile = utils._get_by_id(entity_type, user_id)
+    if not profile:
+        return utils._json_response(401, {"message": "Perfil no encontrado"})
+
+    # Un solo uso: se marca antes de abrir la sesión.
+    utils._update_by_id("LOGIN_LINK", registro.get("tokenHash"), "SET used = :t, usedAt = :u",
+                        {":t": True, ":u": utils._now_iso()})
+    remember_me = _remember_me(body) if "rememberMe" in body else bool(registro.get("rememberMe", True))
+    return _abrir_sesion({**auth, "authId": auth.get("authId") or email}, profile, entity_type, user_id, remember_me)
 
 
 def _vincular_pedidos_de_invitado(customer_id, email: str) -> list:
@@ -446,21 +572,59 @@ def handle_password_recovery(body):
     """POST /auth/password/recovery"""
     email = utils._normalize_email(body.get("email"))
     auth = utils._get_by_id("AUTH", email)
-    
+
     if not auth:
         return utils._json_response(200, {"message": "Si el correo existe, enviamos un código"})
 
     otp = "".join(random.choices("0123456789", k=6))
-    expires = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
-    
+    minutos = _minutos_codigo()
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=minutos)).isoformat()
+
+    # Se conservan los últimos N códigos vigentes (config auth.recoveryCodesKept):
+    # Memo, Lupita, Claudia y Patricia pedían dos códigos porque el primero se
+    # invalidaba en cuanto llegaba el segundo. `otpHash` se conserva por compatibilidad.
+    previo = utils._get_by_id("PASSWORD_RESET", email) or {}
+    vigentes = [] if previo.get("used") else [c for c in (previo.get("otpHashes") or []) if isinstance(c, dict)]
+    if previo.get("otpHash") and not previo.get("used") and not any(c.get("hash") == previo.get("otpHash") for c in vigentes):
+        vigentes.append({"hash": previo.get("otpHash"), "expiresAt": previo.get("expiresAt"), "used": False})
+    vigentes.append({"hash": utils._hash_token(otp), "expiresAt": expires, "used": False})
+    conservar = max(1, int(utils._to_decimal(_cfg_auth().get("recoveryCodesKept") or 3)))
     utils._put_entity("PASSWORD_RESET", email, {
-        "entityType": "passwordReset", "email": email, 
-        "otpHash": utils._hash_token(otp), "expiresAt": expires, "used": False
+        "entityType": "passwordReset", "email": email,
+        "otpHash": utils._hash_token(otp), "expiresAt": expires, "used": False,
+        "otpHashes": vigentes[-conservar:],
     })
 
-    subj, txt, html = _build_password_recovery_email(otp)
+    subj, txt, html = _build_password_recovery_email(otp, minutos)
     utils._send_ses_email(email, subj, txt, html)
-    return utils._json_response(200, {"ok": True, "message": "Código enviado"})
+    return utils._json_response(200, {
+        "ok": True,
+        "message": f"Te mandamos un código de 6 dígitos. Vale {minutos} minutos; si pediste varios, usa el más reciente.",
+    })
+
+
+def _codigo_vigente(reset_rec: dict, otp: str) -> bool:
+    """True si `otp` coincide con alguno de los últimos códigos emitidos, no usado y dentro de su vigencia."""
+    if not reset_rec or reset_rec.get("used") or not otp:
+        return False
+    candidatos = [c for c in (reset_rec.get("otpHashes") or []) if isinstance(c, dict)]
+    if reset_rec.get("otpHash") and not any(c.get("hash") == reset_rec.get("otpHash") for c in candidatos):
+        candidatos.append({"hash": reset_rec.get("otpHash"), "expiresAt": reset_rec.get("expiresAt"), "used": False})
+    ahora = datetime.now(timezone.utc)
+    digest = utils._hash_token(otp)
+    for c in candidatos:
+        if c.get("used") or not utils.hmac.compare_digest(digest, str(c.get("hash") or "")):
+            continue
+        # Antes no se comprobaba `expiresAt`: un código de hace días seguía valiendo.
+        try:
+            expira = datetime.fromisoformat(str(c.get("expiresAt") or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if expira.tzinfo is None:
+            expira = expira.replace(tzinfo=timezone.utc)
+        if ahora <= expira:
+            return True
+    return False
 
 def handle_password_reset(body):
     """POST /auth/password/reset"""
@@ -468,19 +632,20 @@ def handle_password_reset(body):
     otp = body.get("otp", "").strip()
     new_password = body.get("password")
 
+    if not new_password or len(str(new_password)) < 8:
+        return utils._json_response(400, {"message": "La nueva contraseña debe tener al menos 8 caracteres."})
     reset_rec = utils._get_by_id("PASSWORD_RESET", email)
-    if not reset_rec or reset_rec.get("used") or not utils.hmac.compare_digest(
-            utils._hash_token(otp), str(reset_rec.get("otpHash") or "")):
-        return utils._json_response(401, {"message": "Código inválido o expirado"})
+    if not _codigo_vigente(reset_rec, otp):
+        return utils._json_response(401, {"message": "Código inválido o caducado: pide uno nuevo", "code": "OTP_INVALID"})
 
     # Actualizar password en AUTH
     pass_hash = utils._hash_password(str(new_password))
     utils._update_by_id("AUTH", email, "SET passwordHash = :p, updatedAt = :u", {":p": pass_hash, ":u": utils._now_iso()})
     
-    # Marcar OTP como usado
-    utils._update_by_id("PASSWORD_RESET", email, "SET used = :t", {":t": True})
+    # Marcar el registro como usado: al usar un código dejan de valer todos los anteriores.
+    utils._update_by_id("PASSWORD_RESET", email, "SET used = :t, usedAt = :u", {":t": True, ":u": utils._now_iso()})
 
-    return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
+    return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada. Ya puedes entrar con ella."})
 
 def _find_auth_for_customer(customer_id) -> Optional[dict]:
     """Registro AUTH de un cliente/empleado, sin barrer la colección.
@@ -884,6 +1049,11 @@ def lambda_handler(event, context):
             sub = segments[1] if len(segments) > 1 else ""
             if sub == "recovery": return handle_password_recovery(body)
             if sub == "reset": return handle_password_reset(body)
+
+        if root == "enlace-acceso" and method == "POST":
+            sub = segments[1] if len(segments) > 1 else ""
+            if not sub: return handle_login_link_request(body)
+            if sub == "canjear": return handle_login_link_redeem(body)
 
         if root == "referrer" and len(segments) > 1:
             return handle_get_referrer(segments[1])

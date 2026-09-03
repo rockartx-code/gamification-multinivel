@@ -64,6 +64,10 @@ import { AdminCategoriesComponent } from './admin-categories/admin-categories.co
 import { PagosMesComponent } from './pagos-mes/pagos-mes.component'; // WP-A
 import { HonorBoard, HonorEntry } from '../../models/user-dashboard.model';
 import { AdminModoClienteComponent } from './modo-cliente/admin-modo-cliente.component'; // WP-B
+import { FacturaPedidoComponent } from './checkout/factura-pedido.component'; // WP-C
+import { ESTADOS_MX_OPTIONS } from '../../constants/states-mx'; // WP-C
+import { CheckoutService } from '../../services/checkout.service'; // WP-C
+import { FacturaEmitida } from '../../models/checkout.model'; // WP-C
 
 type StructureNode = {
   id: string;
@@ -89,6 +93,8 @@ type AdminStock = {
   inventory: Record<number, number>;
   allowPickup?: boolean;
   isMainWarehouse?: boolean;
+  city?: string;   // paquete C
+  state?: string;  // paquete C
 };
 
 type StockTransferLine = {
@@ -238,7 +244,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -375,7 +381,8 @@ export class AdminComponent implements OnInit {
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
     private readonly api: ApiService,
-    private readonly sanitizer: DomSanitizer
+    private readonly sanitizer: DomSanitizer,
+    private readonly checkoutService: CheckoutService // WP-C
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
@@ -671,8 +678,13 @@ export class AdminComponent implements OnInit {
     location: '',
     postalCode: '',
     isMainWarehouse: false,
-    allowPickup: false
+    allowPickup: false,
+    city: '',   // paquete C
+    state: ''   // paquete C
   };
+  /** Paquete C: ciudad y estado editables del stock activo. */
+  stockUbicacionDraft = { city: '', state: '' };
+  readonly estadoOptionsStock = ESTADOS_MX_OPTIONS;
   stockUserLinkDraft = new Set<number>();
   isStockEntryModalOpen = false;
   isStockDamageModalOpen = false;
@@ -3088,7 +3100,9 @@ export class AdminComponent implements OnInit {
           linkedUserIds: stock.linkedUserIds ?? [],
           inventory: this.normalizeInventoryRecord(stock.inventory as Record<number, number> | Record<string, number>),
           allowPickup: Boolean((stock as { allowPickup?: boolean }).allowPickup),
-          isMainWarehouse: Boolean((stock as { isMainWarehouse?: boolean }).isMainWarehouse)
+          isMainWarehouse: Boolean((stock as { isMainWarehouse?: boolean }).isMainWarehouse),
+          city: (stock as { city?: string }).city || undefined,     // paquete C
+          state: (stock as { state?: string }).state || undefined   // paquete C
         }));
 
         this.transfers = (state.transfers ?? []).map((transfer) => ({
@@ -5599,12 +5613,23 @@ export class AdminComponent implements OnInit {
     const postalCode = this.stockForm.postalCode.trim();
     const isMainWarehouse = this.stockForm.isMainWarehouse;
     const allowPickup = this.stockForm.allowPickup;
-    this.adminControl.createStock({ name, location, postalCode: postalCode || undefined, isMainWarehouse, allowPickup }).subscribe({
+    // Paquete C: ciudad y estado del almacén (recoger en sucursal solo en tu zona).
+    const city = this.stockForm.city.trim();
+    const state = this.stockForm.state.trim();
+    if (allowPickup && (!city || !state)) {
+      this.showSnackbar('Para permitir recoger en esta sucursal escribe su ciudad y elige su estado: así solo se ofrece a clientes de esa zona.', 'error');
+      return;
+    }
+    const payload = { name, location, postalCode: postalCode || undefined, isMainWarehouse, allowPickup, city: city || undefined, state: state || undefined };
+    this.adminControl.createStock(payload).subscribe({
       next: (stock) => {
-        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false, allowPickup: false };
+        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false, allowPickup: false, city: '', state: '' };
         this.selectedStockId = stock.id;
         this.loadStocksAndPosState();
-        this.showSnackbar(`Stock creado: ${stock.name}.`);
+        const zona = (stock as { city?: string; state?: string }).city
+          ? ` · ${(stock as { city?: string }).city}, ${(stock as { state?: string }).state ?? ''}`
+          : '';
+        this.showSnackbar(`Stock creado: ${stock.name}${zona}.`);
       }
     });
   }
@@ -5615,6 +5640,7 @@ export class AdminComponent implements OnInit {
     if (!selected) {
       return;
     }
+    this.stockUbicacionDraft = { city: selected.city ?? '', state: selected.state ?? '' }; // paquete C
     this.stockDamageForm.stockId = selected.id;
     this.stockEntryForm.stockId = selected.id;
     this.stockTransferForm.sourceStockId = this.stockTransferForm.sourceStockId || selected.id;
@@ -7477,6 +7503,43 @@ export class AdminComponent implements OnInit {
 
   private normalizeCustomerKey(name?: string): string {
     return (name ?? '').trim().toLowerCase();
+  }
+
+  // ── Paquete C · factura y ubicación de sucursal ──
+
+  /** El bloque de factura ya guardó en el servidor; aquí se refleja en la fila y se avisa con el dato guardado. */
+  markInvoiceIssued(order: AdminOrder, respuesta: FacturaEmitida): void {
+    order.invoiceStatus = respuesta.invoiceStatus;
+    order.invoiceIssuedAt = respuesta.invoiceIssuedAt;
+    order.invoiceFolio = respuesta.invoiceFolio ?? undefined;
+    order.invoiceFileUrl = respuesta.invoiceFileUrl ?? undefined;
+    this.showSnackbar(
+      `Pedido ${order.id}: factura ${respuesta.invoiceStatus}` +
+      (respuesta.invoiceFolio ? ` · folio ${respuesta.invoiceFolio}` : '') +
+      '. Se avisó al cliente por correo.'
+    );
+    this.requestViewUpdate();
+  }
+
+  guardarUbicacionSucursal(stock: AdminStock): void {
+    const city = this.stockUbicacionDraft.city.trim();
+    const state = this.stockUbicacionDraft.state.trim();
+    if (!city || !state) {
+      this.showSnackbar('Escribe la ciudad y elige el estado de la sucursal.', 'error');
+      return;
+    }
+    this.checkoutService.actualizarUbicacionSucursal(stock.id, { city, state }).subscribe({
+      next: (respuesta) => {
+        const guardado = (respuesta?.stock ?? {}) as { city?: string; state?: string };
+        stock.city = guardado.city ?? city;
+        stock.state = guardado.state ?? state;
+        this.showSnackbar(`Ubicación guardada: ${stock.name} · ${stock.city}, ${stock.state}. Recoger en sucursal se ofrecerá a clientes de esa zona.`);
+        this.requestViewUpdate();
+      },
+      error: (error: unknown) => {
+        this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la ubicación de la sucursal.'), 'error');
+      }
+    });
   }
 
 }

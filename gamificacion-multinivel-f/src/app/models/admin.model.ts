@@ -84,6 +84,14 @@ export interface AdminOrder {
   rejectedAt?: string;
   refundReceiptUrl?: string;
   refundedAt?: string;
+  // paquete C · factura ("Quiero factura" en el checkout; sin timbrado)
+  invoiceRequested?: boolean;
+  invoiceStatus?: 'no_aplica' | 'solicitada' | 'emitida';
+  invoiceData?: { rfc: string; razonSocial: string; regimenFiscal: string; cpFiscal: string; usoCfdi: string; email: string };
+  invoiceRequestedAt?: string;
+  invoiceIssuedAt?: string;
+  invoiceFolio?: string;
+  invoiceFileUrl?: string;
 }
 
 export interface AdminRefundPayload {
@@ -678,6 +686,9 @@ export interface AdminStock {
   inventory: Record<number, number> | Record<string, number>;
   createdAt?: string;
   updatedAt?: string;
+  // paquete C · recoger en sucursal solo si hay sucursal en tu ciudad/estado
+  city?: string;
+  state?: string;
 }
 
 export interface StockTransferLine {
