@@ -1,0 +1,379 @@
+<!-- Botones de caja: cada uno explica por qué está deshabilitado. -->
+<div class="flex flex-wrap items-start gap-3">
+  <div class="flex flex-col items-start gap-1">
+    <ui-button size="sm" variant="ghost" [disabled]="!!motivoDeshabilitado('retiro')" (pressed)="abrirRetiro()">
+      <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
+      Retirar efectivo
+    </ui-button>
+    <span *ngIf="motivoDeshabilitado('retiro') as motivo" class="max-w-[16rem] text-micro text-gray-500">{{ motivo }}</span>
+  </div>
+  <div class="flex flex-col items-start gap-1">
+    <ui-button size="sm" variant="primary" [disabled]="!!motivoDeshabilitado('corte')" (pressed)="abrirCorte()">
+      <i class="fa-solid fa-scissors" aria-hidden="true"></i>
+      {{ guardandoCorte ? 'Guardando...' : 'Hacer corte de caja' }}
+    </ui-button>
+    <span *ngIf="motivoDeshabilitado('corte') as motivo" class="max-w-[16rem] text-micro text-gray-500">{{ motivo }}</span>
+  </div>
+</div>
+
+<!-- Efectivo esperado, siempre visible -->
+<div *ngIf="arqueo" class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <div class="text-mini text-gray-500">Efectivo que debería haber en el cajón</div>
+      <div class="mt-1 text-lg font-semibold text-main">{{ dinero(arqueo.expectedCash) }}</div>
+    </div>
+    <ui-button size="sm" variant="ghost" (pressed)="movimientosAbiertos = !movimientosAbiertos">
+      <i class="fa-solid" [ngClass]="movimientosAbiertos ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+      {{ movimientosAbiertos ? 'Ocultar movimientos' : 'Ver movimientos (' + arqueo.movements.length + ')' }}
+    </ui-button>
+  </div>
+  <div class="mt-2 flex flex-wrap gap-2 text-mini text-gray-600">
+    <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Fondo inicial {{ dinero(arqueo.openingCash) }}</span>
+    <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas en efectivo {{ dinero(arqueo.cashSales) }}</span>
+    <span *ngIf="arqueo.cashSettlements > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Abonos {{ dinero(arqueo.cashSettlements) }}</span>
+    <span *ngIf="arqueo.cashFromMixed > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Efectivo de pagos mixtos {{ dinero(arqueo.cashFromMixed) }}</span>
+    <span *ngIf="arqueo.withdrawals > 0" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-800">Retiros -{{ dinero(arqueo.withdrawals) }}</span>
+    <span *ngIf="arqueo.nonCashTotal > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Tarjeta y transferencia {{ dinero(arqueo.nonCashTotal) }} (no entran al cajón)</span>
+  </div>
+  <div *ngIf="movimientosAbiertos" class="mt-3 space-y-1">
+    <div *ngIf="!arqueo.movements.length" class="text-sm text-gray-600">Sin movimientos desde el último corte.</div>
+    <div *ngFor="let m of arqueo.movements" class="flex items-center justify-between gap-2 rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-mini">
+      <div class="min-w-0">
+        <div class="truncate font-semibold text-main">{{ etiquetaMovimiento(m) }}</div>
+        <div class="text-gray-500">{{ fecha(m.at) }}<span *ngIf="m.id"> · {{ m.id }}</span></div>
+      </div>
+      <span class="shrink-0 font-semibold" [ngClass]="m.amount < 0 ? 'text-red-700' : 'text-main'">{{ dinero(m.amount) }}</span>
+    </div>
+  </div>
+</div>
+<div *ngIf="errorCarga && !arqueo" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorCarga }}</div>
+
+<!-- ═══════════════════════ Corte con arqueo (4 pasos) ═══════════════════════ -->
+<ui-modal [isOpen]="corteAbierto" maxWidthClass="max-w-xl" contentClass="p-6" [closeOnBackdrop]="!guardandoCorte" (closed)="cerrarCorteModal()">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-lg font-extrabold text-main">Corte de caja · paso {{ pasoCorte }} de 4</div>
+      <div class="mt-1 text-sm text-gray-600">
+        <ng-container [ngSwitch]="pasoCorte">
+          <span *ngSwitchCase="1">Esto es lo que debería haber en el cajón según las ventas y retiros del turno.</span>
+          <span *ngSwitchCase="2">Cuenta el efectivo del cajón y escribe cuánto hay. Si no cuadra, explica por qué.</span>
+          <span *ngSwitchCase="3">Decide cuánto se queda como fondo para mañana y cuánto se retira.</span>
+          <span *ngSwitchCase="4">Revisa lo que va a pasar antes de cerrar. Después del corte ya no se puede editar.</span>
+        </ng-container>
+      </div>
+    </div>
+    <ui-button size="sm" variant="ghost" [disabled]="guardandoCorte" (pressed)="cerrarCorteModal()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      Cerrar
+    </ui-button>
+  </div>
+
+  <!-- Paso 1: efectivo esperado -->
+  <div *ngIf="pasoCorte === 1" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4 text-sm">
+    <div *ngIf="!arqueo" class="text-gray-600">Cargando el efectivo esperado...</div>
+    <ng-container *ngIf="arqueo">
+      <div class="flex justify-between gap-3 py-1"><span>Fondo que dejó el corte anterior</span><strong>{{ dinero(arqueo.openingCash) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Ventas en efectivo</span><strong>{{ dinero(arqueo.cashSales) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Abonos en efectivo</span><strong>{{ dinero(arqueo.cashSettlements) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Parte en efectivo de pagos mixtos</span><strong>{{ dinero(arqueo.cashFromMixed) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1 text-amber-800"><span>Retiros del turno</span><strong>- {{ dinero(arqueo.withdrawals) }}</strong></div>
+      <div class="mt-2 flex justify-between gap-3 border-t border-olive-30 pt-2 text-base"><span class="font-semibold">Efectivo esperado</span><strong class="text-lg">{{ dinero(arqueo.expectedCash) }}</strong></div>
+      <div class="mt-2 text-mini text-gray-600">{{ arqueo.salesCount }} venta(s) en el turno · tarjeta y transferencia {{ dinero(arqueo.nonCashTotal) }} (no entran al cajón).</div>
+      <ui-button size="sm" variant="ghost" class="mt-2" (pressed)="movimientosAbiertos = !movimientosAbiertos">
+        {{ movimientosAbiertos ? 'Ocultar movimientos' : 'Ver los movimientos uno por uno' }}
+      </ui-button>
+      <div *ngIf="movimientosAbiertos" class="mt-2 max-h-48 space-y-1 overflow-auto">
+        <div *ngFor="let m of arqueo.movements" class="flex items-center justify-between gap-2 rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-mini">
+          <span class="truncate">{{ etiquetaMovimiento(m) }} · {{ fecha(m.at) }}</span>
+          <span class="shrink-0 font-semibold" [ngClass]="m.amount < 0 ? 'text-red-700' : 'text-main'">{{ dinero(m.amount) }}</span>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Paso 2: efectivo contado -->
+  <div *ngIf="pasoCorte === 2" class="mt-4 space-y-3">
+    <div class="flex flex-wrap gap-2">
+      <ui-choice-card [selected]="!contarPorDenominacion" (pressed)="alternarDenominaciones(false)">
+        <div class="text-sm font-semibold text-main">Escribir el total contado</div>
+        <div class="text-mini text-gray-600">Ya lo sumaste tú.</div>
+      </ui-choice-card>
+      <ui-choice-card [selected]="contarPorDenominacion" (pressed)="alternarDenominaciones(true)">
+        <div class="text-sm font-semibold text-main">Contar por billetes y monedas</div>
+        <div class="text-mini text-gray-600">Escribe cuántos hay de cada uno y el sistema suma.</div>
+      </ui-choice-card>
+    </div>
+    <ui-form-field *ngIf="!contarPorDenominacion"
+      type="text"
+      label="Efectivo contado en el cajón"
+      placeholder="Ej. 1330"
+      helpText="Cuenta todo lo que hay, incluido el fondo con el que arrancaste."
+      [ngModel]="contadoTexto"
+      (ngModelChange)="contadoTexto = $event">
+    </ui-form-field>
+    <div *ngIf="contarPorDenominacion" class="grid gap-2 sm:grid-cols-5">
+      <ui-form-field *ngFor="let d of denominaciones"
+        type="number"
+        [min]="0"
+        [label]="'$' + d"
+        placeholder="0"
+        [ngModel]="conteo[d + ''] || ''"
+        (ngModelChange)="actualizarConteo(d, $event)">
+      </ui-form-field>
+    </div>
+    <div class="rounded-2xl border p-3 text-sm"
+      [ngClass]="!contadoCapturado ? 'border-olive-30 bg-ivory-70' : diferencia === 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'">
+      <div class="flex justify-between gap-3"><span>Efectivo contado</span><strong>{{ dinero(contadoNumero) }}</strong></div>
+      <div class="flex justify-between gap-3"><span>Efectivo esperado</span><strong>{{ dinero(efectivoEsperado) }}</strong></div>
+      <div class="mt-1 flex justify-between gap-3 border-t border-current/20 pt-1">
+        <span class="font-semibold">Diferencia</span>
+        <strong [ngClass]="diferencia === 0 ? 'text-emerald-700' : 'text-red-700'">
+          {{ dinero(diferencia) }}
+          <span *ngIf="contadoCapturado && diferencia > 0"> (sobra)</span>
+          <span *ngIf="contadoCapturado && diferencia < 0"> (falta)</span>
+          <span *ngIf="contadoCapturado && diferencia === 0"> · cuadra</span>
+        </strong>
+      </div>
+    </div>
+    <ui-form-field *ngIf="requiereMotivo"
+      kind="textarea"
+      [rows]="2"
+      label="Motivo de la diferencia (obligatorio)"
+      placeholder="Ej. di cambio de más en la venta de las 5; el billete de $500 era falso"
+      helpText="Queda escrito en el comprobante para que la gerente lo vea. No es una falta: es lo que pasó."
+      [ngModel]="motivoDiferencia"
+      (ngModelChange)="motivoDiferencia = $event">
+    </ui-form-field>
+  </div>
+
+  <!-- Paso 3: destino del efectivo -->
+  <div *ngIf="pasoCorte === 3" class="mt-4 space-y-3">
+    <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">Contaste <strong>{{ dinero(contadoNumero) }}</strong>. ¿A dónde va?</div>
+    <div class="grid gap-2 sm:grid-cols-2">
+      <ui-choice-card [selected]="destino === 'fondo'" (pressed)="elegirDestino('fondo')">
+        <div class="text-sm font-semibold text-main">Dejar todo como fondo de mañana</div>
+        <div class="text-mini text-gray-600">Los {{ dinero(contadoNumero) }} se quedan en el cajón. No hace falta código.</div>
+      </ui-choice-card>
+      <ui-choice-card [selected]="destino === 'retiro'" (pressed)="elegirDestino('retiro')">
+        <div class="text-sm font-semibold text-main">Retirar una parte (o todo)</div>
+        <div class="text-mini text-gray-600">Se anota quién se lo lleva y se pide el código de la gerente.</div>
+      </ui-choice-card>
+    </div>
+    <ng-container *ngIf="destino === 'retiro'">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <ui-form-field
+          type="text"
+          label="Fondo que se queda en caja"
+          placeholder="Ej. 300"
+          helpText="Lo que dejas para dar cambio mañana."
+          [ngModel]="fondoTexto"
+          (ngModelChange)="fondoTexto = $event">
+        </ui-form-field>
+        <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">
+          <div class="text-mini text-gray-500">Se retira</div>
+          <div class="mt-1 text-lg font-semibold text-main">{{ dinero(retiroDelCorte) }}</div>
+          <div class="text-mini text-gray-600">Lo contado menos el fondo.</div>
+        </div>
+      </div>
+      <ui-form-field
+        type="text"
+        label="Quién recibe el efectivo"
+        placeholder="Ej. Sofía (gerente)"
+        [ngModel]="receptor"
+        (ngModelChange)="receptor = $event">
+      </ui-form-field>
+      <ui-form-field
+        type="password"
+        label="Código de autorización"
+        placeholder="****"
+        helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
+        [ngModel]="codigoCorte"
+        (ngModelChange)="codigoCorte = $event">
+      </ui-form-field>
+    </ng-container>
+  </div>
+
+  <!-- Paso 4: confirmación con el efecto escrito -->
+  <div *ngIf="pasoCorte === 4" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <div class="font-semibold">Esto es lo que va a pasar:</div>
+    <p class="mt-1">{{ textoEfectoCorte }}</p>
+    <p class="mt-2 text-mini text-amber-800">Al confirmar, las ventas y retiros del turno quedan dentro del corte y aparece el comprobante con folio.</p>
+  </div>
+
+  <div *ngIf="errorCorte" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorCorte }}</div>
+
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-between">
+    <ui-button size="sm" variant="ghost" [disabled]="pasoCorte === 1 || guardandoCorte" (pressed)="retrocederCorte()">
+      <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+      Atrás
+    </ui-button>
+    <div class="flex flex-col items-end gap-1">
+      <ui-button *ngIf="pasoCorte < 4" size="sm" variant="primary" [disabled]="!!bloqueoPaso(pasoCorte)" (pressed)="avanzarCorte()">
+        {{ pasoCorte === 1 ? 'Siguiente: contar el efectivo' : pasoCorte === 2 ? 'Siguiente: destino del efectivo' : 'Siguiente: revisar' }}
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      </ui-button>
+      <span *ngIf="pasoCorte < 4 && bloqueoPaso(pasoCorte) as bloqueo" class="max-w-xs text-right text-micro text-gray-500">{{ bloqueo }}</span>
+      <ui-button *ngIf="pasoCorte === 4" size="sm" variant="primary" [disabled]="guardandoCorte" (pressed)="confirmarCorte()">
+        <i class="fa-solid fa-scissors" aria-hidden="true"></i>
+        {{ guardandoCorte ? 'Cerrando el corte...' : 'Cerrar el corte' }}
+      </ui-button>
+    </div>
+  </div>
+</ui-modal>
+
+<!-- ═══════════════════════ Comprobante del corte ═══════════════════════ -->
+<ui-modal [isOpen]="comprobanteAbierto" maxWidthClass="max-w-xl" contentClass="p-6" (closed)="cerrarComprobante()">
+  <ng-container *ngIf="comprobante as c">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-lg font-extrabold text-main">Corte cerrado · {{ c.cashCutId }}</div>
+        <div class="mt-1 text-sm text-gray-600">Guardado en el servidor {{ fecha(c.createdAt) }}. Estos son los montos que quedaron registrados.</div>
+      </div>
+      <ui-button size="sm" variant="ghost" (pressed)="cerrarComprobante()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Cerrar
+      </ui-button>
+    </div>
+    <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4 text-sm">
+      <div class="text-mini text-gray-500">{{ stockName || c.stockId }} · {{ operatorName }} · {{ c.salesCount }} venta(s) · de {{ fecha(c.startedAt) }} a {{ fecha(c.endedAt || c.createdAt) }}</div>
+      <div class="mt-2 flex justify-between gap-3 py-1"><span>Fondo inicial</span><strong>{{ dinero(c.openingCash) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Ventas en efectivo</span><strong>{{ dinero(c.cashSales) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Abonos en efectivo</span><strong>{{ dinero(c.cashSettlements) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Parte en efectivo de pagos mixtos</span><strong>{{ dinero(c.cashFromMixed) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1 text-amber-800"><span>Retiros del turno</span><strong>- {{ dinero(c.totalWithdrawals) }}</strong></div>
+      <div class="flex justify-between gap-3 border-t border-olive-30 py-1 pt-2"><span class="font-semibold">Efectivo esperado</span><strong>{{ dinero(c.cashExpected) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span class="font-semibold">Efectivo contado</span><strong>{{ dinero(c.cashCounted) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1">
+        <span class="font-semibold">Diferencia</span>
+        <strong [ngClass]="(c.difference || 0) === 0 ? 'text-emerald-700' : 'text-red-700'">{{ dinero(c.difference) }}</strong>
+      </div>
+      <div *ngIf="c.differenceReason" class="rounded-xl bg-white/70 px-3 py-2 text-mini text-gray-700">Motivo: {{ c.differenceReason }}</div>
+      <div class="mt-2 flex justify-between gap-3 border-t border-olive-30 py-1 pt-2"><span>Se deja como fondo de mañana</span><strong>{{ dinero(c.cashToKeep) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>Se retira<span *ngIf="c.withdrawalReceiver"> (recibe {{ c.withdrawalReceiver }})</span></span><strong>{{ dinero(c.withdrawnAmount) }}</strong></div>
+      <div *ngIf="c.cutWithdrawalId" class="text-mini text-gray-500">Folio del retiro: {{ c.cutWithdrawalId }}</div>
+      <div class="flex justify-between gap-3 py-1 text-gray-600"><span>Tarjeta y transferencia (no entran a caja)</span><span>{{ dinero(c.nonCashTotal) }}</span></div>
+    </div>
+
+    <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-3">
+      <div class="text-xs font-semibold text-main">Enviar el comprobante a la gerente</div>
+      <div *ngIf="correoConfigurado" class="mt-1 text-mini text-gray-600">Se manda al correo que la gerencia configuró para los cortes.</div>
+      <ui-form-field *ngIf="!correoConfigurado"
+        type="email"
+        label="Correo de la gerente"
+        placeholder="gerente@empresa.com"
+        helpText="No hay un correo configurado para los cortes; escribe uno o pide a la gerente que lo capture en Configuración."
+        [ngModel]="correoDestino"
+        (ngModelChange)="correoDestino = $event">
+      </ui-form-field>
+      <div *ngIf="correoEnviadoA" class="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Comprobante enviado a {{ correoEnviadoA }}.</div>
+      <div *ngIf="errorCorreo" class="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ errorCorreo }}</div>
+    </div>
+
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <ui-button size="sm" variant="ghost" (pressed)="imprimirComprobante()">
+        <i class="fa-solid fa-print" aria-hidden="true"></i>
+        Imprimir
+      </ui-button>
+      <ui-button size="sm" variant="ghost" [disabled]="enviandoCorreo" (pressed)="enviarComprobante()">
+        <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+        {{ enviandoCorreo ? 'Enviando...' : correoEnviadoA ? 'Enviar de nuevo' : 'Enviar por correo a la gerente' }}
+      </ui-button>
+      <ui-button size="sm" variant="primary" (pressed)="cerrarComprobante()">Listo</ui-button>
+    </div>
+  </ng-container>
+</ui-modal>
+
+<!-- ═══════════════════════ Retiro guiado (3 pasos) ═══════════════════════ -->
+<ui-modal [isOpen]="retiroAbierto" maxWidthClass="max-w-md" contentClass="p-6" [closeOnBackdrop]="!guardandoRetiro" (closed)="cerrarRetiroModal()">
+  <ng-container *ngIf="!retiroConfirmado; else retiroListo">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-lg font-extrabold text-main">Retiro de efectivo · paso {{ pasoRetiro }} de 3</div>
+        <div class="mt-1 text-sm text-gray-600">
+          <ng-container [ngSwitch]="pasoRetiro">
+            <span *ngSwitchCase="1">Hay {{ dinero(efectivoEsperado) }} en caja. ¿Cuánto se retira?</span>
+            <span *ngSwitchCase="2">Para qué es y quién se lo lleva: queda en el comprobante del corte.</span>
+            <span *ngSwitchCase="3">El retiro lo autoriza la gerente con su código.</span>
+          </ng-container>
+        </div>
+      </div>
+      <ui-button size="sm" variant="ghost" [disabled]="guardandoRetiro" (pressed)="cerrarRetiroModal()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Cerrar
+      </ui-button>
+    </div>
+
+    <div *ngIf="pasoRetiro === 1" class="mt-4">
+      <ui-form-field
+        type="text"
+        label="Monto a retirar"
+        placeholder="Ej. 400"
+        [helpText]="'Máximo ' + dinero(efectivoEsperado) + ' (lo que hay en caja ahora).'"
+        [ngModel]="retiroMontoTexto"
+        (ngModelChange)="retiroMontoTexto = $event">
+      </ui-form-field>
+    </div>
+    <div *ngIf="pasoRetiro === 2" class="mt-4 flex flex-col gap-3">
+      <ui-form-field
+        type="text"
+        label="Motivo"
+        placeholder="Ej. pago de paquetería, depósito al banco"
+        [ngModel]="retiroMotivo"
+        (ngModelChange)="retiroMotivo = $event">
+      </ui-form-field>
+      <ui-form-field
+        type="text"
+        label="Quién recibe el efectivo"
+        placeholder="Ej. Beto (almacén)"
+        [ngModel]="retiroReceptor"
+        (ngModelChange)="retiroReceptor = $event">
+      </ui-form-field>
+    </div>
+    <div *ngIf="pasoRetiro === 3" class="mt-4 space-y-3">
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Se retirarán <strong>{{ dinero(retiroMontoNumero) }}</strong> por "{{ retiroMotivo.trim() }}"; los recibe <strong>{{ retiroReceptor.trim() }}</strong>.
+        Quedarán {{ dinero(efectivoEsperado - retiroMontoNumero) }} en caja.
+      </div>
+      <ui-form-field
+        type="password"
+        label="Código de autorización"
+        placeholder="****"
+        helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
+        [ngModel]="retiroCodigo"
+        (ngModelChange)="retiroCodigo = $event">
+      </ui-form-field>
+    </div>
+
+    <div *ngIf="errorRetiro" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorRetiro }}</div>
+
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-between">
+      <ui-button size="sm" variant="ghost" [disabled]="pasoRetiro === 1 || guardandoRetiro" (pressed)="retrocederRetiro()">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        Atrás
+      </ui-button>
+      <div class="flex flex-col items-end gap-1">
+        <ui-button *ngIf="pasoRetiro < 3" size="sm" variant="primary" [disabled]="!!bloqueoPasoRetiro(pasoRetiro)" (pressed)="avanzarRetiro()">
+          Siguiente
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </ui-button>
+        <span *ngIf="pasoRetiro < 3 && bloqueoPasoRetiro(pasoRetiro) as bloqueo" class="max-w-xs text-right text-micro text-gray-500">{{ bloqueo }}</span>
+        <ui-button *ngIf="pasoRetiro === 3" size="sm" variant="primary" [disabled]="guardandoRetiro || !!bloqueoPasoRetiro(3)" (pressed)="confirmarRetiro()">
+          {{ guardandoRetiro ? 'Registrando...' : 'Confirmar retiro' }}
+        </ui-button>
+        <span *ngIf="pasoRetiro === 3 && bloqueoPasoRetiro(3) as bloqueo" class="max-w-xs text-right text-micro text-gray-500">{{ bloqueo }}</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #retiroListo>
+    <div class="text-lg font-extrabold text-main">Retiro registrado · {{ retiroConfirmado?.folio }}</div>
+    <div class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+      Se retiraron <strong>{{ dinero(retiroConfirmado?.monto) }}</strong><span *ngIf="retiroConfirmado?.receptor">; los recibe <strong>{{ retiroConfirmado?.receptor }}</strong></span>.
+      En caja quedan <strong>{{ dinero(retiroConfirmado?.restante) }}</strong>. El retiro entra al próximo corte.
+    </div>
+    <div class="mt-5 flex justify-end">
+      <ui-button size="sm" variant="primary" (pressed)="cerrarRetiroModal()">Listo</ui-button>
+    </div>
+  </ng-template>
+</ui-modal>

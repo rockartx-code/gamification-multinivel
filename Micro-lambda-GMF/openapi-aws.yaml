@@ -2840,6 +2840,93 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete E · caja-arqueo ──
+  /pos/arqueo:
+    get:
+      summary: "Arqueo de caja: efectivo esperado y movimientos desde el último corte"
+      description: "Privilegio `pos_register_sale`. Fondo del corte anterior + ventas en efectivo + abonos en efectivo + parte en efectivo de pagos mixtos − retiros sin corte. Sin `stockId` usa la sucursal ligada al usuario."
+      operationId: posArqueo
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: stockId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Arqueo calculado"
+        "400":
+          description: "Sin sucursal vinculada"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /pos/cash-cuts/{id}:
+    get:
+      summary: "Comprobante de un corte de caja"
+      description: "Privilegio `pos_register_sale`. Devuelve el corte completo (esperado, contado, diferencia, fondo, retiro, ventas y retiros)."
+      operationId: posGetCashCut
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Corte"
+        "404":
+          description: "No existe"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /pos/cash-cuts/{id}/enviar:
+    post:
+      summary: "Enviar el comprobante del corte por correo a la gerente"
+      description: "Privilegio `pos_register_sale`. Usa `email` del cuerpo o `pos.cashCutNotifyEmail` de la configuración; 400 si no hay ninguno."
+      operationId: posSendCashCut
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: "Enviado"
+        "400":
+          description: "Sin correo configurado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

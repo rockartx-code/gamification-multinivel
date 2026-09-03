@@ -2044,6 +2044,7 @@
                         <div class="mt-2 flex flex-wrap gap-2 text-mini">
                           <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Descuento actual: {{ posCurrentDiscountLabel }}</span>
                           <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Meta proyectada: {{ posProjectedDiscountLabel }}</span>
+                          <span *ngIf="posCustomerIsClientMode" class="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-800">En modo cliente no aplica descuento de socio: paga precio de lista.</span>
                         </div>
                       </div>
                       <ng-template #publicCustomerCard>
@@ -2159,10 +2160,34 @@
                         (ngModelChange)="posSalePaymentMethod = $event">
                       </ui-form-field>
                       <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-xs text-gray-600">
-                        Efectivo impacta la caja actual. Tarjeta y transferencia se registran aparte y no entran al corte de caja.
+                        Efectivo impacta la caja actual. Tarjeta y transferencia se registran aparte y no entran al corte de caja. En "Efectivo + tarjeta/transferencia" solo la parte en efectivo entra al cajón.
                       </div>
                     </div>
-                    <div *ngIf="posSalePaymentMethod === 'cash' && posPaymentTypeMode === 'full'" class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <!-- WP-E: pago mixto, dos importes que deben sumar el total (el segundo se autocompleta) -->
+                    <div *ngIf="posSalePaymentMethod === 'mixed'" class="mt-3 grid gap-3 sm:grid-cols-3">
+                      <ui-form-field
+                        type="text"
+                        label="Paga en efectivo"
+                        placeholder="Ej. 200"
+                        helpText="Lo que el cliente da en billetes."
+                        [ngModel]="posMixedCashAmount"
+                        (ngModelChange)="posMixedCashAmount = $event">
+                      </ui-form-field>
+                      <ui-form-field
+                        kind="select"
+                        label="El resto con"
+                        [options]="posMixedSecondMethodOptions"
+                        [ngModel]="posMixedSecondMethod"
+                        (ngModelChange)="posMixedSecondMethod = $event">
+                      </ui-form-field>
+                      <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">
+                        <div class="text-mini text-gray-500">Se cobra con {{ posMixedSecondMethod === 'card' ? 'tarjeta' : 'transferencia' }}</div>
+                        <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posMixedRemainder) }}</div>
+                        <div class="text-mini text-gray-600">Total {{ formatMoney(posEffectiveTotal) }} − efectivo {{ formatMoney(posMixedCashNumber) }}</div>
+                      </div>
+                    </div>
+                    <div *ngIf="posMixedInvalidReason" class="mt-2 text-micro text-gray-500">{{ posMixedInvalidReason }}</div>
+                    <div *ngIf="(posSalePaymentMethod === 'cash' || posSalePaymentMethod === 'mixed') && posPaymentTypeMode === 'full'" class="mt-3 grid gap-3 sm:grid-cols-2">
                       <ui-form-field
                         type="text"
                         label="Efectivo recibido"
@@ -2173,15 +2198,18 @@
                       <div class="rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-sm">
                         <div *ngIf="posCashShort > 0" class="font-semibold text-red-700">Faltan {{ formatMoney(posCashShort) }}</div>
                         <div *ngIf="posCashShort === 0" class="font-semibold text-main">Cambio: {{ formatMoney(posChangeDue) }}</div>
-                        <div class="text-mini text-gray-600">Sobre un total de {{ formatMoney(posEffectiveTotal) }}</div>
+                        <div class="text-mini text-gray-600">Sobre {{ posSalePaymentMethod === 'mixed' ? 'la parte en efectivo de' : 'un total de' }} {{ formatMoney(posCashPortion) }}</div>
                       </div>
                     </div>
 
                     <div class="mt-3 flex flex-wrap items-center gap-2">
-                      <ui-button size="sm" variant="ghost" (pressed)="openPosDiscountModal()" [disabled]="posSubtotal <= 0">
-                        <i class="fa-solid fa-tag" aria-hidden="true"></i>
-                        {{ posAppliedCashierDiscount ? 'Cambiar descuento' : 'Aplicar descuento' }}
-                      </ui-button>
+                      <div class="flex flex-col items-start gap-1">
+                        <ui-button size="sm" variant="ghost" (pressed)="openPosDiscountModal()" [disabled]="!!posDisabledReason('descuento')">
+                          <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                          {{ posAppliedCashierDiscount ? 'Cambiar descuento' : 'Aplicar descuento' }}
+                        </ui-button>
+                        <span class="max-w-xs text-micro text-gray-500">{{ posDisabledReason('descuento') || 'Requiere el código de autorización de la gerente.' }}</span>
+                      </div>
                       <div *ngIf="posAppliedCashierDiscount" class="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-mini text-emerald-700">
                         Descuento cajero: {{ posAppliedCashierDiscount.displayLabel }}
                         <button (click)="removePosDiscount()" class="ml-1 text-emerald-600 hover:text-red-500" type="button" aria-label="Quitar el descuento de cajero aplicado">
@@ -2196,13 +2224,14 @@
                         <ui-button size="sm" [variant]="posPaymentTypeMode === 'full' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('full')">
                           Pago completo
                         </ui-button>
-                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'partial' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('partial')">
+                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'partial' ? 'primary' : 'ghost'" [disabled]="!!posDisabledReason('parcial')" (pressed)="enablePosPartialPayment('partial')">
                           Pago parcial
                         </ui-button>
-                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'credit' ? 'primary' : 'ghost'" (pressed)="enablePosPartialPayment('credit')">
-                          Credito
+                        <ui-button size="sm" [variant]="posPaymentTypeMode === 'credit' ? 'primary' : 'ghost'" [disabled]="!!posDisabledReason('parcial')" (pressed)="enablePosPartialPayment('credit')">
+                          Crédito
                         </ui-button>
                       </div>
+                      <div class="mt-1 text-micro text-gray-500">{{ posDisabledReason('parcial') || 'El pago parcial y el crédito piden el código de autorización de la gerente al elegirlos; el saldo se cobra después en "Saldos pendientes".' }}</div>
                       <div *ngIf="posPaymentTypeMode === 'partial'" class="mt-3">
                         <ui-form-field
                           type="number"
@@ -2248,7 +2277,19 @@
                       {{ posFeedbackMessage }}
                     </div>
 
-                    <div class="mt-4 flex items-center justify-end">
+                    <div *ngIf="posUltimaVenta as venta" class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                      <div class="text-mini uppercase tracking-[0.18em] text-emerald-700">Última venta guardada</div>
+                      <div class="mt-1 flex flex-wrap items-center gap-2">
+                        <span class="rounded-full border border-emerald-300 bg-white/70 px-3 py-1 font-semibold">{{ venta.orderId }}</span>
+                        <span class="rounded-full border border-emerald-300 bg-white/70 px-3 py-1">Total {{ formatMoney(venta.total) }}</span>
+                        <span class="rounded-full border border-emerald-300 bg-white/70 px-3 py-1">{{ posMethodLabel(venta.sale.paymentMethod) }}</span>
+                        <span *ngIf="venta.cashPortion > 0" class="rounded-full border border-emerald-300 bg-white/70 px-3 py-1">Efectivo {{ formatMoney(venta.cashPortion) }}</span>
+                        <span *ngIf="venta.change != null && venta.cashPortion > 0" class="rounded-full border border-emerald-300 bg-white/70 px-3 py-1 font-semibold">Cambio {{ formatMoney(venta.change) }}</span>
+                        <span *ngIf="venta.pendingAmount > 0" class="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-800">Saldo pendiente {{ formatMoney(venta.pendingAmount) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-col items-end gap-1">
                       <ui-button
                         variant="primary"
                         size="md"
@@ -2258,6 +2299,7 @@
                         <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
                         {{ isRegisteringPosSale ? 'Registrando...' : 'Cobrar ' + formatMoney(posEffectiveTotal) }}
                       </ui-button>
+                      <span *ngIf="posDisabledReason('cobrar') as motivo" class="max-w-md text-right text-micro text-gray-500">{{ motivo }}</span>
                     </div>
                   </div>
                 </ng-container>
@@ -2270,28 +2312,18 @@
                       <div class="text-sm font-semibold text-main">Control de caja actual</div>
                       <div class="mt-1 text-xs text-gray-600">Resumen de la caja abierta para el operador y stock actual.</div>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                      <ui-button
-                        size="sm"
-                        variant="ghost"
-                        *ngIf="hasPermission('pos_register_sale')"
-                        (pressed)="openPosWithdrawalModal()">
-                        <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
-                        Retirar efectivo
-                      </ui-button>
-                      <ui-button
-                        size="sm"
-                        variant="ghost"
-                        *ngIf="hasPermission('pos_register_sale')"
-                        [disabled]="!canCreatePosCashCut"
-                        (pressed)="createPosCashCut()">
-                        <i class="fa-solid fa-scissors" aria-hidden="true"></i>
-                        {{ isCuttingPosCash ? 'Registrando...' : 'Hacer corte de caja' }}
-                      </ui-button>
-                      <div *ngIf="!canCreatePosCashCut && !isCuttingPosCash" class="text-micro text-gray-500">
-                        El corte se habilita cuando hay ventas registradas desde el último corte.
-                      </div>
-                    </div>
+                  </div>
+
+                  <!-- WP-E: corte con arqueo y retiro guiado; cada botón explica por qué está deshabilitado -->
+                  <div class="mt-4">
+                    <app-admin-arqueo
+                      [stockId]="currentPosStock?.id ?? null"
+                      [stockName]="currentPosStock?.name || ''"
+                      [operatorName]="currentOperatorName"
+                      [canOperate]="hasPermission('pos_register_sale')"
+                      [refreshToken]="posCajaRefreshToken"
+                      (cajaCambio)="onCajaCambio()">
+                    </app-admin-arqueo>
                   </div>
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -2451,6 +2483,33 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- WP-E: pagos mixtos (solo la parte en efectivo entra al cajón) -->
+                    <div *ngIf="visibleMixedPosSales.length" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="text-xs font-semibold text-main">Efectivo + tarjeta/transferencia</div>
+                        <div class="text-mini text-gray-500">{{ visibleMixedPosSales.length }} venta(s)</div>
+                      </div>
+                      <div class="mt-3 space-y-2">
+                        <div *ngFor="let sale of visibleMixedPosSales" class="rounded-2xl border border-olive-30 bg-white/70 p-3">
+                          <div class="flex items-start justify-between gap-3">
+                            <div>
+                              <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                            </div>
+                            <div class="text-right">
+                              <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
+                              <div class="text-mini text-gray-500">{{ formatDateTime(sale.createdAt) }}</div>
+                            </div>
+                          </div>
+                          <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                            <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }} · la parte en efectivo aparece en "Ver movimientos" del arqueo</div>
+                            <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
             </div>
@@ -2480,7 +2539,11 @@
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Total: {{ formatMoney(cut.total) }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Ventas: {{ cut.salesCount }}</span>
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">En caja: {{ formatMoney(cut.cashToKeep || 0) }}</span>
-                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Retirado: {{ formatMoney(cut.withdrawnAmount || 0) }}</span>
+                      <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Retirado: {{ formatMoney(cut.withdrawnAmount || 0) }}<span *ngIf="cut.withdrawalReceiver"> → {{ cut.withdrawalReceiver }}</span></span>
+                      <ng-container *ngIf="cut.cashCounted != null">
+                        <span class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5">Contado: {{ formatMoney(cut.cashCounted || 0) }}</span>
+                        <span class="rounded-full px-2 py-0.5" [ngClass]="(cut.difference || 0) === 0 ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-red-200 bg-red-50 text-red-700'" [title]="cut.differenceReason || ''">Diferencia: {{ formatMoney(cut.difference || 0) }}</span>
+                      </ng-container>
                     </div>
                   </div>
                   <div class="flex gap-2">
@@ -4381,58 +4444,101 @@
   </div>
 </ui-modal>
 
-<ui-modal [isOpen]="isPosCashCutModalOpen" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closePosCashCutModal()">
-  <div class="flex items-start justify-between gap-3">
-    <div>
-      <div class="text-lg font-extrabold text-main">Corte de caja</div>
-      <div class="mt-1 text-sm text-gray-600">Indicá cuánto efectivo se queda en caja antes de cerrar el corte.</div>
+<!-- WP-E: abono a saldo pendiente (sin prompt); la confirmación muestra folio, monto y saldo del servidor -->
+<ui-modal [isOpen]="isPosSettleModalOpen" maxWidthClass="max-w-md" contentClass="p-6" [closeOnBackdrop]="!isSettlingPosSale" (closed)="closePosSettleModal()">
+  <ng-container *ngIf="!posSettleResult; else abonoListo">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-lg font-extrabold text-main">Cobrar saldo pendiente</div>
+        <div class="mt-1 text-sm text-gray-600" *ngIf="posSettleTarget as venta">
+          Venta {{ venta.orderId }} · {{ venta.customerName || 'Publico en General' }}. Saldo pendiente: <strong>{{ formatMoney(venta.pendingAmount || 0) }}</strong>.
+        </div>
+      </div>
+      <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" (pressed)="closePosSettleModal()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Cerrar
+      </ui-button>
     </div>
-    <ui-button size="sm" variant="ghost" (pressed)="closePosCashCutModal()">
-      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-      Cerrar
-    </ui-button>
-  </div>
-
-  <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4 text-sm text-gray-700">
-    <div class="flex items-center justify-between gap-3">
-      <span>Efectivo disponible</span>
-      <strong>{{ formatMoney(posCashControl?.currentTotal || 0) }}</strong>
-    </div>
-    <div class="mt-3">
+    <div class="mt-4 flex flex-col gap-3">
       <ui-form-field
-        type="number"
-        label="Monto a dejar en caja"
-        [min]="0"
-        [max]="posCashControl?.currentTotal || 0"
-        [step]="0.01"
-        [ngModel]="posCashCutKeepAmount"
-        (ngModelChange)="posCashCutKeepAmount = $event">
+        type="text"
+        label="¿Cuánto abona el cliente?"
+        placeholder="Ej. 340"
+        helpText="Puede ser una parte; lo que falte sigue como saldo pendiente."
+        [ngModel]="posSettleAmount"
+        (ngModelChange)="posSettleAmount = $event">
+      </ui-form-field>
+      <ui-form-field
+        kind="select"
+        label="Forma de pago del abono"
+        [options]="posSettleMethodOptions"
+        helpText="Solo el efectivo entra al cajón y al corte."
+        [ngModel]="posSettleMethod"
+        (ngModelChange)="posSettleMethod = $event">
       </ui-form-field>
     </div>
-    <div class="mt-2 text-xs text-gray-600">
-      Se retirará {{ formatMoney((posCashControl?.currentTotal || 0) - (+posCashCutKeepAmount || 0)) }} del efectivo acumulado.
+    <div *ngIf="posSettleError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posSettleError }}</div>
+    <div class="mt-5 flex flex-col items-end gap-1">
+      <div class="flex gap-2">
+        <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" (pressed)="closePosSettleModal()">Cancelar</ui-button>
+        <ui-button size="sm" variant="primary" [disabled]="!!posSettleBlockReason" (pressed)="confirmPosSettle()">
+          {{ isSettlingPosSale ? 'Registrando...' : 'Registrar abono de ' + formatMoney(posSettleAmountNumber) }}
+        </ui-button>
+      </div>
+      <span *ngIf="posSettleBlockReason" class="text-right text-micro text-gray-500">{{ posSettleBlockReason }}</span>
     </div>
-  </div>
+  </ng-container>
+  <ng-template #abonoListo>
+    <div class="text-lg font-extrabold text-main">Abono registrado · {{ posSettleResult?.payment?.saleId }}</div>
+    <div class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+      El servidor guardó un abono de <strong>{{ formatMoney(posSettleResult?.payment?.total || 0) }}</strong> ({{ posMethodLabel(posSettleResult?.payment?.paymentMethod) }})
+      a la venta {{ posSettleTarget?.orderId }}.
+      <span *ngIf="(posSettleResult?.pendingAmount || 0) > 0">Saldo pendiente: <strong>{{ formatMoney(posSettleResult?.pendingAmount || 0) }}</strong>.</span>
+      <span *ngIf="(posSettleResult?.pendingAmount || 0) <= 0">La venta quedó <strong>liquidada</strong>.</span>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <ui-button size="sm" variant="primary" (pressed)="closePosSettleModal()">Listo</ui-button>
+    </div>
+  </ng-template>
+</ui-modal>
 
-  <div *ngIf="posCashCutError" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-    {{ posCashCutError }}
-  </div>
-
-  <div *ngIf="lastCompletedCut" class="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 flex items-center justify-between gap-3">
-    <span>Ultimo corte registrado.</span>
-    <ui-button size="sm" variant="ghost" (pressed)="downloadCutReport($any(lastCompletedCut))">
-      <i class="fa-solid fa-download" aria-hidden="true"></i>
-      Descargar CSV
-    </ui-button>
-  </div>
-
-  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-    <ui-button size="sm" variant="ghost" (pressed)="closePosCashCutModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isCuttingPosCash" (pressed)="confirmPosCashCut()">
-      <i class="fa-solid fa-scissors" aria-hidden="true"></i>
-      {{ isCuttingPosCash ? 'Guardando...' : 'Registrar corte' }}
-    </ui-button>
-  </div>
+<!-- WP-E: anular venta (sin prompt), con el efecto escrito -->
+<ui-modal [isOpen]="isPosVoidModalOpen" maxWidthClass="max-w-md" contentClass="p-6" [closeOnBackdrop]="!isVoidingPosSale" (closed)="closePosVoidModal()">
+  <ng-container *ngIf="!posVoidResult; else anulacionLista">
+    <div class="text-lg font-extrabold text-main">Anular la venta {{ posVoidTarget?.orderId }}</div>
+    <div class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      Esto regresa el producto al inventario, cancela el pedido de {{ formatMoney(posVoidTarget?.total || 0) }}, quita el consumo y las comisiones al cliente ligado y le avisa por correo. No se puede deshacer.
+    </div>
+    <div class="mt-4">
+      <ui-form-field
+        kind="textarea"
+        [rows]="2"
+        label="Motivo de la anulación"
+        placeholder="Ej. el cliente no reconoce la compra; se cobró dos veces"
+        [ngModel]="posVoidReason"
+        (ngModelChange)="posVoidReason = $event">
+      </ui-form-field>
+    </div>
+    <div *ngIf="posVoidError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posVoidError }}</div>
+    <div class="mt-5 flex flex-col items-end gap-1">
+      <div class="flex gap-2">
+        <ui-button size="sm" variant="ghost" [disabled]="isVoidingPosSale" (pressed)="closePosVoidModal()">Cancelar</ui-button>
+        <ui-button size="sm" variant="primary" [disabled]="isVoidingPosSale || !posVoidReason.trim()" (pressed)="confirmPosVoid()">
+          {{ isVoidingPosSale ? 'Anulando...' : 'Anular la venta' }}
+        </ui-button>
+      </div>
+      <span *ngIf="!posVoidReason.trim()" class="text-micro text-gray-500">Escribe el motivo para poder anular.</span>
+    </div>
+  </ng-container>
+  <ng-template #anulacionLista>
+    <div class="text-lg font-extrabold text-main">Venta anulada · {{ posVoidResult?.orderId || posVoidTarget?.orderId }}</div>
+    <div class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+      El servidor marcó la venta {{ posVoidResult?.saleId }} como <strong>{{ posVoidResult?.status }}</strong>: el inventario regresó, el pedido quedó cancelado y el cliente ligado recibió el aviso.
+    </div>
+    <div class="mt-5 flex justify-end">
+      <ui-button size="sm" variant="primary" (pressed)="closePosVoidModal()">Listo</ui-button>
+    </div>
+  </ng-template>
 </ui-modal>
 
 <!-- POS Auth code modal -->
@@ -4495,48 +4601,6 @@
     <ui-button size="sm" variant="ghost" (pressed)="closePosDiscountModal()">Cancelar</ui-button>
     <ui-button size="sm" variant="primary" [disabled]="!posDiscountValue || +posDiscountValue <= 0" (pressed)="applyPosDiscount()">
       Aplicar descuento
-    </ui-button>
-  </div>
-</ui-modal>
-
-<!-- POS Cash withdrawal modal -->
-<ui-modal [isOpen]="isPosWithdrawalModalOpen" maxWidthClass="max-w-sm" contentClass="p-6" (closed)="closePosWithdrawalModal()">
-  <div class="text-lg font-extrabold text-main">Retiro de efectivo</div>
-  <div class="mt-1 text-sm text-gray-600">Registra un retiro parcial del efectivo acumulado en caja.</div>
-  <div class="mt-4 flex flex-col gap-3">
-    <ui-form-field
-      kind="input"
-      type="number"
-      label="Monto a retirar"
-      placeholder="0.00"
-      [min]="0.01"
-      [step]="0.01"
-      [ngModel]="posWithdrawalAmount"
-      (ngModelChange)="posWithdrawalAmount = $event">
-    </ui-form-field>
-    <ui-form-field
-      kind="input"
-      type="text"
-      label="Motivo"
-      placeholder="Ej: Pago de proveedor"
-      [ngModel]="posWithdrawalReason"
-      (ngModelChange)="posWithdrawalReason = $event">
-    </ui-form-field>
-    <ui-form-field
-      kind="input"
-      type="text"
-      helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
-      label="Codigo de autorizacion"
-      placeholder="****"
-      [ngModel]="posWithdrawalAuthCode"
-      (ngModelChange)="posWithdrawalAuthCode = $event">
-    </ui-form-field>
-  </div>
-  <div *ngIf="posWithdrawalError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posWithdrawalError }}</div>
-  <div class="mt-5 flex justify-end gap-2">
-    <ui-button size="sm" variant="ghost" (pressed)="closePosWithdrawalModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isRegisteringPosWithdrawal || !posWithdrawalAmount || +posWithdrawalAmount <= 0 || !posWithdrawalReason.trim() || !posWithdrawalAuthCode.trim()" (pressed)="confirmPosWithdrawal()">
-      {{ isRegisteringPosWithdrawal ? 'Registrando...' : 'Confirmar retiro' }}
     </ui-button>
   </div>
 </ui-modal>
