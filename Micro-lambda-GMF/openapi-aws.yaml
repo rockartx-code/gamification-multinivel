@@ -2341,6 +2341,121 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete C · checkout-y-sesion ──────────────────────────────────────────
+  /orders/checkout/envio-info:
+    get:
+      summary: "Envío visible: tarifa base, umbral de envío gratis y faltante"
+      description: "Público. `?subtotal=` (bruto del carrito). Respuesta {baseRateMxn, freeShippingMin, basis, missingForFree, freeNow, checkout:{invoiceEnabled, regimenesFiscales, usosCfdi}}."
+      operationId: checkoutEnvioInfo
+      tags: [Orders]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/checkout/sugerencia-activacion:
+    post:
+      summary: "Completa tu activación: producto más barato que cierra los VP que faltan"
+      description: "Privilegio: sesión propia (customerId del cuerpo debe ser el del actor; admin puede consultar cualquiera). Cuerpo {customerId, items:[{productId, quantity, price}], couponCode?}."
+      operationId: checkoutSugerenciaActivacion
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "OK"
+        "401":
+          description: "Sin sesión"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/checkout/sucursales-recoger:
+    post:
+      summary: "Sucursales donde se puede recoger en la ciudad/estado del cliente y con existencia"
+      description: "Público. Cuerpo {city?, state?, postalCode?, items:[{productId, quantity}]}. Respuesta {available, locationGiven, cities, stocks:[{id, name, location, city, state, inArea, canPickup, missing}]}."
+      operationId: checkoutSucursalesRecoger
+      tags: [Orders]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/{orderId}/factura:
+    post:
+      summary: "Quiero factura: guarda los datos fiscales y deja el pedido en 'solicitada'"
+      description: "Privilegio: dueño del pedido, invitado por folio, o admin. Cuerpo {rfc, razonSocial, regimenFiscal, cpFiscal, usoCfdi, email}. 400 RFC inválido; 409 pedido cancelado/reembolsado o factura ya emitida."
+      operationId: orderSolicitarFactura
+      tags: [Orders]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/{orderId}/factura/emitida:
+    post:
+      summary: "Marcar factura emitida (archivo opcional)"
+      description: "Privilegio: order_mark_paid. Cuerpo {folioFiscal?, name?, contentType?, contentBase64?}. 409 si el pedido no tiene solicitud pendiente."
+      operationId: orderFacturaEmitida
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /auth/enlace-acceso:
+    post:
+      summary: "Enlace de acceso por correo (un solo uso, 15 minutos)"
+      description: "Pública. Cuerpo {email, rememberMe?}. Nunca revela si el correo existe."
+      operationId: authEnlaceAcceso
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /auth/enlace-acceso/canjear:
+    post:
+      summary: "Canjear el enlace de acceso y abrir sesión"
+      description: "Pública. Cuerpo {token, rememberMe?}. Responde como /auth/login; 401 si el enlace es inválido, usado o caducado."
+      operationId: authEnlaceAccesoCanjear
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+        "401":
+          description: "Enlace inválido, usado o caducado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

@@ -70,6 +70,7 @@ def handle_stocks(method, body, stock_id=None):
         item = {
             "entityType": "stock", "stockId": sid, "name": body.get("name"),
             "location": body.get("location"),
+            "city": body.get("city"), "state": body.get("state"),  # paquete C: recoger solo si hay sucursal en tu zona
             "allowPickup": bool(body.get("allowPickup", False)),
             "isMainWarehouse": bool(body.get("isMainWarehouse", False)),
             "linkedUserIds": [int(u) for u in (body.get("linkedUserIds") or []) if u is not None],
@@ -81,7 +82,7 @@ def handle_stocks(method, body, stock_id=None):
     if method == "PATCH" and stock_id:
         updates = ["updatedAt = :u"]
         eav = {":u": utils._now_iso()}
-        for f in ["name", "location", "allowPickup", "isMainWarehouse", "inventory"]:
+        for f in ["name", "location", "allowPickup", "isMainWarehouse", "inventory", "city", "state"]:
             if f in body:
                 updates.append(f"{f} = :{f}")
                 eav[f":{f}"] = body[f]

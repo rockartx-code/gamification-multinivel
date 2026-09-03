@@ -6,6 +6,11 @@ import urllib.parse
 import urllib.request
 import core_utils as utils  # Importado desde la Layer
 from core import order_emails
+import checkout_handlers  # paquete C
+# Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus rutas o devuelve None.
+_EXTENSIONES = [
+    checkout_handlers,  # paquete C
+]
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -319,6 +324,8 @@ def _serialize_order_list_item(item: dict) -> dict:
         "paymentProvider": item.get("paymentProvider"),
         "createdAt": item.get("createdAt"),
         "updatedAt": item.get("updatedAt"),
+        # Factura (paquete C)
+        **checkout_handlers.campos_factura(item),
     }
 
 
@@ -375,6 +382,9 @@ def handle_list_orders(customer_id, query, headers):
         items = utils._query_bucket("ORDER", forward=False)
         if status_filter:
             items = [o for o in items if (o.get("status") or "").lower() == status_filter]
+        invoice_filter = (query.get("invoiceStatus") or "").lower().strip()  # paquete C
+        if invoice_filter:
+            items = [o for o in items if checkout_handlers.estado_factura(o) == invoice_filter]
         # Filtrar por stock (stockId = stock de despacho, pickupStockId = sucursal de retiro)
         if stock_id_filter:
             items = [
@@ -532,11 +542,16 @@ def handle_create_order(body, headers):
     # Envío gratis por importe (config shipping.freeShippingMin): un aviso masivo
     # prometía "envío gratis desde $1,000" y el checkout cobraba $129 igual.
     envio_cobrado = utils._to_decimal(body.get("shippingCost") or 0)
-    minimo_gratis = utils._to_decimal((utils._load_app_config().get("shipping") or {}).get("freeShippingMin") or 0)
-    envio_gratis = bool(minimo_gratis > 0 and totals["netTotal"] >= minimo_gratis and envio_cobrado > 0)
+    # La regla se mide como diga shipping.freeShippingBasis (bruto por omisión): la
+    # misma que el carrito enseña (paquete C).
+    envio_gratis = checkout_handlers.envio_gratis_aplica(totals, envio_cobrado)
     if envio_gratis:
         envio_cobrado = utils.D_ZERO
     shipping_address = body.get("shippingAddress", {}) if isinstance(body.get("shippingAddress"), dict) else {}
+    # "Quiero factura" (paquete C): datos fiscales mínimos; el pedido nace "solicitada".
+    campos_factura, error_factura = checkout_handlers.campos_factura_al_crear(body)
+    if error_factura:
+        return utils._json_response(400, {"message": error_factura, "code": "INVALID_INVOICE_DATA"})
     order_item = {
         "entityType": "order", "orderId": order_id, "customerId": customer_id,
         "customerName": customer_name, "buyerType": buyer_type, "status": "pending",
@@ -570,6 +585,7 @@ def handle_create_order(body, headers):
         "total": (totals["netTotal"] + envio_cobrado).quantize(utils.D_CENT),
         "shippingFreeApplied": envio_gratis,
         **coupon_fields,
+        **campos_factura,
     }
     if delivery_type == "pickup":
         if body.get("pickupStockId"):
@@ -1578,6 +1594,11 @@ def lambda_handler(event, context):
     body, query, headers = request.body, request.query, request.headers
     segments = request.segments
     try:
+        for extension in _EXTENSIONES:
+            respuesta = extension.atender(request)
+            if respuesta is not None:
+                return respuesta
+
         if "webhooks" in segments:
             return handle_mp_webhook(query, body)
 

@@ -62,8 +62,13 @@ def _default_app_config() -> dict:
             "showCommissions": True, "showShipping": True, "showPendingPayments": True,
             "showPendingTransfers": True, "showPosSalesToday": True,
         },
-        # freeShippingMin: neto (tras descuentos) a partir del cual el envío es gratis; 0 = sin regla.
-        "shipping": {"enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"], "freeShippingMin": Decimal("0")},
+        # freeShippingMin: importe a partir del cual el envío es gratis; 0 = sin regla.
+        # freeShippingBasis: "gross" mide la regla sobre el subtotal bruto (lo que el
+        # carrito enseña antes de descuentos, paquete C); "net" conserva la regla
+        # anterior sobre el neto pagado. baseRateMxn: tarifa desde la que se
+        # anuncia el envío antes de cotizar ("Envío desde $129").
+        "shipping": {"enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"], "freeShippingMin": Decimal("0"),
+                     "freeShippingBasis": "gross", "baseRateMxn": Decimal("129")},
         "customerDocumentTypes": [
             {"key": "constancia", "label": "Constancia de situación fiscal", "required": True},
             {"key": "ine",        "label": "INE (frente y reverso)",          "required": True},
@@ -159,6 +164,34 @@ def _default_app_config() -> dict:
                     "rewards": [{"type": "item", "itemLabel": "Viaje internacional elite", "triggerMonths": 6}],
                     "cooldown": "once",
                 },
+            ],
+        },
+        # Paquete C · sesión: sin "recordarme" la sesión dura sessionShortSeconds
+        # (24 h); el enlace de acceso por correo vale loginLinkMinutes; en la
+        # recuperación de contraseña se aceptan los últimos recoveryCodesKept
+        # códigos vigentes (el primero no se invalida si el correo llega tarde).
+        "auth": {
+            "sessionShortSeconds": Decimal("86400"),
+            "loginLinkMinutes": Decimal("15"),
+            "recoveryCodesKept": Decimal("3"),
+        },
+        # Paquete C · checkout: casilla "Quiero factura" y catálogos SAT acotados
+        # que se ofrecen al capturar los datos fiscales (sin timbrado CFDI).
+        "checkout": {
+            "invoiceEnabled": True,
+            "regimenesFiscales": [
+                {"key": "601", "label": "601 · General de Ley Personas Morales"},
+                {"key": "605", "label": "605 · Sueldos y Salarios e Ingresos Asimilados a Salarios"},
+                {"key": "606", "label": "606 · Arrendamiento"},
+                {"key": "612", "label": "612 · Personas Físicas con Actividades Empresariales y Profesionales"},
+                {"key": "616", "label": "616 · Sin obligaciones fiscales"},
+                {"key": "621", "label": "621 · Incorporación Fiscal"},
+                {"key": "626", "label": "626 · Régimen Simplificado de Confianza"},
+            ],
+            "usosCfdi": [
+                {"key": "G01", "label": "G01 · Adquisición de mercancías"},
+                {"key": "G03", "label": "G03 · Gastos en general"},
+                {"key": "S01", "label": "S01 · Sin efectos fiscales"},
             ],
         },
     }
