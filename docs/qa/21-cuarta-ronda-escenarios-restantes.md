@@ -6,7 +6,15 @@ Reglas de esta ronda, iguales a la anterior: máximo dos navegadores a la vez, n
 
 ## 1. Resumen ejecutivo
 
-_(Se completa al cerrar la ronda.)_
+| | |
+|---|---|
+| Escenarios inducidos ejecutados | 20 turnos de agente (Verónica, Memo, Sofía ×3, Bety ×2, Patricia ×3, Lupita, Nadia ×4, Ivonne, Rosa Elena, Beto ×2, Claudia) entre el 12 de diciembre de 2026 y el 10 de enero de 2027, más operación por API (entregas de paquetería, reparación de datos tras dos reinicios del contenedor) |
+| Bugs de producción encontrados y corregidos | 20 (§3), uno grave: una socia con acceso al back office recibía 403 en todas las pantallas con privilegio. Los demás son huecos de flujo (pago parcial sin liquidar, cortesía prometida que no existía, pago de comisiones sin CLABE y sin deshacer) y avisos que faltaban |
+| Escenarios del motor verificados en el ledger | Compresión dinámica y su reversión al activarse la intermedia el día 20; primera comisión de 2ª generación ($49.50); anulación con motivo al cancelar, reembolsar o rechazar una devolución; recálculo del VP con PC netos |
+| Hallazgos de negocio nuevos | 13 (§4) |
+| Cobertura de rutas del frontend | 79 expuestas, 73 alcanzadas; las 6 restantes siguen siendo código muerto (§5) |
+| Pruebas del backend | 147 en verde (eran 142 al empezar la ronda) |
+| Estado del mundo | Reloj en 10 de enero de 2027, 09:40. Diciembre pagado a Verónica; Claudia y Bety con comisión pendiente por falta de CLABE |
 
 ## 2. Escenarios y resultados
 
@@ -117,9 +125,15 @@ Claudia, con "Bloqueadas $195.20" por la compra de Memo, compra $1,458 (27.9 VP)
 - Con 1 Colágeno + 1 Biotina (21 PC de lista) el carrito avisó "18.9 de 20 VP"; agregó el Magnesio del mes para llegar a 27.9. El aviso nuevo cumplió su función.
 - **Bug**: eligió "Recoger en sucursal" y vio "No se pudo crear la orden." sin motivo (Del Valle no tiene Magnesio; la validación nueva funcionó pero el carrito tapó el mensaje). Corregido: el toast muestra el motivo del backend.
 
-### 2.15 Ola en curso
+### 2.15 Día de pago de diciembre (Sofía, 10-ene)
 
-_(10 de enero: Sofía paga las comisiones de diciembre a Verónica, Claudia y Bety.)_
+Sofía entra el 10 de enero con "3 comisiones pendientes por depositar — Urgente". En Clientes, la columna "Mes anterior" muestra exactamente lo que el ledger dice: Verónica $368.40, Claudia $195.20, Bety $99 (suma $662.60, igual al encabezado). Verónica tiene CLABE: sube el comprobante, la ficha pasa a "Pagada · Ver comprobante" y el aviso urgente baja a 1. Claudia no tiene CLABE: no la paga, deja nota "10/01: comisión de diciembre pendiente por falta de CLABE; se le pidió por WhatsApp" y usa el enlace de WhatsApp de la ficha.
+
+- **Bug (grave para el flujo de pago)**: en la ficha de Bety, sin CLABE, Sofía pulsó "Pagar comisiones" esperando que el sistema la frenara. Aceptó el comprobante y marcó "$99 · Pagada" sin que existiera transferencia, y no había forma de deshacerlo. Sofía lo reportó a Sistemas y dejó nota en la ficha. Corregido: el backend rechaza el comprobante sin CLABE (`CLABE_REQUIRED`) y si el mes ya está pagado; el botón se sustituye por un aviso ámbar cuando falta CLABE; y existe "Deshacer pago (registrado por error)" con motivo, que anula el comprobante y devuelve el mes a pendiente. El pago de Bety se revirtió con esa ruta y el resumen mensual volvió a mostrarla pendiente (el resumen y la ficha ignoraban ya el estado del comprobante: también corregido).
+- Cuadro de Honor de diciembre, verificado contra los volúmenes del mes: por VG Verónica 186, Claudia 65, Bety 42; por VP Verónica 54, Memo 37, Claudia 28. Es el primer mes en que el cuadro muestra una red de tres niveles y no solo a la ejecutiva.
+- Sigue "1 pedidos pagados sin envío — Importante": es el pedido de Claudia del 20 de diciembre, que Beto no ha despachado. Queda para la siguiente ronda como arranque natural del mes.
+
+La ronda cierra aquí: todos los escenarios de la lista de la ronda 3 quedaron ejercidos (§5 dice qué no se puede ejercer en este mundo).
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -144,6 +158,7 @@ _(10 de enero: Sofía paga las comisiones de diciembre a Verónica, Claudia y Be
 | 17 | Baja | Pedidos | El detalle no mostraba cuánto se reembolsó ni el motivo | "Reembolsado: $X · motivo" |
 | 18 | Baja | Pedidos | Cancelar desde el panel no pedía motivo (quedaba "admin_request") ni avisaba si no estaba pagado | Motivo obligatorio y aviso |
 | 19 | Baja | Carrito | Un pedido rechazado por el backend mostraba "No se pudo crear la orden." sin el motivo | Toast con el mensaje del backend |
+| 20 | Grave | Comisiones | Se podía marcar un mes como pagado sin CLABE del beneficiario (solo con subir cualquier imagen) y no había forma de deshacerlo | Comprobante rechazado sin CLABE o con el mes ya pagado; aviso en lugar de botón; "Deshacer pago" con motivo que anula el comprobante y vuelve el mes a pendiente |
 
 ## 4. Hallazgos de negocio
 
@@ -159,7 +174,14 @@ _(10 de enero: Sofía paga las comisiones de diciembre a Verónica, Claudia y Be
 10. Devolver un paquete cerrado por arrepentimiento exige tres fotos (producto, empaque y guía). Propuesta: para desistimiento con paquete sin abrir, una sola foto del paquete cerrado con la guía.
 11. Los envíos por paquetería nunca se cierran: cuatro pedidos llevaban semanas "Enviada" con el paquete entregado. Propuesta: aviso "enviados hace más de 7 días sin entrega" en Acciones urgentes, o cierre automático con el rastreo de la paquetería (y el correo "¿te llegó?" al cliente).
 12. Los avisos del tablero son genéricos: "1 pedidos pendientes de pago" sin nombre ni antigüedad, y "comisiones pendientes por depositar — Urgente" desde el día 1 aunque se pagan el 10 del mes siguiente. Propuesta: cada aviso con folio, cliente y días, y la urgencia de comisiones solo a partir del día 8.
+13. La CLABE se pide después de ganar la comisión, no antes: dos de tres beneficiarias llegaron al día 10 sin ella y la ejecutiva tuvo que perseguirlas por WhatsApp. Propuesta: pedir CLABE al activarse por primera vez (o al aparecer la primera comisión pendiente, con aviso en el panel del socio), y que "Acciones urgentes" distinga "listas para depositar" de "sin CLABE" desde el día 1 del mes siguiente.
 
 ## 5. Pendiente
 
-_(Se completa al cerrar la ronda.)_
+Lo que no se ejerció y por qué:
+
+- **Seis rutas muertas** (`/auth/referral-codes/migrate`, `/auth/referral/migrate`, `GET /customer`, `/commissions/associate/{id}/month/{mes}`, `GET /coupons`, `/inventory/pos/auth-code`): ninguna pantalla las llama. Conviene borrarlas del frontend o darles pantalla; no hay usuario que las alcance.
+- **Rangos**: BRONCE pide 4,500 VG y la red completa no llega a 200 VG en su mejor mes (186 de Verónica en diciembre). Ningún escenario realista de esta red los alcanza; siguen cubiertos solo por pruebas unitarias (hallazgo 6).
+- **Comprobantes en S3 y el correo real**: el mundo simulado sustituye S3 y el correo por archivos locales; la subida real del comprobante y la entrega del correo no se probaron aquí.
+- **Enero**: el pedido pagado de Claudia sin despachar, la reactivación de Bety y Claudia con CLABE, y el cobro del saldo pendiente de Nadia al siguiente cliente son el arranque natural de la siguiente ronda.
+- **Propuestas de producto sin implementar** (§4): tabla única de descuento, vigencia de campañas, activación con PC brutos o VP visibles en catálogo, rango de entrada, "entrega en persona" en el checkout, cierre automático de envíos, avisos con folio y CLABE al activarse. Son decisiones de negocio, no defectos.
