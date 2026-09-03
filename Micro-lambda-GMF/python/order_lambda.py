@@ -1151,7 +1151,8 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     utils._upsert_order_customer_history(updated_order)
     utils._audit_event("order.return_request", headers, body,
                        {"orderId": order_id, "requestId": request_id, "motivo": motivo})
-    _avisar(utils._get_by_id("ORDER", order_id) or order, "return_received", {"requestId": request_id})
+    _avisar(utils._get_by_id("ORDER", order_id) or order, "return_received",
+            {"requestId": request_id, "shippingResponsibility": responsable})
 
     return utils._json_response(201, {
         "ok": True,

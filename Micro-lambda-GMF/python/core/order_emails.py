@@ -95,9 +95,13 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         # "Envía el paquete a nuestro almacén" sin dirección: la clienta tuvo que
         # preguntar a soporte a dónde mandarlo y si iba todo el pedido.
         direccion = datos.get("direccionAlmacen") or _direccion_bodega_principal()
+        # La pantalla decía "el envío corre a tu cargo" y este correo prometía reembolsarlo: depende del motivo.
+        paga_cliente = str(datos.get("shippingResponsibility") or "").lower() == "cliente"
+        envio_txt = ("El envío de regreso corre por tu cuenta (devolución por arrepentimiento); el producto se reembolsa una vez revisado (1 a 3 días hábiles tras recibirlo)."
+                     if paga_cliente else
+                     "Guarda tu ticket de envío: te lo reembolsamos junto con el producto una vez que lo revisemos (1 a 3 días hábiles tras recibirlo).")
         lead = (f"Folio <strong>{datos.get('requestId') or ''}</strong>. Envía el producto que reportaste, en su empaque, a "
-                f"<strong>{direccion or 'nuestro almacén'}</strong> con el folio escrito en el paquete, y guarda tu ticket de envío: "
-                "te lo reembolsamos junto con el producto una vez que lo revisemos (1 a 3 días hábiles tras recibirlo).")
+                f"<strong>{direccion or 'nuestro almacén'}</strong> con el folio escrito en el paquete. {envio_txt}")
         extra = ""
     elif evento == "return_approved":
         asunto = f"Devolución aprobada · pedido {oid}"

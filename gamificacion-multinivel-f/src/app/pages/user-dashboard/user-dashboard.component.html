@@ -518,6 +518,12 @@
                   <div class="mt-1 font-semibold">{{ sponsorContact.phone }}</div>
                 </a>
               </div>
+              <!-- Quien tiene patrocinadora solo veía el WhatsApp "de red"; para pedidos y pagos no encontraba a quién escribir. -->
+              <div *ngIf="!sponsorContact.isDefault" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                <span>Pedidos, pagos y devoluciones:</span>
+                <a class="font-semibold text-accent hover:underline" href="https://wa.me/5215514982351" target="_blank" rel="noopener">WhatsApp Soporte Finding'U</a>
+                <a class="font-semibold text-accent hover:underline" href="mailto:contacto@findingu.com.mx">contacto@findingu.com.mx</a>
+              </div>
             </div>
 
             <div *ngIf="networkMembers.length === 0"
