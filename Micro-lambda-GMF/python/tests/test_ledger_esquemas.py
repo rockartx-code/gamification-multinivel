@@ -53,7 +53,7 @@ def test_cada_fila_es_un_item_propio(utils, esquema_filas, store):
     assert len(cabeceras) == 1
 
 
-def test_anular_una_orden_borra_sus_filas(utils, esquema_filas):
+def test_anular_una_orden_deja_sus_filas_tachadas(utils, esquema_filas):
     item = utils._get_ledger_month(12, "2026-09")
     item["ledger"] = [_fila("X#G1", "100", orden="X"), _fila("Y#G1", "80", orden="Y")]
     utils._save_ledger_month(item)
@@ -61,8 +61,12 @@ def test_anular_una_orden_borra_sus_filas(utils, esquema_filas):
     utils._void_ledger_rows_for_order(12, "2026-09", "X")
 
     releido = utils._get_ledger_month(12, "2026-09")
-    assert [f["orderId"] for f in releido["ledger"]] == ["Y"]
+    # La fila anulada se conserva tachada (la socia veía "Sin movimientos") y sale de los totales.
+    assert [(f["orderId"], f["status"]) for f in releido["ledger"]] == [("X", "voided"), ("Y", "pending")]
+    assert releido["ledger"][0]["previousStatus"] == "pending" and releido["ledger"][0]["voidedAt"]
     assert releido["totalPending"] == Decimal("80")
+    # Anular dos veces no vuelve a restar.
+    assert utils._void_ledger_rows_for_order(12, "2026-09", "X") is None
 
 
 def test_anadir_una_fila_no_reescribe_las_demas(utils, esquema_filas, store):

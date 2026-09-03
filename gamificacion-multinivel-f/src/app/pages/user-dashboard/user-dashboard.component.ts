@@ -1486,7 +1486,21 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (normalized.includes('block') || normalized.includes('bloque')) {
       return 'badge badge-compact level-5 status-inactive';
     }
+    if (normalized.includes('void') || normalized.includes('anul')) {
+      return 'badge badge-compact level-5 status-inactive line-through';
+    }
     return 'badge badge-compact level-4';
+  }
+
+  /** Estado del ledger en palabras: la tabla mostraba "pending"/"blocked"/"voided" tal cual. */
+  commissionLedgerStatusLabel(status?: string): string {
+    const normalized = (status ?? '').toLowerCase();
+    if (normalized.includes('confirm')) return 'Confirmada';
+    if (normalized.includes('pending') || normalized.includes('pendient')) return 'Por confirmar';
+    if (normalized.includes('block') || normalized.includes('bloque')) return 'Bloqueada';
+    if (normalized.includes('void') || normalized.includes('anul')) return 'Anulada';
+    if (normalized.includes('paid') || normalized.includes('pagad')) return 'Pagada';
+    return status || '-';
   }
 
   commissionPrevStatusClass(status?: string): string {

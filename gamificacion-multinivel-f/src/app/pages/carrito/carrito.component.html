@@ -560,6 +560,9 @@
                 <span>Puntos de este pedido (VP)</span>
                 <span class="font-semibold text-main">{{ cartVp }} VP</span>
               </div>
+              <div *ngIf="orderLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Con este pedido llegas a {{ vpAfterOrder }} de {{ vpGoalTarget }} VP del mes: te faltarían {{ vpGoalGap }} VP para activarte. Los VP se cuentan sobre el precio ya con descuento; agrega algo más si quieres activarte con esta compra.
+              </div>
               <div *ngIf="couponLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 Con el cupón, este pedido te deja en {{ cartVp }} VP y tu meta de activación es {{ vpGoalTarget }} VP: te faltarían {{ vpGoalGap }} VP. Sin cupón llegarías; o agrega algo más.
               </div>

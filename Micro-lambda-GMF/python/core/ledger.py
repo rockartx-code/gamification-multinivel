@@ -141,7 +141,7 @@ def _mutate_ledger_month(beneficiary_id, month_key, mutate) -> dict:
     }))
     raise last_error
 
-def _void_ledger_rows_for_order(beneficiary_id, month_key, order_id) -> Optional[dict]:
+def _void_ledger_rows_for_order(beneficiary_id, month_key, order_id, reason: str = None) -> Optional[dict]:
     """Quita del mes contable todas las filas de una orden y recalcula totales.
 
     Antes esto era un `update_item` con deltas calculados sobre una lectura
@@ -154,7 +154,7 @@ def _void_ledger_rows_for_order(beneficiary_id, month_key, order_id) -> Optional
 
     def _mutate(item):
         rows = item.get("ledger") or []
-        removed = [r for r in rows if r.get("orderId") == order_id]
+        removed = [r for r in rows if r.get("orderId") == order_id and (r.get("status") or "").lower() != "voided"]
         if not removed:
             return False
 
@@ -169,7 +169,17 @@ def _void_ledger_rows_for_order(beneficiary_id, month_key, order_id) -> Optional
             elif status == "blocked" or row.get("blocked"):
                 blocked += amount
 
-        item["ledger"] = [r for r in rows if r.get("orderId") != order_id]
+        # Las filas anuladas se conservan tachadas: la socia veía "Sin movimientos
+        # este mes" donde antes había una comisión avisada por correo.
+        ahora = _now_iso()
+        conservadas = []
+        for r in rows:
+            if r.get("orderId") == order_id and (r.get("status") or "").lower() != "voided":
+                conservadas.append({**r, "status": "voided", "previousStatus": r.get("status"),
+                                    "voidedAt": ahora, "voidReason": reason or "anulada"})
+            else:
+                conservadas.append(r)
+        item["ledger"] = conservadas
         summary.update({
             "beneficiaryId": beneficiary_id,
             "orderId": order_id,

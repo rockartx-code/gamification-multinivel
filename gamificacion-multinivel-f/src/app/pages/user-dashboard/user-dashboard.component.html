@@ -695,8 +695,8 @@
                   <div class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
-                      <span [class]="commissionLedgerStatusClass(row.status)">{{
-                        row.status || '-' }}</span>
+                      <span [class]="commissionLedgerStatusClass(row.status)" [title]="row.voidReason || ''">{{
+                        commissionLedgerStatusLabel(row.status) }}</span>
                     </div>
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
                       <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
@@ -721,8 +721,8 @@
                     <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
                     <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
                     <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
-                    <div class="px-4 py-3"><span [class]="commissionLedgerStatusClass(row.status)">{{
-                        row.status || '-' }}</span></div>
+                    <div class="px-4 py-3"><span [class]="commissionLedgerStatusClass(row.status)" [title]="row.voidReason || ''">{{
+                        commissionLedgerStatusLabel(row.status) }}</span></div>
                     <div class="px-4 py-3 text-gray-600">{{ formatLedgerDate(row.createdAt) }}</div>
                   </div>
                 </ng-template>

@@ -1017,8 +1017,9 @@ def handle_get_associate_month(associate_id: str, month_key: str) -> dict:
                 "label": f"Descuento {round(tier_rate * 100)}%",
             }
 
-    # VP / VG for this month
-    vp = _mxn_to_vp(net_volume, mxn_per_vp) if mxn_per_vp > 0 else 0.0
+    # VP / VG for this month: el mismo valor que decide la activación (netVP si
+    # existe); antes se derivaba de pesos ÷ tarifa y el panel decía otra cosa.
+    vp = _calc_vp(associate_id, month_key, mxn_per_vp) if mxn_per_vp > 0 else 0.0
 
     return utils._json_response(200, {"month": {
         "associateId": associate_id,
@@ -1070,7 +1071,7 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
     voided = []
     for beneficiary_id in beneficiaries:
         try:
-            summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id)
+            summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id, reason)
         except Exception as e:
             utils._log("void_sfn_error", "ERROR", beneficiary=beneficiary_id, err=e)
             continue

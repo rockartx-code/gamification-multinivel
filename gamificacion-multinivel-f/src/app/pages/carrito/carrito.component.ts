@@ -550,6 +550,21 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   /** El cupón recorta VP: avisa cuando con cupón no se llega a la meta y sin cupón sí. */
+  /** Sin cupón también: Bety compró "20 PC" y quedó en 18 VP netos por el descuento, dos abajo de la activación. */
+  get orderLeavesBelowVpGoal(): boolean {
+    const goal = this.activeGoal;
+    if (this.isGuest || !goal || goal.unit !== 'vp' || this.cartVp <= 0) {
+      return false;
+    }
+    const base = Number(goal.base || 0);
+    return base + this.cartVp < Number(goal.target || 0) && !this.couponLeavesBelowVpGoal;
+  }
+
+  get vpAfterOrder(): number {
+    const goal = this.activeGoal;
+    return Math.round((Number(goal?.base || 0) + this.cartVp) * 10) / 10;
+  }
+
   get couponLeavesBelowVpGoal(): boolean {
     if (!(this.couponDiscount > 0) || !this.vpGoalTarget) {
       return false;
