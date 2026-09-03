@@ -61,6 +61,7 @@ import { AdminControlService } from '../../services/admin-control.service';
 import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
+import { PagosMesComponent } from './pagos-mes/pagos-mes.component'; // WP-A
 import { HonorBoard, HonorEntry } from '../../models/user-dashboard.model';
 
 type StructureNode = {
@@ -236,7 +237,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -3216,6 +3217,8 @@ export class AdminComponent implements OnInit {
     this.isActionsModalOpen = false;
     const map: Record<string, AdminViewId> = {
       commissions: 'customers',
+      commissions_ready: 'customers', // WP-A
+      commissions_no_clabe: 'customers', // WP-A
       shipping: 'orders',
       assets: 'products',
       stocks: 'stocks',
@@ -3229,6 +3232,9 @@ export class AdminComponent implements OnInit {
       this.currentOrderStatus = 'pending';
     }
     this.setView(target);
+    if (warning.type === 'commissions_ready' || warning.type === 'commissions_no_clabe') { // WP-A
+      setTimeout(() => document.getElementById('pagos-mes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
   }
 
   openNewOrderModal(): void {

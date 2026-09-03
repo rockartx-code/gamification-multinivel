@@ -22,6 +22,15 @@ def _default_app_config() -> dict:
             # Al activarse un socio dentro del mes se recalculan las comisiones
             # que le quedaron bloqueadas por estar inactivo al pagar sus referidos.
             "reevaluateBlockedOnActivation": True,
+            # Paquete A · pagos-comisiones. Política de bloqueadas (opción b):
+            # días del mes en que se avisa a la socia inactiva cuánto tiene
+            # bloqueado y qué producto la activa. Vacío = sin avisos.
+            "blockedNoticeDays": [Decimal("20"), Decimal("27")],
+            # Opción a (apagada): si vale N > 0, una socia que se activa en los
+            # primeros N días del mes libera también lo bloqueado del mes anterior.
+            "blockedGraceDays": Decimal("0"),
+            # Aviso "registra tu CLABE" al activarse por primera vez sin CLABE.
+            "clabeReminderOnActivation": True,
             # Escalera de descuentos por MPN (Monto Personal Neto) acumulado en el mes
             # calendario. Importes en MXN. Plan abril 2026 §3.
             "discountTiers": [

@@ -390,7 +390,7 @@ export interface AdminCustomer {
   commissionsPrevMonthKey?: string;
   commissionsCurrentPending?: number;
   commissionsCurrentConfirmed?: number;
-  commissionsPrevStatus?: 'no_moves' | 'pending' | 'paid';
+  commissionsPrevStatus?: 'no_moves' | 'pending' | 'paid' | 'sin_clabe'; // paquete A
   commissionsPrevReceiptUrl?: string;
   clabeInterbancaria?: string;
   bankInstitution?: string;

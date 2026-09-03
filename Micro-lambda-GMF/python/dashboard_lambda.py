@@ -246,10 +246,31 @@ def get_admin_warnings():
         )
     except Exception:
         comm_items = []
-    commissions_count = sum(
-        1 for item in comm_items
-        if utils._to_decimal(item.get("totalConfirmed")) > 0 and (item.get("status") or "") != "PAID"
-    )
+    # Paquete A: se separan "listas para depositar" de "sin CLABE", con el
+    # monto, y la urgencia depende de la fecha: informativo hasta dos días
+    # antes del día de pago del mes siguiente, urgente desde entonces
+    # (hallazgo 12 de la ronda 4: el aviso gritaba "urgente" el día 1).
+    payout_day = int(utils._to_decimal((cfg.get("rewards") or {}).get("payoutDay", 10)))
+    fichas_clabe: dict = {}
+    listas = {"count": 0, "amount": 0.0, "urgent": False}
+    sin_clabe = {"count": 0, "amount": 0.0, "urgent": False}
+    for item in comm_items:
+        confirmado = utils._to_decimal(item.get("totalConfirmed"))
+        if confirmado <= 0 or (item.get("status") or "") == "PAID":
+            continue
+        cid = str(item.get("beneficiaryId") or "")
+        if cid not in fichas_clabe:
+            ficha = utils._get_by_id("CUSTOMER", utils._customer_entity_id(cid)) or {}
+            fichas_clabe[cid] = bool(str(ficha.get("clabeInterbancaria") or "").strip())
+        destino = listas if fichas_clabe[cid] else sin_clabe
+        destino["count"] += 1
+        destino["amount"] = round(destino["amount"] + float(confirmado), 2)
+        mes = str(item.get("monthKey") or "")
+        if len(mes) == 7:
+            anio, m = int(mes[:4]), int(mes[5:7])
+            siguiente = f"{anio + 1}-01" if m == 12 else f"{anio}-{m + 1:02d}"
+            if now_date >= f"{siguiente}-{max(payout_day - 2, 1):02d}":
+                destino["urgent"] = True
 
     # Transferencias pendientes
     transfers = utils._query_bucket("STOCK_TRANSFER")
@@ -262,8 +283,16 @@ def get_admin_warnings():
     )
 
     warnings = []
-    if warning_cfg.get("showCommissions", True) and commissions_count:
-        warnings.append({"type": "commissions", "text": f"{commissions_count} comisiones pendientes por depositar", "severity": "high"})
+    if warning_cfg.get("showCommissions", True) and listas["count"]:
+        warnings.append({"type": "commissions_ready",
+                         "text": f"{listas['count']} comisiones listas para depositar · ${listas['amount']:,.2f}",
+                         "severity": "high" if listas["urgent"] else "low",
+                         "count": listas["count"], "amount": listas["amount"]})
+    if warning_cfg.get("showCommissions", True) and sin_clabe["count"]:
+        warnings.append({"type": "commissions_no_clabe",
+                         "text": f"{sin_clabe['count']} socias con comisión y sin CLABE · ${sin_clabe['amount']:,.2f}",
+                         "severity": "high" if sin_clabe["urgent"] else "low",
+                         "count": sin_clabe["count"], "amount": sin_clabe["amount"]})
     if warning_cfg.get("showShipping", True) and paid_no_ship:
         warnings.append({"type": "shipping", "text": f"{paid_no_ship} pedidos pagados sin envío", "severity": "medium"})
     if warning_cfg.get("showPendingPayments", True) and pending_pay:

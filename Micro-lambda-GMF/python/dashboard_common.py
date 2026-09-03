@@ -377,6 +377,10 @@ def _active_notifications_for_customer(customer_id) -> list:
         notification_id = str(item.get("notificationId") or "").strip()
         if not notification_id:
             continue
+        # Paquete A: un aviso dirigido (targetCustomerId) solo lo ve su cliente.
+        destinatario = str(item.get("targetCustomerId") or "").strip()
+        if destinatario and destinatario != str(customer_id):
+            continue
         start_at = (item.get("startAt") or "")[:10]
         end_at = (item.get("endAt") or "")[:10]
         if start_at and now_str < start_at:
