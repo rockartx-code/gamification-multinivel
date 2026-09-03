@@ -24,6 +24,8 @@ export interface AuthUser {
   discountPercent?: number;
   discountActive?: boolean;
   level?: string;
+  /** Modo de la cuenta que devuelve el login (paquete B). */
+  mode?: 'cliente' | 'socio' | null;
 }
 
 @Injectable({

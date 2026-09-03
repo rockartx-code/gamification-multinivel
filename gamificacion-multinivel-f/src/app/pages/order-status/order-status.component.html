@@ -94,6 +94,21 @@
                   {{ formatMoney(orderTotal) }}
                 </span>
               </div>
+
+              <!-- Paquete B: como socia habrías ahorrado (dato guardado en el pedido) -->
+              <div *ngIf="partnerSavingsVisible" class="mt-3 space-y-3">
+                <ui-ahorro-socio
+                  [gross]="orderSubtotal"
+                  [mode]="partnerSavingsMode"
+                  variant="card"
+                  [orderId]="order?.id"
+                  [savedSavings]="order?.partnerSavings"
+                  [savedNextRate]="order?.partnerSavingsNextRate"
+                  [savedNextMissing]="order?.partnerSavingsNextMissing"></ui-ahorro-socio>
+                <ui-button size="md" variant="primary" type="button" iconClass="fa-solid fa-handshake" (pressed)="goToModoSocio()">
+                  Activar modo socio
+                </ui-button>
+              </div>
             </div>
           </div>
 

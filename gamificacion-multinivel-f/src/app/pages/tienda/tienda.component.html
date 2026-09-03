@@ -327,6 +327,11 @@
       </div>
     </div>
 
+    <!-- Paquete B: como socia habrías ahorrado (solo cliente e invitado) -->
+    <div *ngIf="cartCount > 0 && modoVisible !== 'socio'" class="mb-2">
+      <ui-ahorro-socio [gross]="cartSubtotal" [monthNet]="monthNetSocio" [mode]="modoVisible" variant="inline"></ui-ahorro-socio>
+    </div>
+
     <!-- Cart summary row -->
     <div class="flex items-center gap-3 sm:gap-4">
 

@@ -1,0 +1,48 @@
+<div *ngIf="customer as c" class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-olive-20 bg-white/60 px-3 py-2">
+  <div class="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+    <span [class]="claseEtiqueta">
+      <i class="fa-solid" [ngClass]="modo === 'cliente' ? 'fa-bag-shopping' : 'fa-handshake'" aria-hidden="true"></i>
+      {{ etiqueta }}
+    </span>
+    <span *ngIf="modo === 'socio' && c.modeActivatedAt">desde el {{ c.modeActivatedAt | date:'dd/MM/yyyy' }}</span>
+    <span *ngIf="modo === 'socio' && !c.modeActivatedAt">desde antes del modo cliente</span>
+    <span *ngIf="modo === 'cliente'">compra a precio de lista; no ve red ni comisiones</span>
+  </div>
+  <ui-button size="sm" variant="ghost" type="button" [disabled]="!!c.deletedAt" (pressed)="abrir()">
+    <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+    {{ textoBoton }}
+  </ui-button>
+</div>
+
+<ui-modal [isOpen]="isModalOpen" (closed)="cerrar()" ariaLabel="Cambiar modo de la cuenta">
+  <ng-container *ngIf="customer as c">
+    <ng-container *ngIf="!guardado">
+      <h3 class="text-lg font-semibold text-main">{{ textoBoton }}</h3>
+      <p class="mt-1 text-sm text-gray-600">Cliente: <strong class="text-main">{{ c.name }}</strong> · hoy en <strong class="text-main">{{ etiqueta.toLowerCase() }}</strong>.</p>
+      <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+        <span class="font-semibold">Qué pasa al confirmar:</span> {{ efecto }}
+      </div>
+      <div *ngIf="error" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ error }}</div>
+      <div class="mt-4 flex justify-end gap-2">
+        <ui-button size="md" variant="ghost" type="button" [disabled]="isSaving" (pressed)="cerrar()">Cancelar</ui-button>
+        <ui-button size="md" variant="primary" type="button" [disabled]="isSaving" (pressed)="confirmar()">
+          <i class="fa-solid" [ngClass]="isSaving ? 'fa-spinner fa-spin' : 'fa-check'" aria-hidden="true"></i>
+          {{ isSaving ? 'Guardando…' : 'Confirmar' }}
+        </ui-button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="guardado as g">
+      <h3 class="text-lg font-semibold text-main"><i class="fa-solid fa-circle-check text-success" aria-hidden="true"></i> Modo guardado</h3>
+      <p class="mt-2 text-sm text-main">
+        <strong>{{ g.name }}</strong> quedó en <strong>modo {{ g.mode }}</strong>
+        <ng-container *ngIf="g.modeActivatedAt"> desde el {{ g.modeActivatedAt | date:'dd/MM/yyyy HH:mm' }}</ng-container>
+        <ng-container *ngIf="g.alreadyPartner"> (ya lo estaba; no cambió nada)</ng-container>.
+      </p>
+      <p class="mt-1 text-xs text-gray-600">Dato leído del servidor, no del formulario.</p>
+      <div class="mt-4 flex justify-end">
+        <ui-button size="md" variant="primary" type="button" (pressed)="cerrar()">Cerrar</ui-button>
+      </div>
+    </ng-container>
+  </ng-container>
+</ui-modal>

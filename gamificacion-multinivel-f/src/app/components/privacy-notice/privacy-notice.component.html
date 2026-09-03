@@ -10,7 +10,12 @@
     </div>
 
     <div class="max-h-[60vh] space-y-3 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-gray-700">
-      <p>
+      <p *ngIf="modoEfectivo === 'cliente'">
+        En <strong>Finding'U</strong> protegemos tus datos personales. Para comprar solo te pedimos
+        nombre, correo electrónico, teléfono y dirección de entrega, y los usamos únicamente para
+        operar tu cuenta y procesar tus pedidos. No te pedimos datos bancarios ni fiscales.
+      </p>
+      <p *ngIf="modoEfectivo === 'socio'">
         En <strong>Finding'U</strong> protegemos tus datos personales. La información que nos
         proporcionas (nombre, correo electrónico, teléfono, datos fiscales y bancarios) se utiliza
         únicamente para operar tu cuenta, procesar tus pedidos, calcular tus comisiones y mantener

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { PlanSocioService } from '../../services/plan-socio.service';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -32,8 +33,16 @@ export class UserProfileComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
-    private readonly sanitizer: DomSanitizer
-  ) {}
+    private readonly sanitizer: DomSanitizer,
+    private readonly planSocio: PlanSocioService
+  ) {
+    // Paquete B: en modo cliente el perfil no pide CLABE ni documentos.
+    this.planSocio.modo().subscribe({ next: () => this.cdr.markForCheck(), error: () => this.cdr.markForCheck() });
+  }
+
+  get isClientMode(): boolean {
+    return this.planSocio.modoActual === 'cliente';
+  }
 
   isLoading = true;
   isSavingInfo = false;

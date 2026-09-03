@@ -1,0 +1,300 @@
+<section class="min-h-screen overflow-x-hidden bg-sand-200 text-charcoal antialiased">
+
+  <ui-header variant="landing"
+    containerClass="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+    <ui-button size="sm" variant="ghost" [routerLink]="['/tienda']">
+      <i class="fa-solid fa-store text-gold" aria-hidden="true"></i>
+      <span class="hidden sm:inline">Tienda</span>
+    </ui-button>
+    <ui-button *ngIf="!haySesion" size="sm" variant="ghost" [routerLink]="['/login']">
+      <i class="fa-solid fa-right-to-bracket text-accent" aria-hidden="true"></i>
+      Entrar
+    </ui-button>
+    <ui-button *ngIf="haySesion" size="sm" variant="ghost" [routerLink]="['/dashboard']">
+      <i class="fa-solid fa-circle-user text-accent" aria-hidden="true"></i>
+      Mi panel
+    </ui-button>
+  </ui-header>
+
+  <main class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+
+    <!-- Encabezado -->
+    <header class="text-center">
+      <p class="eyebrow justify-center">Modo socio</p>
+      <h1 class="mt-3 text-3xl font-semibold tracking-tight text-main sm:text-4xl">Cómo funciona, con los números reales</h1>
+      <p class="mx-auto mt-3 max-w-2xl text-gray-600">
+        Hoy compras como cliente: precio de lista, sin compromiso y sin que te pidamos nada más.
+        Esta página explica qué cambia si activas el modo socio. Todos los números salen de la configuración vigente
+        <span *ngIf="plan">(plan {{ plan.version }})</span>.
+      </p>
+      <div *ngIf="desdeOrden" class="mx-auto mt-4 max-w-xl rounded-2xl border border-olive-30 bg-ivory-80 px-4 py-3 text-sm text-main">
+        <i class="fa-solid fa-receipt text-accent" aria-hidden="true"></i>
+        Tu pedido <strong>{{ desdeOrden }}</strong> ya quedó registrado tal como lo pagaste. Si activas el modo socio, el descuento aplica desde tu siguiente compra.
+      </div>
+    </header>
+
+    <div *ngIf="isLoading" class="mt-10 text-center text-sm text-gray-500">
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Cargando el plan…
+    </div>
+    <div *ngIf="loadError" class="mt-10 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ loadError }}</div>
+
+    <ng-container *ngIf="plan as p">
+
+      <!-- (1) Qué cambia -->
+      <section class="mt-10 grid gap-4 sm:grid-cols-3">
+        <div class="card-lift rounded-3xl border border-olive-30 bg-ivory-80 p-6">
+          <div class="icon-orb mb-3 h-12 w-12"><i class="fa-solid fa-tags" aria-hidden="true"></i></div>
+          <h2 class="text-lg font-bold text-main">Descuento por volumen</h2>
+          <p class="mt-2 text-sm text-gray-600">Entre más compras en el mes, menos pagas: de {{ porcentaje(p.descuento.tramos[0]?.rate ?? 0) }} hasta {{ porcentaje(p.descuento.tramos[p.descuento.tramos.length - 1]?.rate ?? 0) }} sobre toda la compra.</p>
+        </div>
+        <div class="card-lift rounded-3xl border border-olive-30 bg-ivory-80 p-6">
+          <div class="icon-orb mb-3 h-12 w-12"><i class="fa-solid fa-users" aria-hidden="true"></i></div>
+          <h2 class="text-lg font-bold text-main">Comisiones por tu red</h2>
+          <p class="mt-2 text-sm text-gray-600">Cuando alguien que invitaste compra, tú ganas un porcentaje: {{ porcentaje(primeraGeneracion?.rate ?? 0) }} de lo que compra una persona directa.</p>
+        </div>
+        <div class="card-lift rounded-3xl border border-olive-30 bg-ivory-80 p-6">
+          <div class="icon-orb mb-3 h-12 w-12"><i class="fa-solid fa-link" aria-hidden="true"></i></div>
+          <h2 class="text-lg font-bold text-main">Tu propio código</h2>
+          <p class="mt-2 text-sm text-gray-600">Un enlace para compartir. Quien se registre con él queda en tu red; tú decides a quién se lo das.</p>
+        </div>
+      </section>
+
+      <!-- (2) Las tres medidas -->
+      <section class="mt-12">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Las tres medidas, con una sola definición</h2>
+        <p class="mt-1 text-sm text-gray-600">Se llaman parecido y se usan en lugares distintos. Aquí están las tres, juntas.</p>
+        <div class="mt-5 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-xs font-semibold uppercase tracking-widest text-gold-70">PC</div>
+            <p class="mt-1 text-sm text-main">{{ p.unidades.pc }}</p>
+          </div>
+          <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-xs font-semibold uppercase tracking-widest text-gold-70">VP</div>
+            <p class="mt-1 text-sm text-main">{{ p.unidades.vp }}</p>
+          </div>
+          <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-xs font-semibold uppercase tracking-widest text-gold-70">VG</div>
+            <p class="mt-1 text-sm text-main">{{ p.unidades.vg }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- (3) Activación -->
+      <section class="mt-12">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Activación</h2>
+        <p class="mt-1 text-sm text-gray-600">
+          Para cobrar comisiones en un mes necesitas <strong class="text-main">{{ puntos(p.activacion.vpNetos) }} VP netos</strong> en ese mes
+          (más o menos {{ pesos(p.activacion.pesosAprox) }} de compra a precio de lista). Se cuenta cada mes desde cero.
+        </p>
+        <div class="mt-5 grid gap-4 md:grid-cols-2" *ngIf="p.activacion.ejemplos.length">
+          <div *ngFor="let ejemplo of p.activacion.ejemplos"
+            class="rounded-2xl border p-4"
+            [ngClass]="ejemplo.activa ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-amber-400/40 bg-amber-400/10'">
+            <div class="text-sm font-semibold text-main">{{ productosDe(ejemplo) }}</div>
+            <ul class="mt-2 space-y-1 text-sm text-main">
+              <li>Compra: {{ pesos(ejemplo.bruto) }} · descuento {{ porcentaje(ejemplo.rate) }}</li>
+              <li>VP netos: <strong>{{ puntos(ejemplo.vp) }}</strong> de {{ puntos(p.activacion.vpNetos) }}</li>
+              <li class="font-semibold" [ngClass]="ejemplo.activa ? 'text-emerald-700' : 'text-amber-700'">
+                <i class="fa-solid" [ngClass]="ejemplo.activa ? 'fa-circle-check' : 'fa-circle-exclamation'" aria-hidden="true"></i>
+                {{ ejemplo.activa ? 'Sí activa el mes' : 'No activa el mes' }}
+              </li>
+            </ul>
+          </div>
+        </div>
+        <p class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 px-4 py-3 text-sm text-main">
+          <i class="fa-solid fa-circle-info text-accent" aria-hidden="true"></i>
+          Ojo: {{ p.activacion.nota }} Los VP se cuentan sobre lo que pagas, no sobre el precio de lista.
+        </p>
+      </section>
+
+      <!-- (4) Tu descuento -->
+      <section class="mt-12">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Tu descuento</h2>
+        <p class="mt-1 text-sm text-gray-600">
+          El tramo se decide con lo que llevas comprado en el mes más la compra en curso, y aplica a toda esa compra.
+          No es retroactivo: lo que ya pagaste no cambia.
+        </p>
+        <div class="mt-5 grid gap-6 md:grid-cols-2">
+          <ui-tabla-descuento
+            [tiers]="p.descuento.tramos"
+            [mxnPerVp]="p.unidades.mxnPerVp"
+            [activationVp]="p.activacion.vpNetos"
+            mode="socio"
+            context="plan"></ui-tabla-descuento>
+          <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-sm font-semibold text-main"><i class="fa-solid fa-calculator text-gold" aria-hidden="true"></i> Ejemplos</div>
+            <ul class="mt-3 space-y-2 text-sm text-main">
+              <li *ngFor="let e of p.descuento.ejemplos" class="flex flex-wrap items-baseline justify-between gap-2 border-t border-olive-20 pt-2">
+                <span>Compras {{ pesos(e.compraMes) }} en el mes</span>
+                <span class="font-semibold">{{ porcentaje(e.rate) }} → pagas {{ pesos(e.pagas) }}<span class="text-xs text-gray-500"> (ahorras {{ pesos(e.descuento) }})</span></span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- (5) Lo que ganas por tu red -->
+      <section class="mt-12">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Lo que ganas por tu red</h2>
+        <p class="mt-1 text-sm text-gray-600">
+          Cada generación paga un porcentaje de lo que compra esa persona. Las generaciones 2 en adelante tienen requisitos; aquí están en palabras.
+        </p>
+        <div class="mt-5 overflow-x-auto rounded-2xl border border-olive-30 surface-soft">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-gray-500">
+                <th class="px-4 py-2 font-semibold">Generación</th>
+                <th class="px-4 py-2 font-semibold">Ganas</th>
+                <th class="px-4 py-2 font-semibold">Requisito</th>
+                <th class="px-4 py-2 font-semibold">Ejemplo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let g of p.generaciones" class="border-t border-olive-20 text-main">
+                <td class="px-4 py-2 font-semibold">{{ g.gen }}</td>
+                <td class="px-4 py-2">{{ porcentaje(g.rate) }}</td>
+                <td class="px-4 py-2">{{ g.requisitoTexto }}</td>
+                <td class="px-4 py-2 text-xs text-gray-600">Si compra {{ pesos(g.ejemplo.compraReferido) }}, ganas {{ pesos(g.ejemplo.comision) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 space-y-2 text-sm text-main">
+          <p *ngIf="primeraGeneracion as g1">
+            <i class="fa-solid fa-lightbulb text-gold" aria-hidden="true"></i>
+            Si una amiga que invitaste (generación 1) compra {{ pesos(g1.ejemplo.compraReferido) }}, ganas <strong>{{ pesos(g1.ejemplo.comision) }}</strong>.
+            <ng-container *ngIf="segundaGeneracion as g2">
+              Si ella invita a alguien que compra {{ pesos(g2.ejemplo.compraReferido) }} y tú cumples el requisito de la generación 2 ({{ g2.requisitoTexto }}), ganas además <strong>{{ pesos(g2.ejemplo.comision) }}</strong>.
+            </ng-container>
+          </p>
+          <p *ngIf="p.compresionDinamica" class="text-gray-600">
+            Compresión dinámica: si alguien de la línea no califica ese mes, su generación no se pierde; sube a la siguiente persona activa de la línea.
+          </p>
+        </div>
+      </section>
+
+      <!-- (6) Cómo y cuándo se paga -->
+      <section class="mt-12">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Cómo y cuándo se paga</h2>
+        <ol class="mt-4 grid gap-3 md:grid-cols-2">
+          <li class="rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-main">
+            <span class="font-semibold">Pendiente</span> — cuando la persona de tu red paga su pedido.
+          </li>
+          <li class="rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-main">
+            <span class="font-semibold">Confirmada</span> — cuando ese pedido se entrega.
+          </li>
+          <li class="rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-main">
+            <span class="font-semibold">Bloqueada</span> — si ese mes tú no estás activa.
+            <span *ngIf="p.pago.reevaluaBloqueadasAlActivarse">Si te activas antes del cierre del mes, se recalcula y pasa a pendiente o confirmada;</span>
+            si no, se pierde al cerrar el mes<ng-container *ngIf="diasAviso">. Te avisamos por correo {{ diasAviso }}</ng-container>.
+          </li>
+          <li class="rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-main">
+            <span class="font-semibold">Pagada</span> — el depósito a tu CLABE se hace el día {{ p.pago.dia }} del mes siguiente.
+          </li>
+        </ol>
+      </section>
+
+      <!-- (7) Qué datos te pedimos y cuándo -->
+      <section class="mt-12">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Qué datos te pedimos y cuándo</h2>
+        <p class="mt-1 text-sm text-gray-600">Nada por adelantado: cada dato se pide cuando hace falta.</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div *ngFor="let d of p.datos" class="flex items-start gap-3 rounded-2xl border border-olive-30 surface-soft p-4 text-sm">
+            <span class="medallion h-8 w-8 shrink-0 text-mini"><i class="fa-solid fa-id-card text-gold" aria-hidden="true"></i></span>
+            <div>
+              <div class="font-semibold text-main">Al {{ d.cuando === 'registro' ? 'registrarte' : d.cuando === 'modo socio' ? 'activar el modo socio' : d.cuando === 'facturación' ? 'facturar comisiones (si aplica)' : 'tener tu ' + d.cuando }}</div>
+              <div class="text-gray-600">{{ listaDatos(d.que) }}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- (8) Rangos y bonos -->
+      <section class="mt-12" *ngIf="bonosDeRango || p.bonos.length">
+        <h2 class="text-2xl font-semibold tracking-tight text-main">Rangos y bonos</h2>
+        <p class="mt-1 text-sm text-gray-600">Son metas de largo plazo; no hacen falta para cobrar comisiones.</p>
+        <div class="mt-4 overflow-x-auto rounded-2xl border border-olive-30 surface-soft" *ngIf="bonosDeRango">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-gray-500">
+                <th class="px-4 py-2 font-semibold">Rango</th>
+                <th class="px-4 py-2 font-semibold">VG mínimo</th>
+                <th class="px-4 py-2 font-semibold">VP mínimo</th>
+                <th class="px-4 py-2 font-semibold">Líneas</th>
+                <th class="px-4 py-2 font-semibold">Bono mensual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of p.rangos" class="border-t border-olive-20 text-main">
+                <td class="px-4 py-2 font-semibold">{{ r.rank }}</td>
+                <td class="px-4 py-2">{{ puntos(r.vgMin) }}</td>
+                <td class="px-4 py-2">{{ puntos(r.vpMin) }}</td>
+                <td class="px-4 py-2">{{ r.minLines }}</td>
+                <td class="px-4 py-2">{{ pesos(r.monthlyBonus) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="mt-3 space-y-1 text-sm text-main" *ngIf="p.bonos.length">
+          <li *ngFor="let b of p.bonos"><i class="fa-solid fa-gift text-gold" aria-hidden="true"></i> <strong>{{ b.name }}</strong><span *ngIf="b.notes">: {{ b.notes }}</span></li>
+        </ul>
+      </section>
+
+      <!-- (9) Activar -->
+      <section class="mt-14 rounded-3xl border border-gold-35 bg-gold-12 p-6 text-center sm:p-8">
+        <ng-container *ngIf="activated as ok">
+          <div class="medallion mx-auto h-14 w-14 text-xl"><i class="fa-solid fa-circle-check text-gold" aria-hidden="true"></i></div>
+          <h2 class="mt-4 text-2xl font-semibold text-main">Tu cuenta ya está en modo socio</h2>
+          <p class="mt-2 text-sm text-gray-700">
+            <strong>{{ ok.name }}</strong>, modo guardado: <strong>{{ ok.mode }}</strong>
+            <ng-container *ngIf="ok.modeActivatedAt"> desde el {{ ok.modeActivatedAt | date:'dd/MM/yyyy HH:mm' }}</ng-container>.
+            <ng-container *ngIf="ok.alreadyPartner"> Ya lo estaba: no cambió nada.</ng-container>
+            <ng-container *ngIf="!ok.alreadyPartner"> Te mandamos un correo con el resumen.</ng-container>
+          </p>
+          <p class="mt-1 text-xs text-gray-600">En tu panel ya aparecen tu red, tus VP, tus comisiones y tu código para invitar.</p>
+          <div class="mt-5">
+            <ui-button size="lg" variant="primary" (pressed)="irAlPanel()">
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+              Ir a mi panel
+            </ui-button>
+          </div>
+        </ng-container>
+
+        <ng-container *ngIf="!activated">
+          <ng-container *ngIf="haySesion && yaEsSocio">
+            <h2 class="text-2xl font-semibold text-main">Tu cuenta ya está en modo socio</h2>
+            <p class="mt-2 text-sm text-gray-700">Todo lo de esta página ya aplica para ti<span *ngIf="nombre">, {{ nombre }}</span>.</p>
+            <div class="mt-5">
+              <ui-button size="lg" variant="primary" (pressed)="irAlPanel()">
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                Ir a mi panel
+              </ui-button>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="!haySesion || !yaEsSocio">
+            <h2 class="text-2xl font-semibold text-main">¿Quieres activar el modo socio?</h2>
+            <p class="mx-auto mt-2 max-w-xl text-sm text-gray-700">
+              Es gratis, no te pide datos extra y lo puedes activar cuando quieras.
+              Si no lo activas, sigues comprando como cliente exactamente igual que hoy.
+            </p>
+            <p *ngIf="!haySesion" class="mt-1 text-xs text-gray-600">Primero necesitas entrar o crear tu cuenta; después regresas aquí.</p>
+            <div *ngIf="activationError" class="mx-auto mt-4 max-w-xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ activationError }}</div>
+            <div class="mt-5 flex flex-wrap justify-center gap-3">
+              <ui-button size="lg" variant="primary" [disabled]="isActivating" (pressed)="activar()">
+                <i class="fa-solid" [ngClass]="isActivating ? 'fa-spinner fa-spin' : 'fa-handshake'" aria-hidden="true"></i>
+                {{ isActivating ? 'Activando…' : (haySesion ? 'Activar modo socio' : 'Entrar y activar modo socio') }}
+              </ui-button>
+              <ui-button size="lg" variant="ghost" [routerLink]="['/tienda']">
+                Seguir como cliente
+              </ui-button>
+            </div>
+          </ng-container>
+        </ng-container>
+      </section>
+
+    </ng-container>
+  </main>
+
+  <ui-footer logoMode="compact"></ui-footer>
+</section>

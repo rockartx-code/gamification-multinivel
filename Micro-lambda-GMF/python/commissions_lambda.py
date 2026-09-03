@@ -2,6 +2,7 @@ import base64
 import boto3
 from datetime import datetime, timezone
 import core_utils as utils # Importado desde la Lambda Layer
+import modo_handlers  # paquete B
 
 # --- CONSTANTES ---
 # Plan abril 2026: 5 generaciones (Gen1..Gen5) con compresión dinámica.
@@ -657,6 +658,7 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
             return True
 
         _mutate_ledger_month(b_id, month_key, _mutate)
+        modo_handlers.asegurar_socio(b_id, "comision")  # paquete B: con fila de comisión ya es socio
         return cambio["nuevo"]
 
     gen = 1  # siguiente generación a cubrir

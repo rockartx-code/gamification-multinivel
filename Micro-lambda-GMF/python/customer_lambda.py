@@ -4,6 +4,7 @@ import time
 import boto3
 import core_utils as utils  # Importado desde la Lambda Layer
 import dashboard_common
+import modo_handlers  # paquete B
 from dashboard_common import (
     DEFAULT_SPONSOR,
     _active_notifications_for_customer,
@@ -20,6 +21,9 @@ from dashboard_common import (
 )
 from datetime import datetime, timezone
 from typing import Optional
+
+# Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus rutas o devuelve None.
+_EXTENSIONES = [modo_handlers]
 
 # Cliente S3 para subida de documentos propios del cliente
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
@@ -68,6 +72,7 @@ def _format_customer_output(item):
     # Asegurar tipos decimales a float para JSON
     out["commissions"] = float(utils._to_decimal(item.get("commissions", 0)))
     out["discountRate"] = float(utils._to_decimal(item.get("discountRate", 0)))
+    out["mode"] = modo_handlers.modo_de(item)  # paquete B
 
     return out
 
@@ -1074,6 +1079,7 @@ def handle_customer_dashboard(headers: dict) -> dict:
         "rank": rank_val,
         "bonuses": bonus_awards,
     })
+    response = modo_handlers.ajustar_dashboard(customer, response)  # paquete B
     timer.mark("complete", status="ok")
     return response
 
@@ -1093,6 +1099,11 @@ def lambda_handler(event, context):
         return utils._json_response(200, {"service": "customer-profile"})
 
     try:
+        for extension in _EXTENSIONES:
+            respuesta = extension.atender(request)
+            if respuesta is not None:
+                return respuesta
+
         root = segments[0]
 
         # ── GET /customers/getall  (lista paginada para admin) ─────────

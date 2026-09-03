@@ -2457,6 +2457,126 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete B (modo cliente y plan) ──────────────────────────────────────────
+  /catalog/plan:
+    get:
+      summary: "Plan publicado con los números reales de la configuración"
+      description: |
+        Público. Tramos de descuento, generaciones con requisitos en palabras,
+        activación con ejemplos calculados sobre el catálogo, calendario de pago,
+        datos que se piden y cuándo, rangos y bonos. Ningún número vive en el código.
+      operationId: getCatalogPlan
+      tags: [Config]
+      responses:
+        "200":
+          description: "Plan publicado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: object
+                    additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/modo:
+    get:
+      summary: "Modo de la cuenta (cliente/socio) e indicadores del mes"
+      description: |
+        Privilegio: sesión propia (Bearer). Devuelve `mode`, `modeSince`,
+        `modeActivatedAt` e `indicators` (compra del mes, ahorro como socia,
+        siguiente tramo y "qué ganarías").
+      operationId: getCustomerMode
+      tags: [Customers]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "Modo e indicadores"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/modo-socio:
+    post:
+      summary: "Activar el modo socio"
+      description: |
+        Privilegio: sesión propia (Bearer); un admin con `customer_add` puede pasar
+        `customerId` (y `mode: cliente` para regresar una ficha). Idempotente.
+      operationId: activatePartnerMode
+      tags: [Customers]
+      security:
+        - UserSession: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customerId: { type: string }
+                acceptedPlanVersion: { type: string }
+                mode: { type: string, enum: [cliente, socio] }
+      responses:
+        "200":
+          description: "Modo guardado"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/ahorro-socio:
+    post:
+      summary: "Cuánto habría ahorrado esta compra en modo socio"
+      description: |
+        Público. `items[{price, quantity}]`; con sesión propia y `customerId`
+        considera el neto ya comprado en el mes.
+      operationId: partnerSavingsQuote
+      tags: [Customers]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customerId: { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      price: { type: number }
+                      quantity: { type: integer }
+      responses:
+        "200":
+          description: "Ahorro calculado"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: "Líneas inválidas"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

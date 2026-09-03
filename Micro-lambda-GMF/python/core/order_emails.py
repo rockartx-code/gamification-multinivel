@@ -60,6 +60,27 @@ def _seguimiento(order: dict, frontend_url: str) -> str:
     return f"{frontend_url.rstrip('/')}/#/orden/{order.get('orderId')}"
 
 
+def _parrafo_ahorro_socio(order: dict, frontend_url: str) -> str:
+    """Paquete B: al comprador en modo cliente (o invitado) le decimos cuánto habría ahorrado como socia.
+
+    Los campos `partnerSavings*` los deja `_calculate_totals` en el pedido; a un socio no se le dice nada.
+    """
+    if str(order.get("partnerMode") or "") not in ("cliente", "invitado"):
+        return ""
+    ahorro = Decimal(str(order.get("partnerSavings") or 0))
+    enlace = f"{frontend_url.rstrip('/')}/#/modo-socio?desde=orden&id={order.get('orderId')}"
+    if ahorro > 0:
+        frase = f"Como socia habrías ahorrado <strong>{_mxn(ahorro)}</strong> en esta compra."
+    else:
+        faltan = Decimal(str(order.get("partnerSavingsNextMissing") or 0))
+        tasa = Decimal(str(order.get("partnerSavingsNextRate") or 0)) * 100
+        if faltan <= 0 or tasa <= 0:
+            return ""
+        frase = f"Como socia, con <strong>{_mxn(faltan)}</strong> más de compra este mes tendrías {tasa:.0f} % de descuento."
+    return (f'<div class="info-box"><p>{frase} El modo socio es gratis, no te pide datos extra y lo activas cuando quieras.</p>'
+            f'<p><a href="{enlace}">Conoce el modo socio</a></p></div>')
+
+
 def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     nombre = order.get("recipientName") or order.get("customerName") or "Hola"
     oid = order.get("orderId")
@@ -73,7 +94,9 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         asunto = f"Recibimos tu pago · pedido {oid}"
         titulo, icono = "¡Gracias por tu compra!", "✅"
         lead = "Tu pago quedó confirmado. Estamos preparando tu paquete y te avisaremos por este medio cuando salga."
-        extra = ""
+        if order.get("invoiceRequested"):
+            lead += " Recibimos tu solicitud de factura: te la mandaremos a este mismo correo."
+        extra = _parrafo_ahorro_socio(order, frontend_url)
     elif evento == "shipped":
         asunto = f"Tu pedido {oid} va en camino"
         titulo, icono = "Tu paquete ya salió", "🚚"
@@ -157,6 +180,9 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     <a class="btn" href="{url}">Ver mi pedido</a>
     """
     texto = f"{titulo}\n\nHola {nombre}. " + lead.replace("<strong>", "").replace("</strong>", "") + f"\n\nPedido {oid}. Seguimiento: {url}\n"
+    if extra:
+        import re as _re
+        texto += "\n" + _re.sub(r"<[^>]+>", " ", extra).strip() + "\n"
     return asunto, texto, _correo._email_shell(cuerpo)
 
 

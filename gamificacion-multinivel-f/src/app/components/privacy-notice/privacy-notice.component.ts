@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 
 import { UiButtonComponent } from '../ui-button/ui-button.component';
+import { PlanSocioService } from '../../services/plan-socio.service';
 
 /**
  * Aviso de Privacidad del Usuario (H19).
@@ -17,6 +18,17 @@ import { UiButtonComponent } from '../ui-button/ui-button.component';
 export class PrivacyNoticeComponent implements OnInit {
   private readonly storageKey = 'privacy-notice-accepted-v1';
   visible = false;
+  /** Paquete B: en modo cliente (o sin sesión) el aviso no habla de red, comisiones ni datos bancarios. */
+  @Input() mode: 'cliente' | 'socio' | 'auto' = 'auto';
+
+  constructor(private readonly planSocio: PlanSocioService) {}
+
+  get modoEfectivo(): 'cliente' | 'socio' {
+    if (this.mode !== 'auto') {
+      return this.mode;
+    }
+    return this.planSocio.modoActual === 'socio' ? 'socio' : 'cliente';
+  }
 
   ngOnInit(): void {
     try {

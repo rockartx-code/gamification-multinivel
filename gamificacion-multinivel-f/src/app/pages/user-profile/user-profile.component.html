@@ -94,8 +94,15 @@
         </div>
       </div>
 
+      <!-- Paquete B: en modo cliente no se piden datos bancarios ni fiscales -->
+      <div *ngIf="isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+        <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">CLABE y documentos</h2>
+        <p class="text-xs text-gray-600">Tu cuenta está en modo cliente: no necesitamos tu CLABE ni documentos fiscales. Solo se piden si activas el modo socio y tienes comisiones que cobrar.</p>
+        <a class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline" [routerLink]="['/modo-socio']">Conoce el modo socio <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+      </div>
+
       <!-- ── CLABE INTERBANCARIA ─────────────────────────────────────── -->
-      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">CLABE interbancaria</h2>
         <p class="mb-5 text-xs text-gray-500">Se utiliza para recibir el depósito de tus comisiones.</p>
 
@@ -139,7 +146,7 @@
       </div>
 
       <!-- ── CARGA DE DOCUMENTACIÓN ─────────────────────────────────── -->
-      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Carga de documentación</h2>
         <p class="mb-5 text-xs text-gray-500">Sube los documentos requeridos para completar tu registro.</p>
 
@@ -279,7 +286,7 @@
       </div>
 
       <!-- ── DOCUMENTOS DE TU ADMINISTRADOR ────────────────────────── -->
-      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Documentos de tu administrador</h2>
         <p class="mb-5 text-xs text-gray-500">Acá podés ver y descargar los documentos que tu administrador ligó a tu cuenta.</p>
 

@@ -92,6 +92,10 @@ export interface SponsorContact {
   email: string;
   phone: string;
   isDefault?: boolean;
+  /** Lo expone el paquete F cuando la patrocinadora efectiva es la coach. */ // paquete B
+  isCoach?: boolean;
+  coachTitle?: string; // paquete B
+  whatsapp?: string; // paquete B
 }
 
 export interface FeaturedItem {
@@ -204,6 +208,10 @@ export interface UserDashboardData {
     prevStatus?: 'no_moves' | 'pending' | 'paid';
     payoutDay?: number;
   } | null;
+  /** Modo de la cuenta e indicadores del cliente (paquete B). */
+  mode?: 'cliente' | 'socio';
+  modeActivatedAt?: string | null; // paquete B
+  clientIndicators?: import('./plan-socio.model').IndicadoresCliente | null; // paquete B
 }
 
 /** Respuesta de GET /catalog */
@@ -240,6 +248,10 @@ export interface DashboardData {
   vg?: number;
   rank?: string;
   bonuses?: BonusAward[];
+  /** Modo de la cuenta e indicadores del cliente (paquete B). */
+  mode?: 'cliente' | 'socio';
+  modeActivatedAt?: string | null; // paquete B
+  clientIndicators?: import('./plan-socio.model').IndicadoresCliente | null; // paquete B
 }
 
 export interface CommissionRequestPayload {

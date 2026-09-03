@@ -597,3 +597,8 @@ def lambda_handler(event: dict, context) -> dict:
         raiz=lambda p: handle_catalog(p.method),
         requiere_privilegio=utils._require_admin,
     )
+
+
+# ── Paquete B (modo cliente y plan): GET /catalog/plan ─────────────────────
+import modo_handlers                          # paquete B
+RUTAS.extend(modo_handlers.RUTAS_CATALOGO)    # paquete B
