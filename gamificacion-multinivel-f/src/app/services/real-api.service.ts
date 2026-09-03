@@ -1292,7 +1292,7 @@ export class RealApiService {
     );
   }
 
-  private actorHeaders(): HttpHeaders {
+  public actorHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
     const raw = localStorage.getItem('auth-user');
     if (!raw) {
