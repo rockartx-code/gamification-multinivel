@@ -691,6 +691,31 @@
         <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
           {{ discountUpgradeMessage }}
         </div>
+        <!-- El cupón solo existía en el resumen de escritorio: desde el celular no había dónde escribirlo. -->
+        <div *ngIf="!isGuest" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
+          <div class="flex items-center gap-2">
+            <ui-form-field placeholder="Código de descuento" wrapperClass="flex-1"
+              [ngModel]="couponCode" (ngModelChange)="couponCode = $event"
+              [disabled]="!!appliedCoupon?.valid"></ui-form-field>
+            <ui-button *ngIf="!appliedCoupon?.valid" size="sm" variant="primary" [disabled]="couponChecking" (pressed)="applyCoupon()">Aplicar</ui-button>
+            <ui-button *ngIf="appliedCoupon?.valid" size="sm" variant="ghost" (pressed)="removeCoupon()">Quitar</ui-button>
+          </div>
+          <p *ngIf="couponMessage" class="mt-1 text-xs" [ngClass]="appliedCoupon?.valid ? 'text-green-600' : 'text-red-500'">{{ couponMessage }}</p>
+        </div>
+        <div *ngIf="couponDiscount > 0" class="flex items-center justify-between text-muted">
+          <span>Cupón {{ appliedCoupon?.code }}</span>
+          <span class="text-gold">-{{ formatMoney(couponDiscount) }}</span>
+        </div>
+        <div *ngIf="!isGuest" class="flex items-center justify-between text-muted">
+          <span>Puntos de este pedido (VP)</span>
+          <span class="font-semibold text-main">{{ cartVp }} VP</span>
+        </div>
+        <div *ngIf="orderLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Con este pedido llegas a {{ vpAfterOrder }} de {{ vpGoalTarget }} VP del mes: te faltarían {{ vpGoalGap }} VP para activarte.
+        </div>
+        <div *ngIf="couponLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Con el cupón, este pedido te deja en {{ cartVp }} VP y tu meta de activación es {{ vpGoalTarget }} VP: te faltarían {{ vpGoalGap }} VP.
+        </div>
         <div class="my-2 border-t border-olive-20"></div>
         <div class="flex items-center justify-between">
           <span class="font-semibold text-main">Total</span>
