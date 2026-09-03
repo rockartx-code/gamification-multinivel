@@ -2296,6 +2296,8 @@
                           <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                             <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
                             <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <span *ngIf="(sale.pendingAmount || 0) > 0 && sale.status !== 'voided'" class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-micro font-semibold text-amber-800">Saldo pendiente {{ formatMoney(sale.pendingAmount || 0) }}</span>
+                            <button *ngIf="canSettlePosSale(sale)" type="button" class="text-micro font-semibold text-accent hover:underline" (click)="settlePosSale(sale)">Cobrar saldo</button>
                             <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
                           </div>
                         </div>
@@ -2323,6 +2325,8 @@
                           <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                             <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
                             <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <span *ngIf="(sale.pendingAmount || 0) > 0 && sale.status !== 'voided'" class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-micro font-semibold text-amber-800">Saldo pendiente {{ formatMoney(sale.pendingAmount || 0) }}</span>
+                            <button *ngIf="canSettlePosSale(sale)" type="button" class="text-micro font-semibold text-accent hover:underline" (click)="settlePosSale(sale)">Cobrar saldo</button>
                             <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
                           </div>
                         </div>
@@ -2350,6 +2354,8 @@
                           <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                             <div class="text-mini text-gray-600">{{ stockName(sale.stockId) }} / {{ customerName(sale.attendantUserId) }}</div>
                             <span *ngIf="sale.status === 'voided'" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700" [title]="sale.voidReason || ''">Anulada</span>
+                            <span *ngIf="(sale.pendingAmount || 0) > 0 && sale.status !== 'voided'" class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-micro font-semibold text-amber-800">Saldo pendiente {{ formatMoney(sale.pendingAmount || 0) }}</span>
+                            <button *ngIf="canSettlePosSale(sale)" type="button" class="text-micro font-semibold text-accent hover:underline" (click)="settlePosSale(sale)">Cobrar saldo</button>
                             <button *ngIf="canVoidPosSale(sale)" type="button" class="text-micro font-semibold text-red-700 hover:underline" (click)="voidPosSale(sale)">Anular</button>
                           </div>
                         </div>

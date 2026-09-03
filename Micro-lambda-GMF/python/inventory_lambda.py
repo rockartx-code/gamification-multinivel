@@ -319,6 +319,58 @@ def _avisar_pos(order: dict, evento: str) -> None:
     )
 
 
+
+def handle_settle_pos_sale(sale_id, body, headers):
+    """POST /pos/sales/{id}/payments — abono al saldo de una venta con pago parcial.
+
+    El saldo pendiente solo se veía al cobrar y después no había forma de
+    liquidarlo. El abono se registra como una venta de caja sin productos
+    (source=settlement) para que entre al efectivo y al corte como cualquier cobro.
+    """
+    sale = utils._get_by_id("POS_SALE", sale_id)
+    if not sale:
+        return utils._json_response(404, {"message": "Venta no encontrada"})
+    if sale.get("status") == "voided":
+        return utils._json_response(409, {"message": "La venta está anulada"})
+    pendiente = utils._to_decimal(sale.get("pendingAmount") or 0)
+    if pendiente <= utils.D_ZERO:
+        return utils._json_response(409, {"message": "Esta venta no tiene saldo pendiente"})
+    monto = utils._to_decimal((body or {}).get("amount") or pendiente)
+    if monto <= utils.D_ZERO or monto > pendiente:
+        return utils._json_response(400, {"message": f"El abono debe ser mayor a 0 y hasta ${pendiente}"})
+    metodo = str((body or {}).get("paymentMethod") or "cash").strip().lower()
+    if metodo not in ("cash", "card", "transfer"):
+        return utils._json_response(400, {"message": "Forma de pago invalida"})
+    actor = utils._extract_actor(headers or {})
+    user_id = actor.get("user_id") or (headers or {}).get("x-user-id")
+    now = utils._now_iso()
+    abono_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
+    nuevo_pendiente = pendiente - monto
+    abono = {
+        "entityType": "posSale", "saleId": abono_id, "orderId": sale.get("orderId"),
+        "source": "settlement", "settlesSaleId": sale_id,
+        "stockId": sale.get("stockId"), "attendantUserId": user_id,
+        "customerId": sale.get("customerId"), "customerName": sale.get("customerName"),
+        "total": monto, "grossSubtotal": monto, "discountRate": utils.D_ZERO, "discountAmount": utils.D_ZERO,
+        "paymentType": "full", "amountPaid": monto, "pendingAmount": utils.D_ZERO,
+        "paymentStatus": "paid", "deliveryStatus": "delivered_branch", "paymentMethod": metodo,
+        "lines": [], "createdAt": now, "updatedAt": now,
+    }
+    utils._put_entity("POS_SALE", abono_id, abono)
+    pagos = list(sale.get("payments") or []) + [{"saleId": abono_id, "amount": monto, "paymentMethod": metodo, "at": now, "by": str(user_id)}]
+    actualizado = utils._update_by_id(
+        "POS_SALE", sale_id,
+        "SET amountPaid = :p, pendingAmount = :r, paymentStatus = :st, payments = :pg, updatedAt = :u",
+        {":p": utils._to_decimal(sale.get("amountPaid") or 0) + monto, ":r": nuevo_pendiente,
+         ":st": "paid" if nuevo_pendiente <= utils.D_ZERO else "partial", ":pg": pagos, ":u": now},
+    )
+    if sale.get("orderId") and nuevo_pendiente <= utils.D_ZERO:
+        try:
+            utils._update_by_id("ORDER", sale.get("orderId"), "SET paymentStatus = :st, updatedAt = :u", {":st": "paid", ":u": now})
+        except Exception as e:
+            utils._log("settle_order_update_error", "ERROR", saleId=sale_id, err=e)
+    return utils._json_response(200, {"sale": actualizado, "payment": abono, "pendingAmount": float(nuevo_pendiente)})
+
 def handle_void_pos_sale(sale_id: str, body: dict, headers: dict) -> dict:
     """POST /pos/sales/{id}/void — anula una venta de mostrador.
 
@@ -732,6 +784,10 @@ def _route_pos(method: str, segments: list, body: dict, query: dict, headers: di
     if root == "pos":
         if len(segments) < 2:
             return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
+        if segments[1] == "sales" and len(segments) == 4 and segments[3] == "payments" and method == "POST":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            return handle_settle_pos_sale(segments[2], body, headers)
         if segments[1] == "sales" and len(segments) == 4 and segments[3] == "void" and method == "POST":
             err = utils._require_admin(headers, "order_mark_paid")
             if err: return err

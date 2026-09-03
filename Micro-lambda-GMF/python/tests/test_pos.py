@@ -145,3 +145,23 @@ def test_recibir_una_transferencia_con_faltante_registra_la_merma(inventory_lamb
     assert trf["status"] == "received" and trf["discrepancies"][0]["missing"] == 1
     mermas = [m for m in utils._query_bucket("INVENTORY_MOVEMENT") if m.get("type") == "damage" and m.get("stockId") == "STK-A"]
     assert mermas and mermas[-1]["quantity"] == 1 if "quantity" in mermas[-1] else mermas[-1].get("qty") == 1
+
+
+def test_abonar_el_saldo_de_una_venta_parcial(inventory_lambda, utils):
+    """Regresión: una venta con pago parcial no tenía forma de liquidarse después;
+    el saldo solo se veía al cobrar. El abono entra a caja como un cobro más."""
+    from decimal import Decimal
+    utils._put_entity("POS_SALE", "SALE-P1", {"entityType": "posSale", "saleId": "SALE-P1", "orderId": "POS-P1", "stockId": "STK-1",
+                                              "attendantUserId": "9", "customerId": 5, "customerName": "Roberto", "total": Decimal("840"),
+                                              "paymentType": "partial", "amountPaid": Decimal("500"), "pendingAmount": Decimal("340"),
+                                              "paymentStatus": "partial", "paymentMethod": "cash", "lines": [], "createdAt": utils._now_iso()})
+    h = {"Authorization": "Bearer sim-superadmin-token"}
+    r = inventory_lambda.handle_settle_pos_sale("SALE-P1", {"amount": 400, "paymentMethod": "card"}, h)
+    assert r["statusCode"] == 400
+    r = inventory_lambda.handle_settle_pos_sale("SALE-P1", {"amount": 340, "paymentMethod": "card"}, h)
+    assert r["statusCode"] == 200, r["body"]
+    venta = utils._get_by_id("POS_SALE", "SALE-P1")
+    assert Decimal(str(venta["pendingAmount"])) == Decimal("0") and venta["paymentStatus"] == "paid" and len(venta["payments"]) == 1
+    abonos = [v for (pk, sk), v in utils._table.store.items() if pk.startswith("POS_SALE") and v.get("source") == "settlement"]
+    assert len(abonos) == 1 and Decimal(str(abonos[0]["amountPaid"])) == Decimal("340") and abonos[0]["orderId"] == "POS-P1"
+    assert inventory_lambda.handle_settle_pos_sale("SALE-P1", {"amount": 10}, h)["statusCode"] == 409

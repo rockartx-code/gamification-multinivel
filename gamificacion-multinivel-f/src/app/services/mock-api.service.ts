@@ -1551,6 +1551,10 @@ export class MockApiService {
     return of([...rows]).pipe(delay(120));
   }
 
+  settlePosSale(_saleId: string, _payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return of({ pendingAmount: 0 }).pipe(delay(80));
+  }
+
   voidPosSale(saleId: string, _reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
     return of({ ok: true, saleId }).pipe(delay(80));
   }

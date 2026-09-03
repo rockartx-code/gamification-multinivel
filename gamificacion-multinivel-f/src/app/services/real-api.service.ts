@@ -809,6 +809,11 @@ export class RealApiService {
       } as InventoryMovement))));
   }
 
+  settlePosSale(saleId: string, payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return this.http
+      .post<{ pendingAmount: number }>(`${this.baseUrl}/inventory/pos/sales/${encodeURIComponent(saleId)}/payments`, payload, { headers: this.actorHeaders() });
+  }
+
   voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
     return this.http.post<{ ok: boolean; saleId: string; orderId?: string }>(
       `${this.baseUrl}/inventory/pos/sales/${encodeURIComponent(saleId)}/void`,
@@ -1025,6 +1030,7 @@ export class RealApiService {
       voidReason: sale['voidReason'] != null ? String(sale['voidReason']) : undefined,
       paymentType: sale['paymentType'] != null ? (String(sale['paymentType']) as PosSale['paymentType']) : undefined,
       amountPaid: sale['amountPaid'] != null ? Number(sale['amountPaid']) : undefined,
+      pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
       pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
       cashierDiscountMode: sale['cashierDiscountMode'] != null ? (String(sale['cashierDiscountMode']) as PosSale['cashierDiscountMode']) : undefined,
       cashierDiscountAmount: sale['cashierDiscountAmount'] != null ? Number(sale['cashierDiscountAmount']) : undefined,

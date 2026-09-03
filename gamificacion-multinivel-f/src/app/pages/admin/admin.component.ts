@@ -6228,6 +6228,39 @@ export class AdminComponent implements OnInit {
     return sale.status !== 'voided' && this.hasPermission('order_mark_paid');
   }
 
+  canSettlePosSale(sale: PosSale): boolean {
+    return sale.status !== 'voided' && Number(sale.pendingAmount || 0) > 0 && this.hasPermission('pos_register_sale');
+  }
+
+  /** Abono al saldo de una venta con pago parcial (antes no existía ninguna acción posterior). */
+  settlePosSale(sale: PosSale): void {
+    if (!this.canSettlePosSale(sale)) {
+      return;
+    }
+    const pendiente = Number(sale.pendingAmount || 0);
+    const montoTxt = prompt(`Saldo pendiente de ${sale.orderId}: ${this.formatMoney(pendiente)}. ¿Cuánto abona el cliente?`, String(pendiente));
+    if (montoTxt === null) return;
+    const monto = Number(String(montoTxt).replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(monto) || monto <= 0 || monto > pendiente + 0.001) {
+      this.showSnackbar(`El abono debe ser mayor a 0 y hasta ${this.formatMoney(pendiente)}.`);
+      return;
+    }
+    const metodoTxt = (prompt('Forma de pago del abono: efectivo, tarjeta o transferencia', 'tarjeta') || '').trim().toLowerCase();
+    const metodo: 'cash' | 'card' | 'transfer' | null = metodoTxt.startsWith('efec') ? 'cash' : metodoTxt.startsWith('tarj') ? 'card' : metodoTxt.startsWith('trans') ? 'transfer' : null;
+    if (!metodo) {
+      this.showSnackbar('Forma de pago no reconocida.');
+      return;
+    }
+    this.adminControl.settlePosSale(sale.id, { amount: monto, paymentMethod: metodo }).subscribe({
+      next: ({ pendingAmount }) => {
+        this.showSnackbar(pendingAmount > 0 ? `Abono registrado. Saldo pendiente: ${this.formatMoney(pendingAmount)}.` : 'Abono registrado. Venta liquidada.');
+        this.refreshPosCashControl();
+        this.requestViewUpdate();
+      },
+      error: (err: unknown) => this.showSnackbar(this.resolveUiErrorMessage(err, 'No se pudo registrar el abono.'))
+    });
+  }
+
   voidPosSale(sale: PosSale): void {
     if (!this.canVoidPosSale(sale)) {
       return;

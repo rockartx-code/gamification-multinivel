@@ -487,6 +487,10 @@ export class AdminControlService {
   }
 
   /** Anula una venta de mostrador; el componente refresca su lista. */
+  settlePosSale(saleId: string, payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return this.api.settlePosSale(saleId, payload);
+  }
+
   voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
     return this.api.voidPosSale(saleId, reason);
   }

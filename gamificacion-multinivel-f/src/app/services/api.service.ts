@@ -362,6 +362,10 @@ export class ApiService {
     return this.resolveApi().listPosSales(stockId);
   }
 
+  settlePosSale(saleId: string, payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return this.resolveApi().settlePosSale(saleId, payload);
+  }
+
   voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
     return this.resolveApi().voidPosSale(saleId, reason);
   }
