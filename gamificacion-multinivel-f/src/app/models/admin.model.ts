@@ -727,6 +727,10 @@ export interface PosSale {
   status?: string;
   voidReason?: string;
   voidedAt?: string;
+  // paquete E: pago mixto
+  payments?: Array<{ method: 'cash' | 'card' | 'transfer'; amount: number }>;
+  cashPortion?: number;
+  change?: number | null;
 }
 
 export interface PosCashControl {
@@ -760,6 +764,13 @@ export interface PosCashCut {
   sales?: PosSale[];
   withdrawals?: PosWithdrawal[];
   totalWithdrawals?: number;
+  // paquete E: arqueo
+  cashExpected?: number;
+  cashCounted?: number;
+  difference?: number;
+  differenceReason?: string;
+  withdrawalReceiver?: string;
+  openingCash?: number;
 }
 
 export interface PosWithdrawal {
@@ -769,6 +780,8 @@ export interface PosWithdrawal {
   amount: number;
   reason: string;
   createdAt?: string;
+  // paquete E
+  receiver?: string;
 }
 
 export interface UpdateBusinessConfigPayload {

@@ -61,6 +61,9 @@ import { AdminControlService } from '../../services/admin-control.service';
 import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
+import { AdminArqueoComponent } from './arqueo/admin-arqueo.component'; // WP-E
+import { CajaService } from '../../services/caja.service'; // WP-E
+import { AbonoCajaRespuesta, AnulacionCajaRespuesta, VentaCajaRespuesta } from '../../models/caja.model'; // WP-E
 import { HonorBoard, HonorEntry } from '../../models/user-dashboard.model';
 
 type StructureNode = {
@@ -130,7 +133,7 @@ type PosSale = {
   total: number;
   paymentStatus: 'paid_branch' | 'partial_branch' | 'credit_branch';
   deliveryStatus: 'paid_branch' | 'delivered_branch';
-  paymentMethod?: 'cash' | 'card' | 'transfer';
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'mixed';
   createdAt: string;
   lines: AdminOrderItem[];
   cashCutId?: string;
@@ -155,6 +158,13 @@ type PosCashCut = {
   createdAt?: string;
   sales?: PosSale[];
   withdrawals?: PosWithdrawal[];
+  // paquete E: arqueo
+  cashExpected?: number;
+  cashCounted?: number;
+  difference?: number;
+  differenceReason?: string;
+  withdrawalReceiver?: string;
+  openingCash?: number;
 };
 
 type PosWithdrawal = {
@@ -236,7 +246,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, AdminArqueoComponent /* WP-E */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -357,7 +367,17 @@ export class AdminComponent implements OnInit {
       description: 'Marca la orden como reembolsada.'
     }
   ];
-  readonly posOrderPaymentMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer'>> = [
+  readonly posOrderPaymentMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer' | 'mixed'>> = [
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'card', label: 'Tarjeta' },
+    { value: 'transfer', label: 'Transferencia' },
+    { value: 'mixed', label: 'Efectivo + tarjeta/transferencia' }
+  ];
+  readonly posMixedSecondMethodOptions: Array<SelectOption<'card' | 'transfer'>> = [
+    { value: 'card', label: 'Tarjeta' },
+    { value: 'transfer', label: 'Transferencia' }
+  ];
+  readonly posSettleMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer'>> = [
     { value: 'cash', label: 'Efectivo' },
     { value: 'card', label: 'Tarjeta' },
     { value: 'transfer', label: 'Transferencia' }
@@ -373,7 +393,8 @@ export class AdminComponent implements OnInit {
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
     private readonly api: ApiService,
-    private readonly sanitizer: DomSanitizer
+    private readonly sanitizer: DomSanitizer,
+    private readonly caja: CajaService // WP-E
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
@@ -720,16 +741,35 @@ export class AdminComponent implements OnInit {
   posItems = new Map<number, number>();
   posSales: PosSale[] = [];
   posCashControl: PosCashControl | null = null;
-  posSalePaymentMethod: 'cash' | 'card' | 'transfer' = 'cash';
+  posSalePaymentMethod: 'cash' | 'card' | 'transfer' | 'mixed' = 'cash';
+  /** Pago mixto (paquete E): parte en efectivo; el resto va a tarjeta o transferencia. */
+  posMixedCashAmount = '';
+  posMixedSecondMethod: 'card' | 'transfer' = 'card';
+  /** Se incrementa tras cada venta, abono o anulación para que el arqueo se recargue. */
+  posCajaRefreshToken = 0;
+  /** Última venta tal como la guardó el servidor: folio y montos reales, no los del formulario. */
+  posUltimaVenta: VentaCajaRespuesta | null = null;
+  // Abono a saldo pendiente (modal en lugar de prompt)
+  isPosSettleModalOpen = false;
+  posSettleTarget: PosSale | null = null;
+  posSettleAmount = '';
+  posSettleMethod: 'cash' | 'card' | 'transfer' = 'cash';
+  posSettleError = '';
+  isSettlingPosSale = false;
+  posSettleResult: AbonoCajaRespuesta | null = null;
+  // Anulación de venta (modal en lugar de prompt)
+  isPosVoidModalOpen = false;
+  posVoidTarget: PosSale | null = null;
+  posVoidReason = '';
+  posVoidError = '';
+  isVoidingPosSale = false;
+  posVoidResult: AnulacionCajaRespuesta | null = null;
   posCustomerSearch = 'Publico en General';
   selectedPosCustomerId: number | null = null;
   posCustomerRecommendations: PosCustomerRecommendation[] = [];
   posSelectedCustomerMonth: AssociateMonth | null = null;
   isLoadingPosCustomerProjection = false;
   isRegisteringPosSale = false;
-  isCuttingPosCash = false;
-  isPosCashCutModalOpen = false;
-  posCashCutKeepAmount = '';
   /** Efectivo que entrega el cliente en mostrador; el POS no lo pedía y el cajero sacaba el cambio de cabeza. */
   posCashReceived = '';
 
@@ -738,20 +778,49 @@ export class AdminComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
+  /** Parte del total que se paga en efectivo (todo, la parte mixta o nada). */
+  get posCashPortion(): number {
+    if (this.posPaymentTypeMode !== 'full') {
+      return this.posSalePaymentMethod === 'cash' ? this.posAmountPaidNow : 0;
+    }
+    if (this.posSalePaymentMethod === 'cash') return this.posEffectiveTotal;
+    if (this.posSalePaymentMethod === 'mixed') return this.posMixedCashNumber;
+    return 0;
+  }
+
+  get posMixedCashNumber(): number {
+    const n = Number(String(this.posMixedCashAmount).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? this.roundMoney(n) : 0;
+  }
+
+  /** Lo que va a tarjeta o transferencia en un pago mixto: se autocompleta. */
+  get posMixedRemainder(): number {
+    return this.roundMoney(Math.max(0, this.posEffectiveTotal - this.posMixedCashNumber));
+  }
+
+  get posMixedInvalidReason(): string {
+    if (this.posSalePaymentMethod !== 'mixed') return '';
+    if (this.posPaymentTypeMode !== 'full') return 'El pago mixto solo aplica a pago completo: elige una sola forma de pago para el pago parcial o crédito.';
+    if (!String(this.posMixedCashAmount).trim()) return 'Escribe cuánto paga en efectivo; el resto se cobra con tarjeta o transferencia.';
+    if (this.posMixedCashNumber <= 0 || this.posMixedCashNumber >= this.posEffectiveTotal) {
+      return `En pago mixto la parte en efectivo debe ser mayor a $0 y menor al total (${this.formatMoney(this.posEffectiveTotal)}).`;
+    }
+    return '';
+  }
+
   get posChangeDue(): number {
-    if (this.posSalePaymentMethod !== 'cash' || this.posPaymentTypeMode !== 'full') {
+    if (!(this.posSalePaymentMethod === 'cash' || this.posSalePaymentMethod === 'mixed') || this.posPaymentTypeMode !== 'full') {
       return 0;
     }
-    return this.roundMoney(Math.max(0, this.posCashReceivedNumber - this.posEffectiveTotal));
+    return this.roundMoney(Math.max(0, this.posCashReceivedNumber - this.posCashPortion));
   }
 
   get posCashShort(): number {
-    if (this.posSalePaymentMethod !== 'cash' || this.posPaymentTypeMode !== 'full' || !this.posCashReceived) {
+    if (!(this.posSalePaymentMethod === 'cash' || this.posSalePaymentMethod === 'mixed') || this.posPaymentTypeMode !== 'full' || !this.posCashReceived) {
       return 0;
     }
-    return this.roundMoney(Math.max(0, this.posEffectiveTotal - this.posCashReceivedNumber));
+    return this.roundMoney(Math.max(0, this.posCashPortion - this.posCashReceivedNumber));
   }
-  posCashCutError = '';
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
 
@@ -772,19 +841,10 @@ export class AdminComponent implements OnInit {
   posPaymentTypeMode: 'full' | 'partial' | 'credit' = 'full';
   posPartialAmountPaid = '';
 
-  isPosWithdrawalModalOpen = false;
-  posWithdrawalAmount = '';
-  posWithdrawalReason = '';
-  posWithdrawalAuthCode = '';
-  posWithdrawalError = '';
-  isRegisteringPosWithdrawal = false;
-  posWithdrawals: PosWithdrawal[] = [];
-
   posCashCuts: PosCashCut[] = [];
   isLoadingPosCashCuts = false;
   isPosCashCutsOpen = false;
   expandedCutId: string | null = null;
-  lastCompletedCut: PosCashCut | null = null;
 
   posAuthCodeDraft = '';
   isSavingPosAuthCode = false;
@@ -1606,6 +1666,11 @@ export class AdminComponent implements OnInit {
     return this.visiblePosSales.filter((sale) => sale.paymentMethod === 'transfer');
   }
 
+  /** Pagos mixtos (paquete E): efectivo + tarjeta/transferencia. */
+  get visibleMixedPosSales(): PosSale[] {
+    return this.visiblePosSales.filter((sale) => sale.paymentMethod === 'mixed');
+  }
+
   get posSubtotal(): number {
     return this.getPosItems().reduce((acc, item) => acc + item.price * item.quantity, 0);
   }
@@ -1632,6 +1697,10 @@ export class AdminComponent implements OnInit {
   get posProjectedDiscountRate(): number {
     const customer = this.selectedPosCustomer;
     if (!customer) {
+      return 0;
+    }
+    // Modo cliente (paquete B): no aplica la escalera de descuento de socio.
+    if (this.posCustomerIsClientMode) {
       return 0;
     }
     return Math.max(this.parseCustomerDiscountRate(customer), this.calculateDiscountTierRate(this.posProjectedMonthNet));
@@ -1717,22 +1786,45 @@ export class AdminComponent implements OnInit {
   }
 
   get canRegisterPosSale(): boolean {
-    return Boolean(
-      this.hasPermission('pos_register_sale') &&
-        this.hasLinkedPosStock &&
-        this.currentPosStock &&
-        this.posItems.size > 0 &&
-        !this.isRegisteringPosSale
-    );
+    return this.posDisabledReason('cobrar') === '';
   }
 
-  get canCreatePosCashCut(): boolean {
-    return Boolean(
-      this.hasPermission('pos_register_sale') &&
-        this.currentPosStock &&
-        (this.posCashControl?.salesCount ?? 0) > 0 &&
-        !this.isCuttingPosCash
-    );
+  /** El cliente seleccionado está en modo cliente (paquete B): paga precio de lista, sin descuento de socio. */
+  get posCustomerIsClientMode(): boolean {
+    const modo = (this.selectedPosCustomer as { mode?: string } | null)?.mode;
+    return String(modo || '').toLowerCase() === 'cliente';
+  }
+
+  /**
+   * Por qué un botón del POS está deshabilitado, en una línea para alguien sin
+   * capacitación (Nadia: el corte "deshabilitado sin ningún tooltip o mensaje").
+   * Devuelve '' cuando el botón está habilitado.
+   */
+  posDisabledReason(accion: 'cobrar' | 'parcial' | 'descuento'): string {
+    if (!this.hasPermission('pos_register_sale')) {
+      return 'No tienes el permiso "Ventas en caja": pídeselo a tu gerente.';
+    }
+    if (!this.hasLinkedPosStock || !this.currentPosStock) {
+      return 'Sin sucursal vinculada: pide a la gerente que te ligue a una en Almacenes → tu sucursal → "Usuarios ligados".';
+    }
+    if (accion === 'descuento') {
+      if (this.posSubtotal <= 0) return 'Elige al menos un producto para aplicar un descuento.';
+      return '';
+    }
+    if (accion === 'parcial') {
+      if (this.posSalePaymentMethod === 'mixed') return 'El pago mixto solo aplica a pago completo. Cambia la forma de pago para cobrar en parcial o a crédito.';
+      return '';
+    }
+    if (this.isRegisteringPosSale) return 'Registrando la venta…';
+    if (this.posItems.size === 0) return 'Elige al menos un producto.';
+    if (this.posMixedInvalidReason) return this.posMixedInvalidReason;
+    if (this.posPaymentTypeMode === 'partial' && (this.posAmountPaidNow <= 0 || this.posAmountPaidNow >= this.posEffectiveTotal)) {
+      return `Escribe cuánto paga ahora el cliente: mayor a $0 y menor al total (${this.formatMoney(this.posEffectiveTotal)}).`;
+    }
+    if (this.posCashShort > 0) {
+      return `Faltan ${this.formatMoney(this.posCashShort)} de efectivo para cubrir la parte en efectivo (${this.formatMoney(this.posCashPortion)}).`;
+    }
+    return '';
   }
 
   get filteredOrders(): AdminOrder[] {
@@ -6201,51 +6293,6 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  openPosWithdrawalModal(): void {
-    this.posWithdrawalAmount = '';
-    this.posWithdrawalReason = '';
-    this.posWithdrawalAuthCode = '';
-    this.posWithdrawalError = '';
-    this.isPosWithdrawalModalOpen = true;
-  }
-
-  closePosWithdrawalModal(): void {
-    this.isPosWithdrawalModalOpen = false;
-  }
-
-  confirmPosWithdrawal(): void {
-    if (!this.currentPosStock || this.isRegisteringPosWithdrawal) return;
-    const amount = Number(this.posWithdrawalAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      this.posWithdrawalError = 'Ingresa un monto valido.';
-      return;
-    }
-    if (!this.posWithdrawalReason.trim()) {
-      this.posWithdrawalError = 'El motivo es requerido.';
-      return;
-    }
-    if (!this.posWithdrawalAuthCode.trim()) {
-      this.posWithdrawalError = 'Se requiere el codigo de autorizacion.';
-      return;
-    }
-    this.isRegisteringPosWithdrawal = true;
-    this.adminControl.registerPosWithdrawal({
-      stockId: this.currentPosStock.id,
-      amount,
-      reason: this.posWithdrawalReason.trim(),
-      authCode: this.posWithdrawalAuthCode.trim()
-    }).pipe(finalize(() => (this.isRegisteringPosWithdrawal = false))).subscribe({
-      next: ({ control }) => {
-        this.posCashControl = { ...this.posCashControl!, ...control };
-        this.closePosWithdrawalModal();
-        this.showSnackbar('Retiro registrado.');
-      },
-      error: (err: { error?: { message?: string }; message?: string }) => {
-        this.posWithdrawalError = err?.error?.message || 'No se pudo registrar el retiro.';
-      }
-    });
-  }
-
   loadPosCashCuts(): void {
     if (!this.currentPosStock) return;
     this.isLoadingPosCashCuts = true;
@@ -6255,6 +6302,7 @@ export class AdminComponent implements OnInit {
       next: (cuts) => {
         this.posCashCuts = (cuts as unknown as PosCashCut[]);
         this.isPosCashCutsOpen = true;
+        this.requestViewUpdate();
       }
     });
   }
@@ -6315,52 +6363,121 @@ export class AdminComponent implements OnInit {
     return sale.status !== 'voided' && Number(sale.pendingAmount || 0) > 0 && this.hasPermission('pos_register_sale');
   }
 
-  /** Abono al saldo de una venta con pago parcial (antes no existía ninguna acción posterior). */
+  /** Abono al saldo de una venta con pago parcial: abre el modal (antes era un prompt del navegador). */
   settlePosSale(sale: PosSale): void {
     if (!this.canSettlePosSale(sale)) {
       return;
     }
-    const pendiente = Number(sale.pendingAmount || 0);
-    const montoTxt = prompt(`Saldo pendiente de ${sale.orderId}: ${this.formatMoney(pendiente)}. ¿Cuánto abona el cliente?`, String(pendiente));
-    if (montoTxt === null) return;
-    const monto = Number(String(montoTxt).replace(/[^0-9.]/g, ''));
-    if (!Number.isFinite(monto) || monto <= 0 || monto > pendiente + 0.001) {
-      this.showSnackbar(`El abono debe ser mayor a 0 y hasta ${this.formatMoney(pendiente)}.`);
-      return;
-    }
-    const metodoTxt = (prompt('Forma de pago del abono: efectivo, tarjeta o transferencia', 'tarjeta') || '').trim().toLowerCase();
-    const metodo: 'cash' | 'card' | 'transfer' | null = metodoTxt.startsWith('efec') ? 'cash' : metodoTxt.startsWith('tarj') ? 'card' : metodoTxt.startsWith('trans') ? 'transfer' : null;
-    if (!metodo) {
-      this.showSnackbar('Forma de pago no reconocida.');
-      return;
-    }
-    this.adminControl.settlePosSale(sale.id, { amount: monto, paymentMethod: metodo }).subscribe({
-      next: ({ pendingAmount }) => {
-        this.showSnackbar(pendingAmount > 0 ? `Abono registrado. Saldo pendiente: ${this.formatMoney(pendingAmount)}.` : 'Abono registrado. Venta liquidada.');
-        this.refreshPosCashControl();
-        this.requestViewUpdate();
-      },
-      error: (err: unknown) => this.showSnackbar(this.resolveUiErrorMessage(err, 'No se pudo registrar el abono.'))
-    });
+    this.posSettleTarget = sale;
+    this.posSettleAmount = String(this.roundMoney(Number(sale.pendingAmount || 0)));
+    this.posSettleMethod = 'cash';
+    this.posSettleError = '';
+    this.posSettleResult = null;
+    this.isPosSettleModalOpen = true;
+    this.requestViewUpdate();
   }
 
+  closePosSettleModal(): void {
+    if (this.isSettlingPosSale) return;
+    this.isPosSettleModalOpen = false;
+    this.posSettleTarget = null;
+    this.posSettleResult = null;
+    this.requestViewUpdate();
+  }
+
+  get posSettleAmountNumber(): number {
+    const n = Number(String(this.posSettleAmount).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? this.roundMoney(n) : 0;
+  }
+
+  /** Por qué no se puede confirmar el abono todavía ('' si se puede). */
+  get posSettleBlockReason(): string {
+    const pendiente = this.roundMoney(Number(this.posSettleTarget?.pendingAmount || 0));
+    if (!this.posSettleTarget) return 'Elige una venta con saldo pendiente.';
+    if (this.isSettlingPosSale) return 'Registrando el abono…';
+    if (!String(this.posSettleAmount).trim() || this.posSettleAmountNumber <= 0) return 'Escribe cuánto abona el cliente (mayor a $0).';
+    if (this.posSettleAmountNumber > pendiente + 0.001) return `El abono no puede ser mayor al saldo pendiente (${this.formatMoney(pendiente)}).`;
+    return '';
+  }
+
+  confirmPosSettle(): void {
+    const sale = this.posSettleTarget;
+    if (!sale || this.posSettleBlockReason) {
+      this.posSettleError = this.posSettleBlockReason;
+      this.requestViewUpdate();
+      return;
+    }
+    this.isSettlingPosSale = true;
+    this.posSettleError = '';
+    this.caja
+      .abonar(sale.id, { amount: this.posSettleAmountNumber, paymentMethod: this.posSettleMethod })
+      .pipe(finalize(() => { this.isSettlingPosSale = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (respuesta) => {
+          // Confirmación con lo que el servidor guardó: folio del abono, monto y saldo que queda.
+          this.posSettleResult = respuesta;
+          const restante = Number(respuesta.pendingAmount || 0);
+          this.showSnackbar(restante > 0
+            ? `Abono ${respuesta.payment?.saleId || ''} registrado por ${this.formatMoney(Number(respuesta.payment?.total || 0))}. Saldo pendiente: ${this.formatMoney(restante)}.`
+            : `Abono ${respuesta.payment?.saleId || ''} registrado. La venta ${sale.orderId} quedó liquidada.`);
+          this.posCajaRefreshToken++;
+          this.refreshPosCashControl();
+          this.loadStocksAndPosState();
+        },
+        error: (err: unknown) => {
+          this.posSettleError = this.resolveUiErrorMessage(err, 'No se pudo registrar el abono.');
+        }
+      });
+  }
+
+  /** Anular una venta: abre el modal con el efecto escrito (antes era un prompt del navegador). */
   voidPosSale(sale: PosSale): void {
     if (!this.canVoidPosSale(sale)) {
       return;
     }
-    const reason = prompt(`Anular la venta ${sale.orderId} (${this.formatMoney(sale.total)}). Regresa el producto al inventario, cancela el pedido y quita el consumo al cliente ligado. Motivo:`);
-    if (!reason || !reason.trim()) {
+    this.posVoidTarget = sale;
+    this.posVoidReason = '';
+    this.posVoidError = '';
+    this.posVoidResult = null;
+    this.isPosVoidModalOpen = true;
+    this.requestViewUpdate();
+  }
+
+  closePosVoidModal(): void {
+    if (this.isVoidingPosSale) return;
+    this.isPosVoidModalOpen = false;
+    this.posVoidTarget = null;
+    this.posVoidResult = null;
+    this.requestViewUpdate();
+  }
+
+  confirmPosVoid(): void {
+    const sale = this.posVoidTarget;
+    if (!sale || this.isVoidingPosSale) return;
+    const reason = this.posVoidReason.trim();
+    if (!reason) {
+      this.posVoidError = 'Escribe el motivo de la anulación: queda en el pedido y en el aviso al cliente.';
+      this.requestViewUpdate();
       return;
     }
-    this.adminControl.voidPosSale(sale.id, reason.trim()).subscribe({
-      next: () => {
-        this.posSales = this.posSales.map((s) => (s.id === sale.id ? { ...s, status: 'voided', voidReason: reason.trim() } : s));
-        this.adminControl.loadOrders().subscribe();
-        this.showSnackbar(`Venta ${sale.orderId} anulada.`);
-        this.requestViewUpdate();
-      },
-      error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo anular la venta.'), 'error')
-    });
+    this.isVoidingPosSale = true;
+    this.posVoidError = '';
+    this.caja
+      .anular(sale.id, reason)
+      .pipe(finalize(() => { this.isVoidingPosSale = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (respuesta) => {
+          this.posVoidResult = respuesta;
+          this.posSales = this.posSales.map((s) => (s.id === sale.id ? { ...s, status: respuesta.status || 'voided', voidReason: reason } : s));
+          this.adminControl.loadOrders().subscribe();
+          this.showSnackbar(`Venta ${respuesta.orderId || sale.orderId} anulada (estado: ${respuesta.status || 'voided'}).`);
+          this.posCajaRefreshToken++;
+          this.refreshPosCashControl();
+        },
+        error: (error: unknown) => {
+          this.posVoidError = this.resolveUiErrorMessage(error, 'No se pudo anular la venta.');
+        }
+      });
   }
 
   registerPosSale(): void {
@@ -6376,14 +6493,23 @@ export class AdminComponent implements OnInit {
       this.setPosFeedback(stockError, 'error');
       return;
     }
+    const esMixto = this.posSalePaymentMethod === 'mixed';
+    const cobraEfectivo = this.posSalePaymentMethod === 'cash' || esMixto;
     this.isRegisteringPosSale = true;
     this.setPosFeedback('', '');
-    this.adminControl
-      .registerPosSale({
+    this.caja
+      .registrarVenta({
         stockId: this.currentPosStock.id,
         customerId: this.selectedPosCustomer?.id,
         customerName: this.selectedPosCustomer?.name || 'Publico en General',
-        paymentMethod: this.posSalePaymentMethod,
+        paymentMethod: esMixto ? undefined : this.posSalePaymentMethod,
+        // Pago mixto (paquete E): dos partes que suman el total; el servidor lo comprueba centavo a centavo.
+        payments: esMixto
+          ? [
+              { method: 'cash', amount: this.posMixedCashNumber },
+              { method: this.posMixedSecondMethod, amount: this.posMixedRemainder }
+            ]
+          : undefined,
         paymentStatus: 'paid_branch',
         deliveryStatus: 'delivered_branch',
         items: lineItems,
@@ -6391,27 +6517,33 @@ export class AdminComponent implements OnInit {
         // no viajaba en la venta: el backend aplicaba 0% y el socio pagaba de más.
         discountAmount: this.posProjectedDiscountAmount,
         discountRate: this.posProjectedDiscountRate,
-        cashReceived: this.posSalePaymentMethod === 'cash' && this.posCashReceivedNumber > 0 ? this.posCashReceivedNumber : undefined,
+        cashReceived: cobraEfectivo && this.posCashReceivedNumber > 0 ? this.posCashReceivedNumber : undefined,
         cashierDiscountMode: this.posAppliedCashierDiscount?.mode,
         cashierDiscountValue: this.posAppliedCashierDiscount?.value,
         paymentType: this.posPaymentTypeMode,
         amountPaid: this.posPaymentTypeMode !== 'full' ? this.posAmountPaidNow : undefined,
         authCode: this.posValidatedAuthCode || undefined
       })
-      .pipe(finalize(() => (this.isRegisteringPosSale = false)))
+      .pipe(finalize(() => { this.isRegisteringPosSale = false; this.requestViewUpdate(); }))
       .subscribe({
-        next: () => {
+        next: (venta) => {
+          this.posUltimaVenta = venta;
           this.posItems.clear();
           this.posForm.status = 'delivered';
           this.posSalePaymentMethod = 'cash';
+          this.posMixedCashAmount = '';
+          this.posMixedSecondMethod = 'card';
           this.posCashReceived = '';
           this.posAppliedCashierDiscount = null;
           this.posPaymentTypeMode = 'full';
           this.posPartialAmountPaid = '';
           this.posValidatedAuthCode = '';
           this.selectPublicGeneralCustomer();
-          this.setPosFeedback('Venta registrada en caja.', 'success');
-          this.showSnackbar('Venta registrada en caja.');
+          // La confirmación dice lo que el servidor guardó, no lo que decía el formulario.
+          const mensaje = this.describirVentaGuardada(venta);
+          this.setPosFeedback(mensaje, 'success');
+          this.showSnackbar(`Venta ${venta.orderId} registrada por ${this.formatMoney(Number(venta.total || 0))}.`);
+          this.posCajaRefreshToken++;
           this.adminControl.load().subscribe({
             next: () => this.loadStocksAndPosState(),
             error: () => this.loadStocksAndPosState()
@@ -6423,72 +6555,42 @@ export class AdminComponent implements OnInit {
       });
   }
 
-  createPosCashCut(): void {
-    if (!this.canCreatePosCashCut) {
-      return;
+  /** Texto de confirmación de una venta con los datos devueltos por el servidor. */
+  describirVentaGuardada(venta: VentaCajaRespuesta): string {
+    const partes = [`Venta ${venta.orderId} registrada por ${this.formatMoney(Number(venta.total || 0))}.`];
+    const metodo = venta.sale?.paymentMethod;
+    if (metodo === 'mixed' && venta.payments?.length) {
+      partes.push('Pago: ' + venta.payments.map((p) => `${this.posMethodLabel(p.method)} ${this.formatMoney(Number(p.amount || 0))}`).join(' + ') + '.');
+    } else if (metodo) {
+      partes.push(`Pago: ${this.posMethodLabel(metodo)}.`);
     }
-    this.posCashCutKeepAmount = String(this.roundMoney(this.posCashControl?.currentTotal ?? 0));
-    this.posCashCutError = '';
-    this.isPosCashCutModalOpen = true;
+    if (Number(venta.pendingAmount || 0) > 0) {
+      partes.push(`Pagó ahora ${this.formatMoney(Number(venta.amountPaid || 0))}; saldo pendiente ${this.formatMoney(Number(venta.pendingAmount || 0))}.`);
+    }
+    if (venta.change != null && Number(venta.cashPortion || 0) > 0) {
+      partes.push(`Cambio a entregar: ${this.formatMoney(Number(venta.change || 0))}.`);
+    }
+    return partes.join(' ');
   }
 
-  closePosCashCutModal(): void {
-    this.isPosCashCutModalOpen = false;
-    this.posCashCutKeepAmount = '';
-    this.posCashCutError = '';
+  posMethodLabel(metodo: string | undefined): string {
+    switch (metodo) {
+      case 'cash': return 'efectivo';
+      case 'card': return 'tarjeta';
+      case 'transfer': return 'transferencia';
+      case 'mixed': return 'efectivo + tarjeta/transferencia';
+      default: return metodo || '';
+    }
   }
 
-  confirmPosCashCut(): void {
-    if (!this.canCreatePosCashCut || !this.currentPosStock || this.isCuttingPosCash) {
-      return;
+  /** Tras un corte o un retiro en <app-admin-arqueo>: refresca caja, ventas e historial. */
+  onCajaCambio(): void {
+    this.refreshPosCashControl();
+    this.loadStocksAndPosState();
+    if (this.isPosCashCutsOpen) {
+      this.loadPosCashCuts();
     }
-    const currentTotal = Number(this.posCashControl?.currentTotal ?? 0);
-    const cashToKeep = this.roundMoney(Number(this.posCashCutKeepAmount));
-    if (!Number.isFinite(cashToKeep) || cashToKeep < 0) {
-      this.posCashCutError = 'Ingresa un monto valido para dejar en caja.';
-      return;
-    }
-    if (cashToKeep > currentTotal) {
-      this.posCashCutError = 'El monto a dejar en caja no puede ser mayor al disponible.';
-      return;
-    }
-    this.isCuttingPosCash = true;
-    this.setPosFeedback('', '');
-    this.posCashCutError = '';
-    this.adminControl
-      .createPosCashCut({ stockId: this.currentPosStock.id, cashToKeep })
-      .pipe(finalize(() => (this.isCuttingPosCash = false)))
-      .subscribe({
-        next: ({ cut, control }) => {
-          this.posCashControl = {
-            stockId: control.stockId,
-            attendantUserId: control.attendantUserId ?? null,
-            currentTotal: Number(control.currentTotal ?? 0),
-            salesCount: Number(control.salesCount ?? 0),
-            cashToKeepSuggested: Number(control.cashToKeepSuggested ?? 0),
-            startedAt: control.startedAt,
-            lastCutAt: control.lastCutAt,
-            lastCutTotal: Number(control.lastCutTotal ?? 0),
-            lastCutSalesCount: Number(control.lastCutSalesCount ?? 0),
-            lastCutCashToKeep: Number(control.lastCutCashToKeep ?? 0),
-            lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
-            lastSaleAt: control.lastSaleAt
-          };
-          this.posSales = this.posSales.map((s) =>
-            (cut.sales ?? []).some((cs) => cs.id === s.id) ? { ...s, cashCutId: cut.id } : s
-          );
-          this.lastCompletedCut = cut as unknown as PosCashCut;
-          this.closePosCashCutModal();
-          this.setPosFeedback('Corte de caja registrado.', 'success');
-          this.showSnackbar('Corte de caja registrado.');
-          if (this.isPosCashCutsOpen) {
-            this.loadPosCashCuts();
-          }
-        },
-        error: (error: { error?: { message?: string }; message?: string }) => {
-          this.posCashCutError = error?.error?.message || error?.message || 'No se pudo registrar el corte.';
-        }
-      });
+    this.requestViewUpdate();
   }
 
   private syncPosOperatorContext(): void {
@@ -6590,6 +6692,7 @@ export class AdminComponent implements OnInit {
       .subscribe((control) => {
         if (!control) {
           this.posCashControl = null;
+          this.requestViewUpdate();
           return;
         }
         this.posCashControl = {
@@ -6606,6 +6709,7 @@ export class AdminComponent implements OnInit {
           lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
           lastSaleAt: control.lastSaleAt
         };
+        this.requestViewUpdate();
       });
   }
 
