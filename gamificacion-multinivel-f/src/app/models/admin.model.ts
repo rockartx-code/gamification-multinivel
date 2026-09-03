@@ -78,6 +78,11 @@ export interface AdminOrder {
   rejectedAt?: string;
   refundReceiptUrl?: string;
   refundedAt?: string;
+  // paquete D · despacho y paquetería
+  shippedAt?: string;
+  shippedBy?: string;
+  deliveredBy?: string;
+  deliverySignedBy?: string;
 }
 
 export interface AdminRefundPayload {

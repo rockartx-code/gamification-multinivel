@@ -87,5 +87,17 @@ export const routes: Routes = [
   {
     path: 'landing',
     component: LandingComponent
+  },
+  {
+    // Paquete D · despacho en bloque con lista de surtido
+    path: 'admin/despacho',
+    loadComponent: () => import('./pages/admin/despacho/despacho.component').then((m) => m.DespachoComponent),
+    canActivate: [adminGuard]
+  },
+  {
+    // Paquete D · resumen automático de turno
+    path: 'admin/resumen-turno',
+    loadComponent: () => import('./pages/admin/resumen-turno/resumen-turno.component').then((m) => m.ResumenTurnoComponent),
+    canActivate: [adminGuard]
   }
 ];

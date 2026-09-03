@@ -140,6 +140,7 @@
                 {{ orderCountByStatus($any(tab.status)) }}
               </span>
             </ui-button>
+            <ui-button size="sm" variant="secondary" routerLink="/admin/despacho" title="Despachar varios pedidos pagados a la vez, con la lista de surtido calculada"><i class="fa-solid fa-boxes-packing" aria-hidden="true"></i> Despacho en bloque</ui-button><!-- WP-D -->
             <!-- Filtro por stock -->
             <ui-form-field *ngIf="stocks.length" kind="select"
               placeholder="Todos los stocks"
@@ -2488,6 +2489,7 @@
                 <span class="text-xs text-gray-500">Periodo analizado</span>
               </div>
               <div class="flex flex-wrap gap-2">
+                <ui-button size="sm" variant="secondary" routerLink="/admin/resumen-turno" title="Qué despachó, recibió y registró cada persona en su turno"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Resumen de turno</ui-button><!-- WP-D -->
                 <ui-button size="sm" variant="ghost" (pressed)="downloadFullReport()">
                   <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
                   Reporte completo Excel

@@ -1,0 +1,321 @@
+<section class="antialiased bg-ambient min-h-screen">
+  <header class="no-print border-b border-olive-20 bg-sand-200-90 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+      <div class="flex items-center gap-3">
+        <img src="/Logo-sin_slogan.svg" width="320" height="96" alt="Logo" class="h-15 w-40" />
+        <div>
+          <p class="eyebrow">Almacén</p>
+          <h1 class="text-lg font-extrabold text-main">Despacho en bloque</h1>
+        </div>
+      </div>
+      <ui-button variant="ghost" size="md" routerLink="/admin">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        Volver a Pedidos
+      </ui-button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl space-y-5 px-4 py-6">
+
+    <!-- Mensaje del servidor (siempre con el dato guardado) -->
+    <div *ngIf="message" class="no-print rounded-2xl border px-4 py-3 text-sm"
+      [ngClass]="{
+        'border-sage-30 bg-sage-10 text-forest': messageTone === 'success',
+        'border-danger bg-white text-danger-deep': messageTone === 'error',
+        'border-olive-30 surface-soft text-main': messageTone === 'info'
+      }" role="status" aria-live="polite">
+      {{ message }}
+    </div>
+
+    <div *ngIf="loadError" class="rounded-2xl border border-danger bg-white px-4 py-3 text-sm text-danger-deep">{{ loadError }}</div>
+
+    <!-- Paso 1 · Bodega y pedidos -->
+    <div class="no-print rounded-2xl border border-olive-30 surface-soft p-4">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div class="flex flex-wrap items-end gap-3">
+          <ui-form-field kind="select" label="1 · Bodega de salida" [options]="stockOptions" [ngModel]="stockId"
+            (ngModelChange)="onStockChange($event)" wrapperClass="block min-w-[16rem]"
+            helpText="De aquí se descuenta la mercancía de todos los pedidos que despaches."></ui-form-field>
+          <div class="pb-1 text-xs text-muted">
+            <span *ngIf="preferencias?.defaultStockId">Mi bodega por defecto: <strong class="text-main">{{ preferencias?.stockName || preferencias?.defaultStockId }}</strong></span>
+            <span *ngIf="!preferencias?.defaultStockId">Aún no tienes bodega por defecto.</span>
+            <ui-button *ngIf="stockId && !isDefaultStock" size="sm" variant="linkish" [disabled]="isSavingDefault" (pressed)="saveDefaultStock()"
+              title="Stocks, Caja y Despacho abrirán con esta bodega la próxima vez que entres">
+              Usar {{ selectedStockName }} como mi bodega por defecto
+            </ui-button>
+            <span *ngIf="isDefaultStock" class="ml-1 text-forest"><i class="fa-solid fa-check" aria-hidden="true"></i> Es la que tienes guardada</span>
+          </div>
+        </div>
+        <ui-button size="sm" variant="ghost" (pressed)="loadPendientes()" [disabled]="isLoading">
+          <i class="fa-solid fa-rotate" aria-hidden="true"></i> Actualizar lista
+        </ui-button>
+      </div>
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        <ui-kpi-card label="Pagados por despachar" [value]="pendientes.length" iconClass="fa-solid fa-box"></ui-kpi-card>
+        <ui-kpi-card label="Seleccionados" [value]="seleccion.size" iconClass="fa-solid fa-list-check"></ui-kpi-card>
+        <ui-kpi-card label="Enviados sin entrega hace más de {{ integracion?.askDays || 7 }} días" [value]="rezagados.length" iconClass="fa-solid fa-truck-clock"></ui-kpi-card>
+      </div>
+
+      <div *ngIf="isLoading" class="mt-4 space-y-2" aria-busy="true" aria-label="Cargando pedidos">
+        <div class="skeleton h-10">&nbsp;</div>
+        <div class="skeleton h-10">&nbsp;</div>
+      </div>
+
+      <p *ngIf="!isLoading && !pendientes.length" class="mt-4 text-sm text-muted">
+        No hay pedidos pagados con envío a domicilio pendientes de despachar. Los pedidos para recoger en sucursal se entregan desde Caja.
+      </p>
+
+      <div *ngIf="!isLoading && pendientes.length" class="mt-4 overflow-x-auto">
+        <table class="table-soft w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-gray-500">
+              <th class="px-2 py-2">
+                <ui-checkbox [checked]="allSelected" (checkedChange)="toggleAll($event)" ariaLabel="Seleccionar todos" compact>Todos</ui-checkbox>
+              </th>
+              <th class="px-2 py-2">Folio</th>
+              <th class="px-2 py-2">Cliente</th>
+              <th class="px-2 py-2">Destino</th>
+              <th class="px-2 py-2">Productos</th>
+              <th class="px-2 py-2">Pagado hace</th>
+              <th class="px-2 py-2">Paquetería</th>
+              <th class="px-2 py-2">Guía</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-olive-20">
+            <tr *ngFor="let p of pendientes; trackBy: trackById" [class.bg-gold-12]="isSelected(p.id)">
+              <td class="px-2 py-2 align-top">
+                <ui-checkbox [checked]="isSelected(p.id)" (checkedChange)="toggle(p.id, $event)" [ariaLabel]="'Seleccionar ' + p.id" compact></ui-checkbox>
+              </td>
+              <td class="px-2 py-2 align-top font-semibold text-main">
+                <a [routerLink]="['/orden', p.id]" class="hover:underline">{{ p.id }}</a>
+                <ui-badge *ngIf="p.hasInvoiceRequest" tone="pending" size="mini" extraClass="ml-1">Factura</ui-badge>
+              </td>
+              <td class="px-2 py-2 align-top">{{ p.customer }}</td>
+              <td class="px-2 py-2 align-top text-muted">{{ p.city }}<span *ngIf="p.state">, {{ p.state }}</span></td>
+              <td class="px-2 py-2 align-top text-muted">{{ itemsLabel(p) }} <span class="text-xs">({{ totalUnits(p) }} pzas)</span></td>
+              <td class="px-2 py-2 align-top" [class.text-danger]="(p.daysSincePaid ?? 0) >= 3">{{ p.daysSincePaid ?? 0 }} día(s)</td>
+              <td class="px-2 py-2 align-top">
+                <ui-form-field *ngIf="isSelected(p.id)" placeholder="Estafeta, DHL…" [ngModel]="guia(p.id).carrier" (ngModelChange)="setGuia(p.id, 'carrier', $event)"
+                  [name]="'carrier-' + p.id" wrapperClass="block min-w-[8rem]"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-2 py-1.5 text-sm text-main"></ui-form-field>
+                <span *ngIf="!isSelected(p.id)" class="text-xs text-muted">{{ p.shippingCarrier || '—' }}</span>
+              </td>
+              <td class="px-2 py-2 align-top">
+                <ui-form-field *ngIf="isSelected(p.id)" placeholder="Número de guía" [ngModel]="guia(p.id).trackingNumber" (ngModelChange)="setGuia(p.id, 'trackingNumber', $event)"
+                  [name]="'tracking-' + p.id" wrapperClass="block min-w-[10rem]"
+                  inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-2 py-1.5 text-sm text-main"></ui-form-field>
+                <span *ngIf="!isSelected(p.id)" class="text-xs text-muted">Selecciona para capturar</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Paso 2 · Surtido -->
+    <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+      <div class="no-print flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-extrabold text-main">2 · Lista de surtido</h2>
+          <p class="text-xs text-muted">Suma por producto de los pedidos seleccionados contra la existencia de {{ selectedStockName || 'la bodega' }}.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <ui-button size="sm" variant="primary" [disabled]="isCalculating || seleccion.size === 0 || !stockId" (pressed)="calcularSurtido()">
+            <i class="fa-solid fa-calculator" aria-hidden="true"></i> {{ isCalculating ? 'Calculando…' : 'Calcular surtido' }}
+          </ui-button>
+          <ui-button size="sm" variant="ghost" [disabled]="!surtido" (pressed)="imprimirLista()">
+            <i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir lista
+          </ui-button>
+        </div>
+      </div>
+      <p *ngIf="seleccion.size === 0" class="no-print mt-2 text-xs text-muted">Selecciona pedidos arriba para poder calcular.</p>
+
+      <div *ngIf="surtido" class="mt-3">
+        <div class="print-only hidden">
+          <h2 class="text-lg font-extrabold text-main">Lista de surtido · {{ surtido.stockName }}</h2>
+          <p class="text-sm text-muted">{{ surtido.orderCount }} pedidos: {{ surtido.orderIds.join(', ') }}</p>
+        </div>
+        <div *ngIf="!surtidoIsCurrent" class="no-print mb-2 rounded-xl border border-gold-35 bg-gold-12 px-3 py-2 text-xs text-main">
+          La selección o la bodega cambió después de calcular: vuelve a pulsar "Calcular surtido".
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table-soft w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-gray-500">
+                <th class="px-2 py-2">Producto</th>
+                <th class="px-2 py-2 text-right">Necesario</th>
+                <th class="px-2 py-2 text-right">En {{ surtido.stockName }}</th>
+                <th class="px-2 py-2">Semáforo</th>
+                <th class="px-2 py-2">Quién sí lo tiene</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-olive-20">
+              <tr *ngFor="let l of surtido.lines">
+                <td class="px-2 py-2 font-semibold text-main">{{ l.name }}</td>
+                <td class="px-2 py-2 text-right">{{ l.needed }}</td>
+                <td class="px-2 py-2 text-right">{{ l.available }}</td>
+                <td class="px-2 py-2">
+                  <ui-badge [tone]="l.status === 'ok' ? 'active' : 'danger'">
+                    {{ l.status === 'ok' ? 'Alcanza' : 'Faltan ' + l.short }}
+                  </ui-badge>
+                </td>
+                <td class="px-2 py-2 text-xs" [class.text-danger]="l.status === 'short' && !l.elsewhere.length">
+                  <ng-container *ngIf="l.status === 'short'">{{ l.elsewhere.length ? elsewhereLabel(l) : 'Ninguna otra bodega' }}</ng-container>
+                  <span *ngIf="l.status === 'ok'" class="text-muted">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul *ngIf="surtido.blockedOrders.length" class="no-print mt-3 space-y-1 text-xs text-danger-deep">
+          <li *ngFor="let b of surtido.blockedOrders"><strong>{{ b.orderId }}</strong>: {{ b.reason }}</li>
+        </ul>
+        <p *ngIf="surtido.canDispatch" class="mt-3 text-sm text-forest"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Todo alcanza: puedes despachar {{ surtido.orderCount }} pedido(s).</p>
+        <p *ngIf="!surtido.canDispatch && shortLines" class="no-print mt-3 text-sm text-danger-deep">
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ surtido.reasons.join(' ') }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Paso 3 · Guías -->
+    <div class="no-print rounded-2xl border border-olive-30 surface-soft p-4">
+      <h2 class="text-base font-extrabold text-main">3 · Guías</h2>
+      <p class="text-xs text-muted">Captúralas en la tabla de arriba, pégalas desde el CSV del portal de la paquetería o genéralas con la integración.</p>
+      <div class="mt-3 grid gap-3 md:grid-cols-2">
+        <div>
+          <ui-form-field kind="textarea" label="Importar CSV (orderId,carrier,tracking)" [rows]="4" [(ngModel)]="csvText" name="csv"
+            placeholder="ORD-123,Estafeta,7788990011&#10;ORD-124,DHL,55667788"
+            helpText="Una línea por pedido. Acepta coma, punto y coma o tabulador; el encabezado es opcional."></ui-form-field>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <ui-button size="sm" variant="secondary" (pressed)="importCsv()"><i class="fa-solid fa-file-csv" aria-hidden="true"></i> Cargar guías del texto</ui-button>
+            <label class="btn btn-ghost h-8 cursor-pointer px-3 text-xs">
+              <i class="fa-solid fa-upload" aria-hidden="true"></i> Elegir archivo CSV
+              <input type="file" accept=".csv,text/csv,text/plain" class="hidden" (change)="onCsvFile($event)" />
+            </label>
+          </div>
+          <p *ngIf="csvMessage" class="mt-2 text-xs text-main">{{ csvMessage }}</p>
+        </div>
+        <div>
+          <ng-container *ngIf="canGenerateLabels; else sinIntegracion">
+            <ui-checkbox [checked]="generateLabels" (checkedChange)="generateLabels = $event" label="Generar guías con la paquetería"
+              [description]="'Para los pedidos seleccionados sin guía se pedirá una a ' + (integracion?.provider || 'la paquetería') + ' al despachar.'"></ui-checkbox>
+          </ng-container>
+          <ng-template #sinIntegracion>
+            <p class="rounded-xl border border-olive-20 bg-white/60 px-3 py-2 text-xs text-muted">
+              La integración con la paquetería está apagada: las guías se capturan a mano o por CSV.
+              Para encenderla, la gerencia activa <em>shipping.carrierIntegration.enabled</em> en Configuración.
+            </p>
+          </ng-template>
+          <p *ngIf="missingTracking.length && seleccion.size" class="mt-2 text-xs text-muted">
+            Sin guía todavía: {{ missingTracking.length }} de {{ seleccion.size }} seleccionados.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 4 · Despachar -->
+    <div class="no-print rounded-2xl border border-olive-30 surface-soft p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-extrabold text-main">4 · Despachar</h2>
+          <p class="text-xs text-muted">Marca todos los seleccionados como enviados, descuenta la bodega y avisa a cada cliente por correo con su guía.</p>
+        </div>
+        <ui-button size="lg" variant="primary" [disabled]="!canDispatch" (pressed)="openConfirm()">
+          <i class="fa-solid fa-truck-fast" aria-hidden="true"></i> Despachar {{ dispatchableOrders.length || seleccion.size }} pedido(s)
+        </ui-button>
+      </div>
+      <p *ngIf="dispatchBlockReason" class="mt-2 text-xs text-danger-deep"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ dispatchBlockReason }}</p>
+
+      <div *ngIf="resultado" class="mt-4 rounded-xl border border-olive-20 bg-white/70 p-3 text-sm">
+        <p class="font-semibold text-main">Último despacho · lote {{ resultado.batchId }} desde {{ resultado.stockName }}</p>
+        <ul *ngIf="resultado.shipped.length" class="mt-2 space-y-1">
+          <li *ngFor="let s of resultado.shipped" class="text-forest">
+            <i class="fa-solid fa-check" aria-hidden="true"></i>
+            <a [routerLink]="['/orden', s.orderId]" class="font-semibold hover:underline">{{ s.orderId }}</a>
+            quedó <strong>enviado</strong> · {{ s.carrier }} {{ s.trackingNumber }}
+            <a *ngIf="s.labelUrl" [href]="s.labelUrl" target="_blank" rel="noopener" class="ml-1 text-xs underline">Ver guía</a>
+          </li>
+        </ul>
+        <ul *ngIf="resultado.failed.length" class="mt-2 space-y-1">
+          <li *ngFor="let f of resultado.failed" class="text-danger-deep">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i> <strong>{{ f.orderId }}</strong> no se despachó: {{ f.reason }}
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Enviados sin entrega -->
+    <div class="no-print rounded-2xl border border-olive-30 surface-soft p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-extrabold text-main">Enviados hace más de {{ integracion?.askDays || 7 }} días sin entrega</h2>
+          <p class="text-xs text-muted">
+            Con la integración encendida, el rastreo marca la entrega con fecha y firma; a los {{ integracion?.askDays || 7 }} días se pregunta "¿te llegó?" y a los {{ integracion?.autoCloseDays || 10 }} el pedido se cierra solo.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <ui-button size="sm" variant="secondary" [disabled]="isTracking || !integracion?.trackingEnabled" (pressed)="rastrear()"
+            [title]="integracion?.trackingEnabled ? 'Consulta a la paquetería todos los envíos en camino' : 'Enciende trackingEnabled en Configuración para consultar a la paquetería'">
+            <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> {{ isTracking ? 'Consultando…' : 'Consultar paquetería ahora' }}
+          </ui-button>
+          <ui-button size="sm" variant="ghost" [disabled]="isClosing || !integracion?.enabled" (pressed)="cerrar()"
+            [title]="integracion?.enabled ? 'Manda el correo a quien toca y cierra los vencidos' : 'Enciende la integración en Configuración para usar el cierre automático'">
+            <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> {{ isClosing ? 'Ejecutando…' : 'Ejecutar "¿te llegó?" y cierre' }}
+          </ui-button>
+        </div>
+      </div>
+      <p *ngIf="!integracion?.enabled" class="mt-2 text-xs text-muted">La integración está apagada; estos pedidos se marcan entregados desde la ficha del pedido.</p>
+      <p *ngIf="!rezagados.length" class="mt-3 text-sm text-muted">Ningún envío lleva más de {{ integracion?.askDays || 7 }} días sin entrega.</p>
+      <div *ngIf="rezagados.length" class="mt-3 overflow-x-auto">
+        <table class="table-soft w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-gray-500">
+              <th class="px-2 py-2">Folio</th><th class="px-2 py-2">Cliente</th><th class="px-2 py-2">Días en camino</th><th class="px-2 py-2">Guía</th><th class="px-2 py-2">Correo "¿te llegó?"</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-olive-20">
+            <tr *ngFor="let r of rezagados; trackBy: trackById">
+              <td class="px-2 py-2 font-semibold text-main"><a [routerLink]="['/orden', r.id]" class="hover:underline">{{ r.id }}</a></td>
+              <td class="px-2 py-2">{{ r.customer }}</td>
+              <td class="px-2 py-2 text-danger">{{ r.daysSinceShipped }}</td>
+              <td class="px-2 py-2 text-muted">{{ r.shippingCarrier }} {{ r.trackingNumber || '— sin guía' }}</td>
+              <td class="px-2 py-2 text-xs text-muted">{{ r.deliveryCheckEmailSentAt ? ('Enviado ' + (r.deliveryCheckEmailSentAt | date:'d MMM')) : 'No enviado' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div *ngIf="rastreo && rastreo.enabled" class="mt-3 text-xs text-main">
+        Último rastreo: {{ rastreo.checked }} consultados · {{ rastreo.delivered.length }} entregados · {{ rastreo.inTransit.length }} en camino
+        <span *ngIf="rastreo.errors.length" class="text-danger-deep"> · incidencias: <span *ngFor="let e of rastreo.errors; let last = last">{{ e.orderId }} ({{ e.text }}){{ last ? '' : ', ' }}</span></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Confirmación de despacho -->
+  <ui-modal [isOpen]="isConfirmOpen" (closed)="closeConfirm()" maxWidthClass="max-w-2xl" ariaLabel="Confirmar despacho en bloque">
+    <h2 class="text-lg font-extrabold text-main">Despachar {{ dispatchableOrders.length }} pedido(s) desde {{ selectedStockName }}</h2>
+    <p class="mt-1 text-sm text-muted">Cada pedido pasará a <strong>Enviado</strong>, se descontará su mercancía de {{ selectedStockName }} y el cliente recibirá un correo con su guía. Esto no se puede deshacer desde aquí.</p>
+    <div class="mt-3 max-h-72 overflow-auto rounded-xl border border-olive-20">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-gray-500"><th class="px-2 py-1">Folio</th><th class="px-2 py-1">Cliente</th><th class="px-2 py-1">Paquetería y guía</th></tr></thead>
+        <tbody class="divide-y divide-olive-20">
+          <tr *ngFor="let p of dispatchableOrders">
+            <td class="px-2 py-1 font-semibold text-main">{{ p.id }}</td>
+            <td class="px-2 py-1">{{ p.customer }}</td>
+            <td class="px-2 py-1">
+              <ng-container *ngIf="hasTracking(p.id); else generar">{{ guia(p.id).carrier || 'Paquetería' }} · {{ guia(p.id).trackingNumber }}</ng-container>
+              <ng-template #generar><span class="text-muted">Se generará con {{ integracion?.provider || 'la paquetería' }}</span></ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 flex flex-wrap justify-end gap-2">
+      <ui-button variant="ghost" [disabled]="isSending" (pressed)="closeConfirm()">Cancelar</ui-button>
+      <ui-button variant="primary" [disabled]="isSending" (pressed)="enviar()">
+        <i class="fa-solid fa-truck-fast" aria-hidden="true"></i> {{ isSending ? 'Despachando…' : 'Sí, despachar ' + dispatchableOrders.length }}
+      </ui-button>
+    </div>
+  </ui-modal>
+</section>
