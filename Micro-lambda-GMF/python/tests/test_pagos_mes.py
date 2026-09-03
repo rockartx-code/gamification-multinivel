@@ -229,3 +229,23 @@ def test_acciones_urgentes_separa_listas_de_sin_clabe_y_sube_la_urgencia_con_la_
     with freeze_time("2026-09-08"):   # payoutDay 10 − 2
         avisos = {w["type"]: w for w in json.loads(dashboard_lambda.get_admin_warnings()["body"])["warnings"]}
     assert avisos["commissions_ready"]["severity"] == "high" and avisos["commissions_no_clabe"]["severity"] == "high"
+
+
+def test_el_csv_neutraliza_nombres_que_excel_leeria_como_formula(motor, escenario, utils):
+    """El nombre lo edita la propia socia: `=HYPERLINK(...)` no debe ejecutarse al abrir el CSV."""
+    _cliente(utils, 5, '=HYPERLINK("http://x","a")', clabe="032180000118359719")
+    _confirmadas(utils, 5, "10.00")
+    r = _get(motor, "/commissions/pagos/dispersion.csv", {"month": MES})
+    fila = next(l for l in r["body"].split("\r\n") if ",5," in l)
+    assert fila.startswith('032180000118359719,"\'=HYPERLINK(""http://x"",""a"")",10.00')
+    assert fila.endswith(",5,'=hyperlink(\"\"http://x\"\",\"\"a\"\")@test.com\"") or "'=hyperlink" in fila
+
+
+def test_el_lote_no_sube_el_comprobante_si_ninguna_fila_se_puede_pagar(motor, escenario, correos, utils):
+    """Doble clic en «Registrar pago por lote»: el segundo intento no deja un archivo huérfano en S3."""
+    r = _post(motor, "/commissions/pagos/lote", _cuerpo_lote([1]))
+    assert r["statusCode"] == 201
+    r = _post(motor, "/commissions/pagos/lote", _cuerpo_lote([1]))
+    assert r["statusCode"] == 409 and json.loads(r["body"])["code"] == "NOTHING_PAID"
+    assert len(motor._s3_fake.subidas) == 1, "solo el primer intento subió el comprobante"
+    assert len([r for r in utils._query_bucket("COMMISSION_RECEIPT") if str(r.get("customerId")) == "1"]) == 1

@@ -658,7 +658,12 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
             return True
 
         _mutate_ledger_month(b_id, month_key, _mutate)
-        modo_handlers.asegurar_socio(b_id, "comision")  # paquete B: con fila de comisión ya es socio
+        # Paquete B: con fila de comisión ya es socio. Se decide con la ficha
+        # ya cacheada: leerla otra vez por beneficiaria rompía el presupuesto
+        # de consultas de ORDER_PAID (tools/check_query_budget.py).
+        if modo_handlers.modo_de(_cached_customer(b_id)) == "cliente":
+            modo_handlers.asegurar_socio(b_id, "comision")
+            _CACHE["customers"].pop(utils._customer_id_str(b_id), None)
         return cambio["nuevo"]
 
     gen = 1  # siguiente generación a cubrir

@@ -213,6 +213,18 @@ def _neto_del_mes(customer_id, month_key: str) -> Decimal:
     return utils._to_decimal(estado.get("netVolume", 0))
 
 
+def _vp_del_mes(customer_id, month_key: str, cfg: dict) -> Decimal:
+    """VP netos acumulados del mes: `netVP` del mes del socio; si el mes no lo
+    trae, se derivan del neto con la tarifa (mismo criterio que el motor)."""
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key)) or {}
+    if "netVP" in estado:
+        return utils._to_decimal(estado.get("netVP", 0))
+    tarifa = utils._to_decimal(utils._mxn_per_vp(cfg))
+    if tarifa <= 0:
+        return utils.D_ZERO
+    return (utils._to_decimal(estado.get("netVolume", 0)) / tarifa).quantize(Decimal("0.01"))
+
+
 def _ahorro_del_mes(customer_id, month_key: str) -> Decimal:
     """Suma de `partnerSavings` de los pedidos pagados del mes (historial por cliente)."""
     total = utils.D_ZERO
@@ -254,6 +266,9 @@ def indicadores_cliente(customer: dict) -> dict:
     return {
         "monthKey": month_key,
         "monthSpend": _f(gasto),
+        # La tabla única decía «llevas 0 VP» en modo cliente porque el panel
+        # vacía `vp`; los VP sí se acumulan y aquí viajan para panel y carrito.
+        "monthVp": _f(_vp_del_mes(cid, month_key, cfg)),
         "monthSavingsIfPartner": _f(_ahorro_del_mes(cid, month_key)),
         "currentRateIfPartner": _f(_tasa(tiers, gasto)),
         "nextTier": {"rate": _f(siguiente["rate"]), "missing": _f(siguiente["missing"])} if siguiente else None,

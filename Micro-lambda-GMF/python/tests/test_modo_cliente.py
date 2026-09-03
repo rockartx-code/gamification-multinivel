@@ -303,6 +303,7 @@ def test_el_panel_en_modo_cliente_no_trae_red_ni_comisiones_y_si_indicadores(mod
     assert datos["goals"][0]["title"] == "Meta de compra del mes"
     ind = datos["clientIndicators"]
     assert ind["monthSpend"] == 1200.0
+    assert ind["monthVp"] > 0, "los VP se acumulan aunque esté en modo cliente: la tabla no debe decir «llevas 0»"
     assert ind["monthSavingsIfPartner"] == 120.0
     assert ind["currentRateIfPartner"] == 0.10
     assert ind["nextTier"] == {"rate": 0.20, "missing": 800.0}

@@ -291,3 +291,26 @@ def test_el_admin_puede_ver_las_suscripciones_de_una_clienta(order_lambda, mundo
     assert estado == 200 and cuerpo["subscriptions"][0]["subscriptionId"] == sub["subscriptionId"]
     estado, cuerpo = _llamar(order_lambda, "GET", f"/orders/suscripciones/{sub['subscriptionId']}", headers=OTRA)
     assert estado == 403
+
+
+def test_un_empleado_sin_privilegio_no_toca_la_suscripcion_de_una_clienta(order_lambda, mundo, buzon):
+    """«Dueño o admin»: un empleado necesita el privilegio; sin él ni lista, ni edita, ni cancela."""
+    sub = _crear(order_lambda)
+    sin_nada = {"x-user-id": "3", "x-user-role": "employee", "x-user-privileges": "{}"}
+    estado, _ = _llamar(order_lambda, "GET", "/orders/suscripciones", headers=sin_nada, query={"customerId": str(CID)})
+    assert estado == 403
+    estado, _ = _llamar(order_lambda, "GET", f"/orders/suscripciones/{sub['subscriptionId']}", headers=sin_nada)
+    assert estado == 403
+    estado, _ = _llamar(order_lambda, "PATCH", f"/orders/suscripciones/{sub['subscriptionId']}", {"dayOfMonth": 12}, headers=sin_nada)
+    assert estado == 403
+    estado, _ = _llamar(order_lambda, "DELETE", f"/orders/suscripciones/{sub['subscriptionId']}", headers=sin_nada)
+    assert estado == 403
+    # Solo lectura con la pantalla de pedidos; no puede cancelar.
+    estado, cuerpo = _llamar(order_lambda, "GET", f"/orders/suscripciones/{sub['subscriptionId']}", headers=EMPLEADO_SIN_PERMISO)
+    assert estado == 200 and cuerpo["subscription"]["status"] == "active"
+    estado, _ = _llamar(order_lambda, "DELETE", f"/orders/suscripciones/{sub['subscriptionId']}", headers=EMPLEADO_SIN_PERMISO)
+    assert estado == 403
+    # Con order_create sí (como el resto de rutas nuevas).
+    con_permiso = {"x-user-id": "4", "x-user-role": "employee", "x-user-privileges": json.dumps({"order_create": True})}
+    estado, cuerpo = _llamar(order_lambda, "DELETE", f"/orders/suscripciones/{sub['subscriptionId']}", headers=con_permiso)
+    assert estado == 200 and cuerpo["subscription"]["status"] == "cancelled"

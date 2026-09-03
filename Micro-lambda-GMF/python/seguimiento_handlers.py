@@ -14,7 +14,7 @@ El mensaje lo manda la persona desde su teléfono (`wa.me`); el sistema solo
 prellena y anota. Todas las rutas exigen `access_screen_customers`.
 """
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import core_utils as utils
@@ -211,10 +211,7 @@ def _ledgers_confirmados() -> dict:
     anterior = f"{y - 1}-12" if m == 1 else f"{y}-{m - 1:02d}"
     confirmado = {}
     try:
-        for item in utils._query_bucket("COMMISSION_MONTH"):
-            sk = str(item.get("SK") or "")
-            if f"#MONTH#{actual}" not in sk and f"#MONTH#{anterior}" not in sk:
-                continue
+        for item in utils._listar_meses_contables(actual) + utils._listar_meses_contables(anterior):
             cid = str(item.get("beneficiaryId") or "")
             confirmado[cid] = confirmado.get(cid, 0.0) + float(utils._to_decimal(item.get("totalConfirmed", 0)))
     except Exception as ex:
@@ -323,11 +320,14 @@ def _fila_cliente(ficha: dict, ahora: datetime, cfg: dict, ejecutivas: dict, pat
 
 # --- Invitados (compradores sin ficha) ----------------------------------------
 
-def _pedidos_de_invitados() -> dict:
-    """Pedidos hechos sin cuenta, agrupados por correo (más reciente primero)."""
+def _pedidos_de_invitados(dias: int = 365) -> dict:
+    """Pedidos hechos sin cuenta en los últimos `dias`, agrupados por correo
+    (más reciente primero). Se acota con `sk_from` (§0.1): recorrer el bucket
+    ORDER entero crecía con el histórico en cada carga de la pantalla."""
     grupos = {}
+    desde = (datetime.now(timezone.utc) - timedelta(days=max(1, int(dias)))).strftime("%Y-%m-%d")
     try:
-        for pedido in utils._query_bucket("ORDER") or []:
+        for pedido in utils._query_bucket("ORDER", sk_from=desde) or []:
             if pedido.get("customerId") not in (None, "", 0, "0"):
                 continue
             correo = utils._normalize_email(pedido.get("email"))
@@ -460,7 +460,8 @@ def handle_seguimiento_hoy(query: dict, headers: dict) -> dict:
         filas.append(_fila_cliente(ficha, ahora, cfg, ejecutivas, patrocinadores, confirmados, nombre_coach))
 
     correos_con_ficha = {utils._normalize_email(c.get("email")) for c in fichas if c.get("email")}
-    for correo, pedidos in _pedidos_de_invitados().items():
+    # Un invitado más viejo que el doble de "frío" ya no es un seguimiento de hoy.
+    for correo, pedidos in _pedidos_de_invitados(dias=_entero(cfg.get("coldDays"), 30) * 2).items():
         if correo in correos_con_ficha:
             continue
         if not _es_mia(""):

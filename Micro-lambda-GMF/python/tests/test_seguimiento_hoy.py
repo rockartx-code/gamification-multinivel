@@ -178,3 +178,22 @@ def test_los_umbrales_salen_de_la_configuracion(mundo, utils):
     assert "Rosa Elena Ortiz" not in por_nombre
     _, por_nombre = _filas(_hoy(mundo, COACH, situation="activa"))
     assert por_nombre["Rosa Elena Ortiz"]["situation"] == "activa"
+
+
+def test_los_invitados_se_leen_acotados_por_fecha_y_no_todo_el_historico(mundo, utils, monkeypatch):
+    """§0.1: `_pedidos_de_invitados` recorría el bucket ORDER entero en cada carga."""
+    import seguimiento_handlers
+    consultas = []
+    original = utils._query_bucket
+
+    def espia(entity, *a, **k):
+        if entity == "ORDER":
+            consultas.append(k.get("sk_from"))
+        return original(entity, *a, **k)
+
+    monkeypatch.setattr(seguimiento_handlers.utils, "_query_bucket", espia)
+    # Un invitado de hace un año no es un seguimiento de hoy (frío × 2 = 60 días).
+    _pedido(utils, "ORD-VIEJO", None, dias=400, email="viejo@test.com", nombre="Viejo Invitado")
+    _, por_nombre = _filas(_hoy(mundo, COACH))
+    assert "Héctor Mora" in por_nombre and "Viejo Invitado" not in por_nombre
+    assert consultas and all(desde and desde >= _hace(61)[:10] for desde in consultas), consultas

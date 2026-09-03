@@ -28,6 +28,10 @@ _EXTENSIONES = [
 # 'paid' (webhook repetido, conciliación tras el webhook) no debe mover nada.
 _ESTADOS_YA_COBRADOS = ("paid", "shipped", "delivered", "refunded",
                         "en_devolucion", "devuelto_validado", "devolucion_rechazada")
+# Un pedido cancelado es terminal (§8.5: solo un 'pending' se acredita). Si el
+# pago llega después de la cancelación (webhook tardío, conciliación) no se
+# reactiva: se anota el cobro y queda reembolso pendiente para la gerente.
+_ESTADOS_CANCELADOS = ("cancelled", "canceled")
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -655,6 +659,33 @@ def handle_create_order(body, headers):
     return utils._json_response(201, {"order": order_item})
 
 
+def _anotar_pago_tras_cancelacion(order: dict, body: dict) -> dict:
+    """El dinero entró a un pedido ya cancelado: no se reactiva ni se reparte
+    comisión; queda `pendingRefund` con el rastro del pago para que la gerente
+    lo devuelva. Idempotente: un segundo aviso del mismo pago no cambia nada."""
+    order_id = order.get("orderId")
+    payment_id = str(body.get("paymentId") or "").strip()
+    if order.get("paymentStatusDetail") == "approved_after_cancel" and (
+            not payment_id or str(order.get("paymentId") or "") == payment_id):
+        return order
+    now = utils._now_iso()
+    valores = {":d": "approved_after_cancel", ":pr": True, ":t": now, ":u": now,
+               ":v": str(body.get("paidVia") or "mercadopago")}
+    expresion = "SET paymentStatusDetail = :d, pendingRefund = :pr, paidAfterCancelAt = :t, paidVia = :v, updatedAt = :u"
+    if payment_id:
+        expresion += ", paymentId = :p"
+        valores[":p"] = payment_id
+    for marca in ("webhookReceivedAt", "reconciledAt"):
+        if body.get(marca):
+            expresion += f", {marca} = :{marca}"
+            valores[f":{marca}"] = str(body[marca])
+    actualizado = utils._update_by_id("ORDER", order_id, expresion, valores)
+    utils._log("payment_after_cancel", "WARN", orderId=order_id, paymentId=payment_id or None)
+    utils._audit_event("order.payment_after_cancel", {}, {"paymentId": payment_id},
+                       {"orderId": order_id, "pendingRefund": True})
+    return actualizado or order
+
+
 def handle_update_status(order_id, body, headers):
     """PATCH /orders/{id}"""
     new_status = body.get("status", "").lower()
@@ -673,6 +704,10 @@ def handle_update_status(order_id, body, headers):
     # duplicaba paidAt, la ejecución del motor de comisiones y el correo.
     if new_status == "paid" and (order.get("status") or "").lower() in _ESTADOS_YA_COBRADOS:
         return utils._json_response(200, {"order": _con_totales_visibles(order), "alreadyPaid": True})
+    if new_status == "paid" and (order.get("status") or "").lower() in _ESTADOS_CANCELADOS:
+        actualizado = _anotar_pago_tras_cancelacion(order, body)
+        return utils._json_response(200, {"order": _con_totales_visibles(actualizado), "alreadyCancelled": True,
+                                          "pendingRefund": True})
 
     actor = utils._extract_actor(headers)
     actor_user_id = actor.get("user_id")
@@ -756,7 +791,13 @@ def handle_update_status(order_id, body, headers):
         # del back office puede fijarlos; un cliente no puede "firmar" por otro.
         if actor.get("role") in ("admin", "employee"):
             if body.get("deliveredAt"):
-                extra_updates["deliveredAt"] = str(body["deliveredAt"]).strip()
+                # Una fecha no ISO dejaba `_horas_desde_entrega` en 0 y la ventana
+                # de devolución (48 h / 7 días) abierta para siempre.
+                entregado_iso = _fecha_iso_valida(body["deliveredAt"])
+                if not entregado_iso:
+                    return utils._json_response(400, {"message": "deliveredAt debe ser una fecha ISO 8601 (por ejemplo 2026-09-03T15:20:00Z)",
+                                                      "code": "INVALID_DELIVERED_AT"})
+                extra_updates["deliveredAt"] = entregado_iso
             if body.get("deliverySignedBy"):
                 extra_updates["deliverySignedBy"] = str(body["deliverySignedBy"]).strip()[:200]
             extra_updates["deliveredBy"] = str(body.get("deliveredBy") or actor_user_id or "admin").strip()[:80]
@@ -892,6 +933,36 @@ def _con_totales_visibles(order: dict) -> dict:
 def _is_guest_order(order: dict) -> bool:
     """Pedido creado sin cuenta: buyerType guest o sin customerId."""
     return str(order.get("buyerType") or "").lower() == "guest" or not order.get("customerId")
+
+
+def _sin_sesion(headers: dict) -> bool:
+    """Ni sesión de cliente ni de back office."""
+    actor = utils._extract_actor(headers or {})
+    return not actor.get("user_id") and actor.get("role") not in ("admin", "employee")
+
+
+def _enmascarar(texto, visibles: int = 4) -> str:
+    texto = str(texto or "")
+    if not texto:
+        return ""
+    if "@" in texto:
+        usuario, _, dominio = texto.partition("@")
+        return (usuario[:1] + "•••@" + dominio) if dominio else "•••"
+    return "•" * max(0, len(texto) - visibles) + texto[-visibles:]
+
+
+def _vista_publica_invitado(order: dict) -> dict:
+    """Lo que ve quien solo conoce el ID de un pedido de invitado: el seguimiento
+    sin los datos personales completos (teléfono, correo y calle enmascarados).
+    El ID circula en correos, URLs y capturas: no es un secreto."""
+    direccion = order.get("shippingAddress") if isinstance(order.get("shippingAddress"), dict) else {}
+    return {
+        **order,
+        "phone": _enmascarar(order.get("phone")),
+        "email": _enmascarar(order.get("email")),
+        "shippingAddress": {k: direccion.get(k) for k in ("city", "state", "postalCode", "zip", "label") if direccion.get(k)},
+        "shippingAddressLabel": order.get("shippingAddressLabel"),
+    }
 
 
 def _precios_cobrables(order: dict) -> list:
@@ -1122,6 +1193,20 @@ def _evidencia_faltante(motivo: str, evidencia: dict) -> list:
         if all(evidencia.get(c) for c in devoluciones_handlers.EVIDENCIA_COMPLETA):
             return []
     return faltan
+
+
+def _fecha_iso_valida(valor) -> str:
+    """Devuelve la fecha normalizada en ISO 8601 (UTC) o cadena vacía si no se puede leer."""
+    texto = str(valor or "").strip()
+    if not texto:
+        return ""
+    try:
+        momento = datetime.fromisoformat(texto.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return ""
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=timezone.utc)
+    return momento.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _horas_desde_entrega(order: dict) -> float:
@@ -1653,6 +1738,12 @@ def handle_mp_webhook(query, body):
         if not utils.hmac.compare_digest(secreto_recibido, secreto_configurado):
             utils._log("mp_webhook_secret_invalid", "WARN", topic=query.get("topic"), id=query.get("id"))
             return utils._json_response(401, {"message": "Secreto de webhook inválido"})
+    elif ml_cfg.get("enabled"):
+        # Con la pasarela encendida el secreto es la única defensa del endpoint
+        # público: sin él no se acredita nada (antes seguía con un WARN).
+        utils._log("mp_webhook_secret_missing", "WARN", topic=query.get("topic"), id=query.get("id"))
+        return utils._json_response(401, {"message": "Webhook sin secreto configurado: captura payments.mercadoLibre.webhookSecret",
+                                          "code": "WEBHOOK_SECRET_MISSING"})
     else:
         utils._log("mp_webhook_secret_missing", "WARN", topic=query.get("topic"), id=query.get("id"))
 
@@ -1679,6 +1770,10 @@ def handle_mp_webhook(query, body):
     ya_cobrado = (order.get("status") or "").lower() in _ESTADOS_YA_COBRADOS
     if ya_cobrado or str(order.get("paymentId") or "") == str(resource_id):
         return utils._json_response(200, {"ok": True, "orderId": order_id, "applied": False, "idempotent": True})
+    if status == "approved" and (order.get("status") or "").lower() in _ESTADOS_CANCELADOS:
+        _anotar_pago_tras_cancelacion(order, {"paymentId": str(resource_id), "paidVia": "mercadopago", "webhookReceivedAt": now})
+        return utils._json_response(200, {"ok": True, "orderId": order_id, "applied": False,
+                                          "ignored": "order_cancelled", "pendingRefund": True})
 
     if status != "approved":
         # pending / rejected / cancelled: no cambia el estado del pedido, pero queda el rastro.
@@ -1941,6 +2036,8 @@ def lambda_handler(event, context):
                     # Se devolvía el item crudo, sin "total": el cálculo guarda
                     # netTotal y la pantalla de seguimiento mostraba "$0".
                     salida = _con_totales_visibles(order)
+                    if _is_guest_order(order) and _sin_sesion(headers):
+                        salida = _vista_publica_invitado(salida)
                     # La gerente necesita ver en la ficha la inspección de la devolución (notas, fotos, checklist).
                     if order.get("returnRequestId") and utils._extract_actor(headers).get("role") in ("admin", "employee"):
                         salida = {**salida, "returnInspection": _resumen_devolucion(order.get("returnRequestId"))}

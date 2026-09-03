@@ -2792,8 +2792,8 @@ paths:
 
   /inventory/envios/{orderId}/confirmar-entrega:
     get:
-      summary: "Enlace del correo '¿te llegó?': el cliente confirma la entrega (página HTML)"
-      description: "Pública con ?token= de un solo uso. 401 token inválido."
+      summary: "Enlace del correo '¿te llegó?': página con el botón 'Sí, ya llegó' (sin efectos)"
+      description: "Pública con ?token= de un solo uso. Solo muestra la página; el cambio de estado lo hace el POST del formulario (?token=&ui=1). 401 token inválido."
       operationId: enviosConfirmarEntregaGet
       tags: [Shipping]
       parameters:

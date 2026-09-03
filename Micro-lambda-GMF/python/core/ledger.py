@@ -228,6 +228,27 @@ def _ledger_row_sk(row_id) -> str:
 
 LEDGER_HEADER_SK = "HEADER"
 
+# Índice por mes del esquema por filas: la partición `LEDGER#<socia>#<mes>` no
+# se puede recorrer "por mes", y Pagos del mes, los avisos y las acciones
+# urgentes necesitan justo eso. Cada cabecera se copia aquí con SK `<mes>#<socia>`.
+COMMISSION_MONTH_INDEX_PK = "COMMISSION_MONTH_INDEX"
+
+# Campos que el esquema por filas reconstruye por su cuenta; el resto (marcas de
+# idempotencia como `blockedNoticeSentDays`, `clabeReminderAt`, `paidAt`…) viaja
+# en la cabecera para que ninguna se pierda al cambiar de esquema.
+_CAMPOS_RECONSTRUIDOS = frozenset((
+    "PK", "SK", "entityType", "ledger", "totalPending", "totalConfirmed", "totalBlocked",
+    "updatedAt", "version", "status", "createdAt", "beneficiaryId", "monthKey",
+))
+
+
+def _ledger_index_sk(beneficiary_id, month_key) -> str:
+    return f"{month_key}#{beneficiary_id}"
+
+
+def _campos_extra(item: dict) -> dict:
+    return {k: v for k, v in (item or {}).items() if k not in _CAMPOS_RECONSTRUIDOS}
+
 
 def _read_ledger_rows(beneficiary_id, month_key) -> Optional[dict]:
     """Reconstruye el mes contable desde los items por fila.
@@ -252,6 +273,7 @@ def _read_ledger_rows(beneficiary_id, month_key) -> Optional[dict]:
     filas.sort(key=lambda f: str(f.get("createdAt") or ""))
 
     reconstruido = {
+        **_campos_extra(cabecera),
         "PK": COMMISSION_MONTH_PK,
         "SK": _ledger_sk(beneficiary_id, month_key),
         "entityType": "commissionMonth",
@@ -276,8 +298,8 @@ def _write_ledger_rows(item: dict) -> None:
     pk = _ledger_rows_pk(beneficiario, mes)
     _recalc_ledger_totals(item)
 
-    db._table.put_item(Item={
-        "PK": pk, "SK": LEDGER_HEADER_SK,
+    cabecera = {
+        **_campos_extra(item),
         "entityType": "commissionMonthHeader",
         "beneficiaryId": beneficiario, "monthKey": mes,
         "totalPending": item.get("totalPending", D_ZERO),
@@ -287,7 +309,10 @@ def _write_ledger_rows(item: dict) -> None:
         "createdAt": item.get("createdAt") or _now_iso(),
         "updatedAt": _now_iso(),
         "version": item.get("version", 0),
-    })
+    }
+    db._table.put_item(Item={"PK": pk, "SK": LEDGER_HEADER_SK, **cabecera})
+    db._table.put_item(Item={"PK": COMMISSION_MONTH_INDEX_PK, "SK": _ledger_index_sk(beneficiario, mes),
+                             **cabecera, "entityType": "commissionMonthIndex"})
 
     vigentes = set()
     for fila in item.get("ledger", []):
@@ -339,11 +364,47 @@ def _add_ledger_row(beneficiary_id, month_key, fila: dict) -> None:
     if not deltas:
         deltas = {"totalPending": D_ZERO}
     expresion = "ADD " + ", ".join(f"{campo} :{campo}" for campo in deltas)
-    db._table.update_item(
-        Key={"PK": pk, "SK": LEDGER_HEADER_SK},
-        UpdateExpression=expresion + " SET updatedAt = :u, beneficiaryId = :b, monthKey = :m",
-        ExpressionAttributeValues={
-            **{f":{campo}": valor for campo, valor in deltas.items()},
-            ":u": _now_iso(), ":b": beneficiary_id, ":m": month_key,
-        },
-    )
+    valores = {
+        **{f":{campo}": valor for campo, valor in deltas.items()},
+        ":u": _now_iso(), ":b": beneficiary_id, ":m": month_key,
+    }
+    for clave in ((pk, LEDGER_HEADER_SK), (COMMISSION_MONTH_INDEX_PK, _ledger_index_sk(beneficiary_id, month_key))):
+        db._table.update_item(
+            Key={"PK": clave[0], "SK": clave[1]},
+            UpdateExpression=expresion + " SET updatedAt = :u, beneficiaryId = :b, monthKey = :m",
+            ExpressionAttributeValues=valores,
+        )
+
+
+def _listar_meses_contables(month_key: Optional[str] = None) -> list:
+    """Meses contables (uno por beneficiaria) de `month_key`, o todos si no se
+    indica, con la misma forma en ambos esquemas: totales, `status`,
+    `beneficiaryId`, `monthKey`, las marcas de idempotencia y el `SK` original.
+
+    Es el único lector "por mes" que deben usar Pagos del mes, el CSV, el lote,
+    los avisos y las acciones urgentes: con el esquema por filas el bucket
+    `COMMISSION_MONTH` no existe.
+    """
+    from .db import _query_all_pages
+    from boto3.dynamodb.conditions import Key
+
+    if LEDGER_ROW_SCHEME != "rows":
+        condicion = Key("PK").eq(COMMISSION_MONTH_PK)
+        items = _query_all_pages(KeyConditionExpression=condicion)
+        marca = f"#MONTH#{month_key}" if month_key else None
+        return [i for i in items if str(i.get("beneficiaryId") or "") and (not marca or marca in str(i.get("SK") or ""))]
+
+    condicion = Key("PK").eq(COMMISSION_MONTH_INDEX_PK)
+    if month_key:
+        condicion = condicion & Key("SK").begins_with(f"{month_key}#")
+    salida = []
+    for cabecera in _query_all_pages(KeyConditionExpression=condicion):
+        beneficiario, mes = cabecera.get("beneficiaryId"), cabecera.get("monthKey")
+        if beneficiario in (None, "") or not mes:
+            continue
+        salida.append({
+            **{k: v for k, v in cabecera.items() if k not in ("PK", "SK")},
+            "PK": COMMISSION_MONTH_PK, "SK": _ledger_sk(beneficiario, mes),
+            "entityType": "commissionMonth", "ledger": [],
+        })
+    return salida

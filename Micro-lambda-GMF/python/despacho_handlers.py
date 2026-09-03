@@ -22,6 +22,7 @@ import csv
 import io
 import json
 import secrets
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -93,13 +94,22 @@ def _cantidad(item: dict) -> int:
         return 0
 
 
-def _lineas_pedido(order: dict) -> list:
+def _lineas_pedido(order: dict, nombres: Optional[dict] = None) -> list:
+    """Líneas del pedido con nombre. Si la línea no lo trae, se resuelve desde
+    el catálogo (`nombres` cachea por invocación) en vez de mostrar el id."""
     salida = []
     for it in order.get("items") or []:
         pid = str(it.get("productId") or "").strip()
         qty = _cantidad(it)
         if pid and qty > 0:
-            salida.append({"productId": pid, "name": it.get("name") or f"Producto {pid}", "quantity": qty})
+            nombre = it.get("name")
+            if not nombre:
+                if nombres is None:
+                    nombres = {}
+                if pid not in nombres:
+                    nombres[pid] = (utils._get_by_id("PRODUCT", pid) or {}).get("name") or f"Producto {pid}"
+                nombre = nombres[pid]
+            salida.append({"productId": pid, "name": nombre, "quantity": qty})
     return salida
 
 
@@ -111,7 +121,7 @@ def _stock_id(stock: dict) -> str:
     return str(stock.get("stockId") or stock.get("id") or "").strip()
 
 
-def _resumen_pedido(order: dict) -> dict:
+def _resumen_pedido(order: dict, nombres: Optional[dict] = None) -> dict:
     """Lo que la pantalla de despacho necesita de cada pedido pagado."""
     return {
         "id": order.get("orderId"),
@@ -120,7 +130,7 @@ def _resumen_pedido(order: dict) -> dict:
         "createdAt": order.get("createdAt"),
         "paidAt": order.get("paidAt") or order.get("updatedAt"),
         "daysSincePaid": _dias_desde(order.get("paidAt") or order.get("updatedAt")),
-        "items": _lineas_pedido(order),
+        "items": _lineas_pedido(order, nombres),
         "city": order.get("city") or (order.get("shippingAddress") or {}).get("city") or "",
         "state": order.get("state") or (order.get("shippingAddress") or {}).get("state") or "",
         "hasInvoiceRequest": bool(order.get("invoiceRequested") or order.get("invoiceStatus")),
@@ -192,9 +202,9 @@ def _calcular_surtido(stock: dict, orders: list, todos_los_stocks: Optional[list
     bodegas sí tienen el faltante, para que el motivo del bloqueo diga a dónde
     ir en vez de solo "no alcanza".
     """
-    necesario = {}
+    necesario, nombres = {}, {}
     for order in orders:
-        for linea in _lineas_pedido(order):
+        for linea in _lineas_pedido(order, nombres):
             entrada = necesario.setdefault(linea["productId"], {"name": linea["name"], "needed": 0})
             entrada["needed"] += linea["quantity"]
 
@@ -254,7 +264,8 @@ def handle_despacho_pendientes(query: dict) -> dict:
     """GET despacho/pendientes — pagados a domicilio y enviados sin entrega."""
     integracion = _integracion()
     ask_days = int(integracion.get("askDays") or 7)
-    pendientes = sorted((_resumen_pedido(o) for o in _pedidos_por_despachar()),
+    nombres = {}
+    pendientes = sorted((_resumen_pedido(o, nombres) for o in _pedidos_por_despachar()),
                         key=lambda p: str(p.get("paidAt") or ""))
     rezagados = []
     for order in _pedidos_enviados():
@@ -584,36 +595,55 @@ def handle_envios_cerrar(body: dict, headers: dict) -> dict:
 _PAGINA_CONFIRMACION = """<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Finding'U · Entrega confirmada</title>
 <style>body{{font-family:system-ui,sans-serif;background:#F9F7F2;margin:0}}main{{max-width:480px;margin:48px auto;background:#fff;border-radius:16px;padding:32px;text-align:center;border:1px solid #e8e3d8}}
 h1{{font-size:22px;color:#2D3436}}p{{color:#636e72;line-height:1.6}}a{{display:inline-block;margin-top:16px;background:#D4AF37;color:#333;padding:12px 28px;border-radius:50px;text-decoration:none;font-weight:bold}}</style></head>
-<body><main><h1>{titulo}</h1><p>{texto}</p><a href="{url}">Ver mi pedido</a></main></body></html>"""
+<body><main><h1>{titulo}</h1><p>{texto}</p>{formulario}<a href="{url}">Ver mi pedido</a></main></body></html>"""
+
+# El botón del correo es un enlace (GET) y los escáneres de correo (SafeLinks,
+# Gmail, antivirus) siguen los enlaces: el GET solo muestra la página con el
+# botón; el cambio de estado vive únicamente en el POST del formulario (§4.3).
+_FORMULARIO_CONFIRMACION = ("""<form method="post" action="{accion}" style="margin-top:16px">"""
+                            """<button type="submit" style="background:#D4AF37;color:#333;border:0;padding:12px 28px;border-radius:50px;font-weight:bold;cursor:pointer">Sí, ya llegó</button></form>""")
 
 
-def _respuesta_confirmacion(method: str, status: int, titulo: str, texto: str, order_id: str, estado: str = "") -> dict:
-    if method == "GET":
-        html = _PAGINA_CONFIRMACION.format(titulo=titulo, texto=texto, url=f"{FRONTEND_BASE_URL.rstrip('/')}/#/orden/{order_id}")
+def _respuesta_confirmacion(en_navegador: bool, status: int, titulo: str, texto: str, order_id: str,
+                            estado: str = "", formulario: str = "") -> dict:
+    if en_navegador:
+        html = _PAGINA_CONFIRMACION.format(titulo=titulo, texto=texto, formulario=formulario,
+                                           url=f"{FRONTEND_BASE_URL.rstrip('/')}/#/orden/{order_id}")
         return {"statusCode": status, "headers": utils._cors_headers("text/html; charset=utf-8"), "body": html}
     return utils._json_response(status, {"status": estado, "message": texto})
 
 
 def handle_confirmar_entrega(order_id: str, method: str, query: dict, headers: dict) -> dict:
-    """GET|POST envios/{orderId}/confirmar-entrega?token= — "Sí, ya llegó" del correo."""
-    token = str((query or {}).get("token") or "").strip()
+    """GET|POST envios/{orderId}/confirmar-entrega?token= — "Sí, ya llegó" del correo.
+
+    GET: página con el botón (sin efectos). POST: marca la entrega; con `ui=1`
+    (el formulario de la página) responde HTML, si no JSON.
+    """
+    query = query or {}
+    token = str(query.get("token") or "").strip()
+    en_navegador = method == "GET" or str(query.get("ui") or "") == "1"
     order = utils._get_by_id("ORDER", order_id)
     if not order:
-        return _respuesta_confirmacion(method, 404, "No encontramos el pedido", "Revisa el enlace del correo o escríbenos a soporte.", order_id)
+        return _respuesta_confirmacion(en_navegador, 404, "No encontramos el pedido", "Revisa el enlace del correo o escríbenos a soporte.", order_id)
     esperado = str(order.get("deliveryCheckTokenHash") or "")
     if not token or not esperado or utils._hash_token(token) != esperado:
-        return _respuesta_confirmacion(method, 401, "Enlace no válido",
+        return _respuesta_confirmacion(en_navegador, 401, "Enlace no válido",
                                        "Este enlace ya no sirve. Entra a tu seguimiento para ver el estado del pedido.", order_id)
     if str(order.get("status") or "").lower() == "delivered":
-        return _respuesta_confirmacion(method, 200, "Tu pedido ya estaba marcado como entregado",
+        return _respuesta_confirmacion(en_navegador, 200, "Tu pedido ya estaba marcado como entregado",
                                        "Gracias por confirmarnos. No hace falta hacer nada más.", order_id, "delivered")
     if str(order.get("status") or "").lower() != "shipped":
-        return _respuesta_confirmacion(method, 409, "El pedido no está en camino",
+        return _respuesta_confirmacion(en_navegador, 409, "El pedido no está en camino",
                                        f"Está en estado '{order.get('status')}'; revisa tu seguimiento.", order_id, str(order.get("status")))
+    if method == "GET":
+        accion = f"?token={urllib.parse.quote(token, safe='')}&ui=1"
+        return _respuesta_confirmacion(True, 200, "¿Ya te llegó tu pedido?",
+                                       f"Confírmanos con un clic que el pedido {order_id} llegó bien.", order_id, "shipped",
+                                       formulario=_FORMULARIO_CONFIRMACION.format(accion=accion))
     _, error = _marcar_entregado(order, headers, "cliente", utils._now_iso(), "Confirmado por el cliente desde el correo")
     if error:
-        return _respuesta_confirmacion(method, 500, "No pudimos guardar la confirmación", "Inténtalo de nuevo en unos minutos.", order_id)
-    return _respuesta_confirmacion(method, 200, "¡Gracias! Marcamos tu pedido como entregado",
+        return _respuesta_confirmacion(en_navegador, 500, "No pudimos guardar la confirmación", "Inténtalo de nuevo en unos minutos.", order_id)
+    return _respuesta_confirmacion(en_navegador, 200, "¡Gracias! Marcamos tu pedido como entregado",
                                    f"El pedido {order_id} quedó cerrado. Si algo llegó mal, pide la devolución desde tu seguimiento.",
                                    order_id, "delivered")
 

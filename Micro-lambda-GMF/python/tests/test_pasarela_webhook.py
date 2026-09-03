@@ -196,3 +196,51 @@ def test_el_pago_en_mostrador_y_el_del_admin_quedan_marcados_por_su_via(order_la
     r = order_lambda.handle_update_status(oid, {"status": "paid"}, {"x-user-id": "7", "x-user-role": "admin"})
     assert json.loads(r["body"])["order"]["paidVia"] == "admin"
     assert utils._get_by_id("ORDER", oid).get("total") == Decimal("929.00")
+
+
+def test_un_pago_tardio_sobre_un_pedido_cancelado_no_lo_reactiva(order_lambda, utils, mercadopago, buzon, sfn):
+    """§8.5: solo un 'pending' se acredita. El webhook que llega después de la
+    cancelación deja el rastro y el reembolso pendiente; no reparte comisiones."""
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    r = order_lambda.handle_cancel_order(oid, {"reason": "customer_request"}, {})
+    assert r["statusCode"] == 200
+    correos = len(buzon)
+    mercadopago["pagos"]["mp-9"] = ("approved", oid)
+
+    estado, cuerpo = _webhook(order_lambda, "mp-9")
+    assert estado == 200 and cuerpo["applied"] is False
+    assert cuerpo["ignored"] == "order_cancelled" and cuerpo["pendingRefund"] is True
+    pedido = utils._get_by_id("ORDER", oid)
+    assert pedido["status"] == "cancelled" and pedido["pendingRefund"] is True
+    assert pedido["paymentStatusDetail"] == "approved_after_cancel" and pedido["paymentId"] == "mp-9"
+    assert [e["action"] for e in sfn.ejecuciones] == ["ORDER_CANCELLED"], "ni ORDER_PAID ni comisiones"
+    assert len(buzon) == correos, "no se manda «Recibimos tu pago» tras «Pedido cancelado»"
+
+    # La conciliación pasa por handle_update_status: misma guarda, sin duplicar el rastro.
+    r = order_lambda.handle_update_status(oid, {"status": "paid", "paymentId": "mp-9", "paidVia": "reconciliation"}, {})
+    d = json.loads(r["body"])
+    assert r["statusCode"] == 200 and d["alreadyCancelled"] is True and d["order"]["status"] == "cancelled"
+    assert utils._get_by_id("ORDER", oid)["paidVia"] == "mercadopago"
+
+    # Y la gerente lo ve en "Acciones urgentes".
+    import dashboard_lambda
+    avisos = json.loads(dashboard_lambda.get_admin_warnings()["body"])["warnings"]
+    aviso = next(a for a in avisos if a["type"] == "refunds")
+    assert aviso["orderIds"] == [oid] and aviso["severity"] == "high"
+
+
+def test_con_la_pasarela_encendida_y_sin_secreto_el_webhook_no_acredita(order_lambda, utils, store, mercadopago, buzon):
+    """La única defensa del endpoint público es el secreto: con la pasarela
+    encendida y el secreto vacío se responde 401 en vez de seguir con un WARN."""
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    now = "2026-01-01T00:00:00Z"
+    store[("CONFIG#app-v1", "REF")] = {"PK": "CONFIG#app-v1", "SK": "REF", "refPK": "CONFIG", "refSK": f"{now}#app-v1"}
+    store[("CONFIG", f"{now}#app-v1")] = {"PK": "CONFIG", "SK": f"{now}#app-v1",
+                                          "config": {"payments": {"mercadoLibre": {"enabled": True, "webhookSecret": ""}}}}
+    utils._invalidate_app_config_cache()
+    mercadopago["pagos"]["mp-10"] = ("approved", oid)
+
+    estado, cuerpo = _webhook(order_lambda, "mp-10")
+    assert estado == 401 and cuerpo["code"] == "WEBHOOK_SECRET_MISSING"
+    assert utils._get_by_id("ORDER", oid)["status"] == "pending"
+    assert mercadopago["consultas"] == [] and buzon == []

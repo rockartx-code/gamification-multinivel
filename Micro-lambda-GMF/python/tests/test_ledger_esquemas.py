@@ -129,3 +129,64 @@ def test_el_modo_dual_escribe_en_ambos(utils, monkeypatch, store):
     assert ("COMMISSION_MONTH", utils._ledger_sk(17, "2026-09")) in store, "falta el original"
     pk = ledger._ledger_rows_pk(17, "2026-09")
     assert (pk, "HEADER") in store and (pk, "ROW#A#G1") in store, "falta el nuevo"
+
+
+def test_las_marcas_del_mes_y_el_indice_por_mes_sobreviven_al_esquema_por_filas(utils, esquema_filas):
+    """`blockedNoticeSentDays`, `clabeReminderAt`, `paidAt`… se perdían: la cabecera
+    solo guardaba status/createdAt/version. Y el bucket COMMISSION_MONTH no existe
+    en este esquema, así que Pagos del mes y los avisos no veían ningún mes."""
+    def _marcar(item):
+        item["ledger"].append(_fila("A#G1", "120", "blocked"))
+        item["blockedNoticeSentDays"] = [Decimal(20)]
+        item["clabeReminderAt"] = "2026-09-20T00:00:00Z"
+        return True
+
+    utils._mutate_ledger_month(2, "2026-09", _marcar)
+    releido = utils._get_ledger_month(2, "2026-09")
+    assert [int(d) for d in releido["blockedNoticeSentDays"]] == [20]
+    assert releido["clabeReminderAt"] == "2026-09-20T00:00:00Z"
+
+    # El camino barato (una fila) tampoco borra las marcas ni desactualiza el índice.
+    esquema_filas._add_ledger_row(2, "2026-09", _fila("B#G1", "30"))
+    releido = utils._get_ledger_month(2, "2026-09")
+    assert releido["clabeReminderAt"] == "2026-09-20T00:00:00Z" and releido["totalPending"] == Decimal("30")
+
+    meses = utils._listar_meses_contables("2026-09")
+    assert [str(m["beneficiaryId"]) for m in meses] == ["2"]
+    assert meses[0]["totalBlocked"] == Decimal("120") and meses[0]["totalPending"] == Decimal("30")
+    assert [int(d) for d in meses[0]["blockedNoticeSentDays"]] == [20]
+    assert "#MONTH#2026-09" in meses[0]["SK"]
+    assert utils._listar_meses_contables("2026-10") == []
+    assert len(utils._listar_meses_contables()) == 1
+
+
+def test_en_el_esquema_original_el_lector_por_mes_filtra_por_mes(utils):
+    for cid, mes in ((21, "2026-09"), (22, "2026-09"), (21, "2026-10")):
+        item = utils._get_ledger_month(cid, mes)
+        item["ledger"] = [_fila("A#G1", "10", "confirmed")]
+        utils._save_ledger_month(item)
+    assert sorted(str(m["beneficiaryId"]) for m in utils._listar_meses_contables("2026-09")) == ["21", "22"]
+    assert len(utils._listar_meses_contables()) == 3
+
+
+def test_los_avisos_de_bloqueadas_son_idempotentes_bajo_el_esquema_por_filas(utils, esquema_filas, monkeypatch):
+    """Reproducción del hallazgo: dos avisos el día 20 mandaban dos correos con 'rows'."""
+    import json
+    from freezegun import freeze_time
+    from test_avisos_bloqueadas import _bloqueada, _catalogo, _cliente, _post
+    import commissions_lambda
+    enviados = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: enviados.append(para))
+    _catalogo(utils)
+    cid = _cliente(utils, 2, "Bety")
+    with freeze_time("2026-10-05"):
+        utils._increment_associate_month_net_volume(cid, "2026-10", Decimal("1080"))
+        utils._increment_associate_month_net_vp(cid, "2026-10", 18.0)
+        _bloqueada(utils, cid, "138.60", "2026-10")
+    with freeze_time("2026-10-20"):
+        primero = json.loads(_post(commissions_lambda, {"force": True})["body"])
+        segundo = json.loads(_post(commissions_lambda, {"force": True})["body"])
+    assert [n["customerId"] for n in primero["notified"]] == ["2"]
+    assert segundo["notified"] == [] and segundo["alreadyNotified"] == ["2"]
+    assert enviados == ["bety@test.com"]
+    assert [int(d) for d in utils._get_ledger_month(2, "2026-10")["blockedNoticeSentDays"]] == [20]

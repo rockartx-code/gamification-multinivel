@@ -235,15 +235,15 @@ def get_admin_warnings():
 
     paid_no_ship = sum(1 for o in orders if (o.get("status") or "").lower() == "paid")
     pending_pay = sum(1 for o in orders if (o.get("status") or "").lower() == "pending")
+    # Pagos que entraron a un pedido ya cancelado: hay que devolver el dinero.
+    pagos_tras_cancelar = [o for o in orders if o.get("paymentStatusDetail") == "approved_after_cancel"
+                           and o.get("pendingRefund") and (o.get("status") or "").lower() != "refunded"]
 
     # Comisiones pendientes de depositar (status CONFIRMED, sin recibo).
     # Esta query leía UNA sola página: con más de 1 MB de meses contables el
     # aviso salía corto y se dejaban de pagar comisiones sin ninguna señal.
-    from boto3.dynamodb.conditions import Key as _Key
     try:
-        comm_items = utils._query_all_pages(
-            KeyConditionExpression=_Key("PK").eq("COMMISSION_MONTH")
-        )
+        comm_items = utils._listar_meses_contables()
     except Exception:
         comm_items = []
     # Paquete A: se separan "listas para depositar" de "sin CLABE", con el
@@ -252,8 +252,8 @@ def get_admin_warnings():
     # (hallazgo 12 de la ronda 4: el aviso gritaba "urgente" el día 1).
     payout_day = int(utils._to_decimal((cfg.get("rewards") or {}).get("payoutDay", 10)))
     fichas_clabe: dict = {}
-    listas = {"count": 0, "amount": 0.0, "urgent": False}
-    sin_clabe = {"count": 0, "amount": 0.0, "urgent": False}
+    listas = {"count": 0, "amount": 0.0, "urgent": False, "months": set()}
+    sin_clabe = {"count": 0, "amount": 0.0, "urgent": False, "months": set()}
     for item in comm_items:
         confirmado = utils._to_decimal(item.get("totalConfirmed"))
         if confirmado <= 0 or (item.get("status") or "") == "PAID":
@@ -267,6 +267,7 @@ def get_admin_warnings():
         destino["amount"] = round(destino["amount"] + float(confirmado), 2)
         mes = str(item.get("monthKey") or "")
         if len(mes) == 7:
+            destino["months"].add(mes)
             anio, m = int(mes[:4]), int(mes[5:7])
             siguiente = f"{anio + 1}-01" if m == 12 else f"{anio}-{m + 1:02d}"
             if now_date >= f"{siguiente}-{max(payout_day - 2, 1):02d}":
@@ -284,19 +285,25 @@ def get_admin_warnings():
 
     warnings = []
     if warning_cfg.get("showCommissions", True) and listas["count"]:
+        # `monthKey`: el mes (del reloj del servidor) al que "Ir a resolver" debe llevar.
         warnings.append({"type": "commissions_ready",
                          "text": f"{listas['count']} comisiones listas para depositar · ${listas['amount']:,.2f}",
                          "severity": "high" if listas["urgent"] else "low",
-                         "count": listas["count"], "amount": listas["amount"]})
+                         "count": listas["count"], "amount": listas["amount"], "monthKey": max(listas["months"], default="")})
     if warning_cfg.get("showCommissions", True) and sin_clabe["count"]:
         warnings.append({"type": "commissions_no_clabe",
                          "text": f"{sin_clabe['count']} socias con comisión y sin CLABE · ${sin_clabe['amount']:,.2f}",
                          "severity": "high" if sin_clabe["urgent"] else "low",
-                         "count": sin_clabe["count"], "amount": sin_clabe["amount"]})
+                         "count": sin_clabe["count"], "amount": sin_clabe["amount"], "monthKey": max(sin_clabe["months"], default="")})
     if warning_cfg.get("showShipping", True) and paid_no_ship:
         warnings.append({"type": "shipping", "text": f"{paid_no_ship} pedidos pagados sin envío", "severity": "medium"})
     if warning_cfg.get("showPendingPayments", True) and pending_pay:
         warnings.append({"type": "payments", "text": f"{pending_pay} pedidos pendientes de pago", "severity": "low"})
+    if pagos_tras_cancelar:
+        warnings.append({"type": "refunds",
+                         "text": f"{len(pagos_tras_cancelar)} pedidos cancelados recibieron el pago: hay que reembolsar",
+                         "severity": "high", "count": len(pagos_tras_cancelar),
+                         "orderIds": [o.get("orderId") for o in pagos_tras_cancelar]})
     if warning_cfg.get("showPendingTransfers", True) and pending_transfers:
         warnings.append({"type": "stocks", "text": f"{pending_transfers} transferencias pendientes por recibir", "severity": "medium"})
     if warning_cfg.get("showPosSalesToday", True) and pos_sales_today:
@@ -333,9 +340,7 @@ def get_user_performance(user_id):
 def get_user_commissions(user_id):
     """GET /user/commissions - Saldo actual"""
     month_key = utils._month_key()
-    comm_item = utils._table.get_item(
-        Key={"PK": utils.COMMISSION_MONTH_PK, "SK": utils._ledger_sk(user_id, month_key)}
-    ).get("Item", {})
+    comm_item = utils._get_ledger_month(user_id, month_key)
 
     return utils._json_response(200, {
         "pending": float(utils._to_decimal(comm_item.get("totalPending", 0))),

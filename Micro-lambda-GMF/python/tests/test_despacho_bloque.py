@@ -266,3 +266,19 @@ def test_la_bodega_por_defecto_valida_bodega_y_sesion(inventory_lambda, utils):
 def test_el_reloj_descubre_las_tareas_programadas(inventory_lambda):
     """docs/arquitectura/23 §0.3: el harness lee TAREAS_PROGRAMADAS del anfitrión."""
     assert inventory_lambda.TAREAS_PROGRAMADAS == [("POST", "/inventory/envios/rastrear"), ("POST", "/inventory/envios/cerrar")]
+
+
+def test_una_linea_sin_nombre_toma_el_del_catalogo(inventory_lambda, utils):
+    """Aparecía «Producto 101» en la lista y en «Faltan 1 Producto 101» del surtido."""
+    _bodegas(utils)
+    _empleado(utils)
+    _pedido(utils, "ORD-SN", items=[{"productId": 102, "price": 620, "quantity": 1}])
+    st, d = _llamar(inventory_lambda, "GET", "/inventory/despacho/pendientes", headers={"x-user-id": BETO, "x-user-role": "employee",
+                                                                                     "x-user-privileges": json.dumps({"order_mark_shipped": True})})
+    assert st == 200, d
+    fila = next(p for p in d["orders"] if p["id"] == "ORD-SN")
+    assert fila["items"][0]["name"] == "Colágeno"
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/despacho/surtido", {"stockId": "STK-VALLE", "orderIds": ["ORD-SN"]},
+                    headers={"x-user-id": BETO, "x-user-role": "employee", "x-user-privileges": json.dumps({"order_mark_shipped": True})})
+    assert st == 200, d
+    assert d["lines"][0]["name"] == "Colágeno" and d["lines"][0]["status"] == "short"

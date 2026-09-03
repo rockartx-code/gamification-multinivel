@@ -87,3 +87,13 @@ def test_el_almacen_guarda_ciudad_y_estado(modulos, utils):
     r = inventory_lambda.handle_stocks("PATCH", {"city": "Mérida", "state": "YUC"}, stock["stockId"])
     actualizado = json.loads(r["body"])["stock"]
     assert actualizado["city"] == "Mérida" and actualizado["state"] == "YUC"
+
+
+def test_una_sucursal_sin_ciudad_no_lista_su_direccion_como_ciudad(modulos, utils):
+    """`location` es una dirección: salía «Hay sucursal en: Av. Coyoacán 1200…» en el carrito."""
+    order_lambda, _ = modulos
+    utils._put_entity("STOCK", "STK-COY", {"entityType": "stock", "stockId": "STK-COY", "name": "Coyoacán",
+                                           "location": "Av. Coyoacán 1200, Col. Del Valle, CDMX", "allowPickup": True,
+                                           "linkedUserIds": [], "inventory": {}})
+    d = _consultar(order_lambda, {"items": []})
+    assert d["cities"] == [] and [s["name"] for s in d["stocks"]] == ["Coyoacán"]

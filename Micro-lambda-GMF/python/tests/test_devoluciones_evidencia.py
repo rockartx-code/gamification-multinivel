@@ -88,3 +88,32 @@ def test_la_solicitud_guarda_la_regla_de_evidencia_y_las_fotos_por_categoria(ord
     # nombres de las categorías ("fotos_producto") en lugar de las fotos.
     resumen = order_lambda._resumen_devolucion(folio)
     assert resumen["evidence"] == solicitud["evidence"]["fotos_paquete_cerrado"]
+
+
+def test_sin_sesion_el_pedido_de_invitado_no_expone_datos_personales_ni_evidencia(order_lambda, utils, monkeypatch):
+    """El ID de un pedido de invitado circula en correos y capturas: quien solo
+    lo conoce ve el seguimiento, no el teléfono, la calle, la descripción libre
+    ni las fotos. Con sesión de back office se sigue viendo todo."""
+    from test_pedidos_creacion import _crear_pedido_invitado, _evento
+    monkeypatch.setattr(order_lambda, "_upload_evidence_s3",
+                        lambda nombre, contenido, tipo, prefix: {"assetId": nombre, "url": f"https://fotos.test/{prefix}/{nombre}"})
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    utils._update_by_id("ORDER", oid, "SET #s = :s, deliveredAt = :d", {":s": "delivered", ":d": utils._now_iso()}, {"#s": "status"})
+    r = solicitar(order_lambda, oid, {"motivo": "DESISTIMIENTO", "descripcion": "No lo quiero, cambié de opinión",
+                                      "evidence": {"fotos_paquete_cerrado": [{"contentBase64": "eA==", "contentType": "image/jpeg", "fileName": "cerrado.jpg"}]}})
+    assert r["statusCode"] == 201, r["body"]
+
+    pedido = json.loads(order_lambda.lambda_handler(_evento("GET", f"/orders/{oid}"), None)["body"])["order"]
+    assert pedido["status"] == "en_devolucion" and pedido["orderId"] == oid
+    assert pedido["phone"] == "••••••2222" and pedido["email"] == "l•••@test.com"
+    assert "street" not in pedido["shippingAddress"] and pedido["shippingAddress"]["city"] == "Guadalajara"
+
+    detalle = json.loads(order_lambda.lambda_handler(_evento("GET", f"/orders/{oid}/devolucion"), None)["body"])["request"]
+    assert detalle["status"] and detalle["refund"]["suggested"] is not None
+    assert detalle["descripcion"] == "" and detalle["evidence"] == {}
+
+    admin = {"x-user-id": "1", "x-user-role": "admin"}
+    completo = json.loads(order_lambda.lambda_handler({**_evento("GET", f"/orders/{oid}/devolucion"), "headers": admin}, None)["body"])["request"]
+    assert completo["descripcion"] == "No lo quiero, cambié de opinión" and completo["evidence"]["fotos_paquete_cerrado"]
+    pedido_admin = json.loads(order_lambda.lambda_handler({**_evento("GET", f"/orders/{oid}"), "headers": admin}, None)["body"])["order"]
+    assert pedido_admin["phone"] == "3311112222" and pedido_admin["shippingAddress"]["street"] == "Av. Vallarta"

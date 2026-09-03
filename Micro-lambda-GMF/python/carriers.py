@@ -47,6 +47,20 @@ def _config_paqueteria(cfg=None) -> dict:
     return dict(((cfg.get("shipping") or {}).get("carrierIntegration")) or {})
 
 
+
+def _fecha_iso_o_ahora(valor) -> str:
+    """La paquetería manda la fecha en su propio formato; si no se puede leer
+    como ISO 8601 se toma el momento del rastreo (nunca un texto libre)."""
+    from datetime import datetime, timezone
+    texto = str(valor or "").strip()
+    try:
+        momento = datetime.fromisoformat(texto.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return utils._now_iso()
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=timezone.utc)
+    return momento.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 class Paqueteria:
     """Contrato mínimo que cumplen todas las paqueterías."""
 
@@ -165,7 +179,7 @@ class EnviaPaqueteria(Paqueteria):
         if "deliver" in crudo or "entreg" in crudo:
             return {
                 "status": "delivered",
-                "deliveredAt": str(primero.get("deliveredAt") or primero.get("deliveryDate") or utils._now_iso()),
+                "deliveredAt": _fecha_iso_o_ahora(primero.get("deliveredAt") or primero.get("deliveryDate")),
                 "signedBy": str(primero.get("signedBy") or primero.get("receivedBy") or "").strip(),
                 "events": eventos,
             }

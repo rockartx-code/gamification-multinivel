@@ -335,10 +335,20 @@ def _del_cliente(customer_id) -> list:
     return [_publica(s) for s in utils._query_bucket(ENTIDAD) if str(s.get("customerId")) == objetivo]
 
 
+def _autorizar(headers: dict, customer_id, privilegio: str):
+    """Dueño o admin; un empleado solo con el privilegio (como el resto de rutas nuevas)."""
+    if utils._extract_actor(headers).get("role") == "employee":
+        return utils._require_admin(headers, privilegio)
+    return utils._require_self_or_admin(headers, customer_id)
+
+
 def handle_listar(query: dict, headers: dict) -> dict:
     actor = utils._extract_actor(headers)
     customer_id = actor.get("user_id")
     if actor.get("role") in ("admin", "employee") and query.get("customerId"):
+        err = _autorizar(headers, query.get("customerId"), "access_screen_orders")
+        if err:
+            return err
         customer_id = query.get("customerId")
     if not customer_id:
         return utils._json_response(401, {"message": "No autenticado"})
@@ -350,7 +360,7 @@ def handle_una(sub_id: str, headers: dict) -> dict:
     sub = _cargar(sub_id)
     if not sub:
         return utils._json_response(404, {"message": "Suscripción no encontrada"})
-    err = utils._require_self_or_admin(headers, sub.get("customerId"))
+    err = _autorizar(headers, sub.get("customerId"), "access_screen_orders")
     if err:
         return err
     return utils._json_response(200, {"subscription": _publica(sub)})
@@ -361,7 +371,7 @@ def handle_crear(body: dict, headers: dict) -> dict:
     customer_id = body.get("customerId") or actor.get("user_id")
     if not customer_id:
         return utils._json_response(401, {"message": "No autenticado"})
-    err = utils._require_self_or_admin(headers, customer_id)
+    err = _autorizar(headers, customer_id, "order_create")
     if err:
         return err
     if not _cfg().get("enabled", True):
@@ -411,7 +421,7 @@ def handle_editar(sub_id: str, body: dict, headers: dict) -> dict:
     sub = _cargar(sub_id)
     if not sub:
         return utils._json_response(404, {"message": "Suscripción no encontrada"})
-    err = utils._require_self_or_admin(headers, sub.get("customerId"))
+    err = _autorizar(headers, sub.get("customerId"), "order_create")
     if err:
         return err
     if sub.get("status") == "cancelled":
@@ -474,7 +484,7 @@ def handle_cancelar(sub_id: str, body: dict, headers: dict) -> dict:
     sub = _cargar(sub_id)
     if not sub:
         return utils._json_response(404, {"message": "Suscripción no encontrada"})
-    err = utils._require_self_or_admin(headers, sub.get("customerId"))
+    err = _autorizar(headers, sub.get("customerId"), "order_create")
     if err:
         return err
     if sub.get("status") == "cancelled":

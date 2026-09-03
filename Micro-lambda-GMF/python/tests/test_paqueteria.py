@@ -225,16 +225,25 @@ def test_el_cliente_confirma_la_entrega_desde_el_correo(inventory_lambda, utils,
     assert r["statusCode"] == 401 and "text/html" in r["headers"]["Content-Type"]
     assert utils._get_by_id("ORDER", "ORD-7")["status"] == "shipped"
 
-    # El botón del correo es un enlace (GET): página de gracias y pedido entregado por el cliente.
+    # El botón del correo es un enlace (GET) y los escáneres de correo lo siguen:
+    # el GET solo muestra la página con el botón, sin tocar el pedido.
     r = inventory_lambda.lambda_handler({"httpMethod": "GET", "path": "/inventory/envios/ORD-7/confirmar-entrega",
                                          "headers": {}, "queryStringParameters": {"token": token}, "body": ""}, None)
-    assert r["statusCode"] == 200 and "Marcamos tu pedido como entregado" in r["body"]
+    assert r["statusCode"] == 200 and "¿Ya te llegó tu pedido?" in r["body"]
+    assert f'<form method="post" action="?token={token}&ui=1"' in r["body"] and "Sí, ya llegó" in r["body"]
+    assert utils._get_by_id("ORDER", "ORD-7")["status"] == "shipped" and sfn == []
+
+    # El clic en el botón (POST del formulario) sí entrega y responde la página de gracias.
+    r = inventory_lambda.lambda_handler({"httpMethod": "POST", "path": "/inventory/envios/ORD-7/confirmar-entrega",
+                                         "headers": {}, "queryStringParameters": {"token": token, "ui": "1"}, "body": ""}, None)
+    assert r["statusCode"] == 200 and "text/html" in r["headers"]["Content-Type"]
+    assert "Marcamos tu pedido como entregado" in r["body"] and "<form" not in r["body"]
     pedido = utils._get_by_id("ORDER", "ORD-7")
     assert pedido["status"] == "delivered" and pedido["deliveredBy"] == "cliente"
     assert pedido["deliverySignedBy"] == "Confirmado por el cliente desde el correo"
     assert sfn == ["ORDER_DELIVERED"]
 
-    # Repetir el clic es inofensivo (JSON para el POST).
+    # Repetir el clic es inofensivo (JSON para el POST sin ui).
     st, d = _llamar(inventory_lambda, "POST", "/inventory/envios/ORD-7/confirmar-entrega", {}, query={"token": token})
     assert st == 200 and d["status"] == "delivered"
 

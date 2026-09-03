@@ -195,3 +195,26 @@ def test_el_correo_de_cancelacion_de_un_pedido_pagado_dice_plazo_y_medio(order_l
     _, asunto, html = buzon[-1]
     assert "cancelado" in asunto
     assert "mismo medio de pago" in html and "3 a 5 días hábiles" in html
+
+
+def test_una_fecha_de_entrega_ilegible_se_rechaza_y_no_deja_abierta_la_devolucion(order_lambda, utils, admin):
+    """`deliveredAt` sin formato ISO dejaba `_horas_desde_entrega` en 0 y el plazo de 7 días nunca corría."""
+    oid = _crear_pedido_invitado(order_lambda, utils)
+    assert order_lambda.handle_update_status(oid, {"status": "paid"}, admin)["statusCode"] == 200
+    r = order_lambda.handle_update_status(oid, {"status": "delivered", "deliveredAt": "ayer por la tarde"}, admin)
+    assert r["statusCode"] == 400 and json.loads(r["body"])["code"] == "INVALID_DELIVERED_AT"
+    assert utils._get_by_id("ORDER", oid)["status"] == "paid"
+
+    r = order_lambda.handle_update_status(oid, {"status": "delivered", "deliveredAt": "2026-07-01T10:00:00-05:00"}, admin)
+    assert r["statusCode"] == 200
+    pedido = utils._get_by_id("ORDER", oid)
+    assert pedido["deliveredAt"] == "2026-07-01T15:00:00Z", "se guarda normalizada en UTC"
+    assert order_lambda._horas_desde_entrega(pedido) > 24 * 30
+
+
+def test_la_paqueteria_manda_la_fecha_en_su_formato_y_se_normaliza(utils, monkeypatch):
+    import carriers
+    assert carriers._fecha_iso_o_ahora("2026-09-01 10:20:00") == "2026-09-01T10:20:00Z"
+    assert carriers._fecha_iso_o_ahora("2026-09-01T10:20:00Z") == "2026-09-01T10:20:00Z"
+    ahora = carriers._fecha_iso_o_ahora("hoy en la mañana")
+    assert ahora.endswith("Z") and ahora[:4] == utils._now_iso()[:4]

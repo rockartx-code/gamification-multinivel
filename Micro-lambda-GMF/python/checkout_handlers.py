@@ -268,8 +268,9 @@ def sucursales_recoger(body: dict) -> dict:
     con_ubicacion = bool(ciudad or estado)
 
     sucursales = [s for s in utils._query_bucket("STOCK") if s.get("allowPickup")]
-    ciudades = sorted({str(s.get("city") or s.get("location") or "").strip()
-                       for s in sucursales if str(s.get("city") or s.get("location") or "").strip()})
+    # Solo `city` cuenta como ciudad: `location` es una dirección y salía en el
+    # carrito como "Hay sucursal en: Av. Coyoacán 1200…".
+    ciudades = sorted({str(s.get("city") or "").strip() for s in sucursales if str(s.get("city") or "").strip()})
     salida = []
     for s in sucursales:
         s_ciudad = _normalizar(s.get("city"))

@@ -264,7 +264,22 @@ def handle_devolucion_detalle(order_id: str, headers: dict) -> dict:
             "message": "Este pedido no tiene una solicitud de devolución.",
             "code": "RETURN_NOT_FOUND",
         })
-    return utils._json_response(200, {"request": detalle_solicitud(req, order)})
+    detalle = detalle_solicitud(req, order)
+    if order_lambda._is_guest_order(order) and order_lambda._sin_sesion(headers):
+        detalle = _detalle_publico(detalle)
+    return utils._json_response(200, {"request": detalle})
+
+
+def _detalle_publico(detalle: dict) -> dict:
+    """Sin sesión solo se conoce el ID del pedido: el estado y el reembolso sí,
+    pero no la descripción libre, las fotos de evidencia ni la inspección."""
+    inspeccion = detalle.get("inspection") or None
+    return {
+        **detalle,
+        "descripcion": "",
+        "evidence": {},
+        "inspection": {"inspectedAt": inspeccion.get("inspectedAt")} if inspeccion else None,
+    }
 
 
 # ---------------------------------------------------------------------------

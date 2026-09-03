@@ -86,18 +86,20 @@ def _clabe_enmascarada(clabe: str) -> str:
     return "•" * (len(clabe) - 4) + clabe[-4:]
 
 
+def _celda_segura(texto) -> str:
+    """Excel evalúa como fórmula una celda que empieza por =, +, -, @ (o tab/CR).
+    El nombre lo edita la propia socia: se neutraliza con un apóstrofo."""
+    texto = str(texto or "")
+    return "'" + texto if texto[:1] in ("=", "+", "-", "@", "\t", "\r") else texto
+
+
 def _nombre_pila(ficha: dict) -> str:
     return (str(ficha.get("name") or "").strip().split(" ") or [""])[0] or "Hola"
 
 
 def _meses_contables(month_key: str) -> list:
-    """Meses contables de `month_key` (la partición se recorre entera: su SK es
-    por beneficiaria, no por fecha)."""
-    marca = f"#MONTH#{month_key}"
-    return [
-        item for item in utils._query_bucket("COMMISSION_MONTH")
-        if marca in str(item.get("SK") or "") and str(item.get("beneficiaryId") or "")
-    ]
+    """Meses contables de `month_key`, sirva el esquema que sirva (core.ledger)."""
+    return utils._listar_meses_contables(month_key)
 
 
 def _recibos_pagados(month_key: str) -> dict:
@@ -186,8 +188,8 @@ def handle_dispersion_csv(peticion) -> dict:
         if fila["status"] != "listo":
             continue
         escritor.writerow([
-            _clabe_de(_ficha(fila["customerId"])), fila["name"], f"{fila['amount']:.2f}",
-            f"Comisiones {mes} Finding'U", fila["customerId"], fila["email"],
+            _clabe_de(_ficha(fila["customerId"])), _celda_segura(fila["name"]), f"{fila['amount']:.2f}",
+            f"Comisiones {mes} Finding'U", fila["customerId"], _celda_segura(fila["email"]),
         ])
     cabeceras = utils._cors_headers("text/csv; charset=utf-8")
     cabeceras["Content-Disposition"] = f'attachment; filename="dispersion-{mes}.csv"'
@@ -223,14 +225,9 @@ def handle_pago_lote(peticion) -> dict:
         if c and c not in ids_unicos:
             ids_unicos.append(c)
 
-    try:
-        asset = motor._upload_receipt_s3(nombre, contenido, body.get("contentType") or "application/pdf", "comprobantes")
-    except ValueError:
-        return utils._json_response(400, {"message": "El comprobante no se pudo leer (contentBase64 inválido)."})
-
-    lote_id = f"LOTE-{utils.uuid.uuid4().hex[:8].upper()}"
-    referencia = str(body.get("bankReference") or "").strip()
-    pagados, saltados = [], []
+    # Primero se valida y solo después se sube el comprobante: un doble clic
+    # (todas ALREADY_PAID) dejaba un archivo huérfano en S3 por intento.
+    pagables, saltados = [], []
     for cid in ids_unicos:
         ledger = utils._get_ledger_month(cid, mes)
         if utils._to_decimal(ledger.get("totalConfirmed", 0)) <= 0:
@@ -240,6 +237,22 @@ def handle_pago_lote(peticion) -> dict:
         if codigo:
             saltados.append({"customerId": cid, "code": codigo})
             continue
+        pagables.append((cid, ledger))
+    if not pagables:
+        return utils._json_response(409, {
+            "message": "Ninguna de las seleccionadas se pudo marcar como pagada; revisa los motivos por fila.",
+            "code": "NOTHING_PAID", "skipped": saltados,
+        })
+
+    try:
+        asset = motor._upload_receipt_s3(nombre, contenido, body.get("contentType") or "application/pdf", "comprobantes")
+    except ValueError:
+        return utils._json_response(400, {"message": "El comprobante no se pudo leer (contentBase64 inválido)."})
+
+    lote_id = f"LOTE-{utils.uuid.uuid4().hex[:8].upper()}"
+    referencia = str(body.get("bankReference") or "").strip()
+    pagados = []
+    for cid, ledger in pagables:
         recibo = motor._registrar_pago(cid, mes, asset, batch_id=lote_id, bank_reference=referencia or None)
         pagados.append({"customerId": cid, "receiptId": recibo.get("receiptId"),
                         "amount": float(utils._to_decimal(ledger.get("totalConfirmed", 0)))})
