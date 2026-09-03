@@ -89,9 +89,17 @@ Tras el mensaje de Ivonne, Rosa Elena entra, ve por fin sus dos compras de invit
 - Encontró el pickup de Claudia de noviembre todavía "Pagada": la entrega del 15-nov y la transferencia de Biotina se habían perdido con un reinicio del contenedor (el simulador guardaba el estado solo al cambiar el reloj). Se repitieron por API y el simulador ahora guarda tras cada escritura.
 - 16-dic: Estafeta entrega los nueve y Beto la personal. Las comisiones de diciembre pasaron a confirmadas en vivo: Verónica $491.20 (con los $49.50 de 2ª generación), Bety $99; Claudia sigue con $195.20 bloqueados a la espera de activarse.
 
-### 2.11 Ola en curso
+### 2.11 Devolución por arrepentimiento (Patricia, 16-dic, móvil)
 
-_(Patricia devuelve por arrepentimiento; Beto la recibe con el checklist; Sofía reembolsa, cancela el pickup que nadie recogió y registra la entrada del Magnesio; Claudia se activa el 20; enero.)_
+Patricia devuelve un Naplus cerrado dentro de los 7 días. Eligió "Desistimiento (arrepentimiento)" con el aviso "el costo de envío de la devolución corre a tu cargo"; folio RET-9A996299; verificado en la API (PENDIENTE, envío a cargo del cliente, VP intactos hasta la inspección).
+
+- **Bug**: el correo "Recibimos tu solicitud" decía "guarda tu ticket de envío: te lo reembolsamos" para todos los motivos, contradiciendo la pantalla. Corregido: el correo distingue quién paga según el motivo.
+- Las tres fotos (producto, empaque, guía) son obligatorias aunque el paquete esté cerrado. Es la regla 3.3 del plan; queda como hallazgo (§4).
+- No encontró a quién escribir por un pedido: su panel solo mostraba el WhatsApp de su patrocinadora "para temas de red". Corregido: el bloque de patrocinador muestra también el WhatsApp y el correo de soporte para pedidos, pagos y devoluciones.
+
+### 2.12 Ola en curso
+
+_(Beto recibe la devolución con el checklist y registra la entrada del Magnesio; Sofía reembolsa, cancela el pickup sin recoger; Claudia se activa el 20; enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -109,6 +117,8 @@ _(Patricia devuelve por arrepentimiento; Beto la recibe con el checklist; Sofía
 | 10 | Media | Devoluciones | La cortesía prometida al rechazar no existía como descuento | Cupón personal de un uso emitido desde el rechazo y enviado en el correo |
 | 11 | Media | POS | Una venta con pago parcial no se podía liquidar después | Ruta de abonos, "Cobrar saldo" en la venta, abono al corte |
 | 12 | Media | Clientes | Sin "última compra", sin filtro de fríos y sin exportar: la recuperación de cuentas se hacía cruzando siete pestañas | `lastPurchaseAt`, filtro "Solo fríos", CSV |
+| 13 | Baja | Correos | El correo de devolución prometía reembolsar el envío también en arrepentimiento (la pantalla decía lo contrario) | Texto según quién paga el envío |
+| 14 | Baja | Panel del socio | Con patrocinadora, el panel no mostraba ningún contacto de soporte para pedidos | WhatsApp y correo de soporte en el bloque de patrocinador |
 
 ## 4. Hallazgos de negocio
 
@@ -121,6 +131,7 @@ _(Patricia devuelve por arrepentimiento; Beto la recibe con el checklist; Sofía
 7. Los códigos de recuperación se invalidan entre sí: quien pide dos (por impaciencia) ve "inválido o expirado" con el primero. Propuesta: aceptar el último código y decir en el correo "usa el código más reciente".
 8. El teléfono es opcional al registrarse y la recuperación de cuentas es por WhatsApp: dos de cuatro fríos no tenían número. Propuesta: pedir celular en el registro (con explicación) y en el primer pedido.
 9. La entrega personal no se puede elegir al comprar (solo el almacén la registra) y la cartera "FindingU" no muestra a la ejecutiva como coach en el panel del cliente. Propuestas: opción "entrega en persona" por zona en el checkout, y que el patrocinador por defecto muestre nombre y WhatsApp de la ejecutiva asignada.
+10. Devolver un paquete cerrado por arrepentimiento exige tres fotos (producto, empaque y guía). Propuesta: para desistimiento con paquete sin abrir, una sola foto del paquete cerrado con la guía.
 
 ## 5. Pendiente
 
