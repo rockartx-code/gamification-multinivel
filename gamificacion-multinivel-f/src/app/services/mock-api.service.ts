@@ -1841,7 +1841,7 @@ export class MockApiService {
     return of({ ...emp }).pipe(delay(120));
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     const emp = this.employees.find((e) => e.id === employeeId);
     if (!emp) {
       return throwError(() => new Error('Empleado no encontrado'));
@@ -2322,7 +2322,7 @@ export class MockApiService {
     }).pipe(delay(300));
   }
 
-  getHonorBoard(): Observable<HonorBoard> {
+  getHonorBoard(_month?: string): Observable<HonorBoard> {
     return of(this.getMockHonorBoard()).pipe(delay(120));
   }
 

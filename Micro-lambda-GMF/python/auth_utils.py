@@ -834,6 +834,8 @@ def handle_employees(method, body, employee_id=None, headers=None):
         # El panel mandaba `phone` y aquí se ignoraba: el celular del empleado no se podía corregir.
         if "phone" in body: updates.append("phone = :ph"); eav[":ph"] = str(body.get("phone") or "").strip()
         if "active" in body: updates.append("active = :a"); eav[":a"] = bool(body["active"])
+        # El panel mandaba canAccessAdmin y aquí se ignoraba: no había forma de quitarle el acceso a un empleado.
+        if "canAccessAdmin" in body: updates.append("canAccessAdmin = :ca"); eav[":ca"] = bool(body["canAccessAdmin"])
         if "privileges" in body: 
             updates.append("privileges = :p"); eav[":p"] = utils._normalize_privileges(body["privileges"])
         

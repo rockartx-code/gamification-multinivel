@@ -896,11 +896,7 @@ export class AdminComponent implements OnInit {
         break;
       case 'honor_board':
         if (!this.honorBoardData && !this.isLoadingHonorBoard) {
-          this.isLoadingHonorBoard = true;
-          this.api.getHonorBoard().subscribe({
-            next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; this.requestViewUpdate(); },
-            error: () => { this.isLoadingHonorBoard = false; this.requestViewUpdate(); }
-          });
+          this.loadHonorBoard();
         }
         break;
     }
@@ -4507,6 +4503,41 @@ export class AdminComponent implements OnInit {
           this.syncSelectedCustomerAccessDraft();
           this.showSnackbar('Permisos guardados.');
         }
+      });
+  }
+
+  /** Mes consultado en el Cuadro de Honor (vacío = mes en curso). En diciembre no se podía ver el de noviembre. */
+  honorBoardMonth = '';
+
+  loadHonorBoard(month?: string): void {
+    if (month !== undefined) {
+      this.honorBoardMonth = month;
+    }
+    this.isLoadingHonorBoard = true;
+    this.api.getHonorBoard(this.honorBoardMonth || undefined).subscribe({
+      next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; this.requestViewUpdate(); },
+      error: () => { this.isLoadingHonorBoard = false; this.requestViewUpdate(); }
+    });
+  }
+
+  isSavingEmployeeActive = false;
+
+  /** Desactivar o reactivar al empleado seleccionado (no se borra: se conserva su historial). */
+  toggleSelectedEmployeeActive(): void {
+    const emp = this.selectedEmployee;
+    if (!emp || this.isSavingEmployeeActive) return;
+    const next = !emp.active;
+    if (!next && !confirm(`¿Desactivar a ${emp.name}? Ya no podrá entrar al back office ni cobrar en el POS.`)) return;
+    this.isSavingEmployeeActive = true;
+    this.adminControl
+      .updateEmployee(emp.id, { active: next, canAccessAdmin: next })
+      .pipe(finalize(() => { this.isSavingEmployeeActive = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedEmployee = { ...emp, ...updated };
+          this.showSnackbar(next ? 'Empleado reactivado.' : 'Empleado desactivado.');
+        },
+        error: () => this.showSnackbar('No se pudo cambiar el estado del empleado.')
       });
   }
 

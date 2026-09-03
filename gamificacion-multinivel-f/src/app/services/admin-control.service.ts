@@ -597,7 +597,7 @@ export class AdminControlService {
     );
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.api.updateEmployee(employeeId, payload).pipe(
       tap((emp) => {
         const current = this.dataSubject.value;

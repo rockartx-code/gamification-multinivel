@@ -166,8 +166,8 @@ export class ApiService {
     return this.resolveApi().getUserDashboardData(userId);
   }
 
-  getHonorBoard(): Observable<import('../models/user-dashboard.model').HonorBoard> {
-    return this.resolveApi().getHonorBoard();
+  getHonorBoard(month?: string): Observable<import('../models/user-dashboard.model').HonorBoard> {
+    return this.resolveApi().getHonorBoard(month);
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -468,7 +468,7 @@ export class ApiService {
     return this.resolveApi().createEmployee(payload);
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.resolveApi().updateEmployee(employeeId, payload);
   }
 

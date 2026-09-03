@@ -476,8 +476,9 @@ export class RealApiService {
     return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard${query}`);
   }
 
-  getHonorBoard(): Observable<HonorBoard> {
-    return this.http.get<HonorBoard>(`${this.baseUrl}/dashboard/honor-board`, { headers: this.actorHeaders() });
+  getHonorBoard(month?: string): Observable<HonorBoard> {
+    const qs = month ? `?month=${encodeURIComponent(month)}` : '';
+    return this.http.get<HonorBoard>(`${this.baseUrl}/dashboard/honor-board${qs}`, { headers: this.actorHeaders() });
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -1099,7 +1100,7 @@ export class RealApiService {
       );
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.http
       .patch<{ employee: AdminEmployee }>(
         `${this.baseUrl}/auth/employees/${encodeURIComponent(String(employeeId))}`,

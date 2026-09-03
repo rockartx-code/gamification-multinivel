@@ -490,7 +490,7 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
 
 # --- HONOR BOARD ---
 
-def get_honor_board() -> dict:
+def get_honor_board(month: str = None) -> dict:
     """
     GET /honor-board — Top 10 por VG y Top 10 por VP del mes actual + mes anterior para delta.
     Complejidad O(N_customers) por mes; adecuado para redes de hasta ~5 000 socios.
@@ -500,8 +500,13 @@ def get_honor_board() -> dict:
     mxn_per_vp = utils._mxn_per_vp()
     rank_thresh = bonus_cfg.get("rankThresholds") or []
 
-    month_key  = utils._month_key()
-    prev_mk    = _prev_month_key()
+    # Con `month` se puede consultar un mes cerrado (en diciembre, el ranking de noviembre).
+    month_key  = (month or "").strip() or utils._month_key()
+    if month:
+        y, m = int(month_key[:4]), int(month_key[5:7])
+        prev_mk = f"{y - 1}-12" if m == 1 else f"{y}-{m - 1:02d}"
+    else:
+        prev_mk = _prev_month_key()
 
     # Sin bajas ARCO: "Cliente eliminado" no debe seguir apareciendo en un ranking.
     customers_raw = [c for c in utils._query_bucket("CUSTOMER") if isinstance(c, dict) and not c.get("deletedAt")]
@@ -723,7 +728,7 @@ def lambda_handler(event, context):
 
         # ── /honor-board  (también /dashboard/honor-board) ──────────────────────
         if root == "honor-board" and method == "GET":
-            return get_honor_board()
+            return get_honor_board((query or {}).get("month"))
 
         # ── /campaigns  (también /dashboard/campaigns) ───────────────────────────
         if root == "campaigns":

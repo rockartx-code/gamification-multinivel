@@ -1021,10 +1021,15 @@
                   </ui-button>
                 </div>
 
-                <div class="mt-3" *ngIf="hasPermission('employee_manage_privileges')">
+                <div class="mt-3 flex flex-wrap gap-2" *ngIf="hasPermission('employee_manage_privileges')">
                   <ui-button size="sm" variant="ghost" [disabled]="isGeneratingEmployeePassword" (pressed)="generateEmployeePassword()">
                     <i class="fa-solid fa-key" aria-hidden="true"></i>
                     {{ isGeneratingEmployeePassword ? 'Generando...' : 'Generar nueva contraseña' }}
+                  </ui-button>
+                  <!-- No había forma de desactivar a un empleado (duplicados, bajas): solo borrar o quitar permisos uno por uno. -->
+                  <ui-button size="sm" [variant]="emp.active ? 'ghost' : 'primary'" [disabled]="isSavingEmployeeActive" (pressed)="toggleSelectedEmployeeActive()">
+                    <i class="fa-solid" [ngClass]="emp.active ? 'fa-user-slash' : 'fa-user-check'" aria-hidden="true"></i>
+                    {{ isSavingEmployeeActive ? 'Guardando...' : (emp.active ? 'Desactivar empleado' : 'Reactivar empleado') }}
                   </ui-button>
                 </div>
                 <div *ngIf="employeeTempPassword" class="mt-2 rounded-2xl border border-green-200 bg-green-50 p-3 text-xs">
@@ -2814,8 +2819,10 @@
             <ng-container *ngIf="!isLoadingHonorBoard && honorBoardData">
               <!-- Sort controls -->
               <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="text-sm text-gray-500">
+                <div class="flex items-center gap-2 text-sm text-gray-500">
                   Mes: <span class="font-semibold text-main">{{ honorBoardData.monthKey }}</span>
+                  <input type="month" class="rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-xs text-main" [value]="honorBoardMonth || honorBoardData.monthKey"
+                    (change)="loadHonorBoard($any($event.target).value)" aria-label="Mes del Cuadro de Honor" />
                 </div>
                 <div class="flex gap-2">
                   <ui-button size="sm" [variant]="honorBoardSort === 'vg' ? 'primary' : 'ghost'" (pressed)="honorBoardSort = 'vg'">
