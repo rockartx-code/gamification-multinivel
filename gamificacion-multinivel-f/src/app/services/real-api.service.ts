@@ -1410,7 +1410,6 @@ export class RealApiService {
       returnShippingCost: Number(order['returnShippingCost'] ?? 0) > 0 ? Number(order['returnShippingCost']) : undefined,
       refundAmount: order['refundAmount'] != null ? Number(order['refundAmount']) : undefined,
       refundReason: this.readString(order, ['refundReason']) || undefined,
-      shippingCost: order['shippingCost'] != null ? Number(order['shippingCost']) : undefined,
       adminNotes: Array.isArray(order['adminNotes']) ? (order['adminNotes'] as AdminOrder['adminNotes']) : [],
       cancelReason: this.readString(order, ['cancelReason']) || undefined,
       cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
