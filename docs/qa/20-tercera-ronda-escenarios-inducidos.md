@@ -14,10 +14,10 @@ Método de esta ronda:
 | | |
 |---|---|
 | Escenarios inducidos ejecutados | 11 turnos de agente (Nadia ×2, Beto ×2, Sofía ×2, Verónica, Claudia, Lupita, Rosa Elena) más acciones de operación por API (entregas de Estafeta, correcciones de datos por "sistemas") |
-| Bugs de producción encontrados y corregidos en esta ronda | 12 (§4), tres de ellos graves: VP negativo al cancelar un pedido no pagado, pedidos de recoger en tienda pagados en línea que nunca pasaban a pagados, y recepción de devolución que aprobaba sin inspeccionar |
-| Hallazgos de negocio nuevos | 6 (§5) |
+| Bugs de producción encontrados y corregidos en esta ronda | 16 (§4), tres de ellos graves: VP negativo al cancelar un pedido no pagado, pedidos de recoger en tienda pagados en línea que nunca pasaban a pagados, y recepción de devolución que aprobaba sin inspeccionar |
+| Hallazgos de negocio nuevos | 8 (§5) |
 | Cobertura de rutas del frontend | 70 de 77 alcanzadas. De las 7 restantes, 6 son código muerto (no hay pantalla que las llame) y 1 (`/auth/resend-email-confirmation`) se ejercitó a mano al final (§6) |
-| Pruebas del backend | 141 en verde (eran 137 al empezar la ronda) |
+| Pruebas del backend | 142 en verde (eran 137 al empezar la ronda) |
 
 ## 2. Correcciones aplicadas antes de lanzar los agentes
 
@@ -101,9 +101,16 @@ Rosa Elena compró dos veces sin cuenta; su pedido de octubre llevaba seis seman
 - 12-nov: reasignó la red de Marcela a Verónica y dio de baja a Marcela (verificado). Reportó que no había botón para borrar el Gel ni bloque "Acceso a panel admin" en la ficha de Verónica. **No era error del agente**: `product_delete` no existía en el catálogo de privilegios del backend (`_normalize_privileges` lo descartaba al guardar, así que ningún empleado podía borrar productos aunque el panel tuviera el botón), y el bloque de privilegios de cliente existía en el componente pero nunca se pintaba (ruta `/customers/{id}/privileges` inalcanzable). Ambos corregidos.
 - 14-nov: dio a Nadia `customer_add`; borró el Gel ("Producto eliminado", catálogo 13→12→11 con el retiro previo); dio a Verónica acceso al panel con "Ver Clientes" y "Ver Cuadro de Honor" (primera vez que se toca `/customers/{id}/privileges`); dejó la nota de compensación; creó la transferencia de 10 Boom. Dudas: si "Acceso a panel admin" es obligatorio (ahora la pantalla lo explica) y por qué las transferencias no mostraban folio (ahora lo muestran).
 
-### 3.8 Turnos del 15-nov y cierre de mes
+### 3.8 Turnos del 15-nov
 
-_(Se completa al terminar: rechazo de la devolución de Lupita por Sofía, entrega en sucursal del pedido pagado en línea de Claudia, alta de un cliente desde el POS y pago mixto por Nadia, día de pago de diciembre.)_
+- **Sofía rechaza la devolución** (RET-671AA6F5) con el motivo completo (sello abierto, producto consumido, cortesía del 20%). Verificado: pedido `devolucion_rechazada`, correo "Devolución no procedente" a Lupita a las 10:07 con ese motivo. Encontró que la ficha del pedido no mostraba las fotos ni las notas de la recepción (estaban en la solicitud, no en el pedido) y que no hay bitácora de avisos enviados al cliente. Corregido lo primero: la ficha muestra estado, motivo del cliente, sus fotos, las notas y fotos de la recepción, el checklist y el motivo del rechazo. Lo segundo queda en §5.
+- **Nadia entrega, da de alta y cobra**: la entrega del pedido de Claudia (recoger en Del Valle, pagado en línea) falló con "Stock insuficiente para el producto Biotina": Del Valle tenía 0. **Bug**: el checkout deja elegir una sucursal sin existencia; la clienta paga y el mostrador no puede entregar. Corregido: el backend rechaza el pedido de pickup y dice qué producto falta. Para Claudia, transferencia de 5 Biotina, recepción y entrega (por API, como acciones de operación); los $35 de Verónica por esa compra pasaron a confirmados. Con su permiso nuevo dio de alta a Roberto desde el POS ("Cliente creado y seleccionado en POS", cliente 1794737118037) y le vendió 2 Boom (POS-6947D029); no pudo decirle cuántos VP ganó porque el POS no los muestra. Bety quiso pagar mitad efectivo y mitad tarjeta: no existe pago mixto; "Pago parcial" pide un código de autorización que la cajera no tiene y la pantalla no decía a quién pedírselo (ahora lo dice). El corte de caja apareció deshabilitado sin explicación (ahora explica que se habilita con ventas desde el último corte).
+- **Reenviar confirmación**, la única ruta viva que ningún agente había tocado, se reprodujo a mano con una cuenta sin confirmar: el botón **nunca aparecía**. El frontend comparaba el texto del error con el del backend y difería en un acento ("sesion" / "sesión"). Corregido con un código de error (`EMAIL_NOT_VERIFIED`); verificado: botón visible, segundo correo de activación en el buzón, ruta registrada.
+- Al crear una transferencia por API con el campo equivocado, el backend aceptó una transferencia vacía. Corregido: exige origen, destino distinto y al menos un producto.
+
+### 3.9 Día de pago (10-dic)
+
+_(Se completa con el turno 16 de Sofía.)_
 
 ## 4. Bugs de producción corregidos en esta ronda
 
@@ -121,6 +128,10 @@ _(Se completa al terminar: rechazo de la devolución de Lupita por Sofía, entre
 | 10 | Baja | Envíos | Sin campo de paquetería; la guía se contaminaba | Selector de paquetería y `shippingCarrier` |
 | 11 | Baja | Correos | Correo de devolución sin dirección del almacén | Dirección de la bodega principal |
 | 12 | Baja | Seguimiento | Sin cuenta no había dónde teclear el folio | Bloque de rastreo en la pantalla de entrar |
+| 13 | Grave | Checkout | Se podía pagar un pedido para recoger en una sucursal sin existencia | Validación de existencia por sucursal al crear el pedido |
+| 14 | Media | Login | "Reenviar correo de confirmación" nunca aparecía (comparación de textos con acento distinto) | Código `EMAIL_NOT_VERIFIED` del backend |
+| 15 | Baja | Devoluciones | La ficha del pedido no mostraba fotos, notas ni checklist de la devolución | `returnInspection` en el detalle para admin/empleado |
+| 16 | Baja | Transferencias | Se aceptaban transferencias sin productos | Validación |
 
 Además, en el entorno de simulación: la tabla en memoria no entendía `list_append` (falso "documento no guardado") y el script de cobertura contaba como nunca tocadas rutas con query string.
 
@@ -131,15 +142,17 @@ Además, en el entorno de simulación: la tabla en memoria no entendía `list_ap
 3. **Devolución parcial.** Lupita quería cambiar un bote de tres productos y la plataforma solo devuelve el pedido completo; con la validación se le anuló todo el volumen. Propuesta: devolución por línea (producto y cantidad), con reembolso y resta de volumen proporcionales.
 4. **Custodia del efectivo.** El corte de caja registra un número y no dice a quién se entrega. Propuesta: el corte pida "efectivo entregado a" y genere el retiro en el mismo paso.
 5. **Los puntos en el mostrador.** El POS muestra PC por producto pero no le dice al cliente de mostrador cuántos VP suma su compra; el argumento "regístrate para que te cuenten los puntos" lo hace la cajera de memoria. Propuesta: ticket con VP acumulados del mes y lo que falta para el siguiente descuento.
-6. **Trazabilidad de quién movió qué.** Beto vio un pedido cambiar solo. Propuesta: bitácora por pedido (quién, cuándo, desde qué sucursal) visible en la ficha del pedido.
+6. **Pago mixto en mostrador.** Bety quiso pagar mitad efectivo y mitad tarjeta; el POS solo admite una forma de pago (o "pago parcial" con saldo pendiente y código de gerente). Propuesta: dos formas de pago por venta, con el efectivo a caja y la tarjeta a terminal.
+7. **Bitácora de avisos al cliente.** Sofía rechazó una devolución y no pudo confirmar que el aviso salió. Propuesta: guardar cada correo enviado (asunto, fecha, destino) y mostrarlo en la ficha del cliente y del pedido.
+8. **Trazabilidad de quién movió qué.** Beto vio un pedido cambiar solo. Propuesta: bitácora por pedido (quién, cuándo, desde qué sucursal) visible en la ficha del pedido.
 
 ## 6. Cobertura de rutas
 
 `python3 sim/cobertura.py` (ya corregido para ignorar query strings y aceptar `{x}` vacío) al cierre de la ronda:
 
-- Rutas que expone el frontend: 77 · alcanzadas: 70 · nunca tocadas: 7.
+- Rutas que expone el frontend: 77 · alcanzadas: 71 · nunca tocadas: 6.
 - Código muerto (ninguna pantalla las llama, y el API Gateway no las enruta): `GET /admin/dashboard`, `POST /assets`, `GET /cart`, `GET /user-dashboard`, `POST /commissions/request`, `POST /commissions/receipt`. Las dos últimas son la solicitud de pago y el comprobante del socio, que la operación decidió hacer automáticos (depósito con CLABE en el día de pago); sus métodos en el frontend nunca se conectaron a un botón. Propuesta: borrarlas del cliente.
-- `/auth/resend-email-confirmation`: la confirmación llegó al instante en todos los registros de la simulación, así que ninguna persona necesitó reenviarla. Se ejercitó a mano al final (§3.8).
+- `/auth/resend-email-confirmation`: la confirmación llegó al instante en todos los registros de la simulación, así que ninguna persona necesitó reenviarla. Al ejercitarla a mano resultó inalcanzable (§3.8, bug 14); ya corregida y alcanzada. Con eso, **71 de 77** rutas alcanzadas y las 6 restantes son código muerto.
 
 ## 7. Pendiente
 
