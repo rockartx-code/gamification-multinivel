@@ -472,12 +472,21 @@ def _void_commissions_for_order(order_id: str, reason: str) -> list:
         # esto era un read-modify-write con deltas que podía descuadrar los
         # totales si otra orden escribía el mismo mes a la vez.
         try:
-            summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id)
+            summary = utils._void_ledger_rows_for_order(beneficiary_id, month_key, order_id, reason)
         except Exception as e:
             utils._log("void_comm_error", "ERROR", beneficiary=beneficiary_id, err=e)
             continue
         if not summary:
             continue
+        # Este camino (inspección, cancelación) anulaba la fila sin avisar; el
+        # aviso "Comisión anulada" solo existía en la acción de Step Functions.
+        monto_anulado = utils._to_decimal(summary.get("pendingRemoved") or 0) + utils._to_decimal(summary.get("confirmedRemoved") or 0)
+        if monto_anulado > 0:
+            try:
+                from commissions_lambda import _avisar_comision_anulada
+                _avisar_comision_anulada(beneficiary_id, order, monto_anulado, reason)
+            except Exception as e:
+                utils._log("void_comm_email_error", "ERROR", beneficiary=beneficiary_id, err=e)
         out.append({
             "action": "void",
             "beneficiaryId": beneficiary_id,
