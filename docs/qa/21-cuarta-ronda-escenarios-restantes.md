@@ -68,9 +68,17 @@ Patricia fue reasignada de Marcela a Verónica en noviembre. Quiere usar `DIC50`
 - Segundo intento, con el código correcto: **pago parcial** de Roberto (2 Boom, $500 en efectivo, "Saldo pendiente $340", folio POS-D7F97B91), **retiro** "entrega a gerencia" ("Retiro registrado") y **corte** ("Corte de caja registrado"). Verificado en la API.
 - **Hueco de producto**: cuando Roberto volvió a liquidar, no existía ninguna acción para cobrar el saldo de una venta con pago parcial; el "$340 pendiente" solo se veía al cobrar. Corregido: nueva ruta de abonos; la tarjeta de la venta muestra "Saldo pendiente" y "Cobrar saldo"; el abono entra a caja como cobro (efectivo al corte, tarjeta no) y cierra la venta al llegar a cero. En el siguiente turno Nadia no encontró el botón: la venta ya estaba dentro de un corte cerrado y ahí las filas son texto. Se agregó la sección "Saldos pendientes" (todas las ventas con saldo de la sucursal, estén o no en un corte) y en el cuarto turno liquidó los $340 con tarjeta: "Abono registrado. Venta liquidada.", efectivo intacto, abono visible en Tarjeta. Verificado en la API (venta `paid`, abono aparte con `source=settlement`).
 
-### 2.8 Ola en curso
+### 2.8 Clientes fríos desde la plataforma (Ivonne, 14-dic)
 
-_(Nadia liquida el saldo; después Beto despacha diciembre con una entrega personal y recibe una devolución con el checklist; Ivonne detecta clientes fríos; Claudia se activa el 20; cierre y pago de enero.)_
+Ivonne revisó las 16 fichas cruzando ficha, las siete pestañas de Pedidos y Estadísticas. Fríos: Rosa Elena (2-oct), Rodrigo (3-sep), Tomás (nunca) y Guadalupe R. (pedido de sucursal sin pagar). Karla ya estaba en "No contactar" y no se le escribió. Dejó nota en cada ficha y avisó a Verónica de sus dos referidos fríos; verificado en la API.
+
+- Le faltó lo mismo que en octubre: "última compra" a simple vista, un filtro "sin compra en X días" y exportar la lista. Corregido: la lista trae "Última compra · N días" (último pedido pagado del historial por cliente), filtro "Solo fríos (30+ días)" y "Exportar CSV".
+- Dos fichas sin teléfono (Guadalupe R., Tomás): el registro no lo exige. Propuesta en §4.
+- La columna "Mes anterior" de la lista se refiere a comisiones, no a compras; con "Última compra" al lado deja de confundir.
+
+### 2.9 Ola en curso
+
+_(Rosa Elena recompra tras el WhatsApp de Ivonne; Beto despacha diciembre con una entrega personal en CDMX y recibe una devolución con el checklist; Claudia se activa el 20; cierre y pago de enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -87,6 +95,7 @@ _(Nadia liquida el saldo; después Beto despacha diciembre con una entrega perso
 | 9 | Media | Carrito móvil | No había dónde escribir el cupón desde el celular | Cupón, VP y aviso de activación en el resumen móvil |
 | 10 | Media | Devoluciones | La cortesía prometida al rechazar no existía como descuento | Cupón personal de un uso emitido desde el rechazo y enviado en el correo |
 | 11 | Media | POS | Una venta con pago parcial no se podía liquidar después | Ruta de abonos, "Cobrar saldo" en la venta, abono al corte |
+| 12 | Media | Clientes | Sin "última compra", sin filtro de fríos y sin exportar: la recuperación de cuentas se hacía cruzando siete pestañas | `lastPurchaseAt`, filtro "Solo fríos", CSV |
 
 ## 4. Hallazgos de negocio
 
@@ -97,6 +106,7 @@ _(Nadia liquida el saldo; después Beto despacha diciembre con una entrega perso
 5. El mínimo de envío gratis se mide sobre el total con descuento: $1,090 de catálogo pagan envío. Propuesta: medirlo sobre el subtotal, o decirlo en el carrito ("te faltan $19 después del descuento").
 6. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
 7. Los códigos de recuperación se invalidan entre sí: quien pide dos (por impaciencia) ve "inválido o expirado" con el primero. Propuesta: aceptar el último código y decir en el correo "usa el código más reciente".
+8. El teléfono es opcional al registrarse y la recuperación de cuentas es por WhatsApp: dos de cuatro fríos no tenían número. Propuesta: pedir celular en el registro (con explicación) y en el primer pedido.
 
 ## 5. Pendiente
 
