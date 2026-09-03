@@ -2268,6 +2268,23 @@
                   </div>
                 </div>
 
+                <div *ngIf="posSalesWithBalance.length" class="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+                  <div class="text-sm font-semibold text-amber-900">Saldos pendientes ({{ posSalesWithBalance.length }})</div>
+                  <div class="mt-1 text-xs text-amber-800">Ventas con pago parcial de esta sucursal, aunque ya estén en un corte. Cobra el resto cuando el cliente regrese.</div>
+                  <div class="mt-3 space-y-2">
+                    <div *ngFor="let sale of posSalesWithBalance" class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-white/80 p-3">
+                      <div>
+                        <div class="text-xs font-semibold text-main">{{ sale.orderId }} · {{ sale.customerName || 'Publico en General' }}</div>
+                        <div class="text-mini text-gray-600">Total {{ formatMoney(sale.total) }} · pagado {{ formatMoney(sale.amountPaid || 0) }} · {{ formatDateTime(sale.createdAt) }}</div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-900">Saldo {{ formatMoney(sale.pendingAmount || 0) }}</span>
+                        <ui-button size="sm" variant="primary" *ngIf="canSettlePosSale(sale)" (pressed)="settlePosSale(sale)">Cobrar saldo</ui-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="rounded-2xl border border-olive-30 surface-soft p-4">
                   <div class="text-sm font-semibold text-main">Ventas registradas</div>
                   <div class="mt-1 text-xs text-gray-600">Solo se muestran las ventas del operador actual sobre su stock ligado, separadas por forma de pago.</div>

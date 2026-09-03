@@ -1535,6 +1535,15 @@ export class AdminComponent implements OnInit {
     return this.customers.find((customer) => customer.id === this.selectedPosCustomerId) ?? null;
   }
 
+  /** Ventas con saldo pendiente de esta sucursal, estén o no en un corte cerrado:
+   *  la cajera encontró la venta parcial dentro del historial de cortes, en texto plano. */
+  get posSalesWithBalance(): PosSale[] {
+    const stockId = this.currentPosStock?.id;
+    return this.posSales.filter(
+      (sale) => (!stockId || sale.stockId === stockId) && sale.status !== 'voided' && Number(sale.pendingAmount || 0) > 0
+    );
+  }
+
   get visiblePosSales(): PosSale[] {
     const stockId = this.currentPosStock?.id;
     const operatorId = this.currentOperatorId;
