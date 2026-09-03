@@ -2341,6 +2341,110 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete F · coach-seguimiento (propuestas 15 y 19) ─────────────────────
+  /customers/seguimiento/hoy:
+    get:
+      summary: "Seguimiento de hoy: clientes priorizados por situación para la coach"
+      description: |
+        Privilegio `access_screen_customers`. Una fila por persona (clientes e invitados sin ficha)
+        con teléfono, enlace wa.me, patrocinadora, ejecutiva asignada, origen, último pedido,
+        días sin compra, días sin contacto, situación (`bienvenida|fria|clabe_pendiente|pedido_tardio|activa`)
+        y prioridad. Excluye "no contactar", bajas y, en `scope=mine`, las de otra ejecutiva.
+        Query: `scope=mine|all` (mine por omisión), `situation=`, `limit=`.
+      operationId: seguimientoHoy
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista priorizada"
+        "403":
+          description: "Sin el privilegio de Clientes"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/seguimiento/plantillas:
+    get:
+      summary: "Plantillas de WhatsApp por situación"
+      description: |
+        Privilegio `access_screen_customers`. Devuelve `templates` (bienvenida, fria, clabe_pendiente,
+        pedido_tardio) y `placeholders` ({nombre}, {coach}, {producto}, {monto}, {folio}). Las
+        plantillas viven en código y se sobreescriben por clave con la config `seguimiento.templates`.
+      operationId: seguimientoPlantillas
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Plantillas"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/seguimiento/ficha-invitado:
+    post:
+      summary: "Crea la ficha de un comprador invitado y le liga sus pedidos"
+      description: |
+        Privilegio `access_screen_customers`. Cuerpo `{email}`. Crea el cliente en modo cliente,
+        origen `invitado`, sin acceso; liga los pedidos hechos con ese correo y migra las notas de
+        `GUEST_CONTACT`. 409 si el correo ya tiene ficha; 404 si no hay pedidos de invitado.
+      operationId: seguimientoFichaInvitado
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "Ficha creada"
+        "409":
+          description: "El correo ya tiene ficha"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/{customerId}/contacto:
+    post:
+      summary: "Anota un contacto (WhatsApp, correo o llamada) y devuelve el enlace wa.me prellenado"
+      description: |
+        Privilegio `access_screen_customers`. Cuerpo `{channel: whatsapp|email|call, templateKey?, message, guestEmail?}`.
+        Añade la nota a `contactNotes` con canal, plantilla y hora y actualiza `lastContactAt`.
+        Con `customerId = "invitado"` y `guestEmail` la nota se guarda en `GUEST_CONTACT`.
+        409 `doNotContact` si la persona pidió que no se le escriba.
+      operationId: seguimientoContacto
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "Nota registrada"
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: "No contactar"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

@@ -161,6 +161,18 @@ def _default_app_config() -> dict:
                 },
             ],
         },
+        # Seguimiento de la coach (paquete F). defaultExecutiveId: empleada dueña de
+        # la cartera "FindingU" (clientes sin patrocinadora ni ejecutiva); vacío =
+        # cualquier admin/empleada con la pantalla. Umbrales en días para decidir la
+        # situación de cada cliente. templates: sobreescribe por clave las plantillas
+        # de WhatsApp que viven en `seguimiento_handlers.PLANTILLAS`.
+        "seguimiento": {
+            "defaultExecutiveId": "",
+            "coldDays": Decimal("30"),
+            "welcomeDays": Decimal("7"),
+            "lateOrderDays": Decimal("5"),
+            "templates": {},
+        },
     }
 
 def _normalize_app_config(raw) -> dict:
