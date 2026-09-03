@@ -92,10 +92,12 @@ export interface SponsorContact {
   email: string;
   phone: string;
   isDefault?: boolean;
-  /** Lo expone el paquete F cuando la patrocinadora efectiva es la coach. */ // paquete B
-  isCoach?: boolean;
-  coachTitle?: string; // paquete B
-  whatsapp?: string; // paquete B
+  /** Sin patrocinadora: la ejecutiva asignada o la de la cartera por defecto. */ // paquete F
+  isCoach?: boolean; // paquete F
+  /** "Tu coach en Finding'U" */ // paquete F
+  coachTitle?: string; // paquete F
+  /** Enlace wa.me listo para abrir. */ // paquete F
+  whatsapp?: string; // paquete F
 }
 
 export interface FeaturedItem {

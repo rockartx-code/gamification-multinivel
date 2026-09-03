@@ -402,12 +402,53 @@ def _active_notifications_for_customer(customer_id) -> list:
     return notifications
 
 
+def _coach_de(customer: dict):
+    """La coach que ve quien no tiene patrocinadora (paquete F).
+
+    "Yo le compré a Finding'U, no a Marcela": el bloque de patrocinador decía
+    "FindingU" con un teléfono genérico y la clienta no sabía a quién escribir.
+    Se muestra la ejecutiva asignada o, si no hay, la de la cartera por defecto
+    (`seguimiento.defaultExecutiveId`), siempre que esté activa.
+    """
+    cfg = (utils._load_app_config().get("seguimiento") or {})
+    for candidata in (customer.get("executiveId"), cfg.get("defaultExecutiveId")):
+        eid = str(candidata or "").strip()
+        if not eid:
+            continue
+        try:
+            empleada = utils._get_by_id("EMPLOYEE", int(eid))
+        except (TypeError, ValueError):
+            empleada = utils._get_by_id("EMPLOYEE", eid)
+        if not empleada or empleada.get("active") is False:
+            continue
+        telefono = str(empleada.get("phone") or "").strip()
+        digitos = "".join(ch for ch in telefono if ch.isdigit())
+        if len(digitos) == 12 and digitos.startswith("52"):
+            digitos = digitos[2:]
+        elif len(digitos) == 13 and digitos.startswith("521"):
+            digitos = digitos[3:]
+        return {
+            "name": str(empleada.get("name") or DEFAULT_SPONSOR["name"]),
+            "email": str(empleada.get("email") or DEFAULT_SPONSOR["email"]),
+            "phone": telefono or DEFAULT_SPONSOR["phone"],
+            "whatsapp": f"https://wa.me/52{digitos}" if len(digitos) == 10 else DEFAULT_SPONSOR_WHATSAPP,
+            "isDefault": True,
+            "isCoach": True,
+            "coachTitle": "Tu coach en Finding'U",
+            "executiveId": eid,
+        }
+    return None
+
+
 def _find_effective_sponsor(customer) -> dict:
     default_sponsor = {**DEFAULT_SPONSOR, "isDefault": True}
     if not customer or not isinstance(customer, dict):
         return {**default_sponsor, "whatsapp": DEFAULT_SPONSOR_WHATSAPP}
     leader_id = customer.get("leaderId")
     if leader_id in (None, ""):
+        coach = _coach_de(customer)
+        if coach:
+            return coach
         return {**default_sponsor, "whatsapp": DEFAULT_SPONSOR_WHATSAPP}
     # _customer_entity_id tolera IDs legados no numéricos; int() a secas
     # tumbaba el dashboard entero con un 500 para esos clientes.

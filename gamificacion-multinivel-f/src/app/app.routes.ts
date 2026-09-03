@@ -105,5 +105,11 @@ export const routes: Routes = [
     path: 'admin/resumen-turno',
     loadComponent: () => import('./pages/admin/resumen-turno/resumen-turno.component').then((m) => m.ResumenTurnoComponent),
     canActivate: [adminGuard]
+  },
+  {
+    // Paquete F · coach-seguimiento: "Seguimiento de hoy" (lista priorizada + WhatsApp con nota).
+    path: 'admin/seguimiento',
+    loadComponent: () => import('./pages/admin/seguimiento/admin-seguimiento.component').then((m) => m.AdminSeguimientoComponent),
+    canActivate: [adminGuard]
   }
 ];

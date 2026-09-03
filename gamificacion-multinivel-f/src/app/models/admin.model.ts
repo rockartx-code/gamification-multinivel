@@ -428,12 +428,21 @@ export interface AdminCustomer {
   /** Modo de la cuenta: cliente (precio de lista, sin red) o socio. */ // paquete B
   mode?: 'cliente' | 'socio';
   modeActivatedAt?: string; // paquete B
+  /** Por dónde prefiere que le escriban: whatsapp | email | none. */ // paquete F
+  contactPreference?: string; // paquete F
+  /** Empleada que la atiende (EMPLOYEE); vacío = cartera FindingU. */ // paquete F
+  executiveId?: string; // paquete F
+  /** Última nota de contacto registrada. */ // paquete F
+  lastContactAt?: string; // paquete F
 }
 
 export interface CustomerContactNote {
   text: string;
   by: string;
   at: string;
+  /** whatsapp | email | call, cuando la nota la dejó "Seguimiento de hoy". */ // paquete F
+  channel?: string; // paquete F
+  templateKey?: string; // paquete F
 }
 
 export interface CustomerDocumentTypeConfig {
@@ -657,6 +666,8 @@ export interface UpdateCustomerPayload {
   /** Nota nueva para la bitácora de contactos. */
   note?: string;
   origin?: string;
+  contactPreference?: 'whatsapp' | 'email' | 'none'; // paquete F
+  executiveId?: string; // paquete F
 }
 
 export interface SaveAdminCampaignPayload {

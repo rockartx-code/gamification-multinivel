@@ -22,8 +22,10 @@ from dashboard_common import (
 from datetime import datetime, timezone
 from typing import Optional
 
-# Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus rutas o devuelve None.
-_EXTENSIONES = [modo_handlers]
+# Módulos que extienden este lambda (docs/arquitectura/23 §0.2). Cada uno expone
+# `atender(peticion)` y responde None cuando la ruta no es suya.
+import seguimiento_handlers  # paquete F
+_EXTENSIONES = [seguimiento_handlers, modo_handlers]  # paquetes F y B
 
 # Cliente S3 para subida de documentos propios del cliente
 BUCKET_NAME = utils.os.getenv("BUCKET_NAME", "findingu-ventas")
@@ -68,6 +70,11 @@ def _format_customer_output(item):
     out["contactNotes"] = item.get("contactNotes") or []
     out["origin"] = item.get("origin") or ""
     out["deletedAt"] = item.get("deletedAt")
+    # Ficha unificada (paquete F): cómo prefiere que le escriban, quién la atiende
+    # y cuándo fue el último contacto (lo actualiza POST /customers/{id}/contacto).
+    out["contactPreference"] = str(item.get("contactPreference") or "")
+    out["executiveId"] = str(item.get("executiveId") or "")
+    out["lastContactAt"] = item.get("lastContactAt")
 
     # Asegurar tipos decimales a float para JSON
     out["commissions"] = float(utils._to_decimal(item.get("commissions", 0)))
@@ -643,6 +650,25 @@ def handle_update_customer(customer_id, body, headers):
             return utils._json_response(409, {"message": "El correo ya esta registrado"})
         updates.append("email = :email")
         eav[":email"] = nuevo_correo
+
+    # Ficha unificada (paquete F): preferencia de contacto y ejecutiva asignada.
+    if "contactPreference" in body:
+        preferencia = str(body.get("contactPreference") or "none").strip().lower()
+        if preferencia not in seguimiento_handlers.PREFERENCIAS:
+            return utils._json_response(400, {"message": "contactPreference debe ser whatsapp, email o none"})
+        updates.append("contactPreference = :cp")
+        eav[":cp"] = preferencia
+    if "executiveId" in body:
+        ejecutiva = str(body.get("executiveId") or "").strip()
+        if ejecutiva:
+            try:
+                empleada = utils._get_by_id("EMPLOYEE", int(ejecutiva))
+            except (TypeError, ValueError):
+                empleada = None
+            if not empleada:
+                return utils._json_response(400, {"message": "La ejecutiva indicada no existe"})
+        updates.append("executiveId = :ex")
+        eav[":ex"] = ejecutiva
 
     # Seguimiento: "no contactar" y bitácora de contactos (solo se añade, nunca se borra).
     if "doNotContact" in body:
