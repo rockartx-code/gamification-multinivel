@@ -2,6 +2,10 @@ import json
 import boto3
 import core_utils as utils
 from core import order_emails # Importado desde la Lambda Layer
+import caja_handlers  # paquete E: arqueo, comprobante y correo del corte
+
+# Extensiones (docs/arquitectura/23 §0.2): cada módulo responde sus rutas o None.
+_EXTENSIONES = [caja_handlers]  # paquete E
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -165,31 +169,60 @@ def _validate_pos_auth(code: str) -> bool:
         return False
     return stored_code == str(code or "").strip()
 
+def _parse_payments(body: dict, payment_method: str):
+    """`payments:[{method, amount}]` del pago mixto. Devuelve (lista, método, error).
+
+    Si viene la lista sustituye a `paymentMethod`; con un solo elemento es una
+    venta normal de ese método, con dos o más es `mixed`.
+    """
+    crudo = body.get("payments")
+    if not isinstance(crudo, list) or not crudo:
+        return [], payment_method, None
+    pagos = []
+    for p in crudo:
+        metodo = str((p or {}).get("method") or "").strip().lower()
+        monto = utils._to_decimal((p or {}).get("amount"))
+        if metodo not in ("cash", "card", "transfer"):
+            return [], payment_method, "Forma de pago inválida en el pago mixto: usa efectivo, tarjeta o transferencia"
+        if monto <= utils.D_ZERO:
+            return [], payment_method, "Cada parte del pago mixto debe ser mayor a cero"
+        pagos.append({"method": metodo, "amount": monto})
+    metodos = {p["method"] for p in pagos}
+    return pagos, (pagos[0]["method"] if len(metodos) == 1 else "mixed"), None
+
+
 def handle_pos_sale(body, headers):
-    """POST /pos/sales"""
+    """POST /pos/sales
+
+    Acepta `payments:[{method, amount}]` para cobrar mitad efectivo, mitad
+    tarjeta (paquete E). Todo se valida ANTES de descontar inventario: antes un
+    código rechazado dejaba el stock descontado y la venta sin registrar.
+    """
     stock_id = body.get("stockId")
     items = body.get("items", [])
     user_id = headers.get("x-user-id", "system")
     payment_method = str(body.get("paymentMethod") or "cash").strip().lower()
-    if payment_method not in ("cash", "card", "transfer"):
+    payments, payment_method, error = _parse_payments(body, payment_method)
+    if error:
+        return utils._json_response(400, {"message": error})
+    if payment_method not in ("cash", "card", "transfer", "mixed"):
         return utils._json_response(400, {"message": "Forma de pago invalida"})
+    if not stock_id or not items:
+        return utils._json_response(400, {"message": "Elige al menos un producto y una sucursal para cobrar"})
 
     payment_type = str(body.get("paymentType") or "full").strip().lower()
     if payment_type not in ("full", "partial", "credit"):
         payment_type = "full"
+    if payment_method == "mixed" and payment_type != "full":
+        return utils._json_response(400, {"message": "El pago mixto solo aplica a ventas con pago completo: para un pago parcial elige una sola forma de pago"})
 
     cashier_discount_mode = body.get("cashierDiscountMode")
     cashier_discount_value = utils._to_decimal(body.get("cashierDiscountValue") or 0)
     auth_code = str(body.get("authCode") or "").strip()
 
-    # 1. Aplicar descuento de stock
-    deltas = {str(it['productId']): -int(it['quantity']) for it in items}
-    _, error = _apply_stock_delta(stock_id, deltas)
-    if error: return utils._json_response(400, {"message": error})
-
-    # 1b. Copiar los puntos del catálogo a cada línea, como hace la tienda en
-    # línea: sin vpPoints el motor de comisiones convertía pesos ÷ tarifa y el
-    # socio que compraba en mostrador recibía otros puntos que en la web.
+    # 1. Puntos del catálogo en cada línea, como hace la tienda en línea: sin
+    # vpPoints el motor de comisiones convertía pesos ÷ tarifa y el socio que
+    # compraba en mostrador recibía otros puntos que en la web.
     for it in items:
         if it.get("vpPoints") is None:
             producto = utils._get_by_id("PRODUCT", it.get("productId")) or {}
@@ -198,10 +231,9 @@ def handle_pos_sale(body, headers):
             if producto.get("commissionable") is False:
                 it["commissionable"] = False
 
-    # 2. Calcular totales
+    # 2. Totales
     gross_subtotal = sum([utils._to_decimal(it['price']) * int(it['quantity']) for it in items])
 
-    # Calcular descuento cajero
     cashier_discount_amount = utils.D_ZERO
     if cashier_discount_mode and cashier_discount_value > utils.D_ZERO:
         if not _validate_pos_auth(auth_code):
@@ -211,18 +243,15 @@ def handle_pos_sale(body, headers):
         else:
             cashier_discount_amount = min(cashier_discount_value, gross_subtotal)
 
-    # Validar auth para pago parcial/credito
     if payment_type != "full":
         if not _validate_pos_auth(auth_code):
             return utils._json_response(403, {"message": "Codigo de autorizacion requerido para pagos parciales o credito"})
 
-    # Calcular total neto (descuentos de cliente vienen del cuerpo o se calculan en otro paso)
     customer_discount_amount = utils._to_decimal(body.get("discountAmount") or 0)
     total = gross_subtotal - customer_discount_amount - cashier_discount_amount
     if total < utils.D_ZERO:
         total = utils.D_ZERO
 
-    # Calcular monto pagado ahora
     if payment_type == "full":
         amount_paid = total
     elif payment_type == "credit":
@@ -230,16 +259,40 @@ def handle_pos_sale(body, headers):
     else:
         amount_paid_raw = utils._to_decimal(body.get("amountPaid") or 0)
         amount_paid = min(amount_paid_raw, total)
-
     pending_amount = total - amount_paid
 
-    # Determinar paymentStatus
+    # 3. Pago mixto: las partes deben sumar el total centavo a centavo.
+    if payments:
+        suma = sum((p["amount"] for p in payments), utils.D_ZERO)
+        if suma != total:
+            return utils._json_response(400, {
+                "message": f"Las partes del pago suman ${suma:,.2f} y el total es ${total:,.2f}: ajusta los importes para que coincidan"})
+    if payment_method == "mixed":
+        cash_portion = sum((p["amount"] for p in payments if p["method"] == "cash"), utils.D_ZERO)
+    elif payment_method == "cash":
+        cash_portion = amount_paid
+    else:
+        cash_portion = utils.D_ZERO
+
+    cash_received = utils._to_decimal(body.get("cashReceived")) if body.get("cashReceived") is not None else None
+    change = None
+    if cash_received is not None and cash_portion > utils.D_ZERO:
+        if cash_received < cash_portion:
+            return utils._json_response(400, {
+                "message": f"El efectivo recibido (${cash_received:,.2f}) es menor que la parte en efectivo (${cash_portion:,.2f})"})
+        change = cash_received - cash_portion
+
     if payment_type == "full":
         payment_status = "paid_branch"
     elif payment_type == "partial":
         payment_status = "partial_branch"
     else:
         payment_status = "credit_branch"
+
+    # 4. Descontar inventario (ya con todo validado)
+    deltas = {str(it['productId']): -int(it['quantity']) for it in items}
+    _, error = _apply_stock_delta(stock_id, deltas)
+    if error: return utils._json_response(400, {"message": error})
 
     order_id = f"POS-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
@@ -254,7 +307,7 @@ def handle_pos_sale(body, headers):
     utils._put_entity("ORDER", order_id, order_item)
     utils._upsert_order_customer_history(order_item)
 
-    # 3. Crear registro de venta POS
+    # 5. Registro de venta POS
     sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
     sale_item = {
         "entityType": "posSale", "saleId": sale_id, "orderId": order_id,
@@ -263,7 +316,9 @@ def handle_pos_sale(body, headers):
         "grossSubtotal": gross_subtotal,
         "discountRate": utils._to_decimal(body.get("discountRate") or 0),
         "discountAmount": customer_discount_amount,
-        "cashReceived": utils._to_decimal(body.get("cashReceived")) if body.get("cashReceived") is not None else None,
+        "cashReceived": cash_received,
+        "change": change,
+        "cashPortion": cash_portion,
         "cashierDiscountMode": cashier_discount_mode,
         "cashierDiscountAmount": cashier_discount_amount,
         "paymentType": payment_type,
@@ -279,13 +334,15 @@ def handle_pos_sale(body, headers):
         "createdAt": now,
         "updatedAt": now,
     }
+    if payment_method == "mixed":
+        sale_item["payments"] = payments
     utils._put_entity("POS_SALE", sale_id, sale_item)
 
-    # 4. Registrar movimientos
+    # 6. Movimientos
     for it in items:
         _log_movement(stock_id, "pos_sale", it['productId'], it['quantity'], order_id, user_id, payment_method=payment_method)
 
-    # 5. DISPARAR STEP FUNCTION (Motor de Comisiones)
+    # 7. DISPARAR STEP FUNCTION (Motor de Comisiones)
     # Una venta de mostrador nace pagada y entregada. Antes solo se disparaba
     # ORDER_DELIVERED, que confirma comisiones "pending" que nunca existieron:
     # el socio que compraba en tienda física no acumulaba volumen ni VP y su
@@ -308,7 +365,12 @@ def handle_pos_sale(body, headers):
     if body.get("customerId"):
         _avisar_pos(order_item, "pos_sale")
 
-    return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
+    return utils._json_response(201, {
+        "sale": sale_item, "saleId": sale_id, "orderId": order_id,
+        "total": float(total), "amountPaid": float(amount_paid), "pendingAmount": float(pending_amount),
+        "cashPortion": float(cash_portion), "change": float(change) if change is not None else None,
+        "payments": [{"method": p["method"], "amount": float(p["amount"])} for p in payments],
+    })
 
 
 def _avisar_pos(order: dict, evento: str) -> None:
@@ -438,132 +500,136 @@ def _stock_id_str(value) -> str:
     return str(value).strip()
 
 def _last_pos_cash_cut(stock_id: str, attendant_user_id) -> dict:
-    """Último corte de caja de un operador en un almacén.
-
-    Recorre la colección de más reciente a más antiguo y corta en el primer
-    acierto, en lugar de traer todos los cortes históricos para ordenarlos.
-    """
-    for item in utils._iter_bucket("POS_CASH_CUT", forward=False):
-        if (_stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-                and str(item.get("attendantUserId")) == str(attendant_user_id)):
-            return item
-    return {}
+    """Último corte de caja de un operador en un almacén (ver `caja_handlers.ultimo_corte`)."""
+    return caja_handlers.ultimo_corte(stock_id, attendant_user_id)
 
 def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
-    """Calcula el estado actual del control de caja."""
-    last_cut = _last_pos_cash_cut(stock_id, attendant_user_id)
-    last_cut_at = str(last_cut.get("createdAt") or "") if last_cut else ""
-    # Solo interesan las ventas posteriores al último corte: `sk_from` las acota
-    # en la condición de clave (SK = "{createdAt}#{id}") en vez de leer todo el
-    # histórico de ventas del punto de venta en cada refresco de la pantalla.
-    sales = [
-        item for item in utils._query_bucket("POS_SALE", sk_from=last_cut_at or None)
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(attendant_user_id)
-        and str(item.get("paymentMethod") or "cash").lower() == "cash"
-        and (not last_cut_at or str(item.get("createdAt") or "") > last_cut_at)
-    ]
-    sales.sort(key=lambda x: str(x.get("createdAt") or ""))
-    cash_carry = utils._to_decimal(last_cut.get("cashToKeep")) if last_cut else utils.D_ZERO
+    """Estado actual del control de caja.
 
-    # Usar amountPaid en lugar de total para ventas parciales/credito
-    sales_total = sum(
-        (utils._to_decimal(item.get("amountPaid") if item.get("paymentType") in ("partial", "credit") else item.get("total"))
-         for item in sales),
-        utils.D_ZERO
-    )
-
-    # Restar retiros desde el ultimo corte
-    # Un retiro anterior al último corte ya lleva `cashCutId`, así que basta con
-    # mirar de esa fecha en adelante.
-    withdrawals = [
-        item for item in utils._query_bucket("POS_WITHDRAWAL", sk_from=last_cut_at or None)
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(attendant_user_id)
-        and not item.get("cashCutId")
-    ]
-    withdrawals_total = sum((utils._to_decimal(w.get("amount")) for w in withdrawals), utils.D_ZERO)
-
-    current_total = cash_carry + sales_total - withdrawals_total
+    `currentTotal` es exactamente el efectivo esperado del arqueo: fondo del
+    corte anterior + ventas en efectivo + abonos en efectivo + parte en efectivo
+    de pagos mixtos − retiros sin corte (antes ignoraba las mixtas y sumaba las
+    ventas anuladas).
+    """
+    arqueo = caja_handlers.calcular_arqueo(stock_id, attendant_user_id)
+    last_cut = arqueo["lastCut"]
+    ventas = [v for v in arqueo["ventas"] if v.get("status") != "voided"]
+    current_total = arqueo["expectedCash"]
     return {
         "stockId": stock_id,
         "attendantUserId": attendant_user_id,
         "currentTotal": float(current_total),
-        "salesCount": len(sales),
+        "expectedCash": float(current_total),
+        "openingCash": float(arqueo["openingCash"]),
+        "cashSales": float(arqueo["cashSales"]),
+        "cashSettlements": float(arqueo["cashSettlements"]),
+        "cashFromMixed": float(arqueo["cashFromMixed"]),
+        "nonCashTotal": float(arqueo["nonCashTotal"]),
+        "salesCount": arqueo["salesCount"],
         "cashToKeepSuggested": float(current_total),
-        "withdrawalCount": len(withdrawals),
-        "totalWithdrawn": float(withdrawals_total),
-        "startedAt": sales[0].get("createdAt") if sales else (last_cut.get("createdAt") if last_cut else None),
+        "withdrawalCount": arqueo["withdrawalCount"],
+        "totalWithdrawn": float(arqueo["withdrawals"]),
+        "startedAt": ventas[0].get("createdAt") if ventas else (last_cut.get("createdAt") if last_cut else None),
+        "lastCutId": last_cut.get("cashCutId") if last_cut else None,
         "lastCutAt": last_cut.get("createdAt") if last_cut else None,
         "lastCutTotal": float(utils._to_decimal(last_cut.get("total"))) if last_cut else 0.0,
         "lastCutSalesCount": int(last_cut.get("salesCount") or 0) if last_cut else 0,
         "lastCutCashToKeep": float(utils._to_decimal(last_cut.get("cashToKeep"))) if last_cut else 0.0,
         "lastCutWithdrawnAmount": float(utils._to_decimal(last_cut.get("withdrawnAmount"))) if last_cut else 0.0,
-        "lastSaleAt": sales[-1].get("createdAt") if sales else None,
+        "lastCutDifference": float(utils._to_decimal(last_cut.get("difference"))) if last_cut else 0.0,
+        "lastSaleAt": ventas[-1].get("createdAt") if ventas else None,
     }
 
 def handle_cash_cut(body, headers):
-    """POST /pos/cash-cut"""
+    """POST /pos/cash-cut — corte con arqueo (paquete E).
+
+    Con `cashCounted` la cajera cuenta el cajón: la diferencia contra lo
+    esperado exige motivo (`pos.requireDifferenceReason`), y lo contado se
+    reparte entre el fondo de mañana (`cashToKeep`) y el retiro
+    (`withdrawalAmount`, con código de autorización y quién lo recibe). Sin
+    `cashCounted` (clientes viejos) se conserva el comportamiento anterior:
+    contado = esperado, diferencia 0.
+    """
     stock_id = body.get("stockId")
     user_id = headers.get("x-user-id")
-    cash_to_keep = utils._to_decimal(body.get("cashToKeep") or 0)
+    if not stock_id:
+        return utils._json_response(400, {"message": "Falta la sucursal (stockId) para hacer el corte"})
 
-    # Ventas y retiros pendientes son, por definición, posteriores al último
-    # corte de este operador: acotarlos por esa fecha evita releer todo el
-    # histórico del punto de venta en cada cierre de caja.
-    last_cut = _last_pos_cash_cut(stock_id, user_id)
-    since = str(last_cut.get("createdAt") or "") or None
-
-    pending_sales = [
-        s for s in utils._query_bucket("POS_SALE", sk_from=since)
-        if _stock_id_str(s.get("stockId")) == _stock_id_str(stock_id)
-        and str(s.get("attendantUserId")) == str(user_id)
-        and str(s.get("paymentMethod") or "cash").lower() == "cash"
-        and not s.get("cashCutId")
-    ]
-
-    pending_withdrawals = [
-        w for w in utils._query_bucket("POS_WITHDRAWAL", sk_from=since)
-        if _stock_id_str(w.get("stockId")) == _stock_id_str(stock_id)
-        and str(w.get("attendantUserId")) == str(user_id)
-        and not w.get("cashCutId")
-    ]
-
+    arqueo = caja_handlers.calcular_arqueo(stock_id, user_id)
+    pending_sales, pending_withdrawals = arqueo["ventas"], arqueo["retiros"]
     if not pending_sales and not pending_withdrawals:
-        return utils._json_response(400, {"message": "No hay ventas pendientes para corte"})
+        return utils._json_response(400, {"message": "No hay ventas ni retiros desde el último corte: no hay nada que cortar"})
 
-    # Usar amountPaid para ventas parciales/credito
-    total_cash = sum([
-        utils._to_decimal(s.get("amountPaid") if s.get("paymentType") in ("partial", "credit") else s.get("total"))
-        for s in pending_sales
-    ], utils.D_ZERO)
-    withdrawals_total = sum([utils._to_decimal(w.get("amount")) for w in pending_withdrawals], utils.D_ZERO)
-    net_total = total_cash - withdrawals_total
+    expected = utils._to_decimal(arqueo["expectedCash"])
+    withdrawals_total = utils._to_decimal(arqueo["withdrawals"])
+    opening = utils._to_decimal(arqueo["openingCash"])
+    cfg = caja_handlers.config_pos()
 
-    if cash_to_keep < utils.D_ZERO:
-        return utils._json_response(400, {"message": "El monto a dejar en caja no puede ser negativo"})
-
-    last_cut = _last_pos_cash_cut(stock_id, user_id)
-    cash_carry = utils._to_decimal(last_cut.get("cashToKeep")) if last_cut else utils.D_ZERO
-    available = cash_carry + net_total
-    if cash_to_keep > available:
-        return utils._json_response(400, {"message": "El monto a dejar en caja no puede exceder el total disponible"})
+    modo_arqueo = body.get("cashCounted") is not None
+    reason, receiver, denominations = "", "", {}
+    if modo_arqueo:
+        cash_counted = utils._to_decimal(body.get("cashCounted"))
+        if cash_counted < utils.D_ZERO:
+            return utils._json_response(400, {"message": "El efectivo contado no puede ser negativo"})
+        difference = cash_counted - expected
+        reason = str(body.get("differenceReason") or "").strip()[:300]
+        if difference != utils.D_ZERO and bool(cfg.get("requireDifferenceReason", True)) and not reason:
+            signo = "sobran" if difference > utils.D_ZERO else "faltan"
+            return utils._json_response(400, {
+                "message": f"Contaste ${cash_counted:,.2f} y se esperaban ${expected:,.2f}: {signo} ${abs(difference):,.2f}. Escribe el motivo de la diferencia para poder cerrar."})
+        withdrawal_amount = utils._to_decimal(body.get("withdrawalAmount") or 0)
+        cash_to_keep = utils._to_decimal(body.get("cashToKeep")) if body.get("cashToKeep") is not None else cash_counted - withdrawal_amount
+        if withdrawal_amount < utils.D_ZERO or cash_to_keep < utils.D_ZERO:
+            return utils._json_response(400, {"message": "El fondo y el retiro no pueden ser negativos"})
+        if cash_to_keep + withdrawal_amount != cash_counted:
+            return utils._json_response(400, {
+                "message": f"El fondo (${cash_to_keep:,.2f}) más el retiro (${withdrawal_amount:,.2f}) deben sumar exactamente lo contado (${cash_counted:,.2f})"})
+        receiver = str(body.get("withdrawalReceiver") or "").strip()[:120]
+        if withdrawal_amount > utils.D_ZERO:
+            if not _validate_pos_auth(str(body.get("authCode") or "").strip()):
+                return utils._json_response(403, {"message": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código"})
+            if not receiver:
+                return utils._json_response(400, {"message": "Indica quién recibe el efectivo retirado"})
+        crudo = body.get("denominations")
+        if isinstance(crudo, dict):
+            denominations = {str(k): int(utils._to_decimal(v)) for k, v in crudo.items() if int(utils._to_decimal(v)) > 0}
+    else:
+        cash_to_keep = utils._to_decimal(body.get("cashToKeep") or 0)
+        if cash_to_keep < utils.D_ZERO:
+            return utils._json_response(400, {"message": "El monto a dejar en caja no puede ser negativo"})
+        if cash_to_keep > expected:
+            return utils._json_response(400, {"message": "El monto a dejar en caja no puede exceder el total disponible"})
+        cash_counted, difference = expected, utils.D_ZERO
+        withdrawal_amount = expected - cash_to_keep
 
     cut_id = f"CUT-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
+    ventas_vivas = [s for s in pending_sales if s.get("status") != "voided"]
 
     cut_item = {
         "entityType": "posCashCut", "cashCutId": cut_id, "stockId": stock_id,
         # DynamoDB rechaza float ("Float types are not supported"): el corte de
         # caja respondía 500 y el cajero no podía cerrar. Se guardan Decimal.
-        "total": utils._to_decimal(net_total),
-        "salesCount": len(pending_sales),
+        "total": utils._to_decimal(expected - opening),
+        "salesCount": len(ventas_vivas),
         "cashToKeep": utils._to_decimal(cash_to_keep),
-        "withdrawnAmount": utils._to_decimal(available - cash_to_keep),
+        "withdrawnAmount": utils._to_decimal(withdrawal_amount),
         "totalWithdrawals": utils._to_decimal(withdrawals_total),
         "withdrawalCount": len(pending_withdrawals),
+        # Arqueo (paquete E)
+        "openingCash": utils._to_decimal(opening),
+        "cashSales": utils._to_decimal(arqueo["cashSales"]),
+        "cashSettlements": utils._to_decimal(arqueo["cashSettlements"]),
+        "cashFromMixed": utils._to_decimal(arqueo["cashFromMixed"]),
+        "nonCashTotal": utils._to_decimal(arqueo["nonCashTotal"]),
+        "cashExpected": utils._to_decimal(expected),
+        "cashCounted": utils._to_decimal(cash_counted),
+        "difference": utils._to_decimal(difference),
+        "differenceReason": reason,
+        "denominations": denominations,
+        "withdrawalReceiver": receiver,
         "attendantUserId": user_id,
-        "startedAt": pending_sales[0].get("createdAt") if pending_sales else now,
+        "startedAt": ventas_vivas[0].get("createdAt") if ventas_vivas else now,
         "endedAt": now,
         "createdAt": now,
         "sales": pending_sales,
@@ -578,6 +644,22 @@ def handle_cash_cut(body, headers):
         if w_id:
             utils._update_by_id("POS_WITHDRAWAL", w_id, "SET cashCutId = :c", {":c": cut_id})
 
+    # El retiro del corte queda como un retiro más, ya ligado al corte para que
+    # el siguiente arqueo no lo vuelva a restar.
+    if modo_arqueo and withdrawal_amount > utils.D_ZERO:
+        wdr_id = f"WDR-{utils.uuid.uuid4().hex[:8].upper()}"
+        retiro = {
+            "entityType": "posWithdrawal", "withdrawalId": wdr_id, "stockId": stock_id,
+            "attendantUserId": user_id, "amount": utils._to_decimal(withdrawal_amount),
+            "reason": f"Retiro del corte {cut_id}", "receiver": receiver, "source": "cash_cut",
+            "cashCutId": cut_id, "createdAt": now, "updatedAt": now,
+        }
+        utils._put_entity("POS_WITHDRAWAL", wdr_id, retiro)
+        cut_item["cutWithdrawalId"] = wdr_id
+        utils._update_by_id("POS_CASH_CUT", cut_id, "SET cutWithdrawalId = :w", {":w": wdr_id})
+
+    utils._audit_event("pos.cash_cut", headers, {"stockId": stock_id},
+                       {"cashCutId": cut_id, "cashCounted": str(cash_counted), "difference": str(difference)})
     return utils._json_response(201, {"cut": cut_item, "control": _build_pos_cash_control(stock_id, user_id)})
 
 
@@ -616,17 +698,24 @@ def handle_pos_auth_config(method, body, headers):
 
 
 def handle_pos_withdrawal(body, headers):
-    """POST /pos/withdrawal"""
+    """POST /pos/withdrawal — retiro guiado: monto ≤ efectivo disponible, motivo, quién recibe, código."""
     stock_id = body.get("stockId")
     user_id = headers.get("x-user-id")
     amount = utils._to_decimal(body.get("amount"))
     reason = str(body.get("reason") or "").strip()
+    receiver = str(body.get("receiver") or "").strip()[:120]
     auth_code = str(body.get("authCode") or "").strip()
 
+    if not stock_id:
+        return utils._json_response(400, {"message": "Falta la sucursal (stockId) del retiro"})
     if not reason:
         return utils._json_response(400, {"message": "Se requiere el motivo del retiro"})
     if amount <= utils.D_ZERO:
         return utils._json_response(400, {"message": "El monto debe ser mayor a cero"})
+    disponible = utils._to_decimal(caja_handlers.calcular_arqueo(stock_id, user_id)["expectedCash"])
+    if amount > disponible:
+        return utils._json_response(400, {
+            "message": f"Solo hay ${disponible:,.2f} en caja: no puedes retirar ${amount:,.2f}"})
     if not _validate_pos_auth(auth_code):
         return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
 
@@ -640,13 +729,15 @@ def handle_pos_withdrawal(body, headers):
         # Decimal: como float, DynamoDB lo rechazaba y el retiro respondía 500.
         "amount": utils._to_decimal(amount),
         "reason": reason,
+        "receiver": receiver,
         "createdAt": now,
         "updatedAt": now
     }
     utils._put_entity("POS_WITHDRAWAL", wdr_id, item)
 
     control = _build_pos_cash_control(stock_id, user_id)
-    return utils._json_response(201, {"withdrawal": item, "control": control})
+    return utils._json_response(201, {"withdrawal": item, "control": control,
+                                      "remainingCash": control["currentTotal"]})
 
 
 MAX_CASH_CUTS_PAGE = 50
@@ -847,7 +938,7 @@ def _route_pos(method: str, segments: list, body: dict, query: dict, headers: di
                 if user_id:
                     withdrawals = [w for w in withdrawals if str(w.get("attendantUserId")) == str(user_id)]
                 return utils._json_response(200, {"withdrawals": withdrawals})
-        if segments[1] == "cash-cuts":
+        if segments[1] == "cash-cuts" and len(segments) == 2:
             err = utils._require_admin(headers, "pos_register_sale")
             if err: return err
             if method == "GET":
@@ -873,6 +964,11 @@ def lambda_handler(event, context):
     segments = request.segments
 
     try:
+        for extension in _EXTENSIONES:
+            respuesta = extension.atender(request)
+            if respuesta is not None:
+                return respuesta
+
         if not segments: return utils._json_response(200, {"service": "inventory-pos"})
 
         root = segments[0]

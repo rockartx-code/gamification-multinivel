@@ -48,6 +48,13 @@ def _default_app_config() -> dict:
             "defaultPaymentStatus": "paid_branch",
             "defaultDeliveryStatus": "delivered_branch",
             "orderStatusByDeliveryStatus": {"delivered_branch": "delivered", "paid_branch": "paid"},
+            # Arqueo (paquete E): correo de la gerente al que se manda el comprobante
+            # del corte (vacío = el botón "Enviar por correo" pide uno), billetes y
+            # monedas para contar por denominación, y si una diferencia entre lo
+            # contado y lo esperado exige motivo.
+            "cashCutNotifyEmail": "",
+            "denominations": [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
+            "requireDifferenceReason": True,
         },
         "stocks": {"requireLinkedUserForTransferReceive": True},
         "payments": {
