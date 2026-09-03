@@ -1,6 +1,8 @@
 import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, type Signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject, type Signal } from '@angular/core';
+import { ConciliacionService } from '../../services/conciliacion.service'; // WP-H
+import { ConciliacionCorrida, ConciliacionResultado } from '../../models/suscripcion.model'; // WP-H
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -2139,6 +2141,64 @@ export class AdminComponent implements OnInit {
     ws3['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Top clientes');
     XLSX.writeFile(wb, `pedidos-${month}.xlsx`);
+  }
+
+  // ── WP-H · Conciliar pagos con MercadoPago ────────────────────────────────
+  // Para cuando alguien pagó y el webhook se perdió: el pedido sigue en
+  // "Pendiente" aunque el dinero ya salió (rodrigo-dia3).
+  private readonly conciliacion = inject(ConciliacionService);
+  isConciliacionModalOpen = false;
+  isConciliando = false;
+  conciliacionResultado: ConciliacionResultado | null = null;
+  conciliacionUltima: ConciliacionCorrida | null = null;
+  conciliacionError = '';
+
+  abrirConciliacion(): void {
+    this.conciliacionResultado = null;
+    this.conciliacionError = '';
+    this.isConciliacionModalOpen = true;
+    this.conciliacion.ultimaCorrida().subscribe({
+      next: (run) => { this.conciliacionUltima = run; this.requestViewUpdate(); },
+      error: () => { this.conciliacionUltima = null; this.requestViewUpdate(); }
+    });
+  }
+
+  cerrarConciliacion(): void {
+    this.isConciliacionModalOpen = false;
+  }
+
+  conciliarPagos(): void {
+    if (this.isConciliando) {
+      return;
+    }
+    this.isConciliando = true;
+    this.conciliacionError = '';
+    this.conciliacion.conciliar({}).pipe(
+      finalize(() => { this.isConciliando = false; this.requestViewUpdate(); })
+    ).subscribe({
+      next: (resultado) => {
+        // Lo que se muestra es lo que el servidor hizo, no lo que se pidió.
+        this.conciliacionResultado = resultado;
+        this.conciliacionUltima = { ...resultado, finishedAt: new Date().toISOString() };
+        if (resultado.credited.length) {
+          this.adminControl.loadOrders().subscribe();
+        }
+        this.showSnackbar(this.resumenConciliacion(resultado));
+      },
+      error: (err: unknown) => {
+        const cuerpo = (err as { error?: ConciliacionResultado } | null)?.error;
+        if (cuerpo && Array.isArray(cuerpo.errors)) {
+          this.conciliacionResultado = cuerpo;
+        }
+        this.conciliacionError = this.resolveUiErrorMessage(err, 'No se pudo consultar a MercadoPago. Inténtalo de nuevo en unos minutos.');
+      }
+    });
+  }
+
+  resumenConciliacion(r: ConciliacionResultado): string {
+    const folios = r.credited.map((c) => c.orderId).join(', ');
+    const base = `Revisados ${r.checked} · Acreditados ${r.credited.length}${folios ? ` (${folios})` : ''} · Sin pago ${r.unpaid.length}`;
+    return r.errors.length ? `${base} · Sin respuesta ${r.errors.length}` : base;
   }
 
   downloadCustomersReport(): void {

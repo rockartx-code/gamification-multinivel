@@ -78,6 +78,10 @@ export interface AdminOrder {
   rejectedAt?: string;
   refundReceiptUrl?: string;
   refundedAt?: string;
+  /** Pago que acreditó el pedido y por qué camino llegó. */ // paquete H
+  paymentId?: string;
+  paidVia?: 'mercadopago' | 'branch' | 'admin' | 'reconciliation';
+  subscriptionId?: string;
 }
 
 export interface AdminRefundPayload {
