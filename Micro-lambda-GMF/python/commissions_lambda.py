@@ -1322,7 +1322,7 @@ def handle_commissions_summary(peticion) -> dict:
     recibos_por_cliente = {
         str(r.get("customerId")): r.get("assetUrl") or ""
         for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=str(month or ""))
-        if str(r.get("monthKey")) == str(month)
+        if str(r.get("monthKey")) == str(month) and r.get("status") != "voided"
     }
 
     resumen = {}

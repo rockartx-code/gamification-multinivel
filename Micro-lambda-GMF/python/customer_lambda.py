@@ -116,7 +116,7 @@ def _con_comisiones(customers: list) -> list:
         recibos = {
             str(r.get("customerId")): r.get("assetUrl") or ""
             for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=anterior)
-            if str(r.get("monthKey")) == anterior
+            if str(r.get("monthKey")) == anterior and (r.get("status") or "paid") != "voided"
         }
     except Exception as ex:
         utils._log("customer_list_commissions_error", "ERROR", error=ex)
