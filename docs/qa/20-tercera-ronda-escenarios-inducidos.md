@@ -13,9 +13,9 @@ Método de esta ronda:
 
 | | |
 |---|---|
-| Escenarios inducidos ejecutados | 11 turnos de agente (Nadia ×2, Beto ×2, Sofía ×2, Verónica, Claudia, Lupita, Rosa Elena) más acciones de operación por API (entregas de Estafeta, correcciones de datos por "sistemas") |
-| Bugs de producción encontrados y corregidos en esta ronda | 16 (§4), tres de ellos graves: VP negativo al cancelar un pedido no pagado, pedidos de recoger en tienda pagados en línea que nunca pasaban a pagados, y recepción de devolución que aprobaba sin inspeccionar |
-| Hallazgos de negocio nuevos | 8 (§5) |
+| Escenarios inducidos ejecutados | 13 turnos de agente (Nadia ×3, Beto ×2, Sofía ×4, Verónica, Claudia, Lupita, Rosa Elena) más acciones de operación por API (entregas de Estafeta, correcciones de datos por "sistemas") |
+| Bugs de producción encontrados y corregidos en esta ronda | 18 (§4), tres de ellos graves: VP negativo al cancelar un pedido no pagado, pedidos de recoger en tienda pagados en línea que nunca pasaban a pagados, y recepción de devolución que aprobaba sin inspeccionar |
+| Hallazgos de negocio nuevos | 10 (§5) |
 | Cobertura de rutas del frontend | 71 de 77 alcanzadas; las 6 restantes son código muerto (no hay pantalla que las llame). La única ruta viva que faltaba (`/auth/resend-email-confirmation`) resultó inalcanzable por un bug y se corrigió (§3.8, §6) |
 | Pruebas del backend | 142 en verde (eran 137 al empezar la ronda) |
 
@@ -108,9 +108,13 @@ Rosa Elena compró dos veces sin cuenta; su pedido de octubre llevaba seis seman
 - **Reenviar confirmación**, la única ruta viva que ningún agente había tocado, se reprodujo a mano con una cuenta sin confirmar: el botón **nunca aparecía**. El frontend comparaba el texto del error con el del backend y difería en un acento ("sesion" / "sesión"). Corregido con un código de error (`EMAIL_NOT_VERIFIED`); verificado: botón visible, segundo correo de activación en el buzón, ruta registrada.
 - Al crear una transferencia por API con el campo equivocado, el backend aceptó una transferencia vacía. Corregido: exige origen, destino distinto y al menos un producto.
 
-### 3.9 Día de pago (10-dic)
+### 3.9 Día de pago (Sofía, 10-dic)
 
-_(Se completa con el turno 16 de Sofía.)_
+- Encontró en Clientes (y en la advertencia de Estadísticas, "1 comisiones pendientes por depositar") a la única socia con comisión de noviembre: Verónica, $393.60, con CLABE. Subió el comprobante ("Comprobante cargado"). Verificado: noviembre `paid` con comprobante y correo "Depositamos tus comisiones de 2026-11: $393.60".
+- Los $172 bloqueados de Claudia **desaparecen sin rastro** al cerrar el mes: su ficha dice "Mes anterior: $0 — Sin movimientos". Es el comportamiento del plan (no se activó en el mes) pero nadie se lo explica (§5.9).
+- El Cuadro de Honor no tenía selector de mes: en diciembre ya no se podía ver el ranking de noviembre. Corregido (selector y parámetro `month`).
+- Quiso desactivar a la empleada duplicada "Veronica Sandoval Ruiz TEST": no había botón, y al desmarcar "Acceso a panel admin" el servidor respondía `true` y no persistía. **Bug**: el PATCH de empleados ignoraba `canAccessAdmin`. Corregido, y la ficha tiene ahora "Desactivar / Reactivar empleado".
+- No aparece folio del depósito en pantalla (solo "Comprobante cargado"); anotado.
 
 ## 4. Bugs de producción corregidos en esta ronda
 
@@ -132,6 +136,8 @@ _(Se completa con el turno 16 de Sofía.)_
 | 14 | Media | Login | "Reenviar correo de confirmación" nunca aparecía (comparación de textos con acento distinto) | Código `EMAIL_NOT_VERIFIED` del backend |
 | 15 | Baja | Devoluciones | La ficha del pedido no mostraba fotos, notas ni checklist de la devolución | `returnInspection` en el detalle para admin/empleado |
 | 16 | Baja | Transferencias | Se aceptaban transferencias sin productos | Validación |
+| 17 | Media | Empleados | El PATCH ignoraba `canAccessAdmin`; no había forma de desactivar a un empleado | Campo guardado y botón "Desactivar / Reactivar" |
+| 18 | Baja | Cuadro de Honor | Solo el mes en curso; el ranking de un mes cerrado no se podía consultar | Selector de mes y `?month=` |
 
 Además, en el entorno de simulación: la tabla en memoria no entendía `list_append` (falso "documento no guardado") y el script de cobertura contaba como nunca tocadas rutas con query string.
 
@@ -144,7 +150,9 @@ Además, en el entorno de simulación: la tabla en memoria no entendía `list_ap
 5. **Los puntos en el mostrador.** El POS muestra PC por producto pero no le dice al cliente de mostrador cuántos VP suma su compra; el argumento "regístrate para que te cuenten los puntos" lo hace la cajera de memoria. Propuesta: ticket con VP acumulados del mes y lo que falta para el siguiente descuento.
 6. **Pago mixto en mostrador.** Bety quiso pagar mitad efectivo y mitad tarjeta; el POS solo admite una forma de pago (o "pago parcial" con saldo pendiente y código de gerente). Propuesta: dos formas de pago por venta, con el efectivo a caja y la tarjeta a terminal.
 7. **Bitácora de avisos al cliente.** Sofía rechazó una devolución y no pudo confirmar que el aviso salió. Propuesta: guardar cada correo enviado (asunto, fecha, destino) y mostrarlo en la ficha del cliente y del pedido.
-8. **Trazabilidad de quién movió qué.** Beto vio un pedido cambiar solo. Propuesta: bitácora por pedido (quién, cuándo, desde qué sucursal) visible en la ficha del pedido.
+8. **Comisiones bloqueadas que se esfuman.** Al cerrar noviembre, los $172 de Claudia desaparecen de todas las pantallas. Propuesta: mostrarlos en el mes anterior como "no pagadas: no te activaste en noviembre" con el monto, en el panel de la socia y en su ficha, y un correo el día 25 a quien tenga comisiones bloqueadas y le falten VP ("te faltan 13 VP para cobrar $172").
+9. **Folio del depósito.** El registro del pago solo dice "Comprobante cargado". Propuesta: folio y fecha visibles en la ficha y en el correo.
+10. **Trazabilidad de quién movió qué.** Beto vio un pedido cambiar solo. Propuesta: bitácora por pedido (quién, cuándo, desde qué sucursal) visible en la ficha del pedido.
 
 ## 6. Cobertura de rutas
 
