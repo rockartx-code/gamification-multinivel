@@ -424,7 +424,15 @@
                               <span *ngIf="order.status === 'devolucion_rechazada'" class="ml-1 italic">— Rechazada</span>
                               <!-- La gerente no veía ni las fotos ni las notas de la recepción: estaban en la solicitud, no en el pedido. -->
                               <div *ngIf="order.returnInspection as ri" class="mt-1 space-y-0.5 text-amber-900">
-                                <div *ngIf="ri.motivo"><span class="font-semibold">Motivo del cliente:</span> {{ ri.motivo }}<span *ngIf="ri.descripcion"> · {{ ri.descripcion }}</span></div>
+                                <!-- Paquete G: qué devolvió y cuánto se sugiere reembolsar, por líneas. -->
+                                <div *ngIf="ri.lines?.length"><span class="font-semibold">Devuelto:</span>
+                                  <ng-container *ngFor="let l of ri.lines; let last = last">{{ l.quantity }} × {{ l.name }}{{ last ? '' : ', ' }}</ng-container>
+                                  <span *ngIf="!ri.partial"> (todo el pedido)</span>
+                                  <span *ngIf="ri.refundSuggested != null"> · reembolso sugerido {{ formatMoney(ri.refundSuggested || 0) }}</span>
+                                  <span *ngIf="ri.motivoLabel"> · {{ ri.motivoLabel }}</span>
+                                </div>
+                                <div *ngIf="ri.motivo && !ri.lines?.length"><span class="font-semibold">Motivo del cliente:</span> {{ ri.motivoLabel || ri.motivo }}<span *ngIf="ri.descripcion"> · {{ ri.descripcion }}</span></div>
+                                <div *ngIf="ri.descripcion && ri.lines?.length"><span class="font-semibold">Dice el cliente:</span> {{ ri.descripcion }}</div>
                                 <div *ngIf="ri.evidence?.length"><span class="font-semibold">Fotos del cliente:</span> <a *ngFor="let u of ri.evidence; let i = index" [href]="u" target="_blank" rel="noopener" class="mr-1 underline">foto {{ i + 1 }}</a></div>
                                 <div *ngIf="ri.notes"><span class="font-semibold">Recepción en bodega:</span> {{ ri.notes }}</div>
                                 <div *ngIf="ri.packageImageUrls?.length"><span class="font-semibold">Fotos al recibir:</span> <a *ngFor="let u of ri.packageImageUrls; let i = index" [href]="u" target="_blank" rel="noopener" class="mr-1 underline">foto {{ i + 1 }}</a></div>
@@ -4260,6 +4268,28 @@
         Cobrado: {{ formatMoney(refundTargetOrder?.total || 0) }}<span *ngIf="refundTargetOrder?.shippingCost"> (incluye envío {{ formatMoney(refundTargetOrder?.shippingCost || 0) }})</span><span *ngIf="refundTargetOrder?.returnShippingCost"> · el cliente pagó {{ formatMoney(refundTargetOrder?.returnShippingCost || 0) }} por el envío de regreso</span>.
         Sugerido: {{ formatMoney(refundSuggestedAmount) }}. {{ refundSuggestedHint }}
       </div>
+      <!-- Paquete G: desglose del sugerido por líneas -->
+      <div *ngIf="refundBreakdown as b" class="mt-2 rounded-lg border border-olive-20 bg-ivory-70 px-3 py-2 text-xs text-main">
+        <div *ngIf="refundReturnedLines.length" class="mb-1 text-gray-600">
+          Devuelve: <ng-container *ngFor="let l of refundReturnedLines; let last = last">{{ l.quantity }} × {{ l.name }}{{ last ? '' : ', ' }}</ng-container>
+        </div>
+        <div class="flex justify-between"><span>Productos (con su descuento)</span><span>{{ formatMoney(b.products) }}</span></div>
+        <div class="flex justify-between"><span>Envío de regreso</span><span>{{ formatMoney(b.returnShipping) }}</span></div>
+        <div class="flex justify-between"><span>Envío original</span><span>{{ formatMoney(b.originalShipping) }}</span></div>
+        <div class="mt-1 flex justify-between border-t border-olive-20 pt-1 font-semibold"><span>Sugerido</span><span>{{ formatMoney(refundSuggestedAmount) }}</span></div>
+        <div class="mt-1 text-gray-600">El cliente ya vio esta cifra: se le prometió al mismo medio de pago, en 3 a 5 días hábiles.</div>
+      </div>
+    </div>
+    <div *ngIf="refundNeedsAdjustmentReason">
+      <ui-form-field
+        wrapperClass="block"
+        label="¿Por qué reembolsas un importe distinto al sugerido? *"
+        kind="textarea"
+        [rows]="2"
+        placeholder="Ej. El bote llegó a la mitad; se reembolsa la mitad del producto"
+        helpText="Obligatorio cuando el importe cambia. El cliente verá este motivo en su página de devolución."
+        inputClass="mt-1 w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70 resize-none"
+        [(ngModel)]="refundAdjustmentReason"></ui-form-field>
     </div>
     <div>
       <ui-form-field
@@ -4307,12 +4337,28 @@
       <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
       Revisa el paquete y marca lo que veas. Con todo en orden la devolución queda <strong>validada</strong>; si algo falla, queda <strong>rechazada</strong> y se le avisa al cliente.
     </div>
-    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-      <div *ngFor="let check of receiveReturnChecks" class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
-        <ui-checkbox layout="row" compact [label]="check.label" [description]="check.hint"
-          [checked]="receiveReturnChecklist[check.key]"
-          (checkedChange)="toggleReceiveReturnCheck(check.key, $event)"></ui-checkbox>
+    <!-- Paquete G: lo que la clienta dijo que devolvía, línea por línea -->
+    <div *ngIf="receiveReturnLines.length" class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+      <div class="text-xs font-semibold text-main">{{ receiveReturnOrder?.returnInspection?.partial ? 'Devuelve solo estos productos' : 'Devuelve el pedido completo' }}<span *ngIf="receiveReturnOrder?.returnInspection?.motivoLabel" class="font-normal text-gray-600"> · {{ receiveReturnOrder?.returnInspection?.motivoLabel }}</span></div>
+      <div class="mt-1 text-xs text-gray-600">Marca cada línea si en el paquete viene exactamente eso (producto y cantidad). Una que no coincida rechaza la devolución.</div>
+      <div *ngFor="let l of receiveReturnLines" class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
+        <ui-checkbox layout="row" compact [label]="l.quantity + ' × ' + l.name + ' coincide'"
+          [description]="l.unitNet != null ? 'Reembolso por esta línea: ' + formatMoney((l.unitNet || 0) * l.quantity) : ''"
+          [checked]="receiveReturnLineMatches[l.productId + ''] !== false"
+          (checkedChange)="toggleReceiveReturnLine(l.productId, $event)"></ui-checkbox>
       </div>
+      <div *ngIf="receiveReturnOrder?.returnInspection?.refundSuggested != null" class="mt-2 text-xs text-gray-600">
+        Reembolso sugerido si todo coincide: <span class="font-semibold text-main">{{ formatMoney(receiveReturnOrder?.returnInspection?.refundSuggested || 0) }}</span>.
+      </div>
+    </div>
+    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+      <ng-container *ngFor="let check of receiveReturnChecks">
+        <div *ngIf="!(receiveReturnLines.length && check.key === 'coincide_con_pedido')" class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
+          <ui-checkbox layout="row" compact [label]="check.label" [description]="check.hint"
+            [checked]="receiveReturnChecklist[check.key]"
+            (checkedChange)="toggleReceiveReturnCheck(check.key, $event)"></ui-checkbox>
+        </div>
+      </ng-container>
       <div class="mt-2">
         <ui-form-field kind="textarea" label="Cómo llegó el paquete (notas)" placeholder="Ej. tapa rota, sello abierto, falta un tercio del contenido"
           [ngModel]="receiveReturnNotes" (ngModelChange)="receiveReturnNotes = $event"></ui-form-field>

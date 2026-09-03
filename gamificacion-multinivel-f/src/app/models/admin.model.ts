@@ -79,6 +79,17 @@ export interface AdminOrder {
     notes?: string;
     packageImageUrls?: string[];
     checklist?: Record<string, boolean>;
+    // paquete G: líneas devueltas y reembolso sugerido por líneas
+    motivoLabel?: string;
+    lines?: Array<{ productId: number | string; name: string; quantity: number; purchasedQuantity?: number; unitPrice?: number; unitNet?: number }>;
+    partial?: boolean;
+    shippingResponsibility?: 'empresa' | 'cliente';
+    returnShippingCost?: number;
+    refundSuggested?: number | null;
+    refundBreakdown?: { products: number | null; returnShipping: number | null; originalShipping: number | null } | null;
+    refundPolicy?: { method: string; businessDays: string } | null;
+    linesReceived?: Array<{ productId: number | string; quantity: number; matches: boolean }>;
+    courtesyCoupon?: string | null;
   };
   rejectionReason?: string;
   rejectedAt?: string;
@@ -97,6 +108,10 @@ export interface AdminOrder {
   shippedBy?: string;
   deliveredBy?: string;
   deliverySignedBy?: string;
+  // paquete G
+  returnedLines?: Array<{ productId: number | string; name: string; quantity: number; unitNet?: number }>;
+  refundSuggested?: number;
+  refundAdjustmentReason?: string;
 }
 
 export interface AdminRefundPayload {
@@ -106,12 +121,22 @@ export interface AdminRefundPayload {
   receiptBase64?: string;
   receiptName?: string;
   receiptContentType?: string;
+  /** paquete G: obligatorio cuando `amount` difiere del reembolso sugerido por líneas. */
+  adjustmentReason?: string;
 }
 
 export interface AdminRefundResponse {
   orderId: string;
   status: string;
   refundReceiptUrl?: string;
+  // paquete G
+  refundAmount?: number;
+  refundSuggested?: number;
+  breakdown?: { products: number | null; returnShipping: number | null; originalShipping: number | null };
+  refundAdjustmentReason?: string | null;
+  refundPolicy?: { method: string; businessDays: string };
+  refundedAt?: string;
+  message?: string;
 }
 
 export interface AdminReturnInspectPayload {
@@ -128,6 +153,8 @@ export interface AdminReturnInspectPayload {
   rejectionReason?: string;
   notes?: string;
   courtesyPercent?: number;
+  /** paquete G: por línea devuelta, si lo recibido coincide con lo declarado. */
+  lines?: Array<{ productId: number | string; quantity: number; matches: boolean }>;
 }
 
 export interface AdminReturnInspectResponse {
@@ -136,6 +163,11 @@ export interface AdminReturnInspectResponse {
   returnStatus: string;
   orderStatus: string;
   approved: boolean;
+  // paquete G
+  refundSuggested?: number | null;
+  refundBreakdown?: { products: number | null; returnShipping: number | null; originalShipping: number | null } | null;
+  linesReceived?: Array<{ productId: number | string; quantity: number; matches: boolean }>;
+  message?: string;
 }
 
 export interface CustomerOrdersPage {
@@ -896,6 +928,8 @@ export interface OrderReturnRequestPayload {
   evidence: OrderReturnEvidencePayload;
   /** Lo que el cliente pagó por regresar el paquete; se suma al reembolso. */
   returnShippingCost?: number;
+  /** paquete G: líneas que se devuelven; sin el campo, todo el pedido. */
+  lines?: Array<{ productId: number | string; quantity: number }>;
 }
 
 export interface OrderReturnRequestResponse {

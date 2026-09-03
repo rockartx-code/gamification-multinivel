@@ -8,13 +8,17 @@ import core_utils as utils  # Importado desde la Layer
 from core import order_emails
 import modo_handlers  # paquete B
 import checkout_handlers  # paquete C
-# Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus rutas o devuelve None.
-_EXTENSIONES = [
-    checkout_handlers,  # paquete C
-]
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
+
+# Extensiones del lambda (docs/arquitectura/23 §0.2): cada paquete aporta un
+# módulo con `atender(peticion)`; el recorrido está al inicio de lambda_handler.
+import devoluciones_handlers  # paquete G
+_EXTENSIONES = [
+    checkout_handlers,  # paquete C
+    devoluciones_handlers,  # paquete G
+]
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -187,12 +191,36 @@ def _resumen_devolucion(request_id):
     if not req:
         return None
     insp = req.get("inspection") or {}
+    # La evidencia se guarda por categoría ({categoria: [urls]}); iterar el
+    # dict daba los nombres de las categorías, no las fotos.
+    evidencia = req.get("evidence") or {}
+    if isinstance(evidencia, dict):
+        fotos = [u for urls in evidencia.values() for u in (urls or [])]
+    else:
+        fotos = list(evidencia)
+    desglose = req.get("refundBreakdown") or {}
     return {
         "requestId": request_id,
         "status": req.get("status"),
         "motivo": req.get("motivo"),
+        "motivoLabel": devoluciones_handlers.MOTIVO_ETIQUETA.get(str(req.get("motivo") or ""), req.get("motivo")),
         "descripcion": req.get("descripcion"),
-        "evidence": [e.get("url") if isinstance(e, dict) else e for e in (req.get("evidence") or [])],
+        "evidence": [e.get("url") if isinstance(e, dict) else e for e in fotos],
+        # Líneas devueltas y reembolso sugerido por líneas (propuesta 18).
+        "lines": req.get("lines") or [],
+        "partial": bool(req.get("partial")),
+        "shippingResponsibility": req.get("shippingResponsibility"),
+        "returnShippingCost": req.get("returnShippingCost") or 0,
+        "refundSuggested": req.get("refundSuggested"),
+        "refundBreakdown": {
+            "products": desglose.get("products"),
+            "returnShipping": desglose.get("returnShipping"),
+            "originalShipping": desglose.get("originalShipping"),
+        } if desglose else None,
+        "refundPolicy": req.get("refundPolicy"),
+        "linesReceived": insp.get("linesReceived") or [],
+        "courtesyCoupon": req.get("courtesyCoupon"),
+        "createdAt": req.get("createdAt"),
         "inspectedAt": req.get("inspectedAt"),
         "inspectedBy": req.get("inspectedBy"),
         "notes": insp.get("notes"),
@@ -1038,14 +1066,29 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
 # HANDLER — SOLICITUD DE DEVOLUCIÓN (Reglas 3.1, 3.2, 3.3, 4)
 # ---------------------------------------------------------------------------
 
-#: Plazos máximos para solicitar devolución, por motivo (Regla 3.1).
+#: Plazos máximos, responsable del envío y evidencia exigida, por motivo
+#: (Reglas 3.1, 3.3 y 4). La evidencia depende del motivo (propuesta 18):
+#: quien no abrió el paquete solo manda una foto del paquete cerrado con la
+#: guía visible; quien reporta daño o error manda producto, empaque y guía.
 RETURN_MOTIVOS = {
-    "DANADO_DEFECTUOSO": {"limite_horas": 48, "responsable_envio": "empresa"},
-    "ERROR_ENVIO": {"limite_horas": 48, "responsable_envio": "empresa"},
-    "DESISTIMIENTO": {"limite_horas": 7 * 24, "responsable_envio": "cliente"},
+    "DANADO_DEFECTUOSO": {"limite_horas": 48, "responsable_envio": "empresa",
+                          "evidencia": devoluciones_handlers.EVIDENCIA_COMPLETA, "regla_evidencia": "completa"},
+    "ERROR_ENVIO": {"limite_horas": 48, "responsable_envio": "empresa",
+                    "evidencia": devoluciones_handlers.EVIDENCIA_COMPLETA, "regla_evidencia": "completa"},
+    "DESISTIMIENTO": {"limite_horas": 7 * 24, "responsable_envio": "cliente",
+                      "evidencia": devoluciones_handlers.EVIDENCIA_PAQUETE_CERRADO, "regla_evidencia": "paquete_cerrado"},
 }
-#: Categorías de evidencia obligatorias (Regla 3.3).
-RETURN_EVIDENCIA_REQUERIDA = ("fotos_producto", "fotos_empaque", "fotos_guia_envio")
+
+
+def _evidencia_faltante(motivo: str, evidencia: dict) -> list:
+    """Categorías que exige el motivo y no llegaron. En desistimiento se acepta
+    también el juego completo de tres fotos (solicitudes del asistente anterior)."""
+    exigidas = RETURN_MOTIVOS[motivo]["evidencia"]
+    faltan = [c for c in exigidas if not (evidencia.get(c) or [])]
+    if faltan and exigidas == devoluciones_handlers.EVIDENCIA_PAQUETE_CERRADO:
+        if all(evidencia.get(c) for c in devoluciones_handlers.EVIDENCIA_COMPLETA):
+            return []
+    return faltan
 
 
 def _horas_desde_entrega(order: dict) -> float:
@@ -1058,8 +1101,9 @@ def _horas_desde_entrega(order: dict) -> float:
         return 0.0
 
 
-def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, horas: float):
-    """Aplica las reglas 3.1 y 3.3. Devuelve una respuesta de error o None."""
+def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, horas: float, lines=None):
+    """Aplica las reglas 3.1 (plazo), 3.3 (evidencia según motivo) y la de
+    líneas (propuesta 18). Devuelve una respuesta de error o None."""
     if (order.get("status") or "").lower() != utils.OrderStatus.DELIVERED:
         return utils._json_response(409, {
             "message": "Solo se pueden solicitar devoluciones de pedidos entregados.",
@@ -1096,13 +1140,21 @@ def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, hor
             **campo,
         })
 
-    # Regla 3.3 — las tres categorías de evidencia son obligatorias
-    faltantes = [c for c in RETURN_EVIDENCIA_REQUERIDA if not (evidencia.get(c) or [])]
+    # Líneas: subconjunto del pedido con cantidades válidas (sin `lines` → todo).
+    _, error_lineas = devoluciones_handlers.normalizar_lineas(order, lines)
+    if error_lineas:
+        return error_lineas
+
+    # Regla 3.3 — la evidencia que exige el motivo
+    faltantes = _evidencia_faltante(motivo, evidencia)
     if faltantes:
+        nombres = {"fotos_producto": "fotos del producto", "fotos_empaque": "fotos del empaque",
+                   "fotos_guia_envio": "foto de la guía de envío", "fotos_paquete_cerrado": "foto del paquete cerrado con la guía visible"}
         return utils._json_response(400, {
-            "message": f"Evidencia incompleta. Faltan: {', '.join(faltantes)}",
+            "message": "Falta evidencia: " + ", ".join(nombres.get(c, c) for c in faltantes) + ".",
             "code": "MISSING_EVIDENCE",
             "missing": faltantes,
+            "evidenceRule": RETURN_MOTIVOS[motivo]["regla_evidencia"],
         })
     return None
 
@@ -1128,10 +1180,11 @@ def _subir_evidencia_devolucion(order_id: str, request_id: str, evidencia: dict)
                              orderId=order_id, requestId=request_id, category=categoria)
             return categoria, None
 
-    subidas = {categoria: [] for categoria in RETURN_EVIDENCIA_REQUERIDA}
+    subidas = {categoria: [] for categoria in devoluciones_handlers.TODAS_LAS_CATEGORIAS
+               if evidencia.get(categoria)}
     tareas = [
         (categoria, indice, archivo)
-        for categoria in RETURN_EVIDENCIA_REQUERIDA
+        for categoria in subidas
         for indice, archivo in enumerate(evidencia.get(categoria) or [])
     ]
     if not tareas:
@@ -1161,10 +1214,17 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     motivo = (body.get("motivo") or "").upper().strip()
     evidencia = body.get("evidence") or {}
     horas = _horas_desde_entrega(order)
+    lines = body.get("lines") if "lines" in body else None
 
-    error = _validar_solicitud_devolucion(order, motivo, evidencia, horas)
+    error = _validar_solicitud_devolucion(order, motivo, evidencia, horas, lines)
     if error:
         return error
+
+    # Propuesta 18: qué se devuelve (líneas con cantidad) y cuánto se sugiere reembolsar.
+    lineas, _ = devoluciones_handlers.normalizar_lineas(order, lines)
+    envio_regreso = utils._to_decimal(body.get("returnShippingCost") or 0)
+    reembolso = devoluciones_handlers.calcular_reembolso(order, lineas, motivo, envio_regreso)
+    parcial = reembolso.pop("partial")
 
     # Regla 4 — quién paga el envío de la devolución
     responsable = RETURN_MOTIVOS[motivo]["responsable_envio"]
@@ -1173,6 +1233,9 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     subidas = _subir_evidencia_devolucion(order_id, request_id, evidencia)
 
     now = utils._now_iso()
+    politica = {"method": reembolso["method"], "businessDays": reembolso["businessDays"]}
+    desglose = {"products": reembolso["products"], "returnShipping": reembolso["returnShipping"],
+                "originalShipping": reembolso["originalShipping"]}
     utils._put_entity("RETURN_REQUEST", request_id, {
         "entityType": "returnRequest",
         "requestId": request_id,
@@ -1183,9 +1246,15 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         "status": "PENDIENTE",
         "shippingResponsibility": responsable,
         "evidence": subidas,
+        "evidenceRule": RETURN_MOTIVOS[motivo]["regla_evidencia"],
         # Lo que el cliente pagó por regresar el paquete (ticket de paquetería);
         # se suma al reembolso por omisión.
-        "returnShippingCost": utils._to_decimal(body.get("returnShippingCost") or 0),
+        "returnShippingCost": envio_regreso,
+        "lines": lineas,
+        "partial": parcial,
+        "refundSuggested": reembolso["suggested"],
+        "refundBreakdown": desglose,
+        "refundPolicy": politica,
         "horasDesdEntrega": Decimal(str(round(horas, 4))),
         "inspection": None,
         "createdAt": now,
@@ -1194,26 +1263,39 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
 
     updated_order = utils._update_by_id(
         "ORDER", order_id,
-        "SET #s = :s, returnRequestId = :rid, returnShippingCost = :rsc, updatedAt = :u",
-        {":s": "en_devolucion", ":rid": request_id, ":rsc": utils._to_decimal(body.get("returnShippingCost") or 0), ":u": now},
+        "SET #s = :s, returnRequestId = :rid, returnShippingCost = :rsc, returnedLines = :rl, "
+        "refundSuggested = :rs, refundBreakdown = :rb, updatedAt = :u",
+        {":s": "en_devolucion", ":rid": request_id, ":rsc": envio_regreso, ":rl": lineas,
+         ":rs": reembolso["suggested"], ":rb": desglose, ":u": now},
         {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
     utils._audit_event("order.return_request", headers, body,
-                       {"orderId": order_id, "requestId": request_id, "motivo": motivo})
+                       {"orderId": order_id, "requestId": request_id, "motivo": motivo,
+                        "lines": [{"productId": l["productId"], "quantity": l["quantity"]} for l in lineas]})
+    direccion = order_emails._direccion_bodega_principal()
     _avisar(utils._get_by_id("ORDER", order_id) or order, "return_received",
-            {"requestId": request_id, "shippingResponsibility": responsable})
+            {"requestId": request_id, "shippingResponsibility": responsable, "lines": lineas,
+             "partial": parcial, "refund": reembolso, "refundPolicy": politica, "direccionAlmacen": direccion,
+             "motivoLabel": devoluciones_handlers.MOTIVO_ETIQUETA.get(motivo, motivo)})
 
+    plazo = devoluciones_handlers.texto_politica(politica)
     return utils._json_response(201, {
         "ok": True,
         "requestId": request_id,
         "status": "PENDIENTE",
         "shippingResponsibility": responsable,
+        "lines": lineas,
+        "partial": parcial,
+        "refund": reembolso,
+        "warehouseAddress": direccion,
         "message": (
-            "Solicitud de devolución registrada. Te notificaremos el resultado de la inspección. "
-            + ("El costo de envío de la devolución corre a cargo de la empresa."
+            f"Solicitud {request_id} registrada. "
+            + ("Envía el paquete a nuestro almacén; el envío de regreso lo paga la empresa "
+               "(guarda tu ticket, te lo reembolsamos). "
                if responsable == "empresa"
-               else "El costo de envío de la devolución corre a tu cargo.")
+               else "Envía el paquete a nuestro almacén; el envío de regreso corre por tu cuenta. ")
+            + f"Cuando lo revisemos te devolvemos {order_emails._mxn(reembolso['suggested'])} {plazo}."
         ),
     })
 
@@ -1259,7 +1341,8 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     if not return_req:
         return utils._json_response(404, {"message": "Solicitud de devolución no encontrada."})
 
-    inspection = body.get("inspection") or {}
+    # Copia: más abajo se anota `coincide_con_pedido` y no debe mutar el cuerpo recibido.
+    inspection = dict(body.get("inspection") or {})
 
     # Checklist de recepción (Regla 3.2 / Paso 2 - Inspección física)
     empaque_original = bool(inspection.get("empaque_original"))
@@ -1271,6 +1354,22 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     danio_no_empresa = bool(inspection.get("danio_no_empresa"))   # Falla si True
     coincide_con_pedido = bool(inspection.get("coincide_con_pedido"))
     trazabilidad_valida = bool(inspection.get("trazabilidad_valida"))
+
+    # Propuesta 18: la bodega marca línea por línea si lo recibido coincide con
+    # lo que la clienta dijo que devolvía. Si alguna no coincide, no coincide el pedido.
+    lineas_recibidas = []
+    for raw in body.get("lines") or []:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            qty = int(raw.get("quantity") or 0)
+        except (TypeError, ValueError):
+            qty = 0
+        lineas_recibidas.append({"productId": raw.get("productId"), "quantity": qty,
+                                 "matches": bool(raw.get("matches", True))})
+    if lineas_recibidas:
+        coincide_con_pedido = coincide_con_pedido and all(l["matches"] for l in lineas_recibidas)
+        inspection["coincide_con_pedido"] = coincide_con_pedido
 
     # Regla 5.1 / 5.2
     approved = (
@@ -1310,6 +1409,8 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     inspection_record = {**inspection}
     if package_image_urls:
         inspection_record["packageImageUrls"] = package_image_urls
+    if lineas_recibidas:
+        inspection_record["linesReceived"] = lineas_recibidas
     # Cómo llegó el paquete, en palabras del almacén (antes solo había fotos).
     notas = (body.get("notes") or "").strip()
     if notas:
@@ -1345,29 +1446,43 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
         "ORDER", order_id, order_update_expr, order_eav, {"#s": "status"},
     )
     utils._upsert_order_customer_history(updated_order)
+    reembolso_sugerido = return_req.get("refundSuggested")
+    politica = return_req.get("refundPolicy") or devoluciones_handlers.politica_reembolso()
     _avisar(updated_order, "return_approved" if approved else "return_rejected",
             {"reason": rejection_reason or body.get("reason") or body.get("motivo") or inspection.get("comentarios"),
-             "courtesyCode": (cortesia or {}).get("code"), "courtesyPercent": (cortesia or {}).get("value")})
+             "courtesyCode": (cortesia or {}).get("code"), "courtesyPercent": (cortesia or {}).get("value"),
+             "amount": reembolso_sugerido, "refundPolicy": politica, "lines": return_req.get("lines") or []})
 
     commission_actions = []
     if approved:
-        commission_actions = _void_commissions_for_order(order_id, reason="return_approved")
+        # Decisión §13.14: una devolución parcial anula la comisión del pedido
+        # completo; queda anotado el motivo para repartir lo no devuelto en otra ronda.
+        motivo_anulacion = "return_approved_partial" if return_req.get("partial") else "return_approved"
+        commission_actions = _void_commissions_for_order(order_id, reason=motivo_anulacion)
 
     utils._audit_event("order.return_inspected", headers, body, {
         "orderId": order_id, "requestId": request_id, "approved": approved,
+        "linesReceived": lineas_recibidas,
     })
 
+    plazo = devoluciones_handlers.texto_politica(politica)
     return utils._json_response(200, {
         "ok": True,
         "requestId": request_id,
         "returnStatus": new_return_status,
         "orderStatus": new_order_status,
         "approved": approved,
+        "refundSuggested": reembolso_sugerido,
+        "refundBreakdown": return_req.get("refundBreakdown"),
+        "lines": return_req.get("lines") or [],
+        "linesReceived": lineas_recibidas,
         "commissionActions": commission_actions,
         "message": (
-            "Devolución aprobada. Las comisiones han sido revertidas."
+            f"Devolución {request_id} validada. Reembolso sugerido: {order_emails._mxn(reembolso_sugerido)} {plazo}. "
+            "Las comisiones del pedido quedaron anuladas."
             if approved
-            else "Devolución rechazada. Se generará orden de reenvío al cliente con costo a su cargo."
+            else f"Devolución {request_id} rechazada; se avisó al cliente"
+                 + (f" con el cupón de cortesía {cortesia['code']}." if cortesia else ".")
         ),
     })
 
@@ -1407,32 +1522,71 @@ def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
             print(f"[S3_REFUND_RECEIPT] {e}")
             return utils._json_response(400, {"message": "No se pudo procesar el comprobante de depósito.", "detail": str(e)})
 
-    # Importe reembolsado: por omisión el total cobrado más el envío de regreso
-    # que el cliente haya declarado en su solicitud de devolución. La gerente
-    # reembolsaba "la única cifra que el sistema mostraba" y el cliente
-    # reclamaba después su ticket de paquetería.
+    # Importe sugerido: con devolución, el calculado por líneas en la solicitud
+    # (productos con descuento + envíos según el motivo); sin devolución
+    # (pedido cancelado ya pagado), el total cobrado más el envío de regreso
+    # declarado. La gerente reembolsaba "la única cifra que el sistema
+    # mostraba" y el cliente reclamaba después su ticket de paquetería.
     importe_base = utils._to_decimal(order.get("total") if order.get("total") is not None else order.get("netTotal"))
     envio_regreso = utils._to_decimal(order.get("returnShippingCost") or 0)
-    refund_amount = utils._to_decimal(body.get("amount")) if body.get("amount") not in (None, "") else importe_base + envio_regreso
+    return_req = utils._get_by_id("RETURN_REQUEST", order.get("returnRequestId")) if order.get("returnRequestId") else None
+    if return_req and return_req.get("refundSuggested") is not None:
+        sugerido = utils._to_decimal(return_req.get("refundSuggested"))
+        desglose = return_req.get("refundBreakdown") or {}
+        politica = return_req.get("refundPolicy") or devoluciones_handlers.politica_reembolso()
+    else:
+        sugerido = (importe_base + envio_regreso).quantize(utils.D_CENT)
+        desglose = {"products": importe_base, "returnShipping": envio_regreso, "originalShipping": utils.D_ZERO}
+        politica = devoluciones_handlers.politica_reembolso()
+
+    refund_amount = utils._to_decimal(body.get("amount")) if body.get("amount") not in (None, "") else sugerido
     if refund_amount < utils.D_ZERO:
-        return utils._json_response(400, {"message": "El importe del reembolso no puede ser negativo"})
-    update_expr = "SET #s = :s, refundReason = :r, refundedAt = :ra, refundAmount = :amt, updatedAt = :u"
-    eav = {":s": "refunded", ":r": body.get("reason") or "refund", ":ra": now, ":amt": refund_amount, ":u": now}
+        return utils._json_response(400, {"message": "El importe del reembolso no puede ser negativo", "code": "NEGATIVE_AMOUNT"})
+    maximo = devoluciones_handlers.maximo_reembolsable(order)
+    if refund_amount > maximo:
+        return utils._json_response(400, {
+            "message": f"No se puede reembolsar {order_emails._mxn(refund_amount)}: lo cobrado más el envío de regreso suma {order_emails._mxn(maximo)}.",
+            "code": "REFUND_EXCEEDS_TOTAL", "max": maximo,
+        })
+    # Con devolución, apartarse del sugerido por líneas exige decir por qué (la
+    # clienta lo verá en su página). En una cancelación el importe queda libre.
+    motivo_ajuste = str(body.get("adjustmentReason") or "").strip()
+    sugerido_por_lineas = bool(return_req and return_req.get("refundSuggested") is not None)
+    if sugerido_por_lineas and refund_amount.quantize(utils.D_CENT) != sugerido.quantize(utils.D_CENT) and not motivo_ajuste:
+        return utils._json_response(400, {
+            "message": f"El importe ({order_emails._mxn(refund_amount)}) es distinto al sugerido ({order_emails._mxn(sugerido)}). Escribe el motivo del ajuste.",
+            "code": "ADJUSTMENT_REASON_REQUIRED", "refundSuggested": sugerido,
+        })
+
+    update_expr = "SET #s = :s, refundReason = :r, refundedAt = :ra, refundAmount = :amt, refundSuggested = :rs, refundBreakdown = :rb, updatedAt = :u"
+    eav = {":s": "refunded", ":r": body.get("reason") or "refund", ":ra": now, ":amt": refund_amount,
+           ":rs": sugerido, ":rb": desglose, ":u": now}
     if refund_receipt_url:
         update_expr += ", refundReceiptUrl = :rru"
         eav[":rru"] = refund_receipt_url
+    if motivo_ajuste:
+        update_expr += ", refundAdjustmentReason = :adj"
+        eav[":adj"] = motivo_ajuste
 
     updated_order = utils._update_by_id("ORDER", order_id, update_expr, eav, {"#s": "status"})
     utils._upsert_order_customer_history(updated_order)
     actions = _void_commissions_for_order(order_id, reason="refund")
-    utils._audit_event("order.refund", headers, body, {"orderId": order_id})
-    _avisar(updated_order, "refunded", {"amount": updated_order.get("refundAmount") or updated_order.get("total") or updated_order.get("netTotal")})
+    utils._audit_event("order.refund", headers, body, {"orderId": order_id, "amount": refund_amount,
+                                                        "suggested": sugerido, "adjustmentReason": motivo_ajuste or None})
+    _avisar(updated_order, "refunded", {"amount": refund_amount, "refundPolicy": politica, "refundedAt": now,
+                                        "lines": (return_req or {}).get("lines") or []})
     return utils._json_response(200, {
         "orderId": order_id,
         "status": "refunded",
         "refundAmount": refund_amount,
+        "refundSuggested": sugerido,
+        "breakdown": desglose,
+        "refundAdjustmentReason": motivo_ajuste or None,
+        "refundPolicy": politica,
+        "refundedAt": now,
         "refundReceiptUrl": refund_receipt_url,
         "commissionActions": actions,
+        "message": f"Reembolso de {order_emails._mxn(refund_amount)} registrado para el pedido {order_id}; se avisó al cliente por correo.",
     })
 
 

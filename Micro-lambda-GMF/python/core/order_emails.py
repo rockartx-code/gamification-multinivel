@@ -54,6 +54,41 @@ def _lineas(order: dict) -> str:
     return "".join(filas)
 
 
+def _politica_reembolso(datos: dict) -> dict:
+    """Medio y plazo del reembolso: los de la solicitud o, si no vienen, los de config."""
+    politica = datos.get("refundPolicy") or (datos.get("refund") or {})
+    metodo, plazo = politica.get("method"), politica.get("businessDays")
+    if not (metodo and plazo):
+        try:
+            from core import config as _config
+            cfg = _config._load_app_config().get("returns") or {}
+        except Exception:
+            cfg = {}
+        metodo = metodo or cfg.get("refundMethod") or "mismo medio de pago"
+        plazo = plazo or cfg.get("refundBusinessDays") or "3 a 5"
+    return {"method": str(metodo), "businessDays": str(plazo)}
+
+
+def _texto_plazo(datos: dict) -> str:
+    p = _politica_reembolso(datos)
+    return f"al <strong>{p['method']}</strong>, en <strong>{p['businessDays']} días hábiles</strong>"
+
+
+def _lineas_devueltas(datos: dict) -> str:
+    """Bloque 'Lo que devuelves' con las líneas de la solicitud (vacío si no hay)."""
+    lineas = datos.get("lines") or []
+    if not lineas:
+        return ""
+    filas = "".join(
+        f"<p>{int(l.get('quantity') or 0)} × {l.get('name') or l.get('productId')}"
+        + (f" — {_mxn(Decimal(str(l.get('unitNet') or 0)) * int(l.get('quantity') or 0))}" if l.get('unitNet') is not None else "")
+        + "</p>"
+        for l in lineas
+    )
+    titulo = "Lo que devuelves" if datos.get("partial") else "Devuelves el pedido completo"
+    return f'<div class="info-box"><p><strong>{titulo}</strong></p>{filas}</div>'
+
+
 def _seguimiento(order: dict, frontend_url: str) -> str:
     # La ruta real del seguimiento es /#/orden/{id}; la primera versión
     # enlazaba a una página que no existe ("link muerto" en el primer correo útil).
@@ -120,17 +155,25 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         direccion = datos.get("direccionAlmacen") or _direccion_bodega_principal()
         # La pantalla decía "el envío corre a tu cargo" y este correo prometía reembolsarlo: depende del motivo.
         paga_cliente = str(datos.get("shippingResponsibility") or "").lower() == "cliente"
-        envio_txt = ("El envío de regreso corre por tu cuenta (devolución por arrepentimiento); el producto se reembolsa una vez revisado (1 a 3 días hábiles tras recibirlo)."
+        envio_txt = ("El envío de regreso corre por tu cuenta (devolución por arrepentimiento)."
                      if paga_cliente else
-                     "Guarda tu ticket de envío: te lo reembolsamos junto con el producto una vez que lo revisemos (1 a 3 días hábiles tras recibirlo).")
-        lead = (f"Folio <strong>{datos.get('requestId') or ''}</strong>. Envía el producto que reportaste, en su empaque, a "
-                f"<strong>{direccion or 'nuestro almacén'}</strong> con el folio escrito en el paquete. {envio_txt}")
-        extra = ""
+                     "El envío de regreso lo paga la empresa: guarda tu ticket de paquetería, te lo reembolsamos junto con el producto.")
+        que = "solo los productos que marcaste (no todo el pedido)" if datos.get("partial") else "el pedido completo"
+        reembolso = datos.get("refund") or {}
+        monto = reembolso.get("suggested")
+        cuanto = (f" Cuando lo revisemos te devolvemos <strong>{_mxn(monto)}</strong> {_texto_plazo(datos)}."
+                  if monto is not None else f" Cuando lo revisemos te devolvemos tu dinero {_texto_plazo(datos)}.")
+        lead = (f"Folio <strong>{datos.get('requestId') or ''}</strong>. Envía {que}, en su empaque, a "
+                f"<strong>{direccion or 'nuestro almacén'}</strong> con el folio escrito en el paquete. {envio_txt}{cuanto}")
+        extra = _lineas_devueltas(datos)
     elif evento == "return_approved":
         asunto = f"Devolución aprobada · pedido {oid}"
         titulo, icono = "Devolución aprobada", "👍"
-        lead = "Ya recibimos y revisamos tu paquete. El reembolso se procesa en los próximos 3 días hábiles y te confirmaremos por aquí cuando salga."
-        extra = ""
+        monto = datos.get("amount")
+        lead = ("Ya recibimos y revisamos tu paquete. "
+                + (f"Te devolvemos <strong>{_mxn(monto)}</strong> " if monto is not None else "Te devolvemos tu dinero ")
+                + f"{_texto_plazo(datos)}; te confirmaremos por aquí cuando salga.")
+        extra = _lineas_devueltas(datos)
     elif evento == "return_rejected":
         asunto = f"Devolución no procedente · pedido {oid}"
         titulo, icono = "No pudimos aprobar la devolución", "ℹ️"
@@ -145,9 +188,12 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         asunto = f"Reembolso realizado · pedido {oid}"
         titulo, icono = "Tu reembolso ya salió", "💸"
         monto = datos.get("amount")
-        lead = (f"Transferimos <strong>{_mxn(monto)}</strong> a la cuenta que nos indicaste." if monto is not None
-                else "Transferimos el reembolso a la cuenta que nos indicaste.") + " Puede tardar hasta 2 días hábiles en reflejarse."
-        extra = ""
+        politica = _politica_reembolso(datos)
+        cuando = str(datos.get("refundedAt") or "")[:10]
+        lead = ((f"Hoy{' (' + cuando + ')' if cuando else ''} devolvimos <strong>{_mxn(monto)}</strong>" if monto is not None
+                 else f"Hoy{' (' + cuando + ')' if cuando else ''} devolvimos tu reembolso")
+                + f" al <strong>{politica['method']}</strong> con el que compraste. Según tu banco puede tardar hasta 2 días hábiles en reflejarse.")
+        extra = _lineas_devueltas(datos)
     elif evento == "pos_sale":
         asunto = f"Registramos una compra a tu nombre en tienda · {oid}"
         titulo, icono = "Compra en tienda registrada", "🏪"
@@ -162,7 +208,8 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     elif evento == "cancelled":
         asunto = f"Pedido {oid} cancelado"
         titulo, icono = "Tu pedido quedó cancelado", "🚫"
-        lead = ("Como el pago ya estaba confirmado, te reembolsaremos el importe completo y te avisaremos cuando salga."
+        # Hallazgo 2 de la ronda 4: el correo prometía el reembolso sin decir cuándo ni a dónde.
+        lead = (f"Como el pago ya estaba confirmado, te devolvemos el importe completo {_texto_plazo(datos)}; te avisaremos cuando salga."
                 if datos.get("pendingRefund") else "No se hizo ningún cargo. Si fue un error, puedes volver a comprar cuando quieras.")
         extra = ""
     elif evento == "delivery_check":

@@ -4,86 +4,209 @@
       <img src="/Logo-sin_slogan.svg" width="320" height="96" alt="Logo" class="h-15 w-40" />
       <ui-button variant="ghost" size="md" [routerLink]="['/orden', orderId]">
         <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-        Regresar
+        Regresar a mi pedido
       </ui-button>
     </div>
   </header>
 
   <main class="mx-auto max-w-3xl px-4 py-10">
 
-    <!-- Loading -->
-    <div *ngIf="isLoading" class="flex items-center justify-center py-24 text-sm text-gray-500">
-      Cargando orden…
+    <!-- Cargando -->
+    <div *ngIf="isLoading || isLoadingDetalle" class="flex items-center justify-center py-24 text-sm text-gray-500">
+      {{ isLoadingDetalle ? 'Cargando el estado de tu devolución…' : 'Cargando tu pedido…' }}
     </div>
 
-    <!-- Success result -->
-    <div *ngIf="!isLoading && result"
-      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-8 shadow-sm text-center">
-      <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-100">
-        <i class="fa-solid fa-rotate-left text-2xl text-green-600" aria-hidden="true"></i>
-      </span>
-      <h1 class="mt-4 text-xl font-extrabold text-main">Solicitud registrada</h1>
-      <p class="mt-2 text-sm text-gray-600">{{ result.message }}</p>
-      <div class="mt-4 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 text-sm text-main">
-        <p class="font-semibold">ID de solicitud: <span class="text-gold">{{ result.requestId }}</span></p>
-        <p class="mt-1 text-xs text-gray-500">
-          Costo de envío de devolución: <span class="font-semibold">{{ result.shippingResponsibility === 'empresa' ? 'A cargo de la empresa' : 'A cargo del cliente' }}</span>
-        </p>
+    <!-- ── Estado de una solicitud ya registrada ── -->
+    <div *ngIf="!isLoading && !isLoadingDetalle && detalle as d"
+      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <p class="text-xs font-semibold tracking-widest text-gray-500 uppercase">Devolución</p>
+      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-main">Folio <span class="text-gold">{{ d.requestId }}</span></h1>
+      <p class="mt-1 text-sm text-gray-500">Pedido <span class="font-semibold text-main">{{ d.orderId }}</span> · solicitada el {{ d.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+
+      <div *ngIf="estadoDetalle as e" class="mt-5 flex items-start gap-3 rounded-2xl border p-4" [ngClass]="e.tono">
+        <i [class]="e.icono + ' mt-0.5'" aria-hidden="true"></i>
+        <div>
+          <p class="text-sm font-semibold">{{ e.label }}</p>
+          <p class="mt-1 text-xs">{{ e.texto }}</p>
+          <p *ngIf="d.inspection?.inspectedAt" class="mt-1 text-xs opacity-80">Revisado el {{ d.inspection?.inspectedAt | date:'dd/MM/yyyy HH:mm' }}</p>
+          <p *ngIf="d.refundedAt" class="mt-1 text-xs opacity-80">Reembolsado el {{ d.refundedAt | date:'dd/MM/yyyy HH:mm' }}<span *ngIf="d.refundAdjustmentReason"> · {{ d.refundAdjustmentReason }}</span></p>
+          <p *ngIf="d.courtesyCoupon" class="mt-1 text-xs">Como cortesía te dejamos el cupón <strong>{{ d.courtesyCoupon }}</strong> para tu próxima compra (personal, de un solo uso).</p>
+        </div>
       </div>
-      <div class="mt-6">
-        <ui-button variant="primary" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-2xl border border-olive-20 bg-white/60 p-4 text-sm">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">{{ d.partial ? 'Lo que devuelves' : 'Devuelves el pedido completo' }}</p>
+          <ul class="mt-2 space-y-1">
+            <li *ngFor="let l of d.lines" class="flex justify-between gap-3">
+              <span class="text-main">{{ l.quantity }} × {{ l.name }}</span>
+              <span *ngIf="l.unitNet != null" class="font-semibold text-main">{{ formatMoney(l.unitNet * l.quantity) }}</span>
+            </li>
+          </ul>
+          <p class="mt-3 text-xs text-gray-500">Motivo: <span class="font-semibold text-main">{{ d.motivoLabel }}</span><span *ngIf="d.descripcion"> · {{ d.descripcion }}</span></p>
+        </div>
+
+        <div class="rounded-2xl border border-olive-20 bg-white/60 p-4 text-sm">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Tu reembolso</p>
+          <div class="mt-2 space-y-1 text-xs text-gray-600">
+            <div class="flex justify-between"><span>Productos (con tu descuento)</span><span>{{ formatMoney(d.refund.products) }}</span></div>
+            <div *ngIf="(d.refund.returnShipping ?? 0) > 0" class="flex justify-between"><span>Envío de regreso</span><span>{{ formatMoney(d.refund.returnShipping) }}</span></div>
+            <div *ngIf="(d.refund.originalShipping ?? 0) > 0" class="flex justify-between"><span>Envío original</span><span>{{ formatMoney(d.refund.originalShipping) }}</span></div>
+          </div>
+          <div class="mt-2 flex justify-between border-t border-olive-20 pt-2 text-sm font-semibold text-main">
+            <span>{{ d.refundedAt ? 'Reembolsado' : 'Total a devolver' }}</span>
+            <span>{{ formatMoney(d.refundedAt ? (d.refundAmount ?? d.refund.suggested) : d.refund.suggested) }}</span>
+          </div>
+          <p class="mt-2 text-xs text-gray-500">Al {{ d.refund.method }}, en {{ d.refund.businessDays }} días hábiles después de validar el paquete.</p>
+        </div>
+      </div>
+
+      <div *ngIf="d.status === 'PENDIENTE'" class="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-800">
+        <p class="font-semibold">¿A dónde lo mando?</p>
+        <p class="mt-1">Envía {{ d.partial ? 'solo los productos marcados' : 'el pedido completo' }}, en su empaque, a <strong>{{ d.warehouseAddress || 'nuestro almacén (te lo confirmamos por correo)' }}</strong>. Escribe el folio <strong>{{ d.requestId }}</strong> en el paquete.</p>
+        <p class="mt-1">{{ d.shippingResponsibility === 'empresa' ? 'El envío de regreso lo pagamos nosotros: guarda tu ticket de paquetería.' : 'El envío de regreso corre por tu cuenta.' }}</p>
+      </div>
+
+      <div *ngIf="fotosDetalle.length" class="mt-4 text-xs text-gray-500">
+        Fotos que enviaste: <a *ngFor="let u of fotosDetalle; let i = index" [href]="u" target="_blank" rel="noopener" class="mr-2 underline">foto {{ i + 1 }}</a>
+      </div>
+
+      <div *ngIf="error" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <ui-button variant="primary" size="md" [routerLink]="['/orden', orderId]">Ver mi pedido</ui-button>
+        <ui-button variant="ghost" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
       </div>
     </div>
 
-    <!-- Error if not delivered -->
-    <div *ngIf="!isLoading && !result && !orderIsDelivered && order"
+    <!-- ── Confirmación recién registrada ── -->
+    <div *ngIf="!isLoading && !isLoadingDetalle && !detalle && result as r"
+      class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-8 shadow-sm">
+      <div class="text-center">
+        <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-100">
+          <i class="fa-solid fa-rotate-left text-2xl text-green-600" aria-hidden="true"></i>
+        </span>
+        <h1 class="mt-4 text-xl font-extrabold text-main">Solicitud registrada</h1>
+        <p class="mt-2 text-sm text-gray-600">Folio <span class="font-semibold text-gold">{{ r.requestId }}</span>. Te mandamos estos mismos datos por correo.</p>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-2xl border border-olive-20 bg-white/60 p-4 text-sm">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">{{ r.partial ? 'Lo que devuelves' : 'Devuelves el pedido completo' }}</p>
+          <ul class="mt-2 space-y-1">
+            <li *ngFor="let l of r.lines" class="flex justify-between gap-3">
+              <span class="text-main">{{ l.quantity }} × {{ l.name }}</span>
+              <span *ngIf="l.unitNet != null" class="font-semibold text-main">{{ formatMoney(l.unitNet * l.quantity) }}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="rounded-2xl border border-olive-20 bg-white/60 p-4 text-sm">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Te devolvemos</p>
+          <p class="mt-1 text-2xl font-extrabold text-main">{{ formatMoney(r.refund.suggested) }}</p>
+          <div class="mt-1 space-y-0.5 text-xs text-gray-600">
+            <div class="flex justify-between"><span>Productos (con tu descuento)</span><span>{{ formatMoney(r.refund.products) }}</span></div>
+            <div *ngIf="(r.refund.returnShipping ?? 0) > 0" class="flex justify-between"><span>Envío de regreso</span><span>{{ formatMoney(r.refund.returnShipping) }}</span></div>
+            <div *ngIf="(r.refund.originalShipping ?? 0) > 0" class="flex justify-between"><span>Envío original</span><span>{{ formatMoney(r.refund.originalShipping) }}</span></div>
+          </div>
+          <p class="mt-2 text-xs text-gray-500">Al {{ r.refund.method }}, en {{ r.refund.businessDays }} días hábiles después de validar el paquete.</p>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-800">
+        <p class="font-semibold">¿A dónde lo mando?</p>
+        <p class="mt-1">Envía {{ r.partial ? 'solo los productos marcados' : 'el pedido completo' }}, en su empaque, a <strong>{{ r.warehouseAddress || 'nuestro almacén (te lo confirmamos por correo)' }}</strong>. Escribe el folio <strong>{{ r.requestId }}</strong> en el paquete.</p>
+        <p class="mt-1">{{ r.shippingResponsibility === 'empresa' ? 'El envío de regreso lo pagamos nosotros: guarda tu ticket de paquetería, te lo reembolsamos.' : 'El envío de regreso corre por tu cuenta.' }}</p>
+      </div>
+
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <ui-button variant="primary" size="md" (pressed)="cargarDetalle()">Ver el estado de mi devolución</ui-button>
+        <ui-button variant="ghost" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
+      </div>
+    </div>
+
+    <!-- ── No disponible ── -->
+    <div *ngIf="!isLoading && !isLoadingDetalle && !detalle && !result && !orderIsDelivered && order"
       class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
       <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
         <i class="fa-solid fa-lock mt-0.5 text-amber-500" aria-hidden="true"></i>
         <div>
-          <p class="text-sm font-semibold text-amber-800">Devolución no disponible</p>
-          <p class="mt-1 text-xs text-amber-700">{{ error || 'Solo puedes solicitar devoluciones de pedidos entregados.' }}</p>
+          <p class="text-sm font-semibold text-amber-800">Todavía no se puede devolver</p>
+          <p class="mt-1 text-xs text-amber-700">{{ error || 'Solo se puede pedir la devolución de un pedido ya entregado. Cuando te llegue, vuelve aquí.' }}</p>
         </div>
       </div>
       <div class="mt-4">
-        <ui-button variant="ghost" size="md" [routerLink]="['/orden', orderId]">Volver a la orden</ui-button>
+        <ui-button variant="ghost" size="md" [routerLink]="['/orden', orderId]">Volver a mi pedido</ui-button>
       </div>
     </div>
 
-    <!-- Main form -->
-    <div *ngIf="!isLoading && !result && orderIsDelivered"
+    <div *ngIf="!isLoading && !isLoadingDetalle && !detalle && !result && !order && error"
+      class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+
+    <!-- ── Asistente ── -->
+    <div *ngIf="!isLoading && !isLoadingDetalle && !detalle && !result && orderIsDelivered"
       class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
 
-      <!-- Header -->
-      <p class="text-xs font-semibold tracking-widest text-gray-500 uppercase">Gestión de orden</p>
-      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-main">Solicitar devolución</h1>
-      <p class="mt-1 text-sm text-gray-500">Orden <span class="font-semibold text-main">{{ orderId }}</span></p>
+      <p class="text-xs font-semibold tracking-widest text-gray-500 uppercase">Devolución</p>
+      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-main">Devolver productos</h1>
+      <p class="mt-1 text-sm text-gray-500">Pedido <span class="font-semibold text-main">{{ orderId }}</span>. Cuatro pasos: qué devuelves, por qué, una o tres fotos, y cuánto te regresamos.</p>
 
-      <!-- Progress steps -->
+      <!-- Pasos -->
       <div class="mt-5 flex items-center gap-2">
-        <ng-container *ngFor="let s of [1,2,3]; let last = last">
+        <ng-container *ngFor="let nombre of nombresPasos; let i = index; let last = last">
           <div class="flex items-center gap-1.5">
             <span class="grid h-6 w-6 place-items-center rounded-full text-xs font-bold"
-              [ngClass]="step >= s ? 'bg-main text-white' : 'bg-olive-10 text-gray-400'">
-              <i *ngIf="step > s" class="fa-solid fa-check" aria-hidden="true"></i><ng-container *ngIf="step <= s">{{ s }}</ng-container>
+              [ngClass]="step >= i + 1 ? 'bg-main text-white' : 'bg-olive-10 text-gray-400'">
+              <i *ngIf="step > i + 1" class="fa-solid fa-check" aria-hidden="true"></i><ng-container *ngIf="step <= i + 1">{{ i + 1 }}</ng-container>
             </span>
-            <span class="hidden text-xs font-medium sm:block"
-              [ngClass]="step === s ? 'text-main' : 'text-gray-400'">
-              {{ s === 1 ? 'Motivo' : s === 2 ? 'Evidencia' : 'Confirmación' }}
-            </span>
+            <span class="hidden text-xs font-medium sm:block" [ngClass]="step === i + 1 ? 'text-main' : 'text-gray-400'">{{ nombre }}</span>
           </div>
           <div *ngIf="!last" class="h-px flex-1 bg-olive-20"></div>
         </ng-container>
       </div>
 
-      <!-- STEP 1: Motivo -->
+      <!-- PASO 1: ¿Qué devuelves? -->
       <div *ngIf="step === 1" class="mt-6 space-y-4">
-        <p class="text-sm font-semibold text-main">¿Cuál es el motivo de la devolución?</p>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm font-semibold text-main">¿Qué devuelves?</p>
+          <div class="flex gap-2">
+            <ui-button variant="secondary" size="sm" (pressed)="devolverTodo()" [disabled]="esTodoElPedido">Todo el pedido</ui-button>
+            <ui-button variant="ghost" size="sm" (pressed)="quitarTodo()" [disabled]="totalUnidades === 0">Quitar todo</ui-button>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500">No tienes que regresar todo: marca solo lo que quieres devolver y cuántas unidades.</p>
+
+        <div *ngFor="let item of items" class="flex items-center justify-between gap-3 rounded-2xl border p-4 transition-colors"
+          [ngClass]="cantidadDe(item) > 0 ? 'border-main bg-main/5' : 'border-olive-20 bg-white/60'">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-semibold text-main">{{ item.name }}</p>
+            <p class="mt-0.5 text-xs text-gray-500">Compraste {{ item.quantity }} · {{ formatMoney(netoUnitario(item)) }} c/u con tu descuento</p>
+          </div>
+          <ui-qty-stepper [qty]="cantidadDe(item)" [min]="0" [max]="item.quantity" [itemLabel]="item.name"
+            (qtyChange)="setCantidad(item, $event)"></ui-qty-stepper>
+        </div>
+
+        <div *ngIf="totalUnidades > 0" class="rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 text-xs text-main">
+          Devuelves <strong>{{ totalUnidades }}</strong> {{ totalUnidades === 1 ? 'unidad' : 'unidades' }}{{ esTodoElPedido ? ' (todo el pedido)' : '' }}.
+          Por los productos te regresamos <strong>{{ formatMoney(productosEstimado) }}</strong>; el envío depende del motivo (siguiente paso).
+        </div>
+
+        <div class="flex justify-end">
+          <ui-button variant="primary" size="md" [disabled]="!canProceedStep1" (pressed)="nextStep()">
+            Siguiente
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </ui-button>
+        </div>
+        <p *ngIf="!canProceedStep1" class="text-right text-xs text-gray-500">Elige al menos una unidad para continuar.</p>
+      </div>
+
+      <!-- PASO 2: Motivo -->
+      <div *ngIf="step === 2" class="mt-6 space-y-4">
+        <p class="text-sm font-semibold text-main">¿Por qué lo devuelves?</p>
 
         <div *ngFor="let m of motivos"
           class="cursor-pointer rounded-2xl border p-4 transition-colors"
           [ngClass]="motivo === m.value ? 'border-main bg-main/5' : 'border-olive-20 bg-white/60 hover:border-main/40'"
-          (click)="motivo = m.value">
+          (click)="seleccionarMotivo(m.value)">
           <div class="flex items-start gap-3">
             <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border"
               [ngClass]="motivo === m.value ? 'border-main bg-main' : 'border-olive-30 bg-white'">
@@ -92,93 +215,25 @@
             <div>
               <p class="text-sm font-semibold text-main">{{ m.label }}</p>
               <p class="mt-0.5 text-xs text-gray-500">{{ m.hint }}</p>
+              <p class="mt-1 text-xs text-gray-600"><i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>{{ m.plazo }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Time policy info -->
-        <div *ngIf="motivo" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-          <ng-container *ngIf="motivo !== 'DESISTIMIENTO'">
-            <i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>
-            Aplica dentro de las <strong>48 horas</strong> posteriores a la entrega.
-          </ng-container>
-          <ng-container *ngIf="motivo === 'DESISTIMIENTO'">
-            <i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>
-            Aplica dentro de los <strong>7 días</strong> posteriores a la entrega.
-            El costo de envío de la devolución corre a tu cargo.
-          </ng-container>
+        <div *ngIf="motivoActual as m" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 space-y-1">
+          <p><i class="fa-solid fa-truck mr-1" aria-hidden="true"></i>{{ m.envio }}</p>
+          <p><i class="fa-solid fa-camera mr-1" aria-hidden="true"></i>{{ m.evidencia }}</p>
         </div>
 
         <ui-form-field
           kind="textarea"
           [rows]="3"
           name="descripcion"
-          label="Descripción adicional (opcional)"
+          label="Cuéntanos qué pasó (opcional)"
           [(ngModel)]="descripcion"
-          placeholder="Describe el problema con más detalle…"
+          placeholder="Ej. La tapa del bote llegó rota y se salió el polvo."
           inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-4 py-2.5 text-sm text-main focus:outline-none"
         ></ui-form-field>
-
-        <div class="flex justify-end">
-          <ui-button variant="primary" size="md" [disabled]="!canProceedStep1" (pressed)="nextStep()">
-            Siguiente
-            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-          </ui-button>
-        </div>
-      </div>
-
-      <!-- STEP 2: Evidence -->
-      <div *ngIf="step === 2" class="mt-6 space-y-5">
-        <p class="text-sm font-semibold text-main">Sube la evidencia requerida</p>
-        <p class="text-xs text-gray-500">Se requieren los tres tipos de fotos para continuar. Acepta JPG, PNG o PDF.</p>
-
-        <!-- Fotos producto -->
-        <div>
-          <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
-            <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
-              [ngClass]="fotosProducto.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
-              <i [class]="fotosProducto.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-camera'" aria-hidden="true"></i>
-            </span>
-            Fotos del producto <span class="text-red-500">*</span>
-          </label>
-          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
-            <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('producto', $event)" />
-            <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
-            <span>{{ fotosProductoNames.length > 0 ? fotosProductoNames.join(', ') : 'Seleccionar fotos del producto…' }}</span>
-          </label>
-        </div>
-
-        <!-- Fotos empaque -->
-        <div>
-          <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
-            <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
-              [ngClass]="fotosEmpaque.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
-              <i [class]="fotosEmpaque.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-box'" aria-hidden="true"></i>
-            </span>
-            Fotos del empaque <span class="text-red-500">*</span>
-          </label>
-          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
-            <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('empaque', $event)" />
-            <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
-            <span>{{ fotosEmpaqueNames.length > 0 ? fotosEmpaqueNames.join(', ') : 'Seleccionar fotos del empaque…' }}</span>
-          </label>
-        </div>
-
-        <!-- Fotos guía de envío -->
-        <div>
-          <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
-            <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
-              [ngClass]="fotosGuia.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
-              <i [class]="fotosGuia.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-file-lines'" aria-hidden="true"></i>
-            </span>
-            Fotos de la guía de envío <span class="text-red-500">*</span>
-          </label>
-          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
-            <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('guia', $event)" />
-            <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
-            <span>{{ fotosGuiaNames.length > 0 ? fotosGuiaNames.join(', ') : 'Seleccionar fotos de la guía…' }}</span>
-          </label>
-        </div>
 
         <div class="flex gap-3">
           <ui-button variant="ghost" size="md" (pressed)="prevStep()">
@@ -192,36 +247,143 @@
         </div>
       </div>
 
-      <!-- STEP 3: Confirm -->
-      <div *ngIf="step === 3" class="mt-6 space-y-4">
-        <p class="text-sm font-semibold text-main">Confirmar solicitud de devolución</p>
+      <!-- PASO 3: Evidencia según el motivo -->
+      <div *ngIf="step === 3" class="mt-6 space-y-5">
+        <!-- Desistimiento: una sola foto del paquete cerrado -->
+        <ng-container *ngIf="esDesistimiento">
+          <p class="text-sm font-semibold text-main">Una foto del paquete cerrado</p>
+          <p class="text-xs text-gray-500">Como no abriste el paquete, solo necesitamos una foto donde se vea que sigue cerrado y la guía de envío pegada. Acepta JPG, PNG o PDF.</p>
+          <div>
+            <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+              <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+                [ngClass]="archivos.fotos_paquete_cerrado.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+                <i [class]="archivos.fotos_paquete_cerrado.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-box'" aria-hidden="true"></i>
+              </span>
+              Foto del paquete cerrado con la guía visible <span class="text-red-500">*</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+              <input type="file" accept="image/*,.pdf" class="sr-only" (change)="onFilesChange('fotos_paquete_cerrado', $event)" />
+              <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+              <span>{{ nombres.fotos_paquete_cerrado.length > 0 ? nombres.fotos_paquete_cerrado.join(', ') : 'Elegir la foto…' }}</span>
+            </label>
+          </div>
+        </ng-container>
+
+        <!-- Daño o error: producto, empaque y guía -->
+        <ng-container *ngIf="!esDesistimiento">
+          <p class="text-sm font-semibold text-main">Tres fotos para revisar tu caso</p>
+          <p class="text-xs text-gray-500">Del producto (donde se vea el daño o el producto equivocado), del empaque y de la guía de envío. Acepta JPG, PNG o PDF.</p>
+
+          <div>
+            <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+              <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+                [ngClass]="archivos.fotos_producto.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+                <i [class]="archivos.fotos_producto.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-camera'" aria-hidden="true"></i>
+              </span>
+              Fotos del producto <span class="text-red-500">*</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+              <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('fotos_producto', $event)" />
+              <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+              <span>{{ nombres.fotos_producto.length > 0 ? nombres.fotos_producto.join(', ') : 'Elegir fotos del producto…' }}</span>
+            </label>
+          </div>
+
+          <div>
+            <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+              <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+                [ngClass]="archivos.fotos_empaque.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+                <i [class]="archivos.fotos_empaque.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-box'" aria-hidden="true"></i>
+              </span>
+              Fotos del empaque <span class="text-red-500">*</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+              <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('fotos_empaque', $event)" />
+              <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+              <span>{{ nombres.fotos_empaque.length > 0 ? nombres.fotos_empaque.join(', ') : 'Elegir fotos del empaque…' }}</span>
+            </label>
+          </div>
+
+          <div>
+            <label class="mb-2 flex items-center gap-2 text-sm font-semibold text-main">
+              <span class="grid h-6 w-6 place-items-center rounded-full text-xs"
+                [ngClass]="archivos.fotos_guia_envio.length > 0 ? 'bg-green-100 text-green-700' : 'bg-olive-10 text-gray-400'">
+                <i [class]="archivos.fotos_guia_envio.length > 0 ? 'fa-solid fa-check' : 'fa-solid fa-file-lines'" aria-hidden="true"></i>
+              </span>
+              Foto de la guía de envío <span class="text-red-500">*</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-olive-30 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-main hover:text-main transition-colors">
+              <input type="file" accept="image/*,.pdf" multiple class="sr-only" (change)="onFilesChange('fotos_guia_envio', $event)" />
+              <i class="fa-solid fa-paperclip text-xs" aria-hidden="true"></i>
+              <span>{{ nombres.fotos_guia_envio.length > 0 ? nombres.fotos_guia_envio.join(', ') : 'Elegir foto de la guía…' }}</span>
+            </label>
+          </div>
+        </ng-container>
+
+        <div class="flex gap-3">
+          <ui-button variant="ghost" size="md" (pressed)="prevStep()">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            Atrás
+          </ui-button>
+          <ui-button variant="primary" size="md" [disabled]="!canProceedStep3" (pressed)="nextStep()">
+            Siguiente
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </ui-button>
+        </div>
+        <p *ngIf="!canProceedStep3" class="text-xs text-gray-500">{{ esDesistimiento ? 'Falta la foto del paquete cerrado.' : 'Faltan fotos: necesitamos las tres para continuar.' }}</p>
+      </div>
+
+      <!-- PASO 4: Tu reembolso y confirmación -->
+      <div *ngIf="step === 4" class="mt-6 space-y-4">
+        <p class="text-sm font-semibold text-main">Así queda tu devolución</p>
 
         <div class="rounded-2xl border border-olive-20 bg-white/60 p-4 space-y-3 text-sm">
-          <div class="flex justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">{{ esTodoElPedido ? 'Devuelves el pedido completo' : 'Devuelves' }}</p>
+            <ul class="mt-1 space-y-0.5">
+              <li *ngFor="let l of lineasSeleccionadas" class="flex justify-between gap-3">
+                <span class="text-main">{{ l.quantity }} × {{ l.item.name }}</span>
+                <span class="font-semibold text-main">{{ formatMoney(netoUnitario(l.item) * l.quantity) }}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="flex justify-between gap-4 border-t border-olive-20 pt-3">
             <span class="text-gray-500">Motivo</span>
             <span class="font-semibold text-main">{{ motivoLabel }}</span>
           </div>
           <div class="flex justify-between gap-4">
             <span class="text-gray-500">Evidencia</span>
-            <span class="font-semibold text-main">{{ fotosProducto.length + fotosEmpaque.length + fotosGuia.length }} archivo(s)</span>
+            <span class="font-semibold text-main">{{ totalArchivos }} archivo(s)</span>
           </div>
           <div class="flex justify-between gap-4">
-            <span class="text-gray-500">Costo de envío devolución</span>
-            <span [ngClass]="shippingResponsibility === 'empresa' ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'">
-              {{ shippingResponsibility === 'empresa' ? 'A cargo de la empresa' : 'A cargo del cliente' }}
+            <span class="text-gray-500">Envío de regreso</span>
+            <span [ngClass]="empresaPaga ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'">
+              {{ empresaPaga ? 'Lo pagamos nosotros' : 'Corre por tu cuenta' }}
             </span>
           </div>
-          <div *ngIf="shippingResponsibility === 'empresa'" class="border-t border-olive-20 pt-3">
+          <div *ngIf="empresaPaga" class="border-t border-olive-20 pt-3">
             <ui-form-field
-              type="text"
+              type="number"
+              [min]="0"
               name="returnShippingCost"
               label="Si ya pagaste el envío de regreso, ¿cuánto te costó? (opcional)"
               placeholder="Ej. 165"
+              helpText="Te lo sumamos al reembolso. Guarda el ticket de la paquetería por si te lo pedimos."
               [ngModel]="returnShippingCost"
               (ngModelChange)="returnShippingCost = $event">
             </ui-form-field>
-            <p class="mt-1 text-xs text-gray-500">Te lo reembolsamos junto con el producto. Guarda el ticket de la paquetería por si te lo pedimos.</p>
           </div>
+        </div>
+
+        <div class="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <p class="text-xs font-semibold tracking-wide uppercase">Te devolvemos</p>
+          <p class="mt-1 text-2xl font-extrabold">{{ formatMoney(reembolsoEstimado) }}</p>
+          <div class="mt-1 space-y-0.5 text-xs">
+            <div class="flex justify-between"><span>Los productos que regresas, con tu descuento</span><span>{{ formatMoney(productosEstimado) }}</span></div>
+            <div *ngIf="envioRegresoEstimado > 0" class="flex justify-between"><span>Envío de regreso (porque el motivo es nuestro)</span><span>{{ formatMoney(envioRegresoEstimado) }}</span></div>
+            <div *ngIf="envioOriginalEstimado > 0" class="flex justify-between"><span>Envío original (devuelves todo el pedido)</span><span>{{ formatMoney(envioOriginalEstimado) }}</span></div>
+          </div>
+          <p class="mt-2 text-xs">Al <strong>{{ medioPorOmision }}</strong> con el que compraste, en <strong>{{ plazoPorOmision }} días hábiles</strong> después de que validemos el paquete. La cifra final te la confirmamos al registrar la solicitud.</p>
         </div>
 
         <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -229,13 +391,13 @@
         </div>
 
         <div class="flex gap-3">
-          <ui-button variant="ghost" size="md" (pressed)="prevStep()">
+          <ui-button variant="ghost" size="md" (pressed)="prevStep()" [disabled]="isSubmitting">
             <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
             Atrás
           </ui-button>
           <ui-button variant="primary" size="md" [disabled]="isSubmitting" (pressed)="submit()">
             <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-            {{ isSubmitting ? 'Enviando…' : 'Enviar solicitud' }}
+            {{ isSubmitting ? 'Enviando…' : 'Confirmar devolución' }}
           </ui-button>
         </div>
       </div>
