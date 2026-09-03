@@ -36,9 +36,19 @@ El primer intento se perdió con un reinicio del contenedor (dos navegadores abi
 - El tablero ya avisa "4 pedidos pagados sin envío (Importante)"; falta la antigüedad de cada uno (propuesta 5.1 de la ronda 3, parcialmente cubierta).
 - Recibió "comisión de $60 en camino" por el pedido que Memo canceló minutos después y ningún aviso de que se anuló. Corregido: correo "Comisión anulada" con el motivo al anular filas pendientes o confirmadas.
 
-### 2.4 Ola en curso
+### 2.4 Activarse "comprando lo que usas" y la comisión que desapareció (Bety, 12-dic)
 
-_(Bety: compra para activarse y busca su comisión de noviembre desaparecida.)_
+Verónica le pide a Bety que se active en diciembre; Bety además quiere saber por qué su comisión de noviembre por la compra de Lupita ya no aparece.
+
+- Noviembre en su panel: "Sin movimientos este mes" y tres correos idénticos "Guadalupe compró: comisión de $138.60 en camino" (el duplicado ya corregido) sin ningún aviso posterior. **Hueco**: la validación de la devolución de Lupita borró la fila del ledger; al rechazarse después la devolución, la comisión ya no existía. Corregido en dos partes: las filas anuladas se conservan como "Anulada" (estado previo, fecha y motivo, fuera de los totales) y el patrocinador recibe "Comisión anulada" con el motivo (§2.3).
+- Compró Colágeno + Longevit: $1,090, 10% de descuento, envío $129, total $1,110 (verificado). El catálogo anuncia 13 + 7 = 20 PC, pero la activación cuenta VP netos: 18. **No quedó activa por 2 VP** comprando justo lo recomendado. El carrito ya mostraba "18 VP" pero sin relacionarlo con la meta. Corregido: aviso "con este pedido llegas a 18 de 20 VP" también sin cupón. Hallazgo de negocio en §4.
+- El envío se cobró porque el mínimo de envío gratis ($1,000) se mide sobre el total con descuento ($981). Regla válida, pero nadie la explica (§4).
+- El endpoint mensual devolvía 19.6 VP (pesos ÷ 50) mientras la activación usa 18 (PC netos). Corregido: un solo valor.
+- Su panel muestra a Lupita "Inactiva" y el aviso de compresión dinámica ya existente.
+
+### 2.5 Ola en curso
+
+_(Patricia: cupón `DIC50` con mínimo y tope, compra bajo la patrocinadora reasignada.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -49,12 +59,17 @@ _(Bety: compra para activarse y busca su comisión de noviembre desaparecida.)_
 | 3 | Media | Panel del socio | "Agregar a carrito" sumaba una unidad de más a la cantidad tecleada | Cantidad como borrador |
 | 4 | Baja | Carrito | Niveles de descuento con nombres que no cuadran con el plan ("Nivel base" = 20%) | Niveles 1–4 = 10/20/30/40% |
 | 5 | Media | Correos | Una comisión anunciada se anulaba sin aviso al patrocinador | Correo "Comisión anulada" con motivo |
+| 6 | Media | Ledger | Las comisiones anuladas se borraban del mes: "Sin movimientos" donde hubo una comisión avisada | Filas "Anulada" con estado previo, fecha y motivo; fuera de los totales |
+| 7 | Baja | Comisiones | El endpoint mensual derivaba VP de pesos ÷ tarifa; la activación usa PC netos | Un solo cálculo |
+| 8 | Baja | Carrito | Nadie avisaba que los VP netos de la compra no alcanzan la activación | Aviso "llegas a X de 20 VP" sin cupón |
 
 ## 4. Hallazgos de negocio
 
 1. El descuento por tramo se explica en tres lugares con tres vocabularios (metas del panel, carrito, POS). Propuesta: una sola tabla "Tu descuento este mes" visible en panel y carrito, con el tramo actual, el siguiente y cuánto falta.
 2. La cancelación de un pedido pagado promete reembolso sin plazo ni medio. Propuesta: "al mismo medio de pago, en 3 a 5 días hábiles" en pantalla y correo, y correo al salir.
 3. Las campañas no tienen vigencia. Propuesta: fecha de inicio y fin, activación automática y aviso al vencer.
+5. El catálogo anuncia PC brutos y la activación cuenta VP netos (con descuento): comprar "20 PC" deja 18 VP. Propuesta: o la activación cuenta PC brutos (más simple de explicar) o el catálogo muestra "VP con tu descuento actual".
+6. El mínimo de envío gratis se mide sobre el total con descuento: $1,090 de catálogo pagan envío. Propuesta: medirlo sobre el subtotal, o decirlo en el carrito ("te faltan $19 después del descuento").
 4. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
 
 ## 5. Pendiente
