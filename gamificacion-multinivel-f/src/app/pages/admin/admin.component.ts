@@ -3488,13 +3488,15 @@ export class AdminComponent implements OnInit {
     if (!this.canCancelOrder(order) || this.updatingOrderIds.has(order.id)) {
       return;
     }
-    const aviso = order.status === 'paid' ? ' El pago quedará pendiente de reembolso.' : '';
-    if (!confirm(`¿Cancelar el pedido ${order.id} de ${order.customer}?${aviso}`)) {
+    const aviso = order.status === 'paid' ? ' El pago quedará pendiente de reembolso.' : ' Este pedido no se ha pagado.';
+    // Antes era un confirm sin motivo y quedaba "admin_request" en el registro.
+    const motivo = prompt(`¿Cancelar el pedido ${order.id} de ${order.customer}?${aviso}\nMotivo (queda en el pedido y en el aviso al cliente):`, '');
+    if (motivo === null) {
       return;
     }
     this.updatingOrderIds.add(order.id);
     this.adminControl
-      .cancelOrder(order.id, 'admin_request')
+      .cancelOrder(order.id, motivo.trim() || 'admin_request')
       .pipe(
         finalize(() => {
           this.updatingOrderIds.delete(order.id);
@@ -3833,14 +3835,29 @@ export class AdminComponent implements OnInit {
 
   refundAmount = '';
 
+  /** Monto sugerido: en arrepentimiento no se devuelve el envío (la gerente lo corregía a mano). */
+  private suggestedRefundFor(o: AdminOrder): number {
+    const arrepentimiento = (o.returnInspection?.motivo || '').toUpperCase() === 'DESISTIMIENTO';
+    const base = arrepentimiento ? (o.total || 0) - (o.shippingCost || 0) : (o.total || 0) + (o.returnShippingCost || 0);
+    return this.roundMoney(Math.max(0, base));
+  }
+
   get refundSuggestedAmount(): number {
     const o = this.refundTargetOrder;
-    return o ? this.roundMoney((o.total || 0) + (o.returnShippingCost || 0)) : 0;
+    return o ? this.suggestedRefundFor(o) : 0;
+  }
+
+  get refundSuggestedHint(): string {
+    const o = this.refundTargetOrder;
+    if (!o) return '';
+    return (o.returnInspection?.motivo || '').toUpperCase() === 'DESISTIMIENTO'
+      ? 'Arrepentimiento: se sugiere solo el producto; el envío no se reembolsa.'
+      : 'Se sugiere el total cobrado más el envío de regreso si el cliente lo pagó.';
   }
 
   openRefundModal(order: AdminOrder): void {
     this.refundTargetOrder = order;
-    this.refundAmount = String(this.roundMoney((order.total || 0) + (order.returnShippingCost || 0)));
+    this.refundAmount = String(this.suggestedRefundFor(order));
     this.refundReceiptBase64 = '';
     this.refundReceiptName = '';
     this.refundReason = '';

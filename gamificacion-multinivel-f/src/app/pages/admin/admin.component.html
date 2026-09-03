@@ -392,6 +392,9 @@
                               <span class="font-semibold">Motivo cancelación:</span> {{ order.cancelReason }}
                               <span *ngIf="order.cancelledAt"> · {{ order.cancelledAt | date:'dd/MM/yyyy HH:mm' }}</span>
                             </div>
+                            <div *ngIf="order.status === 'refunded' && order.refundAmount != null" class="mt-2 rounded-lg border border-olive-30 bg-ivory-70 px-2 py-1.5 text-xs text-main">
+                              <span class="font-semibold">Reembolsado:</span> {{ formatMoney(order.refundAmount) }}<span *ngIf="order.refundReason"> · {{ order.refundReason }}</span>
+                            </div>
                             <!-- Devolución -->
                             <div *ngIf="order.returnRequestId" class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
                               <i class="fa-solid fa-rotate-left mr-1" aria-hidden="true"></i>
@@ -4128,7 +4131,7 @@
         [(ngModel)]="refundAmount"></ui-form-field>
       <div class="mt-1 text-xs text-gray-600">
         Cobrado: {{ formatMoney(refundTargetOrder?.total || 0) }}<span *ngIf="refundTargetOrder?.shippingCost"> (incluye envío {{ formatMoney(refundTargetOrder?.shippingCost || 0) }})</span><span *ngIf="refundTargetOrder?.returnShippingCost"> · el cliente pagó {{ formatMoney(refundTargetOrder?.returnShippingCost || 0) }} por el envío de regreso</span>.
-        Sugerido: {{ formatMoney(refundSuggestedAmount) }}.
+        Sugerido: {{ formatMoney(refundSuggestedAmount) }}. {{ refundSuggestedHint }}
       </div>
     </div>
     <div>

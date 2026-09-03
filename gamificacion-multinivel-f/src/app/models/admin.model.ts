@@ -58,6 +58,7 @@ export interface AdminOrder {
   /** Envío de regreso que el cliente declaró en su devolución. */
   returnShippingCost?: number;
   refundAmount?: number;
+  refundReason?: string;
   /** Notas internas del back office; solo se añaden. */
   adminNotes?: Array<{ text: string; by: string; at: string }>;
   returnRequestId?: string;
