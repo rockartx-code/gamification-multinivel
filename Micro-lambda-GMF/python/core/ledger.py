@@ -48,6 +48,7 @@ def _recalc_ledger_totals(item: dict) -> dict:
         st = r.get("status")
         if st == "confirmed": tc += amt
         elif st == "blocked": tb += amt
+        elif st == "voided": continue  # tachada: se ve, no suma
         else: tp += amt
     item.update({"totalPending": tp, "totalConfirmed": tc, "totalBlocked": tb,
                  "updatedAt": _now_iso()})
@@ -318,20 +319,25 @@ def _add_ledger_row(beneficiary_id, month_key, fila: dict) -> None:
     campo_total = {
         "confirmed": "totalConfirmed",
         "blocked": "totalBlocked",
+        "voided": None,  # tachada: no suma en ningún total
     }.get(estado, "totalPending")
 
     anterior = db._table.get_item(Key={"PK": pk, "SK": _ledger_row_sk(row_id)}).get("Item")
     db._table.put_item(Item={"PK": pk, "SK": _ledger_row_sk(row_id), **fila})
 
-    deltas = {campo_total: importe}
+    deltas = {campo_total: importe} if campo_total else {}
     if anterior:
         # Reescritura de una fila existente: se descuenta su aporte previo.
         campo_previo = {
             "confirmed": "totalConfirmed",
             "blocked": "totalBlocked",
+            "voided": None,
         }.get(anterior.get("status") or "pending", "totalPending")
-        deltas[campo_previo] = deltas.get(campo_previo, D_ZERO) - _to_decimal(anterior.get("amount"))
+        if campo_previo:
+            deltas[campo_previo] = deltas.get(campo_previo, D_ZERO) - _to_decimal(anterior.get("amount"))
 
+    if not deltas:
+        deltas = {"totalPending": D_ZERO}
     expresion = "ADD " + ", ".join(f"{campo} :{campo}" for campo in deltas)
     db._table.update_item(
         Key={"PK": pk, "SK": LEDGER_HEADER_SK},
