@@ -1046,7 +1046,11 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
     # al socio con VP negativo (Verónica quedó en -14.6 VP tras cancelar un
     # carrito de $1,952 que nunca pagó). Pedidos anteriores a la marca
     # rewardsAppliedAt se reconocen por su evidencia de pago.
-    fue_acreditado = bool(order.get("rewardsAppliedAt") or order.get("paidAt") or order.get("paymentId")
+    # Un reembolso o una devolución solo existen sobre pedidos pagados; la
+    # cancelación desde 'paid' deja pendingRefund. Solo la cancelación de un
+    # pedido que nunca se pagó queda fuera.
+    fue_acreditado = bool(reason != "order_cancelled" or order.get("rewardsAppliedAt") or order.get("paidAt")
+                          or order.get("paymentId") or order.get("pendingRefund") or order.get("refundedAt")
                           or order.get("branchSaleId") or order.get("cashSaleId")
                           or (order.get("paymentStatus") or "").lower() in ("paid", "paid_branch"))
     if _es_comprador_registrado(order) and fue_acreditado and not order.get("rewardsVoidedAt"):

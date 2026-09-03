@@ -118,6 +118,20 @@ def test_cancelar_un_pedido_nunca_pagado_no_resta_volumen(modulos, utils):
     assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
 
 
+def test_una_devolucion_de_un_pedido_viejo_sin_marcas_si_resta_volumen(modulos, utils):
+    """Pedidos pagados antes de que existiera rewardsAppliedAt/paidAt: una
+    devolución validada debe restar el volumen igual (no es una cancelación)."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    utils._update_by_id("ORDER", oid, "REMOVE rewardsAppliedAt, paidAt", {})
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_RETURNED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+
 def test_la_pasarela_cobra_el_total_con_descuento(modulos, utils, monkeypatch):
     """Regresión: la preferencia de MercadoPago llevaba precios de lista; el
     socio veía Total $1,137 y pagaba $1,249."""
