@@ -102,7 +102,7 @@ def _compute_order_vp(order: dict, mxn_per_vp: float) -> float:
 # `_get_by_id` (1-3 GetItem). Estos mapas viven mientras dura la invocación del
 # Lambda y se vacían al empezar cada acción para no arrastrar datos entre
 # eventos distintos de un mismo contenedor tibio.
-_CACHE: dict = {"customers": {}, "states": {}, "children": {}, "vg": {}}
+_CACHE: dict = {"customers": {}, "states": {}, "children": {}, "vg": {}, "activos_forzados": set()}
 
 
 def _reset_request_cache() -> None:
@@ -110,6 +110,9 @@ def _reset_request_cache() -> None:
     _CACHE["states"] = {}
     _CACHE["children"] = {}
     _CACHE["vg"] = {}
+    # Paquete A: `(cliente, mes)` que se consideran activos aunque el mes no lo
+    # diga (gracia `blockedGraceDays`: la activación de este mes libera el anterior).
+    _CACHE["activos_forzados"] = set()
 
 
 def _cached_customer(customer_id) -> dict:
@@ -278,6 +281,8 @@ def _compute_rank(customer_id: str, month_key: str, vp: float, vg: float,
 
 def _is_active(customer_id: str, month_key: str, mxn_per_vp: float, activation_vp: float) -> bool:
     """Activo = acumuló al menos `activation_vp` PC netos personales en el mes (Plan §3)."""
+    if (utils._customer_id_str(customer_id), month_key) in _CACHE.get("activos_forzados", set()):
+        return True
     return _calc_vp(customer_id, month_key, mxn_per_vp) >= activation_vp
 
 def _count_active_directs(customer_id: str, month_key: str, mxn_per_vp: float, activation_vp: float) -> int:
@@ -846,6 +851,22 @@ def handle_apply_rewards(order_id):
     if se_activo and cfg.get("reevaluateBlockedOnActivation", True):
         chain = utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
         _reevaluate_blocked_rows([str(buyer_id), *chain], month_key)
+        # Gracia (política 22, opción a; apagada por omisión): si se activó en
+        # los primeros N días del mes, lo bloqueado del mes anterior también se
+        # recalcula, contándola como activa en ese mes.
+        gracia = int(utils._to_decimal(cfg.get("blockedGraceDays", 0)))
+        dia_hoy = int(utils._now_iso()[8:10])
+        if gracia > 0 and dia_hoy <= gracia:
+            mes_anterior = pagos_handlers._mes_anterior(month_key)
+            _CACHE["activos_forzados"].add((utils._customer_id_str(buyer_id), mes_anterior))
+            _reevaluate_blocked_rows([str(buyer_id), *chain], mes_anterior)
+
+    # 4. Primera activación sin CLABE: se le pide desde ya, no el día de pago.
+    if se_activo and cfg.get("clabeReminderOnActivation", True):
+        try:
+            pagos_handlers.avisar_clabe_al_activarse(buyer_id)
+        except Exception as e:  # pragma: no cover
+            utils._log("clabe_reminder_error", "ERROR", buyer=buyer_id, err=e)
 
 def handle_confirm_commissions(order_id):
     """Acción: ORDER_DELIVERED. Cambia 'pending' -> 'confirmed' y evalúa bonos."""
@@ -855,6 +876,13 @@ def handle_confirm_commissions(order_id):
     chain     = _get_upline_chain(order['customerId'])
 
     _confirm_order_rows(order_id, month_key, chain)
+
+    # Primera comisión confirmada del mes sin CLABE: aviso (uno por mes).
+    for b_id in chain:
+        try:
+            pagos_handlers.avisar_clabe_por_comision_confirmada(b_id, month_key, order_id)
+        except Exception as e:  # pragma: no cover
+            utils._log("clabe_reminder_error", "ERROR", beneficiary=b_id, err=e)
 
     # Evaluar bonos para el comprador y su upline al confirmar entrega
     buyer_id = str(order.get("customerId", ""))
@@ -900,52 +928,58 @@ def handle_admin_receipt_revert(body):
         return utils._json_response(409, {"message": "Ese mes no está marcado como pagado."})
     now = utils._now_iso()
     anulados = 0
+    lotes = []
     for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=month_key):
         if str(r.get("customerId")) == str(cid) and str(r.get("monthKey")) == str(month_key) and r.get("status") == "paid":
             utils._update_by_id("COMMISSION_RECEIPT", r.get("receiptId"), "SET #s = :s, voidedAt = :t, voidReason = :r, updatedAt = :t",
                                 {":s": "voided", ":t": now, ":r": motivo}, {"#s": "status"})
             anulados += 1
+            # Un pago de lote se deshace fila por fila: las demás del lote no se tocan.
+            if r.get("batchId"):
+                lotes.append(str(r.get("batchId")))
     utils._table.update_item(
         Key={"PK": PK_MONTH, "SK": utils._ledger_sk(cid, month_key)},
         UpdateExpression="SET #s = :p, paymentRevertedAt = :now, paymentRevertReason = :r REMOVE paidAt ADD version :one",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":p": "IN_PROGRESS", ":now": now, ":r": motivo, ":one": utils._to_decimal(1)},
     )
-    utils._log("commission_payment_reverted", "INFO", customerId=cid, monthKey=month_key, receipts=anulados)
-    return utils._json_response(200, {"ok": True, "receiptsVoided": anulados, "status": "pending"})
+    utils._log("commission_payment_reverted", "INFO", customerId=cid, monthKey=month_key, receipts=anulados, batches=lotes)
+    return utils._json_response(200, {"ok": True, "receiptsVoided": anulados, "status": "pending",
+                                      "customerId": str(cid), "monthKey": month_key,
+                                      "batchId": lotes[0] if lotes else None})
 
-def handle_admin_receipt(body):
-    """POST /admin/commissions/receipt - Admin marca como pagado con comprobante"""
-    cid = body.get("customerId")
-    month_key = body.get("monthKey") or body.get("month")
-    name = body.get("name")
-    content_base64 = body.get("contentBase64")
-
-    if not cid or not month_key or not name or not content_base64:
-        return utils._json_response(400, {"message": "customerId, monthKey, name y contentBase64 son obligatorios"})
+def _validar_pago(cid, month_key, permitir_sin_clabe: bool = False):
+    """Reglas por fila antes de registrar un depósito: devuelve el código del
+    impedimento (`CLABE_REQUIRED`, `ALREADY_PAID`) o None si se puede pagar."""
     # El depósito va a la CLABE del socio: sin CLABE se dejaba marcar "Pagada"
     # sin transferencia real y no había forma de deshacerlo.
-    socio = utils._get_by_id("CUSTOMER", cid) or {}
-    if not str(socio.get("clabeInterbancaria") or "").strip() and not body.get("paidWithoutClabe"):
-        return utils._json_response(409, {"message": "El socio no tiene CLABE registrada: no se puede registrar el depósito. Pídesela y guárdala en su ficha.",
-                                          "code": "CLABE_REQUIRED"})
-    mes_actual = _get_ledger_month(cid, month_key)
-    if str(mes_actual.get("status") or "").upper() == "PAID":
-        return utils._json_response(409, {"message": "Ese mes ya está marcado como pagado.", "code": "ALREADY_PAID"})
+    socio = utils._get_by_id("CUSTOMER", utils._customer_entity_id(cid)) or {}
+    if not str(socio.get("clabeInterbancaria") or "").strip() and not permitir_sin_clabe:
+        return "CLABE_REQUIRED"
+    if str(_get_ledger_month(cid, month_key).get("status") or "").upper() == "PAID":
+        return "ALREADY_PAID"
+    return None
 
-    try:
-        asset = _upload_receipt_s3(name, content_base64, body.get("contentType") or "application/pdf", "comprobantes")
-    except ValueError:
-        return utils._json_response(400, {"message": "contentBase64 invalido"})
 
+def _registrar_pago(cid, month_key, asset: dict, batch_id=None, bank_reference=None) -> dict:
+    """Crea el COMMISSION_RECEIPT, marca el mes PAID y avisa el depósito.
+
+    Lo comparten el pago individual (`handle_admin_receipt`) y el lote
+    (`pagos_handlers.handle_pago_lote`): el archivo ya está subido cuando se
+    llega aquí, así que un lote sube el comprobante una sola vez.
+    """
     now = utils._now_iso()
     receipt_id = f"{cid}#{month_key}#{utils.uuid.uuid4()}"
     receipt_item = {
         "entityType": "commissionReceipt", "receiptId": receipt_id,
-        "customerId": int(cid), "monthKey": month_key,
+        "customerId": utils._customer_entity_id(cid), "monthKey": month_key,
         "assetId": asset.get("assetId"), "assetUrl": asset.get("url"),
         "status": "paid", "createdAt": now, "updatedAt": now,
     }
+    if batch_id:
+        receipt_item["batchId"] = batch_id
+    if bank_reference:
+        receipt_item["bankReference"] = bank_reference
     utils._put_entity("COMMISSION_RECEIPT", receipt_id, receipt_item, created_at_iso=now)
 
     # Marcar el mes contable como PAID
@@ -963,31 +997,56 @@ def handle_admin_receipt(body):
     except Exception as ex:
         utils._log_error("commission_month_mark_paid_failed", ex,
                          customerId=cid, monthKey=month_key)
-    # "Hoy es día de pago y de eso tampoco me entero si no me meto": aviso del depósito.
+    _avisar_deposito(cid, month_key, str(asset.get("url") or asset.get("assetUrl") or ""))
+    return receipt_item
+
+
+def _avisar_deposito(cid, month_key, enlace: str) -> None:
+    """"Hoy es día de pago y de eso tampoco me entero si no me meto": aviso del depósito."""
     try:
-        cliente = utils._get_by_id("CUSTOMER", cid) or {}
+        cliente = utils._get_by_id("CUSTOMER", utils._customer_entity_id(cid)) or {}
         para = str(cliente.get("email") or "").strip()
-        if para:
-            from core.email import _email_shell
-            nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
-            ledger = _get_ledger_month(cid, month_key)
-            monto = float(utils._to_decimal(ledger.get("totalConfirmed", 0)))
-            enlace = ""
-            try:
-                enlace = str((locals().get("asset") or {}).get("url") or (locals().get("asset") or {}).get("assetUrl") or "")
-            except Exception:
-                enlace = ""
-            comprobante = f'<p class="lead"><a class="btn" href="{enlace}">Ver comprobante</a></p>' if enlace else '<p class="lead">El comprobante lo tienes en tu panel, en Comisiones.</p>'
-            cuerpo = f"""
+        if not para:
+            return
+        from core.email import _email_shell
+        nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
+        ledger = _get_ledger_month(cid, month_key)
+        monto = float(utils._to_decimal(ledger.get("totalConfirmed", 0)))
+        comprobante = f'<p class="lead"><a class="btn" href="{enlace}">Ver comprobante</a></p>' if enlace else '<p class="lead">El comprobante lo tienes en tu panel, en Comisiones.</p>'
+        cuerpo = f"""
     <div class="icon">💸</div>
     <h1 class="title">Depositamos tus comisiones</h1>
     <p class="lead">Hola <strong>{nombre}</strong>. Ya está en camino a tu CLABE el depósito de tus comisiones confirmadas de {month_key}: <strong>${monto:,.2f}</strong>.</p>
     {comprobante}"""
-            utils._send_ses_email(para, f"Depositamos tus comisiones de {month_key}: ${monto:,.2f}",
-                                  f"Hola {nombre}. Depositamos tus comisiones confirmadas de {month_key}: ${monto:,.2f}. Comprobante en tu panel.",
-                                  _email_shell(cuerpo))
+        utils._send_ses_email(para, f"Depositamos tus comisiones de {month_key}: ${monto:,.2f}",
+                              f"Hola {nombre}. Depositamos tus comisiones confirmadas de {month_key}: ${monto:,.2f}. Comprobante en tu panel.",
+                              _email_shell(cuerpo))
     except Exception as e:  # pragma: no cover
         utils._log("payout_email_error", "ERROR", customer=cid, err=e)
+
+
+def handle_admin_receipt(body):
+    """POST /admin/commissions/receipt - Admin marca como pagado con comprobante"""
+    cid = body.get("customerId")
+    month_key = body.get("monthKey") or body.get("month")
+    name = body.get("name")
+    content_base64 = body.get("contentBase64")
+
+    if not cid or not month_key or not name or not content_base64:
+        return utils._json_response(400, {"message": "customerId, monthKey, name y contentBase64 son obligatorios"})
+    codigo = _validar_pago(cid, month_key, permitir_sin_clabe=bool(body.get("paidWithoutClabe")))
+    if codigo == "CLABE_REQUIRED":
+        return utils._json_response(409, {"message": "El socio no tiene CLABE registrada: no se puede registrar el depósito. Pídesela y guárdala en su ficha.",
+                                          "code": "CLABE_REQUIRED"})
+    if codigo == "ALREADY_PAID":
+        return utils._json_response(409, {"message": "Ese mes ya está marcado como pagado.", "code": "ALREADY_PAID"})
+
+    try:
+        asset = _upload_receipt_s3(name, content_base64, body.get("contentType") or "application/pdf", "comprobantes")
+    except ValueError:
+        return utils._json_response(400, {"message": "contentBase64 invalido"})
+
+    receipt_item = _registrar_pago(cid, month_key, asset)
     return utils._json_response(201, {"receipt": receipt_item, "asset": asset})
 
 
@@ -1334,11 +1393,19 @@ def handle_commissions_summary(peticion) -> dict:
             continue
         confirmado = float(utils._to_decimal(item.get("totalConfirmed", 0)))
         recibo = recibos_por_cliente.get(beneficiario, "")
+        if confirmado <= 0:
+            estado = "no_moves"
+        elif recibo:
+            estado = "paid"
+        else:
+            # Paquete A: la ficha y la lista distinguen "sin CLABE" de "pendiente".
+            ficha = utils._get_by_id("CUSTOMER", utils._customer_entity_id(beneficiario)) or {}
+            estado = "pending" if str(ficha.get("clabeInterbancaria") or "").strip() else "sin_clabe"
         resumen[beneficiario] = {
             "customerId": beneficiario,
             "monthKey": month,
             "paidTotal": confirmado,
-            "status": "no_moves" if confirmado <= 0 else ("paid" if recibo else "pending"),
+            "status": estado,
             "receiptUrl": recibo,
         }
     return utils._json_response(200, {"summary": resumen, "monthKey": month})
@@ -1498,3 +1565,9 @@ def lambda_handler(event, context):
         RUTAS, event, strip_prefix="commissions", servicio="commissions",
         requiere_privilegio=utils._require_admin,
     )
+
+
+# --- Paquete A · pagos-comisiones -------------------------------------------
+import pagos_handlers                      # paquete A
+RUTAS.extend(pagos_handlers.RUTAS)         # paquete A
+TAREAS_PROGRAMADAS = pagos_handlers.TAREAS_PROGRAMADAS   # paquete A

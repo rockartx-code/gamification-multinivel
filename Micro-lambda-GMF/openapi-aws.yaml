@@ -2341,6 +2341,122 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete A · pagos-comisiones ─────────────────────────────────────────────
+  # Rutas del módulo `pagos_handlers.py` colgadas de commissions_lambda.
+  /commissions/pagos:
+    get:
+      summary: "Pagos del mes: beneficiarias con monto confirmado, CLABE enmascarada y estado"
+      description: |
+        Privilegio `commissions_register_payment`. `?month=YYYY-MM` (por omisión el mes anterior).
+        Devuelve `{monthKey, rows:[{customerId, name, email, phone, amount, clabeMasked, bankInstitution,
+        status: listo|sin_clabe|pagado, receiptUrl, paidAt, batchId}], totals:{listo, sinClabe, pagado}}`.
+        400 si el mes no tiene la forma AAAA-MM.
+      operationId: commissionsPagosMes
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Estado de pago por beneficiaria"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/dispersion.csv:
+    get:
+      summary: "Archivo de dispersión bancaria (CSV) con las comisiones listas para depositar"
+      description: |
+        Privilegio `commissions_register_payment`. `text/csv; charset=utf-8`, columnas
+        `CLABE,Beneficiario,Monto,Concepto,Referencia,Email`; solo filas `listo`, CLABE completa.
+      operationId: commissionsDispersionCsv
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "CSV para el banco"
+          content:
+            text/csv: {}
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/lote:
+    post:
+      summary: "Registrar pago por lote: un comprobante, N beneficiarias marcadas como pagadas"
+      description: |
+        Privilegio `commissions_register_payment`. Body
+        `{monthKey, customerIds[], name, contentType, contentBase64, bankReference?}`.
+        201 `{batchId, assetUrl, paid:[{customerId, receiptId, amount}], skipped:[{customerId, code}], totalPaid}`;
+        códigos por fila: `CLABE_REQUIRED`, `ALREADY_PAID`, `NO_CONFIRMED`. 400 cuerpo incompleto o base64 inválido;
+        409 sin selección o si ninguna fila se pudo pagar.
+      operationId: commissionsPagoLote
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "Lote registrado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/pedir-clabe:
+    post:
+      summary: "Reenviar a una socia el recordatorio de registrar su CLABE (correo + aviso en el panel)"
+      description: |
+        Privilegio `commissions_register_payment`. Body `{customerId, monthKey?}`.
+        200 `{sent, channel: "email+panel"|"panel", clabeReminderAt}`; anota la bitácora de la ficha.
+        404 ficha inexistente; 409 si ya tiene CLABE.
+      operationId: commissionsPedirClabe
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Recordatorio enviado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/avisos/bloqueadas:
+    post:
+      summary: "Tarea programable: aviso de comisiones bloqueadas los días 20 y 27 con el producto que las salva"
+      description: |
+        Privilegio `commissions_register_payment` o token de superadmin (así la invoca EventBridge → API Gateway,
+        cableado documentado y no desplegado en esta ronda). Body `{force?, dryRun?}`. Idempotente por día
+        (`blockedNoticeSentDays` en el mes contable). Días configurables en `rewards.blockedNoticeDays`.
+      operationId: commissionsAvisosBloqueadas
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Resumen de socias avisadas"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth
