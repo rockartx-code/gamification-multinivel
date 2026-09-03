@@ -4,6 +4,8 @@
   [class]="classes"
   [routerLink]="routerLink"
   [attr.aria-label]="ariaLabel || null"
+  [attr.title]="reasonTitle"
+  [attr.aria-disabled]="disabled ? 'true' : null"
   (click)="onClick($event)"
 >
   <i *ngIf="iconClass" [class]="iconClass" aria-hidden="true"></i>
@@ -22,3 +24,6 @@
     </span>
   </span>
 </button>
+
+<!-- Motivo del bloqueo: visible solo mientras el botón está deshabilitado -->
+<span *ngIf="hasReason" class="btn-reason" role="note">{{ disabledReason }}</span>

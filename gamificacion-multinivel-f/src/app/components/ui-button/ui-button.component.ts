@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostBinding, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'ui-button',
@@ -22,6 +22,14 @@ export class UiButtonComponent {
   @Input() variant: 'primary' | 'secondary' | 'ghost' | 'linkish' | 'forest' = 'ghost';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() disabled = false;
+  /**
+   * Por qué el botón está deshabilitado, en una línea para alguien sin
+   * capacitación ("el corte estaba deshabilitado sin ningún tooltip o mensaje").
+   * Se pinta bajo el botón (o solo como tooltip con `reasonPlacement="title"`)
+   * únicamente mientras `disabled` sea verdadero.
+   */
+  @Input() disabledReason = '';
+  @Input() reasonPlacement: 'below' | 'title' = 'below';
   @Input() fullWidth = false;
   @Input() iconClass = '';
   @Input() extraClass = '';
@@ -34,6 +42,21 @@ export class UiButtonComponent {
     
 
   @Output() pressed = new EventEmitter<MouseEvent>();
+
+  /** Con motivo visible el host se apila en columna para que el texto quede bajo el botón. */
+  @HostBinding('class.has-reason')
+  get hasReason(): boolean {
+    return this.disabled && !!this.disabledReason && this.reasonPlacement === 'below';
+  }
+
+  @HostBinding('class.has-reason-full')
+  get hasReasonFull(): boolean {
+    return this.hasReason && this.fullWidth;
+  }
+
+  get reasonTitle(): string | null {
+    return this.disabled && this.disabledReason ? this.disabledReason : null;
+  }
 
   get classes(): string {
     const base = 'btn inline-flex items-center justify-center gap-2';

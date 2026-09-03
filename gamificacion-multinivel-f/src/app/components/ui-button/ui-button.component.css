@@ -36,3 +36,27 @@
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
+
+/* Botón deshabilitado con motivo: el texto va debajo, sin romper filas inline */
+:host(.has-reason) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 100%;
+}
+
+:host(.has-reason-full) {
+  display: flex;
+  width: 100%;
+}
+
+.btn-reason {
+  display: block;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #6b7280;
+  white-space: normal;
+  text-align: left;
+  max-width: 24rem;
+}
