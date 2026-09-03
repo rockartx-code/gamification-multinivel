@@ -228,6 +228,11 @@ type PosCustomerRecommendation = {
 type DiscountTierDraft = AppBusinessConfig['rewards']['discountTiers'][number];
 type CommissionLevelDraft = AppBusinessConfig['rewards']['commissionLevels'][number];
 
+type ReceiveReturnCheck = 'coincide_con_pedido' | 'trazabilidad_valida' | 'empaque_original' | 'sellos_intactos' | 'sin_uso' | 'danio_no_empresa';
+const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
+  coincide_con_pedido: true, trazabilidad_valida: true, empaque_original: true, sellos_intactos: true, sin_uso: true, danio_no_empresa: false
+};
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -3859,7 +3864,30 @@ export class AdminComponent implements OnInit {
     this.receiveReturnOrder = order;
     this.receiveReturnImages = [];
     this.receiveReturnError = '';
+    this.receiveReturnChecklist = { ...RECEIVE_RETURN_CHECKLIST_DEFAULT };
+    this.receiveReturnNotes = '';
     this.isReceiveReturnModalOpen = true;
+  }
+
+  /** Checklist de inspección (reglas 3.2 y 5): antes se mandaba todo en verde y recibir era aprobar. */
+  receiveReturnChecklist: Record<ReceiveReturnCheck, boolean> = { ...RECEIVE_RETURN_CHECKLIST_DEFAULT };
+  receiveReturnNotes = '';
+  readonly receiveReturnChecks: Array<{ key: ReceiveReturnCheck; label: string; hint: string }> = [
+    { key: 'coincide_con_pedido', label: 'Lo recibido coincide con el pedido', hint: 'Producto y cantidad que reportó el cliente.' },
+    { key: 'trazabilidad_valida', label: 'Trae folio o guía identificable', hint: 'Folio RET en el paquete o guía de retorno.' },
+    { key: 'empaque_original', label: 'Empaque original', hint: 'Caja o bote original, aunque venga golpeado.' },
+    { key: 'sellos_intactos', label: 'Sello de seguridad intacto', hint: 'Si el sello ya estaba abierto, la devolución no procede.' },
+    { key: 'sin_uso', label: 'Sin señales de uso', hint: 'Contenido completo, sin consumo.' },
+    { key: 'danio_no_empresa', label: 'El daño lo causó el cliente o la paquetería', hint: 'Márcalo solo si el daño no es de fábrica ni de nuestro empaque.' }
+  ];
+
+  toggleReceiveReturnCheck(key: ReceiveReturnCheck, value: boolean): void {
+    this.receiveReturnChecklist = { ...this.receiveReturnChecklist, [key]: value };
+  }
+
+  get receiveReturnWouldApprove(): boolean {
+    const c = this.receiveReturnChecklist;
+    return c.coincide_con_pedido && c.trazabilidad_valida && c.empaque_original && c.sellos_intactos && c.sin_uso && !c.danio_no_empresa;
   }
 
   closeReceiveReturnModal(): void {
@@ -3898,17 +3926,21 @@ export class AdminComponent implements OnInit {
     this.receiveReturnError = '';
     this.isSavingReceiveReturn = true;
     const orderId = this.receiveReturnOrder.id;
+    const c = this.receiveReturnChecklist;
+    const aprobada = this.receiveReturnWouldApprove;
     const payload: AdminReturnInspectPayload = {
       inspection: {
-        empaque_original: true,
-        sellos_intactos: true,
-        sin_uso: true,
-        producto_abierto: false,
-        danio_no_empresa: false,
-        coincide_con_pedido: true,
-        trazabilidad_valida: true,
+        empaque_original: c.empaque_original,
+        sellos_intactos: c.sellos_intactos,
+        sin_uso: c.sin_uso,
+        producto_abierto: !c.sellos_intactos,
+        danio_no_empresa: c.danio_no_empresa,
+        coincide_con_pedido: c.coincide_con_pedido,
+        trazabilidad_valida: c.trazabilidad_valida,
       },
       packageImages: this.receiveReturnImages,
+      notes: this.receiveReturnNotes.trim() || undefined,
+      rejectionReason: aprobada ? undefined : (this.receiveReturnNotes.trim() || 'No pasó la inspección física del paquete'),
     };
     this.api.inspectReturn(orderId, payload).pipe(
       finalize(() => { this.isSavingReceiveReturn = false; this.requestViewUpdate(); })
@@ -3916,7 +3948,7 @@ export class AdminComponent implements OnInit {
       next: () => {
         this.closeReceiveReturnModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar('Paquete recibido. Devolución validada.');
+        this.showSnackbar(aprobada ? 'Paquete recibido. Devolución validada.' : 'Paquete recibido. Devolución rechazada por la inspección; se avisó al cliente.');
       },
       error: (err: unknown) => {
         this.receiveReturnError = this.resolveUiErrorMessage(err, 'No se pudo registrar la recepción del paquete.');

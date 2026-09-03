@@ -1189,9 +1189,13 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     inspection_record = {**inspection}
     if package_image_urls:
         inspection_record["packageImageUrls"] = package_image_urls
+    # Cómo llegó el paquete, en palabras del almacén (antes solo había fotos).
+    notas = (body.get("notes") or "").strip()
+    if notas:
+        inspection_record["notes"] = notas
 
     # Motivo de rechazo opcional (cuando admin rechaza desde devuelto_validado)
-    rejection_reason = (body.get("rejectionReason") or "").strip()
+    rejection_reason = (body.get("rejectionReason") or "").strip() or ("" if approved else notas)
 
     utils._update_by_id(
         "RETURN_REQUEST", request_id,
@@ -1212,7 +1216,7 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     )
     utils._upsert_order_customer_history(updated_order)
     _avisar(updated_order, "return_approved" if approved else "return_rejected",
-            {"reason": body.get("reason") or body.get("motivo") or inspection.get("comentarios")})
+            {"reason": rejection_reason or body.get("reason") or body.get("motivo") or inspection.get("comentarios")})
 
     commission_actions = []
     if approved:

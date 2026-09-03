@@ -87,6 +87,26 @@
                 Recuperar contraseña
               </button>
             </div>
+            <!-- Quien compró sin cuenta no tenía dónde teclear su folio para ver su paquete. -->
+            <div class="mt-4 rounded-2xl border border-olive-30 bg-white/60 p-4">
+              <div class="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
+                <i class="fa-solid fa-box" aria-hidden="true"></i>
+                ¿Compraste sin cuenta? Rastrea tu pedido
+              </div>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div class="flex-1">
+                  <ui-form-field
+                    name="trackingFolio"
+                    label="Número de pedido"
+                    placeholder="ORD-XXXXXXXX"
+                    [(ngModel)]="trackingFolio"
+                  ></ui-form-field>
+                </div>
+                <ui-button variant="ghost" size="md" iconClass="fa-solid fa-magnifying-glass" [disabled]="!trackingFolio.trim()" (pressed)="trackOrder()">
+                  Ver seguimiento
+                </ui-button>
+              </div>
+            </div>
           </ng-container>
 
           <ng-template #recoveryForm>

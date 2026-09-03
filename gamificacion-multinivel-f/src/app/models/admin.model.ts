@@ -94,6 +94,7 @@ export interface AdminReturnInspectPayload {
   };
   packageImages?: Array<{ contentBase64: string; fileName: string; contentType: string }>;
   rejectionReason?: string;
+  notes?: string;
 }
 
 export interface AdminReturnInspectResponse {

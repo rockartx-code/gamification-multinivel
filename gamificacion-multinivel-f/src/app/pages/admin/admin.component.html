@@ -864,7 +864,10 @@
                   </div>
                   <ng-container *ngIf="isCustomerAccessOpen">
                     <div class="mt-3 flex items-center justify-between rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2">
-                      <div class="text-sm text-main">Acceso a panel admin</div>
+                      <div>
+                        <div class="text-sm text-main">Acceso a panel admin</div>
+                        <div class="text-micro text-gray-500">Obligatorio para entrar al back office; los permisos de abajo dicen qué puede ver ahí.</div>
+                      </div>
                       <ui-checkbox class="text-xs text-gray-600" compact label="Habilitado"
                         [checked]="selectedCustomerAdminAccess"
                         (checkedChange)="updateSelectedCustomerAdminAccess($event)"></ui-checkbox>
@@ -1730,7 +1733,10 @@
                     <div>Fecha</div><div>Origen</div><div>Destino</div><div>Productos</div><div>Estatus</div><div>Accion</div>
                   </div>
                   <div *ngFor="let transfer of stockTransferRowsStable" class="grid grid-cols-[.9fr_1fr_1fr_1.2fr_.7fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
-                    <div>{{ transfer.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+                    <div>
+                      {{ transfer.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+                      <div class="font-mono text-micro text-gray-500">{{ transfer.id }}</div>
+                    </div>
                     <div>{{ transfer.sourceName }}</div>
                     <div>{{ transfer.destinationName }}</div>
                     <div class="text-xs">{{ transfer.productSummary }}</div>
@@ -4117,7 +4123,21 @@
   <div class="mt-4 grid gap-3">
     <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
       <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
-      Adjunta fotos del estado del paquete recibido. Esto marcará la devolución como <strong>validada</strong>.
+      Revisa el paquete y marca lo que veas. Con todo en orden la devolución queda <strong>validada</strong>; si algo falla, queda <strong>rechazada</strong> y se le avisa al cliente.
+    </div>
+    <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
+      <div *ngFor="let check of receiveReturnChecks" class="border-b border-olive-20 py-2 text-xs text-main last:border-b-0">
+        <ui-checkbox layout="row" compact [label]="check.label" [description]="check.hint"
+          [checked]="receiveReturnChecklist[check.key]"
+          (checkedChange)="toggleReceiveReturnCheck(check.key, $event)"></ui-checkbox>
+      </div>
+      <div class="mt-2">
+        <ui-form-field kind="textarea" label="Cómo llegó el paquete (notas)" placeholder="Ej. tapa rota, sello abierto, falta un tercio del contenido"
+          [ngModel]="receiveReturnNotes" (ngModelChange)="receiveReturnNotes = $event"></ui-form-field>
+      </div>
+      <div class="mt-2 text-xs font-semibold" [ngClass]="receiveReturnWouldApprove ? 'text-green-700' : 'text-red-700'">
+        Resultado: {{ receiveReturnWouldApprove ? 'devolución validada (procede el reembolso)' : 'devolución rechazada' }}
+      </div>
     </div>
     <div>
       <label class="block text-xs font-semibold text-gray-600 mb-1">Fotos del paquete <span class="text-red-500">*</span></label>

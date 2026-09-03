@@ -57,6 +57,17 @@ export class LoginComponent {
     private readonly cdr: ChangeDetectorRef
   ) {}
 
+  trackingFolio = '';
+
+  /** Seguimiento de un pedido hecho sin cuenta, por folio. */
+  trackOrder(): void {
+    const folio = this.trackingFolio.trim().toUpperCase();
+    if (!folio) {
+      return;
+    }
+    void this.router.navigate(['/orden', folio]);
+  }
+
   login(): void {
     if (!this.username || !this.password) {
       this.errorMessage = 'Ingresa tu correo electrónico y contraseña.';
