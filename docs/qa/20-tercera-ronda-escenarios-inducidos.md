@@ -112,7 +112,7 @@ Rosa Elena compró dos veces sin cuenta; su pedido de octubre llevaba seis seman
 
 - Encontró en Clientes (y en la advertencia de Estadísticas, "1 comisiones pendientes por depositar") a la única socia con comisión de noviembre: Verónica, $393.60, con CLABE. Subió el comprobante ("Comprobante cargado"). Verificado: noviembre `paid` con comprobante y correo "Depositamos tus comisiones de 2026-11: $393.60".
 - Los $172 bloqueados de Claudia **desaparecen sin rastro** al cerrar el mes: su ficha dice "Mes anterior: $0 — Sin movimientos". Es el comportamiento del plan (no se activó en el mes) pero nadie se lo explica (§5.9).
-- El Cuadro de Honor no tenía selector de mes: en diciembre ya no se podía ver el ranking de noviembre. Corregido (selector y parámetro `month`).
+- El Cuadro de Honor no tenía selector de mes: en diciembre ya no se podía ver el ranking de noviembre. Corregido (selector y parámetro `month`). Con él, noviembre queda: por red Verónica (97.5 VG), Bety (37.9), Claudia (36.6); por personal Bety (37.9 VP), Memo (29.6), Verónica (23.0).
 - Quiso desactivar a la empleada duplicada "Veronica Sandoval Ruiz TEST": no había botón, y al desmarcar "Acceso a panel admin" el servidor respondía `true` y no persistía. **Bug**: el PATCH de empleados ignoraba `canAccessAdmin`. Corregido, y la ficha tiene ahora "Desactivar / Reactivar empleado".
 - No aparece folio del depósito en pantalla (solo "Comprobante cargado"); anotado.
 
