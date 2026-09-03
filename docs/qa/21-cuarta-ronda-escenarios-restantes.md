@@ -26,9 +26,19 @@ Verónica compra para ocho clientas y quiere ver cuánto le descuentan; después
 - **Bug**: la cantidad tecleada junto a "Agregar a carrito" en el panel escribía directo en el carrito y el botón sumaba una unidad más (2 → 3, 1 → 2), dos veces en el mismo turno. Corregido: el campo es un borrador y el botón agrega esa cantidad.
 - Su panel muestra a Claudia como patrocinadora con WhatsApp, su link `GUILLERMO-GIP`, y subió al #2 del Cuadro de Honor.
 
-### 2.3 Ola B en curso
+### 2.3 Gestión de catálogo, cupón con tope, reembolso y código del POS (Sofía, 12-dic)
 
-_(Sofía: reembolso de Memo, cupón `DIC50` con mínimo y tope, producto nuevo con imagen y producto del mes, categoría, campaña, código de autorización del POS, evaluación de bonos. Bety: compra para activarse y busca su comisión de noviembre desaparecida.)_
+El primer intento se perdió con un reinicio del contenedor (dos navegadores abiertos); persistieron el reembolso, el cupón y el código del POS, y el resto se repitió en un segundo turno. Desde aquí, un solo navegador a la vez.
+
+- Reembolso del pedido cancelado de Memo: `refunded`, correo "Reembolso realizado". Cupón `DIC50` creado con compra mínima $1,000 y un solo uso (verificado). Código de autorización del POS configurado (7412) y enviado a Nadia.
+- Catálogo: categoría "Descanso" nueva, producto "Magnesio Glicinato 120 caps" ($520, 10 PC) con tres imágenes, marcado como producto del mes; campaña "Navidad 2026" activa. Verificado en la API. Hueco: la campaña no tiene fechas de vigencia; las escribió en el texto.
+- Buscó "evaluar bonos / rangos" y no existe pantalla: los bonos se evalúan solos en cada compra pagada; la ruta manual del cliente es código muerto. Nadie tiene rango (BRONCE exige 4,500 VG; la red completa suma 91).
+- El tablero ya avisa "4 pedidos pagados sin envío (Importante)"; falta la antigüedad de cada uno (propuesta 5.1 de la ronda 3, parcialmente cubierta).
+- Recibió "comisión de $60 en camino" por el pedido que Memo canceló minutos después y ningún aviso de que se anuló. Corregido: correo "Comisión anulada" con el motivo al anular filas pendientes o confirmadas.
+
+### 2.4 Ola en curso
+
+_(Bety: compra para activarse y busca su comisión de noviembre desaparecida.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -38,11 +48,15 @@ _(Sofía: reembolso de Memo, cupón `DIC50` con mínimo y tope, producto nuevo c
 | 2 | Media | Correos | Aviso de comisión duplicado cuando la compra activa al propio comprador | Aviso solo con fila nueva |
 | 3 | Media | Panel del socio | "Agregar a carrito" sumaba una unidad de más a la cantidad tecleada | Cantidad como borrador |
 | 4 | Baja | Carrito | Niveles de descuento con nombres que no cuadran con el plan ("Nivel base" = 20%) | Niveles 1–4 = 10/20/30/40% |
+| 5 | Media | Correos | Una comisión anunciada se anulaba sin aviso al patrocinador | Correo "Comisión anulada" con motivo |
 
 ## 4. Hallazgos de negocio
 
 1. El descuento por tramo se explica en tres lugares con tres vocabularios (metas del panel, carrito, POS). Propuesta: una sola tabla "Tu descuento este mes" visible en panel y carrito, con el tramo actual, el siguiente y cuánto falta.
-2. La cancelación de un pedido pagado promete reembolso sin plazo ni medio. Propuesta: "al mismo medio de pago, en 3 a 5 días hábiles" en pantalla y correo, y correo al salir.
+2. La cancelación de un pedido pagado promete reembolso sin plazo ni medio.
+3. Las campañas no tienen vigencia. Propuesta: fecha de inicio y fin, activación automática y aviso al vencer.
+4. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
+ Propuesta: "al mismo medio de pago, en 3 a 5 días hábiles" en pantalla y correo, y correo al salir.
 
 ## 5. Pendiente
 
