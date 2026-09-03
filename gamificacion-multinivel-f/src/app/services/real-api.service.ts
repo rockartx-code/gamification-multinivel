@@ -1031,7 +1031,6 @@ export class RealApiService {
       paymentType: sale['paymentType'] != null ? (String(sale['paymentType']) as PosSale['paymentType']) : undefined,
       amountPaid: sale['amountPaid'] != null ? Number(sale['amountPaid']) : undefined,
       pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
-      pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
       cashierDiscountMode: sale['cashierDiscountMode'] != null ? (String(sale['cashierDiscountMode']) as PosSale['cashierDiscountMode']) : undefined,
       cashierDiscountAmount: sale['cashierDiscountAmount'] != null ? Number(sale['cashierDiscountAmount']) : undefined,
     };
