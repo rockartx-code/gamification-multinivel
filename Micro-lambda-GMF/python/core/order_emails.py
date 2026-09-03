@@ -107,7 +107,8 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     elif evento == "return_rejected":
         asunto = f"Devolución no procedente · pedido {oid}"
         titulo, icono = "No pudimos aprobar la devolución", "ℹ️"
-        lead = f"Motivo: {datos.get('reason') or 'no cumple las condiciones de devolución'}. Si crees que es un error, responde a este correo y lo revisamos contigo."
+        motivo = str(datos.get('reason') or 'no cumple las condiciones de devolución').strip().rstrip('.')
+        lead = f"Motivo: {motivo}. Si crees que es un error, responde a este correo y lo revisamos contigo."
         extra = ""
     elif evento == "refunded":
         asunto = f"Reembolso realizado · pedido {oid}"

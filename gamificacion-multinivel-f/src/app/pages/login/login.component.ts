@@ -33,8 +33,11 @@ export class LoginComponent {
   isRecovering = false;
   showRecoveryForm = false;
 
+  /** El backend manda code EMAIL_NOT_VERIFIED; comparar textos fallaba por un acento ("sesion" vs "sesión"). */
+  needsEmailConfirmation = false;
+
   get shouldShowResendConfirmation(): boolean {
-    return this.errorMessage === this.confirmationRequiredMessage;
+    return this.needsEmailConfirmation || this.errorMessage === this.confirmationRequiredMessage;
   }
 
   get usernameError(): string {
@@ -79,6 +82,7 @@ export class LoginComponent {
     this.errorMessage = '';
     this.resendMessage = '';
     this.resendErrorMessage = '';
+    this.needsEmailConfirmation = false;
     this.isSubmitting = true;
     this.authService
       .login(this.username, this.password)
@@ -88,9 +92,12 @@ export class LoginComponent {
           const target = this.authService.defaultRoute(user);
           void this.router.navigate([target]);
         },
-        error: (error: { error?: { message?: string }; message?: string }) => {
+        error: (error: { status?: number; error?: { message?: string; code?: string }; message?: string }) => {
           this.errorMessage =
             error?.error?.message || error?.message || 'Credenciales invalidas. Verifica tu correo electrónico y contraseña.';
+          const mensaje = (error?.error?.message || '').toLowerCase();
+          this.needsEmailConfirmation =
+            error?.error?.code === 'EMAIL_NOT_VERIFIED' || (error?.status === 403 && mensaje.includes('confirma tu cuenta'));
           this.cdr.detectChanges();
         }
       });

@@ -61,6 +61,18 @@ export interface AdminOrder {
   /** Notas internas del back office; solo se añaden. */
   adminNotes?: Array<{ text: string; by: string; at: string }>;
   returnRequestId?: string;
+  returnInspection?: {
+    requestId: string;
+    status?: string;
+    motivo?: string;
+    descripcion?: string;
+    evidence?: string[];
+    inspectedAt?: string;
+    inspectedBy?: string;
+    notes?: string;
+    packageImageUrls?: string[];
+    checklist?: Record<string, boolean>;
+  };
   rejectionReason?: string;
   rejectedAt?: string;
   refundReceiptUrl?: string;

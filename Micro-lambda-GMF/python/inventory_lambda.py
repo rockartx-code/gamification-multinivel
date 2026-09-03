@@ -136,7 +136,9 @@ def handle_transfers(method, body, query, transfer_id=None, headers=None):
 
         # Crear transferencia (Salida de origen)
         source_id = body.get("sourceStockId")
-        lines = body.get("lines", [])
+        lines = [l for l in (body.get("lines") or []) if int(l.get("qty") or 0) > 0]
+        if not lines or not source_id or not body.get("destinationStockId") or source_id == body.get("destinationStockId"):
+            return utils._json_response(400, {"message": "La transferencia necesita origen, destino distinto y al menos un producto con cantidad"})
         deltas = {str(line['productId']): -int(line['qty']) for line in lines}
         
         _, error = _apply_stock_delta(source_id, deltas)

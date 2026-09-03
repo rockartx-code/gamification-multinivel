@@ -146,6 +146,48 @@ def _log_inventory_movement(stock_id, movement_type, product_id, qty, reference_
     })
 
 
+
+def _faltantes_en_sucursal(stock_id, items) -> list:
+    """Nombres de los productos del pedido que la sucursal no puede cubrir."""
+    stock = utils._get_by_id("STOCK", stock_id)
+    if not stock:
+        return []
+    inventario = stock.get("inventory") or {}
+    faltan = []
+    for line in items:
+        pid = str(line.get("productId") or "").strip()
+        qty = int(line.get("quantity") or line.get("qty") or 0)
+        if pid and qty > 0 and int(inventario.get(pid) or 0) < qty:
+            nombre = line.get("name") or line.get("productName")
+            if not nombre:
+                producto = utils._get_by_id("PRODUCT", pid)
+                nombre = (producto or {}).get("name") or pid
+            faltan.append(str(nombre))
+    return faltan
+
+
+def _resumen_devolucion(request_id):
+    """Lo que la gerente necesita ver en la ficha del pedido: estado, checklist, notas y fotos."""
+    if not request_id:
+        return None
+    req = utils._get_by_id("RETURN_REQUEST", request_id)
+    if not req:
+        return None
+    insp = req.get("inspection") or {}
+    return {
+        "requestId": request_id,
+        "status": req.get("status"),
+        "motivo": req.get("motivo"),
+        "descripcion": req.get("descripcion"),
+        "evidence": [e.get("url") if isinstance(e, dict) else e for e in (req.get("evidence") or [])],
+        "inspectedAt": req.get("inspectedAt"),
+        "inspectedBy": req.get("inspectedBy"),
+        "notes": insp.get("notes"),
+        "packageImageUrls": insp.get("packageImageUrls") or [],
+        "checklist": {k: insp.get(k) for k in ("empaque_original", "sellos_intactos", "sin_uso", "producto_abierto",
+                                               "danio_no_empresa", "coincide_con_pedido", "trazabilidad_valida") if k in insp},
+    }
+
 def _user_can_operate_pickup_stock(user_id, pickup_stock_id) -> bool:
     if user_id in (None, "") or not pickup_stock_id:
         return False
@@ -266,6 +308,7 @@ def _serialize_order_list_item(item: dict) -> dict:
         "cancelReason": item.get("cancelReason"),
         "cancelledAt": item.get("cancelledAt"),
         "returnRequestId": item.get("returnRequestId"),
+        "returnInspection": _resumen_devolucion(item.get("returnRequestId")),
         "rejectionReason": item.get("rejectionReason"),
         "rejectedAt": item.get("rejectedAt"),
         "refundReceiptUrl": item.get("refundReceiptUrl"),
@@ -522,6 +565,15 @@ def handle_create_order(body, headers):
     if delivery_type == "pickup":
         if body.get("pickupStockId"):
             order_item["pickupStockId"] = body.get("pickupStockId")
+            # La sucursal elegida debe tener el producto: si no, la clienta paga y
+            # el mostrador no puede entregar ("Stock insuficiente" en la caja).
+            faltantes = _faltantes_en_sucursal(body.get("pickupStockId"), order_item.get("items") or [])
+            if faltantes:
+                return utils._json_response(400, {
+                    "message": "La sucursal elegida no tiene existencia de: " + ", ".join(faltantes)
+                               + ". Elige otra sucursal o envío a domicilio.",
+                    "code": "PICKUP_STOCK_INSUFFICIENT", "missing": faltantes,
+                })
         pickup_payment = body.get("pickupPaymentMethod", "online")
         if pickup_payment not in ("online", "at_store"):
             pickup_payment = "online"
@@ -1554,7 +1606,11 @@ def lambda_handler(event, context):
                         if err: return err
                     # Se devolvía el item crudo, sin "total": el cálculo guarda
                     # netTotal y la pantalla de seguimiento mostraba "$0".
-                    return utils._json_response(200, {"order": _con_totales_visibles(order)})
+                    salida = _con_totales_visibles(order)
+                    # La gerente necesita ver en la ficha la inspección de la devolución (notas, fotos, checklist).
+                    if order.get("returnRequestId") and utils._extract_actor(headers).get("role") in ("admin", "employee"):
+                        salida = {**salida, "returnInspection": _resumen_devolucion(order.get("returnRequestId"))}
+                    return utils._json_response(200, {"order": salida})
                 if method == "PATCH":
                     err = utils._require_admin(headers, "order_mark_paid")
                     if err: return err

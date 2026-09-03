@@ -235,3 +235,17 @@ def test_la_pasarela_puede_marcar_pagado_un_pickup_con_pago_en_linea(order_lambd
                                             "netTotal": 350, "total": 350, "items": [], "monthKey": utils._month_key()})
     r = order_lambda.handle_update_status("ORD-PK2", {"status": "paid", "paymentMethod": "cash"}, {})
     assert r["statusCode"] == 403
+
+
+def test_no_se_puede_recoger_en_una_sucursal_sin_existencia(order_lambda, utils):
+    """Regresión: Claudia pagó una Biotina para recoger en Del Valle, donde había 0."""
+    utils._put_entity("PRODUCT", 901, {"entityType": "product", "productId": 901, "name": "Biotina", "price": 400, "active": True, "vpPoints": 8})
+    utils._put_entity("STOCK", "STK-DV", {"entityType": "stock", "stockId": "STK-DV", "name": "Del Valle", "allowPickup": True, "linkedUserIds": [], "inventory": {"901": 0}})
+    cuerpo = {"customerId": None, "guest": True, "email": "c@test.com", "customerName": "Claudia", "deliveryType": "pickup", "pickupStockId": "STK-DV",
+              "items": [{"productId": 901, "quantity": 1, "price": 400}]}
+    r = order_lambda.handle_create_order(cuerpo, {})
+    assert r["statusCode"] == 400, r["body"]
+    assert "Biotina" in r["body"]
+    utils._put_entity("STOCK", "STK-DV", {"entityType": "stock", "stockId": "STK-DV", "name": "Del Valle", "allowPickup": True, "linkedUserIds": [], "inventory": {"901": 3}})
+    r = order_lambda.handle_create_order(cuerpo, {})
+    assert r["statusCode"] in (200, 201), r["body"]

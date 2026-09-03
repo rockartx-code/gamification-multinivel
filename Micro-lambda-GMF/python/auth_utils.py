@@ -213,7 +213,8 @@ def handle_login(body):
         _rehash_password_if_legacy(identifier, auth, password)
 
     if auth.get("emailVerified") is False:
-        return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electrónico para iniciar sesión."})
+        # El código permite al frontend ofrecer "Reenviar confirmación" sin comparar textos.
+        return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electrónico para iniciar sesión.", "code": "EMAIL_NOT_VERIFIED"})
 
     # 3. Determinar Perfil
     user_id = auth.get("employeeId") or auth.get("customerId")

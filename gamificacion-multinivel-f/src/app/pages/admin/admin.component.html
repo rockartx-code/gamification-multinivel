@@ -399,6 +399,17 @@
                               <span *ngIf="order.status === 'en_devolucion'" class="ml-1 italic">— En proceso de validación</span>
                               <span *ngIf="order.status === 'devuelto_validado'" class="ml-1 italic">— Aprobada</span>
                               <span *ngIf="order.status === 'devolucion_rechazada'" class="ml-1 italic">— Rechazada</span>
+                              <!-- La gerente no veía ni las fotos ni las notas de la recepción: estaban en la solicitud, no en el pedido. -->
+                              <div *ngIf="order.returnInspection as ri" class="mt-1 space-y-0.5 text-amber-900">
+                                <div *ngIf="ri.motivo"><span class="font-semibold">Motivo del cliente:</span> {{ ri.motivo }}<span *ngIf="ri.descripcion"> · {{ ri.descripcion }}</span></div>
+                                <div *ngIf="ri.evidence?.length"><span class="font-semibold">Fotos del cliente:</span> <a *ngFor="let u of ri.evidence; let i = index" [href]="u" target="_blank" rel="noopener" class="mr-1 underline">foto {{ i + 1 }}</a></div>
+                                <div *ngIf="ri.notes"><span class="font-semibold">Recepción en bodega:</span> {{ ri.notes }}</div>
+                                <div *ngIf="ri.packageImageUrls?.length"><span class="font-semibold">Fotos al recibir:</span> <a *ngFor="let u of ri.packageImageUrls; let i = index" [href]="u" target="_blank" rel="noopener" class="mr-1 underline">foto {{ i + 1 }}</a></div>
+                                <div *ngIf="ri.checklist && ri.inspectedAt" class="text-micro">
+                                  Checklist: sello {{ ri.checklist['sellos_intactos'] ? 'intacto' : 'abierto' }} · {{ ri.checklist['sin_uso'] ? 'sin uso' : 'con uso' }} · empaque {{ ri.checklist['empaque_original'] ? 'original' : 'no original' }} · {{ ri.checklist['coincide_con_pedido'] ? 'coincide' : 'no coincide' }} — {{ ri.inspectedAt | date:'dd/MM/yyyy HH:mm' }}
+                                </div>
+                                <div *ngIf="order.rejectionReason"><span class="font-semibold">Motivo del rechazo:</span> {{ order.rejectionReason }}</div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2199,6 +2210,9 @@
                         <i class="fa-solid fa-scissors" aria-hidden="true"></i>
                         {{ isCuttingPosCash ? 'Registrando...' : 'Hacer corte de caja' }}
                       </ui-button>
+                      <div *ngIf="!canCreatePosCashCut && !isCuttingPosCash" class="text-micro text-gray-500">
+                        El corte se habilita cuando hay ventas registradas desde el último corte.
+                      </div>
                     </div>
                   </div>
 
@@ -4320,6 +4334,7 @@
     <ui-form-field
       kind="input"
       type="text"
+      helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
       label="Codigo de autorizacion"
       placeholder="****"
       [ngModel]="posAuthCode"
@@ -4401,6 +4416,7 @@
     <ui-form-field
       kind="input"
       type="text"
+      helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
       label="Codigo de autorizacion"
       placeholder="****"
       [ngModel]="posWithdrawalAuthCode"
