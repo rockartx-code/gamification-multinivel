@@ -16,7 +16,7 @@ Método de esta ronda:
 | Escenarios inducidos ejecutados | 11 turnos de agente (Nadia ×2, Beto ×2, Sofía ×2, Verónica, Claudia, Lupita, Rosa Elena) más acciones de operación por API (entregas de Estafeta, correcciones de datos por "sistemas") |
 | Bugs de producción encontrados y corregidos en esta ronda | 16 (§4), tres de ellos graves: VP negativo al cancelar un pedido no pagado, pedidos de recoger en tienda pagados en línea que nunca pasaban a pagados, y recepción de devolución que aprobaba sin inspeccionar |
 | Hallazgos de negocio nuevos | 8 (§5) |
-| Cobertura de rutas del frontend | 70 de 77 alcanzadas. De las 7 restantes, 6 son código muerto (no hay pantalla que las llame) y 1 (`/auth/resend-email-confirmation`) se ejercitó a mano al final (§6) |
+| Cobertura de rutas del frontend | 71 de 77 alcanzadas; las 6 restantes son código muerto (no hay pantalla que las llame). La única ruta viva que faltaba (`/auth/resend-email-confirmation`) resultó inalcanzable por un bug y se corrigió (§3.8, §6) |
 | Pruebas del backend | 142 en verde (eran 137 al empezar la ronda) |
 
 ## 2. Correcciones aplicadas antes de lanzar los agentes
