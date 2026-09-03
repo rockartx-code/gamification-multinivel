@@ -8,7 +8,7 @@
     <span *ngIf="modo === 'socio' && !c.modeActivatedAt">desde antes del modo cliente</span>
     <span *ngIf="modo === 'cliente'">compra a precio de lista; no ve red ni comisiones</span>
   </div>
-  <ui-button size="sm" variant="ghost" type="button" [disabled]="!!c.deletedAt" (pressed)="abrir()">
+  <ui-button size="sm" variant="ghost" type="button" [disabled]="!!c.deletedAt" [disabledReason]="c.deletedAt ? 'La ficha fue dada de baja: ya no se puede cambiar de modo.' : ''" (pressed)="abrir()">
     <i class="fa-solid fa-right-left" aria-hidden="true"></i>
     {{ textoBoton }}
   </ui-button>

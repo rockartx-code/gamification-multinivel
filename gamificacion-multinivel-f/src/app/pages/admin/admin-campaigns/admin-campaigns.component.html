@@ -111,6 +111,7 @@
               size="md"
               iconClass="fa-solid fa-floppy-disk"
               [disabled]="!isCampaignFormValid || isSavingCampaign"
+              [disabledReason]="isSavingCampaign ? 'Guardando…' : (!isCampaignFormValid ? 'Faltan el nombre, el gancho o alguna de las tres imágenes (historia, feed y banner).' : '')"
               (pressed)="saveCampaign()">
               {{ isSavingCampaign ? 'Guardando...' : 'Guardar campana' }}
             </ui-button>

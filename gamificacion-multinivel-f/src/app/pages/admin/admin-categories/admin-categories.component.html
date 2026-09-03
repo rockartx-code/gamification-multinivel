@@ -23,7 +23,7 @@
         wrapperClass="block"
         inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
         (keydown.enter)="save()"></ui-form-field>
-      <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
+      <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!draftName.trim() ? 'Escribe el nombre de la categoría.' : '')">
         {{ isSaving ? '...' : 'Agregar' }}
       </ui-button>
       <ui-button size="sm" variant="ghost" (pressed)="cancelEdit()">Cancelar</ui-button>
@@ -54,7 +54,7 @@
         wrapperClass="block"
         inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1 text-sm text-main outline-none focus:border-olive-70"
         (keydown.enter)="save()"></ui-form-field>
-      <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
+      <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!draftName.trim() ? 'Escribe el nombre de la categoría.' : '')">
         {{ isSaving ? '...' : 'Guardar' }}
       </ui-button>
       <ui-button size="sm" variant="ghost" (pressed)="cancelEdit()">Cancelar</ui-button>
@@ -72,7 +72,7 @@
       <ui-button size="sm" variant="ghost" (pressed)="startEdit(node)" title="Renombrar">
         <i class="fa-solid fa-pen text-micro" aria-hidden="true"></i>
       </ui-button>
-      <ui-button size="sm" variant="ghost" (pressed)="delete(node.id)" [disabled]="isDeleting" title="Eliminar">
+      <ui-button size="sm" variant="ghost" (pressed)="delete(node.id)" [disabled]="isDeleting" [disabledReason]="isDeleting ? 'Eliminando…' : ''" reasonPlacement="title" title="Eliminar">
         <i class="fa-solid fa-trash text-micro text-danger" aria-hidden="true"></i>
       </ui-button>
     </ng-container>
@@ -87,7 +87,7 @@
       wrapperClass="block"
       inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-1.5 text-sm text-main outline-none focus:border-olive-70"
       (keydown.enter)="save()"></ui-form-field>
-    <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving">
+    <ui-button size="sm" variant="primary" (pressed)="save()" [disabled]="!draftName.trim() || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!draftName.trim() ? 'Escribe el nombre de la categoría.' : '')">
       {{ isSaving ? '...' : 'Agregar' }}
     </ui-button>
     <ui-button size="sm" variant="ghost" (pressed)="cancelEdit()">Cancelar</ui-button>
