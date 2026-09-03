@@ -3957,6 +3957,7 @@ export class AdminComponent implements OnInit {
   openRejectReturnModal(order: AdminOrder): void {
     this.rejectReturnOrder = order;
     this.rejectReturnReason = '';
+    this.rejectReturnCourtesy = '';
     this.rejectReturnError = '';
     this.isRejectReturnModalOpen = true;
   }
@@ -3965,6 +3966,9 @@ export class AdminComponent implements OnInit {
     this.isRejectReturnModalOpen = false;
     this.rejectReturnOrder = null;
   }
+
+  /** Cortesía al rechazar: % en la próxima compra, emitido como cupón personal (antes solo se prometía en el texto). */
+  rejectReturnCourtesy = '';
 
   confirmRejectReturn(): void {
     if (!this.rejectReturnOrder) return;
@@ -3986,6 +3990,7 @@ export class AdminComponent implements OnInit {
         trazabilidad_valida: true,
       },
       rejectionReason: this.rejectReturnReason.trim(),
+      courtesyPercent: Number(this.rejectReturnCourtesy) > 0 ? Math.min(100, Math.floor(Number(this.rejectReturnCourtesy))) : undefined,
     };
     this.api.inspectReturn(orderId, payload).pipe(
       finalize(() => { this.isSavingRejectReturn = false; this.requestViewUpdate(); })

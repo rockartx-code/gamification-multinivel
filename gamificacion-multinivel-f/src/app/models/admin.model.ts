@@ -107,6 +107,7 @@ export interface AdminReturnInspectPayload {
   packageImages?: Array<{ contentBase64: string; fileName: string; contentType: string }>;
   rejectionReason?: string;
   notes?: string;
+  courtesyPercent?: number;
 }
 
 export interface AdminReturnInspectResponse {

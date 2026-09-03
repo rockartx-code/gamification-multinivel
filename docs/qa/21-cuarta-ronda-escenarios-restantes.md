@@ -55,9 +55,16 @@ Patricia fue reasignada de Marcela a Verónica en noviembre. Quiere usar `DIC50`
 - Quedó a 1 VP de activarse (19 PC sin descuento). El "Recoger en sucursal" le mostró Bodega Central (CDMX); la API devuelve también Tienda Del Valle, así que probablemente no desplazó la lista en el móvil; anotado sin confirmar.
 - El primer código de recuperación de contraseña "inválido": pidió dos y el segundo invalida al primero (diseño; Claudia vivió lo mismo). Propuesta en §4.
 
-### 2.6 Ola en curso
+### 2.6 Activación de las directas y 2ª generación (Bety, Patricia y Lupita, 12 y 13-dic)
 
-_(Bety y Patricia completan su activación con un Naplus; después Lupita compra para probar la 2ª generación de Verónica.)_
+- Bety y Patricia compraron un Naplus cada una tras el aviso de que les faltaban 2 y 1 VP. Verificado: 23.4 y 24.4 VP, activas; el carrito ya dice "Puntos de este pedido 5.4 VP · Te faltan 0 VP". Patricia probó `DIC50` desde el celular: "Requiere subtotal mínimo de $1000" (correcto y claro). Detalle: Patricia vio el modal "¡Buen trabajo! Meta cumplida" y Bety no; el modal depende de que la meta estuviera marcada como leída.
+- **2ª generación cubierta.** Con Bety y Patricia activas, Verónica cumple el requisito de dos directas activas: la compra de Lupita (bajo Bety, $990 netos) dejó **$99 pendientes a Bety (G1) y $49.50 pendientes a Verónica (G2)**, verificado en el ledger. Es la primera comisión de segunda generación de todo el ejercicio.
+- Lupita vio el aviso nuevo del carrito ("Con este pedido llegas a 18.9 de 20 VP: te faltarían 1.1 VP") y compró igual; queda inactiva por 1.1 VP.
+- **Hueco de proceso**: en noviembre se le prometió "20% en tu próximo bote" en el correo de rechazo; nadie emitió nada y el carrito no tenía cómo aplicarlo. Corregido: al rechazar una devolución la gerente puede indicar una cortesía en %, que se convierte en un cupón personal de un solo uso (60 días) y viaja en el correo; los cupones admiten ahora `customerId` y rechazan a otro cliente ("Este cupón es personal"). A Lupita se le emitió el suyo por sistemas y soporte se lo mandó.
+
+### 2.7 Ola en curso
+
+_(Nadia: pago parcial con código de autorización, liquidación del saldo y retiro de efectivo; Guadalupe R.: pickup con pago en sucursal que nunca recoge.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -72,6 +79,7 @@ _(Bety y Patricia completan su activación con un Naplus; después Lupita compra
 | 7 | Baja | Comisiones | El endpoint mensual derivaba VP de pesos ÷ tarifa; la activación usa PC netos | Un solo cálculo |
 | 8 | Baja | Carrito | Nadie avisaba que los VP netos de la compra no alcanzan la activación | Aviso "llegas a X de 20 VP" sin cupón |
 | 9 | Media | Carrito móvil | No había dónde escribir el cupón desde el celular | Cupón, VP y aviso de activación en el resumen móvil |
+| 10 | Media | Devoluciones | La cortesía prometida al rechazar no existía como descuento | Cupón personal de un uso emitido desde el rechazo y enviado en el correo |
 
 ## 4. Hallazgos de negocio
 

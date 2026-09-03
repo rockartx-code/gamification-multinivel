@@ -109,6 +109,10 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         titulo, icono = "No pudimos aprobar la devolución", "ℹ️"
         motivo = str(datos.get('reason') or 'no cumple las condiciones de devolución').strip().rstrip('.')
         lead = f"Motivo: {motivo}. Si crees que es un error, responde a este correo y lo revisamos contigo."
+        if datos.get("courtesyCode"):
+            pct = datos.get("courtesyPercent")
+            lead += (f" Como cortesía te dejamos el cupón <strong>{datos['courtesyCode']}</strong>"
+                     f"{f' ({int(float(pct))}% de descuento)' if pct else ''}: escríbelo en el carrito en tu próxima compra; es personal y de un solo uso.")
         extra = ""
     elif evento == "refunded":
         asunto = f"Reembolso realizado · pedido {oid}"

@@ -4207,6 +4207,11 @@
         inputClass="w-full rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main outline-none focus:border-olive-70 resize-none"
         [(ngModel)]="rejectReturnReason"></ui-form-field>
     </div>
+    <div>
+      <ui-form-field type="number" label="Cortesía en su próxima compra (%)" placeholder="0" [min]="0" [max]="100"
+        helpText="Si pones un porcentaje, se emite un cupón personal de un uso (60 días) y va en el correo de rechazo."
+        [ngModel]="rejectReturnCourtesy" (ngModelChange)="rejectReturnCourtesy = $event"></ui-form-field>
+    </div>
     <div *ngIf="rejectReturnError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
       {{ rejectReturnError }}
     </div>

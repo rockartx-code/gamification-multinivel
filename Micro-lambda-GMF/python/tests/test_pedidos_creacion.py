@@ -249,3 +249,26 @@ def test_no_se_puede_recoger_en_una_sucursal_sin_existencia(order_lambda, utils)
     utils._put_entity("STOCK", "STK-DV", {"entityType": "stock", "stockId": "STK-DV", "name": "Del Valle", "allowPickup": True, "linkedUserIds": [], "inventory": {"901": 3}})
     r = order_lambda.handle_create_order(cuerpo, {})
     assert r["statusCode"] in (200, 201), r["body"]
+
+
+def test_rechazar_con_cortesia_emite_un_cupon_personal(order_lambda, utils, monkeypatch):
+    """Regresión: 'se le ofrece 20% en su próximo bote' vivía solo en el correo;
+    la clienta compró y no hubo descuento. Ahora se emite un cupón personal."""
+    import json as _json
+    enviados = []
+    monkeypatch.setattr(order_lambda.utils, "_send_ses_email", lambda para, asunto, texto, html: enviados.append((para, asunto, texto)), raising=False)
+    from core import order_emails as _oe
+    monkeypatch.setattr(_oe._correo, "_send_ses_email", lambda para, asunto, texto, html: enviados.append((para, asunto, texto)), raising=False)
+    utils._put_entity("CUSTOMER", 77, {"entityType": "customer", "customerId": 77, "name": "Lupita", "email": "lupita@test.com"})
+    utils._put_entity("ORDER", "ORD-R1", {"entityType": "order", "orderId": "ORD-R1", "customerId": 77, "customerName": "Lupita", "email": "lupita@test.com",
+                                           "status": "en_devolucion", "returnRequestId": "RET-1", "netTotal": 700, "total": 700, "items": [], "monthKey": utils._month_key()})
+    utils._put_entity("RETURN_REQUEST", "RET-1", {"entityType": "returnRequest", "requestId": "RET-1", "orderId": "ORD-R1", "customerId": 77, "status": "PENDIENTE", "motivo": "DANIO"})
+    r = order_lambda.handle_return_inspection("ORD-R1", {"inspection": {"sellos_intactos": False}, "rejectionReason": "Sello abierto", "courtesyPercent": 20}, {"Authorization": "Bearer sim-superadmin-token"})
+    assert r["statusCode"] == 200, r["body"]
+    cupones = [v for (pk, sk), v in utils._table.store.items() if pk == "COUPON" and str(v.get("code", "")).startswith("CORTESIA-")]
+    assert len(cupones) == 1 and str(cupones[0]["customerId"]) == "77" and cupones[0]["maxRedemptions"] == 1
+    code = cupones[0]["code"]
+    assert any(code in (t or "") for _, _, t in enviados), enviados
+    # Solo ella puede usarlo.
+    assert order_lambda._evaluate_coupon(utils._get_by_id("COUPON", code), 500, 77)["valid"]
+    assert not order_lambda._evaluate_coupon(utils._get_by_id("COUPON", code), 500, 78)["valid"]

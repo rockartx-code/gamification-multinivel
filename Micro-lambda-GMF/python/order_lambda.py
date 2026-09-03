@@ -1172,6 +1172,24 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
 # HANDLER — INSPECCIÓN BACKOFFICE (Reglas 5.1, 5.2)
 # ---------------------------------------------------------------------------
 
+
+def _emitir_cupon_cortesia(order: dict, pct: int, request_id: str) -> dict:
+    """Cupón personal de un uso, 60 días, para el cliente de una devolución rechazada."""
+    from datetime import datetime, timedelta, timezone
+    code = f"CORTESIA-{utils.uuid.uuid4().hex[:5].upper()}"
+    now = utils._now_iso()
+    hasta = (datetime.now(timezone.utc) + timedelta(days=60)).strftime("%Y-%m-%d")
+    item = {
+        "entityType": "coupon", "code": code, "type": "percent", "value": utils._to_decimal(pct),
+        "active": True, "minSubtotal": utils.D_ZERO, "maxRedemptions": 1, "redemptions": 0,
+        "validFrom": None, "validTo": hasta, "customerId": order.get("customerId"),
+        "description": f"Cortesía por la devolución {request_id} del pedido {order.get('orderId')}",
+        "updatedAt": now,
+    }
+    utils._put_entity("COUPON", code, item)
+    utils._update_by_id("RETURN_REQUEST", request_id, "SET courtesyCoupon = :c", {":c": code})
+    return item
+
 def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     """POST /orders/{id}/return/inspect
 
@@ -1248,6 +1266,15 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
 
     # Motivo de rechazo opcional (cuando admin rechaza desde devuelto_validado)
     rejection_reason = (body.get("rejectionReason") or "").strip() or ("" if approved else notas)
+    # Cortesía al rechazar: antes vivía solo en el texto del correo ("20% en tu
+    # próximo bote") y nadie emitía nada; la clienta compró y no hubo descuento.
+    cortesia = None
+    try:
+        pct = int(body.get("courtesyPercent") or 0)
+    except (TypeError, ValueError):
+        pct = 0
+    if not approved and 0 < pct <= 100 and order.get("customerId"):
+        cortesia = _emitir_cupon_cortesia(order, pct, request_id)
 
     utils._update_by_id(
         "RETURN_REQUEST", request_id,
@@ -1268,7 +1295,8 @@ def handle_return_inspection(order_id: str, body: dict, headers: dict) -> dict:
     )
     utils._upsert_order_customer_history(updated_order)
     _avisar(updated_order, "return_approved" if approved else "return_rejected",
-            {"reason": rejection_reason or body.get("reason") or body.get("motivo") or inspection.get("comentarios")})
+            {"reason": rejection_reason or body.get("reason") or body.get("motivo") or inspection.get("comentarios"),
+             "courtesyCode": (cortesia or {}).get("code"), "courtesyPercent": (cortesia or {}).get("value")})
 
     commission_actions = []
     if approved:
@@ -1407,6 +1435,11 @@ def _evaluate_coupon(coupon: dict, subtotal, customer_id=None) -> dict:
     if valid_to and now > str(valid_to):
         return {"valid": False, "message": "Cupón expirado", "discount": utils.D_ZERO}
 
+    # Cupón personal (cortesía a un cliente): solo lo puede usar ese cliente.
+    dueno = coupon.get("customerId")
+    if dueno not in (None, "", 0, "0") and str(dueno) != str(customer_id or ""):
+        return {"valid": False, "message": "Este cupón es personal y pertenece a otro cliente", "discount": utils.D_ZERO}
+
     subtotal_d = utils._to_decimal(subtotal)
     min_subtotal = utils._to_decimal(coupon.get("minSubtotal", 0))
     if subtotal_d < min_subtotal:
@@ -1479,6 +1512,7 @@ def handle_save_coupon(body) -> dict:
         "validFrom": body.get("validFrom") or existing.get("validFrom"),
         "validTo": body.get("validTo") or existing.get("validTo"),
         "description": body.get("description") or "",
+        "customerId": body.get("customerId") or existing.get("customerId"),
         "updatedAt": now,
     }
     saved = utils._put_entity("COUPON", code, item, created_at_iso=existing.get("createdAt"))
