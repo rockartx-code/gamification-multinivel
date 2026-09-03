@@ -709,9 +709,9 @@ def _avisar_comision(beneficiary_id, order: dict, gen: int, amount) -> None:
 
 
 _MOTIVOS_ANULACION = {
-    "order_cancelled": "el pedido se canceló",
-    "order_refunded": "el pedido se reembolsó",
-    "order_returned": "el pedido se devolvió",
+    "order_cancelled": "el pedido se canceló", "cancel": "el pedido se canceló",
+    "order_refunded": "el pedido se reembolsó", "refund": "el pedido se reembolsó",
+    "order_returned": "el pedido se devolvió", "return_approved": "el pedido se devolvió",
 }
 
 
