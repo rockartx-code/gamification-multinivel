@@ -112,6 +112,10 @@ export interface AdminOrder {
   returnedLines?: Array<{ productId: number | string; name: string; quantity: number; unitNet?: number }>;
   refundSuggested?: number;
   refundAdjustmentReason?: string;
+  /** Pago que acreditó el pedido y por qué camino llegó. */ // paquete H
+  paymentId?: string;
+  paidVia?: 'mercadopago' | 'branch' | 'admin' | 'reconciliation';
+  subscriptionId?: string;
 }
 
 export interface AdminRefundPayload {

@@ -3061,6 +3061,140 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete H · pasarela-y-suscripcion ────────────────────────────────────────
+  # Rutas atendidas por order_lambda vía `conciliacion_handlers` y
+  # `suscripciones_handlers` (llegan por /orders/{proxy+}; se declaran aparte
+  # para el contrato y la instantánea de ruteo).
+  /orders/conciliacion:
+    post:
+      summary: "Conciliar pagos pendientes con MercadoPago (programable)"
+      description: |
+        Privilegio: `order_mark_paid` o token de superadmin. Consulta a MercadoPago los
+        pedidos `pending` con preferencia de pago de las últimas `hours` (config
+        `payments.reconciliationHours`, 72 por omisión) y acredita los aprobados con
+        `paidVia = reconciliation`. Idempotente: un pedido ya cobrado no se toca.
+        Cuerpo: `{hours?, orderIds?, dryRun?}`.
+      operationId: reconcileOrderPayments
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{runId, checked, credited:[{orderId, paymentId}], unpaid:[…], errors:[{orderId, error}]}"
+        "502":
+          description: "MercadoPago no respondió para ningún pedido consultado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/conciliacion/ultima:
+    get:
+      summary: "Última corrida de conciliación"
+      description: "Privilegio: `access_screen_orders`. Devuelve `{run}` (null si nunca se ha corrido)."
+      operationId: lastReconciliationRun
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/suscripciones:
+    get:
+      summary: "Suscripciones mensuales del socio con sesión"
+      description: "Sesión propia (401 sin sesión). Un admin puede consultar las de un cliente con `?customerId=`."
+      operationId: listSubscriptions
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{subscriptions:[…]}"
+    post:
+      summary: "Crear una suscripción mensual"
+      description: |
+        Sesión propia. Cuerpo: `{items:[{productId, quantity}], dayOfMonth (1–28), deliveryType,
+        shippingAddressId? | shippingAddress?, pickupStockId?}`. Manda el correo de confirmación.
+      operationId: createSubscription
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "201":
+          description: "{subscription}"
+        "400":
+          description: "Día fuera de rango, sin productos, producto inactivo o dirección/sucursal inválida"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/suscripciones/{id}:
+    patch:
+      summary: "Editar, pausar o reanudar una suscripción"
+      description: |
+        Dueño o admin. Cuerpo: `{items?, dayOfMonth?, deliveryType?, shippingAddressId?, pickupStockId?,
+        status?: active|paused, pausedUntil?}`. Al pausar sin fecha se salta el próximo pedido.
+        409 si está cancelada. Manda correo cuando cambia el estado.
+      operationId: updateSubscription
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "{subscription}"
+    delete:
+      summary: "Cancelar una suscripción"
+      description: "Dueño o admin. Deja `status = cancelled` y manda el correo de cancelación."
+      operationId: cancelSubscription
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "{subscription:{status:'cancelled'}}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/suscripciones/generar:
+    post:
+      summary: "Generar los pedidos de suscripción del día (programable)"
+      description: |
+        Privilegio: `order_create` o token de superadmin. Cuerpo `{date?, dryRun?}`. Para cada
+        suscripción activa con `nextRunDate <= date` crea el pedido con el tramo real, genera la
+        preferencia de MercadoPago y manda el correo "Tu pedido mensual está listo: paga aquí".
+        Idempotente por día (`lastRunDate`).
+      operationId: generateSubscriptionOrders
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{generated:[{subscriptionId, orderId, initPoint}], skipped:[{subscriptionId, reason}]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

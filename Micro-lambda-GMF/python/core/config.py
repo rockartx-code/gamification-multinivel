@@ -71,8 +71,12 @@ def _default_app_config() -> dict:
                 "enabled": False, "accessToken": "", "currencyId": "MXN",
                 "checkoutPreferencesUrl": "https://api.mercadopago.com/checkout/preferences",
                 "paymentInfoUrlTemplate": "https://api.mercadopago.com/v1/payments/{payment_id}",
+                # Conciliación (paquete H): búsqueda de pagos por referencia externa (el orderId).
+                "paymentSearchUrlTemplate": "https://api.mercadopago.com/v1/payments/search?external_reference={order_id}&sort=date_created&criteria=desc",
                 "notificationUrl": "", "successUrl": "", "failureUrl": "", "pendingUrl": "", "webhookSecret": "",
-            }
+            },
+            # Ventana (horas) de pedidos pendientes que revisa "Conciliar pagos" (paquete H).
+            "reconciliationHours": Decimal("72"),
         },
         "adminWarnings": {
             "showCommissions": True, "showShipping": True, "showPendingPayments": True,
@@ -238,6 +242,9 @@ def _default_app_config() -> dict:
         # pantalla y en el correo ("al mismo medio de pago, en 3 a 5 días hábiles
         # tras validar el paquete"). Texto libre para que el negocio lo ajuste.
         "returns": {"refundMethod": "mismo medio de pago", "refundBusinessDays": "3 a 5"},
+        # Suscripción mensual (paquete H): el día elegido se crea el pedido y se manda
+        # el enlace de pago por correo; no hay cobro automático. Día permitido 1–28.
+        "subscriptions": {"enabled": True, "minDay": Decimal("1"), "maxDay": Decimal("28"), "reminderDaysBefore": Decimal("0")},
     }
 
 def _normalize_app_config(raw) -> dict:

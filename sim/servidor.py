@@ -128,15 +128,36 @@ class _Resp:
     def __enter__(self): return self
     def __exit__(self, *a): return False
 def urlopen_mp(req, timeout=None, **kw):
+    """Pasarela simulada (paquete H): cada pedido guarda su `estado` (pending → approved)
+    y la `notification_url` con la que el checkout anexó el webhookSecret."""
     url = req.full_url if hasattr(req, "full_url") else str(req)
     if "checkout/preferences" in url:
         pref = json.loads(req.data.decode()); oid = str(pref.get("external_reference"))
         PAGOS[oid] = dict(pref.get("back_urls") or {}); PAGOS[oid]["total"] = sum(float(i["unit_price"]) * int(i["quantity"]) for i in pref.get("items", []))
+        PAGOS[oid]["notification_url"] = str(pref.get("notification_url") or ""); PAGOS[oid]["estado"] = "pending"
         u = f"http://localhost:{PUERTO}/__sim/pago/{oid}"
         return _Resp({"id": f"pref-{oid}", "init_point": u, "sandbox_init_point": u})
+    m = re.search(r"/v1/payments/search\?.*external_reference=([^&]+)", url)
+    if m:
+        oid = unquote(m.group(1)); estado = PAGOS.get(oid, {}).get("estado", "pending")
+        pagos = [{"id": f"sim-{oid}", "status": estado, "external_reference": oid}] if estado == "approved" else []
+        return _Resp({"results": pagos, "paging": {"total": len(pagos)}})
     m = re.search(r"/v1/payments/sim-(.+)$", url)
-    if m: return _Resp({"id": f"sim-{m.group(1)}", "status": "approved", "external_reference": m.group(1)})
+    if m:
+        oid = unquote(m.group(1)); estado = PAGOS.get(oid, {}).get("estado", "pending")
+        return _Resp({"id": f"sim-{oid}", "status": estado, "external_reference": oid})
     raise RuntimeError("URL externa no simulada: " + url)
+
+def llamar_webhook_mp(oid):
+    """Repite lo que haría MercadoPago: POST al webhook con el secreto de la notification_url."""
+    q = {"topic": "payment", "id": f"sim-{oid}"}
+    notif = PAGOS.get(oid, {}).get("notification_url") or ""
+    secreto = parse_qs(urlparse(notif).query).get("webhookSecret", [None])[0]
+    if secreto: q["webhookSecret"] = secreto
+    ev = {"httpMethod": "POST", "path": "/orders/webhooks/mercadolibre", "headers": {}, "queryStringParameters": q, "body": "{}"}
+    r = order_lambda.lambda_handler(ev, None); drenar_sfn()
+    print(f"[pago] webhook {oid} → {r.get('statusCode')} {r.get('body','')[:160]}")
+    return r
 def urlopen_envia(req, timeout=None, **kw):
     return _Resp({"data": [
         {"carrierDescription": "Estafeta", "serviceDescription": "Terrestre", "totalPrice": 129.0, "deliveryEstimate": "3 a 5 días hábiles"},
@@ -162,6 +183,25 @@ def drenar_sfn():
             dashboard_lambda.lambda_handler({"task": "sync_iceberg", "orderId": ev.get("orderId")}, None)
         except Exception as e:
             print(f"[sfn] ERROR {ev}: {e!r}")
+
+# ── Tareas programadas (paquete H; docs/arquitectura/23 §0.3) ─────────
+def ejecutar_tareas_programadas():
+    """Invoca cada ruta declarada en `TAREAS_PROGRAMADAS` de los lambdas con el
+    token de superadmin, como lo haría EventBridge → API Gateway en producción.
+    Las rutas son idempotentes por día, así que se puede llamar cuantas veces haga falta."""
+    resultados = []
+    for mod in sorted(set(LAMBDAS.values()), key=lambda m: m.__name__):
+        for metodo, ruta in getattr(mod, "TAREAS_PROGRAMADAS", []):
+            ev = {"httpMethod": metodo, "path": ruta, "body": "{}",
+                  "headers": {"authorization": "Bearer " + os.environ["SUPERADMIN_TOKEN"]}}
+            try:
+                r = mod.lambda_handler(ev, None)
+                resultados.append({"ruta": ruta, "status": r.get("statusCode"), "body": (r.get("body") or "")[:600]})
+                print(f"[tareas] {metodo} {ruta} → {r.get('statusCode')} {(r.get('body') or '')[:200]}")
+            except Exception as e:
+                resultados.append({"ruta": ruta, "error": repr(e)}); print(f"[tareas] ERROR {metodo} {ruta}: {e!r}")
+    drenar_sfn(); guardar()
+    return resultados
 
 # ── HTTP ──────────────────────────────────────────────────────────────
 LOCK = threading.Lock()
@@ -230,9 +270,13 @@ class Manejador(BaseHTTPRequestHandler):
 
     def _sim(self, ruta, q, cuerpo):
         if ruta == "/__sim/reloj":
+            tareas = None
             if self.command == "POST":
                 fijar_reloj(json.loads(cuerpo)["fecha"]); guardar()
-            return self._responder(200, json.dumps({"ahora": ahora_iso()}))
+                # Hook del reloj (docs/arquitectura/23 §0.3): al cambiar de fecha corren
+                # las tareas programadas (suscripciones, conciliación, avisos...).
+                tareas = ejecutar_tareas_programadas()
+            return self._responder(200, json.dumps({"ahora": ahora_iso(), "tareas": tareas}, ensure_ascii=False))
         if ruta.startswith("/__sim/buzon/"):
             correo = ruta.split("/__sim/buzon/", 1)[1].lower()
             f = os.path.join(BUZON, re.sub(r"[^a-z0-9@._-]", "_", correo) + ".json")
@@ -264,17 +308,26 @@ class Manejador(BaseHTTPRequestHandler):
         if m and self.command == "GET":
             oid = m.group(1); tot = PAGOS.get(oid, {}).get("total", 0)
             return self._responder(200, PAGINA_PAGO.replace("{oid}", oid).replace("{total}", f"{tot:,.2f}"), ctype="text/html; charset=utf-8")
-        m = re.match(r"^/__sim/pago/([^/]+)/(confirmar|cancelar)$", ruta)
+        m = re.match(r"^/__sim/pago/([^/]+)/(confirmar|cancelar|pagar-sin-aviso|reenviar-webhook)$", ruta)
         if m:
-            oid, acc = m.group(1), m.group(2); back = PAGOS.get(oid, {})
+            oid, acc = m.group(1), m.group(2); back = PAGOS.setdefault(oid, {})
+            if acc in ("confirmar", "pagar-sin-aviso"):
+                back["estado"] = "approved"          # la pasarela ya cobró
+            if acc in ("pagar-sin-aviso", "reenviar-webhook"):
+                # pagar-sin-aviso: el webhook "se perdió" (prueba la conciliación).
+                # reenviar-webhook: MercadoPago reintenta (prueba la idempotencia).
+                r = llamar_webhook_mp(oid) if acc == "reenviar-webhook" else None
+                guardar()
+                return self._responder(200, json.dumps({"ok": True, "pedido": oid, "estado": back.get("estado"),
+                                                        "webhook": (json.loads(r.get("body") or "{}") if r else None)}))
             if acc == "confirmar":
-                ev = {"httpMethod": "POST", "path": "/orders/webhooks/mercadolibre", "headers": {},
-                      "queryStringParameters": {"topic": "payment", "id": f"sim-{oid}"}, "body": "{}"}
-                r = order_lambda.lambda_handler(ev, None); drenar_sfn(); print(f"[pago] {oid} → {r.get('statusCode')} {r.get('body','')[:120]}")
+                llamar_webhook_mp(oid)
                 destino = back.get("success") or f"{FRONT}/#/orden/{oid}"
             else:
                 destino = back.get("failure") or f"{FRONT}/#/orden/{oid}"
             return self._responder(303, b"", {"Location": destino}, "text/plain")
+        if ruta == "/__sim/tareas" and self.command == "POST":
+            return self._responder(200, json.dumps({"ahora": ahora_iso(), "tareas": ejecutar_tareas_programadas()}, ensure_ascii=False))
         return self._responder(404, b'{"message":"sim: ruta desconocida"}')
 
 def _autoguardado():

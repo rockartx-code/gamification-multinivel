@@ -35,6 +35,17 @@
 ## Cobertura
 `servidor.log` registra cada llamada HTTP. Al final se cruza con las 75 rutas que expone el frontend y con las acciones de cada pantalla para saber qué alcanzó cada persona y qué nunca tocó nadie.
 
+## Pasarela simulada y tareas programadas (paquete H)
+La pasarela guarda por pedido su `estado` (`pending` → `approved`) y la `notification_url` con el `webhookSecret` que anexó el checkout. Además de la página de pago (`/__sim/pago/<pedido>`, botones Pagar / Cancelar), hay tres acciones para "sistemas":
+
+| Acción | Qué simula | Para probar |
+|---|---|---|
+| `POST /__sim/pago/<pedido>/confirmar` | La clienta paga y MercadoPago llama al webhook **con el secreto** de la `notification_url` (si la config `payments.mercadoLibre.webhookSecret` está definida). | El camino feliz del pago. |
+| `POST /__sim/pago/<pedido>/pagar-sin-aviso` | El pago quedó aprobado en la pasarela pero el webhook se perdió. El pedido sigue "Pendiente". | Pedidos → **Conciliar pagos** (o `POST /orders/conciliacion`) acredita el pedido. |
+| `POST /__sim/pago/<pedido>/reenviar-webhook` | MercadoPago reintenta la notificación de un pago ya avisado. | Idempotencia: responde `idempotent: true`, sin segundo correo ni comisiones dobles. |
+
+**Tareas programadas.** Al cambiar la fecha con `dia.sh` / `POST /__sim/reloj`, el servidor invoca con el token de superadmin cada ruta que los lambdas declaran en `TAREAS_PROGRAMADAS` (hoy: `POST /orders/suscripciones/generar` y `POST /orders/conciliacion`; las de otros paquetes se descubren solas). Son idempotentes por día. `POST /__sim/tareas` las dispara a mano sin mover el reloj; la respuesta trae el resultado de cada una.
+
 ## Añadido a mitad de simulación
 | Ivonne Castro | sonnet | ejecutiva de recuperación de cuentas: "maneja" al patrocinador por defecto FindingU (que no es una cuenta sino un valor fijo del backend). Debe detectar clientes que se enfriaron desde la plataforma y contactarlos por WhatsApp como su coach | back office (Clientes, Pedidos, Estadísticas, Cuadro de Honor) |
 
