@@ -462,6 +462,12 @@
                     wrapperClass="block"
                     inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main placeholder:text-gray-400 outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"
                     [ngModel]="customerSearch" (ngModelChange)="onTableSearch('customers', $event)"></ui-form-field>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <ui-button size="sm" [variant]="customersColdOnly ? 'primary' : 'ghost'" iconClass="fa-solid fa-snowflake" (pressed)="toggleCustomersColdOnly()">
+                      {{ customersColdOnly ? 'Viendo solo fríos (30+ días)' : 'Solo fríos (30+ días sin compra)' }}
+                    </ui-button>
+                    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-csv" (pressed)="exportCustomersCsv()">Exportar CSV</ui-button>
+                  </div>
                 </div>
 
                 <div class="md:hidden divide-y divide-olive-20">
@@ -479,6 +485,7 @@
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
                       <div>Descuento: <span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
                       <div>Mes anterior: <span class="text-main">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</span></div>
+                      <div>Última compra: <span class="text-main" [class.text-red-700]="isColdCustomer(customer)">{{ customer.lastPurchaseAt ? (customer.lastPurchaseAt | date:'dd/MM/yyyy') + ' (' + daysSinceLastPurchase(customer) + ' días)' : 'nunca' }}</span></div>
                     </div>
                     <ui-button size="sm" variant="ghost" class="mt-3 w-full" (pressed)="selectCustomer(customer.id)">
                       <i class="fa-solid fa-eye" aria-hidden="true"></i>
@@ -489,12 +496,12 @@
 
                 <div class="hidden md:block overflow-auto">
                   <div class="table-soft text-sm">
-                    <div class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
-                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Acción</div>
+                    <div class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                      <div>Cliente</div><div>Estatus</div><div>Descuento</div><div>Mes anterior</div><div>Última compra</div><div>Acción</div>
                     </div>
                     <div *ngIf="!filteredCustomers.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
                     <div *ngFor="let customer of pagedCustomers"
-                      class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0 transition"
+                      class="grid grid-cols-[1.1fr_.8fr_.8fr_1fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0 transition"
                       [class.bg-gold-12]="selectedCustomer?.id === customer.id"
                       [class.shadow-inset-accent]="selectedCustomer?.id === customer.id">
                       <div class="flex items-center gap-2">
@@ -505,6 +512,7 @@
                       <div><span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span></div>
                       <div><span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
                       <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
+                      <div class="text-xs" [class.text-red-700]="isColdCustomer(customer)">{{ customer.lastPurchaseAt ? (customer.lastPurchaseAt | date:'dd/MM/yyyy') + ' · ' + daysSinceLastPurchase(customer) + ' días' : 'nunca' }}</div>
                       <div><ui-button size="sm" [variant]="selectedCustomer?.id === customer.id ? 'primary' : 'ghost'"
                         [ariaLabel]="'Ver ficha de ' + customer.name"
                         (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{ selectedCustomer?.id === customer.id ? 'Viendo' : 'Ver' }}</ui-button></div>

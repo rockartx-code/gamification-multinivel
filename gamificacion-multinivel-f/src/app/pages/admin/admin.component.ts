@@ -915,16 +915,55 @@ export class AdminComponent implements OnInit {
     return this.adminData()?.customers ?? [];
   }
 
+  /** Filtro "fríos": sin compra en 30+ días o nunca. Antes se cruzaban siete pestañas de Pedidos a mano. */
+  customersColdOnly = false;
+
+  daysSinceLastPurchase(customer: AdminCustomer): number | null {
+    if (!customer.lastPurchaseAt) return null;
+    const t = new Date(customer.lastPurchaseAt).getTime();
+    if (!Number.isFinite(t)) return null;
+    return Math.max(0, Math.floor((Date.now() - t) / 86400000));
+  }
+
+  isColdCustomer(customer: AdminCustomer): boolean {
+    if (customer.deletedAt) return false;
+    const days = this.daysSinceLastPurchase(customer);
+    return days === null || days >= 30;
+  }
+
   get filteredCustomers(): AdminCustomer[] {
     const q = this.customerSearch.trim().toLowerCase();
-    if (!q) return this.customers;
-    return this.customers.filter(
+    const base = this.customersColdOnly ? this.customers.filter((c) => this.isColdCustomer(c)) : this.customers;
+    if (!q) return base;
+    return base.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q) ||
         (c.level || '').toLowerCase().includes(q) ||
         (c.discount || '').toLowerCase().includes(q)
     );
+  }
+
+  toggleCustomersColdOnly(): void {
+    this.customersColdOnly = !this.customersColdOnly;
+    this.customerPage = 0;
+  }
+
+  /** Exportar la lista filtrada (nombre, correo, teléfono, patrocinador, última compra, mes anterior) a CSV. */
+  exportCustomersCsv(): void {
+    const rows = this.filteredCustomers.map((c) => [
+      c.name, c.email, c.phone || '', c.leaderId != null ? String(c.leaderId) : 'FindingU',
+      c.lastPurchaseAt ? c.lastPurchaseAt.slice(0, 10) : 'nunca',
+      String(this.daysSinceLastPurchase(c) ?? ''), String(c.commissionsPrevMonth ?? 0), c.doNotContact ? 'no contactar' : ''
+    ]);
+    const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [['Nombre', 'Correo', 'Teléfono', 'Patrocinador', 'Última compra', 'Días', 'Comisión mes anterior', 'Contacto'], ...rows]
+      .map((r) => r.map(esc).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `clientes-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   get pagedCustomers(): AdminCustomer[] {

@@ -77,6 +77,24 @@ def _mes_anterior(month_key: str) -> str:
     return f"{y - 1}-12" if m == 1 else f"{y}-{m - 1:02d}"
 
 
+
+_ESTADOS_COMPRA = ("paid", "shipped", "delivered", "en_devolucion", "devolucion_rechazada", "devuelto_validado")
+
+
+def _ultima_compra(customer_id: str):
+    """Fecha del último pedido pagado del cliente, leído del historial por cliente (newest first)."""
+    try:
+        resp = utils._table.query(
+            KeyConditionExpression=utils.Key("PK").eq(utils._order_customer_history_pk(customer_id)),
+            ScanIndexForward=False, Limit=8,
+        )
+        for it in resp.get("Items", []) or []:
+            if str(it.get("status") or "").lower() in _ESTADOS_COMPRA:
+                return it.get("createdAt")
+    except Exception as ex:
+        utils._log("customer_last_purchase_error", "ERROR", customer=customer_id, error=ex)
+    return None
+
 def _con_comisiones(customers: list) -> list:
     """Añade a cada ficha lo que la gerente necesita el día de pago.
 
@@ -111,6 +129,9 @@ def _con_comisiones(customers: list) -> list:
         confirmado_prev = float(utils._to_decimal(prev.get("totalConfirmed", 0)))
         recibo = recibos.get(cid, "")
         c = dict(c)
+        # "Última compra" a simple vista: la ejecutiva de recuperación cruzaba
+        # las siete pestañas de Pedidos a mano para saber quién se enfrió.
+        c["lastPurchaseAt"] = _ultima_compra(cid)
         c["commissionsCurrentConfirmed"] = float(utils._to_decimal(hoy.get("totalConfirmed", 0)))
         c["commissionsCurrentPending"] = float(utils._to_decimal(hoy.get("totalPending", 0)))
         c["commissionsPrevMonthKey"] = anterior

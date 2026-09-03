@@ -395,6 +395,7 @@ export interface AdminCustomer {
   bankInstitution?: string;
   canAccessAdmin?: boolean;
   privileges?: UserPrivileges;
+  lastPurchaseAt?: string;
   documents?: CustomerDocument[];
   /** Seguimiento: el cliente pidió no ser contactado (o fue dado de baja). */
   doNotContact?: boolean;

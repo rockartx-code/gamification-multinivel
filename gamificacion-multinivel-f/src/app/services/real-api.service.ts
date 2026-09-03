@@ -275,6 +275,7 @@ export class RealApiService {
       clabeInterbancaria: raw['clabeInterbancaria'] != null ? String(raw['clabeInterbancaria']) : undefined,
       bankInstitution: raw['bankInstitution'] != null ? String(raw['bankInstitution']) : undefined,
       documents: raw['documents'] as AdminCustomer['documents'],
+      lastPurchaseAt: this.readString(raw, ['lastPurchaseAt']) || undefined,
       canAccessAdmin: Boolean(raw['canAccessAdmin']),
       privileges: (raw['privileges'] as AdminCustomer['privileges']) ?? {},
       doNotContact: Boolean(raw['doNotContact'] ?? false),
