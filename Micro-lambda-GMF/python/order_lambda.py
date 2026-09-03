@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 import core_utils as utils  # Importado desde la Layer
 from core import order_emails
+import modo_handlers  # paquete B
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -77,18 +78,24 @@ def _calculate_totals(items, customer_id, buyer_type):
 
     cfg = utils._load_app_config().get("rewards", {})
     rate = utils.Decimal("0.0")
+    discount_tiers = cfg.get("discountTiers") or []
+    # Paquete B (modo cliente): un invitado o un cliente en modo cliente paga precio de
+    # lista y el pedido guarda cuánto habría ahorrado como socia (`partnerSavings*`).
+    modo = "invitado"
+    prior_mpn = utils.D_ZERO
 
     if buyer_type in ["associate", "registered"] and customer_id:
-        discount_tiers = cfg.get("discountTiers") or []
         # MPN previo acumulado del mes (neto pagado en compras personales).
         month_key = utils._month_key()
         m_state = utils._get_by_id(
             "ASSOCIATE_MONTH", utils._associate_month_entity_id(customer_id, month_key)
         ) or {}
         prior_mpn = utils._to_decimal(m_state.get("netVolume", 0))
-        # El nivel se determina sumando el acumulado previo + la compra actual (bruto).
-        basis = prior_mpn + gross
-        rate = _resolve_discount_rate(discount_tiers, basis)
+        modo = modo_handlers.modo_de(utils._get_by_id("CUSTOMER", customer_id))
+        if modo == "socio":
+            # El nivel se determina sumando el acumulado previo + la compra actual (bruto).
+            basis = prior_mpn + gross
+            rate = _resolve_discount_rate(discount_tiers, basis)
 
     discount_amount = (gross * rate).quantize(utils.D_CENT)
     return {
@@ -96,6 +103,7 @@ def _calculate_totals(items, customer_id, buyer_type):
         "discountRate": rate,
         "discountAmount": discount_amount,
         "netTotal": (gross - discount_amount).quantize(utils.D_CENT),
+        **modo_handlers.campos_ahorro(gross, prior_mpn, modo, discount_tiers),
     }
 
 

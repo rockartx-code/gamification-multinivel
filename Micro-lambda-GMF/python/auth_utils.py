@@ -3,6 +3,7 @@ import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from typing import Optional
+import modo_handlers  # paquete B
 
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
 
@@ -247,7 +248,8 @@ def handle_login(body):
             "role": auth.get("role"),
             "canAccessAdmin": bool(profile.get("canAccessAdmin")),
             "privileges": utils._normalize_privileges(profile.get("privileges")),
-            "isEmployee": (entity_type == "EMPLOYEE")
+            "isEmployee": (entity_type == "EMPLOYEE"),
+            "mode": modo_handlers.modo_de(profile) if entity_type == "CUSTOMER" else None,  # paquete B
         }
     })
 
@@ -300,11 +302,13 @@ def handle_create_account(body):
     leader_id = _resolve_leader_from_referral_code(raw_referral) or body.get("leaderId") or None
     if raw_referral and not leader_id:
         utils._log("referral_code_unresolved", "INFO", referralToken=raw_referral, detail='se registra sin líder')
+    modo_handlers.asegurar_socio(leader_id, "referido")  # paquete B: quien ya tiene red es socio
     
     customer_item = {
         "entityType": "customer", "customerId": customer_id, "name": name,
         "email": email, "phone": body.get("phone"), "leaderId": leader_id,
-        "isAssociate": True, "canAccessAdmin": False, "createdAt": now
+        "isAssociate": True, "canAccessAdmin": False, "createdAt": now,
+        "mode": "cliente", "modeSince": now, "modeReason": "registro",  # paquete B: todo registro nace cliente
     }
     utils._put_entity("CUSTOMER", customer_id, customer_item)
 
