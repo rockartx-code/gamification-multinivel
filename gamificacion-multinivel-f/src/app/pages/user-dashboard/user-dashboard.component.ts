@@ -1762,15 +1762,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.maybeShowGoalProgressToast();
   }
 
+  /** Cantidad tecleada junto a "Agregar a carrito". Antes el campo escribía
+   *  directo en el carrito y el botón sumaba 1 más: 2 → 3, 1 → 2. */
+  heroQtyDraft = 1;
+
   setHeroQty(value: number): void {
-    const productId = this.productOfMonth?.id;
-    if (!productId) {
-      return;
-    }
-    const product = this.resolveProduct(productId);
-    if (product) {
-      this.cartControl.upsertItem(this.buildCartItem(product), value);
-    }
+    const n = Math.floor(Number(value));
+    this.heroQtyDraft = Number.isFinite(n) && n > 0 ? n : 1;
   }
 
   addHeroToCart(): void {
@@ -1780,8 +1778,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     const product = this.resolveProduct(productId);
     if (product) {
-      this.cartControl.addItem(this.buildCartItem(product), 1);
-      this.celebrateAdd(product, 1);
+      const qty = this.heroQtyDraft;
+      this.cartControl.addItem(this.buildCartItem(product), qty);
+      this.celebrateAdd(product, qty);
+      this.heroQtyDraft = 1;
     }
     this.logGoalProgress();
     this.maybeShowGoalProgressToast();

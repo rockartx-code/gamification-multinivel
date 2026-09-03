@@ -633,6 +633,8 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
     def _write_row(b_id, gen, amount, status, reason=None):
         row_id = f"{order_id}#G{gen}"
 
+        cambio = {"nuevo": True}
+
         def _mutate(item):
             new_row = {
                 "rowId": row_id, "orderId": order_id, "amount": amount,
@@ -641,11 +643,16 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
             }
             if reason:
                 new_row["reason"] = reason
+            previa = next((r for r in item['ledger'] if r.get('rowId') == row_id), None)
+            # Si la fila ya existía igual (reevaluación del mismo pedido), no es un aviso nuevo.
+            if previa and (previa.get("status") or "").lower() == status and utils._to_decimal(previa.get("amount")) == utils._to_decimal(amount):
+                cambio["nuevo"] = False
             item['ledger'] = [r for r in item['ledger'] if r.get('rowId') != row_id]
             item['ledger'].append(new_row)
             return True
 
         _mutate_ledger_month(b_id, month_key, _mutate)
+        return cambio["nuevo"]
 
     gen = 1  # siguiente generación a cubrir
     for b_id in chain:
@@ -657,8 +664,10 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
 
         if _generation_qualified(b_id, gen_cfg, month_key, mxn_per_vp, max_levels, activation_vp):
             # Califica: cobra esta generación y avanza el contador.
-            _write_row(b_id, gen, amount, "pending")
-            _avisar_comision(b_id, order, gen, amount)
+            # El aviso salía dos veces: al pagar y otra vez cuando la propia compra
+            # activaba al comprador y se reevaluaba el mismo pedido.
+            if _write_row(b_id, gen, amount, "pending"):
+                _avisar_comision(b_id, order, gen, amount)
             gen += 1
         elif cut_rule == "dynamic_compression":
             # No califica: se registra informativo 'blocked' y la posición se brinca

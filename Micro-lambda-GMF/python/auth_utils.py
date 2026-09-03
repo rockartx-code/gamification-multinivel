@@ -234,6 +234,9 @@ def handle_login(body):
         "role": auth.get("role"),
         "authId": auth.get("authId") or identifier,
         "privileges": utils._normalize_privileges(profile.get("privileges")),
+        # Una socia con acceso al back office entra con rol cliente: el backend
+        # necesita saberlo para aplicar sus privilegios.
+        "canAccessAdmin": bool(profile.get("canAccessAdmin")),
     }, ttl_epoch=utils._ttl_epoch(utils.SESSION_TTL_SECONDS))
 
     return utils._json_response(200, {

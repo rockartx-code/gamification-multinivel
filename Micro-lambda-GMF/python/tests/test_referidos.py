@@ -75,3 +75,25 @@ def test_crear_cuenta_liga_los_pedidos_hechos_como_invitado(auth, utils):
     assert utils._get_by_id("ORDER", "ORD-OTRO").get("customerId") in (None, "")
     historial = [v for (pk, sk), v in utils._table.store.items() if pk == f"ORDER_BY_CUSTOMER#{cid}"]
     assert [h["orderId"] for h in historial] == ["ORD-INV1"]
+
+
+def test_una_socia_con_acceso_al_back_office_pasa_los_privilegios(auth, utils):
+    """Regresión: Verónica tenía canAccessAdmin y 'Ver Clientes' y recibía 403 en
+    /customers/getall porque _require_admin solo aceptaba admin/empleado."""
+    import json
+    cid = _alta(auth, "Verónica Sandoval", "vero@test.com")
+    utils._update_by_id("AUTH", "vero@test.com", "SET emailVerified = :v", {":v": True})
+    utils._update_by_id("CUSTOMER", cid, "SET canAccessAdmin = :a, privileges = :p",
+                        {":a": True, ":p": utils._normalize_privileges({"access_screen_customers": True})})
+    r = auth.handle_login({"email": "vero@test.com", "password": "Secreta123!"})
+    assert r["statusCode"] == 200, r["body"]
+    token = json.loads(r["body"])["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert utils._require_admin(headers, "access_screen_customers") is None
+    assert utils._require_admin(headers, "customer_add") is not None  # sin ese privilegio sigue negado
+    # Un cliente sin la marca sigue fuera del back office.
+    cid2 = _alta(auth, "Otro Cliente", "otro@test.com")
+    utils._update_by_id("AUTH", "otro@test.com", "SET emailVerified = :v", {":v": True})
+    r2 = auth.handle_login({"email": "otro@test.com", "password": "Secreta123!"})
+    token2 = json.loads(r2["body"])["token"]
+    assert utils._require_admin({"Authorization": f"Bearer {token2}"}) is not None

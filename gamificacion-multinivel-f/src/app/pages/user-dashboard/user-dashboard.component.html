@@ -307,7 +307,7 @@
             <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div class="flex items-center gap-3 rounded-2xl border border-olive-30 surface-soft p-3">
                 <span class="text-sm text-gray-600">Cantidad</span>
-                <ui-form-field type="number" [ngModel]="heroQty" (ngModelChange)="setHeroQty($event)"
+                <ui-form-field type="number" [ngModel]="heroQtyDraft" (ngModelChange)="setHeroQty($event)"
                   inputClass="w-20 rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main"></ui-form-field>
                 <span class="flex items-center gap-2 text-sm text-gray-600">
                   <span class="font-semibold text-main">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>

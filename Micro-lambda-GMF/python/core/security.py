@@ -91,11 +91,7 @@ def _extract_actor(headers: dict) -> dict:
             return _superadmin_actor()
         session = _get_session(token)
         if isinstance(session, dict):
-            return {
-                "user_id": str(session.get("userId") or "").strip() or None,
-                "role": str(session.get("role") or "").strip().lower(),
-                "privileges": _normalize_privileges(session.get("privileges")),
-            }
+            return _actor_de_sesion(session)
 
     # Fallback: headers legacy inyectados por API Gateway / Authorizer
     user_id = (h.get("x-user-id") or h.get("X-User-Id") or "").strip() or None
@@ -122,10 +118,20 @@ def _extract_actor_from_bearer(headers: dict) -> dict:
     if not isinstance(session, dict):
         return {"user_id": None, "role": "", "privileges": _normalize_privileges({})}
 
+    return _actor_de_sesion(session)
+
+def _actor_de_sesion(session: dict) -> dict:
+    """Actor a partir de la sesión. Un cliente con `canAccessAdmin` opera el back
+    office como un empleado (sus privilegios mandan); sin esa marca, un cliente
+    con privilegios guardados recibía 403 en todo."""
+    role = str(session.get("role") or "").strip().lower()
+    if role == "cliente" and bool(session.get("canAccessAdmin")):
+        role = "employee"
     return {
         "user_id": str(session.get("userId") or "").strip() or None,
-        "role": str(session.get("role") or "").strip().lower(),
+        "role": role,
         "privileges": _normalize_privileges(session.get("privileges")),
+        "isCustomer": str(session.get("role") or "").strip().lower() == "cliente",
     }
 
 def _extract_admin_actor(headers: dict) -> dict:

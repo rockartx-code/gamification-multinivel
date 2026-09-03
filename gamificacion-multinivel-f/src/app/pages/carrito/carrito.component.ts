@@ -336,16 +336,20 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (!pct) {
       return 'Sin descuento';
     }
-    if (pct >= 50) {
-      return 'Nivel 3';
-    }
+    // Los niveles van con los tramos del plan (10/20/30/40%); antes el 20% se llamaba "Nivel base".
     if (pct >= 40) {
-      return 'Nivel 2';
+      return 'Nivel 4';
     }
     if (pct >= 30) {
+      return 'Nivel 3';
+    }
+    if (pct >= 20) {
+      return 'Nivel 2';
+    }
+    if (pct >= 10) {
       return 'Nivel 1';
     }
-    return 'Nivel base';
+    return 'Sin descuento';
   }
 
   get hasDiscount(): boolean {
@@ -874,16 +878,20 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private discountLevelLabelByPercent(pct: number): string {
-    if (pct >= 50) {
-      return 'Nivel 3';
-    }
+    // Los niveles van con los tramos del plan (10/20/30/40%); antes el 20% se llamaba "Nivel base".
     if (pct >= 40) {
-      return 'Nivel 2';
+      return 'Nivel 4';
     }
     if (pct >= 30) {
+      return 'Nivel 3';
+    }
+    if (pct >= 20) {
+      return 'Nivel 2';
+    }
+    if (pct >= 10) {
       return 'Nivel 1';
     }
-    return 'Nivel base';
+    return 'Sin descuento';
   }
 
   private showToast(message: string): void {
