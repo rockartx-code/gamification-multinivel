@@ -200,12 +200,14 @@ def test_el_dia_indicado_crea_el_pedido_con_el_tramo_real_y_manda_el_enlace(orde
     assert pedido["subscriptionId"] == sub["subscriptionId"]
     assert pedido["grossSubtotal"] == Decimal("1150") and pedido["discountRate"] == Decimal("0.10")
     assert pedido["netTotal"] == Decimal("1035.00") and pedido["shippingCarrier"] == "por confirmar"
+    # Integrado con C: la tarifa base shipping.baseRateMxn ($129) se cobra en el pedido de suscripción.
+    assert pedido["shippingCost"] == Decimal("129") and pedido["total"] == Decimal("1164.00")
     assert pedido["shippingAddress"]["postalCode"] == "44100" and pedido["email"] == "bety@test.com"
     assert pedido["paymentPreferenceId"] == f"pref-{oid}"
 
     correo = buzon[-1]
     assert correo[0] == "bety@test.com" and "paga aquí" in correo[1] and oid in correo[1]
-    assert f"https://mp.test/pagar/{oid}" in correo[2] and "$1,035.00" in correo[2] and "10 %" in correo[2]
+    assert f"https://mp.test/pagar/{oid}" in correo[2] and "$1,164.00" in correo[2] and "10 %" in correo[2]
 
     actualizada = utils._get_by_id("SUBSCRIPTION", sub["subscriptionId"])
     assert actualizada["lastRunDate"] == dia and actualizada["lastOrderId"] == oid

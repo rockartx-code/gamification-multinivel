@@ -113,7 +113,7 @@ export interface SesionAbierta {
     canAccessAdmin?: boolean;
     privileges?: Record<string, boolean>;
     isEmployee?: boolean;
-    mode?: string;
+    mode?: 'cliente' | 'socio' | null; // paquete B
   };
 }
 
