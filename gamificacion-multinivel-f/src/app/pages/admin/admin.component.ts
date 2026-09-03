@@ -3835,11 +3835,40 @@ export class AdminComponent implements OnInit {
 
   refundAmount = '';
 
-  /** Monto sugerido: en arrepentimiento no se devuelve el envío (la gerente lo corregía a mano). */
+  /** Monto sugerido: el calculado por líneas en la solicitud (productos con descuento + envíos según el motivo);
+   *  si la solicitud es anterior a esa regla, la de la ronda 4 (en arrepentimiento no se devuelve el envío). */
   private suggestedRefundFor(o: AdminOrder): number {
+    const porLineas = o.returnInspection?.refundSuggested;
+    if (porLineas != null && Number.isFinite(Number(porLineas))) {
+      return this.roundMoney(Math.max(0, Number(porLineas)));
+    }
     const arrepentimiento = (o.returnInspection?.motivo || '').toUpperCase() === 'DESISTIMIENTO';
     const base = arrepentimiento ? (o.total || 0) - (o.shippingCost || 0) : (o.total || 0) + (o.returnShippingCost || 0);
     return this.roundMoney(Math.max(0, base));
+  }
+
+  /** Desglose del sugerido por líneas, para mostrarlo en el modal (paquete G). */
+  get refundBreakdown(): { products: number; returnShipping: number; originalShipping: number } | null {
+    const b = this.refundTargetOrder?.returnInspection?.refundBreakdown;
+    if (!b) return null;
+    return { products: Number(b.products ?? 0), returnShipping: Number(b.returnShipping ?? 0), originalShipping: Number(b.originalShipping ?? 0) };
+  }
+
+  get refundReturnedLines(): Array<{ name: string; quantity: number; unitNet?: number }> {
+    return this.refundTargetOrder?.returnInspection?.lines ?? [];
+  }
+
+  /** Importe escrito en el modal, como número (NaN si no es válido). */
+  get refundAmountNumber(): number {
+    return Number(String(this.refundAmount).replace(/[^0-9.]/g, ''));
+  }
+
+  /** Apartarse del sugerido por líneas exige motivo (la clienta lo verá en su página). */
+  get refundNeedsAdjustmentReason(): boolean {
+    const o = this.refundTargetOrder;
+    if (!o || o.returnInspection?.refundSuggested == null) return false;
+    const importe = this.refundAmountNumber;
+    return Number.isFinite(importe) && this.roundMoney(importe) !== this.refundSuggestedAmount;
   }
 
   get refundSuggestedAmount(): number {
@@ -3850,10 +3879,17 @@ export class AdminComponent implements OnInit {
   get refundSuggestedHint(): string {
     const o = this.refundTargetOrder;
     if (!o) return '';
+    if (o.returnInspection?.refundSuggested != null) {
+      return o.returnInspection.partial
+        ? 'Calculado por las líneas que devolvió, con su descuento. Si cambias el importe, escribe por qué.'
+        : 'Calculado por el pedido completo, con su descuento. Si cambias el importe, escribe por qué.';
+    }
     return (o.returnInspection?.motivo || '').toUpperCase() === 'DESISTIMIENTO'
       ? 'Arrepentimiento: se sugiere solo el producto; el envío no se reembolsa.'
       : 'Se sugiere el total cobrado más el envío de regreso si el cliente lo pagó.';
   }
+
+  refundAdjustmentReason = '';
 
   openRefundModal(order: AdminOrder): void {
     this.refundTargetOrder = order;
@@ -3861,6 +3897,7 @@ export class AdminComponent implements OnInit {
     this.refundReceiptBase64 = '';
     this.refundReceiptName = '';
     this.refundReason = '';
+    this.refundAdjustmentReason = '';
     this.refundError = '';
     this.isRefundModalOpen = true;
   }
@@ -3893,9 +3930,15 @@ export class AdminComponent implements OnInit {
     this.refundError = '';
     this.isSavingRefund = true;
     const orderId = this.refundTargetOrder.id;
-    const importe = Number(String(this.refundAmount).replace(/[^0-9.]/g, ''));
+    const importe = this.refundAmountNumber;
     if (!Number.isFinite(importe) || importe < 0) {
+      this.isSavingRefund = false;
       this.refundError = 'Escribe un importe válido.';
+      return;
+    }
+    if (this.refundNeedsAdjustmentReason && !this.refundAdjustmentReason.trim()) {
+      this.isSavingRefund = false;
+      this.refundError = `El importe (${this.formatMoney(importe)}) es distinto al sugerido (${this.formatMoney(this.refundSuggestedAmount)}). Escribe el motivo del ajuste: el cliente lo verá.`;
       return;
     }
     const payload: AdminRefundPayload = {
@@ -3904,14 +3947,17 @@ export class AdminComponent implements OnInit {
       receiptBase64: this.refundReceiptBase64,
       receiptName: this.refundReceiptName || 'comprobante.jpg',
       receiptContentType: this.refundReceiptName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+      adjustmentReason: this.refundNeedsAdjustmentReason ? this.refundAdjustmentReason.trim() : undefined,
     };
     this.api.refundOrder(orderId, payload).pipe(
       finalize(() => { this.isSavingRefund = false; this.requestViewUpdate(); })
     ).subscribe({
-      next: () => {
+      next: (res) => {
         this.closeRefundModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar('Reembolso registrado correctamente.');
+        // La confirmación dice lo que quedó guardado (respuesta del servidor), no lo del formulario.
+        const monto = res?.refundAmount != null ? this.formatMoney(Number(res.refundAmount)) : this.formatMoney(importe);
+        this.showSnackbar(`Reembolso de ${monto} registrado para el pedido ${res?.orderId || orderId}; se avisó al cliente por correo.`);
       },
       error: (err: unknown) => {
         this.refundError = this.resolveUiErrorMessage(err, 'No se pudo registrar el reembolso.');
@@ -3927,7 +3973,25 @@ export class AdminComponent implements OnInit {
     this.receiveReturnError = '';
     this.receiveReturnChecklist = { ...RECEIVE_RETURN_CHECKLIST_DEFAULT };
     this.receiveReturnNotes = '';
+    const coincidencias: Record<string, boolean> = {};
+    for (const l of order.returnInspection?.lines ?? []) { coincidencias[String(l.productId)] = true; }
+    this.receiveReturnLineMatches = coincidencias;
     this.isReceiveReturnModalOpen = true;
+  }
+
+  /** Líneas que la clienta dijo que devolvía (paquete G); la bodega marca si cada una coincide. */
+  receiveReturnLineMatches: Record<string, boolean> = {};
+
+  get receiveReturnLines(): Array<{ productId: number | string; name: string; quantity: number; unitNet?: number }> {
+    return this.receiveReturnOrder?.returnInspection?.lines ?? [];
+  }
+
+  toggleReceiveReturnLine(productId: number | string, value: boolean): void {
+    this.receiveReturnLineMatches = { ...this.receiveReturnLineMatches, [String(productId)]: value };
+  }
+
+  get receiveReturnAllLinesMatch(): boolean {
+    return this.receiveReturnLines.every((l) => this.receiveReturnLineMatches[String(l.productId)] !== false);
   }
 
   /** Checklist de inspección (reglas 3.2 y 5): antes se mandaba todo en verde y recibir era aprobar. */
@@ -3948,7 +4012,8 @@ export class AdminComponent implements OnInit {
 
   get receiveReturnWouldApprove(): boolean {
     const c = this.receiveReturnChecklist;
-    return c.coincide_con_pedido && c.trazabilidad_valida && c.empaque_original && c.sellos_intactos && c.sin_uso && !c.danio_no_empresa;
+    const coincide = this.receiveReturnLines.length ? this.receiveReturnAllLinesMatch : c.coincide_con_pedido;
+    return coincide && c.trazabilidad_valida && c.empaque_original && c.sellos_intactos && c.sin_uso && !c.danio_no_empresa;
   }
 
   closeReceiveReturnModal(): void {
@@ -3996,20 +4061,30 @@ export class AdminComponent implements OnInit {
         sin_uso: c.sin_uso,
         producto_abierto: !c.sellos_intactos,
         danio_no_empresa: c.danio_no_empresa,
-        coincide_con_pedido: c.coincide_con_pedido,
+        coincide_con_pedido: this.receiveReturnLines.length ? this.receiveReturnAllLinesMatch : c.coincide_con_pedido,
         trazabilidad_valida: c.trazabilidad_valida,
       },
       packageImages: this.receiveReturnImages,
       notes: this.receiveReturnNotes.trim() || undefined,
-      rejectionReason: aprobada ? undefined : (this.receiveReturnNotes.trim() || 'No pasó la inspección física del paquete'),
+      rejectionReason: aprobada ? undefined : (this.receiveReturnNotes.trim() || (this.receiveReturnLines.length && !this.receiveReturnAllLinesMatch ? 'Lo recibido no coincide con lo que se declaró devolver' : 'No pasó la inspección física del paquete')),
+      lines: this.receiveReturnLines.length
+        ? this.receiveReturnLines.map((l) => ({ productId: l.productId, quantity: l.quantity, matches: this.receiveReturnLineMatches[String(l.productId)] !== false }))
+        : undefined,
     };
     this.api.inspectReturn(orderId, payload).pipe(
       finalize(() => { this.isSavingReceiveReturn = false; this.requestViewUpdate(); })
     ).subscribe({
-      next: () => {
+      next: (res) => {
         this.closeReceiveReturnModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar(aprobada ? 'Paquete recibido. Devolución validada.' : 'Paquete recibido. Devolución rechazada por la inspección; se avisó al cliente.');
+        // Confirmación con lo guardado: folio, resultado y reembolso sugerido que devuelve el servidor.
+        const folio = res?.requestId ? ` ${res.requestId}` : '';
+        if (res?.approved ?? aprobada) {
+          const sugerido = res?.refundSuggested != null ? ` Reembolso sugerido: ${this.formatMoney(Number(res.refundSuggested))}.` : '';
+          this.showSnackbar(`Paquete recibido. Devolución${folio} validada.${sugerido}`);
+        } else {
+          this.showSnackbar(`Paquete recibido. Devolución${folio} rechazada por la inspección; se avisó al cliente.`);
+        }
       },
       error: (err: unknown) => {
         this.receiveReturnError = this.resolveUiErrorMessage(err, 'No se pudo registrar la recepción del paquete.');
@@ -4060,10 +4135,11 @@ export class AdminComponent implements OnInit {
     this.api.inspectReturn(orderId, payload).pipe(
       finalize(() => { this.isSavingRejectReturn = false; this.requestViewUpdate(); })
     ).subscribe({
-      next: () => {
+      next: (res) => {
         this.closeRejectReturnModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar('Devolución rechazada.');
+        const cortesia = payload.courtesyPercent ? ` con ${payload.courtesyPercent}% de cortesía` : '';
+        this.showSnackbar(`Devolución ${res?.requestId || orderId} rechazada; se avisó al cliente${cortesia}.`);
       },
       error: (err: unknown) => {
         this.rejectReturnError = this.resolveUiErrorMessage(err, 'No se pudo rechazar la devolución.');
