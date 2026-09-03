@@ -218,6 +218,11 @@ class Manejador(BaseHTTPRequestHandler):
                 import traceback; traceback.print_exc()
                 return self._responder(500, json.dumps({"message": f"Error interno simulado: {e!r}"}))
             drenar_sfn()
+            # Guardar tras cada escritura: un reinicio del contenedor perdía todo lo hecho
+            # desde el último cambio de reloj (entregas, transferencias, turnos enteros).
+            if self.command in ("POST", "PUT", "PATCH", "DELETE"):
+                try: guardar()
+                except Exception as e: print(f"[sim] guardar tras {self.command} falló: {e!r}")
             body = r.get("body", "")
             if r.get("isBase64Encoded"): body = base64.b64decode(body)
             hdr = {k: v for k, v in (r.get("headers") or {}).items()}

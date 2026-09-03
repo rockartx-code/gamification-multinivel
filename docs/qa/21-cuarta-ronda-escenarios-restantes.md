@@ -83,9 +83,15 @@ Tras el mensaje de Ivonne, Rosa Elena entra, ve por fin sus dos compras de invit
 - La "entrega personal" existe solo del lado del almacén; el cliente no puede pedirla al comprar (Ivonne lo resuelve avisando a bodega). Propuesta en §4.
 - Su panel no dice quién es su coach: muestra "Patrocinador: FindingU" y el WhatsApp genérico de soporte, no a Ivonne. Propuesta en §4.
 
-### 2.10 Ola en curso
+### 2.10 Despacho de diciembre con entrega personal (Beto, 14-dic) y entregas (16-dic)
 
-_(Beto despacha los diez pedidos de diciembre, uno con entrega personal en CDMX; después la devolución de Patricia con checklist, la activación de Claudia el 20 y el cierre de enero.)_
+- Beto despachó los diez pedidos pagados de diciembre: nueve con guía Estafeta y el de Rosa Elena como **entrega personal** (lugar, fecha y nota "la lleva Beto en persona"), primera vez que se usa esa modalidad. Verificado en la API. Bodega Central quedó holgada; el Magnesio nuevo tiene 0 en ambos almacenes: tras el alta nadie registró la entrada de inventario (hueco operativo).
+- Encontró el pickup de Claudia de noviembre todavía "Pagada": la entrega del 15-nov y la transferencia de Biotina se habían perdido con un reinicio del contenedor (el simulador guardaba el estado solo al cambiar el reloj). Se repitieron por API y el simulador ahora guarda tras cada escritura.
+- 16-dic: Estafeta entrega los nueve y Beto la personal. Las comisiones de diciembre pasaron a confirmadas en vivo: Verónica $491.20 (con los $49.50 de 2ª generación), Bety $99; Claudia sigue con $195.20 bloqueados a la espera de activarse.
+
+### 2.11 Ola en curso
+
+_(Patricia devuelve por arrepentimiento; Beto la recibe con el checklist; Sofía reembolsa, cancela el pickup que nadie recogió y registra la entrada del Magnesio; Claudia se activa el 20; enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
