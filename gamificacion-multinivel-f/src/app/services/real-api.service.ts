@@ -1292,9 +1292,10 @@ export class RealApiService {
     );
   }
 
-  private actorHeaders(): HttpHeaders {
+  public actorHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    const raw = localStorage.getItem('auth-user');
+    // paquete C: sin "Recordarme" la sesión vive en sessionStorage.
+    const raw = sessionStorage.getItem('auth-user') ?? localStorage.getItem('auth-user');
     if (!raw) {
       return headers;
     }
@@ -1423,6 +1424,14 @@ export class RealApiService {
       rejectedAt: this.readString(order, ['rejectedAt']) || undefined,
       refundReceiptUrl: this.readString(order, ['refundReceiptUrl']) || undefined,
       refundedAt: this.readString(order, ['refundedAt']) || undefined,
+      // paquete C · factura
+      invoiceRequested: Boolean(order['invoiceRequested']),
+      invoiceStatus: (this.readString(order, ['invoiceStatus']) || undefined) as AdminOrder['invoiceStatus'],
+      invoiceData: (order['invoiceData'] as AdminOrder['invoiceData']) || undefined,
+      invoiceRequestedAt: this.readString(order, ['invoiceRequestedAt']) || undefined,
+      invoiceIssuedAt: this.readString(order, ['invoiceIssuedAt']) || undefined,
+      invoiceFolio: this.readString(order, ['invoiceFolio']) || undefined,
+      invoiceFileUrl: this.readString(order, ['invoiceFileUrl']) || undefined,
     };
   }
 

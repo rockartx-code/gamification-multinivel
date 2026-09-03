@@ -8,9 +8,11 @@ import { ESTADOS_MX_CODES, ESTADOS_MX_OPTIONS } from '../../constants/states-mx'
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
 import { AdminOrderItem, CustomerShippingAddress, ShippingRate, ShippingQuoteItem, CouponValidation } from '../../models/admin.model';
+import { DatosFiscales, EnvioInfo, SucursalRecoger, SugerenciaActivacion } from '../../models/checkout.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
+import { CheckoutService } from '../../services/checkout.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { GoalControlService } from '../../services/goal-control.service';
@@ -41,8 +43,24 @@ export class CarritoComponent implements OnInit, OnDestroy {
     private readonly dashboardControl: UserDashboardControlService,
     private readonly api: ApiService,
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly checkout: CheckoutService
   ) {}
+
+  // ── Paquete C · envío visible, completa tu activación, sucursales y factura ──
+  envioInfo: EnvioInfo | null = null;
+  sugerencia: SugerenciaActivacion | null = null;
+  isLoadingSugerencia = false;
+  /** Sucursales devueltas por el servidor para la ciudad/estado capturados y el carrito actual. */
+  pickupOptions: SucursalRecoger[] = [];
+  pickupAvailable = false;
+  pickupCities: string[] = [];
+  pickupLocationGiven = false;
+  invoiceRequested = false;
+  invoiceForm: DatosFiscales = { rfc: '', razonSocial: '', regimenFiscal: '', cpFiscal: '', usoCfdi: '', email: '' };
+  invoiceErrors: Partial<Record<keyof DatosFiscales, string>> = {};
+  private checkoutRefreshTimeout?: number;
+  private lastPickupQueryKey = '';
 
   isToastVisible = false;
   toastMessage = 'Actualizado.';
@@ -123,6 +141,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.refreshSuggestedProducts();
     this.dataSub = this.cartControl.data$.subscribe(() => {
       this.refreshSuggestedProducts();
+      this.scheduleCheckoutRefresh();
       this.cdr.markForCheck();
     });
     this.goalControl.load().subscribe();
@@ -137,6 +156,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.updateCountdown();
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
     this.loadPickupStocks();
+    this.scheduleCheckoutRefresh();
   }
 
   private restoreDeliveryState(): void {
@@ -181,6 +201,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     if (this.addFadeRestartTimeout) {
       window.clearTimeout(this.addFadeRestartTimeout);
+    }
+    if (this.checkoutRefreshTimeout) {
+      window.clearTimeout(this.checkoutRefreshTimeout);
     }
     this.dashboardSub?.unsubscribe();
     this.shippingQuoteSub?.unsubscribe();
@@ -422,6 +445,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
         this.couponChecking = false;
         this.appliedCoupon = res;
         this.couponMessage = res.message;
+        this.scheduleCheckoutRefresh();
         this.cdr.markForCheck();
       },
       error: () => {
@@ -437,6 +461,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.appliedCoupon = null;
     this.couponCode = '';
     this.couponMessage = '';
+    this.scheduleCheckoutRefresh();
   }
 
   get total(): number {
@@ -449,6 +474,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   /** Regla de envío gratis por importe (misma que aplica el backend al crear el pedido). */
   get freeShippingMin(): number {
+    if (this.envioInfo) {
+      return Number(this.envioInfo.freeShippingMin) || 0;
+    }
     return Number(this.dashboardControl.data?.settings?.freeShippingMin ?? 0) || 0;
   }
 
@@ -456,7 +484,37 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.deliveryType === 'pickup' || !this.freeShippingMin) {
       return false;
     }
+    // El servidor mide la regla sobre el subtotal bruto (config shipping.freeShippingBasis);
+    // "Envío gratis" dejaba de serlo al poner el CP porque aquí se medía sobre el neto.
+    if (this.envioInfo) {
+      return this.envioInfo.freeNow;
+    }
     return Math.max(0, this.subtotal - this.discount - this.couponDiscount) >= this.freeShippingMin;
+  }
+
+  /** Tarifa base de envío anunciada antes de cotizar. */
+  get baseShippingRate(): number {
+    return Number(this.envioInfo?.baseRateMxn ?? 0) || 0;
+  }
+
+  /** "Envío desde $129 · Gratis en compras de $1,000 o más" (números de config). */
+  get envioAnuncio(): string {
+    const partes: string[] = [];
+    if (this.baseShippingRate > 0) {
+      partes.push(`Envío desde ${this.formatMoney(this.baseShippingRate)}`);
+    }
+    if (this.freeShippingMin > 0) {
+      partes.push(`Gratis en compras de ${this.formatMoney(this.freeShippingMin)} o más`);
+    }
+    return partes.length ? partes.join(' · ') : 'Recibe en tu dirección';
+  }
+
+  /** Cuánto falta de compra (bruto) para el envío gratis; 0 si ya aplica o no hay regla. */
+  get faltanteEnvioGratis(): number {
+    if (this.deliveryType === 'pickup' || !this.envioInfo || this.envioInfo.freeNow) {
+      return 0;
+    }
+    return Math.max(0, Number(this.envioInfo.missingForFree) || 0);
   }
 
   get shippingLabel(): string {
@@ -464,13 +522,228 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return 'Gratis (recoger en sucursal)';
     }
     if (this.isShippingFree) {
-      return `Gratis (pedido de ${this.formatMoney(this.freeShippingMin)} o más)`;
+      return `Gratis (compra de ${this.formatMoney(this.freeShippingMin)} o más)`;
     }
     if (this.selectedShippingRate) {
       return this.formatMoney(this.selectedShippingRate.displayPrice);
     }
     // "Envío Gratis" hasta que el cliente ponía su código postal y aparecían $129.
+    if (this.baseShippingRate > 0) {
+      return `Desde ${this.formatMoney(this.baseShippingRate)} · se calcula con tu CP`;
+    }
     return this.shipping === 0 ? 'Se calcula con tu código postal' : this.formatMoney(this.shipping);
+  }
+
+  // ── Completa tu activación ──
+  get activationSuggestionVisible(): boolean {
+    return Boolean(!this.isGuest && this.sugerencia?.applies && this.sugerencia?.suggestion);
+  }
+
+  /** "Agrega 1 Naplus ($280, +5.4 VP) y llegas a 24.3 VP". */
+  get activationSuggestionText(): string {
+    const s = this.sugerencia?.suggestion;
+    if (!s) {
+      return '';
+    }
+    const piezas = s.units === 1 ? `1 ${s.name}` : `${s.units} ${s.name}`;
+    const vp = Math.round(s.netVpPerUnit * s.units * 10) / 10;
+    return `Agrega ${piezas} (${this.formatMoney(s.cost)}, +${vp} VP) y llegas a ${s.vpAfter} VP.`;
+  }
+
+  addSuggestedActivation(): void {
+    const s = this.sugerencia?.suggestion;
+    if (!s) {
+      return;
+    }
+    const id = String(s.productId);
+    const product = (this.dashboardControl.products ?? []).find((p) => String(p.id) === id);
+    const item: CartItem = product
+      ? this.buildCartItem(product)
+      : { id, name: s.name, price: s.price, qty: 1, note: '', img: '' };
+    this.cartControl.addItem(item, s.units);
+    this.cdr.markForCheck();
+    const vp = Math.round(s.netVpPerUnit * s.units * 10) / 10;
+    this.showToast(`Agregado: ${s.units} ${s.name} (+${vp} VP). Con esto llegas a ${s.vpAfter} VP.`);
+    this.triggerAddedFade(id);
+  }
+
+  // ── Recoger en sucursal ──
+  /** La opción solo se ofrece si hay sucursal en la zona con existencia, o si aún no sabemos la zona. */
+  get pickupChoiceVisible(): boolean {
+    if (this.pickupAvailable) {
+      return true;
+    }
+    return !this.pickupLocationGiven && this.pickupOptions.length > 0;
+  }
+
+  get pickupCitiesLabel(): string {
+    return this.pickupCities.join(', ');
+  }
+
+  /** Motivo por el que no se ofrece recoger en sucursal (vacío si sí se ofrece). */
+  get pickupUnavailableNote(): string {
+    if (this.isLoadingPickupStocks || this.pickupChoiceVisible) {
+      return '';
+    }
+    if (!this.pickupOptions.length) {
+      return 'Por ahora no hay sucursales para recoger: te lo enviamos a domicilio.';
+    }
+    const enZona = this.pickupOptions.filter((s) => s.inArea);
+    if (!enZona.length) {
+      return `Recoger en sucursal no está disponible en tu zona. Hay sucursal en: ${this.pickupCitiesLabel}. Te lo enviamos a domicilio.`;
+    }
+    const faltantes = new Set<string>();
+    enZona.forEach((s) => s.missing.forEach((m) => faltantes.add(m)));
+    return `La sucursal de tu zona no tiene ${[...faltantes].join(', ')} en existencia: te lo enviamos a domicilio.`;
+  }
+
+  pickupReason(branch: SucursalRecoger): string {
+    if (branch.canPickup) {
+      return 'Tiene todo tu pedido';
+    }
+    if (!branch.inArea) {
+      return 'Fuera de tu ciudad/estado';
+    }
+    return branch.missing.length ? `No tiene ${branch.missing.join(', ')}` : 'No disponible';
+  }
+
+  selectPickupStock(branch: SucursalRecoger): void {
+    if (!branch.canPickup) {
+      this.showToast(`${branch.name}: ${this.pickupReason(branch)}.`);
+      return;
+    }
+    this.selectedPickupStockId = branch.id;
+  }
+
+  // ── Quiero factura ──
+  get invoiceEnabled(): boolean {
+    return Boolean(this.envioInfo?.checkout?.invoiceEnabled);
+  }
+
+  get regimenOptions(): Array<{ value: string; label: string }> {
+    return (this.envioInfo?.checkout?.regimenesFiscales ?? []).map((o) => ({ value: o.key, label: o.label }));
+  }
+
+  get usoCfdiOptions(): Array<{ value: string; label: string }> {
+    return (this.envioInfo?.checkout?.usosCfdi ?? []).map((o) => ({ value: o.key, label: o.label }));
+  }
+
+  toggleInvoice(checked: boolean): void {
+    this.invoiceRequested = checked;
+    this.invoiceErrors = {};
+    if (checked) {
+      // Prellenado desde el perfil: a Rodrigo le recapturaron los datos fiscales cuatro veces.
+      const customer = this.dashboardControl.customer;
+      this.invoiceForm.razonSocial = this.invoiceForm.razonSocial || customer?.name || this.authService.currentUser?.name || '';
+      this.invoiceForm.email = this.invoiceForm.email || this.deliveryEmail.trim();
+      if (!this.invoiceForm.usoCfdi && this.usoCfdiOptions.length) {
+        const general = this.usoCfdiOptions.find((o) => o.value === 'G03');
+        this.invoiceForm.usoCfdi = (general ?? this.usoCfdiOptions[0]).value;
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onInvoiceField(field: keyof DatosFiscales, value: string): void {
+    let limpio = String(value ?? '');
+    if (field === 'rfc') {
+      limpio = limpio.toUpperCase().replace(/[^A-ZÑ&0-9]/g, '').slice(0, 13);
+    }
+    if (field === 'cpFiscal') {
+      limpio = limpio.replace(/\D/g, '').slice(0, 5);
+    }
+    this.invoiceForm = { ...this.invoiceForm, [field]: limpio };
+    if (this.invoiceErrors[field]) {
+      this.validateInvoiceForm();
+    }
+  }
+
+  validateInvoiceForm(): boolean {
+    const f = this.invoiceForm;
+    const errores: Partial<Record<keyof DatosFiscales, string>> = {};
+    if (!/^([A-ZÑ&]{3}|[A-ZÑ&]{4})\d{6}[A-Z0-9]{3}$/.test(f.rfc.trim().toUpperCase())) {
+      errores.rfc = 'Escribe el RFC como aparece en tu constancia (12 o 13 caracteres).';
+    }
+    if (!f.razonSocial.trim()) {
+      errores.razonSocial = 'Nombre o razón social tal como está en el SAT.';
+    }
+    if (!f.regimenFiscal) {
+      errores.regimenFiscal = 'Elige tu régimen fiscal.';
+    }
+    if (!/^\d{5}$/.test(f.cpFiscal.trim())) {
+      errores.cpFiscal = 'Cinco dígitos.';
+    }
+    if (!f.usoCfdi) {
+      errores.usoCfdi = 'Elige el uso del CFDI.';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) {
+      errores.email = 'Correo al que te mandaremos la factura.';
+    }
+    this.invoiceErrors = errores;
+    return Object.keys(errores).length === 0;
+  }
+
+  private invoicePayload(): DatosFiscales {
+    const f = this.invoiceForm;
+    return {
+      rfc: f.rfc.trim().toUpperCase(),
+      razonSocial: f.razonSocial.trim(),
+      regimenFiscal: f.regimenFiscal,
+      cpFiscal: f.cpFiscal.trim(),
+      usoCfdi: f.usoCfdi,
+      email: f.email.trim().toLowerCase()
+    };
+  }
+
+  // ── Consultas al servidor (con pequeña espera para no disparar una por tecla) ──
+  private scheduleCheckoutRefresh(): void {
+    if (this.checkoutRefreshTimeout) {
+      window.clearTimeout(this.checkoutRefreshTimeout);
+    }
+    this.checkoutRefreshTimeout = window.setTimeout(() => this.refreshCheckoutInfo(), 250);
+  }
+
+  private refreshCheckoutInfo(): void {
+    this.checkout.envioInfo(this.subtotal).subscribe({
+      next: (info) => {
+        this.envioInfo = info;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cdr.markForCheck();
+      }
+    });
+    this.refreshActivationSuggestion();
+    this.loadPickupStocks();
+  }
+
+  private refreshActivationSuggestion(): void {
+    const user = this.authService.currentUser;
+    if (!user?.userId || user.role !== 'cliente' || !this.cartItems.length && !this.activeGoal) {
+      this.sugerencia = null;
+      return;
+    }
+    this.isLoadingSugerencia = true;
+    this.checkout
+      .sugerenciaActivacion({
+        customerId: this.resolveOrderCustomerId(),
+        items: this.cartItems.map((item) => ({ productId: this.extractProductId(item.id), quantity: item.qty, price: item.price })),
+        couponCode: this.appliedCoupon?.valid ? this.couponCode.trim().toUpperCase() : undefined
+      })
+      .pipe(finalize(() => {
+        this.isLoadingSugerencia = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (respuesta) => {
+          this.sugerencia = respuesta;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.sugerencia = null;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   get itemsCount(): number {
@@ -668,10 +941,20 @@ export class CarritoComponent implements OnInit, OnDestroy {
         this.showToast('Selecciona una sucursal para recoger tu pedido.');
         return;
       }
+      const sucursal = this.pickupOptions.find((branch) => branch.id === pickupStockId);
+      if (sucursal && !sucursal.canPickup) {
+        this.showToast(`${sucursal.name}: ${this.pickupReason(sucursal)}. Elige otra sucursal o envío a domicilio.`);
+        return;
+      }
       if (!this.pickupPaymentMethod) {
         this.showToast('Selecciona un método de pago para continuar.');
         return;
       }
+    }
+    if (this.invoiceRequested && !this.validateInvoiceForm()) {
+      this.showToast('Revisa los datos de tu factura: hay un campo marcado en rojo.');
+      this.scrollToSection('factura-checkout');
+      return;
     }
     const user = this.authService.currentUser;
     const items: AdminOrderItem[] = this.cartItems.map((item) => ({
@@ -764,6 +1047,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.appliedCoupon?.valid) {
       payload['couponCode'] = this.couponCode.trim().toUpperCase();
     }
+    if (this.invoiceRequested) {
+      payload['invoiceRequested'] = true;
+      payload['invoiceData'] = this.invoicePayload();
+    }
     this.isPlacingOrder = true;
     this.api
       .createOrder(payload as any)
@@ -784,7 +1071,12 @@ export class CarritoComponent implements OnInit, OnDestroy {
           }
           const orderId = String(resolvedId);
           this.cartControl.clearCart();
-          this.showToast('Orden creada. Redirigiendo...');
+          // La confirmación dice lo que el servidor guardó (folio y factura), no lo que se tecleó.
+          const factura = (order as { invoiceStatus?: string; invoiceData?: { rfc?: string } } | null);
+          const facturaTexto = factura?.invoiceStatus === 'solicitada'
+            ? ` Factura solicitada para el RFC ${factura?.invoiceData?.rfc ?? ''}: te llegará por correo en los próximos días hábiles.`
+            : '';
+          this.showToast(`Pedido ${orderId} creado.${facturaTexto} Te llevamos al pago...`);
           this.router.navigate(['/orden', orderId]);
         },
         error: (err: { error?: { message?: string }; message?: string }) => {
@@ -1007,6 +1299,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
       this.deliveryFieldErrors[field] = !normalizedValue;
     }
     this.fetchShippingRates();
+    if (field === 'deliveryCity' || field === 'deliveryState') {
+      this.scheduleCheckoutRefresh();
+    }
   }
 
   private assignDeliveryFieldValue(
@@ -1122,25 +1417,51 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.deliveryType = type;
     if (type === 'delivery') {
       this.fetchShippingRates();
+    } else {
+      this.loadPickupStocks();
     }
     this.cdr.markForCheck();
   }
 
+  /**
+   * Sucursales para recoger: solo las de la ciudad/estado capturados y con existencia
+   * de todo el carrito (Patricia veía "Recoger en sucursal" desde Mérida cuando la única
+   * sucursal está en CDMX; Claudia pagó y el mostrador no tenía el producto).
+   */
   private loadPickupStocks(): void {
+    const city = this.deliveryCity.trim();
+    const state = this.deliveryState.trim();
+    const items = this.cartItems.map((item) => ({ productId: this.extractProductId(item.id), quantity: item.qty }));
+    const key = JSON.stringify({ city, state, items });
+    if (key === this.lastPickupQueryKey && !this.isLoadingPickupStocks) {
+      return;
+    }
+    this.lastPickupQueryKey = key;
     this.isLoadingPickupStocks = true;
-    this.api.listPickupStocks().subscribe({
-      next: (stocks) => {
-        const normalizedStocks = this.normalizePickupStocks(stocks);
-        this.pickupStocks = normalizedStocks;
-        this.selectedPickupStockId = this.resolveSelectedPickupStockId(normalizedStocks, this.selectedPickupStockId);
-        if (!this.selectedPickupStockId && normalizedStocks.length === 1) {
-          this.selectedPickupStockId = normalizedStocks[0].id;
+    this.checkout.sucursalesRecoger({ city: city || undefined, state: state || undefined, items }).subscribe({
+      next: (respuesta) => {
+        this.pickupOptions = respuesta.stocks ?? [];
+        this.pickupAvailable = Boolean(respuesta.available);
+        this.pickupCities = respuesta.cities ?? [];
+        this.pickupLocationGiven = Boolean(respuesta.locationGiven);
+        this.pickupStocks = this.normalizePickupStocks(
+          this.pickupOptions.filter((s) => s.canPickup).map((s) => ({ id: s.id, name: s.name, location: s.location || s.city || '' }))
+        );
+        this.selectedPickupStockId = this.resolveSelectedPickupStockId(this.pickupStocks, this.selectedPickupStockId);
+        if (!this.selectedPickupStockId && this.pickupStocks.length === 1) {
+          this.selectedPickupStockId = this.pickupStocks[0].id;
+        }
+        if (this.deliveryType === 'pickup' && !this.pickupChoiceVisible) {
+          // La opción dejó de aplicar (cambió la ciudad o el carrito): se vuelve a envío sin perder nada.
+          this.deliveryType = 'delivery';
+          this.showToast(this.pickupUnavailableNote || 'Recoger en sucursal ya no está disponible: te lo enviamos a domicilio.');
         }
         this.isLoadingPickupStocks = false;
         this.cdr.markForCheck();
       },
       error: () => {
         this.isLoadingPickupStocks = false;
+        this.lastPickupQueryKey = '';
         this.cdr.markForCheck();
       }
     });
@@ -1335,6 +1656,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       deliveryCountry: this.deliveryCountry
     });
     this.fetchShippingRates();
+    this.scheduleCheckoutRefresh();
   }
 
   private buildDeliveryAddressLine(): string {
