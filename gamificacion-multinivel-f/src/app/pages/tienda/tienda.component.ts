@@ -16,11 +16,13 @@ import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-fie
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 import { RevealOnScrollDirective } from '../../directives/reveal-on-scroll.directive';
+import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
+import { ModoVisible, PlanSocioService } from '../../services/plan-socio.service';
 
 @Component({
   selector: 'app-tienda',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent, RevealOnScrollDirective],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent, RevealOnScrollDirective, UiAhorroSocioComponent],
   templateUrl: './tienda.component.html'
 })
 export class TiendaComponent implements OnInit {
@@ -88,8 +90,16 @@ export class TiendaComponent implements OnInit {
     private readonly destroyRef: DestroyRef,
     private readonly router: Router,
     private readonly authService: AuthService,
-    private readonly cartControl: CartControlService
+    private readonly cartControl: CartControlService,
+    private readonly planSocio: PlanSocioService
   ) {}
+
+  /** Neto ya comprado este mes (solo con sesión en modo cliente); sirve para "como socia habrías ahorrado". */
+  monthNetSocio = 0;
+
+  get modoVisible(): ModoVisible {
+    return this.planSocio.modoActual;
+  }
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('refToken') ?? '';
@@ -105,6 +115,17 @@ export class TiendaComponent implements OnInit {
       tap(() => this.cdr.detectChanges()),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe();
+    // Paquete B: con sesión se confirma el modo y el neto del mes para el ahorro como socia.
+    if (this.authService.hasSession) {
+      this.planSocio.modo().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (respuesta) => {
+          this.monthNetSocio = respuesta.indicators?.monthSpend ?? 0;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck()
+      });
+    }
+    this.planSocio.modo$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
     this.loadData();
   }
 

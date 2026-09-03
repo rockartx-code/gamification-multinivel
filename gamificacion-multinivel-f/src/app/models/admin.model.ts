@@ -52,6 +52,12 @@ export interface AdminOrder {
   pickupPaymentMethod?: 'online' | 'at_store';
   cancelReason?: string;
   cancelledAt?: string;
+  /** Ahorro que habría tenido como socia (solo en modo cliente e invitado). */ // paquete B
+  partnerMode?: 'cliente' | 'socio' | 'invitado';
+  partnerSavings?: number; // paquete B
+  partnerSavingsRate?: number; // paquete B
+  partnerSavingsNextRate?: number; // paquete B
+  partnerSavingsNextMissing?: number; // paquete B
   /** Envío cobrado al cliente y paquetería cotizada. */
   shippingCost?: number;
   shippingCarrier?: string;
@@ -406,6 +412,9 @@ export interface AdminCustomer {
   origin?: string;
   /** Fecha de baja de datos (ARCO); la ficha queda anonimizada. */
   deletedAt?: string;
+  /** Modo de la cuenta: cliente (precio de lista, sin red) o socio. */ // paquete B
+  mode?: 'cliente' | 'socio';
+  modeActivatedAt?: string; // paquete B
 }
 
 export interface CustomerContactNote {

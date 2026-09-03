@@ -16,6 +16,7 @@ import { CustomerShippingAddress } from '../models/admin.model';
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
+import { PlanSocioService } from './plan-socio.service';
 
 @Injectable({
   providedIn: 'root'
@@ -38,7 +39,8 @@ export class UserDashboardControlService {
 
   constructor(
     private readonly api: ApiService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly planSocio: PlanSocioService
   ) {}
 
   reset(): void {
@@ -127,6 +129,10 @@ export class UserDashboardControlService {
         myNetSpend: dashboard.myNetSpend,
         rank: dashboard.rank,
         bonuses: dashboard.bonuses ?? [],
+        // Paquete B: modo de la cuenta e indicadores del cliente
+        mode: dashboard.mode,
+        modeActivatedAt: dashboard.modeActivatedAt,
+        clientIndicators: dashboard.clientIndicators ?? null,
       } satisfies UserDashboardData)),
       tap((data) => {
         const safeNetworkMembers = Array.isArray(data.networkMembers) ? data.networkMembers : [];
@@ -163,6 +169,8 @@ export class UserDashboardControlService {
         };
         this.networkMembersCache = safeNetworkMembers;
         this.buyAgainIdsCache = new Set(safeBuyAgainIds);
+        // El panel es la fuente de verdad del modo: tienda, perfil y aviso de privacidad lo leen de aquí.
+        this.planSocio.fijarModo(data.isGuest ? 'invitado' : data.mode === 'cliente' ? 'cliente' : 'socio');
         const clonedData = this.cloneDashboardData(mappedData);
         this.dataSubject.next(clonedData);
         this.heroProductId =

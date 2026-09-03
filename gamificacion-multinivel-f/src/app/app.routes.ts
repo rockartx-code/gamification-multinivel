@@ -13,6 +13,7 @@ import { UserDashboardComponent } from './pages/user-dashboard/user-dashboard.co
 import { UserProfileComponent } from './pages/user-profile/user-profile.component';
 import { TiendaComponent } from './pages/tienda/tienda.component';
 import { VerifyEmailComponent } from './pages/verify-email/verify-email.component';
+import { ModoSocioComponent } from './pages/modo-socio/modo-socio.component'; // paquete B
 
 export const routes: Routes = [
   {
@@ -87,5 +88,10 @@ export const routes: Routes = [
   {
     path: 'landing',
     component: LandingComponent
+  },
+  {
+    // Paquete B: landing pública "Modo socio" (el plan completo y el botón para activarlo).
+    path: 'modo-socio',
+    component: ModoSocioComponent
   }
 ];

@@ -62,6 +62,7 @@ import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
 import { HonorBoard, HonorEntry } from '../../models/user-dashboard.model';
+import { AdminModoClienteComponent } from './modo-cliente/admin-modo-cliente.component'; // WP-B
 
 type StructureNode = {
   id: string;
@@ -236,7 +237,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, AdminModoClienteComponent /* WP-B */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })

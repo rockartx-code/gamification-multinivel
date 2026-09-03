@@ -5,12 +5,13 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AdminOrder } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
+import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent],
+  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
@@ -36,6 +37,20 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
   ) { }
 
   copyToClipboard(txt?: string) { if (txt) navigator.clipboard.writeText(txt); }
+
+  // ── Paquete B: ahorro como socia guardado en el pedido ───────────────────
+  get partnerSavingsVisible(): boolean {
+    const modo = this.order?.partnerMode;
+    return modo === 'cliente' || modo === 'invitado';
+  }
+
+  get partnerSavingsMode(): 'cliente' | 'invitado' {
+    return this.order?.partnerMode === 'invitado' ? 'invitado' : 'cliente';
+  }
+
+  goToModoSocio(): void {
+    void this.router.navigate(['/modo-socio'], { queryParams: { desde: 'orden', id: this.order?.id ?? this.orderId } });
+  }
 
   ngOnInit(): void {
     const routeOrderId = this.normalizeLookupValue(this.route.snapshot.paramMap.get('idOrden'));

@@ -282,6 +282,8 @@ export class RealApiService {
       contactNotes: Array.isArray(raw['contactNotes']) ? (raw['contactNotes'] as AdminCustomer['contactNotes']) : [],
       origin: raw['origin'] != null ? String(raw['origin']) : undefined,
       deletedAt: raw['deletedAt'] != null ? String(raw['deletedAt']) : undefined,
+      mode: raw['mode'] === 'cliente' ? 'cliente' : 'socio', // paquete B
+      modeActivatedAt: raw['modeActivatedAt'] != null ? String(raw['modeActivatedAt']) : undefined, // paquete B
     };
   }
 
@@ -1292,7 +1294,7 @@ export class RealApiService {
     );
   }
 
-  private actorHeaders(): HttpHeaders {
+  actorHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
     const raw = localStorage.getItem('auth-user');
     if (!raw) {
@@ -1368,6 +1370,12 @@ export class RealApiService {
       grossSubtotal: this.readNumber(order, ['grossSubtotal']) || 0,
       discountRate: this.readNumber(order, ['discountRate']) || 0,
       discountAmount: this.readNumber(order, ['discountAmount']) || 0,
+      // paquete B: ahorro como socia guardado en el pedido
+      partnerMode: (this.readString(order, ['partnerMode']) || undefined) as AdminOrder['partnerMode'],
+      partnerSavings: this.readNumber(order, ['partnerSavings']) || 0,
+      partnerSavingsRate: this.readNumber(order, ['partnerSavingsRate']) || 0,
+      partnerSavingsNextRate: this.readNumber(order, ['partnerSavingsNextRate']) || 0,
+      partnerSavingsNextMissing: this.readNumber(order, ['partnerSavingsNextMissing']) || 0,
       netTotal: this.readNumber(order, ['netTotal']) || total,
       total,
       status,

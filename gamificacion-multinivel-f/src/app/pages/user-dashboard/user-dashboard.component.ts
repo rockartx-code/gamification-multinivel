@@ -38,6 +38,9 @@ import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-go
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
+import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
+import { IndicadoresCliente, PlanSocio, formatoPorcentaje } from '../../models/plan-socio.model';
+import { PlanSocioService } from '../../services/plan-socio.service';
 
 type GraphNode = {
   id: string;
@@ -59,7 +62,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent, UiTablaDescuentoComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -71,8 +74,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly goalControl: GoalControlService,
     private readonly router: Router,
     private readonly api: ApiService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly planSocio: PlanSocioService
   ) { }
+
+  /** Plan publicado (tramos, activación) para la tabla única de descuento. */
+  plan: PlanSocio | null = null;
+  readonly porcentaje = formatoPorcentaje;
 
   readonly countdownLabel = signal('');
   activeFeaturedId = '';
@@ -217,6 +225,42 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.currentUser?.role === 'cliente';
   }
 
+  // ── Paquete B: modo cliente / modo socio ─────────────────────────────────
+  get accountMode(): 'cliente' | 'socio' {
+    return this.dashboardControl.data?.mode === 'cliente' ? 'cliente' : 'socio';
+  }
+
+  /** En modo cliente se ocultan red, VP, comisiones, CLABE y enlaces de referido. */
+  get isClientMode(): boolean {
+    return !this.isGuest && this.accountMode === 'cliente';
+  }
+
+  get clientIndicators(): IndicadoresCliente | null {
+    return this.dashboardControl.data?.clientIndicators ?? null;
+  }
+
+  get myNetSpend(): number {
+    return this.dashboardControl.data?.myNetSpend ?? 0;
+  }
+
+  /** PC de lista del carrito actual (para la tabla única de descuento). */
+  get cartPc(): number {
+    const puntos = new Map(this.products.map((p) => [p.id, Number(p.vpPoints ?? 0) || 0]));
+    return this.cartControl.cartItems.reduce((acc, item) => acc + (puntos.get(item.id) ?? 0) * item.qty, 0);
+  }
+
+  get queGanarias(): string {
+    const ejemplo = this.clientIndicators?.exampleEarnings;
+    if (!ejemplo) {
+      return '';
+    }
+    return `Si ${ejemplo.friends} amigas compraran ${this.formatMoney(ejemplo.purchaseEach)} cada una, ganarías ${this.formatMoney(ejemplo.total)} al mes (${this.porcentaje(ejemplo.rate)} de lo que compra cada una).`;
+  }
+
+  goToModoSocio(): void {
+    void this.router.navigate(['/modo-socio']);
+  }
+
   private get dashboardUser(): UserDashboardData['user'] | null {
     return this.dashboardControl.data?.user ?? null;
   }
@@ -247,13 +291,20 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get dashboardNavLinks(): SidebarLink[] {
-    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|honor`;
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.isClientMode ? 'cliente' : 'socio'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|honor`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
     }
 
     const links: SidebarLink[] = [{ id: 'merchant', icon: 'fa-store', label: 'Tienda' }];
-    if (!this.isGuest) {
+    if (!this.isGuest && this.isClientMode) {
+      // Paquete B: en modo cliente no hay red, enlaces ni comisiones que mostrar.
+      links.push(
+        { id: 'modo-cliente', icon: 'fa-bag-shopping', label: 'Mi cuenta' },
+        { id: 'ordenes', icon: 'fa-receipt', label: 'Órdenes' }
+      );
+    }
+    if (!this.isGuest && !this.isClientMode) {
       links.push(
         { id: 'red', icon: 'fa-users', label: 'Red' },
         { id: 'links', icon: 'fa-link', label: 'Links' },
@@ -262,6 +313,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
+    }
+    if (!this.isGuest) {
       links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
       links.push({ id: 'perfil', icon: 'fa-circle-user', label: 'Mi perfil' });
     }
@@ -1136,6 +1189,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   ngOnInit(): void {
     this.isLoading = true;
     this.cartControl.load().subscribe();
+    // Paquete B: la tabla única de descuento usa los tramos reales del plan.
+    this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.plan = plan;
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
     this.restoreSelectedVariantsFromCart();
     this.goalsSub = this.goalControl.goals$.subscribe((goals) => {
       if (goals) {

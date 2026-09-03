@@ -105,8 +105,8 @@
           </div>
 
           <div *ngIf="isClient" class="meta mt-2 flex items-center justify-between text-xs">
-            <span>Descuento</span>
-            <span class="text-main">{{ discountPercent }}%</span>
+            <span>{{ isClientMode ? 'Modo' : 'Descuento' }}</span>
+            <span class="text-main">{{ isClientMode ? 'Cliente (precio de lista)' : discountPercent + '%' }}</span>
           </div>
 
           <!-- Sin ningún canal de soporte en el panel, la gente le escribía a su patrocinadora -->
@@ -404,7 +404,85 @@
 
     </section>
 
-    <section id="red" class="scroll-mt-10" *ngIf="!isGuest">
+    <!-- Paquete B: la cuenta en modo cliente (sin red, VP ni comisiones) -->
+    <section id="modo-cliente" class="scroll-mt-10" *ngIf="isClientMode">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-bag-shopping hidden text-gold md:inline" aria-hidden="true"></i>
+            Tu cuenta en modo cliente
+          </h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Compras a precio de lista, sin compromiso y sin que te pidamos datos bancarios ni fiscales.
+            Aquí ves lo que cambiaría si un día activas el modo socio.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-3">
+        <ui-kpi-card label="Este mes has comprado" iconClass="fa-solid fa-cart-shopping text-accent"
+          [value]="formatMoney(clientIndicators?.monthSpend ?? 0)"></ui-kpi-card>
+        <ui-kpi-card label="Como socia habrías ahorrado este mes" iconClass="fa-solid fa-piggy-bank text-gold"
+          [value]="formatMoney(clientIndicators?.monthSavingsIfPartner ?? 0)"></ui-kpi-card>
+        <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+          <div class="flex items-center gap-2 text-mini text-gray-600">
+            <i class="fa-solid fa-users text-forest" aria-hidden="true"></i>
+            <span>Qué ganarías</span>
+          </div>
+          <div class="mt-1 text-sm font-semibold text-main">{{ queGanarias || 'Como socia, las compras de las personas que invites te generan comisión.' }}</div>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-2">
+        <ui-tabla-descuento *ngIf="plan"
+          [tiers]="plan.descuento.tramos"
+          [mxnPerVp]="plan.unidades.mxnPerVp"
+          [activationVp]="plan.activacion.vpNetos"
+          [monthNet]="clientIndicators?.monthSpend ?? myNetSpend"
+          [monthVp]="vpPoints"
+          [cartGross]="cartTotal"
+          [cartPc]="cartPc"
+          mode="cliente"
+          context="panel"
+          (activateRequested)="goToModoSocio()"></ui-tabla-descuento>
+
+        <div class="flex flex-col gap-4">
+          <div *ngIf="sponsor as sponsorContact" class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-xs text-gray-600">{{ sponsorContact.isCoach ? (sponsorContact.coachTitle || 'Tu coach') : 'Tu contacto para pedidos' }}</div>
+            <div class="mt-1 text-lg font-extrabold text-main">{{ sponsorContact.name }}</div>
+            <div class="mt-1 text-xs text-gray-500">Si algo de tu pedido no sale como esperabas, escríbele o usa el WhatsApp de soporte.</div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2 text-xs text-main transition hover:border-gold-35 hover:bg-gold-12" [href]="sponsorEmailHref">
+                <div class="text-mini text-gray-600">Correo</div>
+                <div class="mt-0.5 font-semibold break-all">{{ sponsorContact.email }}</div>
+              </a>
+              <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2 text-xs text-main transition hover:border-gold-35 hover:bg-gold-12" [href]="sponsorContact.whatsapp || sponsorWhatsappHref" target="_blank" rel="noopener">
+                <div class="text-mini text-gray-600">WhatsApp</div>
+                <div class="mt-0.5 font-semibold">{{ sponsorContact.phone }}</div>
+              </a>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-gold-35 bg-gold-12 p-4">
+            <div class="text-sm font-semibold text-main">¿Y si activo el modo socio?</div>
+            <ul class="mt-2 space-y-1 text-xs text-main">
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Descuento por lo que compras en el mes, sobre toda la compra.</li>
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Tu propio código: quien se registre con él queda en tu red.</li>
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Comisión cuando alguien de tu red compra.</li>
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Es gratis; la CLABE se pide solo cuando ya tengas una comisión que cobrar.</li>
+            </ul>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <ui-button size="md" variant="primary" type="button" (pressed)="goToModoSocio()">
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                Conoce el modo socio
+              </ui-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="red" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode">
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
@@ -596,7 +674,7 @@
     </section>
 
     <!-- ─── VP / VG / RANGO / BONOS ──────────────────────────────────────── -->
-    <section id="volumen" class="scroll-mt-10" *ngIf="!isGuest && (vpPoints > 0 || vgPoints > 0 || hasBonuses)">
+    <section id="volumen" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode && (vpPoints > 0 || vgPoints > 0 || hasBonuses || plan)">
       <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
         <i class="fa-solid fa-trophy hidden text-gold md:inline" aria-hidden="true"></i>
         Volumen &amp; Rangos
@@ -618,6 +696,20 @@
           <div *ngIf="!currentRank" class="mt-1 text-sm text-gray-400 italic">Sin rango aún</div>
           <div *ngIf="!currentRank" class="text-mini text-gray-500">Cada compra te acerca al primero</div>
         </div>
+      </div>
+
+      <!-- Paquete B: la tabla única de descuento y VP -->
+      <div class="mt-6" *ngIf="plan">
+        <ui-tabla-descuento
+          [tiers]="plan.descuento.tramos"
+          [mxnPerVp]="plan.unidades.mxnPerVp"
+          [activationVp]="plan.activacion.vpNetos"
+          [monthNet]="myNetSpend"
+          [monthVp]="vpPoints"
+          [cartGross]="cartTotal"
+          [cartPc]="cartPc"
+          mode="socio"
+          context="panel"></ui-tabla-descuento>
       </div>
 
       <!-- Bonos -->
@@ -644,7 +736,7 @@
       </div>
     </section>
 
-    <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && commissionSummary as commissions">
+    <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode && commissionSummary as commissions">
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
@@ -921,7 +1013,7 @@
       </div>
     </section>
 
-    <section id="links" class="scroll-mt-10" *ngIf="!isGuest">
+    <section id="links" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode">
       <div class="flex items-end justify-between gap-6">
         <div>
           <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
