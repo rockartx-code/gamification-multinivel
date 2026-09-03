@@ -78,10 +78,10 @@ _(Bety y Patricia completan su activación con un Naplus; después Lupita compra
 1. El descuento por tramo se explica en tres lugares con tres vocabularios (metas del panel, carrito, POS). Propuesta: una sola tabla "Tu descuento este mes" visible en panel y carrito, con el tramo actual, el siguiente y cuánto falta.
 2. La cancelación de un pedido pagado promete reembolso sin plazo ni medio. Propuesta: "al mismo medio de pago, en 3 a 5 días hábiles" en pantalla y correo, y correo al salir.
 3. Las campañas no tienen vigencia. Propuesta: fecha de inicio y fin, activación automática y aviso al vencer.
-5. El catálogo anuncia PC brutos y la activación cuenta VP netos (con descuento): comprar "20 PC" deja 18 VP. Propuesta: o la activación cuenta PC brutos (más simple de explicar) o el catálogo muestra "VP con tu descuento actual".
-6. El mínimo de envío gratis se mide sobre el total con descuento: $1,090 de catálogo pagan envío. Propuesta: medirlo sobre el subtotal, o decirlo en el carrito ("te faltan $19 después del descuento").
-7. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
-8. Los códigos de recuperación se invalidan entre sí: quien pide dos (por impaciencia) ve "inválido o expirado" con el primero. Propuesta: aceptar el último código y decir en el correo "usa el código más reciente".
+4. El catálogo anuncia PC brutos y la activación cuenta VP netos (con descuento): comprar "20 PC" deja 18 VP. Propuesta: o la activación cuenta PC brutos (más simple de explicar) o el catálogo muestra "VP con tu descuento actual".
+5. El mínimo de envío gratis se mide sobre el total con descuento: $1,090 de catálogo pagan envío. Propuesta: medirlo sobre el subtotal, o decirlo en el carrito ("te faltan $19 después del descuento").
+6. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
+7. Los códigos de recuperación se invalidan entre sí: quien pide dos (por impaciencia) ve "inválido o expirado" con el primero. Propuesta: aceptar el último código y decir en el correo "usa el código más reciente".
 
 ## 5. Pendiente
 
