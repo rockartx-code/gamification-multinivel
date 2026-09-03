@@ -97,9 +97,16 @@ Patricia devuelve un Naplus cerrado dentro de los 7 días. Eligió "Desistimient
 - Las tres fotos (producto, empaque, guía) son obligatorias aunque el paquete esté cerrado. Es la regla 3.3 del plan; queda como hallazgo (§4).
 - No encontró a quién escribir por un pedido: su panel solo mostraba el WhatsApp de su patrocinadora "para temas de red". Corregido: el bloque de patrocinador muestra también el WhatsApp y el correo de soporte para pedidos, pagos y devoluciones.
 
-### 2.12 Ola en curso
+### 2.12 Recepción con checklist y entrada de inventario (Beto, 18-dic)
 
-_(Beto recibe la devolución con el checklist y registra la entrada del Magnesio; Sofía reembolsa, cancela el pickup sin recoger; Claudia se activa el 20; enero.)_
+- Beto recibió el Naplus de Patricia con el formulario nuevo: seis casillas, "Resultado: devolución validada (procede el reembolso)" antes de confirmar, una foto y notas; "Paquete recibido. Devolución validada." Verificado en la API: checklist, notas y foto en la solicitud, pedido `devuelto_validado`, y la comisión de $25.20 de Verónica por ese pedido quedó "Anulada" (tachada, no borrada).
+- **Bug**: esa anulación venía por un camino propio del servicio de pedidos (inspección, cancelación, reembolso) sin motivo ni correo; el aviso "Comisión anulada" solo existía en la acción de Step Functions. Corregido: ese camino guarda el motivo y avisa.
+- Registró la entrada de 30 Magnesio en Bodega Central ("Entrada de inventario registrada.", bitácora con +30). Verificado.
+- Encontró cuatro pedidos de octubre y noviembre "Enviada" que nunca se marcaron entregados aunque Estafeta los entregó: nadie cierra el ciclo de los envíos por paquetería. Se cerraron por API; propuesta en §4.
+
+### 2.13 Ola en curso
+
+_(Sofía reembolsa a Patricia y cancela el pickup sin recoger; Claudia se activa el 20; enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -119,6 +126,7 @@ _(Beto recibe la devolución con el checklist y registra la entrada del Magnesio
 | 12 | Media | Clientes | Sin "última compra", sin filtro de fríos y sin exportar: la recuperación de cuentas se hacía cruzando siete pestañas | `lastPurchaseAt`, filtro "Solo fríos", CSV |
 | 13 | Baja | Correos | El correo de devolución prometía reembolsar el envío también en arrepentimiento (la pantalla decía lo contrario) | Texto según quién paga el envío |
 | 14 | Baja | Panel del socio | Con patrocinadora, el panel no mostraba ningún contacto de soporte para pedidos | WhatsApp y correo de soporte en el bloque de patrocinador |
+| 15 | Media | Pedidos | La anulación de comisiones desde inspección, cancelación o reembolso no llevaba motivo ni avisaba al patrocinador | Motivo y correo también en ese camino |
 
 ## 4. Hallazgos de negocio
 
@@ -132,6 +140,7 @@ _(Beto recibe la devolución con el checklist y registra la entrada del Magnesio
 8. El teléfono es opcional al registrarse y la recuperación de cuentas es por WhatsApp: dos de cuatro fríos no tenían número. Propuesta: pedir celular en el registro (con explicación) y en el primer pedido.
 9. La entrega personal no se puede elegir al comprar (solo el almacén la registra) y la cartera "FindingU" no muestra a la ejecutiva como coach en el panel del cliente. Propuestas: opción "entrega en persona" por zona en el checkout, y que el patrocinador por defecto muestre nombre y WhatsApp de la ejecutiva asignada.
 10. Devolver un paquete cerrado por arrepentimiento exige tres fotos (producto, empaque y guía). Propuesta: para desistimiento con paquete sin abrir, una sola foto del paquete cerrado con la guía.
+11. Los envíos por paquetería nunca se cierran: cuatro pedidos llevaban semanas "Enviada" con el paquete entregado. Propuesta: aviso "enviados hace más de 7 días sin entrega" en Acciones urgentes, o cierre automático con el rastreo de la paquetería (y el correo "¿te llegó?" al cliente).
 
 ## 5. Pendiente
 
