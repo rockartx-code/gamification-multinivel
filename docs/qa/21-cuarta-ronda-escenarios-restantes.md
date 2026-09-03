@@ -110,9 +110,16 @@ Patricia devuelve un Naplus cerrado dentro de los 7 días. Eligió "Desistimient
 - Canceló el pedido de recoger y pagar en sucursal que Guadalupe R. dejó cinco días sin recoger. **Hueco**: un `confirm` sin motivo, sin decir que no estaba pagado, y el registro quedaba como "admin_request". Corregido: pide motivo y avisa si no había pago. El tablero solo decía "1 pedidos pendientes de pago — Informativo", sin nombre ni días (§4).
 - Acciones urgentes quedó con "2 comisiones pendientes por depositar — Urgente" a mitad de mes: las de diciembre se pagan el 10 de enero; el aviso debería ser informativo hasta entonces (§4).
 
-### 2.14 Ola en curso
+### 2.14 Activación el día 20 y reversión de la compresión (Claudia, 20-dic)
 
-_(Claudia se activa el 20: reversión de la compresión; después el cierre de diciembre y el pago de enero.)_
+Claudia, con "Bloqueadas $195.20" por la compra de Memo, compra $1,458 (27.9 VP) y se activa. Su panel pasó en el acto a "Confirmadas $195.20 · Bloqueadas $0". **Verificado en el ledger**: la fila G1 de Verónica por ese pedido quedó anulada ("recalculada: alguien de la línea se activó"), Claudia recibió G1 $195.20 confirmada y Verónica una G2 de $97.60 confirmada, más $145.80 pendientes por la compra de Claudia. Verónica recibió "comisión de $97.60 en camino" y "$145.80 en camino". Es el último escenario del motor que solo protegían las pruebas unitarias.
+
+- Con 1 Colágeno + 1 Biotina (21 PC de lista) el carrito avisó "18.9 de 20 VP"; agregó el Magnesio del mes para llegar a 27.9. El aviso nuevo cumplió su función.
+- **Bug**: eligió "Recoger en sucursal" y vio "No se pudo crear la orden." sin motivo (Del Valle no tiene Magnesio; la validación nueva funcionó pero el carrito tapó el mensaje). Corregido: el toast muestra el motivo del backend.
+
+### 2.15 Ola en curso
+
+_(10 de enero: Sofía paga las comisiones de diciembre a Verónica, Claudia y Bety.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -136,6 +143,7 @@ _(Claudia se activa el 20: reversión de la compresión; después el cierre de d
 | 16 | Baja | Reembolsos | El monto sugerido incluía el envío en devoluciones por arrepentimiento | Sugerencia según el motivo |
 | 17 | Baja | Pedidos | El detalle no mostraba cuánto se reembolsó ni el motivo | "Reembolsado: $X · motivo" |
 | 18 | Baja | Pedidos | Cancelar desde el panel no pedía motivo (quedaba "admin_request") ni avisaba si no estaba pagado | Motivo obligatorio y aviso |
+| 19 | Baja | Carrito | Un pedido rechazado por el backend mostraba "No se pudo crear la orden." sin el motivo | Toast con el mensaje del backend |
 
 ## 4. Hallazgos de negocio
 
