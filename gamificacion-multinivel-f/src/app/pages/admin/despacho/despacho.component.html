@@ -121,10 +121,10 @@
           <p class="text-xs text-muted">Suma por producto de los pedidos seleccionados contra la existencia de {{ selectedStockName || 'la bodega' }}.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <ui-button size="sm" variant="primary" [disabled]="isCalculating || seleccion.size === 0 || !stockId" (pressed)="calcularSurtido()">
+          <ui-button size="sm" variant="primary" [disabled]="isCalculating || seleccion.size === 0 || !stockId" [disabledReason]="isCalculating ? 'Calculando…' : (!stockId ? 'Elige primero la bodega de salida.' : (seleccion.size === 0 ? 'Marca al menos un pedido de la lista.' : ''))" (pressed)="calcularSurtido()">
             <i class="fa-solid fa-calculator" aria-hidden="true"></i> {{ isCalculating ? 'Calculando…' : 'Calcular surtido' }}
           </ui-button>
-          <ui-button size="sm" variant="ghost" [disabled]="!surtido" (pressed)="imprimirLista()">
+          <ui-button size="sm" variant="ghost" [disabled]="!surtido" [disabledReason]="!surtido ? 'Primero calcula el surtido.' : ''" (pressed)="imprimirLista()">
             <i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir lista
           </ui-button>
         </div>

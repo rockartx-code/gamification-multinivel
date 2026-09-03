@@ -189,7 +189,7 @@
               <div *ngIf="conciliacionError" class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ conciliacionError }}</div>
               <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <ui-button size="sm" variant="ghost" (pressed)="cerrarConciliacion()">{{ conciliacionResultado ? 'Cerrar' : 'Ahora no' }}</ui-button>
-                <ui-button size="sm" variant="primary" [disabled]="isConciliando" (pressed)="conciliarPagos()">
+                <ui-button size="sm" variant="primary" [disabled]="isConciliando" [disabledReason]="isConciliando ? 'Consultando a MercadoPago…' : ''" (pressed)="conciliarPagos()">
                   <i class="fa-solid fa-rotate mr-1" aria-hidden="true"></i>
                   {{ isConciliando ? 'Consultando a MercadoPago...' : (conciliacionResultado ? 'Revisar de nuevo' : 'Revisar pagos ahora') }}
                 </ui-button>
@@ -270,10 +270,10 @@
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
                             {{ expandedOrderDetailId === order.id ? 'Ocultar detalle' : 'Ver detalle' }}
                           </ui-button>
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (click)="advanceOrder(order)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (click)="advanceOrder(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : advanceOrderLabel(order) }}
                           </ui-button>
-                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
+                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar en sucursal' }}
                           </ui-button>
                         </div>
@@ -353,14 +353,14 @@
                               Paga aquí
                             </span>
                           </div>
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="advanceOrder(order)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (pressed)="advanceOrder(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : advanceOrderLabel(order) }}
                           </ui-button>
-                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="markBranchDelivered(order)">
+                          <ui-button variant="primary" size="sm" iconClass="fa-solid fa-store" *ngIf="canMarkBranchDelivered(order)" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (pressed)="markBranchDelivered(order)">
                             {{ isUpdatingOrder(order.id) ? 'Guardando...' : 'Entregar' }}
                           </ui-button>
                           <!-- Cancelar (pendiente o pagado): antes solo el cliente podía, y un pedido de invitado abandonado quedaba "Pendiente" para siempre -->
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-ban" *ngIf="canCancelOrder(order)" [disabled]="isUpdatingOrder(order.id)" (pressed)="cancelOrderFromAdmin(order)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-ban" *ngIf="canCancelOrder(order)" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (pressed)="cancelOrderFromAdmin(order)">
                             Cancelar pedido
                           </ui-button>
                           <!-- Reembolsar (desde cancelado) -->
@@ -451,7 +451,7 @@
                               <div class="mt-1 flex items-center gap-2">
                                 <input type="text" class="flex-1 rounded-lg border border-olive-30 bg-white/70 px-2 py-1 text-xs" placeholder="Agregar nota (ej. transferí \$165 el 3-oct)"
                                   [value]="orderNoteDrafts[order.id] || ''" (input)="orderNoteDrafts[order.id] = $any($event.target).value" (keydown.enter)="addOrderNote(order)">
-                                <button type="button" class="text-xs font-semibold text-accent hover:underline" [disabled]="!(orderNoteDrafts[order.id] || '').trim()" (click)="addOrderNote(order)">Guardar</button>
+                                <ui-button size="sm" variant="linkish" [disabled]="!(orderNoteDrafts[order.id] || '').trim()" [disabledReason]="!(orderNoteDrafts[order.id] || '').trim() ? 'Escribe la nota primero.' : ''" reasonPlacement="title" (pressed)="addOrderNote(order)">Guardar</ui-button>
                               </div>
                             </div>
                             <div *ngIf="order.cancelReason" class="mt-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-800">
@@ -549,54 +549,47 @@
                   </div>
                 </div>
 
-                <div class="md:hidden divide-y divide-olive-20">
-                  <div *ngIf="!filteredCustomers.length" class="p-4 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
-                  <div *ngFor="let customer of pagedCustomers" class="p-4">
-                    <div class="flex items-center justify-between">
-                      <div class="text-sm font-semibold text-main">{{ customer.name }}</div>
-                      <span [class]="customerLevelClass(customer)">
-                        {{ customer.level }}
-                      </span>
-                    </div>
-                    <div class="mt-2">
-                      <span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span>
-                    </div>
-                    <div class="mt-2 grid gap-1 text-xs text-gray-600">
-                      <div>Descuento: <span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
-                      <div>Modo: <span class="text-main">{{ customer.mode === 'cliente' ? 'Cliente' : 'Socio' }}</span></div>
-                      <div>Mes anterior: <span class="text-main">{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</span></div>
-                      <div>Última compra: <span class="text-main" [class.text-red-700]="isColdCustomer(customer)">{{ customer.lastPurchaseAt ? (customer.lastPurchaseAt | date:'dd/MM/yyyy') + ' (' + daysSinceLastPurchase(customer) + ' días)' : 'nunca' }}</span></div>
-                    </div>
-                    <ui-button size="sm" variant="ghost" class="mt-3 w-full" (pressed)="selectCustomer(customer.id)">
-                      <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                      Ver
-                    </ui-button>
-                  </div>
-                </div>
-
-                <div class="hidden md:block overflow-auto">
+                <!-- I1: una sola fila por cliente, adaptada por CSS (tarjeta en móvil, columnas en escritorio); antes había dos "Ver" por registro -->
+                <div class="overflow-auto">
                   <div class="table-soft text-sm">
-                    <div class="grid grid-cols-[1.1fr_.8fr_.6fr_.8fr_1fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                    <div class="hidden md:grid grid-cols-[1.1fr_.8fr_.6fr_.8fr_1fr_1fr_.8fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                       <div>Cliente</div><div>Estatus</div><div>Modo</div><div>Descuento</div><div>Mes anterior</div><div>Última compra</div><div>Acción</div>
                     </div>
                     <div *ngIf="!filteredCustomers.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
                     <div *ngFor="let customer of pagedCustomers"
-                      class="grid grid-cols-[1.1fr_.8fr_.6fr_.8fr_1fr_1fr_.8fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0 transition"
+                      class="grid grid-cols-2 gap-x-3 gap-y-1 border-b border-olive-20 px-4 py-3 last:border-b-0 transition md:grid-cols-[1.1fr_.8fr_.6fr_.8fr_1fr_1fr_.8fr] md:items-center md:gap-y-0"
                       [class.bg-gold-12]="selectedCustomer?.id === customer.id"
                       [class.shadow-inset-accent]="selectedCustomer?.id === customer.id">
-                      <div class="flex items-center gap-2">
+                      <div class="col-span-2 flex items-center gap-2 text-sm font-semibold text-main md:col-span-1 md:font-normal">
                         <i *ngIf="selectedCustomer?.id === customer.id" class="fa-solid fa-caret-right text-accent"
                           aria-hidden="true"></i>
                         {{ customer.name }}
                       </div>
-                      <div><span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span></div>
-                      <div class="text-xs">{{ customer.mode === 'cliente' ? 'Cliente' : 'Socio' }}</div>
-                      <div><span [class]="customerLevelClass(customer)">{{ customer.discount }}</span></div>
-                      <div>{{ formatMoney(customer.commissionsPrevMonth ?? 0) }}</div>
-                      <div class="text-xs" [class.text-red-700]="isColdCustomer(customer)">{{ customer.lastPurchaseAt ? (customer.lastPurchaseAt | date:'dd/MM/yyyy') + ' · ' + daysSinceLastPurchase(customer) + ' días' : 'nunca' }}</div>
-                      <div><ui-button size="sm" [variant]="selectedCustomer?.id === customer.id ? 'primary' : 'ghost'"
-                        [ariaLabel]="'Ver ficha de ' + customer.name"
-                        (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{ selectedCustomer?.id === customer.id ? 'Viendo' : 'Ver' }}</ui-button></div>
+                      <div>
+                        <span class="block text-mini text-gray-500 md:hidden">Estatus</span>
+                        <span [class]="customerStatusClass(customer)">{{ customerStatusLabel(customer) }}</span>
+                      </div>
+                      <div class="text-xs">
+                        <span class="block text-mini text-gray-500 md:hidden">Modo</span>
+                        {{ customer.mode === 'cliente' ? 'Cliente' : 'Socio' }}
+                      </div>
+                      <div>
+                        <span class="block text-mini text-gray-500 md:hidden">Descuento</span>
+                        <span [class]="customerLevelClass(customer)">{{ customer.discount }}</span>
+                      </div>
+                      <div>
+                        <span class="block text-mini text-gray-500 md:hidden">Mes anterior</span>
+                        {{ formatMoney(customer.commissionsPrevMonth ?? 0) }}
+                      </div>
+                      <div class="text-xs">
+                        <span class="block text-mini text-gray-500 md:hidden">Última compra</span>
+                        <span [class.text-red-700]="isColdCustomer(customer)">{{ customer.lastPurchaseAt ? (customer.lastPurchaseAt | date:'dd/MM/yyyy') + ' · ' + daysSinceLastPurchase(customer) + ' días' : 'nunca' }}</span>
+                      </div>
+                      <div class="col-span-2 mt-2 md:col-span-1 md:mt-0">
+                        <ui-button size="sm" [variant]="selectedCustomer?.id === customer.id ? 'primary' : 'ghost'"
+                          [ariaLabel]="'Ver ficha de ' + customer.name"
+                          (pressed)="selectCustomer(customer.id)"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{ selectedCustomer?.id === customer.id ? 'Viendo' : 'Ver' }}</ui-button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -653,6 +646,8 @@
                       <span>
                         <span class="block font-semibold" [class.text-red-700]="customer?.doNotContact">No contactar</span>
                         <span class="text-gray-600">{{ customer?.doNotContact ? 'Pidió que no se le escriba. Todo el equipo lo ve aquí.' : 'Marca la casilla si el cliente pide que no lo contacten.' }}</span>
+                        <span *ngIf="customer?.deletedAt" class="block text-micro text-gray-500">No se puede cambiar: la ficha ya fue dada de baja y quedó como "no contactar".</span>
+                        <span *ngIf="isSavingCustomerFollowUp && !customer?.deletedAt" class="block text-micro text-gray-500">Guardando…</span>
                       </span>
                     </label>
                     <ui-form-field
@@ -673,7 +668,7 @@
                         (ngModelChange)="customerEmailDraft = $event">
                       </ui-form-field>
                     </div>
-                    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-envelope" [disabled]="!customerEmailDraft.trim() || customerEmailDraft.trim() === (customer?.email || '') || isSavingCustomerFollowUp" (pressed)="saveCustomerEmail(customer!)">
+                    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-envelope" [disabled]="!customerEmailDraft.trim() || customerEmailDraft.trim() === (customer?.email || '') || isSavingCustomerFollowUp" [disabledReason]="motivoGuardarCorreoCliente" (pressed)="saveCustomerEmail(customer!)">
                       Guardar correo
                     </ui-button>
                   </div>
@@ -695,13 +690,13 @@
                           (ngModelChange)="customerNoteDraft = $event">
                         </ui-form-field>
                       </div>
-                      <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-plus" [disabled]="!customerNoteDraft.trim() || isSavingCustomerFollowUp" (pressed)="addCustomerNote(customer!)">
+                      <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-plus" [disabled]="!customerNoteDraft.trim() || isSavingCustomerFollowUp" [disabledReason]="isSavingCustomerFollowUp ? 'Guardando…' : (!customerNoteDraft.trim() ? 'Escribe la nota primero.' : '')" (pressed)="addCustomerNote(customer!)">
                         Agregar nota
                       </ui-button>
                     </div>
                   </div>
                   <div class="mt-3 border-t border-olive-30 pt-3" *ngIf="!customer?.deletedAt && hasPermission('user_manage_privileges')">
-                    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-user-slash" [disabled]="isSavingCustomerFollowUp" (pressed)="deleteCustomerData(customer!)">
+                    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-user-slash" [disabled]="isSavingCustomerFollowUp" [disabledReason]="isSavingCustomerFollowUp ? 'Guardando…' : ''" (pressed)="deleteCustomerData(customer!)">
                       Dar de baja sus datos (ARCO)
                     </ui-button>
                     <div class="mt-1 text-micro text-gray-500">Borra nombre, correo, teléfono, direcciones, documentos y acceso; conserva el registro contable de sus compras. Se le confirma por correo.</div>
@@ -784,7 +779,7 @@
                           {{ doc.uploadedAt ? formatDateTime(doc.uploadedAt) : 'Sin fecha' }}
                         </div>
                       </div>
-                      <ui-button size="sm" variant="ghost" [disabled]="!doc.url" (pressed)="openCustomerDocument(doc)">
+                      <ui-button size="sm" variant="ghost" [disabled]="!doc.url" [disabledReason]="!doc.url ? 'Este documento no tiene archivo adjunto.' : ''" (pressed)="openCustomerDocument(doc)">
                         <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
                         Abrir
                       </ui-button>
@@ -819,7 +814,7 @@
 
                     <div class="mt-3 flex justify-end">
                       <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60"
-                        [disabled]="!customerDocumentFile || isUploadingCustomerDocument"
+                        [disabled]="!customerDocumentFile || isUploadingCustomerDocument" [disabledReason]="isUploadingCustomerDocument ? 'Cargando…' : (!customerDocumentFile ? 'Elige primero el archivo con “Seleccionar archivo”.' : '')"
                         (pressed)="uploadCustomerDocument()">
                         <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
                         {{ isUploadingCustomerDocument ? 'Cargando...' : 'Subir documento' }}
@@ -865,7 +860,7 @@
                             <span>{{ doc.uploadedAt ? formatDateTime(doc.uploadedAt) : 'Sin fecha' }}</span>
                           </div>
                         </div>
-                        <ui-button size="sm" variant="ghost" [disabled]="!doc.url" (pressed)="openCustomerDocument(doc)">
+                        <ui-button size="sm" variant="ghost" [disabled]="!doc.url" [disabledReason]="!doc.url ? 'Este documento no tiene archivo adjunto.' : ''" (pressed)="openCustomerDocument(doc)">
                           <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
                           Abrir
                         </ui-button>
@@ -950,7 +945,7 @@
                     </div>
 
                     <div class="mt-3 flex justify-end">
-                      <ui-button size="sm" variant="primary" [disabled]="!canSaveSelectedCustomerPosition" (pressed)="saveSelectedCustomerPosition()">
+                      <ui-button size="sm" variant="primary" [disabled]="!canSaveSelectedCustomerPosition" [disabledReason]="motivoGuardarPosicionCliente" (pressed)="saveSelectedCustomerPosition()">
                         <i class="fa-solid fa-right-left" aria-hidden="true"></i>
                         {{ isSavingCustomerPosition ? 'Guardando...' : 'Guardar posicion' }}
                       </ui-button>
@@ -992,7 +987,7 @@
                       </div>
                     </div>
                     <div class="mt-3 flex justify-end">
-                      <ui-button size="sm" variant="primary" [disabled]="isSavingCustomerPrivileges" (pressed)="saveSelectedCustomerAccess()">
+                      <ui-button size="sm" variant="primary" [disabled]="isSavingCustomerPrivileges" [disabledReason]="isSavingCustomerPrivileges ? 'Guardando…' : ''" (pressed)="saveSelectedCustomerAccess()">
                         <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                         {{ isSavingCustomerPrivileges ? 'Guardando...' : 'Guardar permisos' }}
                       </ui-button>
@@ -1044,7 +1039,7 @@
                   </div>
 
                   <div class="mt-3 flex justify-end">
-                    <ui-button size="sm" variant="primary" [disabled]="isSavingEmployee || !employeeForm.name.trim() || !employeeForm.email.trim()" (pressed)="saveEmployee()">
+                    <ui-button size="sm" variant="primary" [disabled]="isSavingEmployee || !employeeForm.name.trim() || !employeeForm.email.trim()" [disabledReason]="motivoGuardarEmpleado" (pressed)="saveEmployee()">
                       <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
                       {{ isSavingEmployee ? 'Creando...' : 'Crear empleado' }}
                     </ui-button>
@@ -1115,18 +1110,18 @@
                   <div class="flex-1">
                     <ui-form-field type="tel" label="Celular" placeholder="55 0000 0000" [ngModel]="employeePhoneDraft" (ngModelChange)="employeePhoneDraft = $event"></ui-form-field>
                   </div>
-                  <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-floppy-disk" [disabled]="!employeeContactDirty || isSavingEmployeeContact" (pressed)="saveEmployeeContact()">
+                  <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-floppy-disk" [disabled]="!employeeContactDirty || isSavingEmployeeContact" [disabledReason]="isSavingEmployeeContact ? 'Guardando…' : (!employeeContactDirty ? 'No hay cambios por guardar.' : '')" (pressed)="saveEmployeeContact()">
                     {{ isSavingEmployeeContact ? 'Guardando...' : 'Guardar datos' }}
                   </ui-button>
                 </div>
 
                 <div class="mt-3 flex flex-wrap gap-2" *ngIf="hasPermission('employee_manage_privileges')">
-                  <ui-button size="sm" variant="ghost" [disabled]="isGeneratingEmployeePassword" (pressed)="generateEmployeePassword()">
+                  <ui-button size="sm" variant="ghost" [disabled]="isGeneratingEmployeePassword" [disabledReason]="isGeneratingEmployeePassword ? 'Generando…' : ''" (pressed)="generateEmployeePassword()">
                     <i class="fa-solid fa-key" aria-hidden="true"></i>
                     {{ isGeneratingEmployeePassword ? 'Generando...' : 'Generar nueva contraseña' }}
                   </ui-button>
                   <!-- No había forma de desactivar a un empleado (duplicados, bajas): solo borrar o quitar permisos uno por uno. -->
-                  <ui-button size="sm" [variant]="emp.active ? 'ghost' : 'primary'" [disabled]="isSavingEmployeeActive" (pressed)="toggleSelectedEmployeeActive()">
+                  <ui-button size="sm" [variant]="emp.active ? 'ghost' : 'primary'" [disabled]="isSavingEmployeeActive" [disabledReason]="isSavingEmployeeActive ? 'Guardando…' : ''" (pressed)="toggleSelectedEmployeeActive()">
                     <i class="fa-solid" [ngClass]="emp.active ? 'fa-user-slash' : 'fa-user-check'" aria-hidden="true"></i>
                     {{ isSavingEmployeeActive ? 'Guardando...' : (emp.active ? 'Desactivar empleado' : 'Reactivar empleado') }}
                   </ui-button>
@@ -1181,7 +1176,7 @@
                   </div>
 
                   <div class="mt-3 flex justify-end">
-                    <ui-button size="sm" variant="primary" [disabled]="isSavingEmployeePrivileges" (pressed)="saveSelectedEmployeePrivileges()">
+                    <ui-button size="sm" variant="primary" [disabled]="isSavingEmployeePrivileges" [disabledReason]="isSavingEmployeePrivileges ? 'Guardando…' : ''" (pressed)="saveSelectedEmployeePrivileges()">
                       <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                       {{ isSavingEmployeePrivileges ? 'Guardando...' : 'Guardar permisos' }}
                     </ui-button>
@@ -1214,102 +1209,68 @@
                   inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"></ui-form-field>
                 </div>
 
-                <div class="md:hidden divide-y divide-olive-20">
-                  <div *ngIf="!filteredProducts.length" class="p-4 text-xs text-gray-500">Sin resultados.</div>
-                  <div *ngFor="let product of pagedProducts" class="p-4">
-                    <div class="flex items-start justify-between gap-2">
-                      <div class="text-sm font-semibold text-main">{{ product.name }}</div>
-                      <span class="shrink-0 rounded-full border px-3 py-1 text-xs"
-                        [ngClass]="product.active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-olive-30 bg-ivory-80 text-gray-500'">
-                        {{ product.active ? 'Activo' : 'Retirado' }}
-                      </span>
-                    </div>
-                    <div class="mt-2 grid gap-1 text-xs text-gray-600">
-                      <div>Precio: <span class="text-main">{{ formatMoney(product.price) }}</span></div>
-                    </div>
-                    <div class="mt-2 flex flex-wrap gap-1">
-                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
-                        [ngClass]="product.inOnlineStore !== false ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-olive-30 bg-white/60 text-gray-400'">
-                        <i class="fa-solid fa-globe fa-xs" aria-hidden="true"></i>
-                        {{ product.inOnlineStore !== false ? 'Tienda online' : 'Sin tienda online' }}
-                      </span>
-                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
-                        [ngClass]="product.inPOS !== false ? 'border-sage-30 bg-sage-10 text-sage' : 'border-olive-30 bg-white/60 text-gray-400'">
-                        <i class="fa-solid fa-cash-register fa-xs" aria-hidden="true"></i>
-                        {{ product.inPOS !== false ? 'En POS' : 'Sin POS' }}
-                      </span>
-                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
-                        [ngClass]="product.commissionable !== false ? 'border-gold-35 bg-gold-12 text-gold' : 'border-olive-30 bg-white/60 text-gray-400'">
-                        <i class="fa-solid fa-percent fa-xs" aria-hidden="true"></i>
-                        {{ product.commissionable !== false ? 'Comisionable' : 'No comisionable' }}
-                      </span>
-                      <span *ngIf="product.commissionable !== false"
-                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
-                        [ngClass]="product.vpPoints != null ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-olive-30 bg-white/60 text-gray-400'">
-                        <i class="fa-solid fa-star fa-xs" aria-hidden="true"></i>
-                        {{ product.vpPoints != null ? (product.vpPoints + ' VP/u') : 'VP automático' }}
-                      </span>
-                    </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                      <ui-button size="sm" variant="ghost" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
-                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-                        Editar
-                      </ui-button>
-                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (pressed)="toggleProductActive(product)">
-                        <i class="fa-solid" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
-                        {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
-                      </ui-button>
-                      <ui-button size="sm" variant="ghost" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (pressed)="setProductOfMonth(product)">
-                        <i class="fa-solid fa-star" aria-hidden="true"></i>
-                        Producto del mes
-                      </ui-button>
-                      <ui-button size="sm" variant="ghost" class="text-red-600 disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('product_delete')" (pressed)="confirmDeleteProduct(product)">
-                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                        Eliminar
-                      </ui-button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="hidden md:block overflow-auto">
+                <!-- I1: una sola fila por producto, adaptada por CSS; antes había una tarjeta móvil y una fila de escritorio con los mismos botones -->
+                <div class="overflow-auto">
                   <div class="table-soft text-sm">
-                    <div class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                    <div class="hidden md:grid grid-cols-[1.4fr_.7fr_.7fr_1.6fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                       <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
                     </div>
-                    <div *ngIf="!filteredProducts.length" class="hidden md:block px-4 py-3 text-xs text-gray-500">Sin resultados.</div>
-                    <div *ngFor="let product of pagedProducts" class="grid grid-cols-[1.2fr_.8fr_.8fr_1.4fr] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
-                      <div>{{ product.name }}</div>
-                      <div>{{ formatMoney(product.price) }}</div>
-                      <div>{{ product.active ? 'Activo' : 'Retirado' }}</div>
-                      <!-- Acciones compactas: icono + tooltip; el detalle vive en las tarjetas móviles -->
-                      <div class="flex items-center gap-1">
-                        <button type="button" *ngIf="hasPermission('product_update')" (click)="editProduct(product)"
-                          class="flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-gray-600 transition hover:bg-olive-10 hover:text-main"
-                          title="Editar" aria-label="Editar producto">
-                          <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
-                        </button>
-                        <button type="button" *ngIf="hasPermission('product_update')" [disabled]="isUpdatingProductStatus(product.id)" (click)="toggleProductActive(product)"
-                          class="flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-gray-600 transition hover:bg-olive-10 hover:text-main disabled:cursor-not-allowed disabled:opacity-50"
-                          [title]="product.active ? 'Retirar de la tienda' : 'Reactivar'"
-                          [attr.aria-label]="product.active ? 'Retirar producto' : 'Reactivar producto'">
-                          <i class="fa-solid text-xs" [ngClass]="product.active ? 'fa-box-archive' : 'fa-rotate-left'" aria-hidden="true"></i>
-                        </button>
+                    <div *ngIf="!filteredProducts.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados.</div>
+                    <div *ngFor="let product of pagedProducts" class="grid grid-cols-2 gap-x-3 gap-y-1 border-b border-olive-20 px-4 py-3 last:border-b-0 md:grid-cols-[1.4fr_.7fr_.7fr_1.6fr] md:items-center md:gap-y-0">
+                      <div class="col-span-2 md:col-span-1">
+                        <div class="text-sm font-semibold text-main md:font-normal">{{ product.name }}</div>
+                        <div class="mt-1 flex flex-wrap gap-1">
+                          <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
+                            [ngClass]="product.inOnlineStore !== false ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                            <i class="fa-solid fa-globe fa-xs" aria-hidden="true"></i>
+                            {{ product.inOnlineStore !== false ? 'Tienda online' : 'Sin tienda online' }}
+                          </span>
+                          <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
+                            [ngClass]="product.inPOS !== false ? 'border-sage-30 bg-sage-10 text-sage' : 'border-olive-30 bg-white/60 text-gray-400'">
+                            <i class="fa-solid fa-cash-register fa-xs" aria-hidden="true"></i>
+                            {{ product.inPOS !== false ? 'En POS' : 'Sin POS' }}
+                          </span>
+                          <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
+                            [ngClass]="product.commissionable !== false ? 'border-gold-35 bg-gold-12 text-gold' : 'border-olive-30 bg-white/60 text-gray-400'">
+                            <i class="fa-solid fa-percent fa-xs" aria-hidden="true"></i>
+                            {{ product.commissionable !== false ? 'Comisionable' : 'No comisionable' }}
+                          </span>
+                          <span *ngIf="product.commissionable !== false"
+                            class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-micro font-semibold"
+                            [ngClass]="product.vpPoints != null ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-olive-30 bg-white/60 text-gray-400'">
+                            <i class="fa-solid fa-star fa-xs" aria-hidden="true"></i>
+                            {{ product.vpPoints != null ? (product.vpPoints + ' VP/u') : 'VP automático' }}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <span class="block text-mini text-gray-500 md:hidden">Precio</span>
+                        {{ formatMoney(product.price) }}
+                      </div>
+                      <div>
+                        <span class="block text-mini text-gray-500 md:hidden">Estado</span>
+                        <span class="rounded-full border px-3 py-1 text-xs"
+                          [ngClass]="product.active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-olive-30 bg-ivory-80 text-gray-500'">
+                          {{ product.active ? 'Activo' : 'Retirado' }}
+                        </span>
+                      </div>
+                      <div class="col-span-2 mt-2 flex flex-wrap gap-2 md:col-span-1 md:mt-0">
+                        <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-pen-to-square" *ngIf="hasPermission('product_update')" (pressed)="editProduct(product)">
+                          Editar
+                        </ui-button>
+                        <ui-button size="sm" variant="ghost" [iconClass]="product.active ? 'fa-solid fa-box-archive' : 'fa-solid fa-rotate-left'" *ngIf="hasPermission('product_update')"
+                          [disabled]="isUpdatingProductStatus(product.id)" [disabledReason]="isUpdatingProductStatus(product.id) ? 'Actualizando…' : ''" (pressed)="toggleProductActive(product)">
+                          {{ isUpdatingProductStatus(product.id) ? 'Actualizando...' : (product.active ? 'Retirar' : 'Reactivar') }}
+                        </ui-button>
+                        <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-star" *ngIf="hasPermission('product_set_month')"
+                          [disabled]="!!motivoProductoDelMes(product)" [disabledReason]="motivoProductoDelMes(product)" (pressed)="setProductOfMonth(product)">
+                          Producto del mes
+                        </ui-button>
                         <!-- "Eliminar" solo vivía al final del modal de edición y nadie lo encontró -->
-                        <button type="button" *ngIf="!product.active && hasPermission('product_delete')" [disabled]="isDeletingProduct" (click)="confirmDeleteProduct(product)"
-                          class="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100"
-                          title="Eliminar definitivamente" aria-label="Eliminar producto definitivamente">
-                          <i class="fa-solid fa-trash text-xs" aria-hidden="true"></i>
-                        </button>
-                        <button type="button" *ngIf="hasPermission('product_set_month')" [disabled]="isSettingProductOfMonth || !product.active" (click)="setProductOfMonth(product)"
-                          class="flex h-8 w-8 items-center justify-center rounded-full border border-gold-35 bg-gold-12 text-on-gold transition hover:bg-gold-20 disabled:cursor-not-allowed disabled:opacity-50"
-                          title="Hacer producto del mes" aria-label="Hacer producto del mes">
-                          <i class="fa-solid fa-star text-xs" aria-hidden="true"></i>
-                        </button>
-                        <button type="button" *ngIf="hasPermission('product_delete')" (click)="confirmDeleteProduct(product)"
-                          class="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
-                          title="Eliminar" aria-label="Eliminar producto">
-                          <i class="fa-solid fa-trash text-xs" aria-hidden="true"></i>
-                        </button>
+                        <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-trash" class="text-red-600" *ngIf="hasPermission('product_delete')"
+                          [disabled]="isDeletingProduct" [disabledReason]="isDeletingProduct ? 'Eliminando…' : ''" [disabledReason]="isDeletingProduct ? 'Eliminando…' : ''" (pressed)="confirmDeleteProduct(product)">
+                          Eliminar
+                        </ui-button>
                       </div>
                     </div>
                   </div>
@@ -1326,7 +1287,7 @@
                       Incluye todas las imágenes requeridas para marketing.
                     </div>
                   </div>
-                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" *ngIf="hasPermission(productForm.id ? 'product_update' : 'product_add')" [disabled]="!isProductFormValid || isSavingProduct" (click)="saveProduct()">
+                  <ui-button variant="primary" size="md" iconClass="fa-solid fa-floppy-disk" *ngIf="hasPermission(productForm.id ? 'product_update' : 'product_add')" [disabled]="!isProductFormValid || isSavingProduct" [disabledReason]="motivoGuardarProducto" (click)="saveProduct()">
                     {{ isSavingProduct ? 'Guardando...' : 'Guardar' }}
                   </ui-button>
                 </div>
@@ -1848,7 +1809,7 @@
                   <div *ngFor="let line of stockTransferForm.lines; let i = index" class="grid gap-2 sm:grid-cols-[1fr_.5fr_auto]">
                     <ui-form-field kind="select" label="Producto" [options]="productOptionsStable" [ngModel]="line.productId" (ngModelChange)="line.productId = +$event"></ui-form-field>
                     <ui-form-field type="number" [min]="1" label="Cantidad" [ngModel]="line.qty" (ngModelChange)="line.qty = +$event || 1"></ui-form-field>
-                    <ui-button size="sm" variant="ghost" class="self-end" ariaLabel="Eliminar línea del traspaso" [disabled]="stockTransferForm.lines.length === 1" (pressed)="removeTransferLine(i)">
+                    <ui-button size="sm" variant="ghost" class="self-end" ariaLabel="Eliminar línea del traspaso" [disabled]="stockTransferForm.lines.length === 1" [disabledReason]="stockTransferForm.lines.length === 1 ? 'Un traspaso necesita al menos un producto.' : ''" (pressed)="removeTransferLine(i)">
                       <i class="fa-solid fa-trash" aria-hidden="true"></i>
                     </ui-button>
                   </div>
@@ -1891,7 +1852,7 @@
                         *ngIf="hasPermission('stock_receive_transfer')"
                         size="sm"
                         variant="ghost"
-                        [disabled]="transfer.status === 'received' || !isReceiverEligible(transfer)"
+                        [disabled]="transfer.status === 'received' || !isReceiverEligible(transfer)" [disabledReason]="motivoRecibirTraspaso(transfer)"
                         (pressed)="receiveTransfer(transfer.id)">
                         {{ transfer.status === 'received' ? 'Recibida' : 'Recibir' }}
                       </ui-button>
@@ -1965,7 +1926,7 @@
                       </span>
                     </div>
                   </div>
-                  <ui-button size="sm" variant="primary" [disabled]="isUpdatingOrder(o.id)" (pressed)="openReceivePickupPaymentModal(o)">
+                  <ui-button size="sm" variant="primary" [disabled]="isUpdatingOrder(o.id)" [disabledReason]="motivoPedidoOcupado(o.id)" (pressed)="openReceivePickupPaymentModal(o)">
                     <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
                     {{ isUpdatingOrder(o.id) ? 'Guardando...' : 'Recibir pago' }}
                   </ui-button>
@@ -2004,7 +1965,7 @@
                       </span>
                     </div>
                   </div>
-                  <ui-button size="sm" variant="primary" [disabled]="isUpdatingOrder(o.id)" (pressed)="markBranchDelivered(o)">
+                  <ui-button size="sm" variant="primary" [disabled]="isUpdatingOrder(o.id)" [disabledReason]="motivoPedidoOcupado(o.id)" (pressed)="markBranchDelivered(o)">
                     <i class="fa-solid fa-check" aria-hidden="true"></i>
                     {{ isUpdatingOrder(o.id) ? 'Guardando...' : 'Entregar' }}
                   </ui-button>
@@ -2127,38 +2088,31 @@
                         <div class="text-xs font-semibold text-main">Metas y descuento aplicable</div>
                         <span *ngIf="isLoadingPosCustomerProjection" class="text-mini text-gray-500">Cargando...</span>
                       </div>
-                      <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-mini text-gray-500">Consumo acumulado del mes</div>
-                          <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posCustomerMonthNet) }}</div>
-                        </div>
-                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-mini text-gray-500">Consumo proyectado con esta venta</div>
-                          <div class="mt-1 text-lg font-semibold text-main">{{ formatMoney(posProjectedMonthNet) }}</div>
-                        </div>
-                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-mini text-gray-500">Descuento actual</div>
-                          <div class="mt-1 text-lg font-semibold text-main">{{ posCurrentDiscountLabel }}</div>
-                        </div>
-                        <div class="rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                          <div class="text-mini text-gray-500">Descuento aplicable hoy</div>
-                          <div class="mt-1 text-lg font-semibold text-main">{{ posProjectedDiscountLabel }}</div>
-                        </div>
+                      <!-- WP-I1: tabla única de descuento y VP (construida por B, §2.6) con el mes leído del servidor -->
+                      <div class="mt-3">
+                        <ui-tabla-descuento
+                          context="pos"
+                          [tiers]="posTablaTiers"
+                          [mxnPerVp]="posMxnPerVp"
+                          [activationVp]="posActivationVp"
+                          [monthNet]="posCustomerMonthNet"
+                          [monthVp]="posCustomerMonthVp"
+                          [cartGross]="posSubtotal"
+                          [cartPc]="posCartPc"
+                          [mode]="posCustomerIsClientMode ? 'cliente' : 'socio'"
+                          [compact]="false"
+                          (activateRequested)="showSnackbar('El cambio a modo socio se hace desde la ficha del cliente (Clientes → Modo).')">
+                        </ui-tabla-descuento>
                       </div>
                       <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                           <div>
                             <div class="text-mini text-gray-500">Descuento en esta venta</div>
-                            <div class="mt-1 text-sm font-semibold text-main">{{ formatMoney(posProjectedDiscountAmount) }}</div>
+                            <div class="mt-1 text-sm font-semibold text-main">{{ formatMoney(posProjectedDiscountAmount) }} ({{ posProjectedDiscountLabel }})</div>
                           </div>
-                          <div *ngIf="posNextGoal" class="text-right">
-                            <div class="text-mini text-gray-500">Siguiente meta</div>
-                            <div class="mt-1 text-sm font-semibold text-main">{{ posNextGoal.label }}</div>
-                            <div class="text-mini text-gray-600">Faltan {{ formatMoney(posRemainingForNextGoal) }}</div>
-                          </div>
-                          <div *ngIf="!posNextGoal" class="text-right">
-                            <div class="text-mini text-gray-500">Siguiente meta</div>
-                            <div class="mt-1 text-sm font-semibold text-main">Meta mas alta alcanzada</div>
+                          <div class="text-right">
+                            <div class="text-mini text-gray-500">Consumo del mes según el servidor</div>
+                            <div class="mt-1 text-sm font-semibold text-main">{{ formatMoney(posCustomerMonthNet) }} · {{ posCustomerMonthVp }} VP</div>
                           </div>
                         </div>
                       </div>
@@ -2422,7 +2376,7 @@
                   </div>
 
                   <div class="mt-3">
-                    <ui-button size="sm" variant="ghost" (pressed)="loadPosCashCuts()" [disabled]="isLoadingPosCashCuts">
+                    <ui-button size="sm" variant="ghost" (pressed)="loadPosCashCuts()" [disabled]="isLoadingPosCashCuts" [disabledReason]="isLoadingPosCashCuts ? 'Cargando…' : ''">
                       <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
                       {{ isLoadingPosCashCuts ? 'Cargando...' : 'Ver historial de cortes' }}
                     </ui-button>
@@ -3149,7 +3103,7 @@
                       size="sm"
                       variant="primary"
                       *ngIf="hasPermission('config_manage')"
-                      [disabled]="isSavingNotification || !isNotificationFormValid"
+                      [disabled]="isSavingNotification || !isNotificationFormValid" [disabledReason]="isSavingNotification ? 'Guardando…' : (!isNotificationFormValid ? 'Completa los campos obligatorios del aviso.' : '')"
                       (pressed)="saveNotification()">
                       {{ isSavingNotification ? 'Guardando...' : 'Guardar' }}
                     </ui-button>
@@ -3302,7 +3256,8 @@
                     wrapperClass="block"
                     inputClass="mt-1 w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
                     [ngModel]="couponDraft.code" (ngModelChange)="couponDraft.code = $event"
-                    [disabled]="!!couponEditingCode"></ui-form-field>
+                    [disabled]="!!couponEditingCode"
+                    [helpText]="couponEditingCode ? 'El código no se cambia al editar; para otro código crea un cupón nuevo.' : ''"></ui-form-field>
                   <div class="grid grid-cols-2 gap-2">
                     <ui-form-field
                       kind="select"
@@ -3444,7 +3399,7 @@
                   <ui-button size="sm" variant="ghost" *ngIf="hasPermission('config_manage')" (pressed)="restoreBusinessConfigDefaults()">
                     Restaurar defaults
                   </ui-button>
-                  <ui-button size="sm" variant="primary" *ngIf="hasPermission('config_manage')" [disabled]="isSavingBusinessConfig" (pressed)="saveBusinessConfig()">
+                  <ui-button size="sm" variant="primary" *ngIf="hasPermission('config_manage')" [disabled]="isSavingBusinessConfig" [disabledReason]="isSavingBusinessConfig ? 'Guardando…' : ''" (pressed)="saveBusinessConfig()">
                     Guardar configuracion
                   </ui-button>
                 </div>
@@ -3485,7 +3440,7 @@
                     [ngClass]="posAuthCodeIsError ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
                     {{ posAuthCodeMessage }}
                   </div>
-                  <ui-button size="sm" variant="primary" [disabled]="isSavingPosAuthCode || (posAuthCodeDraft || '').length < 4" (pressed)="savePosAuthCode()">
+                  <ui-button size="sm" variant="primary" [disabled]="isSavingPosAuthCode || (posAuthCodeDraft || '').length < 4" [disabledReason]="isSavingPosAuthCode ? 'Guardando…' : ((posAuthCodeDraft || '').length < 4 ? 'El código debe tener al menos 4 caracteres.' : '')" (pressed)="savePosAuthCode()">
                     {{ isSavingPosAuthCode ? 'Guardando...' : 'Actualizar codigo' }}
                   </ui-button>
                 </div>
@@ -3914,7 +3869,7 @@
                         <div class="text-sm font-semibold text-main">Nivel {{ index + 1 }}</div>
                         <div class="flex items-center gap-2">
                           <div class="text-xs text-gray-600">{{ discountTierRangeLabel(tier) }}</div>
-                          <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar nivel de descuento" (pressed)="removeDiscountTier(index)" [disabled]="businessConfigDraft.rewards.discountTiers.length <= 1">
+                          <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar nivel de descuento" (pressed)="removeDiscountTier(index)" [disabled]="businessConfigDraft.rewards.discountTiers.length <= 1" [disabledReason]="businessConfigDraft.rewards.discountTiers.length <= 1 ? 'Debe quedar al menos un tramo.' : ''">
                             <i class="fa-solid fa-trash-can text-danger" aria-hidden="true"></i>
                           </ui-button>
                         </div>
@@ -3965,7 +3920,7 @@
                 <div *ngFor="let lvl of businessConfigDraft.rewards.commissionLevels; let i = index" class="rounded-2xl border border-olive-30 bg-white/70 p-4">
                   <div class="flex items-center justify-between gap-2">
                     <div class="text-sm font-semibold text-main">Generación {{ i + 1 }}</div>
-                    <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar generación de comisión" (pressed)="removeCommissionLevel(i)" [disabled]="businessConfigDraft.rewards.commissionLevels.length <= 1">
+                    <ui-button size="sm" variant="ghost" type="button" ariaLabel="Eliminar generación de comisión" (pressed)="removeCommissionLevel(i)" [disabled]="businessConfigDraft.rewards.commissionLevels.length <= 1" [disabledReason]="businessConfigDraft.rewards.commissionLevels.length <= 1 ? 'Debe quedar al menos una generación.' : ''">
                       <i class="fa-solid fa-trash-can text-danger" aria-hidden="true"></i>
                     </ui-button>
                   </div>
@@ -4016,7 +3971,7 @@
     </div>
     <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
       <ui-button size="sm" variant="ghost" (pressed)="closeChangePasswordModal()">Cancelar</ui-button>
-      <ui-button size="sm" variant="primary" [disabled]="isSavingPassword" (pressed)="submitChangePassword()">
+      <ui-button size="sm" variant="primary" [disabled]="isSavingPassword" [disabledReason]="isSavingPassword ? 'Guardando…' : ''" (pressed)="submitChangePassword()">
         {{ isSavingPassword ? 'Guardando...' : 'Cambiar contraseña' }}
       </ui-button>
     </div>
@@ -4132,7 +4087,7 @@
         <ui-button variant="ghost" size="md" iconClass="fa-solid fa-ban" (pressed)="closeModals()">
           Cancelar
         </ui-button>
-        <ui-button variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('order_create')" [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder" (pressed)="saveNewOrder()">
+        <ui-button variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('order_create')" [disabled]="!newOrderCustomerId || newOrderItems.size === 0 || isSavingOrder" [disabledReason]="motivoGuardarPedidoNuevo" (pressed)="saveNewOrder()">
           <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
           {{ isSavingOrder ? 'Guardando...' : 'Guardar pedido' }}
         </ui-button>
@@ -4284,7 +4239,7 @@
           <i class="fa-solid fa-ban" aria-hidden="true"></i>
           Cancelar
         </ui-button>
-        <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('commissions_register_payment')" [disabled]="!receiptFile || isUploadingReceipt" (pressed)="uploadReceipt()">
+        <ui-button size="sm" variant="primary" class="disabled:cursor-not-allowed disabled:opacity-60" *ngIf="hasPermission('commissions_register_payment')" [disabled]="!receiptFile || isUploadingReceipt" [disabledReason]="isUploadingReceipt ? 'Cargando…' : (!receiptFile ? 'Elige primero el archivo del comprobante.' : '')" (pressed)="uploadReceipt()">
           <i class="fa-solid fa-upload" aria-hidden="true"></i>
           {{ isUploadingReceipt ? 'Cargando...' : 'Subir comprobante' }}
         </ui-button>
@@ -4361,7 +4316,7 @@
   </div>
   <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
     <ui-button size="sm" variant="ghost" (pressed)="closeRefundModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isSavingRefund" (pressed)="confirmRefund()">
+    <ui-button size="sm" variant="primary" [disabled]="isSavingRefund" [disabledReason]="isSavingRefund ? 'Guardando…' : ''" (pressed)="confirmRefund()">
       <i class="fa-solid fa-money-bill-transfer mr-1" aria-hidden="true"></i>
       {{ isSavingRefund ? 'Guardando...' : 'Confirmar reembolso' }}
     </ui-button>
@@ -4428,7 +4383,7 @@
   </div>
   <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
     <ui-button size="sm" variant="ghost" (pressed)="closeReceiveReturnModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isSavingReceiveReturn" (pressed)="confirmReceiveReturn()">
+    <ui-button size="sm" variant="primary" [disabled]="isSavingReceiveReturn" [disabledReason]="isSavingReceiveReturn ? 'Guardando…' : ''" (pressed)="confirmReceiveReturn()">
       <i class="fa-solid fa-box-open mr-1" aria-hidden="true"></i>
       {{ isSavingReceiveReturn ? 'Guardando...' : 'Confirmar recepción' }}
     </ui-button>
@@ -4472,7 +4427,7 @@
   </div>
   <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
     <ui-button size="sm" variant="ghost" (pressed)="closeRejectReturnModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isSavingRejectReturn" (pressed)="confirmRejectReturn()">
+    <ui-button size="sm" variant="primary" [disabled]="isSavingRejectReturn" [disabledReason]="isSavingRejectReturn ? 'Guardando…' : ''" (pressed)="confirmRejectReturn()">
       <i class="fa-solid fa-ban mr-1" aria-hidden="true"></i>
       {{ isSavingRejectReturn ? 'Guardando...' : 'Confirmar rechazo' }}
     </ui-button>
@@ -4531,7 +4486,7 @@
 
   <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
     <ui-button size="sm" variant="ghost" (pressed)="closeReceivePickupPaymentModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isSubmittingPosPayment" (pressed)="confirmReceivePickupPayment()">
+    <ui-button size="sm" variant="primary" [disabled]="isSubmittingPosPayment" [disabledReason]="isSubmittingPosPayment ? 'Registrando…' : ''" (pressed)="confirmReceivePickupPayment()">
       <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
       {{ isSubmittingPosPayment ? 'Guardando...' : 'Confirmar pago' }}
     </ui-button>
@@ -4548,7 +4503,7 @@
           Venta {{ venta.orderId }} · {{ venta.customerName || 'Publico en General' }}. Saldo pendiente: <strong>{{ formatMoney(venta.pendingAmount || 0) }}</strong>.
         </div>
       </div>
-      <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" (pressed)="closePosSettleModal()">
+      <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" [disabledReason]="isSettlingPosSale ? 'Espera a que termine el registro.' : ''" (pressed)="closePosSettleModal()">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         Cerrar
       </ui-button>
@@ -4574,7 +4529,7 @@
     <div *ngIf="posSettleError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posSettleError }}</div>
     <div class="mt-5 flex flex-col items-end gap-1">
       <div class="flex gap-2">
-        <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" (pressed)="closePosSettleModal()">Cancelar</ui-button>
+        <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" [disabledReason]="isSettlingPosSale ? 'Espera a que termine el registro.' : ''" (pressed)="closePosSettleModal()">Cancelar</ui-button>
         <ui-button size="sm" variant="primary" [disabled]="!!posSettleBlockReason" (pressed)="confirmPosSettle()">
           {{ isSettlingPosSale ? 'Registrando...' : 'Registrar abono de ' + formatMoney(posSettleAmountNumber) }}
         </ui-button>
@@ -4616,7 +4571,7 @@
     <div *ngIf="posVoidError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posVoidError }}</div>
     <div class="mt-5 flex flex-col items-end gap-1">
       <div class="flex gap-2">
-        <ui-button size="sm" variant="ghost" [disabled]="isVoidingPosSale" (pressed)="closePosVoidModal()">Cancelar</ui-button>
+        <ui-button size="sm" variant="ghost" [disabled]="isVoidingPosSale" [disabledReason]="isVoidingPosSale ? 'Espera a que termine la anulación.' : ''" (pressed)="closePosVoidModal()">Cancelar</ui-button>
         <ui-button size="sm" variant="primary" [disabled]="isVoidingPosSale || !posVoidReason.trim()" (pressed)="confirmPosVoid()">
           {{ isVoidingPosSale ? 'Anulando...' : 'Anular la venta' }}
         </ui-button>
@@ -4653,7 +4608,7 @@
   <div *ngIf="posAuthError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posAuthError }}</div>
   <div class="mt-5 flex justify-end gap-2">
     <ui-button size="sm" variant="ghost" (pressed)="closePosAuthModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="isValidatingPosAuth || !posAuthCode.trim()" (pressed)="confirmPosAuth()">
+    <ui-button size="sm" variant="primary" [disabled]="isValidatingPosAuth || !posAuthCode.trim()" [disabledReason]="isValidatingPosAuth ? 'Verificando…' : (!posAuthCode.trim() ? 'Escribe el código de autorización.' : '')" (pressed)="confirmPosAuth()">
       {{ isValidatingPosAuth ? 'Verificando...' : 'Confirmar' }}
     </ui-button>
   </div>
@@ -4693,7 +4648,7 @@
   <div *ngIf="posDiscountError" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ posDiscountError }}</div>
   <div class="mt-5 flex justify-end gap-2">
     <ui-button size="sm" variant="ghost" (pressed)="closePosDiscountModal()">Cancelar</ui-button>
-    <ui-button size="sm" variant="primary" [disabled]="!posDiscountValue || +posDiscountValue <= 0" (pressed)="applyPosDiscount()">
+    <ui-button size="sm" variant="primary" [disabled]="!posDiscountValue || +posDiscountValue <= 0" [disabledReason]="!posDiscountValue || +posDiscountValue <= 0 ? 'Escribe un descuento mayor a 0.' : ''" (pressed)="applyPosDiscount()">
       Aplicar descuento
     </ui-button>
   </div>
@@ -4822,7 +4777,7 @@
 
     <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
       <ui-button variant="ghost" size="md" (pressed)="closePosCustomerModal()">Cancelar</ui-button>
-      <ui-button variant="primary" size="md" [disabled]="!canSavePosCustomer" (pressed)="savePosCustomer()">
+      <ui-button variant="primary" size="md" [disabled]="!canSavePosCustomer" [disabledReason]="motivoCrearClientePos" (pressed)="savePosCustomer()">
         <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
         {{ isSavingPosCustomer ? 'Guardando...' : 'Crear cliente' }}
       </ui-button>
@@ -4977,9 +4932,53 @@
   </div>
   <div class="mt-5 flex justify-end gap-2">
     <ui-button variant="ghost" size="sm" (pressed)="cancelDeleteProduct()">Cancelar</ui-button>
-    <ui-button variant="primary" size="sm" class="hover:text-red-600" [disabled]="isDeletingProduct" (pressed)="removeProduct()">
+    <ui-button variant="primary" size="sm" class="hover:text-red-600" [disabled]="isDeletingProduct" [disabledReason]="isDeletingProduct ? 'Eliminando…' : ''" (pressed)="removeProduct()">
       <i class="fa-solid fa-trash" aria-hidden="true"></i>
       {{ isDeletingProduct ? 'Eliminando...' : 'Eliminar' }}
     </ui-button>
   </div>
 </ui-modal>
+
+<!-- WP-I1: confirmación genérica con el efecto escrito (sustituye a prompt()/confirm()); al terminar muestra lo que guardó el servidor -->
+<ui-confirm *ngIf="confirmacion as c"
+  [isOpen]="true"
+  [title]="c.title"
+  [effect]="c.effect"
+  [requireReason]="c.requireReason"
+  [reasonLabel]="c.reasonLabel || 'Motivo'"
+  [confirmLabel]="c.confirmLabel"
+  [danger]="c.danger"
+  [busy]="c.busy"
+  [error]="c.error"
+  [result]="c.result"
+  [resultTitle]="c.resultTitle || 'Listo'"
+  (confirmed)="ejecutarConfirmacion($event)"
+  (cancelled)="cerrarConfirmacion()"></ui-confirm>
+
+<!-- WP-I1: recibir traspaso con cantidades reales (antes: un prompt por producto y un confirm para las mermas) -->
+<ui-confirm *ngIf="recepcionTraspaso as r"
+  [isOpen]="true"
+  [title]="'Recibir el traspaso ' + r.transfer.id"
+  [effect]="efectoRecepcionTraspaso"
+  [requireReason]="false"
+  confirmLabel="Recibir"
+  [danger]="faltantesRecepcion.length > 0"
+  [busy]="r.busy"
+  busyLabel="Recibiendo…"
+  [error]="r.error"
+  [result]="r.result"
+  resultTitle="Traspaso recibido"
+  [blockReason]="motivoBloqueoRecepcion"
+  (confirmed)="confirmarRecepcionTraspaso()"
+  (cancelled)="cerrarRecepcionTraspaso()">
+  <div class="mt-4 space-y-2">
+    <div class="text-xs font-semibold text-gray-600">¿Cuántas piezas llegaron de cada producto? Ya viene puesto lo enviado; corrige solo lo que falte.</div>
+    <div *ngFor="let linea of r.lines" class="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2">
+      <div>
+        <div class="text-sm font-semibold text-main">{{ linea.name }}</div>
+        <div class="text-mini text-gray-500">Enviados: {{ linea.sent }}<span *ngIf="linea.received < linea.sent" class="text-amber-700"> · faltan {{ linea.sent - linea.received }}</span></div>
+      </div>
+      <ui-form-field type="number" [min]="0" [max]="linea.sent" [step]="1" wrapperClass="block w-24" [ngModel]="linea.received" (ngModelChange)="actualizarCantidadRecibida(linea, $event)"></ui-form-field>
+    </div>
+  </div>
+</ui-confirm>

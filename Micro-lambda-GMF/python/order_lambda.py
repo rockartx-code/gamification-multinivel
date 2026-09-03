@@ -1822,8 +1822,10 @@ def handle_delete_coupon(code) -> dict:
     item = dict(existing)
     item["active"] = False
     item["updatedAt"] = utils._now_iso()
-    utils._put_entity("COUPON", code, item, created_at_iso=existing.get("createdAt"))
-    return utils._json_response(200, {"message": "Cupón desactivado", "code": code})
+    saved = utils._put_entity("COUPON", code, item, created_at_iso=existing.get("createdAt"))
+    # I1: la confirmación en pantalla muestra el estado que quedó guardado
+    # (leído de aquí), no el que el formulario supuso.
+    return utils._json_response(200, {"message": "Cupón desactivado", "code": code, "coupon": saved})
 
 
 def _apply_coupon_to_totals(coupon_code: str, totals: dict, customer_id=None) -> dict:

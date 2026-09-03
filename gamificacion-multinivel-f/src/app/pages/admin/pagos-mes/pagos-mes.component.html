@@ -52,11 +52,11 @@
   </div>
 
   <div class="flex flex-wrap items-center gap-2 px-4 pb-3" *ngIf="canRegister">
-    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-csv" [disabled]="!readyRows.length || isSaving" (pressed)="exportCsv()"
+    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-csv" [disabled]="!readyRows.length || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!readyRows.length ? 'No hay socias listas para depositar este mes.' : '')" (pressed)="exportCsv()"
       title="Descarga las listas para depositar en el formato que se sube al banco">
       Exportar archivo de dispersión (CSV)
     </ui-button>
-    <ui-button size="sm" variant="primary" iconClass="fa-solid fa-coins" [disabled]="!selectedRows.length || isSaving" (pressed)="openLote()">
+    <ui-button size="sm" variant="primary" iconClass="fa-solid fa-coins" [disabled]="!selectedRows.length || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!selectedRows.length ? 'Marca las filas que vas a pagar.' : '')" (pressed)="openLote()">
       Registrar pago por lote{{ selectedRows.length ? ' (' + selectedRows.length + ' · ' + formatMoney(selectedTotal) + ')' : '' }}
     </ui-button>
     <span class="text-xs text-gray-600" *ngIf="readyRows.length && !selectedRows.length">

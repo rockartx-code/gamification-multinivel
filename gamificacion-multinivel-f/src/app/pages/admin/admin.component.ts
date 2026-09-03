@@ -74,6 +74,27 @@ import { ESTADOS_MX_OPTIONS } from '../../constants/states-mx'; // WP-C
 import { CheckoutService } from '../../services/checkout.service'; // WP-C
 import { FacturaEmitida } from '../../models/checkout.model'; // WP-C
 import { DespachoService } from '../../services/despacho.service'; // WP-D
+import { UiConfirmComponent } from '../../components/ui-confirm/ui-confirm.component'; // WP-I1
+import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component'; // WP-I1
+
+/** Diálogo de confirmación genérico del back office (I1): un solo `ui-confirm` para todas las acciones. */
+type ConfirmacionAdmin = {
+  title: string;
+  effect: string;
+  requireReason: boolean;
+  reasonLabel?: string;
+  confirmLabel: string;
+  danger: boolean;
+  busy: boolean;
+  error: string;
+  result: string | null;
+  resultTitle?: string;
+  /** Recibe el motivo escrito y hace la llamada; al terminar debe llamar a `confirmacionLista`/`confirmacionFallo`. */
+  ejecutar: (motivo: string) => void;
+};
+
+/** Línea del traspaso que se está recibiendo: lo enviado y lo que realmente llegó. */
+type LineaRecepcion = { productId: number | string; name: string; sent: number; received: number };
 
 type StructureNode = {
   id: string;
@@ -257,7 +278,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */, UiConfirmComponent /* WP-I1 */, UiTablaDescuentoComponent /* WP-I1 */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -3530,14 +3551,19 @@ export class AdminComponent implements OnInit {
             contentType: file.type || 'application/octet-stream'
           });
         }),
-        switchMap(() => this.adminControl.load()),
+        switchMap((respuesta) => this.adminControl.load().pipe(map(() => respuesta))),
         finalize(() => {
           this.isUploadingReceipt = false;
           this.closeReceiptModal();
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Comprobante cargado.'),
+        next: (respuesta) => {
+          const recibo = (respuesta as { receipt?: { receiptId?: string; monthKey?: string; status?: string } })?.receipt;
+          this.showSnackbar(recibo?.receiptId
+            ? `Comprobante ${recibo.receiptId} guardado para ${recibo.monthKey || monthKey}: el mes quedó ${recibo.status === 'paid' ? 'pagado' : (recibo.status || 'registrado')}.`
+            : 'Comprobante cargado.');
+        },
         error: () => {
           this.receiptError = 'No se pudo cargar el comprobante.';
         }
@@ -3583,9 +3609,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () =>
+        next: (guardado) =>
+          // El estado que se anuncia es el que devolvió el servidor, no el que se pidió.
           this.showSnackbar(
-            `Pedido ${order.id} de ${order.customer}: ahora está ${this.orderStatusLabel(nextStatus)}.`
+            `Pedido ${guardado?.id || order.id} de ${order.customer}: el servidor lo dejó ${this.orderStatusLabel(guardado?.status || nextStatus)}.`
           ),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
@@ -3646,9 +3673,10 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.adminControl.addOrderNote(order.id, text).subscribe({
-      next: () => {
+      next: (guardado) => {
         this.orderNoteDrafts[order.id] = '';
-        this.showSnackbar('Nota guardada.');
+        const total = guardado?.adminNotes?.length ?? 0;
+        this.showSnackbar(`Nota guardada: el pedido ${guardado?.id || order.id} tiene ${total} nota${total === 1 ? '' : 's'} interna${total === 1 ? '' : 's'}.`);
         this.requestViewUpdate();
       },
       error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la nota.'), 'error')
@@ -3663,27 +3691,41 @@ export class AdminComponent implements OnInit {
     if (!this.canCancelOrder(order) || this.updatingOrderIds.has(order.id)) {
       return;
     }
-    const aviso = order.status === 'paid' ? ' El pago quedará pendiente de reembolso.' : ' Este pedido no se ha pagado.';
-    // Antes era un confirm sin motivo y quedaba "admin_request" en el registro.
-    const motivo = prompt(`¿Cancelar el pedido ${order.id} de ${order.customer}?${aviso}\nMotivo (queda en el pedido y en el aviso al cliente):`, '');
-    if (motivo === null) {
-      return;
-    }
-    this.updatingOrderIds.add(order.id);
-    this.adminControl
-      .cancelOrder(order.id, motivo.trim() || 'admin_request')
-      .pipe(
-        finalize(() => {
-          this.updatingOrderIds.delete(order.id);
-          this.requestViewUpdate();
-        })
-      )
-      .subscribe({
-        next: () => this.showSnackbar(`Pedido ${order.id} cancelado.`),
-        error: (error: unknown) => {
-          this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo cancelar el pedido.'), 'error');
-        }
-      });
+    const aviso = order.status === 'paid'
+      ? `El pedido ya está pagado: quedará cancelado con el pago pendiente de reembolso (${this.formatMoney(order.total)}) y se le avisará al cliente por correo.`
+      : 'Este pedido no se ha pagado: quedará cancelado y se le avisará al cliente por correo.';
+    // Antes era un prompt del navegador sin efecto escrito (Sofía).
+    this.abrirConfirmacion({
+      title: `Cancelar el pedido ${order.id} de ${order.customer}`,
+      effect: `${aviso} El motivo queda en el pedido y en el aviso al cliente.`,
+      requireReason: true,
+      reasonLabel: 'Motivo de la cancelación',
+      confirmLabel: 'Cancelar el pedido',
+      danger: true,
+      ejecutar: (motivo) => {
+        this.updatingOrderIds.add(order.id);
+        this.adminControl
+          .cancelOrder(order.id, motivo || 'admin_request')
+          .pipe(
+            finalize(() => {
+              this.updatingOrderIds.delete(order.id);
+              this.requestViewUpdate();
+            })
+          )
+          .subscribe({
+            next: (respuesta) => {
+              // Lo que quedó guardado, leído de la respuesta (no del formulario).
+              const estado = this.orderStatusLabel((respuesta?.status || 'cancelled') as AdminOrder['status']);
+              const reembolso = respuesta?.pendingRefund ? ' Queda un reembolso pendiente: hazlo desde "Reembolsar".' : ' No hay reembolso pendiente.';
+              this.confirmacionLista(`El servidor dejó el pedido ${respuesta?.orderId || order.id} en estado "${estado}".${reembolso}`, 'Pedido cancelado');
+              this.showSnackbar(`Pedido ${respuesta?.orderId || order.id}: ahora está ${estado}.`);
+            },
+            error: (error: unknown) => {
+              this.confirmacionFallo(this.resolveUiErrorMessage(error, 'No se pudo cancelar el pedido.'));
+            }
+          });
+      }
+    });
   }
 
   openShippingModal(order: AdminOrder): void {
@@ -3763,9 +3805,9 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (guardado) => {
           this.closeShippingModal();
-          this.showSnackbar('Envio registrado.');
+          this.showSnackbar(this.resumenEnvioGuardado(guardado, orderId));
         },
         error: (error: unknown) => {
           this.shippingError = this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.');
@@ -3826,10 +3868,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (guardado) => {
           this.closeShippingModal();
           this.requestViewUpdate();
-          this.showSnackbar('Envio registrado.');
+          this.showSnackbar(this.resumenEnvioGuardado(guardado, orderId));
         },
         error: (error: unknown) => {
           this.setShippingError(this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.'));
@@ -3999,7 +4041,7 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Orden entregada en sucursal.'),
+        next: (guardado) => this.showSnackbar(`Pedido ${guardado?.id || order.id}: el servidor lo dejó ${this.orderStatusLabel(guardado?.status || 'delivered')}.`),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo registrar la entrega.'), 'error');
         }
@@ -4407,9 +4449,9 @@ export class AdminComponent implements OnInit {
     this.adminControl
       .createOrder(payload)
       .pipe(
-        switchMap(() => {
+        switchMap((creado) => {
           console.log('[Admin] saveNewOrder() createOrder next -> load()');
-          return this.adminControl.load();
+          return this.adminControl.load().pipe(map(() => creado));
         }),
         finalize(() => {
           console.log('[Admin] saveNewOrder() finalize');
@@ -4417,9 +4459,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (creado) => {
           console.log('[Admin] saveNewOrder() load next -> closeModals()');
           this.closeModals();
+          this.showSnackbar(`Pedido ${creado?.id} creado para ${creado?.customer || customer.name}: ${this.orderStatusLabel(creado?.status || this.newOrderStatus)} por ${this.formatMoney(creado?.total ?? 0)}.`);
         },
         error: () => {
           console.log('[Admin] saveNewOrder() error -> closeModals()');
@@ -4513,11 +4556,11 @@ export class AdminComponent implements OnInit {
     };
     this.isSavingStructure = true;
     this.adminControl.createStructureCustomer(payload).subscribe({
-      next: () => {
+      next: (creado) => {
         this.isSavingStructure = false;
         this.adminControl.load().subscribe();
         this.closeModals();
-        this.showSnackbar('Miembro creado.');
+        this.showSnackbar(`Miembro creado: ${creado?.name || fullName} (ficha ${creado?.id}).`);
       },
       error: () => {
         this.isSavingStructure = false;
@@ -4545,7 +4588,7 @@ export class AdminComponent implements OnInit {
         this.isSavingPosCustomer = false;
         this.closePosCustomerModal();
         this.selectPosCustomerRecommendation(customer.id);
-        this.showSnackbar('Cliente creado y seleccionado en POS.');
+        this.showSnackbar(`Cliente ${customer?.name} creado (ficha ${customer?.id}) y seleccionado en la venta.`);
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.isSavingPosCustomer = false;
@@ -4738,17 +4781,31 @@ export class AdminComponent implements OnInit {
   revertCommissionPayment(customer: AdminCustomer): void {
     const mes = customer.commissionsPrevMonthKey;
     if (!mes || !this.hasPermission('commissions_register_payment')) return;
-    const motivo = prompt(`Deshacer el pago de ${mes} de ${customer.name}. El mes vuelve a "pendiente de depósito" y el comprobante queda anulado. Motivo:`);
-    if (!motivo || !motivo.trim()) return;
-    this.adminControl.revertCommissionPayment(customer.id, mes, motivo.trim()).subscribe({
-      next: () => {
-        this.showSnackbar('Pago deshecho: el mes vuelve a pendiente de depósito.');
-        this.adminControl.loadCustomers().subscribe(() => {
-          this.selectedCustomer = this.customers.find((c) => c.id === customer.id) ?? this.selectedCustomer;
-          this.requestViewUpdate();
+    this.abrirConfirmacion({
+      title: `Deshacer el pago de ${mes} de ${customer.name}`,
+      effect: 'El mes vuelve a "pendiente de depósito" y el comprobante queda anulado (se conserva con el motivo). Si el dinero ya salió del banco, tendrás que registrar el pago otra vez con el comprobante correcto.',
+      requireReason: true,
+      reasonLabel: 'Motivo de la reversa',
+      confirmLabel: 'Deshacer el pago',
+      danger: true,
+      ejecutar: (motivo) => {
+        this.adminControl.revertCommissionPayment(customer.id, mes, motivo).subscribe({
+          next: (respuesta) => {
+            const r = respuesta as { status?: string; receiptsVoided?: number; monthKey?: string };
+            const comprobantes = Number(r?.receiptsVoided ?? 0);
+            this.confirmacionLista(
+              `El servidor dejó el mes ${r?.monthKey || mes} en estado "${r?.status === 'pending' ? 'pendiente de depósito' : r?.status || 'pendiente'}" y anuló ${comprobantes} comprobante${comprobantes === 1 ? '' : 's'}.`,
+              'Pago deshecho'
+            );
+            this.showSnackbar(`Pago de ${r?.monthKey || mes} deshecho: el mes volvió a pendiente de depósito.`);
+            this.adminControl.loadCustomers().subscribe(() => {
+              this.selectedCustomer = this.customers.find((c) => c.id === customer.id) ?? this.selectedCustomer;
+              this.requestViewUpdate();
+            });
+          },
+          error: (err: unknown) => this.confirmacionFallo(this.resolveUiErrorMessage(err, 'No se pudo deshacer el pago.'))
         });
-      },
-      error: (err: unknown) => this.showSnackbar(this.resolveUiErrorMessage(err, 'No se pudo deshacer el pago.'))
+      }
     });
   }
 
@@ -4773,21 +4830,32 @@ export class AdminComponent implements OnInit {
     if (!this.hasPermission('user_manage_privileges') || this.isSavingCustomerFollowUp) {
       return;
     }
-    const reason = prompt(`Baja de datos de ${customer.name}. Esto borra nombre, correo, teléfono, direcciones, documentos y acceso, y no se puede deshacer. Escribe el motivo para confirmar:`);
-    if (!reason || !reason.trim()) {
-      return;
-    }
-    this.isSavingCustomerFollowUp = true;
-    this.adminControl
-      .deleteCustomerData(customer.id, reason.trim())
-      .pipe(finalize(() => { this.isSavingCustomerFollowUp = false; this.requestViewUpdate(); }))
-      .subscribe({
-        next: (updated) => {
-          this.selectedCustomer = { ...this.selectedCustomer, ...updated };
-          this.showSnackbar('Datos eliminados. Se envió la confirmación al correo anterior.');
-        },
-        error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo dar de baja.'), 'error')
-      });
+    this.abrirConfirmacion({
+      title: `Baja de datos de ${customer.name}`,
+      effect: 'Se borran nombre, correo, teléfono, direcciones, documentos, CLABE y acceso; queda marcado "no contactar" y se le manda un correo de confirmación antes de perder la dirección. Sus pedidos y comisiones se conservan sin datos que lo identifiquen. No se puede deshacer.',
+      requireReason: true,
+      reasonLabel: 'Motivo de la baja (queda en la bitácora)',
+      confirmLabel: 'Dar de baja los datos',
+      danger: true,
+      ejecutar: (motivo) => {
+        this.isSavingCustomerFollowUp = true;
+        this.adminControl
+          .deleteCustomerData(customer.id, motivo)
+          .pipe(finalize(() => { this.isSavingCustomerFollowUp = false; this.requestViewUpdate(); }))
+          .subscribe({
+            next: (updated) => {
+              this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+              const cuando = updated?.deletedAt ? ` el ${this.formatDateTime(updated.deletedAt)}` : '';
+              this.confirmacionLista(
+                `El servidor guardó la ficha como "${updated?.name || 'Cliente eliminado'}"${cuando}, sin correo ni teléfono y marcada "no contactar". La confirmación se envió al correo anterior.`,
+                'Datos dados de baja'
+              );
+              this.showSnackbar(`Ficha ${updated?.name || 'Cliente eliminado'}: datos eliminados.`);
+            },
+            error: (error: unknown) => this.confirmacionFallo(this.resolveUiErrorMessage(error, 'No se pudo dar de baja.'))
+          });
+      }
+    });
   }
 
   saveSelectedCustomerPosition(): void {
@@ -4810,7 +4878,8 @@ export class AdminComponent implements OnInit {
           this.selectedCustomer = { ...this.selectedCustomer, ...updated };
           this.isChangingSponsor = false;
           this.syncSelectedCustomerAccessDraft();
-          this.showSnackbar('Posicion actualizada.');
+          const patrocinador = this.customers.find((c) => c.id === (updated?.leaderId ?? null));
+          this.showSnackbar(`Posición guardada: el patrocinador de ${updated?.name || this.selectedCustomer?.name} ahora es ${patrocinador?.name || 'nadie (sin patrocinador)'}.`);
         }
       });
   }
@@ -4866,18 +4935,40 @@ export class AdminComponent implements OnInit {
     const emp = this.selectedEmployee;
     if (!emp || this.isSavingEmployeeActive) return;
     const next = !emp.active;
-    if (!next && !confirm(`¿Desactivar a ${emp.name}? Ya no podrá entrar al back office ni cobrar en el POS.`)) return;
-    this.isSavingEmployeeActive = true;
-    this.adminControl
-      .updateEmployee(emp.id, { active: next, canAccessAdmin: next })
-      .pipe(finalize(() => { this.isSavingEmployeeActive = false; this.requestViewUpdate(); }))
-      .subscribe({
-        next: (updated) => {
-          this.selectedEmployee = { ...emp, ...updated };
-          this.showSnackbar(next ? 'Empleado reactivado.' : 'Empleado desactivado.');
-        },
-        error: () => this.showSnackbar('No se pudo cambiar el estado del empleado.')
-      });
+    const guardar = (): void => {
+      this.isSavingEmployeeActive = true;
+      this.adminControl
+        .updateEmployee(emp.id, { active: next, canAccessAdmin: next })
+        .pipe(finalize(() => { this.isSavingEmployeeActive = false; this.requestViewUpdate(); }))
+        .subscribe({
+          next: (updated) => {
+            this.selectedEmployee = { ...emp, ...updated };
+            // El estado que se muestra es el que respondió el servidor, no el que se pidió.
+            const activo = updated?.active ?? next;
+            const texto = `El servidor dejó a ${updated?.name || emp.name} como ${activo ? 'activo (puede entrar al back office)' : 'inactivo (sin acceso al back office ni al POS)'}.`;
+            this.confirmacionLista(texto, activo ? 'Empleado reactivado' : 'Empleado desactivado');
+            this.showSnackbar(texto);
+          },
+          error: (error: unknown) => {
+            const mensaje = this.resolveUiErrorMessage(error, 'No se pudo cambiar el estado del empleado.');
+            this.confirmacionFallo(mensaje);
+            this.showSnackbar(mensaje, 'error');
+          }
+        });
+    };
+    if (next) {
+      guardar();
+      return;
+    }
+    // Antes era un confirm del navegador; ahora se lee el efecto antes de confirmar.
+    this.abrirConfirmacion({
+      title: `Desactivar a ${emp.name}`,
+      effect: 'Ya no podrá entrar al back office ni cobrar en el POS. No se borra: su historial de ventas y movimientos se conserva y puedes reactivarlo cuando quieras.',
+      requireReason: false,
+      confirmLabel: 'Desactivar',
+      danger: true,
+      ejecutar: () => guardar()
+    });
   }
 
   selectEmployee(employeeId: number): void {
@@ -4917,7 +5008,7 @@ export class AdminComponent implements OnInit {
         next: (updated) => {
           this.selectedEmployee = { ...emp, ...updated };
           this.syncEmployeeContactDraft();
-          this.showSnackbar('Datos del empleado guardados.');
+          this.showSnackbar(`Empleado guardado como "${updated?.name || emp.name}"${updated?.phone ? ` · tel. ${updated.phone}` : ''}.`);
         },
         error: () => this.showSnackbar('No se pudieron guardar los datos del empleado.')
       });
@@ -5950,11 +6041,15 @@ export class AdminComponent implements OnInit {
       note: note.trim() || undefined,
       userId: createdByUserId
     }).subscribe({
-      next: () => {
-        this.setStockFeedback('Entrada de inventario registrada.', 'success');
+      next: (respuesta) => {
+        const existencia = productId != null ? (respuesta?.stock?.inventory as Record<string, number> | undefined)?.[String(productId)] : undefined;
+        const texto = existencia != null
+          ? `Entrada registrada: ${this.productName(Number(productId))} ahora tiene ${existencia} en ${this.stockName(stockId)}.`
+          : 'Entrada de inventario registrada.';
+        this.setStockFeedback(texto, 'success');
         this.closeStockEntryModal();
         this.loadStocksAndPosState();
-        this.showSnackbar('Entrada de inventario registrada.');
+        this.showSnackbar(texto);
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.setStockFeedback(
@@ -6102,11 +6197,15 @@ export class AdminComponent implements OnInit {
     this.adminControl
       .createStockTransfer({ sourceStockId, destinationStockId, lines: normalizedLines, createdByUserId })
       .subscribe({
-        next: () => {
-          this.setStockFeedback('Transferencia creada.', 'success');
+        next: (respuesta) => {
+          const creada = respuesta?.transfer;
+          const texto = creada?.id
+            ? `Traspaso ${creada.id} creado (${creada.status === 'pending' ? 'pendiente de recibir' : creada.status}): ya salió de ${this.stockName(creada.sourceStockId)}.`
+            : 'Transferencia creada.';
+          this.setStockFeedback(texto, 'success');
           this.stockTransferForm.lines = [{ productId: this.products[0]?.id ?? null, qty: 1 }];
           this.loadStocksAndPosState();
-          this.showSnackbar('Transferencia creada.');
+          this.showSnackbar(texto);
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           const msg = error?.error?.message || error?.message || 'No se pudo crear la transferencia.';
@@ -6134,40 +6233,106 @@ export class AdminComponent implements OnInit {
       return;
     }
 
-    // Cantidades reales: el almacén contó 4 de 5 y solo podía confirmar 5 o nada.
-    const received: Record<string, number> = {};
-    for (const line of transfer.lines) {
-      const sent = Number(line.qty || 0);
-      const answer = prompt(`${this.productName(line.productId)}: enviados ${sent}. ¿Cuántos llegaron?`, String(sent));
-      if (answer === null) {
-        return;
-      }
-      const real = Math.max(0, Math.min(sent, Math.floor(Number(answer))));
-      if (!Number.isFinite(real)) {
-        this.setStockFeedback('Escribe una cantidad válida.', 'error');
-        return;
-      }
-      received[String(line.productId)] = real;
-    }
-    const faltantes = transfer.lines.filter((line) => received[String(line.productId)] < Number(line.qty || 0));
-    if (faltantes.length && !confirm(`Faltan ${faltantes.map((l) => `${Number(l.qty) - received[String(l.productId)]} ${this.productName(l.productId)}`).join(', ')}. Se registrará como merma en el origen. ¿Continuar?`)) {
+    // Cantidades reales en un modal (antes: un prompt por producto y "el clic
+    // en Recibir no hizo nada visible", Beto). El almacén contó 4 de 5 y solo
+    // podía confirmar 5 o nada.
+    this.setStockFeedback('', '');
+    this.recepcionTraspaso = {
+      transfer,
+      lines: transfer.lines.map((line) => ({
+        productId: line.productId,
+        name: this.productName(line.productId),
+        sent: Number(line.qty || 0),
+        received: Number(line.qty || 0)
+      })),
+      busy: false,
+      error: '',
+      result: null
+    };
+  }
+
+  /** Modal de recepción de traspaso con cantidades reales (I1). */
+  recepcionTraspaso: { transfer: StockTransfer; lines: LineaRecepcion[]; busy: boolean; error: string; result: string | null } | null = null;
+
+  cerrarRecepcionTraspaso(): void {
+    if (this.recepcionTraspaso?.busy) {
       return;
     }
+    this.recepcionTraspaso = null;
+  }
 
-    this.setStockFeedback('', '');
+  actualizarCantidadRecibida(linea: LineaRecepcion, valor: unknown): void {
+    const n = Math.floor(Number(valor));
+    linea.received = Number.isFinite(n) ? Math.max(0, Math.min(linea.sent, n)) : 0;
+  }
+
+  get faltantesRecepcion(): LineaRecepcion[] {
+    return (this.recepcionTraspaso?.lines ?? []).filter((l) => l.received < l.sent);
+  }
+
+  /** Qué va a pasar al confirmar, con las mermas ya calculadas. */
+  get efectoRecepcionTraspaso(): string {
+    const r = this.recepcionTraspaso;
+    if (!r) {
+      return '';
+    }
+    const destino = this.stockName(r.transfer.destinationStockId);
+    const faltantes = this.faltantesRecepcion;
+    if (!faltantes.length) {
+      return `Las cantidades entran al inventario de ${destino} y el traspaso ${r.transfer.id} queda como "Recibida".`;
+    }
+    const detalle = faltantes.map((l) => `${l.sent - l.received} ${l.name}`).join(', ');
+    return `Entra al inventario de ${destino} solo lo que llegó. Faltan ${detalle}: se registran como merma en el origen (${this.stockName(r.transfer.sourceStockId)}) y quedan anotados en el traspaso.`;
+  }
+
+  get motivoBloqueoRecepcion(): string {
+    const r = this.recepcionTraspaso;
+    if (!r) {
+      return '';
+    }
+    if (r.busy) {
+      return 'Recibiendo…';
+    }
+    if (r.lines.some((l) => !Number.isFinite(l.received))) {
+      return 'Escribe una cantidad válida en cada producto.';
+    }
+    if (!this.transferReceiverUserId) {
+      return 'Elige quién recibe el traspaso.';
+    }
+    return '';
+  }
+
+  confirmarRecepcionTraspaso(): void {
+    const r = this.recepcionTraspaso;
+    if (!r || this.motivoBloqueoRecepcion) {
+      return;
+    }
+    const received: Record<string, number> = {};
+    for (const linea of r.lines) {
+      received[String(linea.productId)] = linea.received;
+    }
+    const faltantes = this.faltantesRecepcion.length;
+    r.busy = true;
+    r.error = '';
     this.adminControl
-      .receiveStockTransfer(transferId, { receivedByUserId: this.transferReceiverUserId, received })
+      .receiveStockTransfer(r.transfer.id, { receivedByUserId: this.transferReceiverUserId, received })
+      .pipe(finalize(() => { r.busy = false; this.requestViewUpdate(); }))
       .subscribe({
-        next: () => {
-          this.setStockFeedback(faltantes.length ? 'Transferencia recibida con faltantes registrados.' : 'Transferencia recibida.', 'success');
+        next: (respuesta) => {
+          const guardado = respuesta?.transfer;
+          const discrepancias = (respuesta as { discrepancies?: Array<{ productId: string; missing: number }> })?.discrepancies ?? [];
+          const estado = guardado?.status === 'received' ? 'Recibida' : String(guardado?.status || 'Recibida');
+          const merma = discrepancias.length
+            ? ` Mermas registradas en el origen: ${discrepancias.map((d) => `${d.missing} ${this.productName(Number(d.productId))}`).join(', ')}.`
+            : ' Sin faltantes.';
+          r.result = `El servidor dejó el traspaso ${guardado?.id || r.transfer.id} como "${estado}"${guardado?.receivedAt ? ` el ${this.formatDateTime(guardado.receivedAt)}` : ''}.${merma}`;
+          this.setStockFeedback(faltantes ? 'Traspaso recibido con faltantes registrados.' : 'Traspaso recibido.', 'success');
           this.loadStocksAndPosState();
-          this.showSnackbar('Transferencia recibida.');
+          this.showSnackbar(`Traspaso ${guardado?.id || r.transfer.id}: ${estado}.`);
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
-          this.setStockFeedback(
-            error?.error?.message || error?.message || 'No se pudo recibir la transferencia.',
-            'error'
-          );
+          r.error = error?.error?.message || error?.message || 'No se pudo recibir el traspaso.';
+          this.setStockFeedback(r.error, 'error');
         }
       });
   }
@@ -6218,13 +6383,17 @@ export class AdminComponent implements OnInit {
       reason: reason.trim(),
       userId: reportedByUserId
     }).subscribe({
-      next: () => {
-        this.setStockFeedback('Dano registrado en inventario.', 'success');
+      next: (respuesta) => {
+        const existencia = productId != null ? (respuesta?.stock?.inventory as Record<string, number> | undefined)?.[String(productId)] : undefined;
+        const texto = existencia != null
+          ? `Daño registrado: ${this.productName(Number(productId))} queda con ${existencia} en ${this.stockName(stockId)}.`
+          : 'Daño registrado en inventario.';
+        this.setStockFeedback(texto, 'success');
         this.stockDamageForm.qty = 1;
         this.stockDamageForm.reason = '';
         this.closeDamageModal();
         this.loadStocksAndPosState();
-        this.showSnackbar('Dano registrado.');
+        this.showSnackbar(texto);
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.setStockFeedback(
@@ -7107,37 +7276,56 @@ export class AdminComponent implements OnInit {
   activateCoupon(c: Coupon): void {
     const restantes = c.maxRedemptions != null ? c.maxRedemptions - (c.redemptions ?? 0) : null;
     const aviso = restantes != null && restantes <= 0
-      ? `\n\nAtención: ya se agotaron sus ${c.maxRedemptions} usos, así que no lo podrá canjear nadie.`
+      ? ` Atención: ya se agotaron sus ${c.maxRedemptions} usos, así que no lo podrá canjear nadie hasta que subas el límite.`
       : restantes != null
-        ? `\n\nQuedan ${restantes} de ${c.maxRedemptions} usos.`
+        ? ` Quedan ${restantes} de ${c.maxRedemptions} usos.`
         : '';
-    if (!confirm(`¿Activar el cupón ${c.code}?${aviso}`)) {
-      return;
-    }
-    this.api.saveCoupon({ ...c, active: true } as SaveCouponPayload).subscribe({
-      next: () => {
-        this.couponFeedback = `Cupón ${c.code} activado.`;
-        this.loadCoupons();
-      },
-      error: () => {
-        this.couponFeedback = `No se pudo activar el cupón ${c.code}.`;
-        this.cdr.markForCheck();
+    this.abrirConfirmacion({
+      title: `Activar el cupón ${c.code}`,
+      effect: `Desde ahora cualquier cliente podrá canjearlo en el carrito.${aviso}`,
+      requireReason: false,
+      confirmLabel: 'Activar el cupón',
+      danger: false,
+      ejecutar: () => {
+        this.api.saveCoupon({ ...c, active: true } as SaveCouponPayload).subscribe({
+          next: (guardado) => {
+            const activo = guardado?.active ?? true;
+            this.couponFeedback = `Cupón ${guardado?.code || c.code}: el servidor lo dejó ${activo ? 'activo' : 'inactivo'}.`;
+            this.confirmacionLista(this.couponFeedback, 'Cupón activado');
+            this.loadCoupons();
+          },
+          error: (error: unknown) => {
+            this.couponFeedback = `No se pudo activar el cupón ${c.code}.`;
+            this.confirmacionFallo(this.resolveUiErrorMessage(error, this.couponFeedback));
+            this.cdr.markForCheck();
+          }
+        });
       }
     });
   }
 
   deleteCoupon(c: Coupon): void {
-    if (!confirm(`¿Desactivar el cupón ${c.code}?`)) {
-      return;
-    }
-    this.api.deleteCoupon(c.code).subscribe({
-      next: () => {
-        this.couponFeedback = `Cupón ${c.code} desactivado.`;
-        this.loadCoupons();
-      },
-      error: () => {
-        this.couponFeedback = 'No se pudo desactivar el cupón.';
-        this.cdr.markForCheck();
+    this.abrirConfirmacion({
+      title: `Desactivar el cupón ${c.code}`,
+      effect: 'Deja de aceptarse en el carrito desde ahora; los pedidos que ya lo usaron no cambian. No se borra: puedes volver a activarlo cuando quieras.',
+      requireReason: false,
+      confirmLabel: 'Desactivar el cupón',
+      danger: true,
+      ejecutar: () => {
+        this.api.deleteCoupon(c.code).subscribe({
+          next: (respuesta) => {
+            const guardado = (respuesta as { coupon?: Coupon })?.coupon;
+            const activo = guardado?.active ?? false;
+            this.couponFeedback = `Cupón ${respuesta?.code || c.code}: el servidor lo dejó ${activo ? 'activo' : 'inactivo'}.`;
+            this.confirmacionLista(this.couponFeedback, 'Cupón desactivado');
+            this.loadCoupons();
+          },
+          error: (error: unknown) => {
+            this.couponFeedback = 'No se pudo desactivar el cupón.';
+            this.confirmacionFallo(this.resolveUiErrorMessage(error, this.couponFeedback));
+            this.cdr.markForCheck();
+          }
+        });
       }
     });
   }
@@ -7324,8 +7512,10 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: (config) => {
           this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
-          this.businessConfigMessage = 'Configuracion guardada.';
-          this.showSnackbar('Configuracion guardada.');
+          const tramos = config?.rewards?.discountTiers?.length ?? 0;
+          const generaciones = config?.rewards?.commissionLevels?.length ?? 0;
+          this.businessConfigMessage = `Configuración guardada: activación ${config?.rewards?.activationNetMin ?? '?'} VP, ${tramos} tramo${tramos === 1 ? '' : 's'} de descuento, ${generaciones} generaci${generaciones === 1 ? 'ón' : 'ones'} de comisión.`;
+          this.showSnackbar(this.businessConfigMessage);
         },
         error: () => {
           this.businessConfigMessage = 'No se pudo guardar la configuracion.';
@@ -7810,6 +8000,166 @@ export class AdminComponent implements OnInit {
       },
       error: () => undefined
     });
+  }
+
+  // ───────────────────────── I1 · transversal-admin ─────────────────────────
+
+  /** Diálogo de confirmación abierto (uno solo para todo el back office). */
+  confirmacion: ConfirmacionAdmin | null = null;
+
+  abrirConfirmacion(cfg: Omit<ConfirmacionAdmin, 'busy' | 'error' | 'result'>): void {
+    this.confirmacion = { ...cfg, busy: false, error: '', result: null };
+    this.requestViewUpdate();
+  }
+
+  cerrarConfirmacion(): void {
+    if (this.confirmacion?.busy) {
+      return;
+    }
+    this.confirmacion = null;
+    this.requestViewUpdate();
+  }
+
+  ejecutarConfirmacion(motivo: string): void {
+    const c = this.confirmacion;
+    if (!c || c.busy) {
+      return;
+    }
+    c.busy = true;
+    c.error = '';
+    this.requestViewUpdate();
+    c.ejecutar(motivo);
+  }
+
+  /** La acción terminó: se muestra lo que el servidor guardó y un botón "Listo". */
+  confirmacionLista(resultado: string, titulo = 'Listo'): void {
+    if (this.confirmacion) {
+      this.confirmacion.busy = false;
+      this.confirmacion.result = resultado;
+      this.confirmacion.resultTitle = titulo;
+    }
+    this.requestViewUpdate();
+  }
+
+  confirmacionFallo(mensaje: string): void {
+    if (this.confirmacion) {
+      this.confirmacion.busy = false;
+      this.confirmacion.error = mensaje;
+    }
+    this.requestViewUpdate();
+  }
+
+  /** Motivo de "Guardando…" para los botones de un pedido mientras hay una llamada en curso. */
+  motivoPedidoOcupado(orderId: string): string {
+    return this.isUpdatingOrder(orderId) ? 'Guardando el cambio de este pedido…' : '';
+  }
+
+  /** Motivo por el que no se puede guardar el correo del cliente. */
+  get motivoGuardarCorreoCliente(): string {
+    if (this.isSavingCustomerFollowUp) return 'Guardando…';
+    const draft = this.customerEmailDraft.trim();
+    if (!draft) return 'Escribe el correo nuevo.';
+    if (draft === (this.selectedCustomer?.email || '')) return 'Es el mismo correo que ya tiene.';
+    return '';
+  }
+
+  get motivoGuardarEmpleado(): string {
+    if (this.isSavingEmployee) return 'Guardando…';
+    if (!this.employeeForm.name.trim()) return 'Escribe el nombre del empleado.';
+    if (!this.employeeForm.email.trim()) return 'Escribe el correo: ahí le llega su contraseña temporal.';
+    return '';
+  }
+
+  get motivoGuardarProducto(): string {
+    if (this.isSavingProduct) return 'Guardando…';
+    if (!this.productForm.name.trim()) return 'Escribe el nombre del producto.';
+    if (!Number(this.productForm.price)) return 'Escribe un precio mayor a $0.';
+    return '';
+  }
+
+  get motivoGuardarPedidoNuevo(): string {
+    if (this.isSavingOrder) return 'Guardando el pedido…';
+    if (!this.newOrderCustomerId) return 'Elige el cliente del pedido.';
+    if (this.newOrderItems.size === 0) return 'Agrega al menos un producto.';
+    return '';
+  }
+
+  get motivoGuardarPosicionCliente(): string {
+    if (this.isSavingCustomerPosition) return 'Guardando…';
+    if (!this.selectedCustomer) return 'Elige un cliente.';
+    if (!this.hasValidSelectedSponsorId) return 'Elige un patrocinador válido (no puede ser el mismo cliente).';
+    const nextLeaderId = this.selectedCustomerLeaderId ? Number(this.selectedCustomerLeaderId) : null;
+    if ((this.selectedCustomer.leaderId ?? null) === nextLeaderId) return 'Es el mismo patrocinador que ya tiene.';
+    return '';
+  }
+
+  motivoRecibirTraspaso(transfer: StockTransfer): string {
+    if (transfer.status === 'received') return 'Este traspaso ya se recibió.';
+    if (!this.transferReceiverUserId) return 'Elige arriba quién recibe.';
+    if (!this.isReceiverEligible(transfer)) {
+      return `Quien recibe debe estar ligado al almacén destino (${this.stockName(transfer.destinationStockId)}). Se liga en Almacenes → "Usuarios ligados".`;
+    }
+    return '';
+  }
+
+  motivoProductoDelMes(product: AdminProduct): string {
+    if (this.isSettingProductOfMonth) return 'Guardando…';
+    if (!product.active) return 'Reactiva el producto para poder destacarlo como producto del mes.';
+    return '';
+  }
+
+  get motivoCrearClientePos(): string {
+    if (!this.hasPermission('customer_add')) return 'No tienes el permiso "Agregar clientes": pídeselo a tu gerente.';
+    if (this.isSavingPosCustomer) return 'Guardando…';
+    if (!this.posCustomerForm.firstName.trim()) return 'Escribe el nombre.';
+    if (!this.posCustomerForm.apellidoPaterno.trim()) return 'Escribe el apellido paterno.';
+    return '';
+  }
+
+  // Tabla única de descuento en el POS (construida por B, montada por I1)
+
+  get posTablaTiers(): Array<{ min: number; max: number | null; rate: number }> {
+    const tiers = this.businessConfig?.rewards?.discountTiers ?? [];
+    return tiers.map((t) => ({ min: Number(t.min) || 0, max: t.max == null ? null : Number(t.max), rate: Number(t.rate) || 0 }));
+  }
+
+  get posMxnPerVp(): number {
+    return Number(this.businessConfig?.bonuses?.vpConfig?.mxnPerVp ?? 50) || 50;
+  }
+
+  get posActivationVp(): number {
+    return Number(this.businessConfig?.rewards?.activationNetMin ?? 20) || 20;
+  }
+
+  /** VP netos del mes según el servidor; sin dato, se estiman desde el neto. */
+  get posCustomerMonthVp(): number {
+    const vp = this.posSelectedCustomerMonth?.vp;
+    if (vp != null && Number.isFinite(Number(vp))) {
+      return Number(vp);
+    }
+    return Math.round((this.posCustomerMonthNet / this.posMxnPerVp) * 10) / 10;
+  }
+
+  /** PC de lista de la venta en curso: puntos del producto si los tiene, o precio ÷ pesos por VP. */
+  get posCartPc(): number {
+    const total = this.availablePosProducts
+      .filter((product) => this.posItems.has(product.id))
+      .reduce((acc, product) => {
+        const qty = this.posItems.get(product.id) ?? 1;
+        const pcUnidad = product.vpPoints != null ? Number(product.vpPoints) : Number(product.price) / this.posMxnPerVp;
+        return acc + pcUnidad * qty;
+      }, 0);
+    return Math.round(total * 10) / 10;
+  }
+
+  /** Resumen del envío tal como quedó guardado en el servidor. */
+  private resumenEnvioGuardado(guardado: AdminOrder | null | undefined, orderId: string): string {
+    if (!guardado) {
+      return 'Envío registrado.';
+    }
+    const guia = guardado.trackingNumber ? ` · guía ${guardado.trackingNumber}` : '';
+    const paqueteria = guardado.shippingCarrier ? ` (${guardado.shippingCarrier})` : '';
+    return `Pedido ${guardado.id || orderId}: el servidor lo dejó ${this.orderStatusLabel(guardado.status)}${guia}${paqueteria}.`;
   }
 }
 

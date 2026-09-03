@@ -1,10 +1,11 @@
-<div class="md:hidden divide-y" [ngClass]="mobileDividerClass" *ngIf="mobileRowTpl">
+<!-- Una sola presentación en el DOM a la vez: tarjetas en móvil, filas en escritorio -->
+<div *ngIf="!showDesktop && mobileRowTpl" class="divide-y" [ngClass]="mobileDividerClass" data-tabla="movil">
   <ng-container *ngFor="let row of rows">
     <ng-container *ngTemplateOutlet="mobileRowTpl; context: { $implicit: row }"></ng-container>
   </ng-container>
 </div>
 
-<div class="hidden md:block" *ngIf="desktopRowTpl">
+<div *ngIf="showDesktop" data-tabla="escritorio">
   <ng-container *ngIf="desktopHeaderTpl" [ngTemplateOutlet]="desktopHeaderTpl"></ng-container>
   <div class="divide-y" [ngClass]="desktopDividerClass">
     <ng-container *ngFor="let row of rows">
