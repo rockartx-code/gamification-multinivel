@@ -74,7 +74,7 @@
                 <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                 Entrega
               </div>
-              <div class="text-sm font-extrabold">{{ deliveryType === 'pickup' ? 'Sucursal' : '24–72h' }}</div>
+              <div class="text-sm font-extrabold">{{ deliveryType === 'pickup' ? 'Sucursal' : '3 a 5 días hábiles' }}</div>
             </div>
           </div>
         </div>
@@ -713,7 +713,7 @@
                   [currentValue]="basePercent"
                   [cartValue]="cartPercent"
                   [targetValue]="100">
-                  <div class="mt-2 text-xs text-gray-500">
+                  <div *ngIf="hasGoalGap" class="mt-2 text-xs text-gray-500">
                     Te faltan <span class="font-semibold text-gold">{{ gapToGoalLabel }}</span> para
                     {{ goalTitle }}
                   </div>

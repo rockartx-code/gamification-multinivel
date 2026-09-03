@@ -66,7 +66,7 @@ export interface AdminOrder {
   refundAmount?: number;
   refundReason?: string;
   /** Notas internas del back office; solo se añaden. */
-  adminNotes?: Array<{ text: string; by: string; at: string }>;
+  adminNotes?: Array<{ text: string; by: string; byName?: string; at: string }>;
   returnRequestId?: string;
   returnInspection?: {
     requestId: string;
@@ -769,6 +769,8 @@ export interface InventoryMovement {
   productId: number;
   qty: number;
   userId?: number | null;
+  /** Nombre del empleado guardado con el movimiento (almacén no puede listar empleados). */
+  userName?: string;
   paymentMethod?: 'cash' | 'card' | 'transfer';
   reason?: string;
   referenceId?: string;

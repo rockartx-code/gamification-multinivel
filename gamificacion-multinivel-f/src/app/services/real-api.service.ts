@@ -809,6 +809,7 @@ export class RealApiService {
         productId: Number(m['productId'] ?? 0),
         qty: Number(m['qty'] ?? 0),
         userId: (m['userId'] as number | null) ?? null,
+        userName: m['userName'] != null ? String(m['userName']) : undefined,
         paymentMethod: m['paymentMethod'] != null ? (String(m['paymentMethod']) as InventoryMovement['paymentMethod']) : undefined,
         reason: m['reason'] != null ? String(m['reason']) : undefined,
         referenceId: m['referenceId'] != null ? String(m['referenceId']) : undefined,

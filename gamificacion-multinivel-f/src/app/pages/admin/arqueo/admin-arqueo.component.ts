@@ -226,7 +226,9 @@ export class AdminArqueoComponent implements OnChanges {
       this.receptor = '';
       this.codigoCorte = '';
     } else if (!this.fondoTexto) {
-      this.fondoTexto = '0';
+      // "Retirar una parte" proponía llevarse todo, fondo de cambio incluido.
+      const fondo = this.redondear(this.arqueo?.openingCash ?? 0);
+      this.fondoTexto = fondo > 0 ? String(fondo) : '0';
     }
     this.errorCorte = '';
     this.requestViewUpdate();

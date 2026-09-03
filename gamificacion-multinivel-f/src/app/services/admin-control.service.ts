@@ -582,6 +582,16 @@ export class AdminControlService {
       })
     );
   }
+  /** Cambio ya guardado en el servidor por otra ruta (p. ej. la CLABE): se refleja en la lista sin recargar. */
+  patchCustomer(customerId: number, patch: Partial<AdminCustomer>): void {
+    const current = this.dataSubject.value;
+    if (!current) {
+      return;
+    }
+    const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...patch } : entry));
+    this.dataSubject.next({ ...current, customers });
+  }
+
   /** Baja de datos (ARCO): la ficha vuelve anonimizada y se refleja en la lista. */
   deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
     return this.api.deleteCustomerData(customerId, reason).pipe(

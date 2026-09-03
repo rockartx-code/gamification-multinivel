@@ -310,6 +310,9 @@
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
               Cancelar orden
             </ui-button>
+            <span *ngIf="statusValue === 'paid'" class="text-xs text-gray-500">
+              Si cancelas un pedido ya pagado, administración te reembolsa {{ formatMoney(order.total) }} y te avisa por correo.
+            </span>
           </ng-container>
 
           <!-- Cancelar bloqueado - en proceso logístico -->

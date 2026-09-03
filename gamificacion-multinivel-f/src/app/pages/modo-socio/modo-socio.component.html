@@ -285,8 +285,8 @@
                 <i class="fa-solid" [ngClass]="isActivating ? 'fa-spinner fa-spin' : 'fa-handshake'" aria-hidden="true"></i>
                 {{ isActivating ? 'Activando…' : (haySesion ? 'Activar modo socio' : 'Entrar y activar modo socio') }}
               </ui-button>
-              <ui-button size="lg" variant="ghost" [routerLink]="['/tienda']">
-                Seguir como cliente
+              <ui-button size="lg" variant="ghost" [routerLink]="[desdeCarrito ? '/carrito' : '/tienda']">
+                {{ desdeCarrito ? 'Seguir como cliente y volver al carrito' : 'Seguir como cliente' }}
               </ui-button>
             </div>
           </ng-container>

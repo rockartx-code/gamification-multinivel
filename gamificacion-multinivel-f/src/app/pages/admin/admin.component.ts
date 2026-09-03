@@ -235,6 +235,7 @@ type InventoryMovement = {
   qty: number;
   createdAt: string;
   userId: number | null;
+  userName?: string;
   paymentMethod?: 'cash' | 'card' | 'transfer';
   reason?: string;
   referenceId?: string;
@@ -1264,8 +1265,25 @@ export class AdminComponent implements OnInit {
     if (this.warningsCache?.warningsRef === warnings) {
       return this.warningsCache.warnings;
     }
-    this.warningsCache = { warningsRef: warnings, warnings };
-    return warnings;
+    // A la cajera le salía "socias sin CLABE · Ir a resolver" sin poder abrir Clientes.
+    const visibles = warnings.filter((w) => this.canAccessView(this.warningTargetView(w.type)));
+    this.warningsCache = { warningsRef: warnings, warnings: visibles };
+    return visibles;
+  }
+
+  private warningTargetView(type: string): AdminViewId {
+    const map: Record<string, AdminViewId> = {
+      commissions: 'customers',
+      commissions_ready: 'customers',
+      commissions_no_clabe: 'customers',
+      shipping: 'orders',
+      assets: 'products',
+      stocks: 'stocks',
+      pos: 'pos',
+      payments: 'orders',
+      refunds: 'orders'
+    };
+    return map[type] ?? 'stats';
   }
 
   get adminNavLinksStable(): SidebarLink[] {
@@ -1527,7 +1545,7 @@ export class AdminComponent implements OnInit {
         ...movement,
         stockName: this.stockName(movement.stockId),
         productName: this.productName(movement.productId),
-        userName: this.employeeName(movement.userId),
+        userName: movement.userName || this.employeeName(movement.userId),
         typeLabel: this.movementTypeLabel(movement.type),
         signedQty: this.movementSignedQty(movement)
       }));
@@ -1609,7 +1627,7 @@ export class AdminComponent implements OnInit {
         ...movement,
         stockName: this.stockName(movement.stockId),
         productName: this.productName(movement.productId),
-        userName: this.employeeName(movement.userId),
+        userName: movement.userName || this.employeeName(movement.userId),
         typeLabel: this.movementTypeLabel(movement.type),
         signedQty: this.movementSignedQty(movement)
       }));
@@ -3412,18 +3430,7 @@ export class AdminComponent implements OnInit {
 
   resolveWarning(warning: { type: string; monthKey?: string }): void {
     this.isActionsModalOpen = false;
-    const map: Record<string, AdminViewId> = {
-      commissions: 'customers',
-      commissions_ready: 'customers', // WP-A
-      commissions_no_clabe: 'customers', // WP-A
-      shipping: 'orders',
-      assets: 'products',
-      stocks: 'stocks',
-      pos: 'pos',
-      payments: 'orders',
-      refunds: 'orders'
-    };
-    const target: AdminViewId = map[warning.type] ?? 'stats';
+    const target: AdminViewId = this.warningTargetView(warning.type);
     if (warning.type === 'shipping') {
       this.currentOrderStatus = 'paid';
     } else if (warning.type === 'payments') {
@@ -4762,6 +4769,46 @@ export class AdminComponent implements OnInit {
     { value: 'anuncio_youtube', label: 'Anuncio en YouTube' },
     { value: 'tienda_fisica', label: 'Tienda física' }
   ];
+
+  // ── CLABE capturada por administración (la socia la manda por WhatsApp) ──
+  clabeDraft = '';
+  isSavingClabe = false;
+
+  get clabeDraftValid(): boolean {
+    return /^\d{18}$/.test(this.clabeDraft.replace(/\s/g, ''));
+  }
+
+  saveCustomerClabeAdmin(customer: AdminCustomer | null | undefined): void {
+    const clabe = this.clabeDraft.replace(/\s/g, '');
+    if (!customer || this.isSavingClabe || !/^\d{18}$/.test(clabe)) {
+      return;
+    }
+    this.isSavingClabe = true;
+    this.api
+      .saveCustomerClabe({ customerId: Number(customer.id), clabe })
+      .pipe(finalize(() => { this.isSavingClabe = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (r) => {
+          this.clabeDraft = '';
+          const patch = { clabeInterbancaria: clabe, clabeLast4: r?.clabeLast4 ?? clabe.slice(-4) };
+          this.adminControl.patchCustomer(customer.id, patch);
+          if (this.selectedCustomer?.id === customer.id) {
+            this.selectedCustomer = { ...this.selectedCustomer, ...patch };
+          }
+          this.showSnackbar(`CLABE guardada (termina en ${patch.clabeLast4}). Ya puedes registrar el depósito de ${customer.name}.`);
+        },
+        error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la CLABE.'), 'error')
+      });
+  }
+
+  /** Nombre de quien escribió la nota; el id solo si no hay nada mejor. */
+  noteAuthor(note: { by?: string; byName?: string }): string {
+    if (note.byName?.trim()) {
+      return note.byName.trim();
+    }
+    const id = Number(note.by);
+    return Number.isFinite(id) && id > 0 ? this.employeeName(id) : (note.by || 'sistema');
+  }
 
   private saveCustomerFollowUp(customer: AdminCustomer, payload: UpdateCustomerPayload, ok: string): void {
     this.isSavingCustomerFollowUp = true;
@@ -6463,6 +6510,10 @@ export class AdminComponent implements OnInit {
   employeeName(employeeId: number | null | undefined): string {
     if (!employeeId) {
       return '-';
+    }
+    // Quien no puede listar empleados (almacén) al menos se ve a sí mismo por su nombre.
+    if (String(this.currentUser?.userId ?? '') === String(employeeId) && this.currentUser?.name) {
+      return this.currentUser.name;
     }
     return this.employees.find((emp) => emp.id === employeeId)?.name ?? `Empleado ${employeeId}`;
   }

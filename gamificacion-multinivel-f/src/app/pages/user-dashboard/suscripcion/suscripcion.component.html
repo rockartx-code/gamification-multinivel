@@ -110,7 +110,7 @@
           [options]="addressOptions" [(ngModel)]="shippingAddressId" name="shippingAddressId"
           helpText="El envío se cotiza al crear cada pedido y viene en el correo."></ui-form-field>
         <p *ngIf="!addressOptions.length" class="mt-2 text-xs text-amber-800">
-          Aún no tienes direcciones guardadas. Guarda una en tu perfil y vuelve aquí, o elige recoger en sucursal.
+          Aún no tienes direcciones guardadas. Se guardan al pagar un pedido con la casilla "Guardar esta dirección para futuras compras" del carrito; mientras tanto puedes elegir recoger en sucursal.
         </p>
       </ng-container>
       <ui-form-field *ngIf="deliveryType === 'pickup'" kind="select" label="Sucursal" wrapperClass="block mt-2"

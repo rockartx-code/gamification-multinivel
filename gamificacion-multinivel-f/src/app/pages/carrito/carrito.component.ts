@@ -861,6 +861,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return Math.round(bruto * factor * 10) / 10;
   }
 
+  /** Solo hay algo que decir cuando existe una meta y todavía falta algo ("Te faltan $0" contradecía "Inactivo"). */
+  get hasGoalGap(): boolean {
+    return !!this.activeGoal && this.gapToGoal > 0;
+  }
+
   /** "Te faltan …" con la unidad de la meta activa. */
   get gapToGoalLabel(): string {
     if (this.activeGoal?.unit === 'vp') {
@@ -1261,6 +1266,13 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private updateCountdown(): void {
+    // El mismo corte que el panel (cutoffDay de la configuración): el carrito decía
+    // "27d" y el panel "22d" para el mismo mes.
+    const delPanel = this.dashboardControl.getCountdownLabel();
+    if (delPanel) {
+      this.cartControl.updateCountdown(delPanel);
+      return;
+    }
     const now = new Date();
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     lastDay.setHours(23, 59, 59, 999);
@@ -1621,14 +1633,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       this.deliveryPostalCode = this.deliveryPostalCode || customer.postalCode || '';
       this.deliveryCountry = this.deliveryCountry || 'MX';
       this.saveShippingAddress = true;
-      this.setDeliveryFieldErrors({
-        deliveryStreet: this.deliveryStreet,
-        deliveryNumber: this.deliveryNumber,
-        deliveryCity: this.deliveryCity,
-        deliveryPostalCode: this.deliveryPostalCode,
-        deliveryState: this.deliveryState,
-        deliveryCountry: this.deliveryCountry
-      });
+      // Los errores se marcan al escribir o al pagar; antes salían en rojo sin tocar nada.
     }
 
     this.hasPrefilledDashboardAddress = true;

@@ -43,6 +43,8 @@ export class ModoSocioComponent implements OnInit {
 
   /** De dónde llegó la persona (`?desde=orden&id=ORD-…`). */
   desdeOrden = '';
+  /** Llegó desde el carrito: "Seguir como cliente" regresa ahí, no a la portada. */
+  desdeCarrito = false;
 
   isActivating = false;
   activationError = '';
@@ -63,6 +65,7 @@ export class ModoSocioComponent implements OnInit {
     if (query.get('desde') === 'orden') {
       this.desdeOrden = (query.get('id') ?? '').trim();
     }
+    this.desdeCarrito = query.get('desde') === 'carrito';
     this.planSocio.plan$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (plan) => {
         this.plan = plan;

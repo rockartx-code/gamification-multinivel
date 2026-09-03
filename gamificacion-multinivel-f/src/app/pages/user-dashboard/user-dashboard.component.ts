@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -708,7 +708,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   get heroTags(): string[] {
     return this.productOfMonth?.tags?.length
       ? this.productOfMonth.tags
-      : ['10g por porci?n', 'Vitamina C + AH', 'Alta absorci?n'];
+      : ['10g por porción', 'Vitamina C + AH', 'Alta absorción'];
   }
 
   get heroGoalHint(): string {
@@ -944,6 +944,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   toggleUserDetails(): void {
     this.isUserDetailsOpen = !this.isUserDetailsOpen;
+  }
+
+  /** Escape cierra el cuadro de cuenta y el menú móvil (en móvil quedaban uno sobre otro). */
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (!this.isUserDetailsOpen && !this.isMobileNavOpen) {
+      return;
+    }
+    this.isUserDetailsOpen = false;
+    this.isMobileNavOpen = false;
+    this.cdr.markForCheck();
   }
 
   closeNotificationModal(): void {
@@ -1224,6 +1235,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return `M ${link.x1} ${link.y1} Q ${midX} ${midY}, ${link.x2} ${link.y2}`;
   }
   ngOnInit(): void {
+    // Un empleado con sesión guardada caía en la tienda de socios al abrir #/.
+    const sesion = this.authService.currentUser;
+    if (sesion && sesion.role !== 'cliente' && this.authService.hasAdminPanelAccess(sesion)) {
+      void this.router.navigate(['/admin']);
+      return;
+    }
     this.isLoading = true;
     this.cartControl.load().subscribe();
     // Paquete B: la tabla única de descuento usa los tramos reales del plan.
@@ -1503,6 +1520,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   toggleMobileNav(): void {
     this.isMobileNavOpen = !this.isMobileNavOpen;
+    this.isUserDetailsOpen = false;
   }
 
   closeMobileNav(): void {
@@ -2442,8 +2460,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
     }
+    // OnPush: el toast ("CLABE guardada") no se pintaba al llegar desde una respuesta HTTP.
+    this.cdr.markForCheck();
     this.toastTimeout = window.setTimeout(() => {
       this.isToastVisible = false;
+      this.cdr.markForCheck();
     }, kind === 'logro' ? 2600 : 2200);
   }
 

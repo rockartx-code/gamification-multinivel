@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin, of, catchError } from 'rxjs';
+import { AdminControlService } from '../../../services/admin-control.service';
 
 import { UiBadgeComponent } from '../../../components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../../components/ui-button/ui-button.component';
@@ -81,7 +82,11 @@ export class DespachoComponent implements OnInit {
   cierre: CierreResponse | null = null;
   isClosing = false;
 
-  constructor(private readonly despacho: DespachoService, private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly despacho: DespachoService,
+    private readonly cdr: ChangeDetectorRef,
+    private readonly adminControl: AdminControlService
+  ) {}
 
   ngOnInit(): void {
     this.isLoading = true;
@@ -93,7 +98,11 @@ export class DespachoComponent implements OnInit {
         this.bodegas = bodegas;
         this.preferencias = preferencias;
         const porDefecto = preferencias?.defaultStockId ?? '';
-        this.stockId = porDefecto && bodegas.some((b) => b.id === porDefecto) ? porDefecto : (bodegas[0]?.id ?? '');
+        // Sin bodega por defecto no se propone la primera de la lista: un almacenista de
+        // Bodega Central se encontraba "Tienda Del Valle" y con un clic la descontaba de ahí.
+        this.stockId = porDefecto && bodegas.some((b) => b.id === porDefecto)
+          ? porDefecto
+          : (bodegas.length === 1 ? bodegas[0].id : '');
         this.loadPendientes();
       },
       error: () => {
@@ -126,7 +135,8 @@ export class DespachoComponent implements OnInit {
   }
 
   get stockOptions(): Array<{ value: string; label: string }> {
-    return this.bodegas.map((b) => ({ value: b.id, label: b.location ? `${b.name} · ${b.location}` : b.name }));
+    const bodegas = this.bodegas.map((b) => ({ value: b.id, label: b.location ? `${b.name} · ${b.location}` : b.name }));
+    return this.stockId ? bodegas : [{ value: '', label: 'Elige la bodega de salida…' }, ...bodegas];
   }
 
   get selectedStock(): BodegaResumen | null {
@@ -181,6 +191,12 @@ export class DespachoComponent implements OnInit {
   toggle(id: string, checked: boolean): void {
     if (checked) {
       this.seleccion.add(id);
+      // La paquetería que ya traía el pedido se conserva; antes el campo salía vacío.
+      const pedido = this.pendientes.find((p) => p.id === id);
+      const draft = this.guia(id);
+      if (!draft.carrier && pedido?.shippingCarrier) {
+        draft.carrier = pedido.shippingCarrier;
+      }
     } else {
       this.seleccion.delete(id);
     }
@@ -390,6 +406,10 @@ export class DespachoComponent implements OnInit {
         next: (res) => {
           this.resultado = res;
           res.shipped.forEach((s) => { delete this.guias[s.orderId]; });
+          if (res.shipped.length) {
+            // "Volver a Pedidos" mostraba la lista vieja (los pedidos seguían en Pagado sin guía).
+            this.adminControl.loadOrders().subscribe({ error: () => undefined });
+          }
           const folios = res.shipped.map((s) => `${s.orderId} (${s.carrier} ${s.trackingNumber})`).join(', ');
           if (res.shipped.length) {
             this.notify(`Se despacharon ${res.shipped.length} pedido(s) desde ${res.stockName}: ${folios}.`

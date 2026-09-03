@@ -9,6 +9,8 @@ export interface PortalNotification {
   startAt?: string;
   endAt?: string;
   active: boolean;
+  /** Aviso dirigido: solo lo ve esa clienta. */
+  targetCustomerId?: string;
   status?: PortalNotificationStatus;
   isRead?: boolean;
   readAt?: string;

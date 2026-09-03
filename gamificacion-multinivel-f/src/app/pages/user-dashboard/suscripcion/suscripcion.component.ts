@@ -236,7 +236,7 @@ export class SuscripcionComponent implements OnInit, OnChanges {
       return;
     }
     if (this.deliveryType !== 'pickup' && !this.shippingAddressId) {
-      this.formError = 'Elige una dirección de entrega. Si no tienes ninguna, guárdala primero en tu perfil.';
+      this.formError = 'Elige una dirección de entrega. Si no tienes ninguna, guárdala al pagar tu próximo pedido (casilla "Guardar esta dirección" en el carrito) o elige recoger en sucursal.';
       return;
     }
     const items = this.lineas.map((l) => ({ productId: l.productId, quantity: l.quantity }));
