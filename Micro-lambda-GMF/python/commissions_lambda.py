@@ -707,6 +707,37 @@ def _avisar_comision(beneficiary_id, order: dict, gen: int, amount) -> None:
         utils._log("commission_email_error", "ERROR", beneficiary=beneficiary_id, err=e)
 
 
+
+_MOTIVOS_ANULACION = {
+    "order_cancelled": "el pedido se canceló",
+    "order_refunded": "el pedido se reembolsó",
+    "order_returned": "el pedido se devolvió",
+}
+
+
+def _avisar_comision_anulada(beneficiary_id, order: dict, amount, reason: str) -> None:
+    """Correo al patrocinador cuando una comisión ya anunciada se anula."""
+    try:
+        cliente = _cached_customer(beneficiary_id)
+        para = str((cliente or {}).get("email") or "").strip()
+        if not para or (cliente or {}).get("doNotContact"):
+            return
+        comprador = order.get("customerName") or "alguien de tu red"
+        nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
+        motivo = _MOTIVOS_ANULACION.get(reason, "el pedido se anuló")
+        from core.email import _email_shell
+        monto = f"${float(amount):,.2f}"
+        oid = order.get("orderId") or ""
+        cuerpo = f"""
+    <div class="icon">↩️</div>
+    <h1 class="title">Una comisión se anuló</h1>
+    <p class="lead">Hola <strong>{nombre}</strong>. La comisión de <strong>{monto}</strong> por la compra de {comprador} (pedido {oid}) ya no aplica porque {motivo}. Tu panel de Comisiones ya lo refleja.</p>"""
+        utils._send_ses_email(para, f"Comisión de {monto} anulada · pedido {oid}",
+                              f"Hola {nombre}. La comisión de {monto} por la compra de {comprador} (pedido {oid}) se anuló porque {motivo}.",
+                              _email_shell(cuerpo))
+    except Exception as e:  # pragma: no cover
+        utils._log("commission_void_email_error", "ERROR", beneficiary=beneficiary_id, err=e)
+
 def _confirm_order_rows(order_id: str, month_key: str, chain: list) -> None:
     """Cambia a 'confirmed' las filas 'pending' de una orden ya entregada."""
     def _confirm(item):
@@ -1045,6 +1076,11 @@ def _handle_void_commissions_action(order_id: str, reason: str) -> dict:
             continue
         if summary:
             voided.append({**summary, "reason": reason})
+            # Se le había avisado "comisión en camino"; sin este correo se enteraba
+            # sola de que desapareció, hurgando en el panel.
+            monto_anulado = utils._to_decimal(summary.get("pendingRemoved") or 0) + utils._to_decimal(summary.get("confirmedRemoved") or 0)
+            if monto_anulado > 0:
+                _avisar_comision_anulada(beneficiary_id, order, monto_anulado, reason)
 
     # El volumen y los VP acreditados al comprador al pagar se quedaban tras
     # cancelar, reembolsar o anular: un socio seguía "activo" con un pedido

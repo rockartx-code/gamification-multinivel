@@ -154,3 +154,24 @@ def test_la_pasarela_cobra_el_total_con_descuento(modulos, utils, monkeypatch):
     assert r["statusCode"] == 200, r["body"]
     cobrado = sum(it["unit_price"] * it["quantity"] for it in capturado["pref"]["items"])
     assert abs(cobrado - 561.0) < 0.01, capturado["pref"]["items"]
+
+
+def test_si_se_anula_una_comision_avisada_se_avisa_la_anulacion(modulos, utils, monkeypatch):
+    """La patrocinadora recibía 'comisión de $60 en camino' y, al cancelarse el
+    pedido, la comisión desaparecía del panel sin ningún aviso."""
+    order_lambda, commissions_lambda = modulos
+    correos = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto)))
+    monkeypatch.setattr(commissions_lambda.utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto)), raising=False)
+    utils._put_entity("CUSTOMER", 700, {"entityType": "customer", "customerId": 700, "name": "Verónica", "email": "vero@test.com"})
+    utils._put_entity("ASSOCIATE_MONTH", utils._associate_month_entity_id(700, utils._month_key()),
+                      {"entityType": "associateMonth", "associateId": 700, "monthKey": utils._month_key(), "netVolume": Decimal("2000"), "netVP": Decimal("40"), "isActive": True})
+    utils._put_entity("CUSTOMER", 701, {"entityType": "customer", "customerId": 701, "name": "Memo", "email": "memo@test.com", "leaderId": 700})
+    pid = _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order({**_pedido(701, pid), "customerName": "Memo"}, {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    assert any(p == "vero@test.com" and "en camino" in a for p, a in correos), correos
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_CANCELLED"}, None)
+    anulados = [a for p, a in correos if p == "vero@test.com" and "anulada" in a]
+    assert anulados and oid in anulados[0], correos
