@@ -10,6 +10,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
 
+# Extensiones del lambda (docs/arquitectura/23 §0.2): cada módulo atiende sus
+# propias rutas y devuelve None cuando la petición no es suya.
+import suscripciones_handlers   # paquete H
+import conciliacion_handlers    # paquete H
+_EXTENSIONES = [suscripciones_handlers, conciliacion_handlers]
+
+# Estados desde los cuales un pedido ya cuenta como cobrado: volver a marcarlo
+# 'paid' (webhook repetido, conciliación tras el webhook) no debe mover nada.
+_ESTADOS_YA_COBRADOS = ("paid", "shipped", "delivered", "refunded",
+                        "en_devolucion", "devuelto_validado", "devolucion_rechazada")
+
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
 _s3 = boto3.client("s3", region_name=utils.AWS_REGION)
@@ -607,6 +618,12 @@ def handle_update_status(order_id, body, headers):
     if not order:
         return utils._json_response(404, {"message": "No encontrada"})
 
+    # Idempotencia del pago (paquete H): MercadoPago reintenta el webhook y la
+    # conciliación vuelve a mirar pedidos ya acreditados. Un pago repetido
+    # duplicaba paidAt, la ejecución del motor de comisiones y el correo.
+    if new_status == "paid" and (order.get("status") or "").lower() in _ESTADOS_YA_COBRADOS:
+        return utils._json_response(200, {"order": _con_totales_visibles(order), "alreadyPaid": True})
+
     actor = utils._extract_actor(headers)
     actor_user_id = actor.get("user_id")
     pickup_stock_id = order.get("pickupStockId")
@@ -652,6 +669,24 @@ def handle_update_status(order_id, body, headers):
         extra_updates["stockId"] = pickup_stock_id_str
     if new_status == "paid" and not order.get("paidAt"):
         extra_updates["paidAt"] = now
+    if new_status == "paid":
+        # Rastro del cobro (paquete H): qué pago lo acreditó y por qué camino.
+        if body.get("paymentId"):
+            extra_updates["paymentId"] = str(body["paymentId"])
+        if body.get("paymentStatusDetail"):
+            extra_updates["paymentStatusDetail"] = str(body["paymentStatusDetail"])
+        for marca in ("webhookReceivedAt", "reconciledAt"):
+            if body.get(marca):
+                extra_updates[marca] = str(body[marca])
+        via = str(body.get("paidVia") or "").strip().lower()
+        if not via:
+            if is_pickup_order and order.get("pickupPaymentMethod") == "at_store":
+                via = "branch"
+            elif actor_user_id not in (None, ""):
+                via = "admin"
+            else:
+                via = "mercadopago"
+        extra_updates["paidVia"] = via
     if new_status == "paid" and is_pickup_order and order.get("pickupPaymentMethod") == "at_store":
         extra_updates["paymentStatus"] = body.get("paymentStatus") or "paid_branch"
         if payment_method and not (order.get("cashSaleId") or order.get("branchSaleId")):
@@ -1395,24 +1430,79 @@ def handle_refund_order(order_id: str, body: dict, headers: dict) -> dict:
     })
 
 
+def _consultar_pago_mp(resource_id) -> dict:
+    """GET /v1/payments/{id} en MercadoPago (plantilla en config)."""
+    ml_cfg = (utils._load_app_config().get("payments") or {}).get("mercadoLibre") or {}
+    plantilla = str(ml_cfg.get("paymentInfoUrlTemplate") or "https://api.mercadopago.com/v1/payments/{payment_id}")
+    req = urllib.request.Request(
+        plantilla.format(payment_id=urllib.parse.quote(str(resource_id), safe="")),
+        headers={"Authorization": f"Bearer {ML_TOKEN}"},
+    )
+    with urllib.request.urlopen(req) as res:
+        return json.loads(res.read().decode())
+
+
 def handle_mp_webhook(query, body):
-    """POST /webhooks/mercadolibre"""
+    """POST /webhooks/mercadolibre?topic=payment&id=…&webhookSecret=…
+
+    Paquete H (docs/arquitectura/23 §8): "el dinero salió, los puntos no
+    llegaron" (rodrigo-dia3). El webhook ahora (1) valida el secreto que el
+    checkout anexó a la notification_url, (2) consulta el pago, (3) busca el
+    pedido, (4) no vuelve a acreditar uno ya cobrado y (5) deja rastro del
+    estado del pago aunque no esté aprobado.
+    """
+    query = query or {}
+    body = body if isinstance(body, dict) else {}
+    ml_cfg = (utils._load_app_config().get("payments") or {}).get("mercadoLibre") or {}
+    secreto_configurado = str(ml_cfg.get("webhookSecret") or "").strip()
+    secreto_recibido = str(query.get("webhookSecret") or "").strip()
+    if secreto_configurado:
+        if not utils.hmac.compare_digest(secreto_recibido, secreto_configurado):
+            utils._log("mp_webhook_secret_invalid", "WARN", topic=query.get("topic"), id=query.get("id"))
+            return utils._json_response(401, {"message": "Secreto de webhook inválido"})
+    else:
+        utils._log("mp_webhook_secret_missing", "WARN", topic=query.get("topic"), id=query.get("id"))
+
     topic = query.get("topic") or body.get("type")
-    resource_id = query.get("id") or body.get("data", {}).get("id")
+    resource_id = query.get("id") or (body.get("data") or {}).get("id")
+    if topic != "payment" or not resource_id:
+        return utils._json_response(200, {"ok": True, "ignored": "not_a_payment"})
 
-    if topic == "payment" and resource_id:
-        req = urllib.request.Request(
-            f"https://api.mercadopago.com/v1/payments/{resource_id}",
-            headers={"Authorization": f"Bearer {ML_TOKEN}"},
-        )
-        with urllib.request.urlopen(req) as res:
-            payment_info = json.loads(res.read().decode())
-        status = payment_info.get("status")
-        order_id = payment_info.get("external_reference")
-        if status == "approved" and order_id:
-            return handle_update_status(order_id, {"status": "paid", "paymentId": resource_id}, {})
+    try:
+        payment_info = _consultar_pago_mp(resource_id)
+    except Exception as e:
+        # Con un 5xx MercadoPago reintenta más tarde; con 200 daría el pago por avisado.
+        utils._log_error("mp_webhook_payment_lookup_failed", e, paymentId=resource_id)
+        return utils._json_response(502, {"message": "No se pudo consultar el pago en MercadoPago", "paymentId": str(resource_id)})
 
-    return utils._json_response(200, {"ok": True})
+    status = str(payment_info.get("status") or "").lower()
+    order_id = payment_info.get("external_reference") or (payment_info.get("metadata") or {}).get("orderId")
+    order = utils._get_by_id("ORDER", order_id) if order_id else None
+    if not order:
+        utils._log("mp_webhook_order_not_found", "WARN", paymentId=resource_id, orderId=order_id)
+        return utils._json_response(200, {"ok": True, "ignored": "order_not_found", "paymentId": str(resource_id)})
+
+    now = utils._now_iso()
+    ya_cobrado = (order.get("status") or "").lower() in _ESTADOS_YA_COBRADOS
+    if ya_cobrado or str(order.get("paymentId") or "") == str(resource_id):
+        return utils._json_response(200, {"ok": True, "orderId": order_id, "applied": False, "idempotent": True})
+
+    if status != "approved":
+        # pending / rejected / cancelled: no cambia el estado del pedido, pero queda el rastro.
+        utils._update_by_id("ORDER", order_id, "SET paymentStatusDetail = :d, webhookReceivedAt = :w",
+                            {":d": status or "unknown", ":w": now})
+        return utils._json_response(200, {"ok": True, "orderId": order_id, "applied": False, "ignored": "not_approved",
+                                          "paymentStatus": status})
+
+    respuesta = handle_update_status(order_id, {
+        "status": "paid", "paymentId": str(resource_id), "paidVia": "mercadopago",
+        "paymentStatusDetail": status, "webhookReceivedAt": now,
+    }, {})
+    if respuesta.get("statusCode") != 200:
+        return respuesta
+    detalle = json.loads(respuesta.get("body") or "{}")
+    return utils._json_response(200, {"ok": True, "orderId": order_id, "applied": not detalle.get("alreadyPaid"),
+                                      **({"idempotent": True} if detalle.get("alreadyPaid") else {})})
 
 
 # ---------------------------------------------------------------------------
@@ -1578,6 +1668,11 @@ def lambda_handler(event, context):
     body, query, headers = request.body, request.query, request.headers
     segments = request.segments
     try:
+        for extension in _EXTENSIONES:
+            respuesta = extension.atender(request)
+            if respuesta is not None:
+                return respuesta
+
         if "webhooks" in segments:
             return handle_mp_webhook(query, body)
 
@@ -1717,3 +1812,9 @@ def lambda_handler(event, context):
     except Exception as e:
         utils._log_error("order_unhandled_error", e)
         return utils._json_response(500, {"message": "Critical Error", "error": str(e)})
+
+
+# Rutas programables que expone este lambda (docs/arquitectura/23 §0.3): el
+# reloj de la simulación y, en producción, un programador externo las invocan
+# con el token de superadmin. Se descubren por atributo.
+TAREAS_PROGRAMADAS = suscripciones_handlers.TAREAS_PROGRAMADAS + conciliacion_handlers.TAREAS_PROGRAMADAS
