@@ -2341,6 +2341,36 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete G · devoluciones ──────────────────────────────────────────────
+  /orders/{orderId}/devolucion:
+    get:
+      summary: "Solicitud de devolución de un pedido: líneas devueltas, evidencia, reembolso sugerido, política (medio y plazo) y estado"
+      description: |
+        Privilegio: dueño del pedido (sesión), invitado (pedido sin cuenta, sin sesión) o admin/empleado.
+        Responde `{request: {requestId, status, motivo, lines, evidence, refund, inspection?, refundedAt?, refundAmount?, createdAt}}`;
+        404 `RETURN_NOT_FOUND` si el pedido no tiene solicitud.
+      operationId: getOrderReturnRequest
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Solicitud de devolución del pedido"
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

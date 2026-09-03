@@ -58,9 +58,12 @@ def test_plazos_por_motivo(order_lambda, motivo, horas, permitido):
 
 @pytest.mark.parametrize("falta", ["fotos_producto", "fotos_empaque", "fotos_guia_envio"])
 def test_las_tres_categorias_de_evidencia_son_obligatorias(order_lambda, falta):
+    """Para daño o error de envío siguen siendo obligatorias las tres fotos.
+    (En desistimiento basta la foto del paquete cerrado: propuesta 18,
+    `tests/test_devoluciones_evidencia.py`.)"""
     evidencia = {k: v for k, v in EVIDENCIA_COMPLETA.items() if k != falta}
     r = order_lambda._validar_solicitud_devolucion(
-        _pedido(), "DESISTIMIENTO", evidencia, 1.0)
+        _pedido(), "DANADO_DEFECTUOSO", evidencia, 1.0)
     assert r["statusCode"] == 400
     assert falta in r["body"]
 

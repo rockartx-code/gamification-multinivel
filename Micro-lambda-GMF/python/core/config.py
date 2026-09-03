@@ -161,6 +161,10 @@ def _default_app_config() -> dict:
                 },
             ],
         },
+        # Paquete G · devoluciones. Medio y plazo del reembolso que se prometen en
+        # pantalla y en el correo ("al mismo medio de pago, en 3 a 5 días hábiles
+        # tras validar el paquete"). Texto libre para que el negocio lo ajuste.
+        "returns": {"refundMethod": "mismo medio de pago", "refundBusinessDays": "3 a 5"},
     }
 
 def _normalize_app_config(raw) -> dict:
