@@ -104,9 +104,15 @@ Patricia devuelve un Naplus cerrado dentro de los 7 días. Eligió "Desistimient
 - Registró la entrada de 30 Magnesio en Bodega Central ("Entrada de inventario registrada.", bitácora con +30). Verificado.
 - Encontró cuatro pedidos de octubre y noviembre "Enviada" que nunca se marcaron entregados aunque Estafeta los entregó: nadie cierra el ciclo de los envíos por paquetería. Se cerraron por API; propuesta en §4.
 
-### 2.13 Ola en curso
+### 2.13 Reembolso con checklist y pickup que nadie recoge (Sofía, 18-dic)
 
-_(Sofía reembolsa a Patricia y cancela el pickup sin recoger; Claudia se activa el 20; enero.)_
+- Abrió el detalle de la devolución de Patricia (motivo del cliente, tres fotos, notas y foto de Beto, checklist) y reembolsó. **Hueco**: el modal sugería $381 (producto más envío) aunque era arrepentimiento; lo corrigió a mano a $252. Verificado: `refunded` con $252, motivo y comprobante. Corregido: en desistimiento se sugiere solo el producto, y el detalle del pedido muestra cuánto se reembolsó y por qué.
+- Canceló el pedido de recoger y pagar en sucursal que Guadalupe R. dejó cinco días sin recoger. **Hueco**: un `confirm` sin motivo, sin decir que no estaba pagado, y el registro quedaba como "admin_request". Corregido: pide motivo y avisa si no había pago. El tablero solo decía "1 pedidos pendientes de pago — Informativo", sin nombre ni días (§4).
+- Acciones urgentes quedó con "2 comisiones pendientes por depositar — Urgente" a mitad de mes: las de diciembre se pagan el 10 de enero; el aviso debería ser informativo hasta entonces (§4).
+
+### 2.14 Ola en curso
+
+_(Claudia se activa el 20: reversión de la compresión; después el cierre de diciembre y el pago de enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -127,6 +133,9 @@ _(Sofía reembolsa a Patricia y cancela el pickup sin recoger; Claudia se activa
 | 13 | Baja | Correos | El correo de devolución prometía reembolsar el envío también en arrepentimiento (la pantalla decía lo contrario) | Texto según quién paga el envío |
 | 14 | Baja | Panel del socio | Con patrocinadora, el panel no mostraba ningún contacto de soporte para pedidos | WhatsApp y correo de soporte en el bloque de patrocinador |
 | 15 | Media | Pedidos | La anulación de comisiones desde inspección, cancelación o reembolso no llevaba motivo ni avisaba al patrocinador | Motivo y correo también en ese camino |
+| 16 | Baja | Reembolsos | El monto sugerido incluía el envío en devoluciones por arrepentimiento | Sugerencia según el motivo |
+| 17 | Baja | Pedidos | El detalle no mostraba cuánto se reembolsó ni el motivo | "Reembolsado: $X · motivo" |
+| 18 | Baja | Pedidos | Cancelar desde el panel no pedía motivo (quedaba "admin_request") ni avisaba si no estaba pagado | Motivo obligatorio y aviso |
 
 ## 4. Hallazgos de negocio
 
@@ -141,6 +150,7 @@ _(Sofía reembolsa a Patricia y cancela el pickup sin recoger; Claudia se activa
 9. La entrega personal no se puede elegir al comprar (solo el almacén la registra) y la cartera "FindingU" no muestra a la ejecutiva como coach en el panel del cliente. Propuestas: opción "entrega en persona" por zona en el checkout, y que el patrocinador por defecto muestre nombre y WhatsApp de la ejecutiva asignada.
 10. Devolver un paquete cerrado por arrepentimiento exige tres fotos (producto, empaque y guía). Propuesta: para desistimiento con paquete sin abrir, una sola foto del paquete cerrado con la guía.
 11. Los envíos por paquetería nunca se cierran: cuatro pedidos llevaban semanas "Enviada" con el paquete entregado. Propuesta: aviso "enviados hace más de 7 días sin entrega" en Acciones urgentes, o cierre automático con el rastreo de la paquetería (y el correo "¿te llegó?" al cliente).
+12. Los avisos del tablero son genéricos: "1 pedidos pendientes de pago" sin nombre ni antigüedad, y "comisiones pendientes por depositar — Urgente" desde el día 1 aunque se pagan el 10 del mes siguiente. Propuesta: cada aviso con folio, cliente y días, y la urgencia de comisiones solo a partir del día 8.
 
 ## 5. Pendiente
 
