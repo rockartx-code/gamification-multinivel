@@ -1011,6 +1011,11 @@
         </ui-table>
         <ui-pagination [page]="ordersPage" [totalPages]="ordersTotalPages" [disabled]="isOrdersLoading" (pageChange)="loadOrdersPage($event)"></ui-pagination>
       </div>
+
+      <!-- WP-I2: suscripción mensual "Recibe esto cada mes" (paquete H) -->
+      <div class="mt-6" *ngIf="currentUser?.userId">
+        <app-suscripcion [customerId]="currentUser?.userId ?? ''" [products]="products" [addresses]="shippingAddresses" [defaultAddressId]="defaultShippingAddressId" [pickupStocks]="pickupStocks" [mode]="accountMode" (changed)="onSuscripcionCambiada()"></app-suscripcion>
+      </div>
     </section>
 
     <section id="links" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode">

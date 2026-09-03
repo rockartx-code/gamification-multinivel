@@ -41,6 +41,8 @@ import { UiPaginationComponent } from '../../components/ui-pagination/ui-paginat
 import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
 import { IndicadoresCliente, PlanSocio, formatoPorcentaje } from '../../models/plan-socio.model';
 import { PlanSocioService } from '../../services/plan-socio.service';
+import { CustomerShippingAddress } from '../../models/admin.model';
+import { SuscripcionComponent } from './suscripcion/suscripcion.component'; // WP-I2 · suscripción mensual (paquete H) en #ordenes
 
 type GraphNode = {
   id: string;
@@ -62,7 +64,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent, UiTablaDescuentoComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent, UiTablaDescuentoComponent, SuscripcionComponent /* WP-I2 */],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -80,6 +82,38 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   /** Plan publicado (tramos, activación) para la tabla única de descuento. */
   plan: PlanSocio | null = null;
+
+  // ── Ola B · I2: suscripción mensual (paquete H) montada en #ordenes ──
+  /** Sucursales con recoger en tienda, para la suscripción "recoger en sucursal". */
+  pickupStocks: Array<{ id: string; name: string; location: string }> = [];
+
+  get shippingAddresses(): CustomerShippingAddress[] {
+    return this.dashboardControl.shippingAddresses;
+  }
+
+  get defaultShippingAddressId(): string {
+    return this.dashboardControl.defaultShippingAddressId;
+  }
+
+  /** Tras crear, editar, pausar o cancelar la suscripción: la lista de pedidos puede tener uno nuevo. */
+  onSuscripcionCambiada(): void {
+    this.ordersCache.clear();
+    this.ordersPageTokens.clear();
+    this.ordersPageTokens.set(0, null);
+    this.ordersLastPageIndex = null;
+    this.loadOrders(0);
+    this.cdr.markForCheck();
+  }
+
+  private loadPickupStocks(): void {
+    this.api.listPickupStocks().subscribe({
+      next: (stocks) => {
+        this.pickupStocks = stocks ?? [];
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
+  }
   readonly porcentaje = formatoPorcentaje;
 
   readonly countdownLabel = signal('');
@@ -1237,6 +1271,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
     if (!this.isGuest && this.currentUser?.userId) {
       void this.loadOrders();
+      this.loadPickupStocks();
     }
   }
 
@@ -2014,8 +2049,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         })
       )
       .subscribe({
-        next: () => {
-          this.showToast('Solicitud enviada. Te contactaremos por el deposito.');
+        next: (respuesta) => {
+          // Lo que quedó guardado en el servidor (folio y monto de la solicitud), no lo tecleado.
+          const guardada = (respuesta as { request?: { requestId?: string; amount?: number; status?: string } } | null)?.request;
+          const folio = guardada?.requestId ? ` ${guardada.requestId}` : '';
+          const monto = Number(guardada?.amount ?? 0);
+          const montoTexto = Number.isFinite(monto) && monto > 0 ? ` por ${this.formatMoney(monto)}` : '';
+          this.showToast(`Solicitud de pago${folio} registrada${montoTexto}. Te avisamos por correo cuando se haga el depósito.`);
           this.closeCommissionModal();
           this.dashboardControl.load({ force: true }).subscribe();
         },
@@ -2041,8 +2081,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         })
       )
       .subscribe({
-        next: () => {
-          this.showToast('CLABE actualizada.');
+        next: (respuesta) => {
+          const terminacion = respuesta?.clabeLast4 ? ` Termina en ${respuesta.clabeLast4}.` : '';
+          this.showToast(`CLABE guardada.${terminacion} Ahí depositaremos tus comisiones.`);
           this.closeClabeConfirm();
           this.dashboardControl.load({ force: true }).subscribe();
         },
