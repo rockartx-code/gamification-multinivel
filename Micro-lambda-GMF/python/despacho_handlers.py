@@ -751,6 +751,12 @@ def handle_turno_resumen(query: dict, headers: dict) -> dict:
         },
     }
     resumen["text"] = _texto_resumen(resumen)
+    # La gerente elige de quién es el turno: solo quien puede ver el de otros recibe la lista.
+    if utils._require_admin(headers, "access_screen_stats") is None:
+        resumen["team"] = sorted(
+            ({"id": str(e.get("employeeId")), "name": e.get("name") or str(e.get("employeeId"))}
+             for e in utils._query_bucket("EMPLOYEE") if e.get("active", True)),
+            key=lambda e: e["name"].lower())
     return utils._json_response(200, resumen)
 
 

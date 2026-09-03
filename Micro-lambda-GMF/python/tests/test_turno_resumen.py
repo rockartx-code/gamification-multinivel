@@ -109,12 +109,14 @@ def test_la_gerente_ve_el_turno_de_beto_y_un_companero_solo_el_suyo(inventory_la
     sofia = _empleado(utils, "7003", {"access_screen_stats": True}, "Sofía")
     st, d = _llamar(inventory_lambda, "GET", "/inventory/turno/resumen", headers=sofia, query={"userId": BETO})
     assert st == 200 and d["counters"]["dispatched"] == 2
+    assert [e["name"] for e in d["team"]] == ["Beto", "Sofía"]   # para elegir de quién es el turno
 
     nadia = _empleado(utils, "7002", {"access_screen_pos": True}, "Nadia")
     st, d = _llamar(inventory_lambda, "GET", "/inventory/turno/resumen", headers=nadia, query={"userId": BETO})
     assert st == 403 and "access_screen_stats" in d["message"]
     st, d = _llamar(inventory_lambda, "GET", "/inventory/turno/resumen", headers=nadia)   # sin userId: el propio
     assert st == 200 and d["user"]["id"] == "7002" and d["counters"]["dispatched"] == 0
+    assert "team" not in d   # sin permiso de estadísticas no se lista al equipo
 
     st, d = _llamar(inventory_lambda, "GET", "/inventory/turno/resumen", headers={}, query={"userId": BETO})
     assert st == 403
