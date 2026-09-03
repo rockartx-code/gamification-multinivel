@@ -142,7 +142,9 @@ export class UserProfileComponent implements OnInit {
       .subscribe({
         next: (updated) => {
           this.profile = { ...this.profile!, ...updated };
-          this.showToast('Información guardada correctamente.');
+          // El toast dice lo que quedó guardado en el servidor, no lo que se tecleó.
+          const partes = [updated?.name ? `nombre ${updated.name}` : '', updated?.phone ? `teléfono ${updated.phone}` : ''].filter(Boolean);
+          this.showToast(partes.length ? `Información guardada: ${partes.join(', ')}.` : 'Información guardada.');
         },
         error: () => { this.showToast('No se pudo guardar la información.'); }
       });
@@ -186,7 +188,8 @@ export class UserProfileComponent implements OnInit {
           }
           this.clabeDraft = this.clabePending;
           this.clabePending = '';
-          this.showToast('CLABE guardada correctamente.');
+          const terminacion = res?.clabeLast4 ? ` Termina en ${res.clabeLast4}.` : '';
+          this.showToast(`CLABE guardada.${terminacion} Ahí depositaremos tus comisiones.`);
         },
         error: () => { this.showToast('No se pudo guardar la CLABE.'); }
       });

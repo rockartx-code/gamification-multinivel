@@ -620,6 +620,19 @@
               <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
                 {{ discountUpgradeMessage }}
               </div>
+              <!-- Ola B · I2: la misma tabla de descuento y VP que el panel (paquete B) -->
+              <ui-tabla-descuento *ngIf="tablaDescuentoVisible && plan"
+                [tiers]="plan.descuento.tramos"
+                [mxnPerVp]="plan.unidades.mxnPerVp"
+                [activationVp]="plan.activacion.vpNetos"
+                [monthNet]="monthNetSocio"
+                [monthVp]="monthVpSocio"
+                [cartGross]="subtotal"
+                [cartPc]="cartPc"
+                [mode]="modoTabla"
+                context="carrito"
+                [compact]="true"
+                (activateRequested)="goToModoSocio()"></ui-tabla-descuento>
 
               <!-- Cupón / código de descuento (H7) -->
               <div class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
@@ -672,6 +685,8 @@
                 <span class="font-semibold text-main">Total</span>
                 <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
               </div>
+              <!-- Ola B · I2: "Como socia habrías ahorrado" bajo el total (paquete B); en modo socio no pinta nada -->
+              <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
             </div>
 
             <div class="mt-5 mb-5 rounded-2xl border border-olive-30 bg-ivory-80 p-4">
@@ -794,6 +809,19 @@
         <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
           {{ discountUpgradeMessage }}
         </div>
+        <!-- Ola B · I2: la misma tabla de descuento y VP que el panel (paquete B) -->
+        <ui-tabla-descuento *ngIf="tablaDescuentoVisible && plan"
+          [tiers]="plan.descuento.tramos"
+          [mxnPerVp]="plan.unidades.mxnPerVp"
+          [activationVp]="plan.activacion.vpNetos"
+          [monthNet]="monthNetSocio"
+          [monthVp]="monthVpSocio"
+          [cartGross]="subtotal"
+          [cartPc]="cartPc"
+          [mode]="modoTabla"
+          context="carrito"
+          [compact]="true"
+          (activateRequested)="goToModoSocio()"></ui-tabla-descuento>
         <!-- El cupón solo existía en el resumen de escritorio: desde el celular no había dónde escribirlo. -->
         <div *ngIf="!isGuest" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
           <div class="flex items-center gap-2">
@@ -834,6 +862,8 @@
           <span class="font-semibold text-main">Total</span>
           <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
         </div>
+        <!-- Ola B · I2: "Como socia habrías ahorrado" bajo el total (paquete B) -->
+        <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
       </div>
 
       <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-600">

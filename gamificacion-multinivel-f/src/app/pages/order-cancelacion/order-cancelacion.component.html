@@ -23,10 +23,12 @@
         <i class="fa-solid fa-check text-2xl text-green-600" aria-hidden="true"></i>
       </span>
       <h1 class="mt-4 text-xl font-extrabold text-main">Orden cancelada</h1>
-      <p class="mt-2 text-sm text-gray-600">Tu orden <span class="font-semibold text-main">{{ orderId }}</span> fue cancelada exitosamente.
-        <ng-container *ngIf="isPendingOrder"> El pago no había sido confirmado, por lo que no se generará ningún cargo.</ng-container>
-        <ng-container *ngIf="!isPendingOrder"> El reembolso está siendo procesado por nuestro equipo.</ng-container>
+      <p class="mt-2 text-sm text-gray-600">Tu orden <span class="font-semibold text-main">{{ cancelResult?.orderId || orderId }}</span> quedó con estado
+        <span class="font-semibold text-main">{{ cancelledStatusLabel }}</span> en el sistema.
+        <ng-container *ngIf="!refundPending"> El pago no había sido confirmado, por lo que no se generará ningún cargo.</ng-container>
+        <ng-container *ngIf="refundPending"> Queda un reembolso pendiente: nuestro equipo lo procesa y te avisamos por correo.</ng-container>
       </p>
+      <p *ngIf="order?.total" class="mt-1 text-xs text-gray-500">Importe del pedido: {{ formatMoney(order?.total) }}.</p>
       <div class="mt-6">
         <ui-button variant="primary" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
       </div>

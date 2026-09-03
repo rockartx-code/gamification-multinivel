@@ -20,7 +20,6 @@ en tiempo de carga dejaría a uno de los dos a medias.
 import calendar
 import csv
 import io
-import math
 import os
 import re
 from datetime import datetime, timedelta
@@ -414,35 +413,35 @@ def handle_pedir_clabe(peticion) -> dict:
 def _producto_que_salva(faltan_vp: float, net_volume_mes, tiers: list) -> Optional[dict]:
     """El producto activo más barato que cierra los VP que faltan.
 
-    Para cada producto en tienda con `vpPoints > 0`: la tasa de descuento que
-    tendría la compra (acumulado del mes + precio), los VP netos por unidad
-    (`vpPoints × (1 − tasa)`), las unidades necesarias y el costo. Se elige el
-    menor costo. Misma fórmula que el paquete C (§3.5); I2 las unifica.
+    Ola B (I2): la fórmula vive en una sola función,
+    `checkout_handlers.sugerir_producto_activacion` (la misma que usa
+    "Completa tu activación" en el carrito), para que el correo del día 20 y
+    el carrito nunca sugieran productos distintos. Aquí solo se arma la tasa
+    de descuento con el acumulado del mes y se traduce la respuesta a las
+    claves que usa el correo (`id`, `rate`, `vpPerUnit`, `vpTotal`).
     """
     if faltan_vp <= 0:
         return None
     from order_lambda import _resolve_discount_rate
+    import checkout_handlers
     acumulado = utils._to_decimal(net_volume_mes or 0)
-    mejor = None
-    for p in utils._query_bucket("PRODUCT"):
-        if p.get("active") is False or p.get("inOnlineStore") is False:
-            continue
-        precio = utils._to_decimal(p.get("price", 0))
-        pc = float(utils._to_decimal(p.get("vpPoints", 0)))
-        if precio <= 0 or pc <= 0:
-            continue
-        tasa = float(_resolve_discount_rate(tiers, acumulado + precio))
-        vp_neto = pc * (1 - tasa)
-        if vp_neto <= 0:
-            continue
-        unidades = int(math.ceil(faltan_vp / vp_neto - 1e-9))
-        costo = round(float(precio) * unidades * (1 - tasa), 2)
-        candidato = {"id": str(p.get("productId") or p.get("id") or ""), "name": str(p.get("name") or ""),
-                     "price": float(precio), "units": unidades, "cost": costo, "rate": tasa,
-                     "vpPerUnit": round(vp_neto, 2), "vpTotal": round(vp_neto * unidades, 2)}
-        if mejor is None or (costo, unidades) < (mejor["cost"], mejor["units"]):
-            mejor = candidato
-    return mejor
+    productos = [
+        p for p in utils._query_bucket("PRODUCT")
+        if p.get("active") is not False and p.get("inOnlineStore") is not False
+    ]
+
+    def _tasa(precio):
+        return _resolve_discount_rate(tiers, acumulado + utils._to_decimal(precio))
+
+    mejor = checkout_handlers.sugerir_producto_activacion(productos, faltan_vp, _tasa)
+    if not mejor:
+        return None
+    tasa = float(mejor.get("discountRate") or 0)
+    vp_unidad = float(mejor.get("netVpPerUnit") or 0)
+    unidades = int(mejor.get("units") or 0)
+    return {"id": str(mejor.get("productId") or ""), "name": str(mejor.get("name") or ""),
+            "price": float(mejor.get("price") or 0), "units": unidades, "cost": float(mejor.get("cost") or 0),
+            "rate": tasa, "vpPerUnit": round(vp_unidad, 2), "vpTotal": round(vp_unidad * unidades, 2)}
 
 
 def _correo_bloqueadas(ficha: dict, month_key: str, bloqueado, vp_faltan: float, producto: Optional[dict]) -> bool:

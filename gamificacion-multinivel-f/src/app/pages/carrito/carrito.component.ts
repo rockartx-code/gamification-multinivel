@@ -23,11 +23,16 @@ import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { UiChoiceCardComponent } from '../../components/ui-choice-card/ui-choice-card.component';
 import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
+// Ola B · I2: tabla única de descuento (B) y "Como socia habrías ahorrado" (B) en el carrito.
+import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
+import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
+import { PlanSocio } from '../../models/plan-socio.model';
+import { ModoVisible, PlanSocioService } from '../../services/plan-socio.service';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent, UiTablaDescuentoComponent, UiAhorroSocioComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })
@@ -44,8 +49,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
     private readonly api: ApiService,
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly checkout: CheckoutService
+    private readonly checkout: CheckoutService,
+    private readonly planSocio: PlanSocioService
   ) {}
+
+  // ── Ola B · I2: tabla única de descuento y ahorro como socia ──
+  /** Plan publicado (tramos, activación); la tabla del carrito usa los mismos números que el panel. */
+  plan: PlanSocio | null = null;
+  private planSub?: Subscription;
 
   // ── Paquete C · envío visible, completa tu activación, sucursales y factura ──
   envioInfo: EnvioInfo | null = null;
@@ -135,6 +146,13 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restoreDeliveryState();
+    this.planSub = this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.plan = plan;
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
     this.cartControl.load().subscribe(() => {
       this.cdr.detectChanges();
     });
@@ -207,6 +225,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     this.dashboardSub?.unsubscribe();
     this.shippingQuoteSub?.unsubscribe();
+    this.planSub?.unsubscribe();
     this.cartControl.saveDeliveryState({
       deliveryType: this.deliveryType,
       selectedShippingAddressId: this.selectedShippingAddressId,
@@ -284,6 +303,57 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   get isGuest(): boolean {
     return !this.authService.currentUser;
+  }
+
+  /** Modo con el que se pinta el carrito: invitado sin sesión; cliente o socio según el panel (paquete B). */
+  get modoCuenta(): ModoVisible {
+    if (this.isGuest) {
+      return 'invitado';
+    }
+    const delPanel = this.dashboardControl.data?.mode;
+    if (delPanel === 'cliente' || delPanel === 'socio') {
+      return delPanel;
+    }
+    const delServicio = this.planSocio.modoActual;
+    return delServicio === 'cliente' ? 'cliente' : 'socio';
+  }
+
+  /** Neto acumulado del mes (MPN): en modo cliente el indicador del panel, si no el consumo propio. */
+  get monthNetSocio(): number {
+    const data = this.dashboardControl.data;
+    const indicador = data?.clientIndicators?.monthSpend;
+    if (this.modoCuenta === 'cliente' && indicador != null) {
+      return Number(indicador) || 0;
+    }
+    return Number(data?.myNetSpend ?? 0) || 0;
+  }
+
+  /** VP netos acumulados del mes según el panel. */
+  get monthVpSocio(): number {
+    return Number(this.dashboardControl.data?.vp ?? 0) || 0;
+  }
+
+  /** PC de lista del carrito (sin descuento): la tabla los convierte a VP netos con la tasa del tramo. */
+  get cartPc(): number {
+    const products = this.dashboardControl.products ?? [];
+    return this.cartItems.reduce((sum, item) => {
+      const product = products.find((p) => p.id === this.extractProductId(item.id));
+      return sum + Number(product?.vpPoints ?? 0) * item.qty;
+    }, 0);
+  }
+
+  /** La tabla única se muestra con sesión y plan cargado (socio o cliente); los invitados ven solo el ahorro. */
+  get tablaDescuentoVisible(): boolean {
+    return !this.isGuest && this.plan != null && this.cartItems.length > 0;
+  }
+
+  get modoTabla(): 'cliente' | 'socio' {
+    return this.modoCuenta === 'cliente' ? 'cliente' : 'socio';
+  }
+
+  /** "Activar modo socio" desde la tabla (solo en modo cliente): lleva a la landing del plan. */
+  goToModoSocio(): void {
+    void this.router.navigate(['/modo-socio'], { queryParams: { desde: 'carrito' } });
   }
 
   get hasSavedShippingAddresses(): boolean {
@@ -1071,12 +1141,23 @@ export class CarritoComponent implements OnInit, OnDestroy {
           }
           const orderId = String(resolvedId);
           this.cartControl.clearCart();
-          // La confirmación dice lo que el servidor guardó (folio y factura), no lo que se tecleó.
-          const factura = (order as { invoiceStatus?: string; invoiceData?: { rfc?: string } } | null);
-          const facturaTexto = factura?.invoiceStatus === 'solicitada'
-            ? ` Factura solicitada para el RFC ${factura?.invoiceData?.rfc ?? ''}: te llegará por correo en los próximos días hábiles.`
+          // La confirmación dice lo que el servidor guardó (folio, total, entrega y factura), no lo que se tecleó.
+          const guardado = order as {
+            total?: number; shippingCost?: number; deliveryType?: string; pickupPaymentMethod?: string;
+            invoiceStatus?: string; invoiceData?: { rfc?: string };
+          } | null;
+          const totalGuardado = Number(guardado?.total ?? 0);
+          const totalTexto = Number.isFinite(totalGuardado) && totalGuardado > 0 ? ` por ${this.formatMoney(totalGuardado)}` : '';
+          const entregaTexto = guardado?.deliveryType === 'pickup'
+            ? (guardado?.pickupPaymentMethod === 'at_store' ? ', para recoger y pagar en sucursal' : ', para recoger en sucursal')
+            : (Number(guardado?.shippingCost ?? 0) > 0 ? ` (envío ${this.formatMoney(Number(guardado?.shippingCost))} incluido)` : ', con envío gratis');
+          const facturaTexto = guardado?.invoiceStatus === 'solicitada'
+            ? ` Factura solicitada para el RFC ${guardado?.invoiceData?.rfc ?? ''}: te llegará por correo en los próximos días hábiles.`
             : '';
-          this.showToast(`Pedido ${orderId} creado.${facturaTexto} Te llevamos al pago...`);
+          const siguiente = guardado?.deliveryType === 'pickup' && guardado?.pickupPaymentMethod === 'at_store'
+            ? 'Te mostramos tu pedido...'
+            : 'Te llevamos al pago...';
+          this.showToast(`Pedido ${orderId} creado${totalTexto}${entregaTexto}.${facturaTexto} ${siguiente}`);
           this.router.navigate(['/orden', orderId]);
         },
         error: (err: { error?: { message?: string }; message?: string }) => {

@@ -9,7 +9,7 @@ import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.co
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, AuthUser } from '../../services/auth.service';
 
 type LoginPanel = 'login' | 'recovery' | 'link';
 
@@ -46,6 +46,12 @@ export class LoginComponent implements OnInit {
 
   /** El backend manda code EMAIL_NOT_VERIFIED; comparar textos fallaba por un acento ("sesion" vs "sesión"). */
   needsEmailConfirmation = false;
+
+  // Ola B · I2: sesión de punta a punta.
+  /** Ruta interna a la que volver tras entrar (`?next=`), p. ej. el carrito o la landing del modo socio. */
+  private nextUrl = '';
+  /** Aviso cuando llegamos aquí porque la sesión caducó (`?motivo=sesion`). */
+  infoMessage = '';
 
   get showRecoveryForm(): boolean {
     return this.panel === 'recovery';
@@ -87,7 +93,12 @@ export class LoginComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const enlace = (this.route.snapshot.queryParamMap.get('enlace') ?? '').trim();
+    const query = this.route.snapshot.queryParamMap;
+    this.nextUrl = this.rutaInternaSegura(query.get('next'));
+    if ((query.get('motivo') ?? '') === 'sesion') {
+      this.infoMessage = 'Tu sesión terminó. Vuelve a entrar; tu carrito y tus datos siguen guardados.';
+    }
+    const enlace = (query.get('enlace') ?? '').trim();
     if (enlace) {
       this.redeemLink(enlace);
       return;
@@ -95,8 +106,26 @@ export class LoginComponent implements OnInit {
     // Con sesión vigente, /#/login mandaba al login otra vez ("pensé que había perdido el acceso admin").
     // Solo se salta con sesiones que declaran su vencimiento (las abiertas con "Recordarme" o enlace).
     if (this.authService.hasSession && this.authService.currentUser?.expiresAt) {
-      void this.router.navigate([this.authService.defaultRoute()]);
+      void this.irDespuesDeEntrar(this.authService.currentUser);
     }
+  }
+
+  /** Solo rutas internas (`/carrito`, `modo-socio`): nunca una URL externa que venga en la query. */
+  private rutaInternaSegura(valor: string | null): string {
+    const limpio = String(valor ?? '').trim();
+    if (!limpio || limpio.startsWith('//') || /^[a-z]+:/i.test(limpio)) {
+      return '';
+    }
+    return limpio.startsWith('/') ? limpio : `/${limpio}`;
+  }
+
+  /** Tras entrar: a `?next=` si venía (y la persona puede verlo), si no a su panel. */
+  private irDespuesDeEntrar(user: AuthUser): Promise<boolean> {
+    const destino = this.nextUrl;
+    if (destino && !(destino.startsWith('/admin') && !this.authService.hasAdminPanelAccess(user))) {
+      return this.router.navigateByUrl(destino);
+    }
+    return this.router.navigate([this.authService.defaultRoute(user)]);
   }
 
   trackingFolio = '';
@@ -131,8 +160,7 @@ export class LoginComponent implements OnInit {
       }))
       .subscribe({
         next: (user) => {
-          const target = this.authService.defaultRoute(user);
-          void this.router.navigate([target]);
+          void this.irDespuesDeEntrar(user);
         },
         error: (error: { status?: number; error?: { message?: string; code?: string }; message?: string }) => {
           this.errorMessage =
@@ -203,7 +231,7 @@ export class LoginComponent implements OnInit {
       .pipe(finalize(() => this.cdr.markForCheck()))
       .subscribe({
         next: (user) => {
-          void this.router.navigate([this.authService.defaultRoute(user)]);
+          void this.irDespuesDeEntrar(user);
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           this.linkRedeemStatus = 'error';
