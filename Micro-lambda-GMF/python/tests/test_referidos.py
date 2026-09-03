@@ -57,3 +57,21 @@ def test_el_codigo_no_lleva_acentos_y_resuelve_tecleado_sin_ellos(auth, utils):
     assert codigo == codigo.encode("ascii", "ignore").decode(), codigo
     invitado = _alta(auth, "Patricia Solís", "pat@test.com", referido=codigo.lower())
     assert str(_cliente(utils, invitado)["leaderId"]) == str(lider)
+
+
+def test_crear_cuenta_liga_los_pedidos_hechos_como_invitado(auth, utils):
+    """Regresión: una clienta con dos compras sin cuenta creaba su cuenta con el
+    mismo correo y su panel salía vacío; el historial de invitado se perdía."""
+    from decimal import Decimal
+    utils._put_entity("ORDER", "ORD-INV1", {"entityType": "order", "orderId": "ORD-INV1", "customerId": None, "buyerType": "guest",
+                                             "email": "Rosa.Elena@Test.com", "status": "shipped", "total": Decimal("829"), "netTotal": Decimal("829"),
+                                             "items": [], "createdAt": "2026-10-02T10:00:00Z"})
+    utils._put_entity("ORDER", "ORD-OTRO", {"entityType": "order", "orderId": "ORD-OTRO", "customerId": None, "buyerType": "guest",
+                                             "email": "otra@test.com", "status": "paid", "total": Decimal("100"), "items": [], "createdAt": "2026-10-03T10:00:00Z"})
+    cid = _alta(auth, "Rosa Elena", "rosa.elena@test.com")
+    ligado = utils._get_by_id("ORDER", "ORD-INV1")
+    assert str(ligado.get("customerId")) == str(cid) and ligado.get("linkedToAccountAt")
+    assert ligado.get("buyerType") == "guest"  # el motor no vuelve a acreditar
+    assert utils._get_by_id("ORDER", "ORD-OTRO").get("customerId") in (None, "")
+    historial = [v for (pk, sk), v in utils._table.store.items() if pk == f"ORDER_BY_CUSTOMER#{cid}"]
+    assert [h["orderId"] for h in historial] == ["ORD-INV1"]

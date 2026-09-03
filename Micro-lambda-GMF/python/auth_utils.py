@@ -247,6 +247,32 @@ def handle_login(body):
         }
     })
 
+
+def _vincular_pedidos_de_invitado(customer_id, email: str) -> list:
+    """Liga al nuevo cliente los pedidos hechos como invitado con su mismo correo.
+
+    Solo se toca la referencia del comprador y el historial del panel: el
+    tipo de comprador sigue siendo invitado, así que el motor de comisiones
+    no vuelve a acreditar nada.
+    """
+    ligados = []
+    try:
+        for order in utils._query_bucket("ORDER") or []:
+            if order.get("customerId") not in (None, "", 0, "0"):
+                continue
+            if utils._normalize_email(order.get("email")) != email:
+                continue
+            oid = order.get("orderId")
+            if not oid:
+                continue
+            actualizado = utils._update_by_id("ORDER", oid, "SET customerId = :c, linkedToAccountAt = :t",
+                                              {":c": customer_id, ":t": utils._now_iso()})
+            utils._upsert_order_customer_history(actualizado or {**order, "customerId": customer_id})
+            ligados.append(oid)
+    except Exception as ex:
+        utils._log_error("guest_orders_link_failed", ex)
+    return ligados
+
 def handle_create_account(body):
     """POST /crearcuenta"""
     email = utils._normalize_email(body.get("email"))
@@ -285,6 +311,9 @@ def handle_create_account(body):
     # se escriban igual desde el auto-registro y desde el alta por admin.
     utils._upsert_customer_name_index(customer_id, name, email, created_at_iso=now)
     utils._upsert_customer_email_index(customer_id, email)
+    # Quien compró como invitado y luego crea su cuenta con el mismo correo
+    # debe ver ese historial en su panel (antes desaparecía).
+    _vincular_pedidos_de_invitado(customer_id, email)
 
     try:
         utils._sync_customer_network_metadata()
