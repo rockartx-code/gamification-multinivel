@@ -62,8 +62,9 @@ def test_anular_una_orden_deja_sus_filas_tachadas(utils, esquema_filas):
 
     releido = utils._get_ledger_month(12, "2026-09")
     # La fila anulada se conserva tachada (la socia veía "Sin movimientos") y sale de los totales.
-    assert [(f["orderId"], f["status"]) for f in releido["ledger"]] == [("X", "voided"), ("Y", "pending")]
-    assert releido["ledger"][0]["previousStatus"] == "pending" and releido["ledger"][0]["voidedAt"]
+    assert sorted((f["orderId"], f["status"]) for f in releido["ledger"]) == [("X", "voided"), ("Y", "pending")]
+    anulada = next(f for f in releido["ledger"] if f["orderId"] == "X")
+    assert anulada["previousStatus"] == "pending" and anulada["voidedAt"]
     assert releido["totalPending"] == Decimal("80")
     # Anular dos veces no vuelve a restar.
     assert utils._void_ledger_rows_for_order(12, "2026-09", "X") is None
