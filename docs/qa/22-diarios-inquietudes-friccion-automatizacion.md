@@ -199,28 +199,30 @@ Sirven para no tomar un diario aislado como verdad:
 
 ## 10. Estado de las propuestas
 
-| Propuesta | Estado en el código | Origen en diarios |
-|---|---|---|
-| 1 Modo solo cliente | Sin empezar | 9 personas (§3.1) |
-| 2 Plan publicado | Sin empezar (tabla de generaciones solo en registro) | 8 personas (§3.2) |
-| 3 Tabla única descuento/VP | Parcial (aviso de VP en carrito) | 6 personas |
-| 4 CLABE al activarse | Parcial (CLABE obligatoria para pagar) | Sofía, Claudia, Bety, Memo, Lupita |
-| 5 Completa tu activación | Parcial (aviso sin sugerencia) | 5 socias |
-| 6 Envío visible | Sin empezar | 5 personas |
-| 7 Sesión y último código | Sin empezar | 7 personas |
-| 8 Botones mudos y DOM duplicado | Sin empezar | Nadia, Ivonne, Sofía |
-| 9 Sucursal por defecto | Sin empezar | Beto ×3 turnos |
-| 10 Modales en lugar de prompt | Sin empezar | Beto, Sofía |
-| 11 Recoger en sucursal condicionado | Parcial (motivo visible) | Claudia, Patricia |
-| 12 Pagos del mes | Sin empezar | Sofía ×4 días de pago |
-| 13 Despacho en bloque | Sin empezar | Beto ×9 turnos |
-| 14 Suscripción | Sin empezar | Bety, Rosa, Patricia |
-| 15 Seguimiento de hoy | Parcial (filtro fríos, CSV, notas) | Ivonne ×5 turnos |
-| 16 Arqueo de caja | Parcial (cambio en efectivo) | Nadia, Paco |
-| 17 Factura automática | Sin empezar | Rodrigo ×4 |
-| 18 Devolución por producto | Parcial (cortesía, correo, sugerencia) | Lupita, Patricia, Lucía |
-| 19 Ficha unificada | Parcial (notas, no contactar, origen) | Ivonne, Sofía |
-| 20 Paquetería integrada | Sin empezar | Beto, Sofía, 6 clientes |
-| 21 Conciliación con pasarela | Sin empezar | Rodrigo, Lucía, Claudia |
-| 22 Política de bloqueadas | Decisión de negocio pendiente | Marcela, Verónica, Claudia, Bety |
-| 23 Resumen de turno y confirmaciones | Sin empezar | Beto, Nadia, Sofía |
+La tercera columna se añadió después de la ronda de implementación ([23](23-implementacion-23-propuestas.md), rama `claude/ultimos-cambios-integrados-fylhiw` hasta `acca507`): 20 implementadas, 3 parciales.
+
+| Propuesta | Estado al escribir este documento | Estado tras [23](23-implementacion-23-propuestas.md) | Origen en diarios |
+|---|---|---|---|
+| 1 Modo solo cliente | Sin empezar | **Implementado** (B; `fa1a386`, `72fedc3`) | 9 personas (§3.1) |
+| 2 Plan publicado | Sin empezar (tabla de generaciones solo en registro) | **Implementado** sin PDF (B; `/#/modo-socio`, `GET /catalog/plan`) | 8 personas (§3.2) |
+| 3 Tabla única descuento/VP | Parcial (aviso de VP en carrito) | **Implementado** (B, I1, I2; `ui-tabla-descuento` en panel, carrito y POS) | 6 personas |
+| 4 CLABE al activarse | Parcial (CLABE obligatoria para pagar) | **Implementado** (A; aviso al activarse y con la primera comisión; CLABE desde la ficha en `acca507`) | Sofía, Claudia, Bety, Memo, Lupita |
+| 5 Completa tu activación | Parcial (aviso sin sugerencia) | **Implementado** (C, I2; una sola fórmula para el carrito y el correo del día 20) | 5 socias |
+| 6 Envío visible | Sin empezar | **Implementado** (C; envío gratis sobre el subtotal bruto) | 5 personas |
+| 7 Sesión y último código | Sin empezar | **Implementado** (C, I2; Recordarme 30 días, enlace por correo, tres códigos vigentes, 401 → login con `?next=`) | 7 personas |
+| 8 Botones mudos y DOM duplicado | Sin empezar | **Implementado** (E en el POS, I1 en el resto; `disabledReason`, un solo DOM) | Nadia, Ivonne, Sofía |
+| 9 Sucursal por defecto | Sin empezar | **Implementado** (D; `defaultStockId` del empleado; sin bodega no se propone ninguna) | Beto ×3 turnos |
+| 10 Modales en lugar de prompt | Sin empezar | **Implementado** (I1; `ui-confirm`, 0 `prompt/confirm` en `pages/admin`) | Beto, Sofía |
+| 11 Recoger en sucursal condicionado | Parcial (motivo visible) | **Implementado** (C; falta capturar ciudad/estado en los almacenes existentes) | Claudia, Patricia |
+| 12 Pagos del mes | Sin empezar | **Implementado** (A; Pagos del mes, CSV de dispersión, lote, deshacer, Pedir CLABE) | Sofía ×4 días de pago |
+| 13 Despacho en bloque | Sin empezar | **Implementado** (D; `/#/admin/despacho`, lote `DSP-…`) | Beto ×9 turnos |
+| 14 Suscripción | Sin empezar | **Implementado** sin cobro automático (H, I2; pedido + enlace de pago el día indicado) | Bety, Rosa, Patricia |
+| 15 Seguimiento de hoy | Parcial (filtro fríos, CSV, notas) | **Implementado** (F; `/#/admin/seguimiento`, plantillas de WhatsApp con nota) | Ivonne ×5 turnos |
+| 16 Arqueo de caja | Parcial (cambio en efectivo) | **Implementado** (E; arqueo en 4 pasos, retiro guiado, pago mixto) | Nadia, Paco |
+| 17 Factura automática | Sin empezar | **Parcial** (C; datos fiscales y estado solicitada → emitida a mano; sin timbrado CFDI) | Rodrigo ×4 |
+| 18 Devolución por producto | Parcial (cortesía, correo, sugerencia) | **Implementado** (G; líneas, evidencia por motivo, reembolso sugerido, plazo y medio) | Lupita, Patricia, Lucía |
+| 19 Ficha unificada | Parcial (notas, no contactar, origen) | **Implementado** (F; campos en Seguimiento → Ficha, coach en el panel) | Ivonne, Sofía |
+| 20 Paquetería integrada | Sin empezar | **Parcial** (D; adaptador Envia + simulada, rastreo por consulta, apagado por omisión; sin webhook ni tarea desplegada) | Beto, Sofía, 6 clientes |
+| 21 Conciliación con pasarela | Sin empezar | **Implementado** (H; webhook con secreto e idempotencia, conciliación de 72 h) | Rodrigo, Lucía, Claudia |
+| 22 Política de bloqueadas | Decisión de negocio pendiente | **Implementado** opción b (A; avisos días 20 y 27; opción a como `rewards.blockedGraceDays = 0`; tarea diaria sin desplegar) | Marcela, Verónica, Claudia, Bety |
+| 23 Resumen de turno y confirmaciones | Sin empezar | **Implementado** (D, I1, I2; resumen de turno y confirmaciones desde el servidor) | Beto, Nadia, Sofía |
