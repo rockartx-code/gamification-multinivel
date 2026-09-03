@@ -62,9 +62,15 @@ Patricia fue reasignada de Marcela a Verónica en noviembre. Quiere usar `DIC50`
 - Lupita vio el aviso nuevo del carrito ("Con este pedido llegas a 18.9 de 20 VP: te faltarían 1.1 VP") y compró igual; queda inactiva por 1.1 VP.
 - **Hueco de proceso**: en noviembre se le prometió "20% en tu próximo bote" en el correo de rechazo; nadie emitió nada y el carrito no tenía cómo aplicarlo. Corregido: al rechazar una devolución la gerente puede indicar una cortesía en %, que se convierte en un cupón personal de un solo uso (60 días) y viaja en el correo; los cupones admiten ahora `customerId` y rechazan a otro cliente ("Este cupón es personal"). A Lupita se le emitió el suyo por sistemas y soporte se lo mandó.
 
-### 2.7 Ola en curso
+### 2.7 Punto de venta: pago parcial, código de autorización, retiro y saldo (Nadia, 13-dic)
 
-_(Nadia: pago parcial con código de autorización, liquidación del saldo y retiro de efectivo; Guadalupe R.: pickup con pago en sucursal que nunca recoge.)_
+- Primer intento: el código 7412 fue rechazado en pago parcial y en retiro ("Codigo de autorizacion incorrecto", cinco veces). Causa: el turno de Sofía que lo fijaba se perdió con el reinicio del contenedor y quedó el código anterior; se fijó por API como acción de Sofía. Mientras tanto vendió un Klinhart de mostrador con cambio calculado ("Cambio: $520 sobre un total de $480") e hizo el corte dejando $500 de fondo ("Se retirará $820"). El Magnesio nuevo no tenía existencia en Del Valle: hueco operativo (nadie lo transfirió), no de plataforma.
+- Segundo intento, con el código correcto: **pago parcial** de Roberto (2 Boom, $500 en efectivo, "Saldo pendiente $340", folio POS-D7F97B91), **retiro** "entrega a gerencia" ("Retiro registrado") y **corte** ("Corte de caja registrado"). Verificado en la API.
+- **Hueco de producto**: cuando Roberto volvió a liquidar, no existía ninguna acción para cobrar el saldo de una venta con pago parcial; el "$340 pendiente" solo se veía al cobrar. Corregido: nueva ruta de abonos; la tarjeta de la venta muestra "Saldo pendiente" y "Cobrar saldo"; el abono entra a caja como cobro (efectivo al corte, tarjeta no) y cierra la venta al llegar a cero. Se prueba en el siguiente turno.
+
+### 2.8 Ola en curso
+
+_(Nadia liquida el saldo; después Beto despacha diciembre con una entrega personal y recibe una devolución con el checklist; Ivonne detecta clientes fríos; Claudia se activa el 20; cierre y pago de enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -80,6 +86,7 @@ _(Nadia: pago parcial con código de autorización, liquidación del saldo y ret
 | 8 | Baja | Carrito | Nadie avisaba que los VP netos de la compra no alcanzan la activación | Aviso "llegas a X de 20 VP" sin cupón |
 | 9 | Media | Carrito móvil | No había dónde escribir el cupón desde el celular | Cupón, VP y aviso de activación en el resumen móvil |
 | 10 | Media | Devoluciones | La cortesía prometida al rechazar no existía como descuento | Cupón personal de un uso emitido desde el rechazo y enviado en el correo |
+| 11 | Media | POS | Una venta con pago parcial no se podía liquidar después | Ruta de abonos, "Cobrar saldo" en la venta, abono al corte |
 
 ## 4. Hallazgos de negocio
 
