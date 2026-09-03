@@ -782,7 +782,7 @@ def _reevaluate_blocked_rows(beneficiary_ids: list, month_key: str) -> list:
         chain = utils._get_customer_upline_ids(order['customerId'], MAX_COMPRESSION_DEPTH)
         for b_id in chain:
             try:
-                utils._void_ledger_rows_for_order(b_id, month_key, oid)
+                utils._void_ledger_rows_for_order(b_id, month_key, oid, "recalculada: alguien de la línea se activó")
             except Exception as e:
                 utils._log("reeval_void_error", "ERROR", beneficiary=b_id, orderId=oid, err=e)
         net_amount = utils._to_decimal(order.get("netTotal"))

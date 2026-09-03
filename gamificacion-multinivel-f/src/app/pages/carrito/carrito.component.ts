@@ -787,8 +787,10 @@ export class CarritoComponent implements OnInit, OnDestroy {
           this.showToast('Orden creada. Redirigiendo...');
           this.router.navigate(['/orden', orderId]);
         },
-        error: () => {
-          this.showToast('No se pudo crear la orden.');
+        error: (err: { error?: { message?: string }; message?: string }) => {
+          // El backend explica por qué (p. ej. la sucursal no tiene existencia); el toast lo tapaba.
+          const motivo = err?.error?.message;
+          this.showToast(motivo ? `No se pudo crear la orden: ${motivo}` : 'No se pudo crear la orden.');
         }
       });
   }
