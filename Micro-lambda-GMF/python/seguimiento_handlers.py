@@ -226,11 +226,13 @@ def _situacion(ficha: dict, pedidos: list, ahora: datetime, cfg: dict, comision_
     dias_tardio = _entero(cfg.get("lateOrderDays"), 5)
 
     tiene_clabe = bool(str(ficha.get("clabeInterbancaria") or ficha.get("clabe") or "").strip())
-    if comision_confirmada > 0 and not tiene_clabe:
-        return "clabe_pendiente", None
+    # Primero el pedido tardío: "Pedido tardío 0" mientras Acciones decía "4 pagados sin envío"
+    # porque la CLABE pendiente se llevaba a la persona.
     tardio = _pedido_tardio(pedidos, ahora, dias_tardio)
     if tardio:
         return "pedido_tardio", tardio
+    if comision_confirmada > 0 and not tiene_clabe:
+        return "clabe_pendiente", None
     ultima_compra = next((p.get("createdAt") for p in pedidos if str(p.get("status") or "").lower() in _ESTADOS_COMPRA), None)
     dias_compra = _dias_desde(ultima_compra, ahora)
     dias_registro = _dias_desde(ficha.get("createdAt"), ahora)

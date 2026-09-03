@@ -243,7 +243,13 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         texto += f"\nSí, ya llegó: {datos.get('confirmUrl') or url}\nAún no llega: {datos.get('supportUrl') or ''}\n"
     elif extra:
         import re as _re
-        texto += "\n" + _re.sub(r"<[^>]+>", " ", extra).strip() + "\n"
+        # Las etiquetas en línea (<strong>) no dejan espacios ("con  $300.00  más")
+        # y el enlace va en su propia línea, no pegado al párrafo.
+        plano = _re.sub(r"</p>\s*<p[^>]*>", "\n", extra)
+        plano = _re.sub(r"<a [^>]*href=\"([^\"]+)\"[^>]*>([^<]*)</a>", r"\2: \1", plano)
+        plano = _re.sub(r"<[^>]+>", "", plano)
+        plano = _re.sub(r"[ \t]{2,}", " ", plano)
+        texto += "\n" + "\n".join(l.strip() for l in plano.strip().splitlines()) + "\n"
     return asunto, texto, _correo._email_shell(cuerpo)
 
 

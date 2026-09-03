@@ -61,11 +61,24 @@ def _log_movement(stock_id, m_type, product_id, qty, ref_id, user_id, reason="",
         "qty": int(qty),
         "referenceId": ref_id,
         "userId": user_id,
+        "userName": _nombre_empleado(user_id),
         "paymentMethod": payment_method,
         "reason": reason,
         "createdAt": utils._now_iso()
     }
     return utils._put_entity("INVENTORY_MOVEMENT", move_id, item)
+
+def _nombre_empleado(user_id) -> str:
+    """Nombre para la bitácora: almacén veía "Empleado 1788339615539" al no poder listar empleados."""
+    if user_id in (None, ""):
+        return ""
+    try:
+        emp = utils._get_by_id("EMPLOYEE", user_id)
+        if not emp and str(user_id).isdigit():
+            emp = utils._get_by_id("EMPLOYEE", int(user_id))
+        return str((emp or {}).get("name") or "")
+    except Exception:
+        return ""
 
 # --- HANDLERS: GESTIÓN DE ALMACENES ---
 

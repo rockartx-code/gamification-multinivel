@@ -63,6 +63,9 @@ def _enrich_items_commissionable(items: list) -> list:
         if pid is not None:
             product = utils._get_by_id("PRODUCT", pid)
             if product:
+                # Sin nombre el back office mostraba "Producto x1".
+                if not item.get("name") and product.get("name"):
+                    item["name"] = product.get("name")
                 if "commissionable" not in item:
                     item["commissionable"] = bool(product.get("commissionable", True))
                 if "vpPoints" not in item and product.get("vpPoints") is not None:
@@ -373,6 +376,8 @@ def _serialize_order_list_item(item: dict) -> dict:
         "paymentProvider": item.get("paymentProvider"),
         "createdAt": item.get("createdAt"),
         "updatedAt": item.get("updatedAt"),
+        # Sin esto la nota de la gerente era invisible hasta que almacén escribía otra.
+        "adminNotes": list(item.get("adminNotes") or []),
         # Factura (paquete C)
         **checkout_handlers.campos_factura(item),
     }
@@ -576,7 +581,10 @@ def handle_create_order(body, headers):
         buyer_type = "associate"
 
     if customer_id and buyer_type != "guest":
-        utils._get_by_id("CUSTOMER", customer_id)
+        ficha = utils._get_by_id("CUSTOMER", customer_id) or {}
+        # Un pedido creado por API sin customerName quedaba como "Cliente" en Pedidos.
+        if customer_name in ("", "Cliente", None) and ficha.get("name"):
+            customer_name = str(ficha.get("name"))
 
     raw_items = body.get("items", [])
     # Enriquecer ítems con la bandera commissionable del catálogo
@@ -906,7 +914,8 @@ def handle_add_order_note(order_id: str, body: dict, headers: dict) -> dict:
         return utils._json_response(400, {"message": "Escribe la nota"})
     actor = utils._extract_actor_from_bearer(headers or {})
     notas = list(order.get("adminNotes") or [])
-    notas.append({"text": texto[:1000], "by": str(actor.get("user_id") or headers.get("x-user-id") or "admin"), "at": utils._now_iso()})
+    notas.append({"text": texto[:1000], "by": str(actor.get("user_id") or headers.get("x-user-id") or "admin"),
+                  "byName": str(actor.get("name") or ""), "at": utils._now_iso()})
     updated = utils._update_by_id("ORDER", order_id, "SET adminNotes = :n, updatedAt = :u", {":n": notas[-200:], ":u": utils._now_iso()})
     utils._audit_event("order.note", headers, {"text": texto[:200]}, {"orderId": order_id})
     return utils._json_response(200, {"order": _con_totales_visibles(updated)})

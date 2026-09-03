@@ -46,13 +46,15 @@ def ultimo_corte(stock_id: str, attendant_user_id) -> dict:
 
 
 def ventas_desde(stock_id: str, attendant_user_id, since: Optional[str]) -> list:
-    """Ventas del operador en ese almacén sin corte, de cualquier forma de pago."""
+    """Ventas del operador en ese almacén sin corte, de cualquier forma de pago.
+
+    Se incluyen también las anteriores al último corte que nunca entraron a uno
+    (ventas con tarjeta de meses atrás seguían "sin corte" para siempre)."""
     ventas = [
-        s for s in utils._query_bucket("POS_SALE", sk_from=since or None)
+        s for s in utils._query_bucket("POS_SALE")
         if _stock_str(s.get("stockId")) == _stock_str(stock_id)
         and str(s.get("attendantUserId")) == str(attendant_user_id)
         and not s.get("cashCutId")
-        and (not since or str(s.get("createdAt") or "") > since)
     ]
     ventas.sort(key=lambda s: str(s.get("createdAt") or ""))
     return ventas

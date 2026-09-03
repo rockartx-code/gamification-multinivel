@@ -851,8 +851,22 @@ def handle_update_clabe(customer_id, body, headers):
         eav[":bi"] = bank_institution
 
     utils._update_by_id("CUSTOMER", customer_id, update_expr, eav)
+    _apagar_avisos_clabe(customer_id)
 
     return utils._json_response(200, {"ok": True, "clabeLast4": clabe[-4:]})
+
+
+def _apagar_avisos_clabe(customer_id) -> None:
+    """El aviso "Registra tu CLABE" seguía vigente después de capturarla."""
+    prefijo = f"NTF-CLABE-{utils._customer_id_str(customer_id)}-"
+    try:
+        for aviso in utils._query_bucket("NOTIFICATION"):
+            nid = str(aviso.get("notificationId") or "")
+            if nid.startswith(prefijo) and bool(aviso.get("active", True)):
+                utils._update_by_id("NOTIFICATION", nid, "SET active = :a, updatedAt = :u",
+                                    {":a": False, ":u": utils._now_iso()})
+    except Exception as ex:
+        utils._log_error("clabe_notice_off_error", ex)
 
 
 def handle_add_document(customer_id, body, headers):

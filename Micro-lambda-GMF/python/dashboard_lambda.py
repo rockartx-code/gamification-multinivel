@@ -307,7 +307,8 @@ def get_admin_warnings():
     if warning_cfg.get("showPendingTransfers", True) and pending_transfers:
         warnings.append({"type": "stocks", "text": f"{pending_transfers} transferencias pendientes por recibir", "severity": "medium"})
     if warning_cfg.get("showPosSalesToday", True) and pos_sales_today:
-        warnings.append({"type": "pos", "text": f"{pos_sales_today} ventas POS registradas hoy", "severity": "low"})
+        plural = "" if pos_sales_today == 1 else "s"
+        warnings.append({"type": "pos", "text": f"{pos_sales_today} venta{plural} POS registrada{plural} hoy", "severity": "low"})
 
     return utils._json_response(200, {"warnings": warnings})
 
@@ -587,8 +588,9 @@ def get_honor_board(month: str = None) -> dict:
             })
         return entries
 
-    # Cálculo mes actual
-    current = _compute_ranking(month_key)
+    # Cálculo mes actual. Con cero VP y cero VG nadie "está en el top 10":
+    # siete socias con 0 salían en el cuadro y recibían "Bajaste en el ranking".
+    current = [e for e in _compute_ranking(month_key) if e["vp"] > 0 or e["vg"] > 0]
 
     # Top 10 por VG
     by_vg_sorted = sorted(current, key=lambda e: e["vg"], reverse=True)[:10]
@@ -596,7 +598,7 @@ def get_honor_board(month: str = None) -> dict:
     by_vp_sorted = sorted(current, key=lambda e: e["vp"], reverse=True)[:10]
 
     # Posición anterior para delta (mes previo)
-    prev = _compute_ranking(prev_mk)
+    prev = [e for e in _compute_ranking(prev_mk) if e["vp"] > 0 or e["vg"] > 0]
     prev_vg_pos = {e["customerId"]: i + 1 for i, e in enumerate(sorted(prev, key=lambda e: e["vg"], reverse=True)[:10])}
     prev_vp_pos = {e["customerId"]: i + 1 for i, e in enumerate(sorted(prev, key=lambda e: e["vp"], reverse=True)[:10])}
 

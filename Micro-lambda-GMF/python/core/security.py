@@ -132,6 +132,7 @@ def _actor_de_sesion(session: dict) -> dict:
         "role": role,
         "privileges": _normalize_privileges(session.get("privileges")),
         "isCustomer": str(session.get("role") or "").strip().lower() == "cliente",
+        "name": str(session.get("name") or "").strip(),
     }
 
 def _extract_admin_actor(headers: dict) -> dict:
