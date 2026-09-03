@@ -204,7 +204,7 @@
           <ng-template #sinIntegracion>
             <p class="rounded-xl border border-olive-20 bg-white/60 px-3 py-2 text-xs text-muted">
               La integración con la paquetería está apagada: las guías se capturan a mano o por CSV.
-              Para encenderla, la gerencia activa <em>shipping.carrierIntegration.enabled</em> en Configuración.
+              Para encenderla, la gerencia activa la integración con la paquetería (Configuración → Envíos).
             </p>
           </ng-template>
           <p *ngIf="missingTracking.length && seleccion.size" class="mt-2 text-xs text-muted">
@@ -256,7 +256,8 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <ui-button size="sm" variant="secondary" [disabled]="isTracking || !integracion?.trackingEnabled" (pressed)="rastrear()"
-            [title]="integracion?.trackingEnabled ? 'Consulta a la paquetería todos los envíos en camino' : 'Enciende trackingEnabled en Configuración para consultar a la paquetería'">
+            [disabledReason]="isTracking ? 'Consultando…' : (!integracion?.trackingEnabled ? 'El rastreo con la paquetería está apagado: la gerencia lo enciende en Configuración → Envíos.' : '')"
+            title="Consulta a la paquetería todos los envíos en camino">
             <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> {{ isTracking ? 'Consultando…' : 'Consultar paquetería ahora' }}
           </ui-button>
           <ui-button size="sm" variant="ghost" [disabled]="isClosing || !integracion?.enabled" (pressed)="cerrar()"

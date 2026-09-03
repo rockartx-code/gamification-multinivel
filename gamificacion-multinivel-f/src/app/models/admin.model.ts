@@ -572,6 +572,8 @@ export interface AdminWarning {
   type: string;
   text: string;
   severity: 'high' | 'medium' | 'low';
+  /** Mes (reloj del servidor) al que lleva "Ir a resolver" en los avisos de comisiones. */
+  monthKey?: string;
 }
 
 export interface Coupon {

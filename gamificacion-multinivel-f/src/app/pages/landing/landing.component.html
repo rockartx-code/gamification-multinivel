@@ -113,12 +113,6 @@
             <feature-badge icon="fa-solid fa-bolt text-gold" label="Gratis"></feature-badge>
             <feature-badge icon="fa-solid fa-heart text-forest" label="Con apoyo"></feature-badge>
           </div>
-          <!-- Paquete B: nadie sale "dado de alta como vendedor" sin saberlo -->
-          <p class="mt-3 text-xs text-gray-600">
-            Te registras como <strong class="text-main">cliente</strong>: compras a precio de lista, sin compromiso y sin datos bancarios.
-            El modo socio (descuento por volumen, tu código y comisiones) se activa solo si tú lo pides.
-            <a class="font-semibold text-accent hover:underline" [routerLink]="['/modo-socio']">Ver cómo funciona</a>
-          </p>
         </div>
       </div>
     </div>
@@ -616,6 +610,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Paquete B: nadie sale "dado de alta como vendedor" sin saberlo. Va dentro de
+         #formBlock para que salga con y sin patrocinador (en /#/landing también). -->
+    <p *ngIf="registrationState !== 'pending'" class="mt-3 text-xs text-gray-600">
+      Te registras como <strong class="text-main">cliente</strong>: compras a precio de lista, sin compromiso y sin datos bancarios.
+      El modo socio (descuento por volumen, tu código y comisiones) se activa solo si tú lo pides.
+      <a class="font-semibold text-accent hover:underline" [routerLink]="['/modo-socio']">Ver cómo funciona</a>
+    </p>
   </ng-template>
 
 

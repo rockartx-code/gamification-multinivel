@@ -88,6 +88,8 @@ export interface IndicadoresCliente {
   monthKey: string;
   /** Neto comprado este mes (sí se acredita aunque esté en modo cliente). */
   monthSpend: number;
+  /** VP netos acumulados del mes (también se acumulan en modo cliente). */
+  monthVp?: number;
   /** Suma de `partnerSavings` de los pedidos pagados del mes. */
   monthSavingsIfPartner: number;
   currentRateIfPartner: number;

@@ -349,7 +349,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }
     }
     if (!this.isGuest) {
-      links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
+      if (!this.isClientMode) {
+        // §2.2: en modo cliente no se ve red ni VP; el ranking es por VG y VP.
+        links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
+      }
       links.push({ id: 'perfil', icon: 'fa-circle-user', label: 'Mi perfil' });
     }
 
@@ -1319,7 +1322,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const monthKey = this.honorBoard?.monthKey || '';
     let yaMostrado = false;
     try { yaMostrado = localStorage.getItem(`honorBoardModalShown:${monthKey}`) === '1'; } catch { yaMostrado = false; }
-    if (this.isInTop10 && !this.honorBoardModalShown && !yaMostrado) {
+    if (this.isInTop10 && !this.isClientMode && !this.honorBoardModalShown && !yaMostrado) {
       this.honorBoardModalShown = true;
       try { localStorage.setItem(`honorBoardModalShown:${monthKey}`, '1'); } catch { /* sin almacenamiento */ }
       setTimeout(() => {

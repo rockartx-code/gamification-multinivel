@@ -609,17 +609,20 @@
                 <span>Descuento</span>
                 <span class="text-gold">-{{ formatMoney(discount) }}</span>
               </div>
-              <div class="flex items-center justify-between text-muted">
-                <span>Nivel de descuento</span>
-                <span class="text-main">{{ discountLevelLabel }}</span>
-              </div>
-              <div class="flex items-center justify-between text-muted">
-                <span>Descuento aplicado</span>
-                <span class="text-gold">{{ discountLabel }}</span>
-              </div>
-              <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
-                {{ discountUpgradeMessage }}
-              </div>
+              <!-- Con la tabla única montada, el bloque viejo de "Nivel" decía otra cosa con los mismos nombres -->
+              <ng-container *ngIf="!tablaDescuentoVisible">
+                <div class="flex items-center justify-between text-muted">
+                  <span>Nivel de descuento</span>
+                  <span class="text-main">{{ discountLevelLabel }}</span>
+                </div>
+                <div class="flex items-center justify-between text-muted">
+                  <span>Descuento aplicado</span>
+                  <span class="text-gold">{{ discountLabel }}</span>
+                </div>
+                <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+                  {{ discountUpgradeMessage }}
+                </div>
+              </ng-container>
               <!-- Ola B · I2: la misma tabla de descuento y VP que el panel (paquete B) -->
               <ui-tabla-descuento *ngIf="tablaDescuentoVisible && plan"
                 [tiers]="plan.descuento.tramos"
@@ -798,17 +801,20 @@
           <span>Descuento</span>
           <span class="text-gold">-{{ formatMoney(discount) }}</span>
         </div>
-        <div class="flex items-center justify-between text-muted">
-          <span>Nivel de descuento</span>
-          <span class="text-main">{{ discountLevelLabel }}</span>
-        </div>
-        <div class="flex items-center justify-between text-muted">
-          <span>Descuento aplicado</span>
-          <span class="text-gold">{{ discountLabel }}</span>
-        </div>
-        <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
-          {{ discountUpgradeMessage }}
-        </div>
+        <!-- Con la tabla única montada, el bloque viejo de "Nivel" decía otra cosa con los mismos nombres -->
+        <ng-container *ngIf="!tablaDescuentoVisible">
+          <div class="flex items-center justify-between text-muted">
+            <span>Nivel de descuento</span>
+            <span class="text-main">{{ discountLevelLabel }}</span>
+          </div>
+          <div class="flex items-center justify-between text-muted">
+            <span>Descuento aplicado</span>
+            <span class="text-gold">{{ discountLabel }}</span>
+          </div>
+          <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+            {{ discountUpgradeMessage }}
+          </div>
+        </ng-container>
         <!-- Ola B · I2: la misma tabla de descuento y VP que el panel (paquete B) -->
         <ui-tabla-descuento *ngIf="tablaDescuentoVisible && plan"
           [tiers]="plan.descuento.tramos"

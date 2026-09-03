@@ -446,6 +446,8 @@ export class AdminComponent implements OnInit {
     { value: 'fixed', label: 'Monto fijo ($)' }
   ];
   currentOrderStatus: AdminOrder['status'] = 'pending';
+  /** Mes que abre Pagos del mes al llegar desde un aviso (WP-A). */
+  pagosMesMonth = '';
   orderStockFilter: string = '';
   expandedOrderDetailId: string | null = null;
   isActionsModalOpen = false;
@@ -979,6 +981,11 @@ export class AdminComponent implements OnInit {
       case 'stocks':
       case 'pos':
         this.loadStocksAndPosState();
+        // La tabla única de descuento del POS lee `businessConfig`, que solo se
+        // llenaba al guardar Configuración: salía sin tramos y cobraba sin descuento.
+        if (view === 'pos' && !this.businessConfig) {
+          this.adminControl.loadBusinessConfig().subscribe({ next: () => this.requestViewUpdate(), error: () => undefined });
+        }
         this.adminControl.loadCustomers().subscribe();
         if (!this.adminControl.hasLoadedOrders()) {
           this.adminControl.loadOrders().subscribe();
@@ -3403,7 +3410,7 @@ export class AdminComponent implements OnInit {
     this.isActionsModalOpen = true;
   }
 
-  resolveWarning(warning: { type: string }): void {
+  resolveWarning(warning: { type: string; monthKey?: string }): void {
     this.isActionsModalOpen = false;
     const map: Record<string, AdminViewId> = {
       commissions: 'customers',
@@ -3413,16 +3420,21 @@ export class AdminComponent implements OnInit {
       assets: 'products',
       stocks: 'stocks',
       pos: 'pos',
-      payments: 'orders'
+      payments: 'orders',
+      refunds: 'orders'
     };
     const target: AdminViewId = map[warning.type] ?? 'stats';
     if (warning.type === 'shipping') {
       this.currentOrderStatus = 'paid';
     } else if (warning.type === 'payments') {
       this.currentOrderStatus = 'pending';
+    } else if (warning.type === 'refunds') {
+      this.currentOrderStatus = 'cancelled';
     }
     this.setView(target);
     if (warning.type === 'commissions_ready' || warning.type === 'commissions_no_clabe') { // WP-A
+      // El aviso se calcula con el reloj del servidor: Pagos del mes abre ese mismo mes.
+      this.pagosMesMonth = warning.monthKey || this.pagosMesMonth;
       setTimeout(() => document.getElementById('pagos-mes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
     }
   }

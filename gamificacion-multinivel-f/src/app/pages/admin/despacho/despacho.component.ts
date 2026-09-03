@@ -287,6 +287,7 @@ export class DespachoComponent implements OnInit {
     const conocidos = new Set(this.pendientes.map((p) => p.id));
     let cargadas = 0;
     const desconocidos: string[] = [];
+    let seleccionCambio = false;
     texto.split(/\r?\n/).forEach((linea) => {
       const celdas = linea.split(/[,;\t]/).map((c) => c.trim());
       if (!celdas[0] || ['orderid', 'pedido', 'folio', 'order', 'id'].includes(celdas[0].toLowerCase())) {
@@ -298,10 +299,16 @@ export class DespachoComponent implements OnInit {
         return;
       }
       this.guias[orderId] = { carrier, trackingNumber: tracking };
-      this.seleccion.add(orderId);
+      if (!this.seleccion.has(orderId)) {
+        this.seleccion.add(orderId);
+        seleccionCambio = true;
+      }
       cargadas += 1;
     });
-    this.surtido = null;
+    // Capturar guías no invalida el surtido: solo si el CSV sumó pedidos a la selección.
+    if (seleccionCambio) {
+      this.surtido = null;
+    }
     this.csvMessage = `${cargadas} guía(s) cargadas en la lista`
       + (desconocidos.length ? `; sin pedido pagado pendiente: ${desconocidos.join(', ')}.` : '.');
   }

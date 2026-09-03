@@ -429,6 +429,13 @@ export class AdminControlService {
     return this.api.getBusinessConfig();
   }
 
+  /** Carga la configuración en `data` si aún no está: el POS lee de ahí la tabla de descuento. */
+  loadBusinessConfig(): Observable<AppBusinessConfig> {
+    return this.api.getBusinessConfig().pipe(
+      tap((config) => this.patchData({ businessConfig: config }))
+    );
+  }
+
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.api.saveBusinessConfig(payload).pipe(
       tap((config) => {

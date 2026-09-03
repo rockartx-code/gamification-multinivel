@@ -69,14 +69,27 @@ export class PagosMesComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     this.buildMonthOptions();
     this.monthKey = this.month || this.previousMonthKey();
+    this.ensureMonthOption(this.monthKey);
     this.load();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['month'] && !changes['month'].firstChange && this.month && this.month !== this.monthKey) {
       this.monthKey = this.month;
+      this.ensureMonthOption(this.monthKey);
+      this.selected.clear();
+      this.clearMessages();
       this.load();
     }
+  }
+
+  /** El mes del aviso viene del reloj del servidor: si el selector (reloj del navegador) no lo trae, se añade. */
+  private ensureMonthOption(key: string): void {
+    if (!key || this.monthOptions.some((o) => o.value === key)) {
+      return;
+    }
+    this.monthOptions.push({ value: key, label: this.labelForMonth(key) });
+    this.monthOptions.sort((a, b) => (a.value < b.value ? 1 : a.value > b.value ? -1 : 0));
   }
 
   // ─── Carga ────────────────────────────────────────────────────────────

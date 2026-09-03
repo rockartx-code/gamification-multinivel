@@ -1016,7 +1016,7 @@
                 </div>
               </div>
             </div>
-            <app-pagos-mes id="pagos-mes" class="block scroll-mt-4" *ngIf="hasPermission('commissions_register_payment')"></app-pagos-mes> <!-- WP-A -->
+            <app-pagos-mes id="pagos-mes" class="block scroll-mt-4" [month]="pagosMesMonth" *ngIf="hasPermission('commissions_register_payment')"></app-pagos-mes> <!-- WP-A -->
           </div>
 
           <!-- ============================================================ -->

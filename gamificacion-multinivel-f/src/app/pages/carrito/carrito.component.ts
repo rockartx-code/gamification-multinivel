@@ -328,9 +328,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return Number(data?.myNetSpend ?? 0) || 0;
   }
 
-  /** VP netos acumulados del mes según el panel. */
+  /** VP netos acumulados del mes según el panel (en modo cliente el panel vacía `vp`: se usa el indicador). */
   get monthVpSocio(): number {
-    return Number(this.dashboardControl.data?.vp ?? 0) || 0;
+    const data = this.dashboardControl.data;
+    const indicador = data?.clientIndicators?.monthVp;
+    if (this.modoCuenta === 'cliente' && indicador != null) {
+      return Number(indicador) || 0;
+    }
+    return Number(data?.vp ?? 0) || 0;
   }
 
   /** PC de lista del carrito (sin descuento): la tabla los convierte a VP netos con la tasa del tramo. */
@@ -660,7 +665,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     const enZona = this.pickupOptions.filter((s) => s.inArea);
     if (!enZona.length) {
-      return `Recoger en sucursal no está disponible en tu zona. Hay sucursal en: ${this.pickupCitiesLabel}. Te lo enviamos a domicilio.`;
+      // Sin ciudad en el almacén se nombra la sucursal, no su dirección.
+      const donde = this.pickupCitiesLabel || this.pickupOptions.map((s) => s.name).filter(Boolean).join(', ');
+      return `Recoger en sucursal no está disponible en tu zona. Hay sucursal en: ${donde}. Te lo enviamos a domicilio.`;
     }
     const faltantes = new Set<string>();
     enZona.forEach((s) => s.missing.forEach((m) => faltantes.add(m)));
