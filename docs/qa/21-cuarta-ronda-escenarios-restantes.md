@@ -76,9 +76,16 @@ Ivonne revisó las 16 fichas cruzando ficha, las siete pestañas de Pedidos y Es
 - Dos fichas sin teléfono (Guadalupe R., Tomás): el registro no lo exige. Propuesta en §4.
 - La columna "Mes anterior" de la lista se refiere a comisiones, no a compras; con "Última compra" al lado deja de confundir.
 
-### 2.9 Ola en curso
+### 2.9 Reactivación por WhatsApp (Rosa Elena, 14-dic, móvil)
 
-_(Rosa Elena recompra tras el WhatsApp de Ivonne; Beto despacha diciembre con una entrega personal en CDMX y recibe una devolución con el checklist; Claudia se activa el 20; cierre y pago de enero.)_
+Tras el mensaje de Ivonne, Rosa Elena entra, ve por fin sus dos compras de invitada ligadas a su cuenta y compra otro Colágeno ($829 con envío) pidiendo que se lo lleven en persona. Verificado: pedido pagado y las tres órdenes en su panel.
+
+- La "entrega personal" existe solo del lado del almacén; el cliente no puede pedirla al comprar (Ivonne lo resuelve avisando a bodega). Propuesta en §4.
+- Su panel no dice quién es su coach: muestra "Patrocinador: FindingU" y el WhatsApp genérico de soporte, no a Ivonne. Propuesta en §4.
+
+### 2.10 Ola en curso
+
+_(Beto despacha los diez pedidos de diciembre, uno con entrega personal en CDMX; después la devolución de Patricia con checklist, la activación de Claudia el 20 y el cierre de enero.)_
 
 ## 3. Bugs de producción corregidos en esta ronda
 
@@ -107,6 +114,7 @@ _(Rosa Elena recompra tras el WhatsApp de Ivonne; Beto despacha diciembre con un
 6. Los rangos son inalcanzables a la escala de esta red (BRONCE pide 4,500 VG; la red suma 91). No es un defecto, pero conviene un rango de entrada (por ejemplo 300 VG y 2 líneas) para que el Cuadro de Honor muestre algo más que "—".
 7. Los códigos de recuperación se invalidan entre sí: quien pide dos (por impaciencia) ve "inválido o expirado" con el primero. Propuesta: aceptar el último código y decir en el correo "usa el código más reciente".
 8. El teléfono es opcional al registrarse y la recuperación de cuentas es por WhatsApp: dos de cuatro fríos no tenían número. Propuesta: pedir celular en el registro (con explicación) y en el primer pedido.
+9. La entrega personal no se puede elegir al comprar (solo el almacén la registra) y la cartera "FindingU" no muestra a la ejecutiva como coach en el panel del cliente. Propuestas: opción "entrega en persona" por zona en el checkout, y que el patrocinador por defecto muestre nombre y WhatsApp de la ejecutiva asignada.
 
 ## 5. Pendiente
 
