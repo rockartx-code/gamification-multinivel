@@ -9,3 +9,4 @@ perfiles/
 credenciales.json
 node_modules
 node_modules/
+metricas/*.json

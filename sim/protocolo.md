@@ -1,77 +1,103 @@
-# Protocolo de la simulación
+# Protocolo de la simulación — ronda 6 (marzo de 2027)
+
+Mundo nuevo. Las rondas 1 a 5 (septiembre 2026 – enero 2027, 95 diarios, 30 personas) están archivadas en
+`archivo/rondas-01-05-diarios-mensajes.zip`; sus conclusiones viven en `docs/qa/18` a `docs/qa/23`.
+Nadie de aquellas rondas existe en este mundo: personal nuevo, clientes nuevos, catálogo con fichas
+completas, tres sucursales con ciudad y la configuración encendida (paquetería simulada, secreto del
+webhook, correo del corte).
+
+Lo que cambia respecto a las rondas anteriores: **ya no basta con saber si algo funciona**. Esta ronda
+mide **cuánto cuesta usarlo** y **cómo se siente**.
 
 ## Mundo
-- Frontend real en :4321, backend real (8 Lambdas) en :4400 sobre DynamoDB en memoria persistida.
-- Correo interceptado en `buzon/`. Reloj simulado (`dia.sh`). Pago vía pasarela simulada. Envíos con tarifas fijas.
+
+- Frontend real en `http://localhost:4321`, backend real (8 Lambdas) en `http://localhost:4400` sobre
+  DynamoDB en memoria persistida. Correo interceptado (`leerCorreo`). Reloj simulado (`dia.sh`).
+  Pasarela de pago simulada. Paquetería simulada encendida.
+- Arranque: **2 de marzo de 2027**. Personal: Renata Bustos (gerente), Toño Vera (almacén),
+  Mireya Solano (caja), Gaby Ledesma (coach), Alma Rentería (finanzas). Socia con red vacía:
+  Paulina Ríos (código `PAULINA-PR`). Contraseñas en `credenciales.json`.
 - Limitación conocida: Estadísticas (Athena) queda vacía.
 
-## Reparto
-| Persona | Modelo | Origen | Entra por |
-|---|---|---|---|
-| Lucía Fernández, 38 | sonnet | compra suplementos habitualmente, búsqueda orgánica | `/#/` |
-| Rodrigo Aguilar, 29 | opus | ya está en otra red; su amiga Marcela le mandó su link | `/#/landing/<código Marcela>` |
-| Karla Méndez, 24 | haiku, MÓVIL | anuncio en Instagram del producto "Boom" | `/#/tienda` |
-| Diego (amigo de Rodrigo) | haiku | solo aparece si Rodrigo comparte su link | el link que Rodrigo comparta |
-| Beto Salinas | haiku | almacén y pedidos, sin entrenamiento | back office |
-| Sofía Herrera | sonnet | gerente, todos los permisos, sin entrenamiento | back office |
-| Paco Luna | haiku | cajero POS; solo si alguien elige recoger en tienda | back office |
-
 ## Reglas para los agentes-persona
-- Reciben SOLO su historia y su punto de entrada. Ninguna meta ni instrucción de uso.
-- Prohibido leer código. Solo pantalla y correo.
-- Pueden mandar UN mensaje estilo WhatsApp a "Soporte Finding'U" por cada duda. Lo contesto yo, con lo que contestaría un soporte real (sin internos). Cada pregunta se registra como fricción.
-- Los empleados atienden lo que el sistema les muestre. Tampoco reciben metas.
 
-## Calendario
-| Día | Fecha | Qué pasa |
-|---|---|---|
-| 1 | 02-sep | Llegan los tres clientes. Turno de tarde de Beto y Sofía. |
-| 2 | 03-sep | Correos, seguimiento, despacho. |
-| 5 | 06-sep | Entregas. Rodrigo (si quiere) comparte. Karla recibe. |
-| 15 | 17-sep | Segunda compra / activación mensual. |
-| 31→1 | 01-oct | Cierre de mes: comisiones del mes anterior, solicitud de pago, ranking. |
-| 41 | 12-oct | Tras el día de pago (10). |
+1. **Recibes solo tu historia y tu punto de entrada.** Ninguna instrucción de uso de la plataforma.
+   Si no encuentras algo, no lo busques en el código: descríbelo como lo vive una persona real y sigue.
+2. **Prohibido leer el código del repositorio.** Solo pantalla y correo.
+3. **Un solo navegador a la vez** en todo el arnés (el contenedor se queda sin memoria con dos).
+   Ábrelo con `abrirNavegador`, ciérralo con `cerrar()` al terminar.
+4. Puedes mandar mensajes de WhatsApp a **Soporte Finding'U** (los clientes) o a tu **superior**
+   (los empleados). Cada mensaje se registra con `bitacora.preguntar(...)` y se anota en `helpdesk.md`.
+   Una pregunta no es un fracaso: es la medida de lo que la pantalla no explicó.
+5. **Nada cuenta hasta verificarlo en pantalla.** Si dices "quedó guardado", recarga y compruébalo.
 
-## Cobertura
-`servidor.log` registra cada llamada HTTP. Al final se cruza con las 75 rutas que expone el frontend y con las acciones de cada pantalla para saber qué alcanzó cada persona y qué nunca tocó nadie.
+## Lo que hay que registrar (esto es la ronda)
 
-## Pasarela simulada y tareas programadas (paquete H)
-La pasarela guarda por pedido su `estado` (`pending` → `approved`) y la `notification_url` con el `webhookSecret` que anexó el checkout. Además de la página de pago (`/__sim/pago/<pedido>`, botones Pagar / Cancelar), hay tres acciones para "sistemas":
+Todo se registra con la bitácora del arnés (`sim/lib/persona.mjs`), que además **cuenta sola** los clics,
+las teclas, las pantallas, las recargas y **cuánto tardaste en tocar algo después de que apareció cada
+pantalla** (el tiempo de lectura antes de actuar).
 
-| Acción | Qué simula | Para probar |
-|---|---|---|
-| `POST /__sim/pago/<pedido>/confirmar` | La clienta paga y MercadoPago llama al webhook **con el secreto** de la `notification_url` (si la config `payments.mercadoLibre.webhookSecret` está definida). | El camino feliz del pago. |
-| `POST /__sim/pago/<pedido>/pagar-sin-aviso` | El pago quedó aprobado en la pasarela pero el webhook se perdió. El pedido sigue "Pendiente". | Pedidos → **Conciliar pagos** (o `POST /orders/conciliacion`) acredita el pedido. |
-| `POST /__sim/pago/<pedido>/reenviar-webhook` | MercadoPago reintenta la notificación de un pago ya avisado. | Idempotencia: responde `idempotent: true`, sin segundo correo ni comisiones dobles. |
+```js
+import { abrirNavegador, leer, controles, captura, leerCorreo, hoy } from '../sim/lib/persona.mjs';
+const { pagina, bitacora: b, consola, cerrar } = await abrirNavegador({
+  movil: true, perfil: 'mariana', persona: 'Mariana Robles, 29', rol: 'cliente',
+});
 
-**Tareas programadas.** Al cambiar la fecha con `dia.sh` / `POST /__sim/reloj`, el servidor invoca con el token de superadmin cada ruta que los lambdas declaran en `TAREAS_PROGRAMADAS` (hoy: `POST /orders/suscripciones/generar` y `POST /orders/conciliacion`; las de otros paquetes se descubren solas). Son idempotentes por día. `POST /__sim/tareas` las dispara a mano sin mover el reloj; la respuesta trae el resultado de cada una.
+b.tarea('comprar un bote de colágeno');          // lo que QUIERO, con mis palabras
+b.pensar('creo que "PC" son puntos, pero…');      // lo que razono ANTES de actuar
+b.duda('no sé si esto es una tienda o un negocio', '#/tienda');
+b.atoron('le piqué a "Ver beneficios" y no pasó nada');
+b.reintento('el código de recuperación ya no servía');
+b.preguntar('soporte', '¿el envío es gratis o no?');   // o 'superior', 'patrocinadora', 'familiar'
+b.sentir('frustración', 4, 'el envío gratis se volvió $129 al poner mi código postal');
+await b.errores(pagina);                          // recoge los mensajes de error visibles
+await b.lograr(pagina, { facilidad: 5, confianza: 4, comentario: '…' });
+// o: await b.abandonar('no encontré dónde poner el cupón', pagina, { facilidad: 2 });
+```
 
-## Añadido a mitad de simulación
-| Ivonne Castro | sonnet | ejecutiva de recuperación de cuentas: "maneja" al patrocinador por defecto FindingU (que no es una cuenta sino un valor fijo del backend). Debe detectar clientes que se enfriaron desde la plataforma y contactarlos por WhatsApp como su coach | back office (Clientes, Pedidos, Estadísticas, Cuadro de Honor) |
+- `facilidad`: 1 (muy difícil) a 7 (muy fácil). Es la pregunta de siempre: *¿qué tan fácil fue esto?*
+- `confianza`: 1 a 5. *¿Qué tan seguro estás de que de verdad quedó guardado?*
+- Registra **una tarea por cada cosa que querías lograr**, aunque no la logres. El arnés cuenta cuántos
+  clics, cuántas pantallas y cuántos segundos te costó cada una.
+- `pensar()` es la cadena de pensamiento: escribe lo que estás razonando **antes** de actuar. El tiempo
+  entre una llamada y la anterior es el que tardaste en entender la pantalla, y se guarda.
 
-Sus WhatsApp salientes (`📱 A [nombre]:`) los entrego yo al agente-cliente correspondiente; las respuestas vuelven a ella.
+Al final, la opinión sobre cómo se ve y cómo se siente (todo 1 a 10 salvo lo indicado):
 
-## Tercera ola (Día 5): prospectos desde redes, sin conocer a la socia ni al producto
-| Persona | Modelo | Canal | Entra por |
-|---|---|---|---|
-| Tomás Ibarra, 21 | haiku, MÓVIL | TikTok de Marcela (energía sin café), link en bio | `/#/landing/MARCELA-MO` |
-| Patricia Solís, 47 | sonnet, MÓVIL | Publicación de Instagram de Marcela (colágeno), solo código "MARCELA-MO" | `/#/` y tiene que encontrar dónde va el código |
-| Andrés Quintero, 35 | opus | Video de YouTube de Marcela ("cómo funciona el plan"), link y código en la descripción | `/#/landing/MARCELA-MO` |
+```js
+b.opinar({
+  primeraImpresion: 8, confianzaQueTransmite: 6, legibilidad: 7, coherencia: 7,
+  sensacionMovil: 6,                       // null si no usaste celular
+  tresAdjetivos: ['sobria', 'cara', 'fría'],
+  mejorPantalla: 'la tienda', peorPantalla: 'el carrito en el celular',
+  seParece: 'a una tienda de suplementos gringa, no a una app mexicana',
+  recomendarias: 7,                        // 0 a 10
+  volverias: 'sí, pero solo por el producto',
+  comentario: 'se ve profesional pero no me habla a mí',
+});
+```
 
-## Cuarta ola (Día 5): anuncios pagados por FindingU, sin patrocinador (cartera de Ivonne)
-| Persona | Modelo | Canal | Entra por |
-|---|---|---|---|
-| Héctor Lara, 52 | sonnet | Anuncio de búsqueda en Google ("omega 3 alta pureza precio") | `/#/tienda` |
-| Rosa Elena Mendoza, 58 | haiku, MÓVIL | Anuncio en Facebook ("Suplementos premium · envío gratis") | `/#/` |
-| Iván Robles, 28 | opus | Anuncio pre-roll de YouTube (Finding Pro, proteína con colágeno) | `/#/tienda` |
+## Diario
 
-## Calendario ejecutado (además del previsto)
-| Fecha | Qué pasó |
+Además de la bitácora, cada persona escribe `diarios/<nombre>-<fecha>.md` en primera persona:
+hora, qué vio **textualmente**, qué hizo, qué sintió, qué le costó entender y qué reportaría.
+Capturas en `capturas/`. El diario es la voz; la bitácora es la medida.
+
+## Cómo se lee la ronda
+
+`python3 sim/metricas.py` cruza todas las bitácoras: tabla por persona, tabla por tarea y totales
+(clics por tarea lograda, segundos de reflexión, preguntas a soporte y a superiores, atorones,
+reintentos, facilidad, confianza, estética). `python3 sim/cobertura.py` sigue midiendo qué rutas
+tocó la ronda.
+
+## Pasarela simulada y tareas programadas
+
+| Acción | Qué simula |
 |---|---|
-| 17-sep (Día 15) | Relevos cruzados: Marcela lee a Rodrigo y a Andrés y contesta con sus cifras reales; Andrés hace su punto de equilibrio; Rodrigo cierra a un mes; Iván y Rosa Elena reciben a soporte; Sofía registra las mermas y los envíos (las guías las genera administración, no el almacén); Beto se detiene antes de inventar guías; Lucía envía el paquete de devolución; Patricia vive once días sin paquete. |
-| 22-sep | Estafeta confirma entregas; Beto marca entregados y recibe la devolución con foto ("Recibir paquete" = validada). |
-| 1-oct | Cierre de mes: nadie cobra; Marcela cierra su cuenta; Ivonne cierra su cartera en cero; Sofía no puede dar de baja datos (dos ARCO) ni cancelar un pedido pendiente; reembolsa a Lucía $800 con comprobante subido a mano; Héctor pide cancelar y no ser contactado. Paco (cajero) abre la tienda física: dos ventas de mostrador (público en general y un socio) y un corte de caja que falla. |
-| 2-oct | Lucía reclama los $165 del envío de regreso; Paco reintenta el corte tras la corrección. |
+| `POST /__sim/pago/<pedido>/confirmar` | La clienta paga y MercadoPago llama al webhook con el secreto. |
+| `POST /__sim/pago/<pedido>/pagar-sin-aviso` | El pago se aprobó pero el webhook se perdió (para probar "Conciliar pagos"). |
+| `POST /__sim/pago/<pedido>/reenviar-webhook` | Reintento de notificación (idempotencia). |
 
-Soporte se presenta a los clientes como "Daniel, Soporte Finding'U" y contesta solo con lo que contestaría un soporte real, sin internos; cuando promete algo fuera del sistema (factura, ficha técnica, envío de retorno) queda registrado como promesa incumplida si el sistema no lo puede sostener.
-
+Al mover la fecha con `dia.sh`, el servidor dispara las tareas programadas que declaran los lambdas
+(avisos de comisiones bloqueadas, rastreo y cierre de envíos, suscripciones, conciliación).
+`POST /__sim/tareas` las dispara sin mover el reloj.
