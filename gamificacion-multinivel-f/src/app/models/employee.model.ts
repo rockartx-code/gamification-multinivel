@@ -10,6 +10,8 @@ export interface AdminEmployee {
   active: boolean;
   createdAt?: string;
   tempPassword?: string;
+  // paquete D · bodega por defecto del empleado
+  defaultStockId?: string;
 }
 
 export interface CreateEmployeePayload {

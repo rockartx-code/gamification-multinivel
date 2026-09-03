@@ -92,6 +92,11 @@ export interface AdminOrder {
   invoiceIssuedAt?: string;
   invoiceFolio?: string;
   invoiceFileUrl?: string;
+  // paquete D · despacho y paquetería
+  shippedAt?: string;
+  shippedBy?: string;
+  deliveredBy?: string;
+  deliverySignedBy?: string;
 }
 
 export interface AdminRefundPayload {

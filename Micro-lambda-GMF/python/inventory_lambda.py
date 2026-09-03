@@ -2,6 +2,15 @@ import json
 import boto3
 import core_utils as utils
 from core import order_emails # Importado desde la Lambda Layer
+import despacho_handlers  # paquete D
+
+# Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus
+# rutas y devuelve None si no son suyas. D la introduce; E añade la suya.
+_EXTENSIONES = [despacho_handlers]
+
+# Tareas programables (docs/arquitectura/23 §0.3): el reloj del harness y el
+# programador externo las descubren por este atributo.
+TAREAS_PROGRAMADAS = list(despacho_handlers.TAREAS_PROGRAMADAS)
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -146,10 +155,14 @@ def handle_transfers(method, body, query, transfer_id=None, headers=None):
         if error: return utils._json_response(400, {"message": error})
 
         tid = f"TRF-{utils.uuid.uuid4().hex[:8].upper()}"
+        # createdBy: el resumen de turno (paquete D) lista las transferencias que
+        # cada persona creó; antes solo se guardaba quién la recibió.
+        creador = utils._extract_actor(headers or {}).get("user_id") or (headers or {}).get("x-user-id") or body.get("createdByUserId")
         item = {
             "entityType": "stockTransfer", "transferId": tid,
             "sourceStockId": source_id, "destinationStockId": body.get("destinationStockId"),
-            "lines": lines, "status": "pending", "createdAt": utils._now_iso()
+            "lines": lines, "status": "pending", "createdAt": utils._now_iso(),
+            "createdBy": str(creador) if creador not in (None, "") else None,
         }
         utils._put_entity("STOCK_TRANSFER", tid, item)
         return utils._json_response(201, {"transfer": item})
@@ -719,7 +732,7 @@ def _route_stocks(method: str, segments: list, body: dict, query: dict, headers:
             if method == "POST":
                 err = utils._require_admin(headers, "stock_create_transfer")
                 if err: return err
-            return handle_transfers(method, body, query)
+            return handle_transfers(method, body, query, headers=headers)
 
         # /stocks/movements
         if segments[1] == "movements":
@@ -874,6 +887,11 @@ def lambda_handler(event, context):
     segments = request.segments
 
     try:
+        for extension in _EXTENSIONES:
+            respuesta = extension.atender(request)
+            if respuesta is not None:
+                return respuesta
+
         if not segments: return utils._json_response(200, {"service": "inventory-pos"})
 
         root = segments[0]

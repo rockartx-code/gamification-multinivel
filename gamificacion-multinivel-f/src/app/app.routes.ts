@@ -93,5 +93,17 @@ export const routes: Routes = [
     // Paquete B: landing pública "Modo socio" (el plan completo y el botón para activarlo).
     path: 'modo-socio',
     component: ModoSocioComponent
+  },
+  {
+    // Paquete D · despacho en bloque con lista de surtido
+    path: 'admin/despacho',
+    loadComponent: () => import('./pages/admin/despacho/despacho.component').then((m) => m.DespachoComponent),
+    canActivate: [adminGuard]
+  },
+  {
+    // Paquete D · resumen automático de turno
+    path: 'admin/resumen-turno',
+    loadComponent: () => import('./pages/admin/resumen-turno/resumen-turno.component').then((m) => m.ResumenTurnoComponent),
+    canActivate: [adminGuard]
   }
 ];

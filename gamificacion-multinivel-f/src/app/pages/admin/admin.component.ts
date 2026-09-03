@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, type Signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject, type Signal } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -68,6 +68,7 @@ import { FacturaPedidoComponent } from './checkout/factura-pedido.component'; //
 import { ESTADOS_MX_OPTIONS } from '../../constants/states-mx'; // WP-C
 import { CheckoutService } from '../../services/checkout.service'; // WP-C
 import { FacturaEmitida } from '../../models/checkout.model'; // WP-C
+import { DespachoService } from '../../services/despacho.service'; // WP-D
 
 type StructureNode = {
   id: string;
@@ -3174,6 +3175,7 @@ export class AdminComponent implements OnInit {
         }
         this.syncPosOperatorContext();
         this.refreshPosCashControl();
+        this.applyEmployeeDefaultStock(); // WP-D
         this.requestViewUpdate();
       }
     });
@@ -7542,6 +7544,33 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  // ── WP-D · bodega por defecto del empleado (paquete D) ──────────────────
+  private readonly despachoService = inject(DespachoService);
+  private employeeDefaultStockApplied = false;
+
+  /** Aplica una sola vez la bodega guardada en el perfil: Stocks y POS arrancan con ella. */
+  private applyEmployeeDefaultStock(): void {
+    if (this.employeeDefaultStockApplied || !this.stocks.length) {
+      return;
+    }
+    this.employeeDefaultStockApplied = true;
+    this.despachoService.preferencias().subscribe({
+      next: (prefs) => {
+        const stockId = prefs.defaultStockId ?? '';
+        if (!stockId || !this.stocks.some((stock) => stock.id === stockId)) {
+          return;
+        }
+        this.selectStock(stockId);
+        if (this.linkedPosStocks.some((stock) => stock.id === stockId)) {
+          this.posForm.stockId = stockId;
+          this.syncPosSelectedItems();
+          this.refreshPosCashControl();
+        }
+        this.requestViewUpdate();
+      },
+      error: () => undefined
+    });
+  }
 }
 
 

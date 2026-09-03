@@ -76,8 +76,20 @@ def _default_app_config() -> dict:
         # carrito enseña antes de descuentos, paquete C); "net" conserva la regla
         # anterior sobre el neto pagado. baseRateMxn: tarifa desde la que se
         # anuncia el envío antes de cotizar ("Envío desde $129").
-        "shipping": {"enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"], "freeShippingMin": Decimal("0"),
-                     "freeShippingBasis": "gross", "baseRateMxn": Decimal("129")},
+        "shipping": {
+            "enabled": True, "markup": 0.0, "carriers": ["dhl", "fedex"], "freeShippingMin": Decimal("0"),
+            "freeShippingBasis": "gross", "baseRateMxn": Decimal("129"),
+            # Paquetería integrada (paquete D): generación de guía desde el pedido y
+            # rastreo por consulta programable. Apagada por omisión; provider
+            # "envia" en producción o "simulada" en pruebas y en el harness.
+            # askDays: días tras el envío para preguntar "¿te llegó?";
+            # autoCloseDays: días para marcar entregado automáticamente;
+            # simDeliveryDays: días en que la paquetería simulada "entrega".
+            "carrierIntegration": {
+                "enabled": False, "provider": "envia", "autoLabel": False, "trackingEnabled": False,
+                "askDays": Decimal("7"), "autoCloseDays": Decimal("10"), "simDeliveryDays": Decimal("3"),
+            },
+        },
         "customerDocumentTypes": [
             {"key": "constancia", "label": "Constancia de situación fiscal", "required": True},
             {"key": "ine",        "label": "INE (frente y reverso)",          "required": True},
