@@ -4483,6 +4483,24 @@ export class AdminComponent implements OnInit {
     this.saveCustomerFollowUp(customer, { origin }, 'Origen guardado.');
   }
 
+  /** Deshacer un pago de comisiones registrado por error (se marcó "Pagada" sin CLABE). */
+  revertCommissionPayment(customer: AdminCustomer): void {
+    const mes = customer.commissionsPrevMonthKey;
+    if (!mes || !this.hasPermission('commissions_register_payment')) return;
+    const motivo = prompt(`Deshacer el pago de ${mes} de ${customer.name}. El mes vuelve a "pendiente de depósito" y el comprobante queda anulado. Motivo:`);
+    if (!motivo || !motivo.trim()) return;
+    this.adminControl.revertCommissionPayment(customer.id, mes, motivo.trim()).subscribe({
+      next: () => {
+        this.showSnackbar('Pago deshecho: el mes vuelve a pendiente de depósito.');
+        this.adminControl.loadCustomers().subscribe(() => {
+          this.selectedCustomer = this.customers.find((c) => c.id === customer.id) ?? this.selectedCustomer;
+          this.requestViewUpdate();
+        });
+      },
+      error: (err: unknown) => this.showSnackbar(this.resolveUiErrorMessage(err, 'No se pudo deshacer el pago.'))
+    });
+  }
+
   saveCustomerEmail(customer: AdminCustomer): void {
     const email = this.customerEmailDraft.trim().toLowerCase();
     if (!email || email === (customer.email || '').toLowerCase()) {

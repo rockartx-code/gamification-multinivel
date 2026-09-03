@@ -601,6 +601,10 @@ export class AdminControlService {
     );
   }
 
+  revertCommissionPayment(customerId: number, monthKey: string, reason: string): Observable<{ ok: boolean; status: string }> {
+    return this.api.revertCommissionPayment(customerId, monthKey, reason);
+  }
+
   updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.api.updateEmployee(employeeId, payload).pipe(
       tap((emp) => {

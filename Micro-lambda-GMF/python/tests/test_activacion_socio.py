@@ -175,3 +175,24 @@ def test_si_se_anula_una_comision_avisada_se_avisa_la_anulacion(modulos, utils, 
     commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_CANCELLED"}, None)
     anulados = [a for p, a in correos if p == "vero@test.com" and "anulada" in a]
     assert anulados and oid in anulados[0], correos
+
+
+def test_no_se_paga_sin_clabe_y_el_pago_se_puede_deshacer(modulos, utils, monkeypatch):
+    """Regresión: la gerente marcó 'Pagada' la comisión de una socia sin CLABE
+    (sin transferencia real) y no había forma de deshacerlo."""
+    _, commissions_lambda = modulos
+    monkeypatch.setattr(commissions_lambda, "_upload_receipt_s3", lambda *a, **k: {"assetId": "A1", "url": "https://s3/x.png"})
+    monkeypatch.setattr(commissions_lambda.utils, "_send_ses_email", lambda *a, **k: None, raising=False)
+    utils._put_entity("CUSTOMER", 810, {"entityType": "customer", "customerId": 810, "name": "Bety", "email": "b@test.com"})
+    mk = "2026-12"
+    ledger = commissions_lambda._get_ledger_month(810, mk); ledger["totalConfirmed"] = Decimal("99"); utils._save_ledger_month(ledger)
+    r = commissions_lambda.handle_admin_receipt({"customerId": 810, "monthKey": mk, "name": "c.png", "contentBase64": "aGk="})
+    assert r["statusCode"] == 409 and "CLABE" in r["body"]
+    utils._update_by_id("CUSTOMER", 810, "SET clabeInterbancaria = :c", {":c": "012180000000000001"})
+    r = commissions_lambda.handle_admin_receipt({"customerId": 810, "monthKey": mk, "name": "c.png", "contentBase64": "aGk="})
+    assert r["statusCode"] == 201, r["body"]
+    assert commissions_lambda._get_ledger_month(810, mk)["status"] == "PAID"
+    assert commissions_lambda.handle_admin_receipt({"customerId": 810, "monthKey": mk, "name": "c.png", "contentBase64": "aGk="})["statusCode"] == 409
+    r = commissions_lambda.handle_admin_receipt_revert({"customerId": 810, "monthKey": mk, "reason": "registrado por error"})
+    assert r["statusCode"] == 200, r["body"]
+    assert commissions_lambda._get_ledger_month(810, mk)["status"] != "PAID"

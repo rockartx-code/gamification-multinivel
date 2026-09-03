@@ -883,6 +883,37 @@ def handle_payout_request(body):
     utils._put_entity("COMMISSION_REQUEST", req_id, request_item)
     return utils._json_response(201, {"request": request_item})
 
+
+def handle_admin_receipt_revert(body):
+    """POST /admin/receipt/revert — deshace un pago registrado por error.
+
+    El mes vuelve a estar pendiente de depósito y el comprobante queda anulado
+    (no se borra: se conserva con el motivo).
+    """
+    cid = body.get("customerId")
+    month_key = body.get("monthKey") or body.get("month")
+    motivo = str(body.get("reason") or "").strip()
+    if not cid or not month_key or not motivo:
+        return utils._json_response(400, {"message": "customerId, monthKey y reason son obligatorios"})
+    ledger = _get_ledger_month(cid, month_key)
+    if str(ledger.get("status") or "").upper() != "PAID":
+        return utils._json_response(409, {"message": "Ese mes no está marcado como pagado."})
+    now = utils._now_iso()
+    anulados = 0
+    for r in utils._query_bucket("COMMISSION_RECEIPT", sk_from=month_key):
+        if str(r.get("customerId")) == str(cid) and str(r.get("monthKey")) == str(month_key) and r.get("status") == "paid":
+            utils._update_by_id("COMMISSION_RECEIPT", r.get("receiptId"), "SET #s = :s, voidedAt = :t, voidReason = :r, updatedAt = :t",
+                                {":s": "voided", ":t": now, ":r": motivo}, {"#s": "status"})
+            anulados += 1
+    utils._table.update_item(
+        Key={"PK": PK_MONTH, "SK": utils._ledger_sk(cid, month_key)},
+        UpdateExpression="SET #s = :p, paymentRevertedAt = :now, paymentRevertReason = :r REMOVE paidAt ADD version :one",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":p": "IN_PROGRESS", ":now": now, ":r": motivo, ":one": utils._to_decimal(1)},
+    )
+    utils._log("commission_payment_reverted", "INFO", customerId=cid, monthKey=month_key, receipts=anulados)
+    return utils._json_response(200, {"ok": True, "receiptsVoided": anulados, "status": "pending"})
+
 def handle_admin_receipt(body):
     """POST /admin/commissions/receipt - Admin marca como pagado con comprobante"""
     cid = body.get("customerId")
@@ -892,6 +923,15 @@ def handle_admin_receipt(body):
 
     if not cid or not month_key or not name or not content_base64:
         return utils._json_response(400, {"message": "customerId, monthKey, name y contentBase64 son obligatorios"})
+    # El depósito va a la CLABE del socio: sin CLABE se dejaba marcar "Pagada"
+    # sin transferencia real y no había forma de deshacerlo.
+    socio = utils._get_by_id("CUSTOMER", cid) or {}
+    if not str(socio.get("clabeInterbancaria") or "").strip() and not body.get("paidWithoutClabe"):
+        return utils._json_response(409, {"message": "El socio no tiene CLABE registrada: no se puede registrar el depósito. Pídesela y guárdala en su ficha.",
+                                          "code": "CLABE_REQUIRED"})
+    mes_actual = _get_ledger_month(cid, month_key)
+    if str(mes_actual.get("status") or "").upper() == "PAID":
+        return utils._json_response(409, {"message": "Ese mes ya está marcado como pagado.", "code": "ALREADY_PAID"})
 
     try:
         asset = _upload_receipt_s3(name, content_base64, body.get("contentType") or "application/pdf", "comprobantes")
@@ -1407,6 +1447,9 @@ RUTAS = [
     Ruta("POST", "admin/receipt", privilegio="commissions_register_payment",
          descripcion="Comprobante registrado por el admin",
          handler=lambda p: handle_admin_receipt(p.body)),
+    Ruta("POST", "admin/receipt/revert", privilegio="commissions_register_payment",
+         descripcion="Deshacer un pago registrado por error",
+         handler=lambda p: handle_admin_receipt_revert(p.body)),
 
     Ruta("GET", "config/{ambito}", privilegio="access_screen_settings",
          descripcion="Leer configuración (rewards | app)", handler=handle_get_config),

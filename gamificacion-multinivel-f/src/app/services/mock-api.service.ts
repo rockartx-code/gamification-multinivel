@@ -1845,6 +1845,10 @@ export class MockApiService {
     return of({ ...emp }).pipe(delay(120));
   }
 
+  revertCommissionPayment(_customerId: number, _monthKey: string, _reason: string): Observable<{ ok: boolean; status: string }> {
+    return of({ ok: true, status: 'pending' }).pipe(delay(80));
+  }
+
   updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     const emp = this.employees.find((e) => e.id === employeeId);
     if (!emp) {

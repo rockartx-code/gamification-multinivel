@@ -496,6 +496,10 @@ export class RealApiService {
     });
   }
 
+  revertCommissionPayment(customerId: number, monthKey: string, reason: string): Observable<{ ok: boolean; status: string }> {
+    return this.http.post<{ ok: boolean; status: string }>(`${this.baseUrl}/commissions/admin/receipt/revert`, { customerId, monthKey, reason }, { headers: this.actorHeaders() });
+  }
+
   saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
     return this.http.post<{ ok: boolean; clabeLast4?: string }>(`${this.baseUrl}/customers/clabe`, payload, {
       headers: this.actorHeaders()
