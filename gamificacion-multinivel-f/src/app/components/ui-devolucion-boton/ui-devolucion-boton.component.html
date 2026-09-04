@@ -31,6 +31,10 @@
 
   <!-- Las reglas, publicadas, se lean o no antes de comprar. -->
   <a routerLink="/devoluciones" class="text-xs text-gray-500 underline hover:text-accent">
-    Cómo funciona una devolución<span *ngIf="devolucion.plazoTexto">: {{ devolucion.plazoTexto }}</span>
+    Cómo funciona una devolución
   </a>
 </div>
+
+<p *ngIf="devolucion?.plazoTexto" class="mt-2 basis-full text-xs text-gray-500">
+  Plazos desde la entrega — {{ devolucion?.plazoTexto }}
+</p>
