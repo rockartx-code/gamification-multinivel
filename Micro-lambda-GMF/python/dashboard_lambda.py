@@ -1,6 +1,8 @@
 import boto3
 import base64
 import time
+from datetime import datetime
+
 import core_utils as utils # Importado desde la Layer
 import dashboard_common
 from dashboard_common import (
@@ -225,15 +227,55 @@ def get_admin_orders(query):
     items = items[:limit]
     return utils._json_response(200, {"orders": items, "total": total, "limit": limit})
 
+def _es_recoleccion(order: dict) -> bool:
+    """Recoge en sucursal: no es un envío pendiente, es un cliente por venir."""
+    return str(order.get("deliveryType") or "").strip().lower() == "pickup"
+
+
+def _dias_parados(order: dict, ahora_iso: str):
+    """Días que lleva parado el pedido, contra la hora del servidor.
+
+    Nunca con el reloj del navegador: así salían "0 días" en todos los pedidos.
+    """
+    fecha = str(order.get("paidAt") or order.get("createdAt") or "")[:10]
+    hoy = str(ahora_iso or "")[:10]
+    if len(fecha) != 10 or len(hoy) != 10:
+        return None
+    try:
+        desde = datetime.strptime(fecha, "%Y-%m-%d")
+        hasta = datetime.strptime(hoy, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return max(0, (hasta - desde).days)
+
+
+def _dias_del_mas_viejo(orders: list, ahora_iso: str):
+    """Días del pedido más viejo del grupo (None si ninguno trae fecha)."""
+    dias = [d for d in (_dias_parados(o, ahora_iso) for o in orders) if d is not None]
+    return max(dias) if dias else None
+
+
 def get_admin_warnings():
     """GET /admin/warnings - Alertas reales desde DynamoDB"""
     cfg = utils._load_app_config()
     warning_cfg = cfg.get("adminWarnings") if isinstance(cfg.get("adminWarnings"), dict) else {}
 
     orders = utils._query_bucket("ORDER")
-    now_date = utils._now_iso()[:10]
+    ahora_iso = utils._now_iso()
+    now_date = ahora_iso[:10]
 
-    paid_no_ship = sum(1 for o in orders if (o.get("status") or "").lower() == "paid")
+    # Paquete F · ronda 26 (propuesta 21). "4 pedidos pagados sin envío" metía
+    # tres recolecciones de mostrador en el mismo saco, y ninguna columna decía
+    # cuántos días llevaban parados: "37 días se ven igual que 1 día"
+    # (renata-2027-04-10). De ese pedido colgaba la comisión de una socia.
+    dias_rojo = int(utils._to_decimal((cfg.get("orders") or {}).get("agingRedDays", 7)))
+    por_enviar, por_recoger = [], []
+    for o in orders:
+        if (o.get("status") or "").lower() != "paid":
+            continue
+        (por_recoger if _es_recoleccion(o) else por_enviar).append(o)
+    dias_envio_mas_viejo = _dias_del_mas_viejo(por_enviar, ahora_iso)
+    dias_pickup_mas_viejo = _dias_del_mas_viejo(por_recoger, ahora_iso)
     pending_pay = sum(1 for o in orders if (o.get("status") or "").lower() == "pending")
     # Pagos que entraron a un pedido ya cancelado: hay que devolver el dinero.
     pagos_tras_cancelar = [o for o in orders if o.get("paymentStatusDetail") == "approved_after_cancel"
@@ -295,8 +337,24 @@ def get_admin_warnings():
                          "text": f"{sin_clabe['count']} socias con comisión y sin CLABE · ${sin_clabe['amount']:,.2f}",
                          "severity": "high" if sin_clabe["urgent"] else "low",
                          "count": sin_clabe["count"], "amount": sin_clabe["amount"], "monthKey": max(sin_clabe["months"], default="")})
-    if warning_cfg.get("showShipping", True) and paid_no_ship:
-        warnings.append({"type": "shipping", "text": f"{paid_no_ship} pedidos pagados sin envío", "severity": "medium"})
+    if warning_cfg.get("showShipping", True) and por_enviar:
+        plural = "" if len(por_enviar) == 1 else "s"
+        texto = f"{len(por_enviar)} pedido{plural} pagado{plural} sin envío"
+        if dias_envio_mas_viejo is not None:
+            texto += f" · {dias_envio_mas_viejo} día{'' if dias_envio_mas_viejo == 1 else 's'} el más viejo"
+        warnings.append({"type": "shipping", "text": texto,
+                         "severity": "high" if (dias_envio_mas_viejo or 0) >= dias_rojo else "medium",
+                         "count": len(por_enviar), "oldestDays": dias_envio_mas_viejo,
+                         "orderIds": [o.get("orderId") for o in por_enviar[:20]]})
+    if warning_cfg.get("showShipping", True) and por_recoger:
+        plural = "" if len(por_recoger) == 1 else "s"
+        texto = f"{len(por_recoger)} pedido{plural} por recoger en mostrador"
+        if dias_pickup_mas_viejo is not None:
+            texto += f" · {dias_pickup_mas_viejo} día{'' if dias_pickup_mas_viejo == 1 else 's'} el más viejo"
+        warnings.append({"type": "pickup", "text": texto,
+                         "severity": "high" if (dias_pickup_mas_viejo or 0) >= dias_rojo else "low",
+                         "count": len(por_recoger), "oldestDays": dias_pickup_mas_viejo,
+                         "orderIds": [o.get("orderId") for o in por_recoger[:20]]})
     if warning_cfg.get("showPendingPayments", True) and pending_pay:
         warnings.append({"type": "payments", "text": f"{pending_pay} pedidos pendientes de pago", "severity": "low"})
     if pagos_tras_cancelar:
@@ -310,7 +368,10 @@ def get_admin_warnings():
         plural = "" if pos_sales_today == 1 else "s"
         warnings.append({"type": "pos", "text": f"{pos_sales_today} venta{plural} POS registrada{plural} hoy", "severity": "low"})
 
-    return utils._json_response(200, {"warnings": warnings})
+    # La antigüedad de la tabla de Pedidos se mide contra el reloj del servidor,
+    # nunca con `Date.now()` del navegador (o vuelven a salir "0 días" en todos).
+    return utils._json_response(200, {"warnings": warnings, "serverNow": ahora_iso,
+                                      "agingRedDays": dias_rojo})
 
 # --- HANDLERS USUARIO (GRANULARES) ---
 

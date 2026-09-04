@@ -51,7 +51,11 @@ def _default_app_config() -> dict:
                 {"gen": 5, "rate": Decimal("0.02"), "reqActiveDirects": 5, "reqPersonalPC": 160, "reqLines": 3, "reqPCPerLine": 750},
             ],
         },
-        "orders": {"requireStockOnShipped": True, "requireDispatchLinesOnShipped": True},
+        # agingRedDays (paquete F · ronda 26): días a partir de los cuales un pedido
+        # pagado sin envío se pinta en rojo en la tabla y su aviso sube a urgente.
+        # "37 días se ven igual que 1 día" (renata-2027-04-10).
+        "orders": {"requireStockOnShipped": True, "requireDispatchLinesOnShipped": True,
+                   "agingRedDays": 7},
         "pos": {
             "defaultCustomerName": "Publico en General",
             "defaultPaymentStatus": "paid_branch",
