@@ -25,6 +25,7 @@ from typing import Optional
 # Módulos que extienden este lambda (docs/arquitectura/23 §0.2). Cada uno expone
 # `atender(peticion)` y responde None cuando la ruta no es suya.
 import seguimiento_handlers  # paquete F
+import corte_mes  # paquete G · ronda 26
 _EXTENSIONES = [seguimiento_handlers, modo_handlers]  # paquetes F y B
 
 # Cliente S3 para subida de documentos propios del cliente
@@ -1097,9 +1098,10 @@ def handle_customer_dashboard(headers: dict) -> dict:
     response = utils._json_response(200, {
         "isGuest": False,
         "settings": {
-            "cutoffDay": 25,
-            "cutoffHour": 23,
-            "cutoffMinute": 59,
+            # Paquete G · ronda 26, propuesta 29: un solo origen del corte, del
+            # servidor (`cutoffAt` + `serverNow`). Sale de valores ya cargados:
+            # no cuesta ni una consulta más.
+            **corte_mes.campos_corte(),
             "userCode": str(customer.get("referralCode")
                             or customer.get("customerId") or "").strip().upper(),
             "networkGoal": 300,

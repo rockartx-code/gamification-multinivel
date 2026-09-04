@@ -2,6 +2,7 @@ import boto3
 import base64
 import time
 import core_utils as utils # Importado desde la Layer
+import corte_mes  # paquete G · ronda 26
 import dashboard_common
 from dashboard_common import (
     _active_notifications_for_customer,
@@ -493,7 +494,9 @@ def get_user_dashboard(query: dict, headers: dict) -> dict:
     respuesta = utils._json_response(200, {
         "isGuest": bool(is_guest),
         "settings": {
-            "cutoffDay": 25, "cutoffHour": 23, "cutoffMinute": 59,
+            # Paquete G · ronda 26, propuesta 29: el mismo corte que el panel
+            # nuevo, con el instante absoluto y el reloj del servidor.
+            **corte_mes.campos_corte(),
             "userCode": "" if is_guest else str(user_id), "networkGoal": 300,
         },
         "user": user_payload,
