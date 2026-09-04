@@ -686,12 +686,15 @@ def handle_update_customer(customer_id, body, headers):
         updates.append("contactNotes = :notes")
         eav[":notes"] = notas[-200:]
 
-    # 3. Direcciones (Upsert en lista)
-    if "shippingAddress" in body:
-        if "addresses" in body:
-            updates.append("addresses = :addr")
-            updates.append("shippingAddresses = :addr")
-            eav[":addr"] = body["addresses"]
+    # 3. Direcciones (paquete G · ronda 26, propuesta 19). La condición estaba
+    # anidada dentro de `if "shippingAddress" in body`, así que guardar
+    # direcciones obligaba a mandar además una llave que no se usa para nada; y
+    # este era el único camino de escritura de direcciones que existía, así que
+    # las siete fichas de clientes seguían con `addresses = 0`.
+    if "addresses" in body and isinstance(body.get("addresses"), list):
+        updates.append("addresses = :addr")
+        updates.append("shippingAddresses = :addr")
+        eav[":addr"] = body["addresses"]
 
     updated = utils._update_by_id("CUSTOMER", cid, f"SET {', '.join(updates)}", eav, ean or None)
     if correo_cambio:
