@@ -3195,6 +3195,77 @@ paths:
     options:
       <<: *cors-options
 
+# ── Paquete A · ronda 26 ──
+  /commissions/periodos:
+    get:
+      summary: "Meses contables con datos, mes por omisión y hora del servidor"
+      description: |
+        Privilegio `commissions_register_payment`. Ninguna pantalla de dinero vuelve a construir
+        los meses con el reloj del navegador (propuesta 17). Devuelve
+        `{serverNow, mesContableVigente, defaultMonth, payoutDay,
+        periodos:[{monthKey, label, beneficiarias, confirmado, porConfirmar, bloqueado, estado}]}`.
+        Recorre el índice de meses en su propio endpoint: nunca dentro de `/commissions/pagos`.
+      operationId: commissionsPeriodos
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Periodos con datos y hora del servidor"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/pendientes.csv:
+    get:
+      summary: "Anexo de las comisiones que todavía no se pueden depositar, con su motivo"
+      description: |
+        Privilegio `commissions_register_payment`. `text/csv; charset=utf-8`, columnas
+        `Nombre,Monto,Correo,Teléfono,Motivo`; **segundo archivo**, nunca filas más en el layout
+        del banco (propuesta 35). Nunca lleva CLABE. 400 si el mes no tiene la forma AAAA-MM.
+      operationId: commissionsPendientesCsv
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "CSV de pendientes del mes"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/dia-de-pago:
+    post:
+      summary: "Tarea programable: el correo del día de pago (te depositamos / nos falta tu CLABE)"
+      description: |
+        Privilegio `commissions_register_payment` o token de superadmin. Body `{force?, dryRun?, monthKey?}`.
+        El día `rewards.payoutDay` manda una sola vez por beneficiaria y mes (marca `payoutNoticeSentAt`,
+        respeta `doNotContact`): "te depositamos $X a tu CLABE terminación 6789" si el mes está PAID **y
+        tiene comprobante**, "no te pudimos depositar porque nos falta tu CLABE" si le falta, y nada si ese
+        mes no tiene comisión confirmada (propuesta 34). Se apaga con `rewards.payoutNoticeEnabled`.
+      operationId: commissionsDiaDePago
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "{day, monthKey, payoutDay, notified:[{customerId, kind, amount}], alreadyNotified}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

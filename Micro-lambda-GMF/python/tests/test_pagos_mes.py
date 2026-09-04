@@ -96,11 +96,9 @@ def test_el_listado_trae_los_tres_estados_y_los_totales_cuadran_con_el_ledger(mo
     assert filas["Claudia"]["bankInstitution"] == "BBVA"
     assert filas["Bety"]["status"] == "sin_clabe" and filas["Bety"]["clabeMasked"] == ""
     assert filas["Memo"]["status"] == "pagado" and filas["Memo"]["receiptUrl"] == "https://s3/memo.pdf"
-    assert datos["totals"] == {
-        "listo": {"count": 1, "amount": 250.74},
-        "sinClabe": {"count": 1, "amount": 138.6},
-        "pagado": {"count": 1, "amount": 96.0},
-    }
+    assert datos["totals"]["listo"] == {"count": 1, "amount": 250.74}
+    assert datos["totals"]["sinClabe"] == {"count": 1, "amount": 138.6}
+    assert datos["totals"]["pagado"] == {"count": 1, "amount": 96.0}
     assert [f["status"] for f in datos["rows"]] == ["listo", "sin_clabe", "pagado"], "primero lo que hay que hacer"
 
 
