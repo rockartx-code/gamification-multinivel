@@ -52,12 +52,48 @@ export interface PlanRango {
   monthlyBonus: number;
 }
 
+/**
+ * Lo que de verdad cuesta activarse, de lo más barato a lo más caro según el
+ * producto (propuesta 14). Sustituye al `pesosAprox` que la propia página
+ * desmentía tres renglones abajo. `null` cuando el catálogo no tiene PC.
+ */
+export interface PlanRangoActivacion {
+  min: number;
+  max: number;
+  notaProducto: string;
+}
+
+/** Sobre qué base se paga la comisión, dicho por el servidor (propuesta 37). */
+export interface PlanBaseComision {
+  clave: string;
+  frase: string;
+  /** Neto de la canasta más barata que de verdad activa. */
+  compraEjemplo: number;
+  /** Cómo es esa canasta: `2 × Klinhart`. */
+  canastaEjemplo: string;
+}
+
+/** El IVA que ya llevan dentro los precios de lista (propuesta 38). */
+export interface PlanIva {
+  tasa: number;
+  etiqueta: string;
+  preciosIncluyenIva: boolean;
+  aplicaAlEnvio: boolean;
+}
+
 export interface PlanSocio {
   version: string;
   unidades: { mxnPerVp: number; maxLevels: number; pc: string; vp: string; vg: string };
-  activacion: { vpNetos: number; pesosAprox: number; ejemplos: PlanEjemploActivacion[]; nota: string };
+  activacion: {
+    vpNetos: number;
+    rango: PlanRangoActivacion | null;
+    ejemplos: PlanEjemploActivacion[];
+    nota: string;
+  };
   descuento: { tramos: PlanTramo[]; ejemplos: PlanEjemploDescuento[] };
   generaciones: PlanGeneracion[];
+  baseComision: PlanBaseComision;
+  iva: PlanIva;
   compresionDinamica: boolean;
   pago: {
     dia: number;
@@ -68,6 +104,54 @@ export interface PlanSocio {
   datos: Array<{ cuando: string; que: string[] }>;
   rangos: PlanRango[];
   bonos: Array<{ id: string; name: string; notes: string }>;
+}
+
+// ── Simulador del plan (paquete B, propuesta 36) ───────────────────────────
+
+export interface SimuladorEntrada {
+  directos: number;
+  /** Lo que paga cada persona al mes, ya con su descuento y sin envío. */
+  compraPorDirecto: number;
+  /** Tu propia compra del mes, a precio de lista. */
+  compraPropia: number;
+  nivelesProfundidad: number;
+}
+
+export interface SimuladorGeneracion {
+  gen: number;
+  rate: number;
+  personas: number;
+  compraNetaPorPersona: number;
+  requisitoTexto: string;
+  cumple: boolean;
+  /** Por qué cumple o por qué no, con el número que falta. */
+  porQue: string;
+  comision: number;
+  /** `10 % de $1,350.00 netos, sin envío = $135.00`. */
+  textoBase: string;
+}
+
+export interface SimuladorResultado {
+  tuCompra: {
+    bruto: number;
+    tramo: number;
+    descuento: number;
+    netoPagado: number;
+    vp: number;
+    activa: boolean;
+    vpParaActivar: number;
+    iva: { base: number; iva: number; tasa: number; etiqueta: string };
+  };
+  generaciones: SimuladorGeneracion[];
+  comisionTotal: number;
+  gastoPropio: number;
+  /** Comisiones menos gasto propio. Se muestra siempre, también en rojo. */
+  gananciaNeta: number;
+  baseComision: string;
+  fraseBaseComision: string;
+  explicacion: string[];
+  supuestos: string[];
+  aviso: string;
 }
 
 export interface SiguienteTramo {

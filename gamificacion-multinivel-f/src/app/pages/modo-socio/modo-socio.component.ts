@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
@@ -13,11 +14,13 @@ import {
   PlanSocio,
   formatoPesos,
   formatoPorcentaje,
-  formatoPuntos
+  formatoPuntos,
+  textoBaseComision
 } from '../../models/plan-socio.model';
 import { AuthService } from '../../services/auth.service';
 import { PlanSocioService } from '../../services/plan-socio.service';
 import { UserDashboardControlService } from '../../services/user-dashboard-control.service';
+import { SimuladorPlanComponent } from './simulador/simulador-plan.component';
 
 /**
  * Landing "Modo socio" (paquete B, propuesta 2): una sola página que explica
@@ -27,7 +30,16 @@ import { UserDashboardControlService } from '../../services/user-dashboard-contr
 @Component({
   selector: 'app-modo-socio',
   standalone: true,
-  imports: [CommonModule, RouterLink, UiButtonComponent, UiHeaderComponent, UiFooterComponent, UiTablaDescuentoComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    UiButtonComponent,
+    UiHeaderComponent,
+    UiFooterComponent,
+    UiTablaDescuentoComponent,
+    UiDesgloseIvaComponent,
+    SimuladorPlanComponent
+  ],
   templateUrl: './modo-socio.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -50,6 +62,9 @@ export class ModoSocioComponent implements OnInit {
   activationError = '';
   activated: ActivacionModoSocioRespuesta | null = null;
 
+  /** Lo que la persona ya lleva comprado en el mes; siembra el simulador. */
+  compraPropiaInicial = 0;
+
   constructor(
     private readonly planSocio: PlanSocioService,
     private readonly authService: AuthService,
@@ -71,6 +86,10 @@ export class ModoSocioComponent implements OnInit {
         this.plan = plan;
         this.isLoading = false;
         this.cdr.markForCheck();
+        // "Cómo se calculan" tiene que caer en la sección, no en la portada
+        // de la página (propuesta 23): se desplaza al ancla en cuanto hay
+        // contenido que mostrar.
+        this.irAlFragmento();
       },
       error: () => {
         this.isLoading = false;
@@ -81,10 +100,31 @@ export class ModoSocioComponent implements OnInit {
     // Con sesión, se confirma el modo real de la cuenta (la sesión puede ser anterior a esta ronda).
     if (this.authService.hasSession) {
       this.planSocio.modo().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: () => this.cdr.markForCheck(),
+        next: (respuesta) => {
+          // El simulador arranca con lo que ya lleva comprado este mes.
+          this.compraPropiaInicial = respuesta.indicators?.monthSpend ?? 0;
+          this.cdr.markForCheck();
+        },
         error: () => this.cdr.markForCheck()
       });
     }
+  }
+
+  /**
+   * Desplaza a la sección del fragmento (`#/modo-socio#generaciones`).
+   *
+   * Se hace aquí y no solo con `anchorScrolling` del router porque el
+   * contenido de la página llega después de `GET /catalog/plan`: cuando el
+   * router intenta anclar, la sección todavía no existe en el DOM.
+   */
+  private irAlFragmento(): void {
+    const fragmento = (this.route.snapshot.fragment ?? '').trim();
+    if (!fragmento) {
+      return;
+    }
+    setTimeout(() => {
+      document.getElementById(fragmento)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   get haySesion(): boolean {
@@ -124,6 +164,30 @@ export class ModoSocioComponent implements OnInit {
 
   get bonosDeRango(): boolean {
     return (this.plan?.rangos.length ?? 0) > 0;
+  }
+
+  /**
+   * La frase de la base de la comisión con la compra de referencia del plan:
+   * *"10 % de $960.00 netos, sin envío = $96.00"* (propuesta 37). El texto lo
+   * arma la función única del modelo; aquí no se redacta nada.
+   */
+  get ejemploComision(): string {
+    const gen1 = this.primeraGeneracion;
+    const compra = this.plan?.baseComision?.compraEjemplo ?? 0;
+    if (!gen1 || compra <= 0) {
+      return '';
+    }
+    const canasta = this.plan?.baseComision?.canastaEjemplo ?? '';
+    const frase = textoBaseComision(compra, gen1.rate, gen1.ejemplo.comision);
+    return canasta ? `${frase} — esa compra existe: ${canasta}.` : frase;
+  }
+
+  /** La misma frase, por fila de la tabla de generaciones. */
+  textoDeLaFila(g: PlanGeneracion): string {
+    if (g.ejemplo.compraReferido <= 0) {
+      return 'Sin catálogo con puntos no hay ejemplo que enseñar.';
+    }
+    return textoBaseComision(g.ejemplo.compraReferido, g.rate, g.ejemplo.comision);
   }
 
   listaDatos(que: string[]): string {
