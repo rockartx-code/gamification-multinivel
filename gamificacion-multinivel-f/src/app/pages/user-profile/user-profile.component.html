@@ -106,43 +106,12 @@
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">CLABE interbancaria</h2>
         <p class="mb-5 text-xs text-gray-500">Se utiliza para recibir el depósito de tus comisiones.</p>
 
-        <!-- Current masked CLABE + bank -->
-        <div *ngIf="maskedClabe" class="mb-4 flex items-center gap-3 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3">
-          <i class="fa-solid fa-building-columns text-sm text-gray-400" aria-hidden="true"></i>
-          <div class="min-w-0 flex-1">
-            <p class="font-mono text-sm tracking-widest text-main">{{ maskedClabe }}</p>
-            <p *ngIf="profile?.bankInstitution" class="mt-0.5 text-xs text-gray-500">{{ profile!.bankInstitution }}</p>
-          </div>
-          <span class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-micro font-semibold text-green-700">Registrada</span>
-        </div>
-        <div *ngIf="!maskedClabe" class="mb-4 rounded-xl border border-dashed border-olive-30 bg-sand-200-90 px-4 py-3 text-xs text-gray-400">
-          No tienes una CLABE registrada todavía.
-        </div>
-
-        <div class="grid gap-3 sm:grid-cols-2">
-          <ui-form-field
-            label="Nueva CLABE (18 dígitos)"
-            placeholder="123456789012345678"
-            name="clabeDraft"
-            [(ngModel)]="clabeDraft"
-            wrapperClass="block">
-          </ui-form-field>
-
-          <ui-form-field
-            label="Institución bancaria"
-            placeholder="Ej: BBVA, Banorte, HSBC…"
-            name="bankInstitutionDraft"
-            [(ngModel)]="bankInstitutionDraft"
-            wrapperClass="block">
-          </ui-form-field>
-        </div>
-
-        <div class="mt-4 flex justify-end">
-          <ui-button variant="primary" size="md" (pressed)="openClabeConfirm()" [disabled]="isSavingClabe">
-            <i class="fa-solid fa-shield-check" aria-hidden="true"></i>
-            {{ isSavingClabe ? 'Guardando…' : 'Actualizar CLABE' }}
-          </ui-button>
-        </div>
+        <!-- WP-A · propuesta 1: el mismo formulario que en el panel; guarda
+             al primer intento y dice el resultado en el propio campo. -->
+        <ui-clabe-form [customerId]="userId || ''"
+          [clabeLast4]="profile?.clabeInterbancaria ? profile!.clabeInterbancaria!.slice(-4) : ''"
+          [bankInstitution]="profile?.bankInstitution || ''"
+          modo="propio" (saved)="onClabeSaved($event)"></ui-clabe-form>
       </div>
 
       <!-- ── CARGA DE DOCUMENTACIÓN ─────────────────────────────────── -->
@@ -352,40 +321,6 @@
         class="h-full w-full rounded-xl border-0"
         style="min-height: 70vh;">
       </iframe>
-    </div>
-  </div>
-
-  <!-- ── CLABE CONFIRM DIALOG ───────────────────────────────────────── -->
-  <div *ngIf="isClabeConfirmOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-    <div class="grain w-full max-w-sm rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-2xl">
-      <div class="mb-4 flex items-center gap-3">
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100">
-          <i class="fa-solid fa-triangle-exclamation text-amber-600" aria-hidden="true"></i>
-        </span>
-        <h3 class="text-base font-bold text-main">Confirmar CLABE</h3>
-      </div>
-      <p class="mb-2 text-sm text-gray-600">
-        Estás a punto de registrar la siguiente CLABE interbancaria:
-      </p>
-      <p class="mb-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 font-mono text-sm tracking-widest text-main">
-        {{ clabePending }}
-      </p>
-      <div *ngIf="bankInstitutionDraft.trim()" class="mb-4 flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2 text-sm text-main">
-        <i class="fa-solid fa-building-columns text-xs text-gray-400" aria-hidden="true"></i>
-        <span>{{ bankInstitutionDraft.trim() }}</span>
-      </div>
-      <p class="mb-5 text-xs text-gray-400">
-        Verifica que los 18 dígitos sean correctos. Esta cuenta se usará para depósitos de comisiones.
-      </p>
-      <div class="flex gap-3">
-        <ui-button variant="ghost" size="md" class="flex-1" (pressed)="cancelClabeConfirm()">
-          Cancelar
-        </ui-button>
-        <ui-button variant="primary" size="md" class="flex-1" (pressed)="confirmSaveClabe()" [disabled]="isSavingClabe">
-          Confirmar
-        </ui-button>
-      </div>
     </div>
   </div>
 

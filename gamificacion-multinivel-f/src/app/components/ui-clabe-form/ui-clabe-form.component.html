@@ -1,0 +1,74 @@
+<!-- Paquete A · propuesta 1: "Guardar" guarda, y el estado se lee aquí mismo. -->
+<div class="rounded-2xl border border-olive-30 surface-soft p-4 text-sm">
+  <div *ngIf="titulo" class="text-sm font-semibold text-main">{{ titulo }}</div>
+
+  <div class="flex flex-wrap items-center justify-between gap-2" [class.mt-2]="titulo">
+    <span class="text-xs text-gray-600">CLABE registrada</span>
+    <span class="font-mono text-xs text-main">{{ resumen }}</span>
+  </div>
+
+  <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+    <ui-form-field
+      [label]="tieneClabe ? 'Nueva CLABE (18 dígitos)' : 'CLABE interbancaria (18 dígitos)'"
+      name="clabe"
+      type="text"
+      placeholder="000000000000000000"
+      [helpText]="modo === 'admin' ? 'Se guarda en la ficha de la socia; el depósito va a esta cuenta.' : 'Ahí te depositamos tus comisiones el día de pago.'"
+      [ngModel]="clabe"
+      (ngModelChange)="onClabeChange($event)"
+      wrapperClass="block text-xs"></ui-form-field>
+    <ui-button type="button" variant="primary" size="md" iconClass="fa-solid fa-floppy-disk"
+      extraClass="self-end" [disabled]="guardando" (pressed)="guardar()">
+      {{ textoBoton }}
+    </ui-button>
+  </div>
+
+  <div class="mt-3">
+    <ui-form-field label="Banco (opcional)" name="banco" placeholder="BBVA, Banorte, Santander…"
+      helpText="Sirve para reconocer la cuenta en el comprobante del depósito."
+      [(ngModel)]="banco" wrapperClass="block text-xs"></ui-form-field>
+  </div>
+
+  <!-- El estado, junto al campo y no en un aviso al fondo de la página. -->
+  <div *ngIf="mensaje"
+    class="mt-3 rounded-xl px-3 py-2 text-xs"
+    [ngClass]="{
+      'border border-olive-30 bg-ivory-70 text-main': estado === 'guardando',
+      'border border-emerald-200 bg-emerald-50 text-emerald-900': estado === 'guardada',
+      'border border-amber-300 bg-amber-50 text-amber-900': estado === 'quitada',
+      'border border-red-200 bg-red-50 text-red-800': estado === 'error'
+    }"
+    role="status" aria-live="polite">
+    <i class="fa-solid" aria-hidden="true"
+      [ngClass]="{
+        'fa-spinner fa-spin': estado === 'guardando',
+        'fa-circle-check': estado === 'guardada',
+        'fa-circle-info': estado === 'quitada',
+        'fa-triangle-exclamation': estado === 'error'
+      }"></i>
+    {{ mensaje }}
+  </div>
+
+  <!-- Quitar CLABE, con la confirmación en línea (nunca en un modal aparte). -->
+  <div class="mt-3" *ngIf="tieneClabe">
+    <ui-button *ngIf="!confirmandoQuitar" type="button" variant="linkish" size="sm"
+      iconClass="fa-solid fa-trash-can" [disabled]="guardando" (pressed)="pedirQuitar()">
+      Quitar CLABE
+    </ui-button>
+    <div *ngIf="confirmandoQuitar" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+      <div>
+        ¿Quitamos la CLABE que termina en {{ clabeLast4 }}? Sin CLABE no podemos depositar
+        {{ modo === 'admin' ? 'sus comisiones' : 'tus comisiones' }}; puedes registrar otra cuando quieras.
+      </div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <ui-button type="button" variant="ghost" size="sm" [disabled]="guardando" (pressed)="cancelarQuitar()">
+          Mejor no
+        </ui-button>
+        <ui-button type="button" variant="primary" size="sm" iconClass="fa-solid fa-trash-can"
+          [disabled]="guardando" (pressed)="confirmarQuitar()">
+          {{ guardando ? 'Quitando…' : 'Sí, quitarla' }}
+        </ui-button>
+      </div>
+    </div>
+  </div>
+</div>

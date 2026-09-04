@@ -11,6 +11,7 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
+import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // WP-A · propuesta 1
 
 interface OwnDocUploadState {
   file: File | null;
@@ -21,7 +22,7 @@ interface OwnDocUploadState {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiClabeFormComponent],
   templateUrl: './user-profile.component.html'
 })
 export class UserProfileComponent implements OnInit {
@@ -46,7 +47,6 @@ export class UserProfileComponent implements OnInit {
 
   isLoading = true;
   isSavingInfo = false;
-  isSavingClabe = false;
   toastMessage = '';
   isToastVisible = false;
   private toastTimeout?: number;
@@ -54,10 +54,6 @@ export class UserProfileComponent implements OnInit {
   profile: CustomerProfile | null = null;
 
   infoForm = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', phone: '', rfc: '', curp: '' };
-  clabeDraft = '';
-  bankInstitutionDraft = '';
-  clabePending = '';
-  isClabeConfirmOpen = false;
 
   passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
   passwordErrors = { currentPassword: '', newPassword: '', confirmPassword: '' };
@@ -92,8 +88,6 @@ export class UserProfileComponent implements OnInit {
             rfc: profile.rfc || '',
             curp: profile.curp || ''
           };
-          this.clabeDraft = profile.clabeInterbancaria || '';
-          this.bankInstitutionDraft = profile.bankInstitution || '';
           this.cdr.markForCheck();
         },
         error: () => { this.showToast('No se pudo cargar el perfil.'); }
@@ -123,12 +117,6 @@ export class UserProfileComponent implements OnInit {
     return this.authService.currentUser?.userId ?? '';
   }
 
-  get maskedClabe(): string {
-    const clabe = this.profile?.clabeInterbancaria || '';
-    if (!clabe) return '';
-    return '•••• •••• •••• ' + clabe.slice(-4);
-  }
-
   saveInfo(): void {
     if (this.isSavingInfo || !this.userId) return;
     this.isSavingInfo = true;
@@ -150,49 +138,20 @@ export class UserProfileComponent implements OnInit {
       });
   }
 
-  openClabeConfirm(): void {
-    const clean = this.clabeDraft.replace(/\s/g, '');
-    if (clean.length !== 18) {
-      this.showToast('La CLABE debe tener 18 dígitos.');
-      return;
+  /**
+   * WP-A · propuesta 1: `ui-clabe-form` guarda al primer intento y dice el
+   * resultado en el propio campo. El perfil solo refleja lo que quedó.
+   */
+  onClabeSaved(evento: { clabeLast4: string; bankInstitution: string; removed: boolean }): void {
+    if (this.profile) {
+      this.profile = {
+        ...this.profile,
+        clabeInterbancaria: evento.removed ? '' : this.profile.clabeInterbancaria,
+        clabeLast4: evento.clabeLast4,
+        bankInstitution: evento.bankInstitution
+      };
     }
-    this.clabePending = clean;
-    this.isClabeConfirmOpen = true;
-  }
-
-  cancelClabeConfirm(): void {
-    this.isClabeConfirmOpen = false;
-    this.clabePending = '';
-  }
-
-  confirmSaveClabe(): void {
-    if (this.isSavingClabe || !this.userId) return;
-    this.isClabeConfirmOpen = false;
-    this.isSavingClabe = true;
-    const customerId = Number(this.userId);
-    this.api.saveCustomerClabe({
-      customerId,
-      clabe: this.clabePending,
-      bankInstitution: this.bankInstitutionDraft.trim() || undefined
-    })
-      .pipe(finalize(() => { this.isSavingClabe = false; this.cdr.markForCheck(); }))
-      .subscribe({
-        next: (res) => {
-          if (this.profile) {
-            this.profile = {
-              ...this.profile,
-              clabeInterbancaria: this.clabePending,
-              clabeLast4: res.clabeLast4 ?? this.clabePending.slice(-4),
-              bankInstitution: this.bankInstitutionDraft.trim() || this.profile.bankInstitution
-            };
-          }
-          this.clabeDraft = this.clabePending;
-          this.clabePending = '';
-          const terminacion = res?.clabeLast4 ? ` Termina en ${res.clabeLast4}.` : '';
-          this.showToast(`CLABE guardada.${terminacion} Ahí depositaremos tus comisiones.`);
-        },
-        error: () => { this.showToast('No se pudo guardar la CLABE.'); }
-      });
+    this.cdr.markForCheck();
   }
 
   onOwnDocFileChange(docKey: string, event: Event): void {
