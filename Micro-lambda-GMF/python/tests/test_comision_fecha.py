@@ -20,7 +20,8 @@ def modulos(utils):
 @pytest.fixture
 def correos(utils, monkeypatch):
     enviados = []
-    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: enviados.append((para, asunto)))
+    monkeypatch.setattr(utils, "_send_ses_email",
+                        lambda para, asunto, texto, html: enviados.append((para, asunto, texto)))
     return enviados
 
 
@@ -138,9 +139,9 @@ def test_al_desbloquearse_las_comisiones_la_socia_se_entera(modulos, utils, corr
     correos.clear()
     with freeze_time("2027-03-20 09:14:39"):
         _pagar(order_lambda, commissions_lambda, paulina, pid, 2)
-    asuntos = [a for _, a in correos if "desbloquearon" in a]
+    asuntos = [a for _, a, _ in correos if "desbloquearon" in a]
     assert asuntos == ["Se desbloquearon $96.00 de tus comisiones"]
-    assert ("paulina@test.com", asuntos[0]) in correos
+    assert [p for p, a, _ in correos if a == asuntos[0]] == ["paulina@test.com"]
 
 
 def test_el_aviso_de_desbloqueo_se_puede_apagar(modulos, utils, correos, monkeypatch):
@@ -156,4 +157,20 @@ def test_el_aviso_de_desbloqueo_se_puede_apagar(modulos, utils, correos, monkeyp
     correos.clear()
     with freeze_time("2027-03-20 09:14:39"):
         _pagar(order_lambda, commissions_lambda, paulina, pid, 2)
-    assert [a for _, a in correos if "desbloquearon" in a] == []
+    assert [a for _, a, _ in correos if "desbloquearon" in a] == []
+
+
+def test_el_correo_de_comision_dice_sobre_que_base_se_calcula(modulos, utils, correos):
+    """Propuesta 37: Ximena buscó la base en tres pantallas y el enlace
+    "Cómo se calculan" la devolvía a la misma página."""
+    order_lambda, commissions_lambda = modulos
+    pid = _producto(utils)
+    paulina = _cliente(utils, 1, "Paulina")
+    ximena = _cliente(utils, 2, "Ximena", leader=paulina)
+    with freeze_time("2027-03-02 11:18:00"):
+        _pagar(order_lambda, commissions_lambda, paulina, pid, 2)    # activa
+        correos.clear()
+        _pagar(order_lambda, commissions_lambda, ximena, pid, 2)
+    aviso = next(t for _, a, t in correos if "comisión de" in a)
+    assert "10 % de $960.00 netos, sin envío = $96.00" in aviso
+    assert "sin contar el envío" in aviso

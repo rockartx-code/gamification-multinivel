@@ -803,7 +803,9 @@
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
                       <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
                       <div>Monto: <span class="text-main">{{ formatMoney(row.amount || 0) }}</span></div>
-                      <div>Fecha: <span class="text-main">{{ formatLedgerDate(row.createdAt) }}</span></div>
+                      <div>Fecha del pedido: <span class="text-main">{{ ledgerRowDate(row) }}</span></div>
+                      <div *ngIf="ledgerRowBase(row)">{{ ledgerRowBase(row) }}</div>
+                      <div *ngIf="ledgerRowRecalculo(row)" class="text-amber-800">{{ ledgerRowRecalculo(row) }}</div>
                     </div>
                   </div>
                 </ng-template>
@@ -814,7 +816,7 @@
                     <div class="px-4 py-3">Nivel</div>
                     <div class="px-4 py-3">Monto</div>
                     <div class="px-4 py-3">Estado</div>
-                    <div class="px-4 py-3">Fecha</div>
+                    <div class="px-4 py-3">Fecha del pedido</div>
                   </div>
                 </ng-template>
 
@@ -822,10 +824,18 @@
                   <div class="grid grid-cols-5 text-sm">
                     <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
                     <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
-                    <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
+                    <div class="px-4 py-3">
+                      {{ formatMoney(row.amount || 0) }}
+                      <!-- WP-A · propuesta 37: ningún número queda sin explicación. -->
+                      <div class="text-xs text-gray-600" *ngIf="ledgerRowBase(row)">{{ ledgerRowBase(row) }}</div>
+                    </div>
                     <div class="px-4 py-3"><span [class]="commissionLedgerStatusClass(row.status)" [title]="row.voidReason || ''">{{
                         commissionLedgerStatusLabel(row.status) }}</span></div>
-                    <div class="px-4 py-3 text-gray-600">{{ formatLedgerDate(row.createdAt) }}</div>
+                    <div class="px-4 py-3 text-gray-600">
+                      {{ ledgerRowDate(row) }}
+                      <!-- WP-A · propuesta 32: si hubo recálculo, se dice por qué. -->
+                      <div class="text-xs text-amber-800" *ngIf="ledgerRowRecalculo(row)">{{ ledgerRowRecalculo(row) }}</div>
+                    </div>
                   </div>
                 </ng-template>
               </ui-data-table>

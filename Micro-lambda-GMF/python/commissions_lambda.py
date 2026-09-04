@@ -710,7 +710,7 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
             # El aviso salía dos veces: al pagar y otra vez cuando la propia compra
             # activaba al comprador y se reevaluaba el mismo pedido.
             if _write_row(b_id, gen, amount, "pending"):
-                _avisar_comision(b_id, order, gen, amount)
+                _avisar_comision(b_id, order, gen, amount, neto=commissionable_net, rate=rate)
             gen += 1
         elif cut_rule == "dynamic_compression":
             # No califica: se registra informativo 'blocked' y la posición se brinca
@@ -723,7 +723,7 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
             gen += 1
 
 
-def _avisar_comision(beneficiary_id, order: dict, gen: int, amount) -> None:
+def _avisar_comision(beneficiary_id, order: dict, gen: int, amount, neto=None, rate=None) -> None:
     """Correo al patrocinador cuando alguien de su red compra y le genera comisión.
 
     "Mis dos referidas compraron el 3 y yo me enteré el 7, sola, hurgando en el
@@ -738,13 +738,21 @@ def _avisar_comision(beneficiary_id, order: dict, gen: int, amount) -> None:
         nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
         from core.email import _email_shell
         monto = f"${float(amount):,.2f}"
+        # Propuesta 37: sobre qué base se calcula, con estas palabras y una
+        # sola vez (§3.2). Ximena la buscó en tres pantallas y no la encontró.
+        cuenta = (f'<p class="lead">Así sale el número: <strong>{pagos_handlers.texto_base_comision(neto, rate, amount)}</strong>. '
+                  f"{pagos_handlers.frase_base_comision()}</p>") if neto is not None and rate is not None else ""
+        cuenta_texto = (f" Así sale el número: {pagos_handlers.texto_base_comision(neto, rate, amount)}. "
+                        f"{pagos_handlers.frase_base_comision()}") if neto is not None and rate is not None else ""
         cuerpo = f"""
     <div class="icon">🎉</div>
     <h1 class="title">{comprador} compró</h1>
     <p class="lead">Hola <strong>{nombre}</strong>. Una compra de tu red (generación {gen}) te genera una comisión de <strong>{monto}</strong>. Queda pendiente hasta que el pedido se entregue; la ves en tu panel, en Comisiones.</p>
+    {cuenta}
     <p class="lead">Hoy es buen día para escribirle y darle las gracias.</p>"""
         utils._send_ses_email(para, f"{comprador} compró: comisión de {monto} en camino",
-                              f"Hola {nombre}. {comprador} compró; te genera una comisión de {monto} (generación {gen}), pendiente hasta la entrega.",
+                              f"Hola {nombre}. {comprador} compró; te genera una comisión de {monto} (generación {gen}), "
+                              f"pendiente hasta la entrega.{cuenta_texto}",
                               _email_shell(cuerpo))
     except Exception as e:  # pragma: no cover
         utils._log("commission_email_error", "ERROR", beneficiary=beneficiary_id, err=e)
