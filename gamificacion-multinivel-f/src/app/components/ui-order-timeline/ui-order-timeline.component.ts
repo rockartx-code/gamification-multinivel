@@ -15,6 +15,8 @@ type TimelineStep = {
 })
 export class UiOrderTimelineComponent {
   @Input() status = 'pending';
+  /** Cómo se entrega el pedido: en recolección la barra no habla de rutas ni de paquetes. */
+  @Input() deliveryType: 'delivery' | 'pickup' = 'delivery';
   @Input() steps: TimelineStep[] = [
     { key: 'created', label: 'Orden creada', description: 'Tu pedido fue registrado.' },
     { key: 'paid', label: 'Pago', description: 'Conciliación y confirmación.' },
@@ -22,6 +24,20 @@ export class UiOrderTimelineComponent {
     { key: 'shipped', label: 'Envío', description: 'Ruta de entrega.' },
     { key: 'delivered', label: 'Entregada', description: 'Pedido finalizado.' }
   ];
+
+  // ── Paquete C · ronda 26 · propuesta 7 ──
+  /** A tres compradoras de mostrador la barra les decía "Envío — Ruta de entrega". */
+  private readonly pasosRecoleccion: TimelineStep[] = [
+    { key: 'created', label: 'Orden creada', description: 'Tu pedido quedó registrado.' },
+    { key: 'paid', label: 'Pago', description: 'Confirmación del pago.' },
+    { key: 'packing', label: 'Preparando', description: 'Lo estamos separando en la sucursal.' },
+    { key: 'shipped', label: 'Listo para recoger', description: 'Puedes pasar por él.' },
+    { key: 'delivered', label: 'Entregado', description: 'Lo recogiste en la sucursal.' }
+  ];
+
+  get pasos(): TimelineStep[] {
+    return this.deliveryType === 'pickup' ? this.pasosRecoleccion : this.steps;
+  }
 
   get currentIndex(): number {
     const s = String(this.status || '').toLowerCase();
@@ -44,7 +60,7 @@ export class UiOrderTimelineComponent {
     if (index === this.currentIndex) {
       if (stepKey === 'paid') return 'fa-credit-card text-[11px]';
       if (stepKey === 'packing') return 'fa-box-open text-[11px]';
-      if (stepKey === 'shipped') return 'fa-truck-fast text-[11px]';
+      if (stepKey === 'shipped') return this.deliveryType === 'pickup' ? 'fa-store text-[11px]' : 'fa-truck-fast text-[11px]';
       if (stepKey === 'delivered') return 'fa-circle-check text-[11px]';
       return 'fa-check text-[10px]';
     }

@@ -80,6 +80,13 @@ export const routes: Routes = [
     component: TiendaComponent
   },
   {
+    // paquete C · ronda 26 · propuesta 22: dirección propia por producto.
+    // Va antes que `tienda/:refToken` y tiene tres segmentos: entrar por aquí no
+    // toca la atribución de la patrocinadora guardada en `leaderId`.
+    path: 'tienda/producto/:id',
+    component: TiendaComponent
+  },
+  {
     path: 'tienda/:refToken',
     component: TiendaComponent
   },

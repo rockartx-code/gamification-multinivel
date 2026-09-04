@@ -102,7 +102,16 @@
               <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
               {{ heroSecondaryCta }}
             </ui-button>
+            <!-- Paquete C · propuesta 22: cada producto tiene su propia dirección y se puede mandar -->
+            <ui-button *ngIf="enlaceDelProducto" size="lg" variant="ghost" class="w-full sm:w-auto"
+              (pressed)="copiarEnlaceDelProducto()">
+              <i class="fa-solid" [ngClass]="enlaceCopiado ? 'fa-circle-check text-forest' : 'fa-link'" aria-hidden="true"></i>
+              {{ enlaceCopiado ? 'Enlace copiado' : 'Copiar enlace del producto' }}
+            </ui-button>
           </div>
+          <p *ngIf="enlaceCopiado" class="mt-2 text-xs text-gray-600">
+            Ya lo puedes pegar en un mensaje: quien lo abra verá este producto.
+          </p>
 
           <div class="mt-8 grid grid-cols-2 gap-3 text-sm md:mt-10">
             <feature-badge
@@ -150,6 +159,7 @@
         <div>
           <p class="eyebrow eyebrow-plain">Explora la colección</p>
           <h2 class="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">Catálogo</h2>
+          <p class="mt-1 text-xs text-gray-600">{{ resultadoBusquedaTexto }}</p>
         </div>
         <!-- Category filter chips -->
         <div *ngIf="availableCategories.length > 0" class="flex flex-wrap gap-2">
@@ -170,6 +180,22 @@
             {{ cat.name }}
           </button>
         </div>
+      </div>
+
+      <!-- Paquete C · propuesta 22: buscador por nombre, etiquetas y descripción, sin acentos -->
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center" revealOnScroll>
+        <ui-form-field
+          wrapperClass="block w-full sm:max-w-md"
+          name="buscadorTienda"
+          placeholder="Busca por nombre o por lo que necesitas: omega 3, colágeno, proteína..."
+          [ngModel]="searchTerm"
+          (ngModelChange)="searchTerm = $event"
+          inputClass="w-full rounded-2xl border border-olive-30 bg-ivory-80 px-4 py-3 text-sm text-main">
+        </ui-form-field>
+        <ui-button *ngIf="hasSearch" size="sm" variant="ghost" (pressed)="clearSearch()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          Limpiar
+        </ui-button>
       </div>
 
       <div class="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -211,7 +237,11 @@
       </div>
 
       <p *ngIf="filteredProducts.length === 0" class="mt-8 text-center text-sm text-gray-500">
-        No hay productos en esta categoría.
+        <ng-container *ngIf="hasSearch">
+          Ningún producto coincide con "{{ searchTerm }}". Prueba con una palabra más corta o
+          <button type="button" class="font-semibold text-main underline underline-offset-2" (click)="clearSearch()">ve todos los productos</button>.
+        </ng-container>
+        <ng-container *ngIf="!hasSearch">No hay productos en esta categoría.</ng-container>
       </p>
     </div>
   </section>

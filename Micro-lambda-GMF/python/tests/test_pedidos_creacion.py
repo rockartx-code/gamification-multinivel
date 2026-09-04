@@ -272,3 +272,59 @@ def test_rechazar_con_cortesia_emite_un_cupon_personal(order_lambda, utils, monk
     # Solo ella puede usarlo.
     assert order_lambda._evaluate_coupon(utils._get_by_id("COUPON", code), 500, 77)["valid"]
     assert not order_lambda._evaluate_coupon(utils._get_by_id("COUPON", code), 500, 78)["valid"]
+
+
+# ── Paquete C · ronda 26 · propuestas 3 y 31: contratos de los que vive el carrito ──
+
+def test_recoger_en_sucursal_guarda_nombre_y_telefono_de_quien_recoge(order_lambda, utils):
+    """Los dos pedidos de mostrador de Aurora quedaron con `recipientName` y `phone` en null
+    porque los campos vivían dentro del bloque de envío a domicilio. El backend siempre los
+    aceptó en cualquier modo de entrega: esta prueba amarra ese contrato, que es de lo que
+    depende el bloque de contacto del carrito."""
+    import json
+    _producto(utils)
+    utils._put_entity("STOCK", "STK-GDL", {"entityType": "stock", "stockId": "STK-GDL",
+                                           "name": "Sucursal Guadalajara", "location": "Av. Chapultepec 480",
+                                           "city": "Guadalajara", "state": "JAL", "allowPickup": True,
+                                           "linkedUserIds": [], "inventory": {"101": 10}})
+    cuerpo = {
+        "items": [{"productId": 101, "name": "Finding Pro 500g", "price": 800, "quantity": 1}],
+        "guest": True, "customerName": "Aurora Vega", "email": "aurora@test.com",
+        "recipientName": "Aurora Vega", "phone": "3312345678",
+        "deliveryType": "pickup", "pickupStockId": "STK-GDL", "pickupPaymentMethod": "online",
+    }
+    r = order_lambda.handle_create_order(cuerpo, {})
+    assert r["statusCode"] in (200, 201), r["body"]
+    d = json.loads(r["body"])
+    oid = d.get("orderId") or d["order"]["orderId"]
+
+    guardado = utils._get_by_id("ORDER", oid)
+    assert guardado["recipientName"] == "Aurora Vega"
+    assert guardado["phone"] == "3312345678"
+
+    # Y el seguimiento del invitado los sigue devolviendo (con el teléfono enmascarado).
+    r = order_lambda.lambda_handler(_evento("GET", f"/orders/{oid}"), None)
+    pedido = json.loads(r["body"])["order"]
+    assert pedido["recipientName"] == "Aurora Vega"
+    assert pedido["deliveryType"] == "pickup" and pedido["pickupStockId"] == "STK-GDL"
+
+
+def test_la_cotizacion_de_envio_solo_necesita_el_codigo_postal(utils):
+    """Mariana escribió solo su CP "a propósito, para no dar mi dirección" y no pasó nada.
+    El cotizador acepta el CP solo, pero rechaza la dirección a medias: o todos los campos o
+    ninguno. Por eso el carrito le manda únicamente `zipTo` y los bultos."""
+    import shipping_lambda
+
+    def cotizar(cuerpo):
+        return shipping_lambda.lambda_handler(_evento("POST", "/shipping/quote", cuerpo), None)
+
+    solo_cp = cotizar({"zipTo": "03100", "items": [{"weightKg": 0.5, "lengthCm": 20, "widthCm": 15,
+                                                    "heightCm": 10, "quantity": 1}]})
+    assert solo_cp["statusCode"] == 200, solo_cp["body"]
+
+    # Añadirle el estado sin el resto de la dirección lo rompe: es la premisa que corrige
+    # la propuesta 31 y la razón de no mandar campos sueltos.
+    con_estado = cotizar({"zipTo": "03100", "state": "CMX"})
+    assert con_estado["statusCode"] == 400, con_estado["body"]
+
+    assert cotizar({"zipTo": "031"})["statusCode"] == 400

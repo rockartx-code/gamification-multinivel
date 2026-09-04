@@ -2,11 +2,12 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
-import { AdminOrder } from '../../models/admin.model';
+import { AdminOrder, AdminOrderItem } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
 import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { ApiService } from '../../services/api.service';
+import { CheckoutService } from '../../services/checkout.service';
 
 @Component({
   selector: 'app-order-status',
@@ -17,7 +18,14 @@ import { ApiService } from '../../services/api.service';
 })
 export class OrderStatusComponent implements OnInit, OnDestroy {
   private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'] as const;
-  private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private pollingTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Paquete C · ronda 26 · propuesta 13 ──
+  /** Se pregunta pronto y luego cada vez menos: 5 s, 10 s, 20 s y 30 s. Antes era un minuto fijo,
+   *  y Ernesto y Mariana se quedaron mirando una pantalla en blanco con $609 y $829 en juego. */
+  private readonly pollingDelaysMs = [5000, 10000, 20000, 30000];
+  private pollingIndex = 0;
+  /** Se agotaron los reintentos y el pago sigue sin confirmarse: se dice qué hacer. */
+  paymentConfirmTimedOut = false;
   orderId = '';
   orderReference = '';
   paymentId = '';
@@ -28,11 +36,17 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
   isCheckoutLoading = false;
   isLoading = false;
   order: AdminOrder | null = null;
+  // ── Paquete C · ronda 26 · propuesta 7 ──
+  /** Sucursal donde se recoge el pedido, con su dirección: "Sucursal Guadalajara, Av. Chapultepec 480". */
+  pickupBranchName = '';
+  pickupBranchLocation = '';
+  private pickupBranchAskedFor = '';
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly api: ApiService,
+    private readonly checkout: CheckoutService,
     private readonly cdr: ChangeDetectorRef
   ) { }
 
@@ -69,9 +83,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     );
 
     if (this.redirectStatus === 'failure') {
-      this.redirectMessage = 'Tu operacion fue rechazada.';
+      this.redirectMessage = 'Tu operación fue rechazada. No se te cobró nada: puedes volver a intentarlo.';
     } else if (this.redirectStatus === 'pending' || this.redirectStatus === 'success') {
-      this.redirectMessage = 'Tu operacion esta siendo procesada y validando por tu banco.';
+      this.redirectMessage = 'Tu operación está siendo procesada y validándose con tu banco.';
     }
 
     this.orderId = this.orderReference || routeOrderId || this.paymentId;
@@ -86,7 +100,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
       this.loadOrder(this.orderReference || this.paymentId || this.orderId);
     }
 
-    if (this.redirectStatus === 'success') {
+    if (this.redirectStatus === 'success' || this.redirectStatus === 'pending') {
       this.startSuccessPolling();
     }
   }
@@ -103,6 +117,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         if (order?.id) {
           this.orderId = order.id;
         }
+        this.loadPickupBranch(order);
         this.syncOrderStatusState(order);
         this.isLoading = false;
         this.cdr.markForCheck();
@@ -119,22 +134,59 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (!lookupId) {
       return;
     }
-    this.pollingTimer = setInterval(() => this.loadOrder(lookupId), 60000);
+    this.pollingIndex = 0;
+    this.paymentConfirmTimedOut = false;
+    this.scheduleNextPoll(lookupId);
+  }
+
+  private scheduleNextPoll(lookupId: string): void {
+    const espera = this.pollingDelaysMs[this.pollingIndex];
+    if (espera === undefined) {
+      // Se acabaron los reintentos: en vez de callar, se dice qué hacer.
+      this.paymentConfirmTimedOut = true;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.pollingIndex += 1;
+    this.pollingTimer = setTimeout(() => {
+      this.pollingTimer = null;
+      this.loadOrder(lookupId);
+      if (this.isConfirmingPayment) {
+        this.scheduleNextPoll(lookupId);
+      }
+    }, espera);
   }
 
   private stopSuccessPolling(): void {
     if (this.pollingTimer) {
-      clearInterval(this.pollingTimer);
+      clearTimeout(this.pollingTimer);
       this.pollingTimer = null;
     }
+  }
+
+  /** Volvimos de la pasarela y el pedido todavía no está pagado: no hay nada que cobrar otra vez. */
+  get isConfirmingPayment(): boolean {
+    if (this.redirectStatus !== 'success' && this.redirectStatus !== 'pending') {
+      return false;
+    }
+    if (this.order?.markedByWebhook) {
+      return false;
+    }
+    return this.normalizeStatus(this.order?.status) === 'pending';
+  }
+
+  /** Mientras se confirma no se pinta el resumen: un total en $0 al volver de pagar asusta. */
+  get isSummaryVisible(): boolean {
+    return Boolean(this.order) && !this.isLoading;
   }
 
   private syncOrderStatusState(order: AdminOrder | null | undefined): void {
     const backendStatus = this.normalizeStatus(order?.status);
     const markedByWebhook = Boolean(order?.markedByWebhook);
     const shouldStop = markedByWebhook || ['paid', 'shipped', 'delivered'].includes(backendStatus);
-    if (markedByWebhook) {
+    if (shouldStop) {
       this.redirectMessage = '';
+      this.paymentConfirmTimedOut = false;
     }
 
     const cutoffWindow = Boolean(order?.discountCutoffWindow);
@@ -152,20 +204,21 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   get statusLabel(): string {
     if (this.redirectStatus === 'failure') {
-      return 'Operacion rechazada';
+      return 'Operación rechazada';
     }
-    if ((this.redirectStatus === 'success' || this.redirectStatus === 'pending') && this.normalizeStatus(this.order?.status) === 'pending') {
-      return 'Operacion en validacion';
+    if (this.isConfirmingPayment) {
+      return 'Estamos confirmando tu pago';
     }
     const status = this.normalizeStatus(this.order?.status);
     if (status === 'paid') {
       return 'Pago registrado';
     }
     if (status === 'shipped') {
-      return 'Pedido enviado';
+      // A quien recoge en sucursal no le enviamos nada: su pedido está listo en el mostrador.
+      return this.isPickup ? 'Listo para recoger' : 'Pedido enviado';
     }
     if (status === 'delivered') {
-      return 'Pedido entregado';
+      return this.isPickup ? 'Entregado en sucursal' : 'Pedido entregado';
     }
     if (status === 'cancelled') {
       return 'Cancelado';
@@ -287,6 +340,102 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return 0;
   }
 
+  // ── Paquete C · ronda 26 · propuesta 7: el recibo repite lo que se eligió ──
+
+  /** La dirección de la sucursal ya la publica el checkout; el recibo solo la vuelve a leer. */
+  private loadPickupBranch(order: AdminOrder | null | undefined): void {
+    const stockId = String(order?.pickupStockId ?? '').trim();
+    if (order?.deliveryType !== 'pickup' || !stockId || this.pickupBranchAskedFor === stockId) {
+      return;
+    }
+    this.pickupBranchAskedFor = stockId;
+    this.checkout.sucursalesRecoger({ items: [] }).subscribe({
+      next: (respuesta) => {
+        const sucursal = (respuesta?.stocks ?? []).find((s) => String(s.id) === stockId);
+        this.pickupBranchName = sucursal?.name ?? '';
+        this.pickupBranchLocation = sucursal?.location ?? '';
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
+  }
+
+  get isPickup(): boolean {
+    return this.order?.deliveryType === 'pickup';
+  }
+
+  /** "Recoges en Sucursal Guadalajara, Av. Chapultepec 480". */
+  get pickupText(): string {
+    if (!this.isPickup) {
+      return '';
+    }
+    const donde = [this.pickupBranchName, this.pickupBranchLocation].filter(Boolean).join(', ');
+    return donde ? `Recoges en ${donde}` : 'Recoges en la sucursal que elegiste';
+  }
+
+  get paysAtStore(): boolean {
+    return this.isPickup && this.order?.pickupPaymentMethod === 'at_store';
+  }
+
+  get orderItems(): AdminOrderItem[] {
+    return this.order?.items ?? [];
+  }
+
+  /** La dirección de entrega depende del tipo de entrega, no de `shippingType`, que solo se
+   *  escribe al despachar: por eso la tarjeta no aparecía hasta que alguien mandaba el paquete. */
+  get hasShippingAddress(): boolean {
+    if (this.isPickup) {
+      return false;
+    }
+    return Boolean(this.order?.address || this.order?.street || this.order?.city || this.order?.postalCode);
+  }
+
+  get shippingAddressLine(): string {
+    const o = this.order;
+    if (!o) {
+      return '';
+    }
+    const calle = o.address || [o.street, o.number].filter(Boolean).join(' ');
+    return [calle, o.city, o.state, o.postalCode].filter(Boolean).join(', ');
+  }
+
+  get invoiceVisible(): boolean {
+    return Boolean(this.order?.invoiceRequested);
+  }
+
+  /** "Factura solicitada a nombre de Aurora Vega · RFC VEAA850101AB1". */
+  get invoiceText(): string {
+    const datos = this.order?.invoiceData;
+    if (!datos) {
+      return this.order?.invoiceStatus === 'emitida' ? 'Factura emitida' : 'Factura solicitada';
+    }
+    const cabecera = this.order?.invoiceStatus === 'emitida' ? 'Factura emitida' : 'Factura solicitada';
+    const nombre = datos.razonSocial ? ` a nombre de ${datos.razonSocial}` : '';
+    const rfc = datos.rfc ? ` · RFC ${datos.rfc}` : '';
+    return `${cabecera}${nombre}${rfc}`;
+  }
+
+  /** Desglose del IVA guardado en el pedido (§38): el total no cambia, se explica. */
+  get hasVatBreakdown(): boolean {
+    return this.order?.taxBase != null && this.order?.taxAmount != null;
+  }
+
+  get vatLabel(): string {
+    const tasa = Number(this.order?.vatRate ?? 0) * 100;
+    return tasa > 0 ? `IVA ${Math.round(tasa)} %` : 'IVA';
+  }
+
+  /** Fecha en las palabras de la gente: "2 de marzo de 2027, 11:18", no "2027-03-02T11:18:04Z". */
+  formatDate(value?: string): string {
+    const fecha = new Date(String(value ?? ''));
+    if (!value || Number.isNaN(fecha.getTime())) {
+      return String(value ?? '');
+    }
+    return new Intl.DateTimeFormat('es-MX', {
+      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }).format(fecha);
+  }
+
   formatMoney(value: number): string {
     const amount = Number.isFinite(value) ? value : 0;
     // Sin centavos cuando el importe es entero; con dos cuando no lo es
@@ -344,7 +493,15 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
     this.checkoutError = '';
     this.isCheckoutLoading = true;
-    this.api.createOrderCheckout(targetOrderId).subscribe({
+    // Sin `successUrl` la pasarela no sabía a dónde regresar y el mensaje "estamos confirmando tu
+    // pago", que ya estaba escrito, no se encendía nunca. El cuerpo manda mano sobre la
+    // configuración del servidor, así que aquí se le dice a dónde volver.
+    const regreso = this.buildReturnUrl(targetOrderId);
+    this.api.createOrderCheckout(targetOrderId, regreso ? {
+      successUrl: regreso,
+      pendingUrl: regreso,
+      failureUrl: regreso
+    } : {}).subscribe({
       next: (response) => {
         const checkout = response?.checkout;
         const initPoint = String(checkout?.initPoint || checkout?.sandboxInitPoint || '').trim();
@@ -362,6 +519,18 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /** URL de esta misma pantalla, para que la pasarela devuelva a la persona a su pedido. */
+  private buildReturnUrl(orderId: string): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    const { origin, pathname } = window.location;
+    if (!origin) {
+      return '';
+    }
+    return `${origin}${pathname}#/orden/${encodeURIComponent(orderId)}`;
   }
 
   private normalizeRedirectStatusFromList(...candidates: Array<string | null>): 'success' | 'failure' | 'pending' | '' {

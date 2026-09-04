@@ -69,6 +69,13 @@ export class TiendaComponent implements OnInit {
   categories: ProductCategory[] = [];
   selectedCategoryId = '';
 
+  // ── Paquete C · ronda 26 · propuesta 22 ──
+  /** Lo que la persona escribe en el buscador de la tienda. */
+  searchTerm = '';
+  /** Se muestra un momento tras copiar el enlace del producto. */
+  enlaceCopiado = false;
+  private enlaceCopiadoTimeout?: number;
+
   form = {
     firstName: '',
     apellidoPaterno: '',
@@ -103,7 +110,10 @@ export class TiendaComponent implements OnInit {
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('refToken') ?? '';
-    const product = this.route.snapshot.queryParamMap.get('p') ?? this.getHashQueryParam('p');
+    // `#/tienda/producto/:id` es una ruta distinta de `#/tienda/:refToken` (tres segmentos contra
+    // dos): entrar por el enlace de un producto no toca la atribución de la patrocinadora.
+    const porRuta = this.route.snapshot.paramMap.get('id') ?? '';
+    const product = porRuta || this.route.snapshot.queryParamMap.get('p') || this.getHashQueryParam('p');
     this.referralToken = token.trim();
     this.productId = product.trim();
     if (this.referralToken) {
@@ -163,8 +173,52 @@ export class TiendaComponent implements OnInit {
   }
 
   get filteredProducts(): DashboardProduct[] {
-    if (!this.selectedCategoryId) return this.allProducts;
-    return this.allProducts.filter((p) => (p.categoryIds ?? []).includes(this.selectedCategoryId));
+    const porCategoria = this.selectedCategoryId
+      ? this.allProducts.filter((p) => (p.categoryIds ?? []).includes(this.selectedCategoryId))
+      : this.allProducts;
+    const busqueda = this.normalizarTexto(this.searchTerm);
+    if (!busqueda) {
+      return porCategoria;
+    }
+    // Ernesto leyó los trece nombres uno por uno con la vista cansada, y "omega 3" ya vive en las
+    // etiquetas del producto: se busca en nombre, etiquetas y descripción, sin acentos ni mayúsculas.
+    const palabras = busqueda.split(/\s+/).filter(Boolean);
+    return porCategoria.filter((producto) => {
+      const texto = this.textoBuscableDe(producto);
+      return palabras.every((palabra) => texto.includes(palabra));
+    });
+  }
+
+  /** Minúsculas y sin acentos: "colageno" encuentra "Colágeno" y al revés. */
+  private normalizarTexto(valor: string): string {
+    return String(valor ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private textoBuscableDe(producto: DashboardProduct): string {
+    const partes = [producto.name, producto.description, producto.badge, ...(producto.tags ?? [])];
+    return this.normalizarTexto(partes.filter(Boolean).join(' '));
+  }
+
+  get hasSearch(): boolean {
+    return Boolean(this.normalizarTexto(this.searchTerm));
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  /** "3 de 13 productos" / "Ningún producto coincide con …": la lista dice siempre qué está mostrando. */
+  get resultadoBusquedaTexto(): string {
+    const total = this.allProducts.length;
+    const mostrados = this.filteredProducts.length;
+    if (!this.hasSearch && !this.selectedCategoryId) {
+      return `${total} producto${total === 1 ? '' : 's'}`;
+    }
+    return `${mostrados} de ${total} producto${total === 1 ? '' : 's'}`;
   }
 
   selectCategory(id: string): void {
@@ -174,7 +228,37 @@ export class TiendaComponent implements OnInit {
   selectProduct(product: DashboardProduct): void {
     this.featuredProduct = this.mapProduct(product);
     this.selectedVariantId = '';
+    this.productId = product.id;
+    // La dirección de la barra cambia con el producto que se está viendo, para poder mandarlo.
+    void this.router.navigate(['/tienda/producto', product.id], { replaceUrl: true });
     document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Enlace directo al producto que se está viendo (Julio no tenía qué mandarle a un cliente). */
+  get enlaceDelProducto(): string {
+    const id = this.featuredProduct?.id ?? '';
+    if (!id || typeof window === 'undefined') {
+      return '';
+    }
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}#/tienda/producto/${encodeURIComponent(id)}`;
+  }
+
+  copiarEnlaceDelProducto(): void {
+    const enlace = this.enlaceDelProducto;
+    if (!enlace) {
+      return;
+    }
+    void navigator.clipboard?.writeText(enlace);
+    this.enlaceCopiado = true;
+    this.cdr.markForCheck();
+    if (this.enlaceCopiadoTimeout) {
+      window.clearTimeout(this.enlaceCopiadoTimeout);
+    }
+    this.enlaceCopiadoTimeout = window.setTimeout(() => {
+      this.enlaceCopiado = false;
+      this.cdr.markForCheck();
+    }, 2500);
   }
 
   get featuredVariants() {

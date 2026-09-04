@@ -1442,6 +1442,10 @@ export class RealApiService {
       invoiceIssuedAt: this.readString(order, ['invoiceIssuedAt']) || undefined,
       invoiceFolio: this.readString(order, ['invoiceFolio']) || undefined,
       invoiceFileUrl: this.readString(order, ['invoiceFileUrl']) || undefined,
+      // ── Paquete C · ronda 26 ── desglose de IVA guardado en el pedido (§38)
+      vatRate: order['vatRate'] != null ? Number(order['vatRate']) : undefined,
+      taxBase: order['taxBase'] != null ? Number(order['taxBase']) : undefined,
+      taxAmount: order['taxAmount'] != null ? Number(order['taxAmount']) : undefined,
     };
   }
 

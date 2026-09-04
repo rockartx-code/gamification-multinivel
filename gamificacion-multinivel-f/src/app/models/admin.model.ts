@@ -116,6 +116,12 @@ export interface AdminOrder {
   paymentId?: string;
   paidVia?: 'mercadopago' | 'branch' | 'admin' | 'reconciliation';
   subscriptionId?: string;
+  // ── Paquete C · ronda 26 ── desglose de IVA que el pedido guarda al crearse (§38).
+  /** Tasa con la que se desglosó el IVA de este pedido (0.16 = 16 %). */
+  vatRate?: number;
+  /** Importe sin IVA; `taxBase + taxAmount === total`, al centavo. */
+  taxBase?: number;
+  taxAmount?: number;
 }
 
 export interface AdminRefundPayload {
