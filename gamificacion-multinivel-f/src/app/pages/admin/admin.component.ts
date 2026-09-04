@@ -980,7 +980,8 @@ export class AdminComponent implements OnInit {
   employeeForm = {
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    jobTitle: '' // paquete E · ronda 26: el puesto que pinta la insignia
   };
 
   ngOnInit(): void {
@@ -2717,6 +2718,16 @@ export class AdminComponent implements OnInit {
 
   get currentUser(): AuthUser | null {
     return this.authService.currentUser;
+  }
+
+  /**
+   * Paquete E · ronda 26 · propuesta 27c · El puesto que pinta la insignia.
+   * Decía ADMIN sobre el nombre de la cajera de tercer día, igual que sobre el
+   * de la gerente de operaciones, y es lo primero que ve el cliente que se
+   * asoma al mostrador. `role` sigue siendo `admin`: es la llave de las guardas.
+   */
+  get puestoDelUsuario(): string {
+    return this.authService.jobTitleLabel(this.currentUser);
   }
 
 
@@ -5345,6 +5356,7 @@ export class AdminComponent implements OnInit {
         name: this.employeeForm.name.trim(),
         email: this.employeeForm.email.trim(),
         phone: this.employeeForm.phone.trim() || undefined,
+        jobTitle: this.employeeForm.jobTitle.trim() || undefined,
         canAccessAdmin: true,
         privileges: normalizePrivileges(null)
       })
@@ -5355,7 +5367,7 @@ export class AdminComponent implements OnInit {
           this.employeeMessage = `Empleado creado: ${emp.name}.`;
           this.employeeMessageIsError = false;
           this.showSnackbar(`Empleado creado: ${emp.name}.`);
-          this.employeeForm = { name: '', email: '', phone: '' };
+          this.employeeForm = { name: '', email: '', phone: '', jobTitle: '' };
           this.selectedEmployee = emp;
           this.syncSelectedEmployeePrivilegeDraft();
           this.cdr.detectChanges();
