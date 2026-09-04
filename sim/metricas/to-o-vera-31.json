@@ -1,0 +1,804 @@
+{
+ "persona": "Toño Vera, 31",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T06:15:06.433Z",
+ "tareas": [
+  {
+   "quiero": "entrar al sistema con mi correo de trabajo",
+   "esperaba": null,
+   "t": 28,
+   "segundos": 46,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Renata me dejó dicho que despache hoy todo lo que esté pagado. Nadie me enseñó el sistema; llevo dos semanas y lo poco que sé lo he visto por encima del hombro de Mireya. Empiezo por entrar.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 28
+    },
+    {
+     "texto": "Sale un aviso de privacidad encima. Le doy \"Entendido y acepto\" y ya. Abajo dice \"© 2026 finding U\" y estamos en marzo de 2027, se ve descuidado pero no me detiene.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 50
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Entré a la primera con mi correo y contraseña. Lo raro es que arriba dice \"ADMIN\" y yo soy de almacén; me deja nervioso no saber qué puedo tocar y qué no."
+  },
+  {
+   "quiero": "ver qué es eso de \"1 urgentes\" antes de ponerme a despachar",
+   "esperaba": null,
+   "t": 82,
+   "segundos": 26,
+   "logrado": true,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Arriba a la izquierda hay un botón \"Acciones · 1 urgentes\". Si algo urge, quiero verlo antes de perder el rato.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 82
+    },
+    {
+     "texto": "El panel de \"Acciones urgentes\" dice \"3 pedidos pagados sin envío — Importante — Ir a resolver\". Eso es justo lo que me pidió Renata. Le doy \"Ir a resolver\".",
+     "segundosDesdeLoAnterior": 8,
+     "t": 90
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "El botón de \"Acciones urgentes\" me llevó derechito a los 3 pedidos pagados. Bien. Pero me molesta que al entrar la lista salga vacía y diga \"No hay pedidos en este estado\" cuando arriba dice que hay 3: por poco me voy pensando que no había nada que hacer."
+  },
+  {
+   "quiero": "ver qué producto lleva cada pedido para saber si me alcanza el inventario",
+   "esperaba": null,
+   "t": 108,
+   "segundos": 58,
+   "logrado": false,
+   "clicsBase": 4,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Renata me pidió dos cosas: despachar lo pagado y decirle si nos falta producto. Antes de tocar \"Registrar envío\" quiero saber qué lleva cada pedido. Le doy \"Ver\" al primero, el de Mariana Robles.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 108
+    },
+    {
+     "texto": "Ya vi qué pasa: cuando le pico a \"Ver\" no abre ningún detalle, lo que hace es brincarme a la pestaña \"Por devolver\" (se queda pintada esa). Por eso la lista sale vacía. O sea que con \"Ver\" no puedo ver qué trae el pedido. Es la tercera vez que lo intento.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 166
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Ver\" del pedido de Mariana Robles y en vez de abrirse el detalle, la lista se quedó en blanco: \"0 pedidos / No hay pedidos en este estado\"",
+     "pantalla": null,
+     "t": 117
+    },
+    {
+     "texto": "reintento: vuelvo a la pestaña \"Pagado 3\" a ver si reaparecen los pedidos",
+     "t": 125
+    },
+    {
+     "texto": "reintento: pico \"Ver\" otra vez, ahora estando ya parado en la pestaña Pagado, a ver si ahora sí abre el detalle",
+     "t": 135
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "el botón \"Ver\" del renglón no abre el detalle del pedido: cambia la pestaña a \"Por devolver\" y deja la lista en 0"
+  },
+  {
+   "quiero": "encontrar por otro lado qué productos lleva cada pedido pagado",
+   "esperaba": null,
+   "t": 166,
+   "segundos": 23,
+   "logrado": true,
+   "clicsBase": 7,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Si no puedo abrir el detalle, quizá \"Despacho en bloque\" me muestre qué lleva cada uno antes de mandarlos. Voy a asomarme sin confirmar nada.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 166
+    },
+    {
+     "texto": "Aquí sí está todo lo que necesitaba: \"Despacho en bloque\" me muestra folio, cliente, destino y PRODUCTOS de cada pedido, y hasta trae un paso \"2 · Lista de surtido — Suma por producto de los pedidos seleccionados contra la existencia de la bodega\". Eso es exactamente lo que Renata me pidió saber. Lo malo: llegué aquí de puro milagro, buscando por otro lado porque el botón \"Ver\" no sirve. Nadie me dijo que esta pantalla existía.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 189
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Sí supe qué lleva cada pedido, pero no por donde debía: tuve que rendirme con \"Ver\" y entrar a \"Despacho en bloque\". Son 1 Klinhart, 1 Finding Pro 500g, 1 Naplus y 1 Colágeno Hidrolizado."
+  },
+  {
+   "quiero": "elegir mi bodega (Bodega Central) para que salga de ahí la mercancía",
+   "esperaba": null,
+   "t": 189,
+   "segundos": 19,
+   "logrado": true,
+   "clicsBase": 9,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Dice \"Aún no tienes bodega por defecto\". Yo soy de Bodega Central, así que la escojo. Me llama la atención que en la lista salga primero Guadalajara y hasta abajo la mía: si voy con prisa puedo escoger la equivocada y descontarle producto a otra sucursal.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 189
+    },
+    {
+     "texto": "Apareció \"Usar Bodega Central como mi bodega por defecto\". Le doy, así mañana no me equivoco de bodega.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 206
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "Escogí Bodega Central y la dejé como mi bodega por defecto. Me incomoda que el menú ponga Guadalajara hasta arriba: con prisa le puedo descontar producto a otra sucursal y ni cuenta me doy."
+  },
+  {
+   "quiero": "saber si alcanza el producto en Bodega Central para los 3 pedidos",
+   "esperaba": null,
+   "t": 214,
+   "segundos": 65,
+   "logrado": true,
+   "clicsBase": 10,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Marco los tres pedidos con el \"Todos\" y le doy \"Calcular surtido\". Si el sistema me dice solo cuánto hay y cuánto falta, me ahorra ir y venir a Stocks producto por producto.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 214
+    },
+    {
+     "texto": "Seleccionados: 3. Ahora \"Calcular surtido\" para ver si me alcanza.",
+     "segundosDesdeLoAnterior": 48,
+     "t": 261
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "En una sola pantalla vi que de los 4 productos hay 60 de cada uno en Bodega Central y que \"Todo alcanza: puedes despachar 3 pedido(s)\". Esto sí me lo dijo el sistema solo, no tuve que ir y venir."
+  },
+  {
+   "quiero": "sacar las guías de paquetería para los 3 pedidos",
+   "esperaba": null,
+   "t": 279,
+   "segundos": 71,
+   "logrado": true,
+   "clicsBase": 13,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Hay tres formas de poner guía: capturarla a mano, pegar un CSV del portal de la paquetería, o \"Generar guías con la paquetería\". Como no tengo ningún CSV ni número a mano, uso la de generar. Me da algo de cosa porque dice \"se pedirá una a simulada al despachar\" y no sé si me va a cobrar o duplicar algo.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 279
+    },
+    {
+     "texto": "No era un botón: \"Generar guías con la paquetería\" es una casillita. Yo la andaba buscando como botón. Abajo el botón \"Despachar 3 pedido(s)\" está apagado y explica por qué: \"Faltan guías en ORD-97E56995, ORD-682C1E22, ORD-1F950075\". Eso sí está bien explicado, me gusta que me diga qué me falta.",
+     "segundosDesdeLoAnterior": 50,
+     "t": 329
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "Las guías se piden marcando una casilla, no un botón; tardé en verla porque está metida entre el CSV y el \"Elegir archivo\". Ya marcada, el botón de despachar se prendió."
+  },
+  {
+   "quiero": "despachar los 3 pedidos pagados y que le llegue su guía a cada cliente",
+   "esperaba": null,
+   "t": 350,
+   "segundos": 82,
+   "logrado": true,
+   "clicsBase": 15,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Este es el botón que no se deshace: \"Marca todos los seleccionados como enviados, descuenta la bodega y avisa a cada cliente por correo con su guía\". Voy a apretarlo una sola vez y después reviso pedido por pedido que no se haya duplicado el descuento. Si me tardo y le pico dos veces, capaz que le saco doble a la bodega.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 350
+    },
+    {
+     "texto": "Sí hay confirmación, me tragué mi desconfianza: sale un cuadro \"Despachar 3 pedido(s) desde Bodega Central\" con los tres folios, dice \"Se generará con simulada\" y avisa \"Esto no se puede deshacer desde aquí\". Eso está bien hecho. Lo único que me choca es que la paquetería se llame \"simulada\"; si un cliente me pregunta con qué le mandé, ¿qué le digo?",
+     "segundosDesdeLoAnterior": 24,
+     "t": 375
+    },
+    {
+     "texto": "Dice \"Se despacharon 3 pedido(s)... quedó enviado\". No me confío: voy a recargar la página y a revisar en Pedidos que de verdad estén en Enviado, porque si algo no se guardó y Renata cree que ya salieron, el problema es mío.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 395
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Los 3 pedidos salieron en un solo movimiento, con guía cada uno, y después de recargar siguen en \"Enviada\" con su guía y la bodega de donde salió. Es lo mejor que he usado del sistema."
+  },
+  {
+   "quiero": "comprobar que el inventario de Bodega Central sí se descontó y no doble",
+   "esperaba": null,
+   "t": 432,
+   "segundos": 24,
+   "logrado": true,
+   "clicsBase": 18,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Me dijo que descuenta la bodega. Antes había 60 de cada uno; deberían quedar 59 de Klinhart, Finding Pro, Naplus y Colágeno. Si veo 58 es que se descontó dos veces y ahí sí hay bronca.",
+     "segundosDesdeLoAnterior": 37,
+     "t": 432
+    },
+    {
+     "texto": "Quedaron en 59 exactos Colágeno, Naplus, Klinhart y Finding Pro. No se duplicó nada. Eso me deja tranquilo.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 456
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "Sí se descontó bien y una sola vez. Pero la pantalla de Stocks abre con \"Alta de stock\" (crear una bodega nueva) hasta arriba, que es lo último que yo quiero hacer, y el inventario de verdad queda hasta abajo después de un montón de formularios."
+  },
+  {
+   "quiero": "revisar si a alguna sucursal le falta producto, que es la otra cosa que me pidió Renata",
+   "esperaba": null,
+   "t": 456,
+   "segundos": 42,
+   "logrado": true,
+   "clicsBase": 19,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Renata dijo \"dime si nos falta producto para algo\". En Bodega Central todo está en 59 o 60, no falta nada. Pero somos tres sucursales; voy a asomarme a Guadalajara y a Tienda Del Valle por si allá están en ceros.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 456
+    },
+    {
+     "texto": "Ya vi las tres: Bodega Central 59-60, Guadalajara 9-10, Tienda Del Valle 11-12. No falta nada hoy. Pero para saberlo tuve que cambiar el menú tres veces y leer 39 renglones a ojo. El sistema no me dice en ningún lado \"de esto queda poco\": no hay mínimo, no hay foco rojo, nada. La única vez que me avisó algo fue en la lista de surtido, y esa solo mira los pedidos que ya seleccioné.",
+     "segundosDesdeLoAnterior": 42,
+     "t": 498
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "no encuentro dónde poner un mínimo por producto ni una vista de \"todas las sucursales juntas\"; si Guadalajara se queda en 1 pieza nadie se va a enterar",
+     "pantalla": "#/admin Stocks",
+     "t": 498
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Contesté lo de Renata: no falta producto. Pero lo saqué a ojo, cambiando de sucursal tres veces. Me habría gustado una sola tabla con las tres columnas y un aviso de mínimos."
+  },
+  {
+   "quiero": "asegurarme de que no quedó ningún pedido pagado sin aparecer en mi lista",
+   "esperaba": null,
+   "t": 507,
+   "segundos": 49,
+   "logrado": true,
+   "clicsBase": 19,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Renata dijo \"todo lo que esté pagado\". En Pedidos hay un botón \"Conciliar pagos\" que no sé bien qué hace, pero suena a que busca pagos que no se registraron. Si un cliente ya pagó y a mí no me apareció, me lo van a reclamar a mí. Le pico.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 507
+    },
+    {
+     "texto": "El cuadro explica bien: \"Para cuando alguien ya pagó y su pedido sigue en Pendiente\". Pero abajo dice \"Última revisión: 6 mar, 11:00\" y hoy es 3 de marzo de 2027. ¿Cómo va a haber una revisión de dentro de tres días? Eso me deja dudando de si los números que veo son de hoy.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 534
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la última revisión de pagos aparece con fecha \"6 mar\" cuando hoy es 3 de marzo",
+     "pantalla": "#/admin Conciliar pagos",
+     "t": 534
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Corrí \"Conciliar pagos\" y me dijo \"Revisados 0 · Acreditados 0 · Sin pago 0 — No hay pedidos pendientes de pago en las últimas 72 horas\". O sea que no se quedó ningún pago colgado. Bien explicado, aunque la fecha de la última revisión decía 6 de marzo y hoy es 3."
+  },
+  {
+   "quiero": "comprobar que a los tres clientes de verdad les llegó su correo con la guía",
+   "esperaba": null,
+   "t": 567,
+   "segundos": 31,
+   "logrado": true,
+   "clicsBase": 22,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "La pantalla prometió \"avisa a cada cliente por correo con su guía\". Si Renata me pregunta \"¿ya les avisaste?\" quiero poder decirle que sí, no que el sistema dijo que sí.",
+     "segundosDesdeLoAnterior": 33,
+     "t": 567
+    },
+    {
+     "texto": "Sí les llegó. A Mariana le entró \"Tu pedido ORD-1F950075 va en camino — Lo enviamos por Simulada. Guía: SIM-1F950075\". Eso me tranquiliza. Pero \"Simulada\" como nombre de paquetería en un correo al cliente se ve mal: si me habla y me pregunta \"¿qué es Simulada?\", no sé qué contestarle.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 598
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "Comprobé el correo de la clienta: le llegó el aviso con la guía. Lo malo es el nombre de la paquetería, \"Simulada\", que sale tal cual en el correo del cliente."
+  },
+  {
+   "quiero": "abrir el detalle de un pedido para saber qué llevaba, ahora por el folio",
+   "esperaba": null,
+   "t": 598,
+   "segundos": 22,
+   "logrado": false,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "En la pantalla de despacho el folio ORD-1F950075 estaba subrayado como liga. A lo mejor por ahí sí se abre el detalle que el botón \"Ver\" no me abrió.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 598
+    },
+    {
+     "texto": "El folio no me lleva a un detalle de almacén: me lleva a la pantalla de SEGUIMIENTO del cliente, la misma que ve Mariana, y ahí ni siquiera dice qué productos lleva. Además a mí, que soy el de almacén, me está ofreciendo \"Activar modo socio\" y me habla en femenino (\"Como socia\"). O sea: en todo el sistema el ÚNICO lugar donde puedo ver qué productos trae un pedido es la tabla de \"Despacho en bloque\". Si el pedido ya se despachó, ya no puedo ver qué llevaba.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 620
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿dónde veo qué productos llevaba un pedido que ya despaché? Si un cliente reclama que le faltó algo, no tengo cómo revisarlo",
+     "pantalla": "#/orden/ORD-1F950075",
+     "t": 620
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "no existe un detalle de pedido para almacén: el folio abre la pantalla del cliente y no trae la lista de productos"
+  },
+  {
+   "quiero": "encontrar dentro del sistema cómo dejarle a Renata el reporte de lo que hice hoy",
+   "esperaba": null,
+   "t": 629,
+   "segundos": 29,
+   "logrado": false,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Renata me dijo \"dime si nos falta producto para algo\". No sé si eso se le avisa por el sistema o por WhatsApp. Voy a buscar: en el menú solo hay Pedidos, Stocks y Campañas. Campañas suena a promociones, pero es lo único que me falta por abrir; me asomo por si ahí hay avisos o reportes.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 629
+    },
+    {
+     "texto": "Campañas es de publicidad: \"Campañas, assets y copy comercial para compartir con la red\". No tiene nada que ver conmigo y aun así me deja crear y guardar campañas. Igual que me deja dar de alta una bodega nueva y cancelar pedidos. Yo soy el de almacén y arriba dice ADMIN. Si le pico mal a algo, lo rompo y nadie me detiene.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 658
+    },
+    {
+     "texto": "Ya recorrí las tres pantallas que tengo (Pedidos, Stocks, Campañas) y no hay ningún lugar para dejarle un recado o un reporte a Renata: ni \"notas\", ni \"avisos\", ni \"reporte del día\". Lo único parecido es \"Acciones urgentes\", y eso lo escribe el sistema, no yo. Le voy a mandar WhatsApp, como llevo haciendo dos semanas.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 658
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿por qué el sistema me deja crear campañas de publicidad y bodegas nuevas si yo solo empaco cajas? No hay un modo \"almacén\"",
+     "pantalla": "#/admin Campañas",
+     "t": 658
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no hay ningún lugar en el sistema para dejarle el reporte del día a mi jefa; se lo tengo que mandar por WhatsApp"
+  },
+  {
+   "quiero": "confirmar que el botón \"Ver\" está mal para poder reportarlo bien",
+   "esperaba": null,
+   "t": 675,
+   "segundos": 23,
+   "logrado": true,
+   "clicsBase": 24,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 7,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Antes de acusar al sistema quiero estar seguro. Voy a la pestaña \"Enviado\", que tiene 3 pedidos, y le pico a \"Ver\". Si otra vez me brinca de pestaña y deja la lista en cero, entonces sí está descompuesto y no soy yo.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 675
+    },
+    {
+     "texto": "Confirmado: pase lo que pase, \"Ver\" me deja parado en la pestaña \"Por devolver\" y con la lista en cero. Pasó desde la pestaña Pagado y desde la pestaña Enviado, cuatro veces ya. No soy yo.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 698
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 5,
+   "comentario": "Reproduje el fallo cuatro veces: el botón \"Ver\" de la columna Detalle nunca abre nada, siempre te cambia a la pestaña \"Por devolver\" y vacía la lista."
+  },
+  {
+   "quiero": "buscar un pedido por su número de guía, como si un cliente me hablara",
+   "esperaba": null,
+   "t": 698,
+   "segundos": 42,
+   "logrado": true,
+   "clicsBase": 27,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 2,
+   "pantallasBase": 7,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Si Mariana me habla y me dice \"mi guía es SIM-1F950075\", quiero encontrar su pedido rápido. Hay un buscador que dice \"Buscar por cliente, guía, teléfono, dirección...\". Lo pruebo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 698
+    },
+    {
+     "texto": "El buscador sí jala con la guía y con el nombre. Ahora la prueba de verdad: si yo no sé en qué estado está el pedido, ¿me lo encuentra igual? Me paro en la pestaña \"Pendiente\" y busco \"Mariana\".",
+     "segundosDesdeLoAnterior": 26,
+     "t": 724
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "El buscador sí encuentra por guía y por nombre, y cuando no hay resultados avisa \"Sin resultados para Mariana en este estado\", que al menos me dice que busque en otra pestaña. Aun así, si no sé el estado tengo que ir pestaña por pestaña."
+  },
+  {
+   "quiero": "antes de irme, revisar si entró algún pedido nuevo y cómo van los envíos de la mañana",
+   "esperaba": null,
+   "t": 751,
+   "segundos": 55,
+   "logrado": true,
+   "clicsBase": 29,
+   "teclasBase": 2,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 7,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Son las 5:30 de la tarde y antes de cerrar quiero dejar limpio: ver si llegó otro pedido pagado en el día y si la paquetería ya movió las guías de la mañana. Recargo la pantalla porque no confío en que se actualice sola.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 751
+    },
+    {
+     "texto": "No entró nada nuevo: sigue 0 pagados. Voy a \"Despacho en bloque\" y le doy \"Consultar paquetería ahora\" para ver si mis tres guías ya se movieron.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 777
+    },
+    {
+     "texto": "El rastreo dice \"Se consultaron 3 envío(s): 0 entregado(s), 3 en camino, 0 con incidencia\". Perfecto, van en camino. Lo que no me late es que arriba, en Pedidos, el sistema me sigue empujando con \"SIGUIENTE · Confirmar entregas 3\": me está diciendo que marque como entregados unos paquetes que salieron hace cinco horas y que él mismo acaba de confirmar que van en tránsito. Si un compañero le hace caso, vamos a tener pedidos entregados que nunca llegaron.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 806
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el sistema me sugiere \"Confirmar entregas 3\" el mismo día que despaché, y su propio rastreo dice que van en camino",
+     "pantalla": "#/admin Pedidos",
+     "t": 806
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Cerré el día sabiendo que los 3 van en camino y que no entró nada nuevo. El rastreo con un botón está bien resuelto."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "sí había trabajo y lo encontré rápido gracias al aviso de urgentes",
+   "t": 108,
+   "tarea": null
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "el único botón que dice \"Ver\" me manda a una pestaña que no tiene nada que ver, y yo necesito saber qué producto lleva cada caja",
+   "t": 166,
+   "tarea": "ver qué producto lleva cada pedido para saber si me alcanza el inventario"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "encontré una pantalla que hace justo mi trabajo del día, después de creer que no iba a poder ver qué llevaba cada pedido",
+   "t": 189,
+   "tarea": "encontrar por otro lado qué productos lleva cada pedido pagado"
+  },
+  {
+   "emocion": "gusto",
+   "intensidad": 4,
+   "porque": "la lista de surtido me dice necesario, existencia, semáforo y hasta \"Quién sí lo tiene\" si faltara: eso me ahorra ir producto por producto a Stocks",
+   "t": 279,
+   "tarea": "saber si alcanza el producto en Bodega Central para los 3 pedidos"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "no hay ninguna confirmación de \"¿seguro?\" antes de mover 3 pedidos y descontar inventario",
+   "t": 350,
+   "tarea": "despachar los 3 pedidos pagados y que le llegue su guía a cada cliente"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 4,
+   "porque": "salió el lote DSP-89056D5E94 con las tres guías y el sistema me lo dijo con nombre y número",
+   "t": 395,
+   "tarea": "despachar los 3 pedidos pagados y que le llegue su guía a cada cliente"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "el descuento fue exacto: 60 menos 1 en los cuatro productos que salieron, ni uno de más",
+   "t": 456,
+   "tarea": "comprobar que el inventario de Bodega Central sí se descontó y no doble"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "no poder consultar el contenido de un pedido ya enviado me deja sin defensa si hay un reclamo",
+   "t": 620,
+   "tarea": "abrir el detalle de un pedido para saber qué llevaba, ahora por el folio"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 3,
+   "porque": "me da pena andar picándole a pantallas que no me tocan porque el sistema no me pone límites",
+   "t": 658,
+   "tarea": "encontrar dentro del sistema cómo dejarle a Renata el reporte de lo que hice hoy"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 2,
+   "porque": "me hace buscar nueve veces lo mismo porque el buscador solo mira la pestaña donde estoy parado",
+   "t": 740,
+   "tarea": null
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Renata, buenas. Ya despaché los 3 pedidos pagados desde Bodega Central: ORD-97E56995 (Ernesto Vidal, Monterrey, 1 Klinhart), ORD-682C1E22 (Julio Herrera, CDMX, 1 Finding Pro y 1 Naplus) y ORD-1F950075 (Mariana Robles, CDMX, 1 Colágeno). Salieron con guía SIM-97E56995, SIM-682C1E22 y SIM-1F950075, lote DSP-89056D5E94, y ya les llegó su correo. De producto no falta nada: en Central quedan 59 o 60 de todo, en Guadalajara 9-10 y en Del Valle 11-12. Dos cosas: 1) el botón \"Ver\" de los pedidos no abre nada, me brinca a la pestaña \"Por devolver\", así que no puedo revisar qué llevaba un pedido ya despachado; 2) ¿dónde le dejo estos reportes? No hallé lugar en el sistema y por eso se lo mando por aquí.",
+   "t": 658,
+   "tarea": null
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 6,
+  "legibilidad": 7,
+  "coherencia": 4,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada",
+   "incompleta",
+   "despareja"
+  ],
+  "mejorPantalla": "Despacho en bloque: los cuatro pasos numerados y sobre todo la Lista de surtido con \"Necesario / En Bodega Central / Semáforo / Quién sí lo tiene\"",
+  "peorPantalla": "la lista de Pedidos, por el botón \"Ver\" que no ve nada y porque abre en una pestaña vacía diciendo que no hay pedidos cuando sí los hay",
+  "seParece": "a un sistema de bodega hecho por alguien que sí ha empacado cajas, pero al que le faltó una semana para terminarlo",
+  "recomendarias": 6,
+  "volverias": "sí, es mi trabajo; pero solo entro por Despacho en bloque, lo demás lo esquivo",
+  "comentario": "Cuando le atina, le atina bonito: el despacho en bloque me resolvió el día en cinco minutos y me dijo solo si alcanzaba el producto. Pero se siente hecho a pedazos: unas pantallas tienen acentos y otras dicen \"danos\", \"bitacora\", \"campanas\"; abajo dice 2026 y estamos en 2027; me pone ADMIN cuando yo soy el de almacén y me deja crear campañas de publicidad; y el detalle del pedido simplemente no existe para mí."
+ },
+ "totales": {
+  "clics": 31,
+  "teclas": 2,
+  "envios": 0,
+  "campos": 2,
+  "pantallas": 9,
+  "recargas": 0,
+  "atrases": 3
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788502534496,
+   "primerClicMs": 22435,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/despacho",
+   "desde": 1788502901774,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788502918184,
+   "primerClicMs": 8045,
+   "clics": 22,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-1F950075",
+   "desde": 1788503104919,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788502918185,
+   "primerClicMs": 8045,
+   "clics": 6,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/orden/ORD-1F950075",
+   "desde": 1788503104920,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788503135053,
+   "primerClicMs": 2035,
+   "clics": 17,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788503257013,
+   "primerClicMs": 26635,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788503135054,
+   "primerClicMs": 2035,
+   "clics": 6,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "Ya adentro. En el menú solo veo tres cosas: Pedidos, Stocks y Campañas. Renata me pidió despachar lo pagado, así que Pedidos es lo mío. Arriba dice \"SIGUIENTE: Preparar envíos 3\" y \"Pagados 3\", pero la lista dice \"0 pedidos / No hay pedidos en este estado\". No entiendo si tengo trabajo o no.",
+   "segundosDesdeLoAnterior": 23,
+   "t": 74
+  },
+  {
+   "texto": "el resumen dice 3 pagados pero la lista dice 0 pedidos; no sé en qué pestaña estoy parado",
+   "pantalla": "#/admin",
+   "t": 74
+  },
+  {
+   "texto": "dice \"Solo se registran entradas; las salidas quedan en bitacora\" pero no veo por dónde abrir esa bitácora para comprobar una salida",
+   "pantalla": "#/admin Stocks",
+   "t": 456
+  }
+ ],
+ "fin": "2026-09-04T06:30:24.609Z",
+ "duracionMin": 15
+}

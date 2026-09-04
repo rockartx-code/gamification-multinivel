@@ -1,0 +1,978 @@
+{
+ "persona": "Ernesto Vidal, 63",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-04T04:35:41.868Z",
+ "tareas": [
+  {
+   "quiero": "entrar a la pagina que me pasó mi sobrino y ver si venden el omega 3",
+   "esperaba": null,
+   "t": 15,
+   "segundos": 146,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Mi sobrino me mandó una liga en el WhatsApp. La abro en el celular. Espero ver una tienda, con fotos y precios. Traigo los lentes puestos.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 15
+    },
+    {
+     "texto": "Lo primero que me tapa la pantalla es un \"Aviso de Privacidad\" largo con un botón \"Entendido y acepto\". Lo leo por encima: dice que no me piden datos bancarios ni fiscales. Le doy aceptar para que me deje ver.",
+     "segundosDesdeLoAnterior": 63,
+     "t": 78
+    },
+    {
+     "texto": "Ahora sí veo la tienda. Le bajo despacio buscando la palabra \"Omega\". Leo: Gel Reductivo, Creatina, Colageno, CRT-1200, Keto Elektrolyte, Biotina, BHB Acido, Glu-10, Naplus, Boom, Longevit, Klinhart, Finding Pro. Ninguno se llama Omega 3.",
+     "segundosDesdeLoAnterior": 2,
+     "t": 80
+    },
+    {
+     "texto": "Busco una lupa o un cuadrito para escribir \"omega\". Voy a abrir el menú de arriba a ver si ahí hay buscador o categorías.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 80
+    },
+    {
+     "texto": "Le voy bajando despacio. La mayoría de los productos solo dice \"Presentación y modo de uso en la etiqueta del producto\", o sea, no me dicen nada. Pero cuatro sí traen letra chiquita con los ingredientes. En uno que se llama \"Klinhart\" alcanzo a leer \"aceite de pescado con 660 mg de EPA y 440 mg de DHA\". EPA y DHA son las letras que me dijo mi doctora. Creo que ese es el omega 3.",
+     "segundosDesdeLoAnterior": 39,
+     "t": 119
+    },
+    {
+     "texto": "Le voy a picar a \"Ver detalle\" del Klinhart para asegurarme de la dosis antes de comprarlo. Mi doctora me dijo los miligramos.",
+     "segundosDesdeLoAnterior": 1,
+     "t": 120
+    },
+    {
+     "texto": "Se abrió una ventanita: \"Detalle del producto — Klinhart — omega 3 — Precio $480 — Sin descuento — Cantidad actual: 0\". ¡Ahí sí dice \"omega 3\"! O sea que la palabra sí existe en la página, pero solo se ve DESPUÉS de abrir el producto. Si hubiera un buscador yo lo encontraba en diez segundos.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 161
+    },
+    {
+     "texto": "La dosis: \"1,000 mg de aceite de pescado con 660 mg de EPA y 440 mg de DHA\". Mi doctora me pidió por lo menos 500 de EPA. Esto lo cumple. Y son 60 cápsulas, 2 meses, una al día. $480. Eso me sirve.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 161
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Dónde está el omega 3? Ningún producto se llama así. Los nombres son de marca (Klinhart, Glu-10, CRT-1200) y no dicen qué son.",
+     "pantalla": "#/",
+     "t": 80
+    },
+    {
+     "texto": "Se llama \"Klinhart\" y en ningún lado del nombre dice omega 3 ni aceite de pescado. ¿Y si hay otro y me equivoco?",
+     "pantalla": "#/",
+     "t": 119
+    },
+    {
+     "texto": "Dice \"Cantidad actual: 0\". ¿Eso quiere decir que no hay, que se acabó? Porque igual me deja el botón de \"Agregar a carrito\". No entiendo si el 0 es del inventario o de lo que yo llevo.",
+     "pantalla": "#/ (ventana de detalle)",
+     "t": 161
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Abrí el menú de arriba y lo único que hay es \"Tienda\". No hay lupa, ni buscador, ni categorías. Para encontrar el omega 3 tengo que leerme los 13 productos uno por uno.",
+     "pantalla": "#/",
+     "t": 119
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Sí encontré el omega 3, pero por pura suerte: se llama \"Klinhart\" y hay que leerse los 13 productos porque no hay buscador. La palabra \"omega 3\" solo aparece adentro del producto."
+  },
+  {
+   "quiero": "agregar el omega 3 al carrito",
+   "esperaba": null,
+   "t": 161,
+   "segundos": 205,
+   "logrado": true,
+   "clicsBase": 3,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Le pico a \"Agregar a carrito\" aquí dentro de la ventanita del producto. Espero que me diga que se agregó.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 161
+    },
+    {
+     "texto": "No me salió ningún mensaje de \"listo, se agregó\". Pero arriba, junto a \"Tienda\", ahora aparece un \"1\" y \"$480\". Supongo que ese es mi carrito.",
+     "segundosDesdeLoAnterior": 35,
+     "t": 196
+    },
+    {
+     "texto": "Le pico al \"1 $480\" de arriba a ver si me abre el carrito.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 196
+    },
+    {
+     "texto": "Cuando el celular se queda tonto, lo que yo hago es cerrar y volver a abrir. Voy a recargar la página. Ojalá no se me pierda lo que ya metí al carrito.",
+     "segundosDesdeLoAnterior": 89,
+     "t": 284
+    },
+    {
+     "texto": "Ya recargando entendí qué pasó: la ventanita del producto NUNCA se cerró cuando le di \"Agregar a carrito\". Se quedó abierta, y lo único que cambió fue una línea chiquita que decía \"Cantidad actual: 1\" en vez de 0. Yo estaba picándole al carrito de arriba, que estaba atrás del vidrio oscuro. Nunca me dijo \"listo, lo agregué\".",
+     "segundosDesdeLoAnterior": 37,
+     "t": 321
+    },
+    {
+     "texto": "Bueno, al menos el carrito aguantó la recarga: sigue diciendo \"1 $480\". Ahora sí le pico.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 321
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "El carrito no dice \"Carrito\" por ningún lado: es un dibujito con un 1 al lado. Yo lo adiviné por el precio.",
+     "pantalla": "#/",
+     "t": 196
+    },
+    {
+     "texto": "¿Por qué la ventana del producto no se cierra sola cuando agrego? ¿Y por qué no me dice \"agregado\" con letras grandes? Un \"Cantidad actual: 1\" en letra chica no me sirve, yo veo poco.",
+     "pantalla": "#/ (ventana de detalle)",
+     "t": 321
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: le piqué al dibujito del carrito y no se abrió nada; lo vuelvo a intentar",
+     "t": 224
+    },
+    {
+     "texto": "Le pico al \"1 $480\" de arriba y no pasa nada la primera vez.",
+     "pantalla": "#/",
+     "t": 224
+    },
+    {
+     "texto": "Le pico tres veces al carrito de arriba y no abre nada. La pantalla se ve normal (la lista de productos), pero ya nada responde: es como si le hubieran puesto un vidrio encima.",
+     "pantalla": "#/",
+     "t": 284
+    },
+    {
+     "texto": "reintento: recargo la página completa porque la pantalla se quedó muerta",
+     "t": 284
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "Sí quedó en el carrito, pero me costó: la ventana del producto no se cierra y no me avisa que agregó nada. Tuve que recargar la página para poder salir."
+  },
+  {
+   "quiero": "ver qué dice el carrito y si puedo dejar que me llegue cada mes",
+   "esperaba": null,
+   "t": 366,
+   "segundos": 127,
+   "logrado": true,
+   "clicsBase": 5,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Ya estoy en el \"Carrito\". Leo despacio: \"Total $480\", \"Sin descuento\", \"1 artículo\", \"Corte en 21d 19h 18m 56s\", \"Pago Seguro\", \"Entrega 3 a 5 días hábiles\". Abajo mi Klinhart, y luego un formulario largo con Nombre, Teléfono, Correo, Calle, Número, Ciudad, CP, Estado, País.",
+     "segundosDesdeLoAnterior": 44,
+     "t": 366
+    },
+    {
+     "texto": "Lo que yo vine a hacer es que me llegue CADA MES sin acordarme. Le busco por todo el carrito: \"suscripción\", \"cada mes\", \"mensual\", \"repetir\", \"programar\". No veo nada de eso.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 366
+    },
+    {
+     "texto": "A lo mejor lo de \"cada mes\" está guardado detrás de una cuenta. Arriba salía todo el tiempo \"Regístrate para obtener beneficios — Crea tu cuenta para desbloquear descuentos y seguimiento de tu red\". Voy a ver qué pide el registro. Si me pide muchas cosas, me regreso.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 392
+    },
+    {
+     "texto": "No sé escribir direcciones de internet, así que me regreso con el botón \"Regresar\" y le pico al botón azul de \"Registrate\" que sale arriba en la tienda.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 421
+    },
+    {
+     "texto": "Y el botón \"Registrate\" no me llevó a un registro normal: me llevó a una página de negocio. Lo primero que leo es \"Bono de Inicio Rápido disponible\", \"Transforma tu salud. Construye ingresos. Recupera tu control.\", \"Comisiones de Red\", \"Gen 1 10%\", \"Gen 2 5%\"… Yo no vine a esto. Yo vine por un frasco de omega 3.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 456
+    },
+    {
+     "texto": "Hasta abajo, en letra chiquita, por fin dice algo que me tranquiliza: \"Te registras como cliente: compras a precio de lista, sin compromiso y sin datos bancarios. El modo socio... se activa solo si tú lo pides.\" Eso es lo único que yo quería saber, y está al final, después de cinco pantallas de comisiones y viajes a Diamante. Debería estar HASTA ARRIBA.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 493
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Corte en 21d 19h 18m 56s\". ¿Corte de qué? ¿Se me vence el carrito? ¿Es una oferta que se acaba? Un reloj corriendo me pone nervioso y nadie me explica qué es.",
+     "pantalla": "#/carrito",
+     "t": 366
+    },
+    {
+     "texto": "\"Recoger en sucursal — Disponible en: Ciudad de México, Guadalajara\". Yo vivo en Monterrey, o sea que eso no me sirve. Ojalá lo dijera antes de hacerme ilusiones.",
+     "pantalla": "#/carrito",
+     "t": 366
+    },
+    {
+     "texto": "Le di \"Regresar\" en el carrito y me mandó a algo que dice /dashboard, no a la tienda. Yo esperaba volver a los productos.",
+     "pantalla": "#/carrito",
+     "t": 456
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "En todo el carrito no hay ni una palabra de \"suscripción\" ni \"cada mes\". Lo único que puedo hacer es comprar este bote, una vez.",
+     "pantalla": "#/carrito",
+     "t": 366
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 3,
+   "comentario": "No encontré nada de \"cada mes\" en el carrito. Y el botón de registrarme me llevó a una página de negocio de comisiones que casi me hace cerrar todo."
+  },
+  {
+   "quiero": "crear mi cuenta para ver si desde ahí puedo dejar el pedido cada mes",
+   "esperaba": null,
+   "t": 493,
+   "segundos": 153,
+   "logrado": true,
+   "clicsBase": 7,
+   "teclasBase": 0,
+   "clics": 11,
+   "teclas": 111,
+   "pantallasBase": 3,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Lleno los datos. Escribo despacio. Nombre Ernesto, apellido Vidal. El materno dice \"(opcional)\" así que lo dejo. Mi correo de hotmail y mi teléfono. La contraseña \"mínimo 8 caracteres\": pongo Monterrey1963. El \"Código de Referido (opcional)\" no lo tengo, mi sobrino no me dio ninguno; lo dejo vacío.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 493
+    },
+    {
+     "texto": "Le doy a \"Unirme ahora\".",
+     "segundosDesdeLoAnterior": 8,
+     "t": 501
+    },
+    {
+     "texto": "Donde estaba el formulario ahora dice: \"Solo falta un paso, confirma tu cuenta desde tu correo electrónico — Enviamos un enlace de activación a ernesto.vidal@hotmail.com\". Le atiné al correo, qué bueno.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 558
+    },
+    {
+     "texto": "Me salgo al Hotmail en el celular. Ahí está: \"Activa tu cuenta de Finding'U — Hola Ernesto Vidal, activa tu cuenta de Finding'U desde este enlace\". Le pico al enlace.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 558
+    },
+    {
+     "texto": "Dice \"¡Correo verificado! Tu cuenta ha sido activada correctamente. Ya puedes iniciar sesión.\" Esa pantalla sí está clara y con letra grande. Le doy a \"Iniciar sesión\".",
+     "segundosDesdeLoAnterior": 22,
+     "t": 580
+    },
+    {
+     "texto": "Marco \"Recordarme en este dispositivo\" porque no me quiero acordar de la contraseña cada vez. Escribo mi correo y mi contraseña.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 604
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"LOGIN — Accede a tu panel\" y el botón dice \"Ingresar al panel\". ¿Qué es un \"panel\"? Yo esperaba \"Mi cuenta\" o \"Entrar\". Y \"LOGIN\" está en inglés.",
+     "pantalla": "#/login",
+     "t": 604
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "Me registré y confirmé el correo yo solo. El correo llegó rápido y la pantalla de \"¡Correo verificado!\" es la más clara de todas."
+  },
+  {
+   "quiero": "encontrar dónde se deja programado que me llegue el omega 3 cada mes",
+   "esperaba": null,
+   "t": 646,
+   "segundos": 118,
+   "logrado": false,
+   "clicsBase": 18,
+   "teclasBase": 111,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ya entré. Arriba dice \"Progreso mensual 0%\", \"Corte de mes 21d 19h\", \"Meta de compra del mes — Al llegar aquí, como socia tendrías descuento y te activarías. Te faltan 20 VP para lograrlo\". Dice \"socia\", y yo soy hombre. Y no sé qué es un VP.",
+     "segundosDesdeLoAnterior": 42,
+     "t": 646
+    },
+    {
+     "texto": "Abro el menú de arriba, ahora que ya entré con mi cuenta, a ver si aparece \"Mis pedidos\" o algo de \"suscripción\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 646
+    },
+    {
+     "texto": "El menú ahora tiene: Tienda, Mi cuenta, Órdenes, Mi perfil. Ninguno dice \"suscripción\" ni \"envío mensual\". Voy a entrar a \"Mi cuenta\" a ver.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 671
+    },
+    {
+     "texto": "Pruebo \"Órdenes\". Aunque \"órdenes\" a mí me suena a mandar, no a mis compras. Yo diría \"Mis compras\" o \"Mis pedidos\".",
+     "segundosDesdeLoAnterior": 28,
+     "t": 699
+    },
+    {
+     "texto": "Me falta uno: \"Mi perfil\". Si tampoco hace nada, aquí ya no hay dónde buscar lo del envío mensual.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 728
+    },
+    {
+     "texto": "\"Mi perfil\" sí abre. Aquí veo mis datos y \"Tu cuenta está en modo cliente: no necesitamos tu CLABE ni documentos fiscales\". Eso me gusta. Pero tampoco hay nada de envíos mensuales, ni siquiera mi dirección guardada.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 764
+    },
+    {
+     "texto": "Ya recorrí todo lo que hay: Tienda, Mi cuenta (que no lleva a nada), Órdenes (que no lleva a nada), Mi perfil y el carrito. En ningún lado dice \"suscripción\", \"cada mes\" ni \"envío programado\". Antes de rendirme, le escribo a mi sobrino, que él me pasó la página.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 764
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Te faltan 20 VP para lograrlo\". ¿Qué es un VP? ¿Y por qué me habla de metas si yo nomás quiero comprar mi omega 3?",
+     "pantalla": "#/dashboard",
+     "t": 646
+    },
+    {
+     "texto": "Me dice \"como socia\" y yo soy señor. Me está hablando en femenino.",
+     "pantalla": "#/dashboard",
+     "t": 646
+    },
+    {
+     "texto": "Aquí \"Apellido materno *\" tiene estrellita de obligatorio, pero cuando me registré decía \"Apellido materno (opcional)\" y me dejó pasar sin él. ¿Entonces sí o no?",
+     "pantalla": "#/perfil",
+     "t": 764
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le piqué a \"Mi cuenta\" y me dejó en la MISMA pantalla en la que ya estaba (la de las metas y la tienda). Pensé que no había funcionado el dedo y le piqué otra vez.",
+     "pantalla": "#/dashboard",
+     "t": 699
+    },
+    {
+     "texto": "reintento: \"Mi cuenta\" no me llevó a ningún lado nuevo",
+     "t": 699
+    },
+    {
+     "texto": "\"Órdenes\" tampoco me lleva a ningún lado: me deja otra vez en la misma pantalla de siempre. Ya van dos botones del menú que no hacen nada.",
+     "pantalla": "#/dashboard",
+     "t": 728
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "familiar",
+     "texto": "Oye Beto, ya me registré en la página que me pasaste y ya tengo mi omega 3 (se llama Klinhart) en el carrito. Pero no hallo dónde se deja pagado para que me llegue solito cada mes. Busqué en el carrito, en Mi cuenta, en Órdenes y en Mi perfil. ¿Tú sabes dónde está o hay que hablarles?",
+     "t": 764,
+     "tarea": "encontrar dónde se deja programado que me llegue el omega 3 cada mes"
+    },
+    {
+     "aQuien": "soporte",
+     "texto": "Buenas tardes. Soy Ernesto Vidal, me acabo de registrar con el correo ernesto.vidal@hotmail.com. Quiero dejar programado que me manden el Klinhart (omega 3) cada mes sin tener que entrar a pedirlo. Busqué en el carrito y en mi cuenta y no encuentro la opción. ¿Existe? Gracias.",
+     "t": 764,
+     "tarea": "encontrar dónde se deja programado que me llegue el omega 3 cada mes"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "Recorrí las cinco pantallas que hay (Tienda, Mi cuenta, Órdenes, Mi perfil, Carrito) y en ninguna aparece la palabra suscripción ni nada de \"cada mes\". Le escribí a mi sobrino y a Soporte y me quedé esperando."
+  },
+  {
+   "quiero": "comprar mi frasco de omega 3 y pagarlo",
+   "esperaba": null,
+   "t": 786,
+   "segundos": 312,
+   "logrado": true,
+   "clicsBase": 24,
+   "teclasBase": 111,
+   "clics": 11,
+   "teclas": 30,
+   "pantallasBase": 4,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Bueno, aunque sea compro este bote y ya después veré lo del mes. Son 60 cápsulas, dos meses, así que tampoco me urge tanto. Vuelvo al carrito con el dibujito de arriba.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 786
+    },
+    {
+     "texto": "Ahora que entré con mi cuenta el carrito ya trae mi nombre \"Ernesto Vidal\" y mi teléfono puestos. Eso me gustó, me ahorra escribir. Ya no me pide el correo.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 811
+    },
+    {
+     "texto": "Leo el resto: \"Guardar esta dirección para futuras compras\" con un \"Alias\". Eso lo marco, para no volver a escribir todo. Y hay \"Quiero factura de esta compra\" que no necesito, soy jubilado.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 833
+    },
+    {
+     "texto": "Escribo mi dirección despacio: calle Río Nazas, número 415, Monterrey, CP 64860, Nuevo León. Me tardo, escribo con un dedo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 833
+    },
+    {
+     "texto": "Al escoger \"Nuevo Leon\" quiero ver si ya me dice cuánto es el envío, porque decía \"Envío desde $129\" y ese \"desde\" siempre esconde algo.",
+     "segundosDesdeLoAnterior": 4,
+     "t": 837
+    },
+    {
+     "texto": "En cuanto puse Nuevo León, el Total de arriba brincó de $480 a $609. Hasta abajo, después de la parte de la factura, aparecieron las \"Opciones de envío\": Estafeta Terrestre 3 a 5 días $129, y DHL Express 1 a 2 días $219. O sea, el envío es $129, casi la tercera parte de lo que cuesta el frasco.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 873
+    },
+    {
+     "texto": "Marco \"Guardar esta dirección para futuras compras\" y le pongo de nombre \"Casa\", para no volver a escribir todo el mes que entra.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 873
+    },
+    {
+     "texto": "Ahora \"Ver resumen\" antes de pagar. Yo siempre reviso los números antes de dar dinero, para eso fui contador.",
+     "segundosDesdeLoAnterior": 2,
+     "t": 875
+    },
+    {
+     "texto": "El resumen sí está claro en lo importante: \"Subtotal $480, Envío $129, Descuento -$0, Total $609\". Eso lo entiendo perfecto y me da confianza. Pero luego me llenan la ventana de cosas que no pedí: \"Como socia, con $520 más de compra este mes tendrías 10 % de descuento\", \"Activación: 20 VP netos · llevas 0 · este pedido suma 10\", \"Te faltan 10 VP para Meta de compra del mes\".",
+     "segundosDesdeLoAnterior": 56,
+     "t": 931
+    },
+    {
+     "texto": "Otra vez \"Como socia\". Soy Ernesto, señor de 63 años. Ya van tres pantallas que me hablan en femenino.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 931
+    },
+    {
+     "texto": "Le doy \"Cerrar\" y luego \"Pagar\". A ver si me pide la tarjeta; ahí es donde yo desconfío.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 931
+    },
+    {
+     "texto": "Ya tengo \"Orden ORD-97E56995 — Pago pendiente\". Los números coinciden: $480 + $129 = $609. Bien.",
+     "segundosDesdeLoAnterior": 39,
+     "t": 970
+    },
+    {
+     "texto": "Ahora sí lo que me da nervios: \"Pagar con MercadoPago\". MercadoPago sí lo conozco, mi hija lo usa. Eso me tranquiliza más que si me pidiera la tarjeta aquí mismo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 970
+    },
+    {
+     "texto": "Me sacó de la tienda a Mercado Pago: \"$609.00 — Pagar $609.00\". Nunca me pidió el número de mi tarjeta dentro de la página de Finding'U, que era mi miedo. Le doy pagar.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 998
+    },
+    {
+     "texto": "Me regresó a la página del pedido pero la pantalla está en BLANCO. Ni una letra. Yo acabo de pagar $609 y no sé si se hizo o no.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 1030
+    },
+    {
+     "texto": "Después de como quince segundos en blanco por fin apareció. Ahora dice \"Pago registrado\".",
+     "segundosDesdeLoAnterior": 32,
+     "t": 1062
+    },
+    {
+     "texto": "Me fui al Hotmail y ahí sí está claro: \"Recibimos tu pago · pedido ORD-97E56995 — ¡Gracias por tu compra! Tu pago quedó confirmado. Estamos preparando tu paquete\". Eso es lo que debió decirme la pantalla, no \"Pago registrado\".",
+     "segundosDesdeLoAnterior": 37,
+     "t": 1098
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Por qué las opciones de envío salen HASTA ABAJO, después de la factura, y no arriba donde dice \"Tipo de entrega — Envío desde $129\"? Yo ya iba a pagar sin verlas.",
+     "pantalla": "#/carrito",
+     "t": 873
+    },
+    {
+     "texto": "¿Qué son los VP? Nunca me explicaron. En la tienda decía \"PC\" junto a cada producto y aquí dice \"VP\". ¿Son lo mismo o son dos cosas distintas? Yo fui contador y no le entiendo.",
+     "pantalla": "#/carrito (resumen)",
+     "t": 931
+    },
+    {
+     "texto": "Dice \"Creada: 2027-03-02T11:18:04Z\". ¿Qué es esa \"T\" y esa \"Z\"? Para mí eso no es una fecha. Debería decir \"2 de marzo de 2027, 11:18\".",
+     "pantalla": "#/orden/ORD-97E56995",
+     "t": 970
+    },
+    {
+     "texto": "Aquí otra vez \"Como socia, con $520 más de compra...\" y un botón \"Activar modo socio\" en medio de mi pedido. Ya me lo dijeron cuatro veces.",
+     "pantalla": "#/orden/ORD-97E56995",
+     "t": 970
+    },
+    {
+     "texto": "\"Pago registrado\". ¿Eso quiere decir que ya me cobraron y ya está, o que apenas lo anotaron? Yo quiero leer \"Pagado\" o \"Recibimos tu pago\". Y el único botón grande que me queda es \"Cancelar orden\", que es justo lo que NO quiero apretar.",
+     "pantalla": "#/orden/ORD-97E56995",
+     "t": 1062
+    },
+    {
+     "texto": "La lista de PROGRESO (Orden creada, Pago, Preparación, Envío, Entregada) no me marca en cuál voy. No sé si ya pasé el segundo escalón.",
+     "pantalla": "#/orden/ORD-97E56995",
+     "t": 1062
+    },
+    {
+     "texto": "Hasta en el correo me dicen \"Como socia, con $520.00 más de compra este mes tendrías 10 % de descuento\". Ya van cinco veces. Y sigo siendo señor.",
+     "pantalla": "correo",
+     "t": 1098
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "Sí compré mi omega 3 y sí me llegó el correo de que el pago quedó confirmado. Lo feo: la pantalla se quedó en blanco como quince segundos después de pagar y luego solo dice \"Pago registrado\" con un botón de \"Cancelar orden\"."
+  },
+  {
+   "quiero": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra",
+   "esperaba": null,
+   "t": 1098,
+   "segundos": 398,
+   "logrado": false,
+   "clicsBase": 35,
+   "teclasBase": 141,
+   "clics": 7,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Ahora que ya tengo un pedido, capaz que en \"Órdenes\" ya aparece algo, y con suerte un botón de \"repetir cada mes\". Le vuelvo a picar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1098
+    },
+    {
+     "texto": "¡Aquí está! Le bajé HASTA EL FINAL de la pantalla principal, después de los trece productos, después de \"Órdenes\", y hasta el mero último renglón dice: \"Recibe esto cada mes — Elige qué quieres recibir y qué día. Ese día creamos tu pedido y te mandamos por correo el enlace para pagarlo; nada se cobra solo. Puedes pausar o cancelar cuando quieras.\" Y un botón \"Crear mi suscripción\".",
+     "segundosDesdeLoAnterior": 64,
+     "t": 1162
+    },
+    {
+     "texto": "También noto que \"Órdenes\" del menú era esto: un pedacito hasta abajo de la misma página. Por eso cuando le picaba \"no pasaba nada\": no me bajaba solo hasta ahí.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1162
+    },
+    {
+     "texto": "Esta parte sí está bien explicada, se los reconozco: \"Ese día creamos tu pedido y te mandamos por correo el enlace para pagarlo; nada se cobra solo. Puedes pausar o cancelar cuando quieras.\" Eso es exactamente lo que un señor como yo necesita oír: que NO me van a cobrar solos.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 1220
+    },
+    {
+     "texto": "Escojo \"Klinhart · $480.00\" de la lista. Menos mal que aquí sale el precio junto al nombre.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1220
+    },
+    {
+     "texto": "Ahora \"Agregar\", que hasta ahorita estaba apagado.",
+     "segundosDesdeLoAnterior": 1,
+     "t": 1221
+    },
+    {
+     "texto": "Ya quedó \"Enviar a mi dirección\". Ahora el día: venía en \"Día 20\" solo, yo no lo puse. Mi pensión cae a principios de mes, escojo Día 5.",
+     "segundosDesdeLoAnterior": 134,
+     "t": 1355
+    },
+    {
+     "texto": "Escogí \"Enviar a mi dirección\" y me salió un renglón que me dejó helado: \"Aún no tienes direcciones guardadas. Se guardan al pagar un pedido con la casilla 'Guardar esta dirección para futuras compras' del carrito; mientras tanto puedes elegir recoger en sucursal.\"",
+     "segundosDesdeLoAnterior": 56,
+     "t": 1411
+    },
+    {
+     "texto": "De todos modos le voy a dar a \"Guardar mi suscripción\", a ver qué me dice.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1411
+    },
+    {
+     "texto": "Voy a asomarme al carrito otra vez, a ver si de casualidad ahí aparece mi dirección \"Casa\" guardada y es la suscripción la que no la ve.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 1451
+    },
+    {
+     "texto": "Ya entré al carrito y está vacío (\"0 artículos\"), qué bueno, y mi nombre y teléfono sí se quedaron. Pero la dirección NO: Calle, Número, Ciudad, CP y Estado están otra vez en blanco, y no hay ninguna lista donde escoger \"Casa\". Confirmado: no la guardó, aunque yo palomeé la casilla y le puse nombre.",
+     "segundosDesdeLoAnterior": 45,
+     "t": 1496
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En \"3. Dónde lo recibes\" viene ya marcada \"Recoger en sucursal\" y abajo \"Sucursal Guadalajara · Av. Chapultepec 480\". ¡Yo vivo en Monterrey! Si le doy guardar sin fijarme, cada mes mi frasco se va a quedar esperándome en Guadalajara.",
+     "pantalla": "#/dashboard (suscripción)",
+     "t": 1332
+    },
+    {
+     "texto": "¿Por qué me pone \"Día 20\" de entrada? Nadie me preguntó. Si no me fijo, me llega el cobro un día que a lo mejor no tengo.",
+     "pantalla": "#/dashboard (suscripción)",
+     "t": 1355
+    },
+    {
+     "texto": "¿Entonces para poder programar mi envío mensual tengo que hacer OTRA compra, pagar OTROS $609, y rezar para que esta vez sí me guarde la dirección? Eso no está bien.",
+     "pantalla": "#/carrito",
+     "t": 1496
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Lo que yo vine a buscar desde el principio estaba en el último renglón de la página, debajo de todo el catálogo. Nunca lo vi porque uno no le baja tanto en el celular. Y en el menú no hay ninguna palabra que diga \"suscripción\".",
+     "pantalla": "#/dashboard",
+     "t": 1162
+    },
+    {
+     "texto": "Le piqué a \"Enviar a mi dirección\" y la primera vez no se cambió: el botón azul se quedó en \"Recoger en sucursal\".",
+     "pantalla": "#/dashboard (suscripción)",
+     "t": 1332
+    },
+    {
+     "texto": "reintento: vuelvo a picarle a \"Enviar a mi dirección\"",
+     "t": 1332
+    },
+    {
+     "texto": "¡Pero si YO SÍ palomeé esa casilla al pagar! Hasta le puse de nombre \"Casa\". Y ahora me dice que no tengo ninguna dirección guardada.",
+     "pantalla": "#/dashboard (suscripción)",
+     "t": 1411
+    },
+    {
+     "texto": "Le di \"Guardar mi suscripción\" y me salió en rojo: \"Elige una dirección de entrega. Si no tienes ninguna, guárdala al pagar tu próximo pedido (casilla 'Guardar esta dirección' en el carrito) o elige recoger en sucursal.\" O sea: para que me llegue cada mes tengo que hacer OTRA compra primero. No me deja.",
+     "pantalla": "#/dashboard (suscripción)",
+     "t": 1451
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Otra vez yo, Ernesto Vidal (ORD-97E56995). Ya encontré lo de \"Recibe esto cada mes\" hasta abajo de la pantalla principal. Puse mi Klinhart y el día 5, pero al escoger \"Enviar a mi dirección\" me dice \"Aún no tienes direcciones guardadas\" y no me deja guardar. Yo SÍ palomeé \"Guardar esta dirección para futuras compras\" cuando pagué y hasta le puse \"Casa\". ¿Me pueden guardar ustedes mi dirección: Rio Nazas 415, Monterrey, N.L., CP 64860? No quiero comprar otra vez nomás para que se guarde.",
+     "t": 1496,
+     "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+    },
+    {
+     "aQuien": "familiar",
+     "texto": "Beto, ya la encontré: lo de cada mes está hasta abajo de todo, después de la lista de productos. Pero no me deja guardarlo porque dice que no tengo dirección guardada, aunque yo sí le puse la palomita cuando pagué. ¿Me echas la mano el domingo?",
+     "t": 1496,
+     "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "Encontré \"Recibe esto cada mes\" y llené todo (Klinhart, día 5, envío a mi domicilio), pero no me deja guardarlo: dice que no tengo direcciones guardadas, aunque al pagar sí palomeé \"Guardar esta dirección para futuras compras\" y le puse el alias \"Casa\". Para programarlo tendría que comprar otra vez."
+  },
+  {
+   "quiero": "comprobar que mi pedido de veras existe y va en camino",
+   "esperaba": null,
+   "t": 1496,
+   "segundos": 40,
+   "logrado": true,
+   "clicsBase": 42,
+   "teclasBase": 141,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Antes de dejar el teléfono quiero ver otra vez mi pedido, para dormir tranquilo. Le bajo hasta \"Órdenes\" en la pantalla principal.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1496
+    },
+    {
+     "texto": "Ahí está: \"ORD-97E56995 — Pagada — Fecha: 2027-03-02T11:18:04Z — Total: $609\". Dice \"Pagada\", con esa palabra sí me quedo tranquilo. Ojalá la pantalla del pedido dijera eso mismo en vez de \"Pago registrado\".",
+     "segundosDesdeLoAnterior": 40,
+     "t": 1536
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Otra vez la fecha rara: \"2027-03-02T11:18:04Z\". Ni mi nieto sabría qué es eso.",
+     "pantalla": "#/dashboard",
+     "t": 1536
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Sí aparece mi pedido como \"Pagada\" con el total. Lo malo es que también está escondido hasta abajo y la fecha viene en un formato de computadora."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "frustración",
+   "intensidad": 3,
+   "porque": "no hay dónde escribir \"omega\" y yo veo poco de cerca; leer 13 nombres raros me cansa",
+   "t": 119,
+   "tarea": "entrar a la pagina que me pasó mi sobrino y ver si venden el omega 3"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "sí es el omega 3 y sí trae los miligramos de EPA y DHA que me pidió la doctora",
+   "t": 161,
+   "tarea": "entrar a la pagina que me pasó mi sobrino y ver si venden el omega 3"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "la pantalla se ve bien pero ya no obedece; pensé que era mi dedo o mis lentes",
+   "t": 284,
+   "tarea": "agregar el omega 3 al carrito"
+  },
+  {
+   "emocion": "desilusión",
+   "intensidad": 3,
+   "porque": "lo único que yo quería era no tener que acordarme cada mes, y no veo por dónde",
+   "t": 366,
+   "tarea": "ver qué dice el carrito y si puedo dejar que me llegue cada mes"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "la página de registro parece de esas de \"hazte rico invitando gente\"; a mi edad eso me huele mal",
+   "t": 456,
+   "tarea": "ver qué dice el carrito y si puedo dejar que me llegue cada mes"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "la letra chiquita del final aclara que puedo ser nomás cliente",
+   "t": 493,
+   "tarea": "ver qué dice el carrito y si puedo dejar que me llegue cada mes"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "lo hice yo solo, sin llamarle a mi sobrino",
+   "t": 580,
+   "tarea": "crear mi cuenta para ver si desde ahí puedo dejar el pedido cada mes"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "le pico a los botones del menú y me regresan siempre a lo mismo; parece que el teléfono no me hace caso",
+   "t": 728,
+   "tarea": "encontrar dónde se deja programado que me llegue el omega 3 cada mes"
+  },
+  {
+   "emocion": "desilusión",
+   "intensidad": 4,
+   "porque": "lo principal que yo venía a hacer, que me llegue solo cada mes, no existe o está tan escondido que no lo hallé",
+   "t": 764,
+   "tarea": "encontrar dónde se deja programado que me llegue el omega 3 cada mes"
+  },
+  {
+   "emocion": "molestia",
+   "intensidad": 3,
+   "porque": "el envío de $129 sobre un frasco de $480 se me hace caro y aparece hasta el final",
+   "t": 873,
+   "tarea": "comprar mi frasco de omega 3 y pagarlo"
+  },
+  {
+   "emocion": "molestia",
+   "intensidad": 3,
+   "porque": "me están empujando a gastar $520 más justo cuando voy a pagar; eso a mí me parece que me quieren enganchar",
+   "t": 931,
+   "tarea": "comprar mi frasco de omega 3 y pagarlo"
+  },
+  {
+   "emocion": "confianza",
+   "intensidad": 3,
+   "porque": "que el pago sea por MercadoPago y no metiendo mi tarjeta en esta página me da más tranquilidad",
+   "t": 970,
+   "tarea": "comprar mi frasco de omega 3 y pagarlo"
+  },
+  {
+   "emocion": "miedo",
+   "intensidad": 5,
+   "porque": "pagué $609 y la pantalla se quedó en blanco; no sé si me cobraron o no",
+   "t": 1030,
+   "tarea": "comprar mi frasco de omega 3 y pagarlo"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "el correo sí me dijo con todas sus letras que el pago quedó confirmado",
+   "t": 1098,
+   "tarea": "comprar mi frasco de omega 3 y pagarlo"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "sí existe lo de cada mes; me quita un peso de encima",
+   "t": 1162,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "pero me costó una hora y dos mensajes pidiendo ayuda encontrar algo que estaba escondido hasta abajo",
+   "t": 1162,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  },
+  {
+   "emocion": "confianza",
+   "intensidad": 4,
+   "porque": "me dicen claro que nada se cobra solo y que puedo cancelar cuando quiera",
+   "t": 1220,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  },
+  {
+   "emocion": "susto",
+   "intensidad": 4,
+   "porque": "venía marcado \"Recoger en sucursal Guadalajara\" por default y yo casi le doy guardar",
+   "t": 1332,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "hice exactamente lo que la página me pidió, palomeé \"Guardar esta dirección\" y de todos modos no la guardó",
+   "t": 1411,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "ver la palabra \"Pagada\" junto a mi pedido me deja dormir tranquilo",
+   "t": 1536,
+   "tarea": "comprobar que mi pedido de veras existe y va en camino"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "familiar",
+   "texto": "Oye Beto, ya me registré en la página que me pasaste y ya tengo mi omega 3 (se llama Klinhart) en el carrito. Pero no hallo dónde se deja pagado para que me llegue solito cada mes. Busqué en el carrito, en Mi cuenta, en Órdenes y en Mi perfil. ¿Tú sabes dónde está o hay que hablarles?",
+   "t": 764,
+   "tarea": "encontrar dónde se deja programado que me llegue el omega 3 cada mes"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Buenas tardes. Soy Ernesto Vidal, me acabo de registrar con el correo ernesto.vidal@hotmail.com. Quiero dejar programado que me manden el Klinhart (omega 3) cada mes sin tener que entrar a pedirlo. Busqué en el carrito y en mi cuenta y no encuentro la opción. ¿Existe? Gracias.",
+   "t": 764,
+   "tarea": "encontrar dónde se deja programado que me llegue el omega 3 cada mes"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Otra vez yo, Ernesto Vidal (ORD-97E56995). Ya encontré lo de \"Recibe esto cada mes\" hasta abajo de la pantalla principal. Puse mi Klinhart y el día 5, pero al escoger \"Enviar a mi dirección\" me dice \"Aún no tienes direcciones guardadas\" y no me deja guardar. Yo SÍ palomeé \"Guardar esta dirección para futuras compras\" cuando pagué y hasta le puse \"Casa\". ¿Me pueden guardar ustedes mi dirección: Rio Nazas 415, Monterrey, N.L., CP 64860? No quiero comprar otra vez nomás para que se guarde.",
+   "t": 1496,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  },
+  {
+   "aQuien": "familiar",
+   "texto": "Beto, ya la encontré: lo de cada mes está hasta abajo de todo, después de la lista de productos. Pero no me deja guardarlo porque dice que no tengo dirección guardada, aunque yo sí le puse la palomita cuando pagué. ¿Me echas la mano el domingo?",
+   "t": 1496,
+   "tarea": "volver a buscar dónde repetir el pedido cada mes, ahora que ya tengo una compra"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 5,
+  "legibilidad": 4,
+  "coherencia": 4,
+  "sensacionMovil": 4,
+  "tresAdjetivos": [
+   "larga",
+   "joven",
+   "insistente"
+  ],
+  "mejorPantalla": "la ventanita del \"Resumen\" antes de pagar: Subtotal $480, Envío $129, Total $609. Y la de \"¡Correo verificado!\", que tiene letras grandes y una sola cosa que hacer.",
+  "peorPantalla": "la pantalla principal después de entrar: son metas, porcentajes, un reloj que corre, trece productos y hasta el último renglón lo que yo venía a buscar",
+  "seParece": "a esas juntas donde te invitan por un producto y acabas oyendo dos horas de cómo ganar dinero invitando gente",
+  "recomendarias": 5,
+  "volverias": "sí, porque el producto sí es el que me pidió mi doctora y el correo me llegó bien; pero no sin que alguien me ayude",
+  "comentario": "La letra es chica y hay demasiadas cosas en una sola pantalla. Me hablaron cinco veces de comisiones y de \"modo socio\" y ninguna vez de lo que yo quería, que era que me llegue mi frasco cada mes. Y me dicen \"socia\" todo el tiempo, siendo yo señor."
+ },
+ "totales": {
+  "clics": 42,
+  "teclas": 141,
+  "envios": 1,
+  "campos": 13,
+  "pantallas": 7,
+  "recargas": 1,
+  "atrases": 4
+ },
+ "pantallas": [
+  {
+   "ruta": "#/",
+   "desde": 1788496557117,
+   "primerClicMs": 62986,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/",
+   "desde": 1788496826266,
+   "primerClicMs": 37106,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/registro",
+   "desde": 1788496933798,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-76feccbb58584c30a4ca8ae0b135602d",
+   "desde": 1788497100311,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-97E56995",
+   "desde": 1788497540329,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788497992968,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788498037870,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Mínimo requerido",
+   "t": 931,
+   "tarea": "comprar mi frasco de omega 3 y pagarlo"
+  }
+ ],
+ "consola": [
+  "HTTP 403 GET /commissions/config/app"
+ ],
+ "notas": [],
+ "fin": "2026-09-04T05:03:16.457Z",
+ "duracionMin": 28
+}

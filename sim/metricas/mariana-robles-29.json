@@ -1,0 +1,519 @@
+{
+ "persona": "Mariana Robles, 29",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-04T04:21:52.460Z",
+ "tareas": [
+  {
+   "quiero": "entrar a la tienda y entender qué venden",
+   "esperaba": null,
+   "t": 18,
+   "segundos": 39,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "vi el anuncio en Instagram del colageno. Me mandaron a esta liga. Antes de nada quiero ver si esto es una tienda normal o uno de esos negocios de \"unete a mi equipo\".",
+     "segundosDesdeLoAnterior": 18,
+     "t": 18
+    },
+    {
+     "texto": "Lo primero que veo es un aviso de privacidad tapando todo. Dice \"Para comprar solo te pedimos nombre, correo, telefono y direccion... No te pedimos datos bancarios ni fiscales\". Eso me tranquiliza un poco, pero me da risa que diga que no pide datos bancarios si voy a pagar.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 46
+    },
+    {
+     "texto": "Acepto el aviso para poder ver bien la tienda. Yo quiero el COLAGENO, no la proteina que ponen arriba.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 55
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "debajo de cada producto dice \"13 PC · $53.85/PC\". No tengo idea de que es PC. ¿Piezas? ¿Puntos? ¿Pesos de comision?",
+     "pantalla": "#/tienda",
+     "t": 46
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Sí entendí que venden suplementos y vi el colágeno a $700, pero la home me empuja la proteína y no el producto del anuncio. Lo de \"PC\" no lo entiendo."
+  },
+  {
+   "quiero": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos",
+   "esperaba": null,
+   "t": 57,
+   "segundos": 154,
+   "logrado": false,
+   "clicsBase": 1,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Le voy a picar a \"Ver producto\" del Colageno Hidrolizado, $700. Quiero ver si dice cuanto cuesta el envio.",
+     "segundosDesdeLoAnterior": 2,
+     "t": 57
+    },
+    {
+     "texto": "Le piqué a \"Ver producto\" del colágeno y NO me llevó a otra pantalla: solo cambió el letrero de hasta arriba y me dejó en el mismo lugar. Tuve que subir con el dedo para darme cuenta.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 74
+    },
+    {
+     "texto": "Voy a picarle a \"Ver beneficios\", a ver si ahí viene el detalle.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 74
+    },
+    {
+     "texto": "Da igual, lo quiero probar. Le doy Agregar al carrito y me voy al carrito a ver si ahí me dice el envío ANTES de darle mis datos.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 89
+    },
+    {
+     "texto": "Abajo apareció \"Como socia, con $300 más de compra este mes tendrías 10 % de descuento. Conoce el modo socio\". Ahí está lo que me daba mala espina. Yo quiero UN bote, no un modo socio.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 101
+    },
+    {
+     "texto": "Bien: no me obligó a crear cuenta para llegar al carrito. Eso me gusta. Pero arriba dice \"Corte en 26d 19h\" y no tengo idea de qué es un corte ni por qué me lo cuentan a mí que solo quiero un bote.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 118
+    },
+    {
+     "texto": "Dice \"Envío desde $129\". \"Desde\" siempre significa que me van a cobrar más. Quiero el número exacto antes de escribir mi dirección. Le pico a \"Envío a domicilio\" a ver si el total cambia solo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 118
+    },
+    {
+     "texto": "El total sigue diciendo $700 aunque elegí envío a domicilio. Entonces el $129 del envío NO está incluido. Voy a \"Ver resumen\" a ver si ahí me desglosa.",
+     "segundosDesdeLoAnterior": 45,
+     "t": 163
+    },
+    {
+     "texto": "Antes de escribir nada, lo que haría de verdad: le mando mensaje a soporte por WhatsApp preguntando el envío, porque no quiero dejar mi dirección para enterarme de que sale carísimo.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 182
+    },
+    {
+     "texto": "Truco: voy a escribir SOLO el código postal, sin nombre ni dirección, para ver si con eso ya me calcula el envío. Si me lo calcula, ya sé cuánto es y decido.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 191
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la ficha del colágeno dice literal \"Presentación y modo de uso en la etiqueta del producto.\" y ya. La proteína sí traía gramos, calorías, sabor. Del que yo quiero no dice NADA: ni cuántos gramos trae, ni sabor, ni cuántos días me dura.",
+     "pantalla": "#/tienda",
+     "t": 74
+    },
+    {
+     "texto": "¿el 10% de descuento es por comprar más o por meter gente? no pienso averiguarlo si me lo empiezan a vender así",
+     "pantalla": "#/tienda",
+     "t": 101
+    },
+    {
+     "texto": "\"Corte en 26d 19h\" — ¿es que se me acaba una promoción? ¿que si no pago en 26 días se cancela? Un reloj en cuenta regresiva sin explicación me pone nerviosa.",
+     "pantalla": "#/carrito",
+     "t": 118
+    },
+    {
+     "texto": "En el resumen dice Envío \"Desde $129 · se calcula con tu CP\" y abajo Total $700. O sea, el Total que me enseña NO es lo que voy a pagar. Eso está mal, es el número que uno mira.",
+     "pantalla": "#/carrito",
+     "t": 182
+    },
+    {
+     "texto": "\"Nivel de descuento: Inactivo\", \"Descuento aplicado: Sin descuento\" y \"Te faltan $0 para Meta de beneficios\". No entiendo ninguna de las tres. ¿$0 me faltan? ¿entonces ya la alcancé?",
+     "pantalla": "#/carrito",
+     "t": 182
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Ver beneficios\" y la pantalla se quedó igual. Si me bajó a la sección \"Por qué elegir Colageno Hidrolizado\", ahí solo dice \"Resultados reales para tu bienestar diario\" y repite las palabras \"colageno, colágeno\". Eso no es un beneficio, es relleno.",
+     "pantalla": null,
+     "t": 89
+    },
+    {
+     "texto": "reintento: no pude picarle a \"Envío a domicilio\" al primer intento; lo intento tocando el texto directo, como haría con el dedo",
+     "t": 155
+    },
+    {
+     "texto": "puse mi CP 03100 (que es lo que el propio resumen pedía: \"se calcula con tu CP\") y el resumen siguió diciendo exactamente lo mismo: \"Desde $129\" y Total $700. No calculó nada.",
+     "pantalla": null,
+     "t": 211
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, quiero comprar el Colágeno Hidrolizado de $700 a la CDMX (CP 03100). ¿Cuánto sale el envío exactamente? En el carrito solo dice \"desde $129\" y el total me sigue diciendo $700. No quiero dar mi dirección hasta saber el total real.",
+     "t": 182,
+     "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "nunca pude saber cuánto iba a pagar con envío antes de dar mis datos: el resumen dice \"se calcula con tu CP\", puse mi CP y siguió diciendo \"desde $129\" con total $700"
+  },
+  {
+   "quiero": "comprar el bote de colágeno como invitada, sin crear cuenta",
+   "esperaba": null,
+   "t": 222,
+   "segundos": 184,
+   "logrado": true,
+   "clicsBase": 9,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Ni modo. Son $700 y a lo mucho $129 de envío, me arriesgo. Lleno solo lo que entiendo y NO le pico a factura ni a modo socio.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 222
+    },
+    {
+     "texto": "¡Ahí está! Hasta que elegí el ESTADO en la lista aparecieron \"Opciones de envío\": Estafeta terrestre $129 (3 a 5 días) y DHL Express $219 (1 a 2 días). Y el total de arriba se volvió $829.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 280
+    },
+    {
+     "texto": "Me quedo con Estafeta $129, no tengo prisa. $829 total. Le pico y luego a Pagar.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 288
+    },
+    {
+     "texto": "Ya se creó la orden ORD-1F950075, $829, \"Pago pendiente\". Ahora sí me dice el desglose completo: Subtotal $700 + Envío (Estafeta) $129. Esto es lo que debió enseñarme ANTES.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 345
+    },
+    {
+     "texto": "Me sacó de la tienda al checkout de Mercado Pago por $829.00. Al menos el monto coincide. Pago.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 355
+    },
+    {
+     "texto": "Dice \"Pago registrado\". Recargo para asegurarme de que de verdad quedó y no es una pantalla bonita.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 389
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "entonces el envío nunca se calculaba con el CP como decía el resumen, se calcula con el estado. El mensaje me hizo perder tiempo escribiendo mi CP para nada.",
+     "pantalla": "#/carrito",
+     "t": 280
+    },
+    {
+     "texto": "el contador de arriba decía \"Corte en 26d 19h\" cuando entré y ahora dice \"Corte en 21d 19h 34m 26s\". Bajó cinco días en dos minutos. Ya no le creo nada a ese reloj.",
+     "pantalla": "#/carrito",
+     "t": 280
+    },
+    {
+     "texto": "aquí me vuelve a salir \"Activar modo socio... comisiones por tu red\". Ahí sí ya me quedó claro que esto es multinivel. Si lo hubiera visto así de claro en la primera pantalla, quizá ni entro.",
+     "pantalla": "#/orden",
+     "t": 345
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: la opción de Estafeta tampoco responde como botón normal; la toco por el texto",
+     "t": 324
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "Sí compré el bote como invitada, sin cuenta, y el cobro coincidió ($829). Pero me costó: el total real no apareció hasta que elegí Estado, y el desglose Subtotal+Envío solo lo vi DESPUÉS de crear la orden."
+  },
+  {
+   "quiero": "saber cuándo me va a llegar el bote",
+   "esperaba": null,
+   "t": 417,
+   "segundos": 0,
+   "logrado": false,
+   "clicsBase": 13,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Lo único que quiero ahora es una fecha. En la lista de PROGRESO veo cinco pasos pero ninguno me dice \"llega el jueves 5\". En el carrito decía \"3 a 5 días hábiles\", aquí ya no lo repite.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 417
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿en qué paso voy? La lista pinta \"Orden creada / Pago / Preparación / Envío / Entregada\" pero leyéndola no me queda claro cuál ya pasó y cuál no.",
+     "pantalla": "#/orden",
+     "t": 417
+    },
+    {
+     "texto": "no hay ninguna fecha estimada de entrega ni número de guía. Solo \"Creada: 2027-03-02T21:48:44Z\", que además está en ese formato de computadora con la Z.",
+     "pantalla": "#/orden",
+     "t": 417
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": null,
+   "comentario": "la pantalla del pedido nunca me dio una fecha estimada de entrega; me quedé con \"3 a 5 días hábiles\" que leí en el carrito"
+  },
+  {
+   "quiero": "entender de una vez qué es el \"modo socio\" que me insisten en cada pantalla",
+   "esperaba": null,
+   "t": 428,
+   "segundos": 20,
+   "logrado": true,
+   "clicsBase": 13,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Me lo ofrecieron en la tienda, en el carrito, en la orden y ahora en el correo. Cuatro veces. Voy a verlo nada más para saber en qué me metí, y si es de meter gente, ya no vuelvo.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 428
+    },
+    {
+     "texto": "Ok, esta página sí me explicó todo con números: \"PC son los puntos de lista (1 PC ≈ $50)\", VP, VG, la tabla de descuento por compra del mes y \"10 % de lo que compra una persona directa\". Es la pantalla más honesta de todo el sitio.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 448
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "si esta página existe y explica qué es PC, ¿por qué la tienda me pone \"13 PC · $53.85/PC\" debajo de cada producto sin un solo enlace a esta explicación? Yo lo leí de milagro, porque venía en el correo.",
+     "pantalla": "#/modo-socio",
+     "t": 448
+    },
+    {
+     "texto": "dice \"plan abril-2026\" y hoy es marzo de 2027. ¿Los números están viejos? Igual que el pie de la tienda, que dice \"© 2026 finding U\".",
+     "pantalla": "#/modo-socio",
+     "t": 448
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "La página \"Modo socio\" es clarísima, con tablas y ejemplos. El problema es que está escondida: llegué a ella por un enlace del correo, después de pagar, no desde la tienda donde me confundía el \"PC\"."
+  },
+  {
+   "quiero": "revisar mi correo para tener un comprobante de lo que compré",
+   "esperaba": null,
+   "t": 462,
+   "segundos": 0,
+   "logrado": true,
+   "clicsBase": 13,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Como compré sin cuenta, el correo es lo único que me queda. Quiero ver ahí qué compré, cuánto pagué y a dónde llega.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 462
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "me llegó UN solo correo, \"Recibimos tu pago · pedido ORD-1F950075\". Dice \"Tu pago quedó confirmado\" pero NO dice qué compré, ni cuánto pagué, ni a qué dirección llega. Si mañana me cobran mal, no tengo con qué reclamar.",
+     "pantalla": "correo",
+     "t": 462
+    },
+    {
+     "texto": "el correo también me mete el \"modo socio\" con un enlace. Ya van cinco veces. Compré un bote, no pedí trabajo.",
+     "pantalla": "correo",
+     "t": 462
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 2,
+   "comentario": "Sí llegó correo, rapidísimo (21:49, un minuto después de pagar) y con la liga de seguimiento. Pero no trae ni el producto ni el monto ni la dirección: no me sirve de comprobante."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "la palabra PC y \"descuentos por tu consumo como socia\" me huelen a esquema piramidal",
+   "t": 46,
+   "tarea": "entrar a la tienda y entender qué venden"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 3,
+   "porque": "quiero saber qué estoy comprando y la ficha del colágeno está vacía",
+   "t": 74,
+   "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "una tienda que no me dice qué trae el bote pero sí me insiste en registrarme como socia",
+   "t": 89,
+   "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "no puedo saber cuánto voy a pagar sin darles mi código postal, que era justo lo que quería evitar",
+   "t": 182,
+   "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "mandé el mensaje pero nadie contesta a las 9 y media de la noche; voy a tener que arriesgarme",
+   "t": 182,
+   "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "me pidió el dato con la promesa de calcularme el envío y no lo calculó",
+   "t": 211,
+   "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "por fin veo un número real: $829 con Estafeta",
+   "t": 280,
+   "tarea": "comprar el bote de colágeno como invitada, sin crear cuenta"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "la palabra \"comisiones por tu red\" me confirma que es un esquema de esos",
+   "t": 345,
+   "tarea": "comprar el bote de colágeno como invitada, sin crear cuenta"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 3,
+   "porque": "pagué y sigo sin saber qué día llega",
+   "t": 417,
+   "tarea": "saber cuándo me va a llegar el bote"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "por lo menos no me esconden que hay comisiones por red y hasta 5 niveles; lo dicen con tabla",
+   "t": 448,
+   "tarea": "entender de una vez qué es el \"modo socio\" que me insisten en cada pantalla"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "confirmado que es multinivel de 5 niveles; no me voy a meter, solo quería mi bote",
+   "t": 448,
+   "tarea": "entender de una vez qué es el \"modo socio\" que me insisten en cada pantalla"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 3,
+   "porque": "un correo de compra sin el detalle de la compra no me deja tranquila",
+   "t": 462,
+   "tarea": "revisar mi correo para tener un comprobante de lo que compré"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, quiero comprar el Colágeno Hidrolizado de $700 a la CDMX (CP 03100). ¿Cuánto sale el envío exactamente? En el carrito solo dice \"desde $129\" y el total me sigue diciendo $700. No quiero dar mi dirección hasta saber el total real.",
+   "t": 182,
+   "tarea": "ver el colágeno y saber cuánto cuesta con envío antes de dar mis datos"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 5,
+  "legibilidad": 6,
+  "coherencia": 4,
+  "sensacionMovil": 5,
+  "tresAdjetivos": [
+   "bonita",
+   "ambigua",
+   "insistente"
+  ],
+  "mejorPantalla": "la de \"Modo socio\": tablas, ejemplos con pesos y una definición de PC, VP y VG. Es la única que me habló claro.",
+  "peorPantalla": "el carrito en el celular: kilométrico, con \"Corte en 26d 19h\" sin explicación, un Total que decía $700 cuando iba a pagar $829, y el envío que solo aparece cuando eliges el Estado aunque el resumen te jura que \"se calcula con tu CP\".",
+  "seParece": "a una tienda de suplementos bien hecha con un negocio de multinivel encima; como si dos apps distintas compartieran la misma pantalla",
+  "recomendarias": 5,
+  "volverias": "sí, si el bote sirve, pero comprando rápido y sin leerles nada del modo socio",
+  "comentario": "Se ve cuidada, los colores y las tarjetas están lindos, y me gustó muchísimo que me dejaran comprar sin crear cuenta. Lo que me tira la confianza es que nunca sé cuánto voy a pagar hasta el final, y que en cada pantalla me empujen a ser socia. Del producto que fui a comprar, el colágeno, la ficha dice literal \"Presentación y modo de uso en la etiqueta del producto\": ni gramos, ni sabor, ni cuánto dura. La proteína sí tiene toda la información. Se siente que a mi producto nadie lo escribió."
+ },
+ "totales": {
+  "clics": 13,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 7,
+  "pantallas": 4,
+  "recargas": 1,
+  "atrases": 1
+ },
+ "pantallas": [
+  {
+   "ruta": "#/tienda",
+   "desde": 1788495730508,
+   "primerClicMs": 37077,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-1F950075",
+   "desde": 1788496067969,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-1F950075",
+   "desde": 1788496101768,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/modo-socio?desde=orden&id=ORD-1F950075",
+   "desde": 1788496140553,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T04:31:03.471Z",
+ "duracionMin": 9
+}

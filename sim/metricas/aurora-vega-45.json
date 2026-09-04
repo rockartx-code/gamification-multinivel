@@ -1,0 +1,596 @@
+{
+ "persona": "Aurora Vega, 45",
+ "rol": "cliente",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T06:33:02.000Z",
+ "tareas": [
+  {
+   "quiero": "entrar a la tienda y ver si puedo comprar dos suplementos para probarlos yo",
+   "esperaba": null,
+   "t": 28,
+   "segundos": 177,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Me pasaron el link de Finding U. Antes de recomendarle nada a mis pacientes quiero probar dos productos yo misma. Lo primero que quiero saber: si puedo pasar por ellos a la sucursal de Guadalajara y si me dan factura.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 28
+    },
+    {
+     "texto": "Lo primero que leo abajo de todo es el Aviso de Privacidad y dice textual: \"Para comprar solo te pedimos nombre, correo electrónico, teléfono y dirección de entrega... No te pedimos datos bancarios ni fiscales.\" Eso me prende un foco: yo necesito factura y la factura se hace con RFC, que es un dato fiscal. Si no me lo piden, ¿entonces no facturan?",
+     "segundosDesdeLoAnterior": 29,
+     "t": 58
+    },
+    {
+     "texto": "En toda la portada no aparece ni una vez la palabra factura, ni sucursal, ni recoger, ni envío. Solo precios y un \"6 PC · $66.67/PC\" que no sé qué es. Voy a abrir la ficha del Colágeno Hidrolizado, que es uno de los dos que quiero, a ver si ahí explican la entrega.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 72
+    },
+    {
+     "texto": "El \"Ver producto\" no me lleva a otra página: cambia el encabezado de arriba y se queda en #/tienda. Y la ficha del colágeno dice literal \"Presentación y modo de uso en la etiqueta del producto.\" Nada más. Ni gramos por porción, ni tipo de colágeno, ni cuántas porciones trae. Soy nutrióloga: así no puedo recomendarlo a un paciente. La sección \"Por qué elegir Colageno Hidrolizado\" solo repite las etiquetas \"colageno / colágeno\" como si fueran beneficios.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 92
+    },
+    {
+     "texto": "Ya tengo los dos: colágeno $700 y proteína $800, total $1,500. Abajo me salta \"Como socia habrías ahorrado $150 en esta compra. Conoce el modo socio\". No vine a ser socia de nada, vine a comprar dos botes, pero me deja la duda de si estoy pagando de más. Primero voy al carrito a ver si ahí me deja elegir recoger en sucursal y pedir factura.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 106
+    },
+    {
+     "texto": "Aquí sí está todo lo que me importa, pero hasta el carrito: \"Recoger en sucursal — Disponible en: Ciudad de México, Guadalajara\" y más abajo \"Factura — Quiero factura de esta compra. Te pedimos tus datos fiscales una sola vez.\" Me alivia, aunque me molesta que el aviso de privacidad de la portada jure que no piden datos fiscales. Voy a picar \"Recoger en sucursal\" a ver si me deja elegir la de Guadalajara.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 122
+    },
+    {
+     "texto": "Al elegir \"Recoger en sucursal\" pasaron dos cosas. Buena: el resumen ahora dice \"Envío: Gratis (recoger en sucursal)\". Rara: desaparecieron TODOS los campos donde iba mi nombre, mi teléfono y mi correo. Antes decía \"Correo (te avisamos del pago, el envío y la entrega)\" y ahora ya no hay dónde escribirlo. Y encima me instruye \"Escribe tu ciudad y estado en la dirección para ver solo las sucursales de tu zona\" cuando la dirección ya no existe en pantalla. ¿Entonces cómo me avisan que ya llegó mi pedido?",
+     "segundosDesdeLoAnterior": 58,
+     "t": 180
+    },
+    {
+     "texto": "No hay ningún texto que me diga \"elegiste Sucursal Guadalajara\". Tengo que fijarme en que la tarjeta se pinte distinto, y en una laptop con la vista chica ni se nota. Reviso a ojo.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 194
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el aviso de privacidad dice que no piden datos fiscales; yo necesito factura con mi RFC",
+     "pantalla": "#/tienda",
+     "t": 58
+    },
+    {
+     "texto": "¿qué es \"PC\"? Aparece en todos los productos como \"13 PC · $53.85/PC\" y nadie lo explica",
+     "pantalla": "#/tienda",
+     "t": 72
+    },
+    {
+     "texto": "la ficha del colágeno no dice contenido, gramaje ni porciones; la de la proteína sí. ¿Por qué unas sí y otras no?",
+     "pantalla": "#/tienda",
+     "t": 92
+    },
+    {
+     "texto": "al elegir recoger en sucursal desaparecen nombre, teléfono y correo: ¿a dónde me avisan?",
+     "pantalla": "#/carrito",
+     "t": 180
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: le piqué a \"Recoger en sucursal\" y no respondió al primer intento",
+     "t": 162
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "pedir factura en la misma compra, con mi RFC de consultorio",
+   "esperaba": null,
+   "t": 205,
+   "segundos": 39,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Quedó marcada la Sucursal Guadalajara (lo sé porque la tarjeta se pinta distinto, no porque me lo diga con palabras). Ahora lo que de verdad me importa: la factura. Palomeo \"Quiero factura de esta compra\" y espero que me pida RFC, régimen y uso de CFDI.",
+     "segundosDesdeLoAnterior": 11,
+     "t": 205
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "pedir factura en la misma compra, con mi RFC de consultorio",
+   "esperaba": null,
+   "t": 244,
+   "segundos": 115,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 21,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Quedó marcada la Sucursal Guadalajara (lo sé porque la tarjeta se pinta distinto, no porque me lo diga con palabras). Ahora lo que de verdad me importa: la factura. Palomeo \"Quiero factura de esta compra\" y espero que me pida RFC, régimen y uso de CFDI.",
+     "segundosDesdeLoAnterior": 39,
+     "t": 244
+    },
+    {
+     "texto": "Bien: al palomear salieron RFC, razón social, régimen fiscal, código postal fiscal, uso del CFDI y \"Correo para la factura\". Es exactamente lo que me pide mi contadora. Lo que me choca es que el único correo que existe en toda la pantalla ahora es el \"Correo para la factura\": no hay dónde poner mi nombre ni mi teléfono para el pedido. Voy a llenarlo y a ver si al pagar me reclama algo.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 264
+    },
+    {
+     "texto": "Dejo \"Pagar en línea\" porque quiero que la factura salga rápido: el propio texto dice \"La factura te llega por correo en los siguientes días hábiles después del pago\". Le doy a \"Pagar y finalizar\" sin haber puesto en ningún lado mi nombre ni mi teléfono, porque la pantalla nunca me los pidió al elegir sucursal.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 278
+    },
+    {
+     "texto": "Esto es un callejón sin salida. Me pide un dato que la propia pantalla escondió. Voy a probar el truco de siempre: regresar a \"Envío a domicilio\", llenar nombre/teléfono/correo ahí, y luego volver a \"Recoger en sucursal\" a ver si se me queda guardado.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 299
+    },
+    {
+     "texto": "Confirmado: en \"Envío a domicilio\" sí existen \"Nombre\", \"Teléfono\" y \"Correo (te avisamos del pago, el envío y la entrega)\". Mis datos de factura se quedaron guardados al cambiar, eso está bien. Lleno nombre, teléfono y correo aquí y regreso a sucursal.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 315
+    },
+    {
+     "texto": "Los campos se escondieron otra vez pero espero que el correo se haya quedado por dentro. Segundo intento de \"Pagar y finalizar\".",
+     "segundosDesdeLoAnterior": 11,
+     "t": 325
+    },
+    {
+     "texto": "Se creó la orden ORD-351342D9 al segundo intento, después de dar el rodeo por \"Envío a domicilio\" para poder escribir mi correo. Ahora lo primero que busco en la pantalla de la orden son mis dos cosas: ¿dice que la recojo en la Sucursal Guadalajara? ¿dice que pedí factura? Leo todo con calma.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 341
+    },
+    {
+     "texto": "Esto es lo que menos me gusta. Yo pedí dos cosas: recoger en Guadalajara y factura con mi RFC. La orden ORD-351342D9 no menciona ninguna de las dos, ni siquiera dice qué compré. Si mañana me llega un paquete a mi casa y sin factura, no tengo con qué reclamar: no hay comprobante en pantalla de lo que elegí. Antes de escribirle a soporte reviso mi correo, a lo mejor ahí sí viene el detalle.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 359
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la pantalla de la orden no dice ni \"sucursal\" ni \"factura\" ni el nombre de los productos: solo ID, subtotal y total",
+     "pantalla": "#/orden/ORD-351342D9",
+     "t": 359
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le di a \"Pagar y finalizar\" y me contestó \"Escribe tu correo: ahí te avisamos del pago, el envío y la entrega.\" pero NO hay ningún campo de correo del pedido: al elegir recoger en sucursal desaparecieron nombre, teléfono y correo. El único correo que existe es \"Correo para la factura\", y ya lo llené.",
+     "pantalla": "#/carrito",
+     "t": 299
+    },
+    {
+     "texto": "reintento: volver a envío a domicilio solo para poder escribir mi correo",
+     "t": 299
+    },
+    {
+     "texto": "reintento: segundo intento de pagar con recoger en sucursal",
+     "t": 325
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 3,
+   "confianza": 2,
+   "comentario": "sí encontré el checkbox de factura y llené RFC, régimen, CP fiscal y uso de CFDI, pero la orden creada no confirma en ningún lado que pedí factura"
+  },
+  {
+   "quiero": "pagar los $1,500 y que me quede algo por escrito de que recojo en Guadalajara y que pedí factura",
+   "esperaba": null,
+   "t": 369,
+   "segundos": 46,
+   "logrado": true,
+   "clicsBase": 21,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Mi bandeja de aurora.vega@gmail.com está vacía: cero correos. O sea que ni siquiera me mandaron el \"recibimos tu pedido\". Le doy a \"Pagar con MercadoPago\" a ver a dónde me manda.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 369
+    },
+    {
+     "texto": "Me sacó de la tienda a la pasarela: \"Estás fuera de la tienda. Este es el checkout de la pasarela.\" Solo un botón \"Pagar $1,500.00\", sin pedirme tarjeta. Le doy.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 381
+    },
+    {
+     "texto": "Por fin algo por escrito, pero en el correo, no en la pantalla. El correo dice textual: \"Recibimos tu solicitud de factura: te la mandaremos a este mismo correo.\" Eso me tranquiliza de la factura. Lo que NO dice ni una palabra es que yo elegí recoger en la Sucursal Guadalajara: dice \"Estamos preparando tu paquete y te avisaremos por este medio cuando salga\", como si me lo fueran a mandar. Y en la pantalla el progreso sigue diciendo \"Envío · Ruta de entrega\" y \"Entregada\". Yo voy a pasar por ellos a Chapultepec 480; no quiero que salgan a ningún lado.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 415
+    },
+    {
+     "texto": "Le escribo a soporte por WhatsApp porque en la pantalla no hay ningún teléfono de la sucursal ni horario. Mientras tanto no voy a dejar de trabajar: sigo con lo demás y ya veré si contestan.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 415
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el correo y el seguimiento hablan de envío y de paquete que \"sale\", cuando yo elegí recoger en sucursal",
+     "pantalla": "#/orden/ORD-351342D9",
+     "t": 415
+    }
+   ],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, soy Aurora Vega. Acabo de pagar el pedido ORD-351342D9 y elegí \"Recoger en sucursal – Guadalajara (Av. Chapultepec 480)\". Tres cosas: 1) en la pantalla del pedido no aparece por ningún lado la sucursal ni que pedí factura, solo el total; 2) el correo que me llegó dice que están preparando el paquete y que me avisan \"cuando salga\", como si me lo fueran a enviar. ¿Sí me lo van a tener ahí o me lo van a mandar? 3) ¿desde qué día puedo pasar por él y con qué me identifico? Gracias.",
+     "t": 415,
+     "tarea": "pagar los $1,500 y que me quede algo por escrito de que recojo en Guadalajara y que pedí factura"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 3,
+   "comentario": "el pago sí pasó y el correo confirma la factura, pero tuve que dar un rodeo por \"envío a domicilio\" solo para poder escribir mi correo, y ni la orden ni el correo dicen que recojo en sucursal"
+  },
+  {
+   "quiero": "averiguar cuándo y con qué me identifico para recoger en la Sucursal Guadalajara",
+   "esperaba": null,
+   "t": 441,
+   "segundos": 77,
+   "logrado": false,
+   "clicsBase": 22,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 6,
+   "pensamientos": [
+    {
+     "texto": "Ya pagué. Lo único que sé de la sucursal es lo que decía la tarjetita del carrito: \"Av. Chapultepec 480, Col. Americana · Guadalajara\". Ni horario, ni teléfono, ni \"presenta tu número de pedido\". Recargo la pantalla de la orden, primero, porque quiero comprobar que de verdad quedó guardado y no es algo que se me borra al refrescar.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 441
+    },
+    {
+     "texto": "Recargué y sí quedó: sigue \"Pago registrado\", $1,500. Pero después de recargar sigue sin aparecer ni un solo producto, ni la sucursal, ni la factura. Es literalmente un recibo de un número. Voy a buscar en la tienda un teléfono o un horario de la sucursal: pie de página, \"Beneficios\", y si no, voy a adivinar direcciones como hace uno.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 470
+    },
+    {
+     "texto": "Última carta: el botón \"Beneficios\" de arriba. A ver si ahí hay algo de las sucursales.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 493
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "escribí a mano #/ayuda, #/contacto, #/sucursales y #/facturacion: las cuatro me rebotan a la tienda. El pie de página dice solo \"© 2026 finding U\", sin un teléfono, sin un correo, sin nada.",
+     "pantalla": "#/tienda",
+     "t": 493
+    },
+    {
+     "texto": "\"Beneficios\" del menú no lleva a ninguna página de beneficios: baja al mismo catálogo. Y \"Por qué elegir Finding Pro 500g\" solo repite las etiquetas del producto (proteina, colageno, suero, polvo, vainilla) como si fueran razones.",
+     "pantalla": "#/tienda",
+     "t": 518
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no existe en toda la tienda ni un horario, ni un teléfono, ni una página de sucursales: lo único que sé de dónde recoger es la línea de dirección que vi en el carrito y que ya no puedo volver a ver"
+  },
+  {
+   "quiero": "entender si estoy pagando de más por no ser socia (el aviso de los $150)",
+   "esperaba": null,
+   "t": 518,
+   "segundos": 42,
+   "logrado": true,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 8,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "En cada pantalla me repiten \"Como socia habrías ahorrado $150 en esta compra\". Ya pagué $1,500. Quiero saber si eso significa que pagué de más y si conviene para mi consultorio, porque yo compraría seguido para mis pacientes. Le doy una sola vez a \"Conoce el modo socio\".",
+     "segundosDesdeLoAnterior": 26,
+     "t": 518
+    },
+    {
+     "texto": "Esta página sí me explicó todo lo que la tienda me escondió: \"PC son los puntos de lista de cada producto (1 PC ≈ $50 de precio de lista)\". O sea que el \"13 PC · $53.85/PC\" que llevo viendo desde la portada es una medida de un programa de socios, no un precio. Que la única explicación de un dato que sale en TODOS los productos viva escondida detrás de un anuncio, me parece mal.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 540
+    },
+    {
+     "texto": "Aquí está la trampa que me molesta de verdad. En la pantalla de mi pedido ya pagado hay un botón \"Activar modo socio\" al lado de \"Como socia habrías ahorrado $150 en esta compra\". Pero esta misma página dice, con todas sus letras: \"No es retroactivo: lo que ya pagaste no cambia.\" Entonces me están enseñando un botón que NO me va a devolver esos $150. Si me lo hubieran ofrecido en el carrito, con un botón que dijera \"activa y ahorra $150 en esta compra\", lo habría pensado. Ofrecérmelo después de cobrarme se siente a burla.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 560
+    },
+    {
+     "texto": "Y otra cosa que a mí, que llevo un consultorio, me importa: aquí dice \"Al facturar comisiones (si aplica): Constancia de situación fiscal, INE (frente y reverso), CURP\". El aviso de privacidad de la portada jura que \"No te pedimos datos bancarios ni fiscales\". Las dos cosas no pueden ser ciertas, y a mí ya me pidieron RFC y régimen para la factura.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 560
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿por qué \"PC\" aparece en cada producto de la tienda y solo se explica en #/modo-socio?",
+     "pantalla": "#/tienda",
+     "t": 540
+    },
+    {
+     "texto": "la orden pagada me ofrece \"Activar modo socio\" junto a \"habrías ahorrado $150\", pero el descuento no es retroactivo",
+     "pantalla": "#/orden/ORD-351342D9",
+     "t": 560
+    },
+    {
+     "texto": "el aviso de privacidad dice que no piden datos fiscales ni bancarios; el carrito me pidió RFC y el modo socio pide constancia fiscal, INE, CURP y CLABE",
+     "pantalla": "#/tienda",
+     "t": 560
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "esta página sí está bien escrita y con números, es lo mejor del sitio; el problema es que explica cosas (qué es PC, cuánto es el descuento) que hacen falta en la tienda y en el carrito, no aquí"
+  },
+  {
+   "quiero": "comprobar en algún lado que el RFC que escribí quedó bien (no quiero una factura mal hecha)",
+   "esperaba": null,
+   "t": 577,
+   "segundos": 21,
+   "logrado": false,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 10,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Escribí VEGA850312AB1 de corrido en un campo con el ejemplo \"GOMR850101AB1\" y nadie me lo repitió de vuelta. Si le puse una letra mal, la factura sale mal y para mi contadora eso es un mes perdido. Quiero releer lo que mandé. Vuelvo a la orden y al correo.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 577
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "mi RFC no aparece ni en la pantalla del pedido ni en el correo. El correo solo dice \"Recibimos tu solicitud de factura\", sin decirme a nombre de quién ni con qué RFC.",
+     "pantalla": "#/orden/ORD-351342D9",
+     "t": 598
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Otra cosa del pedido ORD-351342D9: pedí factura y llené RFC, razón social, régimen 612 y uso G03, pero en ninguna pantalla ni en el correo me repiten esos datos. ¿Me pueden confirmar a qué RFC va la factura? Y si le puse una letra mal, ¿dónde la corrijo antes de que la emitan?",
+     "t": 598,
+     "tarea": "comprobar en algún lado que el RFC que escribí quedó bien (no quiero una factura mal hecha)"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no hay ninguna pantalla ni correo donde vuelva a ver los datos fiscales que capturé, ni forma de corregirlos"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "una ficha de suplemento sin gramaje no me sirve profesionalmente",
+   "t": 92,
+   "tarea": "entrar a la tienda y ver si puedo comprar dos suplementos para probarlos yo"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "sí existen recoger en sucursal y factura, aunque escondidos hasta el carrito",
+   "t": 122,
+   "tarea": "entrar a la tienda y ver si puedo comprar dos suplementos para probarlos yo"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "me pide un correo que la pantalla no me deja escribir",
+   "t": 299,
+   "tarea": "pedir factura en la misma compra, con mi RFC de consultorio"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "pagué por una pantalla que no me confirma ni dónde recojo ni que pedí factura",
+   "t": 359,
+   "tarea": "pedir factura en la misma compra, con mi RFC de consultorio"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "el correo sí confirma que pedí factura",
+   "t": 415,
+   "tarea": "pagar los $1,500 y que me quede algo por escrito de que recojo en Guadalajara y que pedí factura"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "ni el correo ni la pantalla mencionan la sucursal donde debo recoger",
+   "t": 415,
+   "tarea": "pagar los $1,500 y que me quede algo por escrito de que recojo en Guadalajara y que pedí factura"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "no hay un solo teléfono, correo ni horario para preguntar dónde y cuándo recojo lo que ya pagué",
+   "t": 518,
+   "tarea": "averiguar cuándo y con qué me identifico para recoger en la Sucursal Guadalajara"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "me recuerdan el ahorro que perdí justo después de cobrarme, con un botón que no lo repara",
+   "t": 560,
+   "tarea": "entender si estoy pagando de más por no ser socia (el aviso de los $150)"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "no puedo releer ni corregir el RFC que mandé, y si está mal la factura sale mal",
+   "t": 598,
+   "tarea": "comprobar en algún lado que el RFC que escribí quedó bien (no quiero una factura mal hecha)"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, soy Aurora Vega. Acabo de pagar el pedido ORD-351342D9 y elegí \"Recoger en sucursal – Guadalajara (Av. Chapultepec 480)\". Tres cosas: 1) en la pantalla del pedido no aparece por ningún lado la sucursal ni que pedí factura, solo el total; 2) el correo que me llegó dice que están preparando el paquete y que me avisan \"cuando salga\", como si me lo fueran a enviar. ¿Sí me lo van a tener ahí o me lo van a mandar? 3) ¿desde qué día puedo pasar por él y con qué me identifico? Gracias.",
+   "t": 415,
+   "tarea": "pagar los $1,500 y que me quede algo por escrito de que recojo en Guadalajara y que pedí factura"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Otra cosa del pedido ORD-351342D9: pedí factura y llené RFC, razón social, régimen 612 y uso G03, pero en ninguna pantalla ni en el correo me repiten esos datos. ¿Me pueden confirmar a qué RFC va la factura? Y si le puse una letra mal, ¿dónde la corrijo antes de que la emitan?",
+   "t": 598,
+   "tarea": "comprobar en algún lado que el RFC que escribí quedó bien (no quiero una factura mal hecha)"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "bonita",
+   "incompleta",
+   "olvidadiza"
+  ],
+  "mejorPantalla": "la de \"Modo socio\": es la única que habla con números y con tablas, y hasta define qué es un PC",
+  "peorPantalla": "la de la orden ya pagada: no dice qué compré, ni que la recojo en Guadalajara, ni que pedí factura; solo un ID y $1,500",
+  "seParece": "a la página bonita de una marca de suplementos que todavía no ha abierto: el escaparate está terminado y la trastienda no",
+  "recomendarias": 5,
+  "volverias": "sí, pero solo si me llega bien la factura; si no me llega, no vuelvo y tampoco se la paso a mis pacientes",
+  "comentario": "Los dos datos por los que yo entré —recoger en sucursal y factura— sí existen, pero están escondidos hasta el carrito y desaparecen del recibo. Elegir \"Recoger en sucursal\" me borró los campos de nombre, teléfono y correo, y luego el botón de pagar me exigió el correo que la propia pantalla acababa de esconder: tuve que regresar a \"Envío a domicilio\" para poder escribirlo. Y como nutrióloga me pesa que la ficha del colágeno diga solo \"Presentación y modo de uso en la etiqueta del producto\": no puedo recomendar lo que no sé qué trae."
+ },
+ "totales": {
+  "clics": 23,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 6,
+  "pantallas": 11,
+  "recargas": 1,
+  "atrases": 7
+ },
+ "pantallas": [
+  {
+   "ruta": "#/tienda",
+   "desde": 1788503610498,
+   "primerClicMs": 29241,
+   "clics": 21,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-351342D9",
+   "desde": 1788503962889,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-351342D9",
+   "desde": 1788504023138,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788504051799,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/ayuda",
+   "desde": 1788504053611,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/contacto",
+   "desde": 1788504055423,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/sucursales",
+   "desde": 1788504057235,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/facturacion",
+   "desde": 1788504059045,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788504051800,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/modo-socio",
+   "desde": 1788504100439,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-351342D9",
+   "desde": 1788504158540,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T06:43:07.135Z",
+ "duracionMin": 10
+}

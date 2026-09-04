@@ -1,0 +1,727 @@
+{
+ "persona": "Renata Bustos, 38",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T08:02:44.216Z",
+ "tareas": [
+  {
+   "quiero": "entrar al sistema para cerrar las comisiones de marzo",
+   "esperaba": null,
+   "t": 22,
+   "segundos": 81,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Hoy es 10 de abril y es dia de pago de comisiones. Nunca he cerrado un mes aqui. Voy a entrar con mi correo y ver que me deja hacer como gerente.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 22
+    },
+    {
+     "texto": "Primero me sale un aviso de privacidad encima. Le doy Entendido y acepto. De paso noto que abajo dice \"© 2026 finding U\" y estamos en 2027.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 53
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 7,
+   "confianza": 5,
+   "comentario": "Entrar fue lo mas facil del dia. Solo estorbo el aviso de privacidad encima del formulario."
+  },
+  {
+   "quiero": "encontrar donde se cierran y se pagan las comisiones de marzo",
+   "esperaba": null,
+   "t": 103,
+   "segundos": 57,
+   "logrado": true,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Leo el menu de la izquierda entero: OPERACION DIARIA (Pedidos, Punto de Venta, Stocks), PERSONAS (Clientes, Empleados), CATALOGO Y OFERTA (Productos, Campanas, Cupones), SEGUIMIENTO (Estadisticas, Cuadro de Honor, Notificaciones), SISTEMA (Configuracion). No hay ninguna palabra que diga Comisiones, ni Socios, ni Red, ni Pagos. Y yo vengo a pagar comisiones. Voy a abrir \"Acciones 2 urgentes\" primero, porque quiza ahi me diga que hay algo de marzo pendiente.",
+     "segundosDesdeLoAnterior": 49,
+     "t": 103
+    },
+    {
+     "texto": "El panel de Acciones urgentes SI habla de comisiones: \"1 socias con comision y sin CLABE · $135.00\". O sea que el modulo existe pero no esta en el menu. Le doy a \"Ir a resolver\" a ver a donde me manda.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 124
+    },
+    {
+     "texto": "Sorpresa: el boton \"Ir a resolver\" me manda a CLIENTES, y la tabla de pagos de comisiones esta hasta el fondo de esa pantalla, debajo de la ficha completa de un cliente cualquiera (Julio Herrera, que ni tiene comisiones). La URL sigue siendo #/admin. Si el dueno me pregunta \"donde se pagan las comisiones\" yo tendria que contestarle \"en Clientes, hasta abajo, despues de la bitacora de contactos y los documentos\". Eso no lo encuentra nadie solo.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 160
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "no hay ninguna entrada de menu que diga Comisiones y hoy es dia de pago",
+     "pantalla": "#/admin",
+     "t": 103
+    },
+    {
+     "texto": "la tabla de pagos de comisiones esta escondida al final de la pantalla de Clientes, no tiene entrada propia en el menu",
+     "pantalla": "#/admin Clientes",
+     "t": 160
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 3,
+   "comentario": "Solo lo encontre porque el panel de \"Acciones urgentes\" me llevo de la mano. Por el menu no habria llegado: no existe la palabra Comisiones en la navegacion."
+  },
+  {
+   "quiero": "ver que hay que pagar de marzo 2027 y a quien",
+   "esperaba": null,
+   "t": 160,
+   "segundos": 501,
+   "logrado": true,
+   "clicsBase": 4,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "El selector de meses va: marzo 2027, septiembre 2026, agosto 2026... Se salta octubre, noviembre y diciembre de 2026 y enero y febrero de 2027. Si el dueno me pide \"ensename febrero\" no puedo. Y ofrece meses de 2025 que ni existiamos. Lo anoto.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 184
+    },
+    {
+     "texto": "De marzo solo hay UNA socia con comision: Paulina Rios, $135.00, sin CLABE. Listas para depositar 0. O sea que el \"cierre de marzo\" es literalmente cobrar 135 pesos a una persona, y ni eso puedo porque no tiene cuenta. Le doy a \"Pedir CLABE\" a ver que hace.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 184
+    },
+    {
+     "texto": "El modal me explica bien: le manda correo con enlace, aviso en su panel y queda en su ficha. Eso si me gusta, es lo primero del dia que me dice exactamente que va a pasar antes de apretar. Le doy Enviar recordatorio.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 208
+    },
+    {
+     "texto": "En pantalla dice \"Recordatorio de CLABE enviado a Paulina Rios por correo (paulina.rios@gmail.com)\" y en su fila aparece \"Recordatorio enviado el 10 abr 2027\". Ahora quiero comprobar dos cosas: que el correo de verdad salio y que quedo en su ficha, porque no me fio de un mensaje verde.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 240
+    },
+    {
+     "texto": "Abro la ficha de Paulina Rios para ver su bitacora y sus comisiones.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 240
+    },
+    {
+     "texto": "ALTO. En el correo de Paulina veo dos comisiones de marzo: $135.00 por la compra de Ximena y $124.20 por la de Fabiola, las dos \"generacion 1\". Suman $259.20, que es justo lo que decia el aviso del 20 de marzo de \"comisiones bloqueadas\". Pero en mi tabla de pagos de marzo solo aparecen $135.00. Faltan $124.20 y la tabla no tiene ninguna columna ni pestana donde vivan las comisiones pendientes o bloqueadas. Necesito saber si esos $124.20 se los debemos o se perdieron, porque eso es dinero de una persona.",
+     "segundosDesdeLoAnterior": 81,
+     "t": 321
+    },
+    {
+     "texto": "En la ficha de Paulina la Bitacora de contactos solo tiene la nota de Gaby del 08/03. El modal me prometio \"Queda anotado en su ficha\" y ahi no hay nada del recordatorio de CLABE que acabo de mandar. Voy a recargar para asegurarme de que no es que la pantalla no se refresco.",
+     "segundosDesdeLoAnterior": 150,
+     "t": 471
+    },
+    {
+     "texto": "Recargue y me boto a Pedidos. Vuelvo a Clientes a mano para comprobar si el recordatorio de CLABE de verdad quedo guardado o solo fue un mensajito de pantalla.",
+     "segundosDesdeLoAnterior": 65,
+     "t": 536
+    },
+    {
+     "texto": "A la tercera volvio marzo 2027, pero SOLO entrando por Acciones urgentes -> Ir a resolver. Si entro por el menu Clientes, marzo 2027 no existe en la lista y me pone agosto 2026 sin avisarme. Eso significa que si el dia 10 alguien entra por el menu normal, ve \"no hay comisiones\" y cierra el mes creyendo que no se le debe nada a nadie. Para mi esto es lo mas grave que he visto hoy.",
+     "segundosDesdeLoAnterior": 124,
+     "t": 661
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el selector de meses de comisiones se salta de marzo 2027 a septiembre 2026: faltan oct/nov/dic 2026 y ene/feb 2027",
+     "pantalla": "Clientes · Pagos del mes",
+     "t": 184
+    },
+    {
+     "texto": "el correo dice que Paulina genero $135.00 + $124.20 en marzo, pero la tabla de pagos solo reconoce $135.00 y no hay donde ver la diferencia",
+     "pantalla": "Clientes · Pagos del mes",
+     "t": 321
+    },
+    {
+     "texto": "todo el panel de administracion vive en la misma direccion #/admin: si recargo la pagina me regresa a Pedidos y pierdo donde estaba; no puedo mandarle al dueno un link de la pantalla de comisiones",
+     "pantalla": "#/admin",
+     "t": 536
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: el boton Ver de la fila de Paulina no respondio a la primera, tuve que buscarlo de otra forma",
+     "t": 321
+    },
+    {
+     "texto": "despues de recargar, el selector \"Mes de las comisiones\" ya no tiene marzo 2027: empieza en septiembre 2026 y se puso solo en agosto 2026. Los $135 de marzo desaparecieron de la pantalla",
+     "pantalla": null,
+     "t": 587
+    },
+    {
+     "texto": "reintento: intento 2: cambio de seccion y regreso a Clientes a ver si vuelve marzo 2027",
+     "t": 587
+    },
+    {
+     "texto": "reintento: intento 3: vuelvo por donde llegue la primera vez, el panel de Acciones urgentes",
+     "t": 612
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 3,
+   "facilidad": 2,
+   "confianza": 2,
+   "comentario": "Vi que de marzo solo hay $135 de Paulina Rios y que no se le puede depositar por falta de CLABE. Me costo 3 intentos volver a la pantalla despues de recargar, y solo se llega por la alerta, no por el menu."
+  },
+  {
+   "quiero": "registrar la CLABE de Paulina para poder depositarle",
+   "esperaba": null,
+   "t": 661,
+   "segundos": 56,
+   "logrado": false,
+   "clicsBase": 12,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 1,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En su ficha hay un campo \"Guardar CLABE\". Yo no tengo su CLABE: no me la ha dado. Antes de nada quiero ver que tan estricto es el campo, porque si acepta cualquier numero alguien podria mandar 135 pesos a una cuenta equivocada y el sistema tan contento. Escribo 1234 a proposito y NO lo guardo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 661
+    },
+    {
+     "texto": "Bien: el campo no me deja guardar \"1234\", el boton se queda apagado y me dice el motivo, \"La CLABE tiene 18 digitos\". Eso si esta bien hecho. Pero yo no tengo su CLABE de 18 digitos, asi que no puedo depositarle hoy.",
+     "segundosDesdeLoAnterior": 57,
+     "t": 717
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "patrocinadora",
+     "texto": "Hola Paulina, soy Renata de Finding'U. Hoy 10 de abril pagamos las comisiones de marzo y tienes $135.00 a tu favor, pero no podemos depositarte porque no tienes CLABE registrada. Te acabo de mandar un correo con el enlace para capturarla en tu panel (Comisiones). En cuanto la registres te deposito el mismo dia. Otra cosa: en tu correo del 20 de marzo aparecen dos comisiones, $135.00 por Ximena y $124.20 por Fabiola; a mi solo me aparecen confirmados los $135.00. Estoy revisando que paso con los $124.20 y te aviso.",
+     "t": 717,
+     "tarea": "registrar la CLABE de Paulina para poder depositarle"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": null,
+   "comentario": "no puedo capturar la CLABE porque la socia no me la ha dado; le mande el recordatorio por el sistema y le escribi por WhatsApp"
+  },
+  {
+   "quiero": "averiguar que paso con los $124.20 de comision de Paulina que el correo anuncia y la tabla no reconoce",
+   "esperaba": null,
+   "t": 717,
+   "segundos": 129,
+   "logrado": true,
+   "clicsBase": 13,
+   "teclasBase": 1,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "La tabla de agosto 2026 me solto una pista: \"Las comisiones se confirman cuando el pedido se entrega\". Entonces los $124.20 de la compra de Fabiola probablemente siguen pendientes porque su pedido no se ha entregado. Pero eso yo no lo puedo ver en ningun lado: la pantalla de pagos solo tiene Listas para depositar, Sin CLABE y Pagadas. No hay una casilla que diga \"pendientes de entrega $124.20\". Voy a Pedidos a buscar el pedido de Fabiola.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 717
+    },
+    {
+     "texto": "La pantalla de Pedidos me recibe en la pestana Pendiente, que tiene 0, y me dice \"No hay pedidos en este estado\". Por un segundo pense que no habia nada. Le pico a Pagado 4.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 741
+    },
+    {
+     "texto": "Aqui esta la respuesta: el pedido de Fabiola, ORD-9CD8BD3D del 04/03/2027 por $1,371, sigue en \"Pagada\" sin guia. Lleva 37 dias cobrado y sin salir de la bodega. Por eso la comision de $124.20 de Paulina nunca se confirmo. Y hay dos pedidos de Aurora Vega del 04/03 con \"Factura Solicitada\" que tampoco se han tocado. Abro el detalle del de Fabiola.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 768
+    },
+    {
+     "texto": "El detalle del pedido me da productos y direccion, pero nada de dinero: no dice cuando entro el pago, ni por que via, ni cuanta comision genero, ni cuantos dias lleva parado. Y hago la cuenta: 700 + 400 + 280 = 1,380 y el Total dice $1,371. Faltan 9 pesos que no se de donde salen; no hay renglon de descuento ni de envio.",
+     "segundosDesdeLoAnterior": 78,
+     "t": 846
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la pantalla de pagos no muestra las comisiones pendientes/bloqueadas: no puedo decirle al dueno cuanto debemos en total, solo cuanto es depositable hoy",
+     "pantalla": "Clientes · Pagos del mes",
+     "t": 717
+    },
+    {
+     "texto": "la suma de los productos del pedido ORD-9CD8BD3D da $1,380 y el total dice $1,371, sin ningun renglon que explique los $9 de diferencia",
+     "pantalla": "Pedidos · detalle",
+     "t": 846
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: el boton Ver del pedido tampoco respondio al primer intento; la fila no es una fila de tabla de verdad",
+     "t": 809
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "Deduje que los $124.20 estan detenidos porque el pedido de Fabiola lleva 37 dias pagado y sin enviar. Lo deduje yo, la plataforma no me lo dice en ningun lado."
+  },
+  {
+   "quiero": "revisar que no haya pedidos cobrados por el banco que el sistema no haya registrado (conciliar pagos)",
+   "esperaba": null,
+   "t": 846,
+   "segundos": 71,
+   "logrado": false,
+   "clicsBase": 16,
+   "teclasBase": 1,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "El dueno me pidio revisar que no haya cobros del banco sin registrar. En Pedidos veo un boton \"Conciliar pagos\". No se que hace exactamente ni si me va a pedir subir el estado de cuenta. Le doy y leo antes de confirmar nada.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 846
+    },
+    {
+     "texto": "Leo con cuidado: \"Se consultara a MercadoPago por los pedidos pendientes de pago de las ULTIMAS 72 HORAS\". El dueno me pidio revisar TODO marzo. Con 72 horas solo alcanzo del 7 al 10 de abril. Y no hay ningun campo para cambiar el rango de fechas ni para subir el estado de cuenta del banco. Ademas dice Pendientes 0: no hay ningun pedido pendiente que revisar. O sea que este boton hoy no me sirve para lo que me pidieron.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 881
+    },
+    {
+     "texto": "Resultado: \"No hay pedidos pendientes de pago en las ultimas 72 horas: no habia nada que revisar.\" El mensaje es claro y honesto, eso se agradece. Pero yo no puedo contestarle al dueno lo que me pregunto. El sistema solo sabe comparar contra pedidos que EL ya tiene. Si el banco nos cobro algo de un pedido que nunca se creo, o de uno cancelado, aqui no aparece nunca. No hay ninguna pantalla donde yo pueda subir el estado de cuenta ni ver una lista de movimientos del banco.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 917
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Conciliar pagos\" solo mira 72 horas hacia atras y no deja cambiar el rango; no hay forma de conciliar un mes completo ni de contrastar contra el estado de cuenta del banco",
+     "pantalla": "Pedidos · Conciliar pagos",
+     "t": 881
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "la unica herramienta de conciliacion mira 72 horas y solo contra pedidos pendientes; no hay forma de revisar todo marzo ni de cruzar contra el banco"
+  },
+  {
+   "quiero": "reconstruir a mano como cerro marzo: cuanto se cobro, cuanto se entrego y cuanto se debe de comisiones",
+   "esperaba": null,
+   "t": 917,
+   "segundos": 177,
+   "logrado": true,
+   "clicsBase": 18,
+   "teclasBase": 1,
+   "clics": 9,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Sumo a mano lo de marzo. Entregados: 760 + 829 + 1,350 + 1,209 + 609 = 4,757. Pagados sin enviar: 960 + 1,371 + 1,500 + 1,500 = 5,331. Total 10,088, que es justo lo que dice arriba \"Pedidos cargados $10,088 cobrado · 9 pedidos\". Al menos eso cuadra. Pero tuve que sumarlo yo en papel: no hay ninguna pantalla que me de el cierre del mes.",
+     "segundosDesdeLoAnterior": 87,
+     "t": 1004
+    },
+    {
+     "texto": "Necesito dejar constancia. En Clientes hay un boton \"Exportar\" junto a \"Comisiones por depositar $135\" y otro \"Exportar CSV\". Voy a ver que me bajan.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1004
+    },
+    {
+     "texto": "Abri el archivo que me bajo el boton Exportar. Se llama \"comisiones-2026-08.xlsx\" —agosto de 2026— pero adentro, en la hoja Resumen, dice Periodo 2027-03, Paulina Rios, 135, Pendiente de pago. O sea que el nombre del archivo miente. Si yo se lo mando asi a contabilidad lo archivan como agosto del ano pasado. Y hay una segunda hoja, \"Desglose por arbol\", donde la misma Paulina aparece con Comision ganada $0 y Motivo de perdida \"Nivel no configurado\", y la compra de Ximena aparece en $0 cuando fue de $1,350. El mismo archivo dice 135 en una hoja y 0 en la otra.",
+     "segundosDesdeLoAnterior": 61,
+     "t": 1065
+    },
+    {
+     "texto": "Confirmado: aunque el selector diga marzo 2027, el archivo que se descarga se sigue llamando comisiones-2026-08.xlsx. No es que yo me haya equivocado de mes: el nombre esta mal siempre.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 1094
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "no existe un corte o resumen del mes: para saber como cerro marzo tuve que abrir pestana por pestana y sumar con calculadora",
+     "pantalla": "Pedidos",
+     "t": 1004
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: vuelvo a exportar, ahora entrando por Acciones urgentes para que el selector si diga marzo 2027, a ver si cambia el nombre del archivo",
+     "t": 1065
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 3,
+   "confianza": 2,
+   "comentario": "Si tengo constancia del cierre, pero es un archivo mal nombrado y con dos hojas que no dicen lo mismo. No lo mandaria sin explicarlo por escrito."
+  },
+  {
+   "quiero": "entender por que el desglose dice \"Nivel no configurado\" y si por eso se perdieron comisiones",
+   "esperaba": null,
+   "t": 1094,
+   "segundos": 86,
+   "logrado": true,
+   "clicsBase": 27,
+   "teclasBase": 1,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "El archivo culpa a \"Nivel no configurado\". Si los niveles de comision no estan configurados, quiza por eso solo se reconocio una comision de las dos. Voy a Configuracion a buscar donde se definen los niveles.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1094
+    },
+    {
+     "texto": "Aqui esta la mentira. En Configuracion, hasta el fondo del todo, \"Niveles de comision\": Generacion 1 = 10%, Generacion 2 = 5%, y asi. SI estan configurados. Y 10% de los $1,350 que compro Ximena son exactamente los $135. Entonces el \"Nivel no configurado\" que trae mi archivo de Excel es falso, y por eso ese desglose pone $0 donde deberia poner $135 y $124.20. El archivo que iba a ser mi constancia esta mal.",
+     "segundosDesdeLoAnterior": 86,
+     "t": 1180
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el Excel de comisiones dice \"Nivel no configurado\" y $0 ganado, cuando en Configuracion la Generacion 1 esta al 10% y el resumen del mismo archivo paga $135",
+     "pantalla": "Configuración · Niveles de comision",
+     "t": 1180
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 4,
+   "comentario": "Encontre los niveles (Gen 1 = 10%) pero hasta el final de una pantalla larguisima, despues de rangos, bonos y descuentos. Y comprobe que el Excel miente al decir \"Nivel no configurado\"."
+  },
+  {
+   "quiero": "ver si queda rastro en el sistema de lo que hice hoy (el recordatorio de CLABE)",
+   "esperaba": null,
+   "t": 1180,
+   "segundos": 43,
+   "logrado": true,
+   "clicsBase": 28,
+   "teclasBase": 1,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En Notificaciones hay TRES avisos activos de \"Registra tu CLABE para cobrar tus comisiones\": uno para Paulina, uno para Fabiola y uno para Ximena, los tres diciendo \"Ya tienes comisiones a tu favor\". Pero en mi tabla de pagos de marzo solo existe UNA socia, Paulina. Si Fabiola y Ximena tambien tienen comisiones, yo hoy no les estoy pagando y ni siquiera las veo. Y ademas: el aviso de Paulina sigue diciendo \"Actualizada: 20 mar 2027\", o sea que el recordatorio que mande hoy no toco su aviso. Voy a abrir las fichas de Fabiola y de Ximena para ver que dicen sus comisiones.",
+     "segundosDesdeLoAnterior": 43,
+     "t": 1223
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el sistema le avisa a tres socias que tienen comisiones a su favor, pero la tabla de pagos del mes solo reconoce a una",
+     "pantalla": "Notificaciones vs Pagos del mes",
+     "t": 1223
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 2,
+   "comentario": "Del recordatorio que mande hoy el unico rastro es una linea gris en la fila de pagos. En su ficha no quedo nada, aunque el modal me prometio que si."
+  },
+  {
+   "quiero": "revisar ficha por ficha si Fabiola y Ximena tambien tienen comisiones de marzo",
+   "esperaba": null,
+   "t": 1223,
+   "segundos": 108,
+   "logrado": true,
+   "clicsBase": 29,
+   "teclasBase": 1,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ficha de Fabiola: \"Comisiones mes actual $0 / Por confirmar $0 / Comisiones mes anterior $0 / Sin movimientos\". Y sin embargo tiene un aviso ACTIVO en su panel que le dice \"Ya tienes comisiones a tu favor\". Le estamos prometiendo dinero a una socia que segun el sistema no tiene nada. Falta ver a Ximena.",
+     "segundosDesdeLoAnterior": 78,
+     "t": 1302
+    },
+    {
+     "texto": "Ximena igual: $0 en todo, y tambien con su aviso activo de \"Ya tienes comisiones a tu favor\". Llevo cuatro fichas abiertas una por una (Julio, Paulina, Fabiola, Ximena) solo para contestar una pregunta que la pantalla de pagos deberia contestarme de un golpe: a quien le debemos y cuanto.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 1331
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "todos los clientes dicen \"02/03/2027 · 0 dias\" o \"04/03/2027 · 0 dias\" cuando hoy es 10 de abril: la cuenta de dias sin comprar esta en cero para todos",
+     "pantalla": "Clientes · lista",
+     "t": 1276
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: le di a \"Ver\" en el renglon de Fabiola y la ficha de abajo siguio siendo la de Julio; lo intento otra vez",
+     "t": 1276
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "Abri 4 fichas a mano. Conclusion: solo Paulina tiene comision reconocida ($135). Fabiola y Ximena tienen $0 aunque el sistema les prometio comisiones por aviso."
+  },
+  {
+   "quiero": "ver que tan viejos son los 4 pedidos pagados sin enviar, porque de ahi cuelga la comision que falta",
+   "esperaba": null,
+   "t": 1331,
+   "segundos": 34,
+   "logrado": false,
+   "clicsBase": 33,
+   "teclasBase": 1,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "La lista de pedidos pagados sin enviar solo trae \"Fecha de creacion\". No hay una columna que diga cuantos dias llevan parados, ni un color, ni nada. Yo tengo que restar a mano: 04/03 a 10/04 son 37 dias. Y dos de esos pedidos, los de Aurora Vega, dicen \"Factura Solicitada\" desde el 4 de marzo. En todo el menu no hay ninguna seccion de Facturas: no tengo donde emitirla ni donde marcar que ya se emitio.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 1365
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "dos pedidos dicen \"Factura Solicitada\" desde el 04/03/2027 y no hay ninguna pantalla ni boton para atender la factura",
+     "pantalla": "Pedidos · Pagados",
+     "t": 1365
+    },
+    {
+     "texto": "no hay columna de antiguedad ni alerta por dias en los pedidos pagados sin enviar: 37 dias parados se ven igual que 1 dia",
+     "pantalla": "Pedidos · Pagados",
+     "t": 1365
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": null,
+   "comentario": "el envio no me toca a mi y la pantalla no me deja priorizar por antiguedad; lo paso a almacen"
+  },
+  {
+   "quiero": "mandarle al dueno el cierre de marzo y lo que quedo pendiente",
+   "esperaba": null,
+   "t": 1400,
+   "segundos": 0,
+   "logrado": true,
+   "clicsBase": 35,
+   "teclasBase": 1,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ya tengo todo lo que la plataforma me deja decir. Antes de escribirle reviso que no me falte: cobrado del mes, comisiones, conciliacion. Lo malo es que casi todo lo saque a mano o deduciendolo, y de las tres cosas que me pidio solo puedo cerrar una a medias.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 1400
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Don Beto, cierre de marzo 2027 al 10 de abril:\n\n1) COBRADO. 9 pedidos por $10,088. Entregados 5 ($4,757). Pagados y SIN ENVIAR 4 ($5,331), los mas viejos del 4 de marzo: llevan 37 dias cobrados y sin salir. Dos de ellos (Aurora Vega, $1,500 c/u) piden factura desde el 4 de marzo y en el sistema no hay ninguna pantalla de facturas para atenderlos.\n\n2) COMISIONES. Solo hay UNA socia con comision de marzo: Paulina Rios, $135.00. NO se le pudo depositar: no tiene CLABE registrada. Le mande el recordatorio desde el sistema y le escribi por WhatsApp. Pagado hoy: $0.00.\n\n3) LO QUE NO CUADRA Y NO PUEDO RESOLVER SOLA:\n   a) A Paulina el sistema le anuncio por correo el 20 de marzo DOS comisiones: $135.00 por la compra de Ximena y $124.20 por la de Fabiola. En la tabla de pagos solo existen los $135.00. Los $124.20 estan detenidos porque el pedido de Fabiola sigue sin entregarse; en ninguna pantalla se ven las comisiones pendientes, asi que no puedo decirte cuanto debemos en total, solo cuanto es depositable.\n   b) El sistema tiene avisos activos diciendo \"Ya tienes comisiones a tu favor\" para Fabiola y Ximena, pero sus fichas dicen $0. O les debemos y no lo veo, o les estamos prometiendo algo que no existe.\n   c) El Excel de comisiones que baje se llama \"comisiones-2026-08.xlsx\" (agosto 2026) aunque adentro es marzo 2027, y su hoja de desglose dice comision ganada $0 con el motivo \"Nivel no configurado\", cuando en Configuracion la Generacion 1 esta al 10%. No lo mando a contabilidad hasta que lo revisen.\n\n4) CONCILIACION CON EL BANCO. No la pude hacer. La unica herramienta (\"Conciliar pagos\") solo revisa las ultimas 72 horas y solo pedidos que ya estan en el sistema como pendientes; hoy dijo \"Revisados 0\". No hay manera de cargar el estado de cuenta ni de revisar marzo completo. Si el banco nos cobro algo de un pedido que nunca se creo, la plataforma no lo puede detectar.\n\n5) PARA HOY: que almacen saque los 4 pedidos pagados (eso destraba los $124.20 de Paulina) y que alguien resuelva las 2 facturas del 4 de marzo. Yo sigo detras de la CLABE de Paulina.",
+     "t": 1400,
+     "tarea": "mandarle al dueno el cierre de marzo y lo que quedo pendiente"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "El mensaje lo pude escribir, pero casi todo lo saque sumando a mano y cruzando correos con pantallas. La plataforma no tiene un cierre de mes."
+  },
+  {
+   "quiero": "comprobar que el sistema no me deje marcar como pagada una comision de alguien sin CLABE",
+   "esperaba": null,
+   "t": 1429,
+   "segundos": 36,
+   "logrado": true,
+   "clicsBase": 35,
+   "teclasBase": 1,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Antes de irme quiero probar una cosa que me preocupa: en la tabla de pagos hay una casilla al lado de Paulina, que NO tiene CLABE. Si yo puedo palomearla y darle a \"Registrar pago por lote\", el sistema estaria dejando marcar como pagados $135 que nunca salieron del banco. Voy a marcarla y ver si el boton se enciende. Si se enciende, NO voy a confirmar nada.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 1429
+    },
+    {
+     "texto": "En la fila de Paulina no hay casilla que marcar. O sea que el sistema NO me deja registrar como pagada una comision de alguien sin CLABE. Eso esta bien hecho y me tranquiliza: al menos por ahi no se va a colar un pago fantasma.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 1465
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Comprobado: sin CLABE no aparece ni la casilla, y el boton de pago por lote se queda apagado con el motivo escrito. Esta parte si esta bien pensada."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "mover dinero desde una pantalla que se llama Clientes y a la que solo llegue por una alerta me da mala espina",
+   "t": 160,
+   "tarea": "encontrar donde se cierran y se pagan las comisiones de marzo"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "hoy es dia de pago y la pantalla que me dice a quien le debo se borro sola con una recarga",
+   "t": 587,
+   "tarea": "ver que hay que pagar de marzo 2027 y a quien"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "al menos el recordatorio de CLABE si quedo guardado: la fila dice \"Recordatorio enviado el 10 abr 2027\" despues de recargar",
+   "t": 661,
+   "tarea": "ver que hay que pagar de marzo 2027 y a quien"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "llevamos 37 dias con pedidos pagados sin enviar y en ningun lado hay una alarma que diga \"esto lleva 37 dias\"; la unica etiqueta es un \"Importante\" gris",
+   "t": 768,
+   "tarea": "averiguar que paso con los $124.20 de comision de Paulina que el correo anuncia y la tabla no reconoce"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "el archivo que iba a mandar como constancia del cierre de marzo se llama agosto 2026 y se contradice a si mismo entre sus dos hojas",
+   "t": 1065,
+   "tarea": "reconstruir a mano como cerro marzo: cuanto se cobro, cuanto se entrego y cuanto se debe de comisiones"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "la pantalla de configuracion mide 12 mil caracteres y los niveles de comision, que es lo que mas me importa hoy, estan hasta el ultimo renglon",
+   "t": 1180,
+   "tarea": "entender por que el desglose dice \"Nivel no configurado\" y si por eso se perdieron comisiones"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 4,
+   "porque": "si el dueno abre esta pantalla va a ver que llevamos 37 dias con dinero cobrado y producto sin salir, y yo no tenia como enterarme",
+   "t": 1365,
+   "tarea": "ver que tan viejos son los 4 pedidos pagados sin enviar, porque de ahi cuelga la comision que falta"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "de las tres cosas que me pidio el dueno pude cerrar una a medias, y no por flojera mia sino porque la pantalla no da mas",
+   "t": 1400,
+   "tarea": "mandarle al dueno el cierre de marzo y lo que quedo pendiente"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "la unica puerta por donde se podia registrar un pago falso esta cerrada: sin CLABE no hay casilla que marcar",
+   "t": 1465,
+   "tarea": "comprobar que el sistema no me deje marcar como pagada una comision de alguien sin CLABE"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Hola Paulina, soy Renata de Finding'U. Hoy 10 de abril pagamos las comisiones de marzo y tienes $135.00 a tu favor, pero no podemos depositarte porque no tienes CLABE registrada. Te acabo de mandar un correo con el enlace para capturarla en tu panel (Comisiones). En cuanto la registres te deposito el mismo dia. Otra cosa: en tu correo del 20 de marzo aparecen dos comisiones, $135.00 por Ximena y $124.20 por Fabiola; a mi solo me aparecen confirmados los $135.00. Estoy revisando que paso con los $124.20 y te aviso.",
+   "t": 717,
+   "tarea": "registrar la CLABE de Paulina para poder depositarle"
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Don Beto, cierre de marzo 2027 al 10 de abril:\n\n1) COBRADO. 9 pedidos por $10,088. Entregados 5 ($4,757). Pagados y SIN ENVIAR 4 ($5,331), los mas viejos del 4 de marzo: llevan 37 dias cobrados y sin salir. Dos de ellos (Aurora Vega, $1,500 c/u) piden factura desde el 4 de marzo y en el sistema no hay ninguna pantalla de facturas para atenderlos.\n\n2) COMISIONES. Solo hay UNA socia con comision de marzo: Paulina Rios, $135.00. NO se le pudo depositar: no tiene CLABE registrada. Le mande el recordatorio desde el sistema y le escribi por WhatsApp. Pagado hoy: $0.00.\n\n3) LO QUE NO CUADRA Y NO PUEDO RESOLVER SOLA:\n   a) A Paulina el sistema le anuncio por correo el 20 de marzo DOS comisiones: $135.00 por la compra de Ximena y $124.20 por la de Fabiola. En la tabla de pagos solo existen los $135.00. Los $124.20 estan detenidos porque el pedido de Fabiola sigue sin entregarse; en ninguna pantalla se ven las comisiones pendientes, asi que no puedo decirte cuanto debemos en total, solo cuanto es depositable.\n   b) El sistema tiene avisos activos diciendo \"Ya tienes comisiones a tu favor\" para Fabiola y Ximena, pero sus fichas dicen $0. O les debemos y no lo veo, o les estamos prometiendo algo que no existe.\n   c) El Excel de comisiones que baje se llama \"comisiones-2026-08.xlsx\" (agosto 2026) aunque adentro es marzo 2027, y su hoja de desglose dice comision ganada $0 con el motivo \"Nivel no configurado\", cuando en Configuracion la Generacion 1 esta al 10%. No lo mando a contabilidad hasta que lo revisen.\n\n4) CONCILIACION CON EL BANCO. No la pude hacer. La unica herramienta (\"Conciliar pagos\") solo revisa las ultimas 72 horas y solo pedidos que ya estan en el sistema como pendientes; hoy dijo \"Revisados 0\". No hay manera de cargar el estado de cuenta ni de revisar marzo completo. Si el banco nos cobro algo de un pedido que nunca se creo, la plataforma no lo puede detectar.\n\n5) PARA HOY: que almacen saque los 4 pedidos pagados (eso destraba los $124.20 de Paulina) y que alguien resuelva las 2 facturas del 4 de marzo. Yo sigo detras de la CLABE de Paulina.",
+   "t": 1400,
+   "tarea": "mandarle al dueno el cierre de marzo y lo que quedo pendiente"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 6,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada por fuera",
+   "desordenada por dentro",
+   "sin memoria"
+  ],
+  "mejorPantalla": "el panel de Acciones urgentes y los modales que te explican que va a pasar antes de apretar (Pedir CLABE, Conciliar pagos)",
+  "peorPantalla": "la tabla de Pagos del mes escondida al fondo de Clientes, que pierde el mes en cuanto recargas",
+  "seParece": "a un ERP heredado al que le fueron colgando pantallas: cada pieza por separado esta bien escrita, pero nadie se sento a pensar el dia 10 de un contador",
+  "recomendarias": 4,
+  "volverias": "la tengo que usar, no es cuestion de querer; pero no cierro un mes con ella sin sacar cuentas en papel aparte",
+  "comentario": "Los textos son de lo mejor que he visto: cada boton apagado te dice por que esta apagado y cada modal te avisa que va a pasar. El problema no es como habla, es donde vive cada cosa: la pantalla con la que se mueve dinero no tiene entrada en el menu, no tiene direccion propia, se le olvida el mes si recargas y el archivo que exporta se llama con otro mes y se contradice consigo mismo. Confio en como me explica las cosas y desconfio de los numeros que me da."
+ },
+ "totales": {
+  "clics": 37,
+  "teclas": 1,
+  "envios": 0,
+  "campos": 2,
+  "pantallas": 2,
+  "recargas": 0,
+  "atrases": 0
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788508986292,
+   "primerClicMs": 31383,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788509435534,
+   "primerClicMs": 64933,
+   "clics": 5,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T08:28:46.614Z",
+ "duracionMin": 26
+}

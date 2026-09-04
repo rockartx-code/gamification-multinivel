@@ -1,0 +1,712 @@
+{
+ "persona": "Mireya Solano, 24",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T05:52:16.902Z",
+ "tareas": [
+  {
+   "quiero": "entrar al sistema con el usuario que me dieron para abrir mi turno de caja",
+   "esperaba": null,
+   "t": 25,
+   "segundos": 44,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Me dijeron que entre por la pantalla de login con mi correo del trabajo. Ni siquiera sé si esto es una página de tienda o el sistema de la caja. Voy a abrir la dirección y ver qué sale.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 25
+    },
+    {
+     "texto": "Antes de escribir nada me sale un aviso de privacidad largo que tapa la pantalla. Dice \"Para comprar solo te pedimos nombre, correo...\" — habla de comprar, y yo no vengo a comprar, vengo a trabajar. Le doy Entendido y acepto porque si no, no me deja.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 52
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "El aviso de privacidad me habla como si fuera clienta (\"para comprar solo te pedimos...\"), pero yo soy empleada. Abajo dice \"© 2026 finding U\" y estamos en 2027.",
+     "pantalla": "#/login",
+     "t": 52
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Entrar fue lo más fácil del día: correo, contraseña y ya. Lo raro es que caigo en \"Pedidos\" y arriba dice ADMIN, y yo soy de caja."
+  },
+  {
+   "quiero": "abrir mi turno de caja con $500 de fondo",
+   "esperaba": null,
+   "t": 69,
+   "segundos": 147,
+   "logrado": false,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Yo lo que necesito es abrir caja. En la lista de la izquierda veo Pedidos, Punto de Venta, Stocks y Campañas. \"Punto de Venta\" suena a la caja. No veo en ningún lado que diga \"turno\" ni \"abrir caja\". Voy a Punto de Venta a ver si ahí me pide el fondo.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 69
+    },
+    {
+     "texto": "Esta pantalla es larguísima. Busco con los ojos algo que diga \"abrir caja\", \"abrir turno\" o \"fondo\". Encuentro \"Fondo inicial $0.00\" pero es un renglón de solo lectura, no un campo. Los únicos botones de caja son \"Retirar efectivo\" y \"Hacer corte de caja\" y los dos están grises.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 94
+    },
+    {
+     "texto": "Y algo peor: arriba dice \"Stock actual: Sucursal Guadalajara\" y yo estoy en la Tienda Del Valle. Nadie me dijo que hubiera que escoger sucursal. Si vendo así, ¿le bajo el producto a Guadalajara?",
+     "segundosDesdeLoAnterior": 0,
+     "t": 94
+    },
+    {
+     "texto": "Abrí \"Ver movimientos\" esperando que ahí se metiera el fondo. Solo dice \"Sin movimientos desde el último corte\" y \"Fondo inicial $0.00\". Nada para capturar. Voy a probar \"Ver historial de cortes\", a lo mejor ahí se abre el turno.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 108
+    },
+    {
+     "texto": "\"No hay cortes registrados.\" Tampoco ahí. Cierro y busco en el menú de arriba: \"Acciones 1 urgentes\". A lo mejor lo urgente es abrir la caja.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 122
+    },
+    {
+     "texto": "Sí abrió algo, tardé en verlo porque la ventanita sale encimada en medio de una pantalla larguísima y yo estaba mirando la parte de abajo. Dice \"Acciones urgentes — Resuelve los pendientes críticos desde aquí — 4 pedidos pagados sin envío — Importante — Ir a resolver\". Eso no es mío, es de almacén; a mí me sale igual que a todos.",
+     "segundosDesdeLoAnterior": 93,
+     "t": 215
+    },
+    {
+     "texto": "Cierro. Ya busqué en Punto de Venta, en Ver movimientos, en Ver historial de cortes y en Acciones. En ningún lado se puede abrir turno ni meter el fondo de $500. Leyendo el renglón chiquito entiendo que el fondo sale del corte anterior, y como nunca ha habido corte, para el sistema hoy arranco en $0 aunque yo tenga los $500 en la mano.",
+     "segundosDesdeLoAnterior": 1,
+     "t": 216
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "No hay ningún botón para abrir el turno ni para meter los $500 del fondo. ¿Se abre sola la caja con la primera venta? ¿O el fondo lo pone la gerente?",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 94
+    },
+    {
+     "texto": "¿Por qué a la cajera le aparecen como \"urgentes\" los envíos que no ha mandado almacén? No es mi trabajo y no sé si me van a regañar por no resolverlo.",
+     "pantalla": "#/admin",
+     "t": 215
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le piqué a \"Acciones 1 urgentes\" arriba de mi nombre y no se abrió nada. Lo intenté y la pantalla quedó igual.",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 148
+    },
+    {
+     "texto": "reintento: volví a picarle a \"Acciones\" pensando que se me había ido el dedo",
+     "t": 148
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata, buenos días, soy Mireya de la caja de Del Valle. No encuentro dónde abrir el turno ni dónde capturar los $500 del fondo: en Punto de Venta dice \"Fondo inicial $0.00\" y no me deja escribirlo, \"Retirar efectivo\" y \"Hacer corte de caja\" están grises, y en \"Ver movimientos\" y \"Ver historial de cortes\" no hay nada. ¿El fondo lo carga usted desde otro lado o empiezo a vender con la caja en $0?",
+     "t": 216,
+     "tarea": "abrir mi turno de caja con $500 de fondo"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "No hay ninguna opción para abrir turno ni capturar el fondo inicial de $500. Busqué en Punto de Venta, movimientos, historial de cortes y en Acciones urgentes."
+  },
+  {
+   "quiero": "cobrar a un cliente de mostrador dos productos: paga con un billete de $500 en efectivo y el resto con tarjeta",
+   "esperaba": null,
+   "t": 233,
+   "segundos": 153,
+   "logrado": true,
+   "clicsBase": 8,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Antes de cobrar nada tengo que cambiar el \"Stock ligado\", porque viene en Sucursal Guadalajara y yo estoy en la Tienda Del Valle. Si no lo cambio le voy a descontar el producto a otra tienda.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 233
+    },
+    {
+     "texto": "Ya dice \"Stock actual: Tienda Del Valle\" y ahora los productos dicen Disp. 12 en vez de 10, o sea que sí eran otros números. Me asusta pensar que si no me fijo, vendo del inventario de Guadalajara. Ojo: al cambiar de sucursal desapareció el pedido de la señora Ximena que estaba para entregar; ahorita vuelvo a eso.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 257
+    },
+    {
+     "texto": "El cliente lleva Klinhart ($480) y Naplus ($280). Le pico a los dos productos a ver si se agregan.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 257
+    },
+    {
+     "texto": "Ya dice Subtotal $760 y Total neto $760. El cliente me da un billete de $500 y el resto con tarjeta. En \"Forma de pago\" hay una opción que dice \"Efectivo + tarjeta/transferencia\": esa es. La escojo.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 272
+    },
+    {
+     "texto": "Aquí me trabé tantito: aparecieron DOS casillas de dinero. Una dice \"Paga en efectivo — Lo que el cliente da en billetes\" y otra abajo dice \"Efectivo recibido\" con \"Cambio: $0\". Para mí las dos son lo mismo: lo que me dio en billetes. ¿En cuál pongo los $500?",
+     "segundosDesdeLoAnterior": 17,
+     "t": 289
+    },
+    {
+     "texto": "Al escribir 500 arriba, abajo se puso solo \"Se cobra con tarjeta $260 · Total $760 − efectivo $500\". Eso sí lo entendí y me tranquilizó. Entonces \"Efectivo recibido\" es nada más para sacar el cambio. Pongo los $500 del billete ahí también, para que quede el registro.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 302
+    },
+    {
+     "texto": "Todo cuadra: $500 en efectivo, $260 con tarjeta, cambio $0. Le doy a \"Cobrar $760\". Me da un poquito de nervio porque no sé si va a preguntar algo más o si ya se cobra de una vez.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 311
+    },
+    {
+     "texto": "Salió: \"Venta POS-E26D95B4 registrada por $760. Pago: efectivo $500 + tarjeta $260. Cambio a entregar: $0.\" Me late que lo diga con todas sus letras. Pero el cliente me pide su ticket y no veo ningún botón de imprimir ni de mandar comprobante. Busco en la pantalla y no hay nada.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 334
+    },
+    {
+     "texto": "Recargo la página para ver si de verdad quedó guardada la venta o si nomás fue el mensajito.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 334
+    },
+    {
+     "texto": "Al recargar me sacó de Punto de Venta y me regresó a \"Pedidos\". Otra vez tengo que picarle a Punto de Venta y volver a escoger la sucursal. Si estoy con gente formada eso es tiempo perdido.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 361
+    },
+    {
+     "texto": "Recargué, volví a entrar y ahí sigue: \"Efectivo que debería haber en el cajón $500.00\", \"Ventas registradas 1\" y la venta POS-E26D95B4 por $760. Sí quedó guardada. Klinhart y Naplus bajaron a 11. Eso me da confianza.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 386
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Paga en efectivo\" y \"Efectivo recibido\" suenan idénticas. Si pongo 500 en las dos, ¿le voy a cobrar $1,000 de efectivo?",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 289
+    },
+    {
+     "texto": "¿Cómo le doy comprobante al cliente de mostrador? No hay \"imprimir ticket\" ni \"enviar por correo\" por ningún lado.",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 334
+    },
+    {
+     "texto": "En la lista dice \"Tienda Del Valle / Usuario 1803978000097\". ¿Ese número soy yo? Debería decir mi nombre.",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 386
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: recargar me devolvió a Pedidos y tuve que volver a entrar a Punto de Venta y reelegir Tienda Del Valle",
+     "t": 361
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "La venta mixta salió bien y el mensaje final explica todo. Lo que me costó fue entender dos casillas de dinero que se llaman casi igual (\"Paga en efectivo\" y \"Efectivo recibido\"), y que no hay ticket para el cliente."
+  },
+  {
+   "quiero": "entregar el pedido de internet a la señora que vino a recogerlo",
+   "esperaba": null,
+   "t": 386,
+   "segundos": 293,
+   "logrado": true,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 13,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "La señora Ximena Paredes viene por su pedido. Hace rato lo vi arriba: \"1 pedido pendiente de entregar — ORD-7C55FDBD — $1,350 — Entregar\". Pero eso lo vi cuando la sucursal estaba en Guadalajara. Ahora que puse Tienda Del Valle no lo veo. Busco arriba de la pantalla.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 386
+    },
+    {
+     "texto": "Voy a buscar su pedido en \"Pedidos\" con el buscador, a ver qué dice ahí y si dice a qué tienda le toca.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 402
+    },
+    {
+     "texto": "Dice \"Sin resultados para Ximena en este estado\". Es que estoy parada en la pestaña \"Pendiente\": los pedidos se guardan en pestañas por estado y hay que adivinar en cuál está el de la señora. Le pico a \"Pagado 4\".",
+     "segundosDesdeLoAnterior": 20,
+     "t": 421
+    },
+    {
+     "texto": "Ahí está: \"ORD-7C55FDBD · Ximena Paredes Cordero · $1,350 · Pagada\" y en la columna de Acción dice \"Sucursal\" pero no es botón, es una etiqueta. También noté que al cambiar de pestaña se me borró lo que había escrito en el buscador. Le pico a \"Ver\" de su renglón para ver a qué tienda le toca.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 434
+    },
+    {
+     "texto": "Se abrió el pedido equivocado. Los renglones son muy pegados y el botón \"Ver\" no dice de quién es. Cierro y vuelvo a intentar con cuidado.",
+     "segundosDesdeLoAnterior": 60,
+     "t": 494
+    },
+    {
+     "texto": "Ahora sí apareció un menú que antes no estaba: \"Todos los stocks / Sucursal Guadalajara / Bodega Central / Tienda Del Valle\". No sé cuándo aparece y cuándo no. Regreso a \"Pagado\" y le pico al Ver de la señora apuntando bien con el dedo.",
+     "segundosDesdeLoAnterior": 59,
+     "t": 553
+    },
+    {
+     "texto": "Ya lo abrí a la cuarta. Dice: \"Productos del pedido: Colageno Hidrolizado x1 · $700, Finding Pro 500g x1 · $800, Total $1,350\" y donde debería ir la dirección dice \"Dirección de envío — Sucursal: Sucursal Guadalajara\". O sea que la señora pidió recoger en GUADALAJARA y está parada aquí en Del Valle.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 584
+    },
+    {
+     "texto": "Mientras me contesta, voy a dejar apuntado en \"Notas internas\" lo que está pasando, para que quede constancia.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 584
+    },
+    {
+     "texto": "El campo de la nota dice, textualito, \"Agregar nota (ej. transferí \\$165 el 3-oct)\". Trae una diagonal antes del signo de pesos, como si se les hubiera colado un símbolo raro. Se ve descuidado.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 603
+    },
+    {
+     "texto": "La nota quedó: \"Nota guardada: el pedido ORD-7C55FDBD tiene 1 nota interna\" y abajo se ve con mi nombre y la hora. Eso sí me gustó.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 622
+    },
+    {
+     "texto": "Nadie me contesta y la señora sigue parada. Antes de entregarle voy a apuntar cómo está el inventario: en Del Valle el Colágeno y el Finding Pro estaban en 12 cada uno y en Guadalajara en 10. Voy a Punto de Venta, pongo Guadalajara (que es la única forma de ver su pedido) y le doy Entregar, a ver qué pasa.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 622
+    },
+    {
+     "texto": "¡Aguas! Al poner Guadalajara, arriba dice \"Caja actual $0\" y \"Ventas en caja 0\". Mi venta de hace rato desapareció de la vista. O sea que la caja también cambia con la sucursal: si me equivoco de sucursal, mi dinero se va a otra caja. Eso está para asustarse.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 643
+    },
+    {
+     "texto": "Ahí sí aparece \"Entregar\". La señora ya pagó y trae su número. Le doy Entregar aunque diga Guadalajara, porque el producto se lo estoy dando yo aquí.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 643
+    },
+    {
+     "texto": "Salió un mensaje: \"Pedido ORD-7C55FDBD: el servidor lo dejó Entregado.\" Hasta eso raro, \"el servidor\". Yo esperaba un \"Entregado a Ximena Paredes, listo\".",
+     "segundosDesdeLoAnterior": 18,
+     "t": 661
+    },
+    {
+     "texto": "Regresé a Tienda Del Valle: Colágeno 12 y Finding Pro 12, igualito que antes. Y en Guadalajara también 10 y 10. O sea que yo entregué dos botes de mi anaquel y el sistema no se los bajó a NADIE. Mañana el conteo me va a salir con dos productos menos y no voy a poder explicar por qué.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 679
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Le entrego o no? Su pedido está pagado y yo tengo los dos productos en mi tienda, pero el sistema dice que le toca en Guadalajara. Si le entrego, ¿de qué almacén se descuenta?",
+     "pantalla": "#/admin (Pedidos)",
+     "t": 584
+    },
+    {
+     "texto": "Le entregué el Colágeno y el Finding Pro de MI anaquel, pero el inventario de Guadalajara sigue en 10 y no bajó nada. ¿Dónde se descontó ese producto?",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 661
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "El pedido de la señora Ximena solo aparece si pongo la caja en \"Sucursal Guadalajara\". Con \"Tienda Del Valle\" (donde estoy y donde ella está parada) el recuadro de \"1 pedido pendiente de entregar\" desaparece por completo.",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 402
+    },
+    {
+     "texto": "reintento: le piqué a \"Ver\" del renglón de la señora y se me abrió el detalle de OTRA clienta (Mariana Robles)",
+     "t": 494
+    },
+    {
+     "texto": "Le piqué al \"Ver\" del renglón de la señora y se me vació la lista: volvió sola a la pestaña \"Pendiente\" con \"0 pedidos\". Tuve que empezar otra vez.",
+     "pantalla": "#/admin (Pedidos)",
+     "t": 553
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata, otra: vino la Sra. Ximena Paredes por su pedido ORD-7C55FDBD de $1,350 (Colágeno y Finding Pro). En el detalle dice \"Sucursal: Sucursal Guadalajara\" y en Punto de Venta el pedido para entregar solo me aparece si pongo mi caja en Guadalajara; en Tienda Del Valle desaparece. ¿Se lo entrego aquí y cómo, o la mando a otro lado? No quiero descontarle producto a la tienda equivocada.",
+     "t": 584,
+     "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 2,
+   "confianza": 2,
+   "comentario": "Sí quedó \"Entregado\", pero solo porque me atreví a cambiar mi caja a Guadalajara. El pedido de retiro no aparece en la sucursal donde está el cliente y el inventario no se descontó de ningún lado."
+  },
+  {
+   "quiero": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día",
+   "esperaba": null,
+   "t": 702,
+   "segundos": 281,
+   "logrado": true,
+   "clicsBase": 27,
+   "teclasBase": 0,
+   "clics": 19,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Son las 8 de la noche. Cuento el cajón: los $500 del fondo con los que abrí, los $500 del billete de la venta mixta y $40 que salieron de más. En total $1,040 contados. El sistema me dice \"Efectivo que debería haber en el cajón $500.00\" porque nunca me dejó capturar el fondo. Así que contra el sistema me sobran $540, pero de verdad de verdad solo me sobran $40.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 702
+    },
+    {
+     "texto": "Me gustó que sea por pasos: \"Corte de caja · paso 1 de 4\" y me desglosa \"Fondo que dejó el corte anterior $0.00 / Ventas en efectivo $0.00 / Parte en efectivo de pagos mixtos $500.00 / Retiros del turno -$0.00 / Efectivo esperado $500.00\". Ahí se ve clarito el problema: \"Fondo que dejó el corte anterior $0.00\" y mi fondo real era $500.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 717
+    },
+    {
+     "texto": "Dice \"Cuenta todo lo que hay, incluido el fondo con el que arrancaste\". Entonces son $1,040. Y hay una opción \"Contar por billetes y monedas: escribe cuántos hay de cada uno y el sistema suma\". Eso es justo lo que uno hace en el mostrador, la voy a usar.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 731
+    },
+    {
+     "texto": "Salieron las casillas de $1000, $500, $200, $100, $50, $20, $10, $5, $2 y $1. En el cajón tengo dos billetes de $500 y dos de $20. Pongo 2 en el de $500 y 2 en el de $20.",
+     "segundosDesdeLoAnterior": 54,
+     "t": 785
+    },
+    {
+     "texto": "Sumó solito: \"Efectivo contado $1,040.00 / Efectivo esperado $500.00 / Diferencia $540.00 (sobra)\". Y me pide motivo obligatorio, y hasta me dice \"No es una falta: es lo que pasó\". Eso me quitó un peso de encima, porque yo pensé que me iban a acusar de algo.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 801
+    },
+    {
+     "texto": "Paso 3: \"¿A dónde va?\" con dos opciones: \"Dejar todo como fondo de mañana — Los $1,040.00 se quedan en el cajón. No hace falta código.\" o \"Retirar una parte (o todo) — Se anota quién se lo lleva y se pide el código de la gerente\". Yo lo que quiero es entregar el dinero del día y dejar solo los $500 del fondo. Le pico a retirar.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 818
+    },
+    {
+     "texto": "Me pide \"Fondo que se queda en caja\", \"Quién recibe el efectivo\" y \"Código de autorización — Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente\". Yo no tengo ese código. Nadie me lo dio. Voy llenando lo que sí sé: dejo $500 de fondo para mañana y quien recibe es la gerente.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 834
+    },
+    {
+     "texto": "Ya dice \"Se retira $540.00\". Pero sin el código no me deja pasar: \"Escribe el código de autorización de la gerente para el retiro\". Le voy a intentar con algo, aunque sé que probablemente no sea.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 846
+    },
+    {
+     "texto": "¡Me dejó pasar con un código que me inventé (1234)! Yo pensé que me iba a rebotar. Ahora estoy en el paso 4 y me resume todo: \"Se cerrará el corte con 1 venta por $760.00. Fondo para mañana: $500.00. Retiro: $540.00 a nombre de Renata Bustos (gerente)...\" y avisa \"Después del corte ya no se puede editar\".",
+     "segundosDesdeLoAnterior": 18,
+     "t": 864
+    },
+    {
+     "texto": "Ahora sí: \"Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código\". O sea que el código sí se revisa, pero hasta el último paso, después de que me hizo llenar todo y leer el resumen. Me hubiera ahorrado el susto si me lo dice donde lo escribí.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 889
+    },
+    {
+     "texto": "No me queda de otra: regreso y escojo \"Dejar todo como fondo de mañana\" para poder cerrar el corte, aunque eso signifique dejar $1,040 en la tienda. Prefiero eso a irme sin corte.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 889
+    },
+    {
+     "texto": "El resumen ahora dice \"Fondo para mañana: $1,040.00. No se retira efectivo.\" Le doy cerrar.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 905
+    },
+    {
+     "texto": "Quedó: \"Corte cerrado · CUT-8D11C495 · Guardado en el servidor 3 mar 2027, 8:03 p.m.\" con todo el desglose y mi motivo escrito completito. Hay un botón \"Enviar por correo a la gerente — Se manda al correo que la gerencia configuró para los cortes\". Como no me contestó el WhatsApp, se lo mando por correo.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 920
+    },
+    {
+     "texto": "Dice \"Comprobante enviado a renata@findingu.mx.\" Al menos queda por escrito que dejé $1,040 en el cajón y por qué. Le doy Listo y recargo para comprobar que de verdad quedó el corte.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 940
+    },
+    {
+     "texto": "Recargué, volví a entrar, volví a escoger Tienda Del Valle y ahí está: \"CUT-8D11C495 · 03 mar 2027, 08:03 p.m. · Efectivo del turno: $500 · Ventas: 1 · En caja: $1,040 · Retirado: $0\", con un botón de CSV. Sí quedó.",
+     "segundosDesdeLoAnterior": 42,
+     "t": 983
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Si el código de la gerente es \"el que sea\", ¿para qué lo piden? A lo mejor lo revisa hasta el final. Le doy \"Cerrar el corte\" con miedo.",
+     "pantalla": "#/admin (Punto de Venta)",
+     "t": 864
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: le piqué a \"Contar por billetes y monedas\" y a la primera no me tomó el clic",
+     "t": 771
+    },
+    {
+     "texto": "No puedo entregar el dinero del día: el retiro exige un código de la gerente que nadie me dio y no hay forma de pedirlo desde la pantalla.",
+     "pantalla": "#/admin (corte de caja paso 3)",
+     "t": 889
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata, perdón la insistencia: estoy haciendo mi corte. Conté $1,040 (los $500 del fondo, los $500 de la venta mixta y $40 que sobraron). Quiero dejar $500 de fondo y entregar $540, pero me pide un \"código de autorización\" que no tengo. ¿Me lo pasa o dejo todo el dinero en el cajón hasta mañana?",
+     "t": 846,
+     "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "El corte por pasos está muy bien hecho y me dejó explicar la diferencia sin sentirme acusada. Lo malo: como nunca pude capturar el fondo de $500, mi corte dice que me sobraron $540 cuando en realidad me sobraron $40; y no pude entregar el dinero porque el código de la gerente no lo tengo y el sistema solo me lo rechaza hasta el último paso."
+  },
+  {
+   "quiero": "dejar constancia de los $40 que sobran y del pedido entregado, antes de irme",
+   "esperaba": null,
+   "t": 983,
+   "segundos": 29,
+   "logrado": false,
+   "clicsBase": 46,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Antes de apagar, quiero ver si hay algún lugar donde reportar el sobrante de $40 aparte del motivo del corte. Miro los menús que tengo: Pedidos, Punto de Venta, Stocks, Campañas. No hay nada de \"incidencias\" ni \"reportes\". Con el motivo del corte y el correo a la gerente me tengo que conformar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 983
+    },
+    {
+     "texto": "Entré a \"Stocks\" a ver si ahí podía dejar la nota del faltante de los dos botes que le di a la señora. Lo que me encontré me dejó fría: yo, que soy cajera de tercer día, puedo dar de \"Alta de stock\" una bodega o sucursal nueva, con nombre, ciudad y estado. ¿Por qué me deja hacer eso a mí?",
+     "segundosDesdeLoAnterior": 29,
+     "t": 1012
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Si yo puedo crear sucursales y registrar daños, ¿qué más puedo descomponer sin querer? Nadie me dijo qué sí y qué no me toca.",
+     "pantalla": "#/admin (Stocks)",
+     "t": 1012
+    },
+    {
+     "texto": "Además está lleno de palabras sin acento: \"Inventario por sucursal, transferencias, recepciones y danos\", \"Ubicacion\", \"Guardar vinculacion\", \"Michoacan\". Se ve mal hecho.",
+     "pantalla": "#/admin (Stocks)",
+     "t": 1012
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "No hay ningún lugar para reportar el sobrante de $40 ni el faltante de los dos productos que entregué; lo único que pude fue dejarlo en el motivo del corte y en una nota interna del pedido."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconcierto",
+   "intensidad": 3,
+   "porque": "me dice ADMIN abajo de mi nombre y yo solo soy cajera; me da miedo apretar algo que no me toca",
+   "t": 69,
+   "tarea": null
+  },
+  {
+   "emocion": "susto",
+   "intensidad": 4,
+   "porque": "la caja viene puesta en la sucursal de Guadalajara y yo estoy en Del Valle; casi vendo del almacén equivocado",
+   "t": 94,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "emocion": "inseguridad",
+   "intensidad": 4,
+   "porque": "voy a empezar a cobrar sin poder registrar el fondo y sin que nadie me confirme si está bien",
+   "t": 216,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "la venta mixta quedó bien registrada y el sistema separó solo el efectivo para el cajón",
+   "t": 386,
+   "tarea": "cobrar a un cliente de mostrador dos productos: paga con un billete de $500 en efectivo y el resto con tarjeta"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "la señora está enfrente esperando y su pedido no aparece en mi sucursal",
+   "t": 402,
+   "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "llevo tres intentos para abrir el detalle de un pedido y la lista se me reinicia sola",
+   "t": 553,
+   "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+  },
+  {
+   "emocion": "angustia",
+   "intensidad": 4,
+   "porque": "la señora ya pagó y está enfrente, y el sistema dice que su pedido es de otra ciudad",
+   "t": 584,
+   "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "con un menú desplegable puedo mandar mi venta y mi efectivo a la caja de otra ciudad sin que nada me avise",
+   "t": 643,
+   "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+  },
+  {
+   "emocion": "preocupación",
+   "intensidad": 5,
+   "porque": "entregué mercancía física y el inventario no se movió en ninguna sucursal; el faltante va a aparecer en mi tienda",
+   "t": 679,
+   "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+  },
+  {
+   "emocion": "nervios",
+   "intensidad": 4,
+   "porque": "voy a hacer mi primer corte y los números no coinciden por culpa del fondo que no pude registrar",
+   "t": 702,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "el sistema me deja explicar la diferencia en vez de solo marcarme un error",
+   "t": 801,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  },
+  {
+   "emocion": "miedo",
+   "intensidad": 4,
+   "porque": "me avisa que después ya no se puede editar y yo no estoy segura de nada de lo que puse",
+   "t": 864,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  },
+  {
+   "emocion": "impotencia",
+   "intensidad": 4,
+   "porque": "no me contestan, no tengo el código y el dinero del día se va a quedar en el cajón toda la noche",
+   "t": 889,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "a pesar de todo cerré mi primer corte yo sola y quedó explicado por escrito",
+   "t": 983,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "tengo permisos de cosas que no son de mi puesto y nadie me explicó los límites",
+   "t": 1012,
+   "tarea": "dejar constancia de los $40 que sobran y del pedido entregado, antes de irme"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Renata, buenos días, soy Mireya de la caja de Del Valle. No encuentro dónde abrir el turno ni dónde capturar los $500 del fondo: en Punto de Venta dice \"Fondo inicial $0.00\" y no me deja escribirlo, \"Retirar efectivo\" y \"Hacer corte de caja\" están grises, y en \"Ver movimientos\" y \"Ver historial de cortes\" no hay nada. ¿El fondo lo carga usted desde otro lado o empiezo a vender con la caja en $0?",
+   "t": 216,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Renata, otra: vino la Sra. Ximena Paredes por su pedido ORD-7C55FDBD de $1,350 (Colágeno y Finding Pro). En el detalle dice \"Sucursal: Sucursal Guadalajara\" y en Punto de Venta el pedido para entregar solo me aparece si pongo mi caja en Guadalajara; en Tienda Del Valle desaparece. ¿Se lo entrego aquí y cómo, o la mando a otro lado? No quiero descontarle producto a la tienda equivocada.",
+   "t": 584,
+   "tarea": "entregar el pedido de internet a la señora que vino a recogerlo"
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Renata, perdón la insistencia: estoy haciendo mi corte. Conté $1,040 (los $500 del fondo, los $500 de la venta mixta y $40 que sobraron). Quiero dejar $500 de fondo y entregar $540, pero me pide un \"código de autorización\" que no tengo. ¿Me lo pasa o dejo todo el dinero en el cajón hasta mañana?",
+   "t": 846,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 6,
+  "legibilidad": 6,
+  "coherencia": 5,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "seria",
+   "apretada",
+   "para alguien que ya sabe"
+  ],
+  "mejorPantalla": "el corte de caja por pasos (paso 1 de 4 al 4 de 4), sobre todo poder contar por billetes y explicar la diferencia",
+  "peorPantalla": "la lista de Pedidos: los renglones se abren y se cierran solos, le piqué a \"Ver\" de una clienta y se me abrió el de otra, y una vez se me vació la lista entera",
+  "seParece": "al sistema de la farmacia donde trabajé, pero sin el manual pegado en la pared",
+  "recomendarias": 6,
+  "volverias": "pues sí, es mi trabajo, pero mañana llego con una libreta para apuntar lo que el sistema no guarda",
+  "comentario": "Se nota que quien lo hizo sabe de cajas: los textos chiquitos explican cosas que nadie me explicó, como que la tarjeta no entra al cajón. Pero está pensado para una tienda que ya venía funcionando: no hay manera de abrir turno ni de meter el fondo el primer día, y todo cambia según una sucursal que viene puesta en otra ciudad."
+ },
+ "totales": {
+  "clics": 48,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 11,
+  "pantallas": 3,
+  "recargas": 1,
+  "atrases": 0
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788501162187,
+   "primerClicMs": 26734,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788501470768,
+   "primerClicMs": 27603,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788502078902,
+   "primerClicMs": 15996,
+   "clics": 2,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código",
+   "t": 868,
+   "tarea": "cerrar mi caja: cuadrarla, decir qué hago con los $40 que sobran y entregar el dinero del día"
+  }
+ ],
+ "consola": [
+  "HTTP 403 POST /inventory/pos/cash-cut"
+ ],
+ "notas": [],
+ "fin": "2026-09-04T06:09:16.391Z",
+ "duracionMin": 17
+}

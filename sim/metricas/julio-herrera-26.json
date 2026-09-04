@@ -1,0 +1,710 @@
+{
+ "persona": "Julio Herrera, 26",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-04T05:31:38.004Z",
+ "tareas": [
+  {
+   "quiero": "encontrar la proteína que vi en Google y ver si esto es una tienda de verdad",
+   "esperaba": null,
+   "t": 16,
+   "segundos": 117,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Busqué \"proteína whey mexicana\" y me salió este Finding'U. No sé qué es. Voy a entrar directo a la tienda y ver si tiene precios y si puedo comprar sin registrarme, como en cualquier tienda.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 16
+    },
+    {
+     "texto": "Primera impresión: sí es una tienda, hay precios y un botón \"Agregar al carrito\". Pero abajo de cada producto dice cosas como \"15 PC · $53.33/PC\". ¿PC qué es? ¿Piezas? ¿Porciones? Un bote de 500 g no trae 15 piezas. Y el texto de registro dice \"descuentos por tu consumo como socia\" — socia, en femenino. Yo soy hombre y no quiero ser socio de nada, solo quiero mi proteína.",
+     "segundosDesdeLoAnterior": 39,
+     "t": 55
+    },
+    {
+     "texto": "Antes que nada me quito ese aviso de privacidad que tapa la pantalla, y luego agrego la proteína del banner.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 55
+    },
+    {
+     "texto": "Ya se puso el carrito en 1 y $800. Apareció un mensajito: \"Como socia, con $200 más de compra este mes tendrías 10 % de descuento\". O sea que si gasto $200 más me hacen descuento. Justo iba a llevar los electrolitos de $280, así que en teoría ya me tocaría. Voy a ver el Naplus antes de meterlo, quiero saber cuántos sobres trae.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 84
+    },
+    {
+     "texto": "Raro: al abrir el Naplus la dirección sigue siendo /#/tienda, solo cambió el banner de arriba. O sea que no puedo mandarle el link del producto a un cliente mío, ni regresar con el botón de atrás. Para un entrenador que recomienda productos eso es un problema.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 110
+    },
+    {
+     "texto": "El Naplus trae 20 sobres, pero en la tarjeta dice \"6 PC\". Entonces PC no son sobres ni porciones. Sigo sin saber qué es. Lo agrego igual, son $280 y es lo que ocupo para mis clases.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 110
+    },
+    {
+     "texto": "Ahora sí, a pagar. Busco el carrito.",
+     "segundosDesdeLoAnterior": 2,
+     "t": 112
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "no entiendo qué son los \"PC\" que salen debajo del precio de cada producto",
+     "pantalla": "#/tienda",
+     "t": 55
+    },
+    {
+     "texto": "dice \"socia\" y habla de un programa; no sé si al comprar me estoy metiendo a un negocio de esos de niveles",
+     "pantalla": "#/tienda",
+     "t": 55
+    },
+    {
+     "texto": "el descuento del 10% dice \"como socia\" — no sé si me aplica sin registrarme como socio o solo si me meto al programa",
+     "pantalla": "#/tienda",
+     "t": 84
+    },
+    {
+     "texto": "cada producto no tiene su propia dirección: todo es /#/tienda",
+     "pantalla": "#/tienda",
+     "t": 110
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "La tienda se entiende y agregar al carrito fue de un toque. Lo que no entendí: los \"PC\" y por qué me habla de \"socia\"."
+  },
+  {
+   "quiero": "pagar los dos productos (proteína + electrolitos) y que me lleguen a mi casa",
+   "esperaba": null,
+   "t": 133,
+   "segundos": 165,
+   "logrado": true,
+   "clicsBase": 4,
+   "teclasBase": 0,
+   "clics": 10,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Voy al carrito. Espero ver los dos productos, el envío y un botón de pagar. Ojalá no me obligue a hacer cuenta.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 133
+    },
+    {
+     "texto": "Bien: no me obliga a registrarme, hay formulario de entrega y botón \"Pagar\". Pero arriba dice \"Corte en 26d 18h\" y no tengo idea de qué es un corte. ¿Se me va el pedido si no pago en 26 días? ¿Es lo del programa? Nadie me lo explica.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 160
+    },
+    {
+     "texto": "Dice \"Envío desde $129\" pero el Total sigue diciendo $1,080. No sé si el envío ya está incluido o me lo van a sumar al final. Voy a llenar la dirección y ver si el total se mueve.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 160
+    },
+    {
+     "texto": "Ahí está: al poner mi dirección el total pasó de $1,080 a $1,209. Ya entendí que el envío se suma aparte ($129 Estafeta o $219 DHL). Está claro, aunque me hubiera gustado verlo desde antes de teclear todo. También sale \"Recoger en sucursal — Sin costo de envío\", pero yo quiero que llegue a mi casa.",
+     "segundosDesdeLoAnterior": 49,
+     "t": 209
+    },
+    {
+     "texto": "Le doy a Pagar. Espero que me pida tarjeta.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 209
+    },
+    {
+     "texto": "Ya se creó la orden ORD-682C1E22 y dice \"Pago pendiente\". Otra vez me insiste con \"Como socia habrías ahorrado $108\" y un botón \"Activar modo socio\". Es la tercera vez que me lo dice en cinco minutos. Prefiero pagar primero y ya luego veo.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 232
+    },
+    {
+     "texto": "Pagó. La orden dice \"Pago registrado\". Voy a mi correo a ver si me llegó el comprobante, porque en la pantalla no me dio ni un número de guía ni una fecha de entrega concreta.",
+     "segundosDesdeLoAnterior": 41,
+     "t": 273
+    },
+    {
+     "texto": "El correo dice \"Tu pago quedó confirmado\" y trae el link de seguimiento, pero NO trae qué compré ni cuánto pagué. Ni los $1,209, ni la proteína, ni los electrolitos. Como comprobante no me sirve. Y hasta en el correo me vuelve a decir \"Como socia habrías ahorrado $108\".",
+     "segundosDesdeLoAnterior": 25,
+     "t": 298
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿qué es \"Corte en 26d 18h\" en el carrito?",
+     "pantalla": "#/carrito",
+     "t": 160
+    },
+    {
+     "texto": "arriba del formulario dice \"Entrega / Mínimo requerido\" y no sé a qué mínimo se refiere: ¿monto mínimo de compra? ¿campos mínimos?",
+     "pantalla": "#/carrito",
+     "t": 209
+    },
+    {
+     "texto": "el correo de pago no dice qué productos compré ni el monto total",
+     "pantalla": "correo",
+     "t": 298
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "Comprar sin cuenta fue rápido. Le bajo puntos porque el envío solo aparece después de teclear toda la dirección y el correo de confirmación no dice ni qué compré ni cuánto pagué."
+  },
+  {
+   "quiero": "entender qué es el \"modo socio\" que me han ofrecido cuatro veces",
+   "esperaba": null,
+   "t": 298,
+   "segundos": 36,
+   "logrado": true,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Ya van cuatro: en la tienda, en el carrito, en la orden y en el correo. Soy entrenador, si de verdad hay comisiones por recomendar producto me interesa, pero también quiero saber si me van a pedir dinero o meterme a una pirámide. Le doy a \"Conoce el modo socio\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 298
+    },
+    {
+     "texto": "Ah, caray. AQUÍ está la explicación de los PC: \"PC son los puntos de lista de cada producto (1 PC ≈ $50 de precio de lista)\". Llevo media hora viendo \"15 PC\" en cada producto y la definición estaba escondida en una página a la que solo llegué porque me insistieron cuatro veces. Debería estar en la tienda, con un signo de interrogación al lado del número.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 334
+    },
+    {
+     "texto": "La página en sí está bien hecha y es honesta: dice los porcentajes, los requisitos por generación y hasta pone \"Ojo: 20 PC de lista con 10% de descuento = 18 VP: no activa\". Eso me gusta, no me está vendiendo humo. Lo que sí: acabo de pagar $1,080 de compra y la tabla dice que de $1,000 a $1,999 es 10% de descuento. O sea que por no haber activado esto ANTES de pagar, dejé ir $108. Y nadie me lo dijo hasta que ya había pagado.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 334
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la definición de PC solo aparece en /#/modo-socio, no en la tienda donde se muestran los PC",
+     "pantalla": "#/modo-socio",
+     "t": 334
+    },
+    {
+     "texto": "dice \"Si una amiga que invitaste\"; todo está escrito para mujeres y yo soy hombre",
+     "pantalla": "#/modo-socio",
+     "t": 334
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 3,
+   "comentario": "La página del modo socio es la mejor de todo el sitio: clara, con números y sin trampa. El problema es que está escondida y que la información que necesitaba (qué es PC, que hay 10% de descuento) llega después de pagar."
+  },
+  {
+   "quiero": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero",
+   "esperaba": null,
+   "t": 362,
+   "segundos": 341,
+   "logrado": false,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 17,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 9,
+   "pensamientos": [
+    {
+     "texto": "Hoy 2027-03-06T11:00:13Z llegó el paquete. Abrí la caja y el bote de proteína viene estrellado, con polvo por fuera de la bolsa; los electrolitos vienen perfectos. No pienso mandar de regreso lo que sí sirve. Quiero devolver un solo producto. Primero veo el correo, a ver si me avisaron de la entrega y si dicen algo de devoluciones.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 362
+    },
+    {
+     "texto": "Esto no puede ser. Han pasado CUATRO días, el paquete YA me llegó (lo tengo aquí en la mesa) y la pantalla sigue diciendo \"Pago registrado\". No hay guía, no hay \"Enviado\", no hay \"Entregada\". Y de correo solo me llegó el del pago del día 2: nunca me avisaron que salió ni que llegó.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 394
+    },
+    {
+     "texto": "Busco cómo devolver. En la pantalla del pedido los únicos botones son \"Regresar\", \"Activar modo socio\" y \"Cancelar orden\". Cancelar dice que me reembolsan $1,209, o sea TODO: la proteína, los electrolitos que sí quiero, y hasta el envío. Yo no quiero eso. Voy a buscar en el pie de página de la tienda algo de devoluciones, garantía o contacto.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 394
+    },
+    {
+     "texto": "Nada. Bajé hasta abajo de la tienda y el pie de página dice solamente \"© 2026 finding U\". Ni un enlace. Ni \"Devoluciones\", ni \"Garantía\", ni \"Ayuda\", ni \"Contacto\", ni un teléfono, ni un WhatsApp. Es la primera vez que veo una tienda en línea sin un solo dato de contacto. Y de paso: dice 2026 y estamos en marzo de 2027.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 427
+    },
+    {
+     "texto": "Voy a probar a mano un par de direcciones, como cuando le adivinas a una página: /#/ayuda, /#/devoluciones, /#/contacto. Si no, ya no sé qué más hacer.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 427
+    },
+    {
+     "texto": "Adiviné cuatro direcciones (/#/ayuda, /#/devoluciones, /#/contacto, /#/soporte) y las cuatro me rebotaron a la tienda. Última idea: a lo mejor la opción de devolver está dentro de la cuenta, y yo compré como invitado. Me voy a registrar con el mismo correo, aunque me caiga gordo tener que hacer cuenta para reclamar un producto roto que ya pagué.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 458
+    },
+    {
+     "texto": "Dice \"Solo falta un paso, confirma tu cuenta desde tu correo electrónico\". Ese mensajito sale abajo del botón, chiquito, y casi no lo veo en el celular. Voy al correo.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 485
+    },
+    {
+     "texto": "Cuenta verificada. Ahora entro y busco \"Mis pedidos\". Cruzo los dedos de que ahí aparezca mi pedido ORD-682C1E22 (lo hice como invitado, con el mismo correo) y que tenga algo tipo \"Reportar un problema\".",
+     "segundosDesdeLoAnterior": 25,
+     "t": 510
+    },
+    {
+     "texto": "Aquí abajo dice \"¿COMPRASTE SIN CUENTA? RASTREA TU PEDIDO\" con un campo de número de pedido. Eso sí está bien pensado… pero está escondido en la pantalla de login, donde uno nunca entra si compró como invitado. A mí me sirvió el link del correo, si no, nunca lo encuentro.",
+     "segundosDesdeLoAnterior": 47,
+     "t": 557
+    },
+    {
+     "texto": "¡Aquí sí hay contacto! Abajo del panel dice \"Correo contacto@findingu.com.mx\" y \"WhatsApp +52 1 55 1498 2351\". Pero eso está ADENTRO de la cuenta. Como cliente invitado, que es como compré, ese teléfono no existe por ningún lado. Tuve que registrarme, verificar mi correo y entrar al panel para encontrar el WhatsApp de la tienda a la que ya le pagué $1,209.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 587
+    },
+    {
+     "texto": "Dos cosas raras en la MISMA pantalla: arriba dice \"Este mes has comprado $0\" y tres dedos más abajo, en Órdenes, dice \"ORD-682C1E22 · Pagada · Total: $1,209\" con fecha del 2 de marzo. ¿Cómo que $0? Compré hace cuatro días. Si así llevan la cuenta del dinero, no me sorprende que no sepan que ya me entregaron el paquete.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 612
+    },
+    {
+     "texto": "Aquí la orden dice \"Pagada\" y en la página pública decía \"Pago registrado\". Dos nombres para lo mismo. Le doy a \"Ver orden\" a ver si de este lado sí me deja reclamar la proteína rota.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 612
+    },
+    {
+     "texto": "Es exactamente la misma pantalla que ya vi como invitado, con los mismos tres botones. Ni siquiera me dice qué productos trae el pedido, solo \"Subtotal $1,080\". Estando dentro de mi cuenta y todo, no hay manera de decir \"esta pieza vino rota\".",
+     "segundosDesdeLoAnterior": 29,
+     "t": 641
+    },
+    {
+     "texto": "Aquí sí veo \"Finding Pro 500g x1 · $800\" y \"Naplus x1 · $280\". O sea el sistema sabe perfectamente que son dos cosas separadas y cuánto cuesta cada una. Puede devolverme $800 sin tocar el resto. Simplemente no hay botón. Hay un botón que dice \"Explicar estados de orden\", a ver si ahí dice algo de devoluciones.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 667
+    },
+    {
+     "texto": "Los estados que me explican son \"Pendiente, Pagada, Enviada, Entregada\". Cuatro. Pero en la página pública del pedido son cinco pasos: \"Orden creada, Pago, Preparación, Envío, Entregada\", y el estatus decía \"Pago registrado\", que no es ninguno de los cuatro. Tres vocabularios distintos para lo mismo. Y en ninguna lista existe \"Devuelta\" ni \"Cancelada\": o sea, devolver no está contemplado, punto.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 703
+    },
+    {
+     "texto": "Ya intenté todo lo que se me ocurre: el pedido como invitado, el pie de la tienda, adivinar cuatro direcciones, registrarme, verificar el correo, entrar al panel, abrir la orden y desplegar los productos. Trece pantallas para no encontrar un botón que debería estar en la primera. Le voy a escribir al WhatsApp que encontré escondido en el panel.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 703
+    },
+    {
+     "texto": "No pienso darle a \"Cancelar orden\". Prefiero quedarme con la proteína rota que devolver también mis electrolitos y volver a pagar $129 de envío. Que me contesten por WhatsApp.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 703
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el pedido dice \"Pago registrado\" el 6 de marzo aunque el paquete ya está en mi casa; no hay número de guía ni aviso de envío",
+     "pantalla": "#/orden/ORD-682C1E22",
+     "t": 394
+    },
+    {
+     "texto": "el aviso de privacidad dice que puedo ejercer mis derechos \"a través de los canales de contacto oficiales de Finding'U\", pero en ningún lado dice cuáles son esos canales",
+     "pantalla": "#/tienda",
+     "t": 427
+    },
+    {
+     "texto": "el correo y el WhatsApp de contacto solo aparecen dentro del panel; el cliente invitado no tiene forma de encontrarlos",
+     "pantalla": "#/dashboard",
+     "t": 587
+    },
+    {
+     "texto": "\"Este mes has comprado $0\" pero abajo aparece mi pedido pagado de $1,209 del 2 de marzo",
+     "pantalla": "#/dashboard",
+     "t": 612
+    },
+    {
+     "texto": "los estados del panel (Pendiente/Pagada/Enviada/Entregada) no coinciden con los cinco pasos ni con el texto \"Pago registrado\" del seguimiento público",
+     "pantalla": "#/dashboard",
+     "t": 703
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "en el pedido no hay ningún botón de devolución: solo \"Cancelar orden\", que me regresa los $1,209 completos",
+     "pantalla": "#/orden/ORD-682C1E22",
+     "t": 394
+    },
+    {
+     "texto": "el pie de página de la tienda no tiene ningún enlace: ni ayuda, ni contacto, ni devoluciones",
+     "pantalla": "#/tienda",
+     "t": 427
+    },
+    {
+     "texto": "reintento: probé a adivinar la dirección #/ayuda",
+     "t": 428
+    },
+    {
+     "texto": "reintento: probé a adivinar la dirección #/devoluciones",
+     "t": 430
+    },
+    {
+     "texto": "reintento: probé a adivinar la dirección #/contacto",
+     "t": 432
+    },
+    {
+     "texto": "reintento: probé a adivinar la dirección #/soporte",
+     "t": 433
+    },
+    {
+     "texto": "reintento: me metí sin querer a \"Entra sin contraseña\" y tuve que volver al login normal",
+     "t": 533
+    },
+    {
+     "texto": "ni desde la cuenta hay opción de devolver o reportar un producto dañado; el detalle de la orden ni siquiera lista los productos",
+     "pantalla": "#/orden/ORD-682C1E22",
+     "t": 641
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, soy Julio Herrera, pedido ORD-682C1E22 (2 de marzo). Me llegó hoy y el bote de Finding Pro 500g viene estrellado y con polvo regado fuera de la bolsa; el Naplus llegó bien. Quiero devolver SOLO la proteína y que me regresen esos $800. En la página no encuentro ningún botón para eso: lo único que hay es \"Cancelar orden\", que me reembolsa los $1,209 completos y yo sí me quiero quedar con los electrolitos. ¿Cómo lo hago? ¿Les mando fotos? ¿Quién paga el envío de regreso y en cuántos días me devuelven el dinero?",
+     "t": 703,
+     "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+    },
+    {
+     "aQuien": "soporte",
+     "texto": "Otra cosa: mi pedido sigue diciendo \"Pago registrado\" aunque el paquete ya está en mi casa desde hoy, y nunca me llegó correo de que lo enviaron ni número de guía. ¿Ustedes tienen registrado que ya me entregaron?",
+     "t": 703,
+     "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+    }
+   ],
+   "reintentos": 5,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no existe ninguna manera de devolver un solo producto: la única opción es cancelar el pedido completo y perder también los electrolitos que sí llegaron bien"
+  },
+  {
+   "quiero": "ver qué me pregunta \"Cancelar orden\": ojalá me deje elegir solo la proteína",
+   "esperaba": null,
+   "t": 734,
+   "segundos": 46,
+   "logrado": false,
+   "clicsBase": 31,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 12,
+   "pantallas": 8,
+   "pensamientos": [
+    {
+     "texto": "Antes de rendirme del todo quiero ASOMARME a \"Cancelar orden\". A lo mejor al picarle me abre una pantalla donde elijo qué producto devolver. Si me pregunta \"¿seguro?\", le digo que no. Me da nervio porque el texto dice que reembolsa los $1,209 completos, pero necesito saber.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 734
+    },
+    {
+     "texto": "Sí me pide confirmar, qué bueno. Pero la pantalla dice \"2 producto(s)\" y \"Total $1,209.00\" y no me deja tocar nada: es todo o nada. Y fíjate: dice \"Estado: paid\", así, en inglés y en chiquito. Ya van cuatro nombres para el mismo estado: \"Pago registrado\", \"Pagada\", \"Pendiente/Pagada/Enviada/Entregada\" y ahora \"paid\".",
+     "segundosDesdeLoAnterior": 27,
+     "t": 761
+    },
+    {
+     "texto": "Le doy a \"Mantener orden\". No voy a devolver mis electrolitos buenos ni pagar otra vez el envío por culpa de que ellos empacaron mal.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 761
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en la pantalla de cancelación el estado aparece como \"paid\", en inglés",
+     "pantalla": "#/orden cancelar",
+     "t": 761
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "la cancelación es todo o nada: no hay forma de elegir solo la proteína"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "la palabra \"socia\" y los \"PC\" me huelen a multinivel, y yo solo entré por Google buscando proteína",
+   "t": 55,
+   "tarea": "encontrar la proteína que vi en Google y ver si esto es una tienda de verdad"
+  },
+  {
+   "emocion": "molestia",
+   "intensidad": 2,
+   "porque": "me dice \"Como socia habrías ahorrado $108 en esta compra\" justo cuando ya iba a pagar; se siente a que me están picando para meterme al programa",
+   "t": 133,
+   "tarea": "encontrar la proteína que vi en Google y ver si esto es una tienda de verdad"
+  },
+  {
+   "emocion": "fastidio",
+   "intensidad": 3,
+   "porque": "tres veces me han ofrecido el \"modo socio\" antes de dejarme pagar, y siempre en femenino",
+   "t": 232,
+   "tarea": "pagar los dos productos (proteína + electrolitos) y que me lleguen a mi casa"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "al menos el pago fue de dos toques y me llegó correo en menos de un minuto",
+   "t": 298,
+   "tarea": "pagar los dos productos (proteína + electrolitos) y que me lleguen a mi casa"
+  },
+  {
+   "emocion": "coraje",
+   "intensidad": 3,
+   "porque": "me avisaron del descuento del 10% en el carrito y en la orden, pero para tenerlo tenía que activar el modo socio ANTES; me enteré del cómo cuando ya había pagado",
+   "t": 334,
+   "tarea": "entender qué es el \"modo socio\" que me han ofrecido cuatro veces"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "si el sistema ni siquiera sabe que ya me lo entregaron, no confío en que sepa procesar una devolución",
+   "t": 394,
+   "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "llevo diez minutos buscando dónde devolver un bote estrellado y la única salida que me da la pantalla es cancelar TODO el pedido",
+   "t": 458,
+   "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "la misma pantalla se contradice sobre cuánto he comprado este mes",
+   "t": 612,
+   "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "el bote se rompió por un error de ellos y el que está haciendo el trabajo de buscar, registrarse y perseguirlos soy yo",
+   "t": 703,
+   "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+  },
+  {
+   "emocion": "resignación",
+   "intensidad": 4,
+   "porque": "me quedo con un bote de $800 estrellado porque la plataforma no contempla que un producto llegue mal",
+   "t": 780,
+   "tarea": "ver qué me pregunta \"Cancelar orden\": ojalá me deje elegir solo la proteína"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, soy Julio Herrera, pedido ORD-682C1E22 (2 de marzo). Me llegó hoy y el bote de Finding Pro 500g viene estrellado y con polvo regado fuera de la bolsa; el Naplus llegó bien. Quiero devolver SOLO la proteína y que me regresen esos $800. En la página no encuentro ningún botón para eso: lo único que hay es \"Cancelar orden\", que me reembolsa los $1,209 completos y yo sí me quiero quedar con los electrolitos. ¿Cómo lo hago? ¿Les mando fotos? ¿Quién paga el envío de regreso y en cuántos días me devuelven el dinero?",
+   "t": 703,
+   "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Otra cosa: mi pedido sigue diciendo \"Pago registrado\" aunque el paquete ya está en mi casa desde hoy, y nunca me llegó correo de que lo enviaron ni número de guía. ¿Ustedes tienen registrado que ya me entregaron?",
+   "t": 703,
+   "tarea": "devolver SOLO la proteína, que llegó con el bote estrellado, y que me regresen ese dinero"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": 6,
+  "tresAdjetivos": [
+   "limpia",
+   "insistente",
+   "incompleta"
+  ],
+  "mejorPantalla": "la de \"Conoce el modo socio\": es la única que explica con números y sin trampa (ahí supe qué son los PC)",
+  "peorPantalla": "la del pedido /#/orden: dice \"Pago registrado\" cuatro días después de que el paquete ya está en mi casa y solo te deja cancelar todo",
+  "seParece": "a una tienda bonita montada por alguien que nunca pensó qué pasa cuando algo sale mal; la parte de vender está terminada y la de responder no existe",
+  "recomendarias": 4,
+  "volverias": "para volver a comprar sí, el producto está bien y pagar fue rápido; pero ya no gastaría $800 en un solo artículo sabiendo que si llega roto no hay a quién reclamarle desde la página",
+  "comentario": "Comprar me costó cinco minutos y devolver no lo logré en veinte. El sitio se ve profesional en el celular y los textos están bien escritos, pero todo está redactado para mujeres (\"como socia\", \"si dos amigas compraran\") y yo soy hombre; se siente que no me hablan a mí. Lo que más me pegó: el teléfono y el correo de soporte están ESCONDIDOS dentro del panel, o sea que para poder quejarme tuve que registrarme y verificar mi correo. Y la misma pantalla me dice \"Este mes has comprado $0\" arriba y \"$1,209 Pagada\" abajo."
+ },
+ "totales": {
+  "clics": 33,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 14,
+  "pantallas": 21,
+  "recargas": 1,
+  "atrases": 11
+ },
+ "pantallas": [
+  {
+   "ruta": "#/tienda",
+   "desde": 1788499914176,
+   "primerClicMs": 39225,
+   "clics": 4,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-682C1E22",
+   "desde": 1788500150214,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/modo-socio?desde=orden&id=ORD-682C1E22",
+   "desde": 1788500195956,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-682C1E22",
+   "desde": 1788500260244,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788500292254,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/ayuda",
+   "desde": 1788500324676,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/devoluciones",
+   "desde": 1788500326287,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/contacto",
+   "desde": 1788500327898,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/soporte",
+   "desde": 1788500329508,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788500356422,
+   "primerClicMs": 1844,
+   "clics": 7,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-56c6051347d74547951ad3b06bd2a752",
+   "desde": 1788500382934,
+   "primerClicMs": 24796,
+   "clics": 8,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788500539338,
+   "primerClicMs": 2588,
+   "clics": 2,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/modo-socio?desde=orden&id=ORD-682C1E22",
+   "desde": 1788500195957,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/orden/ORD-682C1E22",
+   "desde": 1788500260245,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/devoluciones",
+   "desde": 1788500326288,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/contacto",
+   "desde": 1788500327899,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-56c6051347d74547951ad3b06bd2a752",
+   "desde": 1788500382935,
+   "primerClicMs": 24796,
+   "clics": 8,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788500539339,
+   "primerClicMs": 2588,
+   "clics": 2,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/orden/ORD-682C1E22",
+   "desde": 1788500632006,
+   "primerClicMs": 2529,
+   "clics": 2,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-682C1E22",
+   "desde": 1788500662415,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-682C1E22",
+   "desde": 1788500632007,
+   "primerClicMs": 2529,
+   "clics": 2,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Mínimo requerido",
+   "t": 185,
+   "tarea": "pagar los dos productos (proteína + electrolitos) y que me lleguen a mi casa"
+  }
+ ],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T05:45:26.696Z",
+ "duracionMin": 14
+}

@@ -1,0 +1,703 @@
+{
+ "persona": "Fabiola Cantu, 41",
+ "rol": "cliente",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T06:50:53.862Z",
+ "tareas": [
+  {
+   "quiero": "entrar por el link que me mandó Paulina y entender qué es esto",
+   "esperaba": null,
+   "t": 16,
+   "segundos": 115,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Paulina me pasó un link con su nombre al final. Espero que se vea que viene de ella y que me diga clarito qué gano yo entrando como socia y cuánto tengo que comprar.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 16
+    },
+    {
+     "texto": "Dice \"Te registras como cliente… El modo socio se activa solo si tú lo pides\". Yo quiero entrar de socia desde hoy, no de clienta. Antes de dar mis datos quiero leer \"Ver cómo funciona\" para saber cuánto hay que comprar y qué descuento me toca.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 43
+    },
+    {
+     "texto": "Ah, es un aviso de privacidad que se come toda la pantalla. Le doy Entendido para poder leer lo del modo socio.",
+     "segundosDesdeLoAnterior": 43,
+     "t": 86
+    },
+    {
+     "texto": "Esta página sí me habla claro: \"de 0 % hasta 40 %\", \"20 VP netos para activar el mes (más o menos $1,000 de compra a precio de lista)\", \"el depósito a tu CLABE se hace el día 10 del mes siguiente\". Es lo que le iba a preguntar a Paulina. Lo que me marea es que hay TRES medidas: PC, VP y VG, y la tabla de descuento va en pesos, no en puntos.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 111
+    },
+    {
+     "texto": "Le voy a picar a \"Entrar y activar modo socio\" a ver a dónde me manda, pero me da cosa: si me registro por otro lado, ¿va a quedar que Paulina me invitó? Ella me dijo que usara su link.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 111
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el formulario no tiene ninguna casilla para decir \"quiero ser socia\", solo el aviso de abajo",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 43
+    },
+    {
+     "texto": "si el descuento se decide por PESOS del mes y la activación por VP (puntos), ¿cuál de los dos números tengo que cuidar al comprar? Dice \"20 PC con 10 % = 18 VP\" y eso me da miedo de quedarme corta por dos puntitos",
+     "pantalla": "#/modo-socio",
+     "t": 111
+    },
+    {
+     "texto": "me mandó a \"LOGIN / Accede a tu panel\" pero yo no tengo cuenta todavía y aquí NO hay ningún botón de \"crear cuenta\" ni \"registrarme\". Sólo entrar, enlace por correo o recuperar contraseña",
+     "pantalla": "#/login?next=modo-socio",
+     "t": 131
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Ver cómo funciona\" y no pasó nada: hasta abajo hay un aviso de privacidad tapando la pantalla y no deja tocar nada hasta darle \"Entendido y acepto\"",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 86
+    },
+    {
+     "texto": "desde \"Entrar y activar modo socio\" acabé en una pantalla de login sin salida para alguien nuevo; tuve que acordarme del link de Paulina y volver a escribirlo",
+     "pantalla": "#/login?next=modo-socio",
+     "t": 131
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "La página \"Cómo funciona, con los números reales\" me contestó casi todo (descuentos, activación, cuándo pagan). Le bajo puntos porque el aviso de privacidad tapa la pantalla al entrar y porque el botón de activar socio me tiró a un login donde no se puede crear cuenta."
+  },
+  {
+   "quiero": "registrarme con el link de Paulina para que quede que ella me invitó",
+   "esperaba": null,
+   "t": 131,
+   "segundos": 84,
+   "logrado": true,
+   "clicsBase": 3,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Regreso al link tal cual me lo mandó Paulina (#/landing/PAULINA-PR) porque no quiero que se pierda su código. Voy a llenar todo con calma: soy Fabiola Cantú, correo fabiola.cantu@gmail.com, teléfono 2221006006.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 131
+    },
+    {
+     "texto": "Dice \"Solo falta un paso, confirma tu cuenta desde tu correo electrónico\". Voy a mi correo a buscar el enlace.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 159
+    },
+    {
+     "texto": "\"¡Correo verificado! Tu cuenta ha sido activada correctamente.\" Ahora entro con mi correo y mi contraseña.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 177
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Me registré con el link de Paulina, me llegó el correo \"Activa tu cuenta de Finding'U\", verifiqué y entré. Aquí arriba sale \"Fabiola Cantú Robledo\" y abajo \"Tu contacto para pedidos: Paulina Ríos\", así que sí quedó bajo ella."
+  },
+  {
+   "quiero": "activar el modo socio, que es a lo que vine",
+   "esperaba": null,
+   "t": 215,
+   "segundos": 46,
+   "logrado": true,
+   "clicsBase": 6,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "El panel me dice \"Tu cuenta en modo cliente\" y \"Activar modo socio: Es gratis y no te pide datos extra\". Yo vengo a vender en el salón, así que le doy ya. Lo que quiero ver después es si me dan mi código y si el descuento aparece solo.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 215
+    },
+    {
+     "texto": "Bajo hasta el final y le doy al botón de aquí. Que no me vaya a pedir la CLABE todavía: dice que la CLABE se pide sólo cuando ya haya comisión.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 234
+    },
+    {
+     "texto": "El botón ahora dice \"Ir a mi panel\". Quiero leer si en algún lado me dice \"ya eres socia\" y si me dieron mi código, porque yo quiero invitar a mis clientas del salón.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 247
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "le di a \"Activar modo socio\" en mi panel y en vez de activarme me trajo otra vez a la página larga de explicación. Aquí hasta el final vuelve a estar el botón \"Activar modo socio\". No sé si el de arriba activó algo o no",
+     "pantalla": "#/modo-socio",
+     "t": 234
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: el botón \"Activar modo socio\" del panel sólo me trajo a leer; hay que darle otra vez al de abajo",
+     "t": 234
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "Sí se activó y hasta dice la fecha y hora, pero tuve que picarle dos veces: el botón del panel sólo me trae a leer la página larga y hay que bajar hasta el final para el botón que de verdad activa."
+  },
+  {
+   "quiero": "ver en mi panel mi código para invitar y entender los números que ahora tengo",
+   "esperaba": null,
+   "t": 261,
+   "segundos": 60,
+   "logrado": true,
+   "clicsBase": 8,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ya cambió el menú: ahora dice Red, Links, Órdenes, Comisiones, Cuadro de Honor. Arriba hay un reloj \"Corte de mes 21d 17h 4m\" pero no dice qué día es el corte; si hoy es 4 de marzo, 21 días caen como el 26, no fin de mes. Me confunde porque en la explicación decían que avisan los días 20 y 27 y que pagan el 10.",
+     "segundosDesdeLoAnterior": 33,
+     "t": 280
+    },
+    {
+     "texto": "Voy a \"Links\" a buscar mi código para invitar a mis clientas del salón.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 280
+    },
+    {
+     "texto": "Mi código es FABIOLA-FCR. Quiero ver el link completo que voy a mandar por WhatsApp a mis clientas.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 308
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el contador \"Corte de mes 21d 17h\" no dice la fecha del corte y no cuadra con \"fin de mes\"",
+     "pantalla": "#/dashboard",
+     "t": 280
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 5,
+   "comentario": "Encontré mi código FABIOLA-FCR y mi link http://localhost:4321/#/landing/FABIOLA-FCR, pero está hasta el fondo de una página larguísima: el menú de arriba (Red, Links, Comisiones) no cambia de pantalla, sólo te baja en el mismo rollo, y la tienda completa con los 13 productos queda en medio."
+  },
+  {
+   "quiero": "dejar mi CLABE guardada para que me puedan pagar",
+   "esperaba": null,
+   "t": 321,
+   "segundos": 91,
+   "logrado": false,
+   "clicsBase": 10,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 19,
+   "pantallasBase": 4,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "En \"Comisiones\" vi \"CLABE registrada: No registrada\" y un campo. En la explicación decía que la CLABE se pide hasta la primera comisión, pero yo la quiero dejar puesta hoy para no andar corriendo el día 10. Mi CLABE es 012914002123456789.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 321
+    },
+    {
+     "texto": "Le di Guardar y sigue diciendo \"CLABE registrada: No registrada\". No vi ningún mensaje de \"guardado\". Voy a recargar la página para ver si de verdad se guardó, porque no me pienso quedar con la duda de si me van a poder depositar.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 337
+    },
+    {
+     "texto": "Ya lo intenté dos veces, una pegando el número y otra tecleándolo. No aparece ningún mensaje. No es que me lo rechace por estar mal escrito: es que no dice nada. Le voy a escribir a soporte porque sin CLABE no me pueden depositar el día 10.",
+     "segundosDesdeLoAnterior": 74,
+     "t": 412
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "reintento: la CLABE no se guardó a la primera; la escribo otra vez, ahora tecleándola despacio",
+     "t": 369
+    },
+    {
+     "texto": "el botón \"Guardar\" de la CLABE no hace nada visible: no sale ni \"guardado\" ni un error, y al recargar sigue diciendo \"No registrada\" y el campo vacío",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 412
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Buenas tardes, soy Fabiola Cantú, me acabo de registrar como socia hoy. En Comisiones puse mi CLABE 012914002123456789 y le di Guardar dos veces; no sale ningún mensaje y al volver a entrar sigue diciendo \"CLABE registrada: No registrada\" y el campo aparece vacío. ¿Está fallando o mi CLABE tiene que ir de otra forma? Necesito dejarlo listo para que me depositen.",
+     "t": 412,
+     "tarea": "dejar mi CLABE guardada para que me puedan pagar"
+    },
+    {
+     "aQuien": "patrocinadora",
+     "texto": "Pau, ya me registré con tu link y activé el modo socio (mi código quedó FABIOLA-FCR). Una cosa: guardé mi CLABE en la parte de Comisiones y no se queda guardada, ¿a ti también te pasó o hay que mandarla por otro lado?",
+     "t": 412,
+     "tarea": "dejar mi CLABE guardada para que me puedan pagar"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "el campo de CLABE no guarda nada y no da ningún mensaje; lo dejo para preguntarle a soporte"
+  },
+  {
+   "quiero": "armar una compra que me deje activa este mes y me dé descuento",
+   "esperaba": null,
+   "t": 434,
+   "segundos": 208,
+   "logrado": true,
+   "clicsBase": 13,
+   "teclasBase": 19,
+   "clics": 7,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "A ver, según la explicación necesito 20 VP netos y pasar de $1,000 para el 10 %. Yo quiero Colágeno Hidrolizado ($700, 13 PC) y Biotina ($400, 8 PC) porque eso es lo que me piden en el salón: son $1,100 y 21 PC. Con eso paso los $1,000 y paso los 20 puntos… creo.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 434
+    },
+    {
+     "texto": "El carrito ya dice $1,100 pero en las tarjetas de la tienda todos los productos siguen diciendo \"Sin descuento\" y arriba sigue diciendo \"Te faltan 20 VP\". Voy a ver el carrito a ver si ahí sí me aplica el 10 % y si me dice cuántos VP llevo.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 449
+    },
+    {
+     "texto": "Aquí está lo que me daba miedo, tal cual: \"Con este pedido llegas a 18.9 de 20 VP del mes: te faltarían 1.1 VP para activarte\". Compré $1,100 y aun así NO me activo. Menos mal que el carrito me lo dice antes de pagar.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 475
+    },
+    {
+     "texto": "Ya dice \"Con esta compra queda activo el mes\" y \"24.3 VP\". Me tienta llegar al 20 %: me faltan $620 y me ahorraría el doble… pero es mi primera compra y prefiero no meter tanto dinero de golpe. Me quedo en $1,242.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 495
+    },
+    {
+     "texto": "Ahora la entrega. \"Recoger en sucursal: Disponible en Ciudad de México, Guadalajara\" — yo estoy en Puebla, así que ni modo, envío a domicilio. Dice \"Envío desde $129\", quiero ver cuánto me sale de verdad a mi CP antes de pagar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 495
+    },
+    {
+     "texto": "Lleno mi dirección del salón en Puebla. Marco \"Guardar esta dirección\" porque voy a pedir cada mes.",
+     "segundosDesdeLoAnterior": 65,
+     "t": 560
+    },
+    {
+     "texto": "Con el CP 72000 el envío se puso en $129 con Estafeta terrestre y el total quedó en $1,371. Está bien, al menos me lo dice antes de pagar y no me sale una sorpresa al final.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 589
+    },
+    {
+     "texto": "Ya está la orden ORD-9CD8BD3D con \"Pago pendiente\". Le doy a \"Pagar con MercadoPago\" a ver a dónde me manda; me da un poco de nervio porque es la primera vez que le paso mi tarjeta a esta gente.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 604
+    },
+    {
+     "texto": "Dice \"Pago registrado\". Quiero comprobar dos cosas: que en mi panel ya aparezcan los 24.3 VP que me prometió el carrito, y que llegue un correo del pedido.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 642
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en la tienda el Colágeno dice \"13 PC\" y la Biotina \"8 PC\" (21 PC), el carrito me dice 18.9 VP y mi panel de arriba dice \"llevas 0\" y \"Te faltan 20 VP\". Son tres números distintos para lo mismo y una tiene que adivinar cuál es el que cuenta",
+     "pantalla": "#/carrito",
+     "t": 475
+    },
+    {
+     "texto": "en \"Sugeridos\" el Finding Pro aparece con precio $720 (que ya es el precio con descuento) pero al lado dice \"15 PC\"; si los PC bajan con el descuento, ese 15 no es el que voy a recibir",
+     "pantalla": "#/carrito",
+     "t": 475
+    },
+    {
+     "texto": "sí quiero factura para el salón pero no traigo aquí mi constancia; la casilla \"Quiero factura de esta compra\" no me dice si la puedo pedir después",
+     "pantalla": "#/carrito",
+     "t": 589
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "Compré $1,380 de lista, me aplicó el 10 % solo, el envío a Puebla salió $129 y pagué $1,371. Lo mejor: el carrito me avisó que con $1,100 NO me activaba y me dijo exactamente qué agregar."
+  },
+  {
+   "quiero": "comprobar en mi panel que los puntos de la compra sí me contaron",
+   "esperaba": null,
+   "t": 642,
+   "segundos": 37,
+   "logrado": true,
+   "clicsBase": 20,
+   "teclasBase": 19,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 7,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "En mi panel: VP 24.3, \"Activación: 20 VP netos · llevas 24.3 · Este mes ya está activo\" y \"Tramo actual: 10 %\". El carrito decía 24.3 VP y el panel dice 24.3 VP: esos dos sí cuadran. Lo que no cuadra con esos es la tienda: ahí compré 13 PC + 8 PC + 6 PC = 27 PC y en ningún lado me dijeron que esos 27 se me iban a convertir en 24.3.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 679
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Carrito y panel dicen lo mismo: 24.3 VP y mes activo. La tienda habla de PC (27 de lista) y nunca te dice que eso son otros puntos."
+  },
+  {
+   "quiero": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo",
+   "esperaba": null,
+   "t": 679,
+   "segundos": 261,
+   "logrado": false,
+   "clicsBase": 20,
+   "teclasBase": 19,
+   "clics": 8,
+   "teclas": 18,
+   "pantallasBase": 8,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Me llegó un correo: \"Registra tu CLABE para cobrar tus comisiones… Captúrala en tu panel, en Comisiones\". O sea que sí la quieren, pero el campo no me la guarda. Voy por el enlace del correo, a ver si desde ahí sí jala.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 679
+    },
+    {
+     "texto": "Me saltó un cuadro encima: \"Metas cumplidas del mes · ¡Buen trabajo! · Alcanzar VP mínimo (usuario activo) · Alcanzar nivel 1 de descuento (10%)\". Se siente bonito, pero atrás se ve otro cuadro más y no me deja tocar nada hasta cerrarlos todos.",
+     "segundosDesdeLoAnterior": 63,
+     "t": 742
+    },
+    {
+     "texto": "Segundo cuadro: \"¡Estás en el Cuadro de Honor! Red (VG): #3, Personal (VP): #2\" y ahí salgo como \"Fabiola Cantú Robledo (tú) 24\", mientras que a las demás sólo las ponen como \"Paulina R.\" o \"Ximena P.\". A mí me pusieron mi nombre completo donde todas lo pueden ver, y además dice 24 cuando mi panel dice 24.3.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 759
+    },
+    {
+     "texto": "Y el tercer cuadro me dice \"Ya tienes comisiones a tu favor… captúrala en Comisiones, toma un minuto\". Pero en Comisiones mi total del mes es $0 y no tengo ni una persona en mi red, así que eso de \"ya tienes comisiones a tu favor\" no me cuadra. Aun así le doy a \"Ver\" a ver si por ahí sí me deja guardar la CLABE.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 772
+    },
+    {
+     "texto": "A lo mejor los datos del banco van en \"Mi perfil\" y no en Comisiones. Voy a buscar ahí antes de rendirme.",
+     "segundosDesdeLoAnterior": 94,
+     "t": 866
+    },
+    {
+     "texto": "¡Aquí sí! En \"Mi perfil\" hay otro lugar para la CLABE, y aquí además me piden \"Institución bancaria\". A lo mejor por eso el otro no guardaba: allá no hay dónde poner el banco. Voy a llenarlo aquí.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 884
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en el Cuadro de Honor aparezco con mi nombre y apellidos completos y las demás con inicial. ¿Todas van a ver mi nombre completo?",
+     "pantalla": "#/dashboard (Cuadro de Honor)",
+     "t": 759
+    },
+    {
+     "texto": "el aviso dice \"Ya tienes comisiones a tu favor\" pero mi panel dice Total del mes $0, Confirmadas $0, y mi red está vacía",
+     "pantalla": "#/dashboard (aviso del portal)",
+     "t": 772
+    },
+    {
+     "texto": "hay DOS lugares distintos para la misma CLABE (Comisiones en el panel y Mi perfil) y ninguno de los dos la guarda; ni siquiera me dicen que algo salió mal",
+     "pantalla": "#/perfil",
+     "t": 940
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "en el aviso \"Registra tu CLABE\" le di a \"Ver\" y el cuadro se quedó igual, no me llevó a ningún lado ni se cerró; tuve que darle a \"Cerrar\"",
+     "pantalla": "#/dashboard#comisiones",
+     "t": 827
+    },
+    {
+     "texto": "reintento: cuarto intento de guardar la CLABE, ahora entrando por el enlace del correo: igual, \"No registrada\"",
+     "t": 866
+    },
+    {
+     "texto": "reintento: quinto intento: llené la CLABE y el banco en \"Mi perfil\" y le di \"Actualizar CLABE\"; al recargar sigue diciendo \"No tienes una CLABE registrada todavía\" y los dos campos vacíos",
+     "t": 940
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Sigo yo, Fabiola Cantú. Ya probé guardar mi CLABE en los dos lados: en el panel (Comisiones) y en Mi perfil con el banco BBVA. Cinco veces. Nunca sale un mensaje de error ni de guardado, y siempre vuelve a \"No tienes una CLABE registrada todavía\". Mientras tanto el sistema me manda correos y avisos diciendo \"Ya tienes comisiones a tu favor, registra tu CLABE\". ¿Me la pueden dar de alta ustedes?",
+     "t": 940,
+     "tarea": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo"
+    }
+   ],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "ni en Comisiones ni en Mi perfil se guarda la CLABE, y no da ningún mensaje; ya son cinco intentos"
+  },
+  {
+   "quiero": "mandarle mi link a mis clientas del salón",
+   "esperaba": null,
+   "t": 940,
+   "segundos": 348,
+   "logrado": true,
+   "clicsBase": 28,
+   "teclasBase": 37,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 11,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Al menos me llevo mi código FABIOLA-FCR. Voy a \"Links\" a copiar el link y ver qué texto manda el botón de compartir, porque yo lo voy a pegar en el grupo de WhatsApp del salón.",
+     "segundosDesdeLoAnterior": 56,
+     "t": 940
+    },
+    {
+     "texto": "Le di al botón \"Compartir mi enlace\" en la sección de Red y no vi que se abriera nada: ni un cuadro para copiar, ni WhatsApp. El link sí lo tengo porque viene escrito abajo en \"Links de referencia\": http://localhost:4321/#/landing/FABIOLA-FCR y mi código FABIOLA-FCR. Ese lo puedo copiar a mano y pegarlo en el grupo del salón.",
+     "segundosDesdeLoAnterior": 347,
+     "t": 1288
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Compartir mi enlace\" (sale tres veces en el panel) no abrió nada visible en la computadora; si es para el celular, en la laptop debería al menos copiarlo o abrir un cuadro",
+     "pantalla": "#/dashboard (Red)",
+     "t": 1288
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "Me llevo el link y el código, pero copiándolos a mano de la parte de abajo: el botón grande de \"Compartir mi enlace\" no hizo nada visible en la laptop."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "encontré una página que explica los números sin que tenga que preguntarle a nadie",
+   "t": 111,
+   "tarea": "entrar por el link que me mandó Paulina y entender qué es esto"
+  },
+  {
+   "emocion": "gusto",
+   "intensidad": 3,
+   "porque": "ver el nombre de Paulina como mi contacto me dio confianza de que sí quedé en su red",
+   "t": 215,
+   "tarea": null
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "leer \"Tu cuenta ya está en modo socio… socio desde el 04/03/2027 17:07\" me hizo sentir que ya es en serio",
+   "t": 261,
+   "tarea": "activar el modo socio, que es a lo que vine"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "guardé mi CLABE, no me dijo nada, recargué y el campo estaba vacío otra vez: si así se pierde mi cuenta bancaria, ¿cómo me van a pagar?",
+   "t": 369,
+   "tarea": "dejar mi CLABE guardada para que me puedan pagar"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "el carrito me avisó que me faltaban 1.1 VP y hasta me dijo qué agregar; si no, pago $990 y me quedo sin activar el mes",
+   "t": 475,
+   "tarea": "armar una compra que me deje activa este mes y me dé descuento"
+  },
+  {
+   "emocion": "gusto",
+   "intensidad": 3,
+   "porque": "el aviso de \"¡Buen trabajo!\" con mis dos metas cumplidas se siente como cuando te felicitan en el gimnasio",
+   "t": 742,
+   "tarea": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "cuatro veces guardé mi CLABE, el sistema mismo me manda correos y avisos diciendo que la registre, y no se guarda ni me dice por qué",
+   "t": 866,
+   "tarea": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Buenas tardes, soy Fabiola Cantú, me acabo de registrar como socia hoy. En Comisiones puse mi CLABE 012914002123456789 y le di Guardar dos veces; no sale ningún mensaje y al volver a entrar sigue diciendo \"CLABE registrada: No registrada\" y el campo aparece vacío. ¿Está fallando o mi CLABE tiene que ir de otra forma? Necesito dejarlo listo para que me depositen.",
+   "t": 412,
+   "tarea": "dejar mi CLABE guardada para que me puedan pagar"
+  },
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Pau, ya me registré con tu link y activé el modo socio (mi código quedó FABIOLA-FCR). Una cosa: guardé mi CLABE en la parte de Comisiones y no se queda guardada, ¿a ti también te pasó o hay que mandarla por otro lado?",
+   "t": 412,
+   "tarea": "dejar mi CLABE guardada para que me puedan pagar"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Sigo yo, Fabiola Cantú. Ya probé guardar mi CLABE en los dos lados: en el panel (Comisiones) y en Mi perfil con el banco BBVA. Cinco veces. Nunca sale un mensaje de error ni de guardado, y siempre vuelve a \"No tienes una CLABE registrada todavía\". Mientras tanto el sistema me manda correos y avisos diciendo \"Ya tienes comisiones a tu favor, registra tu CLABE\". ¿Me la pueden dar de alta ustedes?",
+   "t": 940,
+   "tarea": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 5,
+  "legibilidad": 6,
+  "coherencia": 5,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada",
+   "larguísima",
+   "desconfiada"
+  ],
+  "mejorPantalla": "el carrito: es la única que me dijo con números que con $1,100 NO me activaba y qué agregar para lograrlo",
+  "peorPantalla": "la parte de Comisiones del panel: el campo de la CLABE, que traga el número y no guarda nada ni avisa",
+  "seParece": "a una tienda naturista bien puesta con un manual de negocio pegado atrás; los colores olivo y el tipo de letra me dan cosa de spa, no de multinivel gritón, eso me gustó",
+  "recomendarias": 6,
+  "volverias": "sí, por el producto y porque el descuento sí se aplicó solo; pero no le voy a decir a mis clientas que se metan hasta que sepa que sí pagan",
+  "comentario": "Lo que se ve, se ve bien y explicado con números de verdad, que es rarísimo en estas cosas. Lo que me deja fría es que el único dato que sirve para que YO cobre —mi CLABE— es justo el que no se guarda, y nadie me avisa. También es cansado que todo el panel sea una sola página kilométrica: le picas a \"Comisiones\" y sólo te baja, con la tienda entera de por medio."
+ },
+ "totales": {
+  "clics": 28,
+  "teclas": 37,
+  "envios": 0,
+  "campos": 19,
+  "pantallas": 11,
+  "recargas": 1,
+  "atrases": 4
+ },
+ "pantallas": [
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788504669518,
+   "primerClicMs": 70555,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788504784732,
+   "primerClicMs": 15105,
+   "clics": 1,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-5fdd0d1e739741a8b6219604cd90f28e",
+   "desde": 1788504819875,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788504784733,
+   "primerClicMs": 15105,
+   "clics": 1,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788504991403,
+   "primerClicMs": 31628,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788505048564,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-9CD8BD3D",
+   "desde": 1788505269663,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788505296170,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard#comisiones",
+   "desde": 1788505332567,
+   "primerClicMs": 63035,
+   "clics": 6,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard#comisiones",
+   "desde": 1788505488579,
+   "primerClicMs": 31303,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788505554284,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Sube los documentos requeridos para completar tu registro.",
+   "t": 891,
+   "tarea": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo"
+  },
+  {
+   "texto": "Requerido",
+   "t": 891,
+   "tarea": "volver a intentar guardar mi CLABE, ahora entrando por el link del correo"
+  }
+ ],
+ "consola": [
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app"
+ ],
+ "notas": [],
+ "fin": "2026-09-04T07:12:31.102Z",
+ "duracionMin": 22
+}
