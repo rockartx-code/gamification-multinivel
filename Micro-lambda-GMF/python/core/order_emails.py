@@ -22,6 +22,7 @@ def _direccion_bodega_principal() -> str:
         pass
     return ""
 
+
 def _sucursal_de_recoleccion(order: dict) -> str:
     """Nombre y dirección de la sucursal donde se recoge el pedido ("Sucursal Guadalajara, Av. Chapultepec 480")."""
     if str(order.get("deliveryType") or "") != "pickup":
@@ -146,12 +147,8 @@ def _renglones_factura(order: dict) -> list[str]:
 
 def _bloque_pedido(order: dict) -> str:
     """La caja de "esto fue lo que compraste": detalle, entrega y factura, en ese orden."""
-    renglones = _renglones_detalle(order)
-    cuerpo = "".join(f"<p>{fila}</p>" for fila in renglones[:-1])
-    cuerpo += f"<p><strong>{renglones[-1]}</strong></p>" if renglones else ""
-    for fila in _renglones_entrega(order) + _renglones_factura(order):
-        cuerpo += f"<p>{fila}</p>"
-    return cuerpo
+    extras = "".join(f"<p>{fila}</p>" for fila in _renglones_entrega(order) + _renglones_factura(order))
+    return _lineas(order) + extras
 
 
 def _politica_reembolso(datos: dict) -> dict:
