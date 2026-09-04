@@ -132,3 +132,38 @@ def test_una_configuracion_rota_nunca_deja_al_cliente_sin_regla(utils):
     utils._invalidate_app_config_cache()
     motivos = order_lambda._motivos_devolucion()
     assert set(motivos) == {"DANADO_DEFECTUOSO", "ERROR_ENVIO", "DESISTIMIENTO"}
+
+
+def test_guardar_una_politica_invalida_devuelve_400_y_no_guarda_nada(utils, monkeypatch):
+    """Un plazo vacío abriría devoluciones eternas y un cambio retroactivo movería
+    reembolsos ya calculados: el bloque entero se rechaza."""
+    import commissions_lambda
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    peticion = type("P", (), {
+        "params": {"ambito": "app"},
+        "body": {"returns": {"motivos": [
+            {"key": "DESISTIMIENTO", "limiteHoras": 0, "responsableEnvio": "cliente",
+             "evidencia": "paquete_cerrado"}]}},
+        "headers": {},
+    })()
+    r = commissions_lambda.handle_put_config(peticion)
+    assert r["statusCode"] == 400
+    assert "INVALID_RETURNS_POLICY" in r["body"]
+    assert utils._get_by_id("CONFIG", "app-v1") in (None, {})
+
+
+def test_guardar_una_politica_valida_si_guarda(utils, monkeypatch):
+    import commissions_lambda
+    monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
+    peticion = type("P", (), {
+        "params": {"ambito": "app"},
+        "body": {"returns": {"inspeccionDiasHabiles": "3", "motivos": [
+            {"key": "DESISTIMIENTO", "label": "Cambié de opinión", "limiteHoras": 240,
+             "responsableEnvio": "cliente", "evidencia": "paquete_cerrado"}]}},
+        "headers": {},
+    })()
+    r = commissions_lambda.handle_put_config(peticion)
+    assert r["statusCode"] == 200, r["body"]
+    utils._invalidate_app_config_cache()
+    pasos = {p["clave"]: p["texto"] for p in _ayuda(utils)["devoluciones"]["pasos"]}
+    assert "10 días" in pasos["plazo"] and "3 días hábiles" in pasos["reembolso"]
