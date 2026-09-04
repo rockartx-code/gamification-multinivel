@@ -3870,6 +3870,33 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
+  /** Último pedido cuyo enlace se copió; el botón lo dice sin abrir un toast. */
+  enlacePedidoCopiadoId: string | null = null; // paquete E · ronda 26
+
+  /**
+   * Copia la dirección de este pedido. El detalle era un acordeón dentro de una
+   * pantalla sin dirección: "Si alguien me pregunta dónde se pagan las
+   * comisiones tendría que contestarle: en Clientes, hasta abajo" era el mismo
+   * problema una pantalla más allá.
+   */
+  copiarEnlaceDePedido(order: AdminOrder): void {
+    const base = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+    const enlace = `${base}#/admin/pedido/${order.id}`;
+    const portapapeles = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (!portapapeles?.writeText) {
+      this.showSnackbar('Tu navegador no deja copiar solo; selecciona el enlace y cópialo a mano.', 'error');
+      return;
+    }
+    portapapeles.writeText(enlace).then(
+      () => {
+        this.enlacePedidoCopiadoId = order.id;
+        this.showSnackbar('Enlace del pedido copiado. Ya se puede mandar por correo o WhatsApp.');
+        this.cdr.detectChanges();
+      },
+      () => this.showSnackbar('No se pudo copiar; selecciona el enlace y cópialo a mano.', 'error')
+    );
+  }
+
   toggleOrderDetail(orderId: string): void {
     this.expandedOrderDetailId = this.expandedOrderDetailId === orderId ? null : orderId;
   }

@@ -404,6 +404,16 @@
                         </div>
                       </div>
                       <div *ngIf="expandedOrderDetailId === order.id" class="border-t border-olive-20 bg-ivory-80 px-4 py-4">
+                        <!-- Paquete E · ronda 26 · El pedido tiene dirección propia:
+                             "no puedo mandarle un enlace al dueño" (Renata). -->
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                          <span>Este pedido tiene su propia dirección: <span class="font-mono text-main">#/admin/pedido/{{ order.id }}</span></span>
+                          <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-link"
+                            [ariaLabel]="'Copiar el enlace del pedido de ' + order.customer"
+                            (pressed)="copiarEnlaceDePedido(order)">
+                            {{ enlacePedidoCopiadoId === order.id ? 'Enlace copiado' : 'Copiar enlace' }}
+                          </ui-button>
+                        </div>
                         <div class="grid gap-4 sm:grid-cols-2">
                           <div>
                             <div class="text-xs font-semibold text-gray-600">
