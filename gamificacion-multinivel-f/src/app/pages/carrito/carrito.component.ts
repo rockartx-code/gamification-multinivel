@@ -117,6 +117,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
     deliveryState: false,
     deliveryCountry: false
   };
+  // ── Paquete C · ronda 26 · propuesta 3 ──
+  /** Nombre, teléfono y correo son datos de contacto del pedido: se piden siempre y el error se pinta en el campo.
+   *  Antes vivían dentro del bloque de envío a domicilio: quien elegía "Recoger en sucursal" no tenía dónde
+   *  escribir su correo y el botón de pagar se lo exigía igual (dos pedidos de mostrador sin nombre ni teléfono). */
+  contactFieldErrors: Record<'deliveryName' | 'deliveryPhone' | 'deliveryEmail', string> = {
+    deliveryName: '',
+    deliveryPhone: '',
+    deliveryEmail: ''
+  };
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
   lastAddedItemId = '';
@@ -139,6 +148,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private goalsSub?: Subscription;
   private dashboardSub?: Subscription;
   private shippingQuoteSub?: Subscription;
+  /** Espera antes de cotizar mientras se teclea el CP (propuesta 31). */
+  private shippingQuoteTimeout?: number;
   private addFadeTimeout?: number;
   private addFadeRestartTimeout?: number;
   private hasPrefilledDashboardAddress = false;
@@ -200,7 +211,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (saved.deliveryReferences) { this.deliveryReferences = saved.deliveryReferences; }
     if (saved.deliveryNotes) { this.deliveryNotes = saved.deliveryNotes; }
 
-    if (this.deliveryType === 'delivery' && this.hasValidShippingQuoteFormData()) {
+    if (this.deliveryType === 'delivery' && this.cpParaCotizar) {
       this.fetchShippingRates();
     }
   }
@@ -222,6 +233,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }
     if (this.checkoutRefreshTimeout) {
       window.clearTimeout(this.checkoutRefreshTimeout);
+    }
+    if (this.shippingQuoteTimeout) {
+      window.clearTimeout(this.shippingQuoteTimeout);
     }
     this.dashboardSub?.unsubscribe();
     this.shippingQuoteSub?.unsubscribe();
@@ -365,8 +379,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return this.shippingAddresses.length > 0;
   }
 
+  // ── Paquete C · ronda 26 · propuesta 31 ──
+  /** CP de cinco dígitos: es lo único que el cotizador necesita. */
+  get cpParaCotizar(): string {
+    const cp = this.deliveryPostalCode.trim();
+    return /^\d{5}$/.test(cp) ? cp : '';
+  }
+
   get isShippingQuoteReady(): boolean {
-    return this.hasValidShippingQuoteFormData();
+    return Boolean(this.cpParaCotizar);
   }
 
   get goalTitle(): string {
@@ -602,11 +623,28 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.selectedShippingRate) {
       return this.formatMoney(this.selectedShippingRate.displayPrice);
     }
-    // "Envío Gratis" hasta que el cliente ponía su código postal y aparecían $129.
-    if (this.baseShippingRate > 0) {
-      return `Desde ${this.formatMoney(this.baseShippingRate)} · se calcula con tu CP`;
+    if (this.isLoadingShippingRates) {
+      return 'Calculando con tu CP...';
     }
-    return this.shipping === 0 ? 'Se calcula con tu código postal' : this.formatMoney(this.shipping);
+    // "Envío desde $129 · se calcula con tu CP" era mentira: la cotización solo salía con la
+    // dirección completa. Ahora basta el CP, y el rótulo dice exactamente qué hay que escribir.
+    if (this.baseShippingRate > 0) {
+      return `Desde ${this.formatMoney(this.baseShippingRate)} · escribe tu CP y lo calculamos`;
+    }
+    return this.shipping === 0 ? 'Escribe tu CP y lo calculamos' : this.formatMoney(this.shipping);
+  }
+
+  /** El rótulo del resumen se llama "Subtotal" mientras falte el envío, y "Total" cuando ya está todo.
+   *  Mariana leyó "$700" arriba y pagó "$829": el número no mentía, el nombre sí. */
+  get totalLabel(): string {
+    return this.deliveryType === 'delivery' && !this.selectedShippingRate && !this.isShippingFree
+      ? 'Subtotal'
+      : 'Total';
+  }
+
+  /** Aclaración de una línea junto al rótulo, para que "Subtotal" no quede sin explicación. */
+  get totalNote(): string {
+    return this.totalLabel === 'Subtotal' ? 'Falta el envío: escribe tu CP para verlo completo.' : '';
   }
 
   // ── Completa tu activación ──
@@ -1013,8 +1051,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
     const pickupStockId = this.resolveSelectedPickupStockId(this.pickupStocks, this.selectedPickupStockId);
-    if (this.isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.deliveryEmail.trim())) {
-      this.showToast('Escribe tu correo: ahí te avisamos del pago, el envío y la entrega.');
+    // El contacto del pedido se pide siempre, y lo que falte se marca en su propio campo.
+    if (!this.validarContacto()) {
+      this.scrollToSection('contacto-pedido');
+      this.focusFirstMissingContactField();
+      this.showToast('Revisa tus datos de contacto: hay un campo marcado en rojo.');
       return;
     }
     if (this.deliveryType === 'pickup') {
@@ -1047,12 +1088,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }));
     let payload: Record<string, unknown>;
     if (this.deliveryType === 'pickup') {
+      // El backend acepta recipientName y phone en cualquier modo de entrega; el carrito no se los
+      // mandaba y los pedidos de mostrador quedaban sin nombre ni teléfono de quien los va a recoger.
       payload = {
         customerId: this.resolveOrderCustomerId(),
-        customerName: user?.name || this.deliveryName.trim() || 'Cliente',
+        customerName: user?.name || this.resolveDeliveryName() || 'Cliente',
         email: this.isGuest ? this.deliveryEmail.trim() || undefined : undefined,
         status: 'pending' as const,
         items,
+        recipientName: this.resolveDeliveryName() || user?.name,
+        phone: this.resolveDeliveryPhone() || undefined,
         deliveryType: 'pickup',
         pickupStockId,
         pickupPaymentMethod: this.pickupPaymentMethod
@@ -1180,31 +1225,32 @@ export class CarritoComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Cotiza tras una pequeña espera, para no lanzar una consulta por cada tecla del CP. */
+  private scheduleShippingQuote(): void {
+    if (this.shippingQuoteTimeout) {
+      window.clearTimeout(this.shippingQuoteTimeout);
+    }
+    this.shippingQuoteTimeout = window.setTimeout(() => this.fetchShippingRates(), 600);
+  }
+
   fetchShippingRates(): void {
-    if (!this.hasValidShippingQuoteFormData()) {
+    const zipTo = this.cpParaCotizar;
+    if (!zipTo) {
       this.shippingRates = [];
       this.selectedShippingRate = null;
       this.shippingQuoteError = '';
       return;
     }
-    const zipTo = this.deliveryPostalCode.trim();
     const items = this.buildShippingItems();
     this.isLoadingShippingRates = true;
     this.shippingQuoteError = '';
     this.shippingQuoteSub?.unsubscribe();
+    // Solo CP y bultos: el cotizador exige *todos* los campos de dirección o ninguno, así que
+    // mandarle el estado a medias devolvía 400 y el precio "aparecía al elegir el estado".
     this.shippingQuoteSub = this.api
       .getShippingQuote({
         zipTo,
         postalCode: zipTo,
-        name: this.resolveDeliveryName(),
-        recipientName: this.resolveDeliveryName(),
-        phone: this.resolveDeliveryPhone(),
-        street: this.deliveryStreet.trim(),
-        number: this.deliveryNumber.trim(),
-        address: this.buildDeliveryAddressLine(),
-        city: this.deliveryCity.trim(),
-        state: this.deliveryState.trim(),
-        country: this.deliveryCountry.trim().toUpperCase(),
         items
       })
       .pipe(finalize(() => {
@@ -1398,10 +1444,66 @@ export class CarritoComponent implements OnInit, OnDestroy {
     } else {
       this.deliveryFieldErrors[field] = !normalizedValue;
     }
-    this.fetchShippingRates();
+    // El envío se cotiza solo con el CP (propuesta 31): los demás campos ya no disparan consultas.
+    if (field === 'deliveryPostalCode') {
+      this.scheduleShippingQuote();
+    }
     if (field === 'deliveryCity' || field === 'deliveryState') {
       this.scheduleCheckoutRefresh();
     }
+  }
+
+  // ── Paquete C · ronda 26 · propuesta 3: contacto del pedido ──
+  onContactFieldChange(field: 'deliveryName' | 'deliveryPhone' | 'deliveryEmail', value: string): void {
+    const limpio = String(value ?? '');
+    if (field === 'deliveryName') {
+      this.deliveryName = limpio;
+    } else if (field === 'deliveryPhone') {
+      this.deliveryPhone = limpio;
+    } else {
+      this.deliveryEmail = limpio;
+    }
+    if (this.contactFieldErrors[field]) {
+      this.validarContacto();
+    }
+  }
+
+  /** Marca en cada campo lo que falta y devuelve si el contacto del pedido está completo. */
+  private validarContacto(): boolean {
+    const errores: Record<'deliveryName' | 'deliveryPhone' | 'deliveryEmail', string> = {
+      deliveryName: '',
+      deliveryPhone: '',
+      deliveryEmail: ''
+    };
+    if (!this.resolveDeliveryName()) {
+      errores.deliveryName = 'Escribe el nombre de quien recibe el pedido.';
+    }
+    const telefono = this.resolveDeliveryPhone().replace(/[^\d]/g, '');
+    if (telefono.length < 10) {
+      errores.deliveryPhone = 'Escribe un teléfono de 10 dígitos: ahí te avisamos si algo pasa con tu pedido.';
+    }
+    if (this.isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.deliveryEmail.trim())) {
+      errores.deliveryEmail = 'Escribe tu correo: ahí te avisamos del pago, el envío y la entrega.';
+    }
+    this.contactFieldErrors = errores;
+    return !errores.deliveryName && !errores.deliveryPhone && !errores.deliveryEmail;
+  }
+
+  /** Lleva el foco al primer campo de contacto con error (el aviso al fondo de la página no se veía). */
+  private focusFirstMissingContactField(): void {
+    const orden: Array<'deliveryName' | 'deliveryPhone' | 'deliveryEmail'> = ['deliveryName', 'deliveryPhone', 'deliveryEmail'];
+    const pendiente = orden.find((campo) => this.contactFieldErrors[campo]);
+    if (!pendiente) {
+      return;
+    }
+    window.setTimeout(() => {
+      const campo = document.querySelector<HTMLInputElement>(`[name="${pendiente}"]`);
+      if (!campo) {
+        return;
+      }
+      campo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      campo.focus();
+    }, 180);
   }
 
   private assignDeliveryFieldValue(
@@ -1754,19 +1856,6 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   private buildDeliveryAddressLine(): string {
     return [this.deliveryStreet.trim(), this.deliveryNumber.trim(), this.deliveryCity.trim()].filter(Boolean).join(', ');
-  }
-
-  private hasValidShippingQuoteFormData(): boolean {
-    return Boolean(
-      this.resolveDeliveryName() &&
-      this.resolveDeliveryPhone() &&
-      this.deliveryStreet.trim() &&
-      this.deliveryNumber.trim() &&
-      this.deliveryCity.trim() &&
-      /^\d{5}$/.test(this.deliveryPostalCode.trim()) &&
-      ESTADOS_MX_CODES.has(this.deliveryState.trim()) &&
-      this.deliveryCountry.trim()
-    );
   }
 
   private resolveDeliveryName(): string {
