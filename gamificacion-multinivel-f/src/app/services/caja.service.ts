@@ -6,6 +6,8 @@ import { environment } from '../../environments/environment';
 import {
   AbonoCajaRespuesta,
   AnulacionCajaRespuesta,
+  AperturaTurnoPayload,
+  AperturaTurnoRespuesta,
   ArqueoCaja,
   CerrarCortePayload,
   CorteCaja,
@@ -29,6 +31,27 @@ export class CajaService {
   obtenerArqueo(stockId: string): Observable<{ arqueo: ArqueoCaja }> {
     return this.http.get<{ arqueo: ArqueoCaja }>(
       `${this.baseUrl}/inventory/pos/arqueo?stockId=${encodeURIComponent(stockId)}`,
+      { headers: this.realApi.actorHeaders() }
+    );
+  }
+
+  /**
+   * Abrir turno declarando el fondo con el que arranca la caja (propuesta 5).
+   * Mireya llegó con $500 y la pantalla le dijo "Fondo inicial $0.00".
+   */
+  abrirTurno(payload: AperturaTurnoPayload): Observable<AperturaTurnoRespuesta> {
+    return this.http.post<AperturaTurnoRespuesta>(
+      `${this.baseUrl}/inventory/pos/turno/abrir`,
+      payload,
+      { headers: this.realApi.actorHeaders() }
+    );
+  }
+
+  /** Valida el código de autorización antes de pedirle a la cajera que avance (propuesta 6). */
+  validarCodigo(code: string): Observable<{ ok: boolean; configured: boolean }> {
+    return this.http.post<{ ok: boolean; configured: boolean }>(
+      `${this.baseUrl}/inventory/pos/validate-auth`,
+      { code },
       { headers: this.realApi.actorHeaders() }
     );
   }

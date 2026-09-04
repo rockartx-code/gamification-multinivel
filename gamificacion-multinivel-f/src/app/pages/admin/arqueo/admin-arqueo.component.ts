@@ -57,6 +57,16 @@ export class AdminArqueoComponent implements OnChanges {
   errorCarga = '';
   movimientosAbiertos = false;
 
+  // --- Abrir turno (propuesta 5): el fondo lo declara quien tiene el dinero ---
+  fondoAperturaTexto = '';
+  guardandoApertura = false;
+  errorApertura = '';
+  aperturaGuardada = '';
+
+  // --- Código de autorización (propuesta 6): tres estados, al salir del paso 3 ---
+  estadoCodigo: 'sin_validar' | 'validando' | 'correcto' | 'incorrecto' = 'sin_validar';
+  motivoCodigo = '';
+
   // --- Corte con arqueo ---
   corteAbierto = false;
   pasoCorte: PasoCorte = 1;
@@ -116,6 +126,67 @@ export class AdminArqueoComponent implements OnChanges {
       });
   }
 
+  /** La caja nunca cortó ni declaró fondo: se pide, no se enseña un $0.00. */
+  get necesitaApertura(): boolean {
+    return Boolean(this.arqueo?.needsOpening);
+  }
+
+  /** De dónde sale el fondo inicial, en una línea. */
+  get textoFondoInicial(): string {
+    const a = this.arqueo;
+    if (!a) return '';
+    if (a.openingSource === 'apertura') {
+      const quien = (a.openingDeclaredBy || '').trim();
+      return `Fondo declarado al abrir el turno${quien ? ' por ' + quien : ''}`;
+    }
+    if (a.openingSource === 'corte_anterior') {
+      return 'Fondo que dejó el corte anterior';
+    }
+    return 'Esta caja nunca ha cerrado un corte: captura el fondo con el que arrancas';
+  }
+
+  get fondoAperturaNumero(): number {
+    return this.redondear(this.aNumero(this.fondoAperturaTexto));
+  }
+
+  /** Por qué no se puede guardar el fondo todavía. Vacío si se puede. */
+  motivoAperturaDeshabilitada(): string {
+    if (!this.canOperate) return 'No tienes el permiso "Ventas en caja": pídeselo a tu gerente.';
+    if (!this.stockId) return 'Sin sucursal vinculada: pide a la gerente que te ligue a una en Almacenes.';
+    if (this.guardandoApertura) return 'Guardando el fondo…';
+    if (String(this.fondoAperturaTexto).trim() === '') return 'Escribe con cuánto arrancas (puede ser $0).';
+    if (this.fondoAperturaNumero < 0) return 'El fondo no puede ser negativo.';
+    return '';
+  }
+
+  /** Guarda el fondo declarado: el arqueo del día arranca de ahí. */
+  guardarApertura(): void {
+    if (this.motivoAperturaDeshabilitada() || !this.stockId) {
+      this.errorApertura = this.motivoAperturaDeshabilitada();
+      this.requestViewUpdate();
+      return;
+    }
+    this.guardandoApertura = true;
+    this.errorApertura = '';
+    this.aperturaGuardada = '';
+    this.caja
+      .abrirTurno({ stockId: this.stockId, openingCash: this.fondoAperturaNumero })
+      .pipe(finalize(() => { this.guardandoApertura = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: ({ opening, arqueo }) => {
+          this.arqueo = arqueo;
+          this.fondoAperturaTexto = '';
+          this.aperturaGuardada = `Turno abierto con ${this.dinero(opening.openingCash)} de fondo. `
+            + 'Queda escrito en los movimientos y en el comprobante del corte.';
+          this.requestViewUpdate();
+        },
+        error: (err: unknown) => {
+          this.errorApertura = this.mensajeDeError(err, 'No se pudo guardar el fondo con el que arrancas.');
+          this.requestViewUpdate();
+        }
+      });
+  }
+
   get efectivoEsperado(): number {
     return this.redondear(this.arqueo?.expectedCash ?? 0);
   }
@@ -168,6 +239,8 @@ export class AdminArqueoComponent implements OnChanges {
     this.receptor = '';
     this.codigoCorte = '';
     this.errorCorte = '';
+    this.estadoCodigo = 'sin_validar';
+    this.motivoCodigo = '';
     this.corteAbierto = true;
     this.cargarArqueo();
   }
@@ -201,6 +274,17 @@ export class AdminArqueoComponent implements OnChanges {
     return this.diferencia !== 0 && (this.arqueo?.config?.requireDifferenceReason ?? true);
   }
 
+  /** ¿La gerencia configuró un código de autorización? (propuesta 6). */
+  get codigoConfigurado(): boolean {
+    return this.arqueo?.config?.authCodeConfigured !== false;
+  }
+
+  /** El texto honesto cuando no hay ningún código configurado. */
+  get textoSinCodigo(): string {
+    return 'Todavía no hay un código de autorización configurado: nadie puede autorizar un retiro. '
+      + 'Deja todo como fondo y avisa a tu gerente.';
+  }
+
   actualizarConteo(denominacion: number, valor: string): void {
     this.conteo = { ...this.conteo, [String(denominacion)]: valor };
   }
@@ -221,6 +305,8 @@ export class AdminArqueoComponent implements OnChanges {
 
   elegirDestino(destino: DestinoEfectivo): void {
     this.destino = destino;
+    this.estadoCodigo = 'sin_validar';
+    this.motivoCodigo = '';
     if (destino === 'fondo') {
       this.fondoTexto = '';
       this.receptor = '';
@@ -249,12 +335,16 @@ export class AdminArqueoComponent implements OnChanges {
     }
     if (paso === 3) {
       if (this.destino === 'retiro') {
+        // Tres estados, y el primero es el de este mundo: no hay código configurado.
+        if (!this.codigoConfigurado) return this.textoSinCodigo;
         if (this.fondoNumero < 0 || this.fondoNumero > this.contadoNumero) {
           return `El fondo debe estar entre $0 y ${this.dinero(this.contadoNumero)} (lo contado).`;
         }
         if (this.retiroDelCorte <= 0) return 'Si no se retira nada, elige "Dejar todo como fondo".';
         if (!this.receptor.trim()) return 'Escribe quién recibe el efectivo retirado.';
         if (!this.codigoCorte.trim()) return 'Escribe el código de autorización de la gerente para el retiro.';
+        if (this.estadoCodigo === 'validando') return 'Comprobando el código de autorización…';
+        if (this.estadoCodigo === 'incorrecto') return this.motivoCodigo;
       }
       return '';
     }
@@ -269,10 +359,62 @@ export class AdminArqueoComponent implements OnChanges {
       return;
     }
     this.errorCorte = '';
+    // El código se comprueba aquí, al salir del paso 3, y no en "Cerrar el
+    // corte": Mireya se llevó el 403 con el dinero contado y el turno acabado.
+    if (this.pasoCorte === 3 && this.destino === 'retiro' && this.estadoCodigo !== 'correcto') {
+      this.comprobarCodigo(this.codigoCorte.trim(), () => this.pasarAlPaso(4));
+      return;
+    }
     if (this.pasoCorte < 4) {
       this.pasoCorte = (this.pasoCorte + 1) as PasoCorte;
     }
     this.requestViewUpdate();
+  }
+
+  private pasarAlPaso(paso: PasoCorte): void {
+    this.pasoCorte = paso;
+    this.requestViewUpdate();
+  }
+
+  /**
+   * Comprueba el código contra el servidor y traduce sus tres respuestas:
+   * no hay código configurado, código incorrecto o correcto.
+   */
+  private comprobarCodigo(codigo: string, siEsCorrecto: () => void): void {
+    this.estadoCodigo = 'validando';
+    this.motivoCodigo = '';
+    this.requestViewUpdate();
+    this.caja.validarCodigo(codigo).subscribe({
+      next: () => {
+        this.estadoCodigo = 'correcto';
+        this.motivoCodigo = '';
+        siEsCorrecto();
+      },
+      error: (err: unknown) => {
+        const e = err as { status?: number } | null;
+        if (e?.status === 409 && this.arqueo?.config) {
+          // Nadie ha configurado un código: se dice eso, no "incorrecto".
+          this.arqueo = { ...this.arqueo, config: { ...this.arqueo.config, authCodeConfigured: false } };
+          this.estadoCodigo = 'sin_validar';
+          this.motivoCodigo = '';
+          this.errorCorte = this.textoSinCodigo;
+          this.errorRetiro = this.textoSinCodigo;
+        } else {
+          this.estadoCodigo = 'incorrecto';
+          this.motivoCodigo = this.mensajeDeError(err, 'Código de autorización incorrecto: pídeselo a tu gerente.');
+          this.errorCorte = this.motivoCodigo;
+          this.errorRetiro = this.motivoCodigo;
+        }
+        this.requestViewUpdate();
+      }
+    });
+  }
+
+  alCambiarCodigoCorte(valor: string): void {
+    this.codigoCorte = valor;
+    this.estadoCodigo = 'sin_validar';
+    this.motivoCodigo = '';
+    this.errorCorte = '';
   }
 
   retrocederCorte(): void {
@@ -432,6 +574,8 @@ ${c.withdrawalReceiver ? `<p>El retiro lo recibe: ${esc(c.withdrawalReceiver)}</
     this.retiroReceptor = '';
     this.retiroCodigo = '';
     this.errorRetiro = '';
+    this.estadoCodigo = 'sin_validar';
+    this.motivoCodigo = '';
     this.retiroConfirmado = null;
     this.retiroAbierto = true;
     this.cargarArqueo();
@@ -460,8 +604,18 @@ ${c.withdrawalReceiver ? `<p>El retiro lo recibe: ${esc(c.withdrawalReceiver)}</
       if (!this.retiroReceptor.trim()) return 'Escribe quién recibe el efectivo.';
       return '';
     }
+    if (!this.codigoConfigurado) return this.textoSinCodigo;
     if (!this.retiroCodigo.trim()) return 'Escribe el código de autorización de la gerente.';
+    if (this.estadoCodigo === 'validando') return 'Comprobando el código de autorización…';
+    if (this.estadoCodigo === 'incorrecto') return this.motivoCodigo;
     return '';
+  }
+
+  alCambiarCodigoRetiro(valor: string): void {
+    this.retiroCodigo = valor;
+    this.estadoCodigo = 'sin_validar';
+    this.motivoCodigo = '';
+    this.errorRetiro = '';
   }
 
   avanzarRetiro(): void {
