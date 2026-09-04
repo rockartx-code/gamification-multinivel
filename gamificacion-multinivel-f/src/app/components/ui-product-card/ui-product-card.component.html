@@ -101,25 +101,32 @@
     </div>
 
     <!-- Acciones inferiores (solo para productos sin variantes) -->
-    <div *ngIf="activeVariants.length === 0" class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2 rounded-2xl border border-olive-30 px-3 py-2">
-        <span class="text-xs text-gray-600">Qty</span>
-        <ui-form-field
-          type="number"
-          [ngModel]="qty"
-          (ngModelChange)="qtyChange.emit(+$event || 0)"
-          inputClass="w-14 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main text-center">
-        </ui-form-field>
-      </div>
+    <div *ngIf="activeVariants.length === 0" class="flex flex-col gap-2">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 rounded-2xl border border-olive-30 px-3 py-2">
+          <span class="text-xs text-gray-600">Cantidad</span>
+          <!-- La cantidad es un borrador: entra al carrito al pulsar "Agregar a carrito", no al teclear. -->
+          <ui-form-field
+            type="number"
+            [attr.aria-label]="'Cantidad de ' + product.name"
+            [ngModel]="qtyDraft"
+            (ngModelChange)="setQtyDraft($event)"
+            inputClass="w-14 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main text-center">
+          </ui-form-field>
+        </div>
 
-      <ui-button
-        size="lg"
-        variant="primary"
-        class="flex-1"
-        (pressed)="add.emit()">
-        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-        Agregar a carrito
-      </ui-button>
+        <ui-button
+          size="lg"
+          variant="primary"
+          class="flex-1"
+          (pressed)="addToCart()">
+          <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+          Agregar a carrito
+        </ui-button>
+      </div>
+      <p *ngIf="qty > 0" class="text-mini text-gray-500">
+        Ya llevas {{ qty }} en el carrito. Lo que escribas aquí se suma al pulsar "Agregar a carrito".
+      </p>
     </div>
   </div>
 </article>
@@ -165,7 +172,7 @@
         type="button"
         class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-white hover:opacity-90"
         [attr.aria-label]="'Agregar ' + product.name + ' al carrito'"
-        (click)="add.emit()">
+        (click)="add.emit(1)">
         <i class="fa-solid fa-cart-plus text-xs" aria-hidden="true"></i>
       </button>
     </div>

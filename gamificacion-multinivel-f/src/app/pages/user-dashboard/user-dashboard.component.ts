@@ -1811,26 +1811,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     window.open(this.referralLink, '_blank', 'noopener');
   }
 
-  updateCart(productId: string, qty: number): void {
-    const product = this.resolveProduct(productId);
-    if (product) {
-      const variantId = this.selectedVariantIds.get(productId);
-      const previousQty = this.getCartQty(productId);
-      this.cartControl.upsertItem(this.buildCartItem(product, variantId), qty);
-      if (qty > previousQty) {
-        this.celebrateAdd(product, qty - previousQty);
-        this.logGoalProgress();
-        this.maybeShowGoalProgressToast();
-        return;
-      }
-    }
-    this.logGoalProgress();
-    if (this.cartTotal > 0) {
-      this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
-    }
-    this.maybeShowGoalProgressToast();
-  }
-
   getVariantQtys(productId: string): Record<string, number> {
     const result: Record<string, number> = {};
     for (const item of this.cartControl.cartItems) {
@@ -1880,6 +1860,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
+  /** Agrega al carrito la cantidad tecleada en la tarjeta (borrador de `ui-product-card`, propuesta 10). */
   addQuick(productId: string, addQty: number): void {
     const product = this.resolveProduct(productId);
     if (product) {

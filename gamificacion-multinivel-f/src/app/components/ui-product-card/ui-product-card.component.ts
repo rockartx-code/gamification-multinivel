@@ -36,6 +36,7 @@ export class UiProductCardComponent {
   @Input() discountedPriceLabel = '';
   @Input() originalPriceLabel = '';
   @Input() discountLabel = '';
+  /** Cantidad que ya lleva este producto en el carrito (informativa). */
   @Input() qty = 0;
   @Input() mode: 'detailed' | 'compact' = 'detailed';
   /** Descuento vigente del asociado (0..1). Si > 0 se muestran también los PC netos. */
@@ -43,9 +44,28 @@ export class UiProductCardComponent {
 
   @Input() variantQtys: Record<string, number> = {};
   @Output() variantQtyChange = new EventEmitter<{ variantId: string; qty: number }>();
-  @Output() qtyChange = new EventEmitter<number>();
   @Output() viewDetails = new EventEmitter<void>();
-  @Output() add = new EventEmitter<void>();
+  /** Cantidad tecleada con la que se pulsó "Agregar a carrito". */
+  @Output() add = new EventEmitter<number>();
+
+  // ── Paquete C · ronda 26 · propuesta 10 ──
+  /** Borrador local de la cantidad: el campo ya no escribe en el carrito.
+   *  Paulina tecleó 2 y le quedaron 3 Klinhart ($1,440), casi tumbándole la activación por
+   *  la que había gastado el dinero: el campo entraba directo al carrito y "Agregar" sumaba
+   *  una pieza más. Es el patrón que ya estaba escrito para el producto destacado del panel. */
+  qtyDraft = 1;
+
+  setQtyDraft(value: unknown): void {
+    const n = Math.floor(Number(value));
+    this.qtyDraft = Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
+  /** El carrito solo se toca aquí, con la cantidad que la persona dejó escrita. */
+  addToCart(): void {
+    const cantidad = this.qtyDraft;
+    this.add.emit(cantidad);
+    this.qtyDraft = 1;
+  }
 
   private readonly checkedVariantIds = new Set<string>();
   private defaultApplied = false;

@@ -374,8 +374,8 @@
             [discountRate]="discountPercent / 100"
             [variantQtys]="getVariantQtys(product.id)"
             (variantQtyChange)="onVariantQtyChange(product.id, $event)"
-            (qtyChange)="updateCart(product.id, $event)" (viewDetails)="openProductDetails(product)"
-            (add)="addQuick(product.id, 1)"></ui-product-card>
+            (viewDetails)="openProductDetails(product)"
+            (add)="addQuick(product.id, $event)"></ui-product-card>
         </div>
       </div>
 
@@ -397,8 +397,8 @@
             [discountRate]="discountPercent / 100"
             [variantQtys]="getVariantQtys(product.id)"
             (variantQtyChange)="onVariantQtyChange(product.id, $event)"
-            (qtyChange)="updateCart(product.id, $event)" (viewDetails)="openProductDetails(product)"
-            (add)="addQuick(product.id, 1)"></ui-product-card>
+            (viewDetails)="openProductDetails(product)"
+            (add)="addQuick(product.id, $event)"></ui-product-card>
         </div>
       </div>
 
