@@ -1700,8 +1700,17 @@
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
-                <div class="text-sm font-semibold text-main">Alta de stock</div>
-                <div class="mt-1 text-xs text-gray-600">Crea bodega/sucursal con nombre y ubicacion.</div>
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div class="text-sm font-semibold text-main">Alta de stock</div>
+                    <div class="mt-1 text-xs text-gray-600">Fundar una bodega o sucursal nueva. Casi nunca hace falta.</div>
+                  </div>
+                  <ui-button size="sm" variant="ghost" (pressed)="altaStockAbierta = !altaStockAbierta">
+                    <i class="fa-solid" [ngClass]="altaStockAbierta ? 'fa-chevron-up' : 'fa-plus'" aria-hidden="true"></i>
+                    {{ altaStockAbierta ? 'Ocultar el formulario' : 'Dar de alta una bodega' }}
+                  </ui-button>
+                </div>
+                <ng-container *ngIf="altaStockAbierta">
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                   <ui-form-field
                     label="Nombre"
@@ -1753,6 +1762,7 @@
                   <i class="fa-solid fa-plus" aria-hidden="true"></i>
                   Crear stock
                 </ui-button>
+                </ng-container>
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
