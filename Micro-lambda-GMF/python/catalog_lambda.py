@@ -602,3 +602,8 @@ def lambda_handler(event: dict, context) -> dict:
 # ── Paquete B (modo cliente y plan): GET /catalog/plan ─────────────────────
 import modo_handlers                          # paquete B
 RUTAS.extend(modo_handlers.RUTAS_CATALOGO)    # paquete B
+
+
+# ── Paquete D · ronda 26 ── ayuda pública: GET /catalog/ayuda ──────────
+import ayuda_handlers                          # paquete D
+RUTAS.extend(ayuda_handlers.RUTAS_CATALOGO)    # paquete D

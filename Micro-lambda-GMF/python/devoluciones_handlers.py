@@ -165,7 +165,7 @@ def calcular_reembolso(order: dict, lineas: list, motivo: str, envio_regreso) ->
     - envío original: solo si se devuelve todo el pedido y el responsable es la empresa.
     Desistimiento: solo productos (regla de la ronda 4).
     """
-    regla = order_lambda.RETURN_MOTIVOS.get(motivo) or {}
+    regla = order_lambda._motivos_devolucion().get(motivo) or {}
     empresa_paga = regla.get("responsable_envio") == "empresa"
     completa = es_devolucion_completa(order, lineas)
 

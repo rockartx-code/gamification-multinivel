@@ -3195,6 +3195,30 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete D · ronda 26 ──
+  /catalog/ayuda:
+    get:
+      summary: "Contacto, sucursales y política de devolución"
+      description: |
+        Pública (sin sesión). Quien ya pagó necesita saber a quién escribirle:
+        correo, WhatsApp, horario y dirección; las sucursales que reciben gente
+        (nombre, ubicación, ciudad y estado, nunca inventario); y la política de
+        devolución completa en seis puntos, leída de `returns` en configuración.
+      operationId: getCatalogAyuda
+      tags: [Config]
+      responses:
+        "200":
+          description: "{contacto, sucursales:[…], devoluciones:{motivos, pasos, …}}"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth
