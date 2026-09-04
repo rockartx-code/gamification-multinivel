@@ -37,6 +37,13 @@ export class ResumenTurnoComponent implements OnInit {
   copyMessage = '';
   copyFailed = false;
 
+  // --- Entregar el turno por correo (paquete F · ronda 26, propuesta 30) ---
+  correoDestino = '';
+  enviando = false;
+  errorEnvio = '';
+  mensajeEnvio = '';
+  reenviarPendiente = false;
+
   constructor(
     private readonly despacho: DespachoService,
     private readonly auth: AuthService,
@@ -63,6 +70,9 @@ export class ResumenTurnoComponent implements OnInit {
     this.isLoading = true;
     this.error = '';
     this.copyMessage = '';
+    this.mensajeEnvio = '';
+    this.errorEnvio = '';
+    this.reenviarPendiente = false;
     this.despacho
       .resumenTurno(this.userId || undefined, this.date || undefined)
       .pipe(finalize(() => { this.isLoading = false; this.requestViewUpdate(); }))
@@ -81,6 +91,77 @@ export class ResumenTurnoComponent implements OnInit {
           this.error = this.resolveError(err, 'No se pudo armar el resumen. Revisa la fecha o vuelve a intentarlo.');
         }
       });
+  }
+
+  /** ¿Hay a quién mandárselo sin escribir el correo a mano? */
+  get correoConfigurado(): boolean {
+    return Boolean(this.resumen?.notifyEmailConfigured);
+  }
+
+  /** Si ya se entregó, se dice a quién y cuándo, en vez de mandarlo dos veces. */
+  get yaEntregado(): string {
+    const r = this.resumen;
+    if (!r?.notifiedTo || !r?.notifiedAt) {
+      return '';
+    }
+    return `Este turno ya se le entregó a ${r.notifiedTo} el ${this.fechaLarga(r.notifiedAt)}.`;
+  }
+
+  /** Por qué no se puede enviar todavía. Vacío si se puede. */
+  motivoEnvioDeshabilitado(): string {
+    if (this.enviando) return 'Enviando el resumen…';
+    if (!this.resumen) return 'Espera a que se arme el resumen.';
+    if (this.isEmpty) return 'Este turno no tiene movimientos que reportar.';
+    if (!this.correoConfigurado && !this.correoDestino.trim()) {
+      return 'Escribe el correo de tu gerente, o pídele que lo configure en Configuración → Punto de venta.';
+    }
+    return '';
+  }
+
+  enviar(): void {
+    const motivo = this.motivoEnvioDeshabilitado();
+    if (motivo) {
+      this.errorEnvio = motivo;
+      this.requestViewUpdate();
+      return;
+    }
+    this.enviando = true;
+    this.errorEnvio = '';
+    this.mensajeEnvio = '';
+    this.despacho
+      .enviarResumenTurno({
+        userId: this.userId || undefined,
+        date: this.date || undefined,
+        email: this.correoDestino.trim() || undefined,
+        reenviar: this.reenviarPendiente || undefined
+      })
+      .pipe(finalize(() => { this.enviando = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (res) => {
+          this.reenviarPendiente = false;
+          if (res.sent) {
+            this.mensajeEnvio = `Resumen entregado a ${res.to}. Queda escrito quién lo recibió y a qué hora.`;
+            if (this.resumen) {
+              this.resumen = { ...this.resumen, notifiedTo: res.to, notifiedAt: res.sentAt };
+            }
+          } else {
+            // Ya se había entregado: no se manda dos veces sin decirlo.
+            this.mensajeEnvio = res.message ?? `Este turno ya se le entregó a ${res.to}.`;
+            this.reenviarPendiente = true;
+          }
+          this.requestViewUpdate();
+        },
+        error: (err) => {
+          this.errorEnvio = this.resolveError(err, 'No se pudo enviar el resumen. Inténtalo de nuevo.');
+          this.requestViewUpdate();
+        }
+      });
+  }
+
+  fechaLarga(valor: string | null | undefined): string {
+    if (!valor) return '';
+    const d = new Date(valor);
+    return Number.isNaN(d.getTime()) ? String(valor) : d.toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
   }
 
   onUserChange(userId: string): void {

@@ -9,6 +9,7 @@ import {
   DespachoEnviarPayload,
   DespachoEnviarResponse,
   DespachoPendientesResponse,
+  EnvioResumenTurno,
   PreferenciasDespacho,
   RastreoResponse,
   ResumenTurno,
@@ -84,5 +85,13 @@ export class DespachoService {
       params = params.set('date', date);
     }
     return this.http.get<ResumenTurno>(`${this.baseUrl}/inventory/turno/resumen`, { headers: this.headers, params });
+  }
+
+  /**
+   * Paquete F · ronda 26 (propuesta 30): entregar el turno por correo, como ya
+   * se entrega el corte de caja. Toño se lo mandaba a Renata por WhatsApp.
+   */
+  enviarResumenTurno(body: { userId?: string; date?: string; email?: string; reenviar?: boolean }): Observable<EnvioResumenTurno> {
+    return this.http.post<EnvioResumenTurno>(`${this.baseUrl}/inventory/turno/resumen/enviar`, body, { headers: this.headers });
   }
 }
