@@ -839,8 +839,18 @@ def handle_update_clabe(customer_id, body, headers):
         return err
 
     clabe = str(body.get("clabe", "")).strip()
+
+    # Paquete A · propuesta 1: una CLABE guardada no se podía borrar ni vaciar,
+    # solo sustituir por otra de 18 dígitos. Cadena vacía = "Quitar CLABE".
+    if clabe == "":
+        utils._update_by_id("CUSTOMER", customer_id,
+                            "REMOVE clabe, clabeInterbancaria, bankInstitution SET updatedAt = :u",
+                            {":u": utils._now_iso()})
+        _apagar_avisos_clabe(customer_id)
+        return utils._json_response(200, {"ok": True, "clabeLast4": "", "removed": True})
+
     if len(clabe) != 18 or not clabe.isdigit():
-        return utils._json_response(400, {"message": "CLABE debe tener 18 dígitos numéricos"})
+        return utils._json_response(400, {"message": "La CLABE debe tener 18 dígitos numéricos."})
 
     update_expr = "SET clabe = :c, clabeInterbancaria = :c, updatedAt = :u"
     eav = {":c": clabe, ":u": utils._now_iso()}
@@ -853,7 +863,7 @@ def handle_update_clabe(customer_id, body, headers):
     utils._update_by_id("CUSTOMER", customer_id, update_expr, eav)
     _apagar_avisos_clabe(customer_id)
 
-    return utils._json_response(200, {"ok": True, "clabeLast4": clabe[-4:]})
+    return utils._json_response(200, {"ok": True, "clabeLast4": clabe[-4:], "removed": False})
 
 
 def _apagar_avisos_clabe(customer_id) -> None:

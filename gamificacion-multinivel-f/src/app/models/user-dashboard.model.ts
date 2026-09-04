@@ -200,6 +200,15 @@ export interface UserDashboardData {
       buyerType?: string;
       rowId?: string;
       status?: string;
+      // ── Paquete A · ronda 26 ──
+      /** Fecha del pedido que generó la comisión: la que la socia reconoce (32). */
+      orderCreatedAt?: string;
+      recalculatedAt?: string;
+      recalculatedReason?: string;
+      /** Base y tasa con las que se calculó el importe, para poder explicarlo (37). */
+      commissionRate?: number;
+      commissionBaseNet?: number;
+      voidReason?: string;
     }>;
     hasPending: boolean;
     hasConfirmed?: boolean;
@@ -209,6 +218,9 @@ export interface UserDashboardData {
     prevReceiptUrl?: string;
     prevStatus?: 'no_moves' | 'pending' | 'paid';
     payoutDay?: number;
+    // ── Paquete A · ronda 26 ──
+    /** Banco de la CLABE registrada, para reconocer la cuenta (1). */
+    bankInstitution?: string;
   } | null;
   /** Modo de la cuenta e indicadores del cliente (paquete B). */
   mode?: 'cliente' | 'socio';

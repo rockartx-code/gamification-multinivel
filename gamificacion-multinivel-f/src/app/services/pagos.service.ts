@@ -8,6 +8,7 @@ import {
   DeshacerPagoRespuesta,
   LotePagoPayload,
   LotePagoRespuesta,
+  PagoPeriodos,
   PagosMes,
   PedirClabeRespuesta
 } from '../models/pagos.model';
@@ -30,6 +31,25 @@ export class PagosService {
   getPagosMes(monthKey: string): Observable<PagosMes> {
     return this.http.get<PagosMes>(`${this.baseUrl}/commissions/pagos?month=${encodeURIComponent(monthKey)}`, {
       headers: this.realApi.actorHeaders()
+    });
+  }
+
+  /**
+   * Paquete A · ronda 26 · propuesta 17: los meses contables con datos, el mes
+   * por omisión y la hora del servidor. Renata recargaba y marzo de 2027
+   * desaparecía del selector porque se armaba con el reloj del navegador.
+   */
+  getPeriodos(): Observable<PagoPeriodos> {
+    return this.http.get<PagoPeriodos>(`${this.baseUrl}/commissions/periodos`, {
+      headers: this.realApi.actorHeaders()
+    });
+  }
+
+  /** Anexo de las que todavía no se pueden depositar, con su motivo (35). */
+  descargarPendientesCsv(monthKey: string): Observable<string> {
+    return this.http.get(`${this.baseUrl}/commissions/pagos/pendientes.csv?month=${encodeURIComponent(monthKey)}`, {
+      headers: this.realApi.actorHeaders(),
+      responseType: 'text'
     });
   }
 

@@ -7,7 +7,7 @@ import { UiButtonComponent } from '../../../components/ui-button/ui-button.compo
 import { UiCheckboxComponent } from '../../../components/ui-checkbox/ui-checkbox.component';
 import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../../components/ui-modal/ui-modal.component';
-import { LoteSaltoCodigo, PagoFila, PagosMes } from '../../../models/pagos.model';
+import { LoteSaltoCodigo, PagoFila, PagoPeriodo, PagosMes } from '../../../models/pagos.model';
 import { AdminControlService } from '../../../services/admin-control.service';
 import { PagosService } from '../../../services/pagos.service';
 
@@ -38,7 +38,12 @@ export class PagosMesComponent implements OnInit, OnChanges {
   @Input() canRegister = true;
 
   monthKey = '';
-  readonly monthOptions: Array<{ value: string; label: string }> = [];
+  monthOptions: Array<{ value: string; label: string }> = [];
+  /** Periodos y hora del servidor (17): ninguna fecha sale del navegador. */
+  periodos: PagoPeriodo[] = [];
+  serverNow = '';
+  payoutDay = 10;
+  periodosError = '';
 
   data: PagosMes | null = null;
   isLoading = false;
@@ -67,10 +72,37 @@ export class PagosMesComponent implements OnInit, OnChanges {
   ) {}
 
   ngOnInit(): void {
-    this.buildMonthOptions();
-    this.monthKey = this.month || this.previousMonthKey();
-    this.ensureMonthOption(this.monthKey);
-    this.load();
+    this.cargarPeriodos();
+  }
+
+  /**
+   * WP-A · propuesta 17: los meses los manda el servidor. Renata recargó la
+   * página tres veces y marzo de 2027 ya no estaba en el selector, porque los
+   * doce meses se armaban con `new Date()` del navegador.
+   */
+  private cargarPeriodos(): void {
+    this.pagos.getPeriodos().subscribe({
+      next: (datos) => {
+        this.serverNow = datos.serverNow;
+        this.payoutDay = datos.payoutDay ?? 10;
+        this.periodos = datos.periodos ?? [];
+        this.monthOptions = this.periodos.map((p) => ({ value: p.monthKey, label: p.label }));
+        this.monthKey = this.month || datos.defaultMonth;
+        this.ensureMonthOption(this.monthKey);
+        this.requestViewUpdate();
+        this.load();
+      },
+      error: () => {
+        // Sin periodos no se inventa un mes con el reloj del navegador: se dice.
+        this.periodosError = 'No pudimos leer los meses con comisiones. Se muestra el mes que venía seleccionado.';
+        this.monthKey = this.month || this.monthKey;
+        this.ensureMonthOption(this.monthKey);
+        this.requestViewUpdate();
+        if (this.monthKey) {
+          this.load();
+        }
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -83,13 +115,26 @@ export class PagosMesComponent implements OnInit, OnChanges {
     }
   }
 
-  /** El mes del aviso viene del reloj del servidor: si el selector (reloj del navegador) no lo trae, se añade. */
+  /** Si llega un mes por `Input` que el servidor no listó (aún sin datos), se añade. */
   private ensureMonthOption(key: string): void {
     if (!key || this.monthOptions.some((o) => o.value === key)) {
       return;
     }
-    this.monthOptions.push({ value: key, label: this.labelForMonth(key) });
-    this.monthOptions.sort((a, b) => (a.value < b.value ? 1 : a.value > b.value ? -1 : 0));
+    this.monthOptions = [...this.monthOptions, { value: key, label: this.labelForMonth(key) }]
+      .sort((a, b) => (a.value < b.value ? 1 : a.value > b.value ? -1 : 0));
+  }
+
+  /** El periodo del mes en pantalla, tal como lo publicó el servidor. */
+  get periodoActivo(): PagoPeriodo | null {
+    return this.periodos.find((p) => p.monthKey === this.monthKey) ?? null;
+  }
+
+  /** "Ninguna pantalla se planta sola en un mes sin datos sin decirlo" (17). */
+  get avisoMesSinDatos(): string {
+    if (!this.monthKey || this.isLoading || !this.periodos.length || this.periodoActivo) {
+      return '';
+    }
+    return `En ${this.monthLabel} no hay comisiones registradas. Los meses con movimientos son ${this.periodos.map((p) => p.label).join(', ')}.`;
   }
 
   // ─── Carga ────────────────────────────────────────────────────────────
@@ -188,13 +233,53 @@ export class PagosMesComponent implements OnInit, OnChanges {
   statusLabel(status: PagoFila['status']): string {
     if (status === 'listo') return 'Lista para depositar';
     if (status === 'sin_clabe') return 'Sin CLABE';
+    if (status === 'por_confirmar') return 'Nada que depositar aún';
     return 'Pagada';
   }
 
   statusClass(status: PagoFila['status']): string {
     if (status === 'listo') return 'badge badge-compact level-1 status-active';
     if (status === 'sin_clabe') return 'badge badge-compact level-3';
+    if (status === 'por_confirmar') return 'badge badge-compact level-2';
     return 'badge badge-compact level-5 status-inactive';
+  }
+
+  /** El pedido que frena un importe y cuántos días lleva parado (18). */
+  frenoTexto(freno: PagoFila['frenoPorConfirmar']): string {
+    if (!freno) {
+      return '';
+    }
+    const dias = freno.dias === 1 ? '1 día' : `${freno.dias} días`;
+    const otros = freno.pedidos > 1 ? ` y ${freno.pedidos - 1} pedido${freno.pedidos > 2 ? 's' : ''} más` : '';
+    return `Pedido ${freno.orderId}${otros} · ${dias} · ${freno.texto}`;
+  }
+
+  /**
+   * WP-A · propuesta 35: el botón apagado dice el número, no solo que no hay.
+   * *"No hay socias listas para depositar este mes · 1 espera CLABE ($135.00)"*.
+   */
+  get motivoExportacionApagada(): string {
+    if (this.isSaving) {
+      return 'Guardando…';
+    }
+    if (this.readyRows.length) {
+      return '';
+    }
+    const partes: string[] = [];
+    const sinClabe = this.data?.totals?.sinClabe;
+    const porConfirmar = this.data?.totals?.porConfirmar ?? 0;
+    if (sinClabe?.count) {
+      partes.push(`${sinClabe.count} ${sinClabe.count === 1 ? 'espera' : 'esperan'} CLABE (${this.formatMoney(sinClabe.amount)})`);
+    }
+    if (porConfirmar > 0) {
+      partes.push(`${this.formatMoney(porConfirmar)} por confirmar`);
+    }
+    const detalle = partes.length ? ` · ${partes.join(' · ')}` : '';
+    return `No hay socias listas para depositar este mes${detalle}.`;
+  }
+
+  get hayPendientes(): boolean {
+    return (this.data?.totals?.sinClabe?.count ?? 0) > 0 || (this.data?.totals?.porConfirmarFilas?.count ?? 0) > 0;
   }
 
   formatMoney(value: number): string {
@@ -231,6 +316,33 @@ export class PagosMesComponent implements OnInit, OnChanges {
         },
         error: (error: unknown) => {
           this.actionError = this.errorMessage(error, 'No se pudo generar el archivo de dispersión.');
+        }
+      });
+  }
+
+  /** WP-A · propuesta 35: el anexo de las que faltan, como segundo archivo. */
+  exportPendientesCsv(): void {
+    if (!this.hayPendientes || this.isSaving) {
+      return;
+    }
+    this.clearMessages();
+    this.isSaving = true;
+    this.pagos
+      .descargarPendientesCsv(this.monthKey)
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: (csv) => {
+          const lineas = csv.split(/\r?\n/).filter((l) => l.trim().length > 0).length - 1;
+          this.downloadText(csv, `pendientes-${this.monthKey}.csv`);
+          this.confirmation = `Archivo pendientes-${this.monthKey}.csv descargado con ${lineas} ${lineas === 1 ? 'socia' : 'socias'} que todavía no se pueden depositar, con el motivo de cada una. No es el archivo del banco: ese lleva solo a las listas.`;
+        },
+        error: (error: unknown) => {
+          this.actionError = this.errorMessage(error, 'No se pudo generar el anexo de pendientes.');
         }
       });
   }
@@ -428,21 +540,6 @@ export class PagosMesComponent implements OnInit, OnChanges {
     this.confirmation = '';
     this.confirmationDetails = [];
     this.actionError = '';
-  }
-
-  private buildMonthOptions(): void {
-    const now = new Date();
-    for (let i = 0; i < 12; i += 1) {
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-      this.monthOptions.push({ value: key, label: this.labelForMonth(key) });
-    }
-  }
-
-  private previousMonthKey(): string {
-    const now = new Date();
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
   }
 
   private labelForMonth(key: string): string {

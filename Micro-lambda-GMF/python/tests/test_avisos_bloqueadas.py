@@ -147,7 +147,9 @@ def test_la_tarea_programable_exige_privilegio_o_superadmin(modulos, utils, monk
         monkeypatch.setattr(security, "_SUPERADMIN_TOKEN", "token-de-prueba")
         r = _post(motor, headers={"authorization": "Bearer token-de-prueba"})
     assert r["statusCode"] == 200 and json.loads(r["body"])["notified"]
-    assert motor.TAREAS_PROGRAMADAS == [("POST", "/commissions/avisos/bloqueadas")]
+    # Paquete A · ronda 26: el reloj recorre también el correo del día de pago.
+    assert motor.TAREAS_PROGRAMADAS == [("POST", "/commissions/avisos/bloqueadas"),
+                                        ("POST", "/commissions/pagos/dia-de-pago")]
 
 
 def test_sin_producto_que_alcance_se_avisa_igual_con_los_vp_que_faltan(modulos, utils, correos):

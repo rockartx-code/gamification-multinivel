@@ -270,7 +270,11 @@ def _read_ledger_rows(beneficiary_id, month_key) -> Optional[dict]:
         {k: v for k, v in item.items() if k not in ("PK", "SK")}
         for item in items if str(item.get("SK", "")).startswith("ROW#")
     ]
-    filas.sort(key=lambda f: str(f.get("createdAt") or ""))
+    # Paquete A · propuesta 32: el historial se ordena por la fecha del pedido
+    # (la que la socia reconoce) y desempata por `rowId`. Ordenar por
+    # `createdAt` reordenaba el mes entero cada vez que un recálculo reescribía
+    # una fila: "le movieron la fecha a mis comisiones".
+    filas.sort(key=lambda f: (str(f.get("orderCreatedAt") or f.get("createdAt") or ""), str(f.get("rowId") or "")))
 
     reconstruido = {
         **_campos_extra(cabecera),

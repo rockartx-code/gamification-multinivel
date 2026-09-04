@@ -8,10 +8,32 @@
       </div>
     </div>
     <div class="w-full md:w-56">
+      <!-- WP-A · propuesta 17: los meses los manda el servidor, con datos. -->
       <ui-form-field kind="select" label="Mes de las comisiones" [options]="monthOptions"
-        helpText="Se paga el mes anterior el día 10."
+        [helpText]="'Se paga el mes anterior el día ' + payoutDay + '. Solo se listan los meses con comisiones.'"
         [ngModel]="monthKey" (ngModelChange)="onMonthChange($event)"></ui-form-field>
     </div>
+  </div>
+
+  <div *ngIf="avisoMesSinDatos" class="mx-4 mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ avisoMesSinDatos }}
+  </div>
+  <div *ngIf="periodosError" class="mx-4 mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ periodosError }}
+  </div>
+
+  <!-- WP-A · propuesta 18: las tres cifras del mismo dinero, con su total. -->
+  <div class="mx-4 mt-3 rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-xs text-main">
+    <div class="font-semibold">
+      Comisión reconocida de {{ monthLabel }}: {{ formatMoney(data?.totals?.reconocido ?? 0) }}
+    </div>
+    <div class="mt-1 text-gray-600">
+      {{ formatMoney(data?.totals?.confirmado ?? 0) }} confirmadas ·
+      {{ formatMoney(data?.totals?.porConfirmar ?? 0) }} por confirmar (esperan la entrega del pedido) ·
+      {{ formatMoney(data?.totals?.bloqueado ?? 0) }} bloqueadas (la socia no se activó en el mes).
+      El día {{ payoutDay }} solo se depositan las confirmadas.
+    </div>
+    <div class="mt-1 text-gray-600" *ngIf="data?.baseComisionTexto">{{ data?.baseComisionTexto }}</div>
   </div>
 
   <div class="grid gap-3 p-4 md:grid-cols-3">
@@ -52,9 +74,16 @@
   </div>
 
   <div class="flex flex-wrap items-center gap-2 px-4 pb-3" *ngIf="canRegister">
-    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-csv" [disabled]="!readyRows.length || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!readyRows.length ? 'No hay socias listas para depositar este mes.' : '')" (pressed)="exportCsv()"
+    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-csv" [disabled]="!readyRows.length || isSaving" [disabledReason]="motivoExportacionApagada" (pressed)="exportCsv()"
       title="Descarga las listas para depositar en el formato que se sube al banco">
       Exportar archivo de dispersión (CSV)
+    </ui-button>
+    <!-- WP-A · propuesta 35: el anexo de las que faltan, aparte del archivo del banco. -->
+    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-list-check" [disabled]="!hayPendientes || isSaving"
+      [disabledReason]="isSaving ? 'Guardando…' : (!hayPendientes ? 'Este mes no hay comisiones pendientes: todas están listas o pagadas.' : '')"
+      (pressed)="exportPendientesCsv()"
+      title="Lista aparte de quién falta y por qué; no se sube al banco">
+      Descargar pendientes ({{ (data?.totals?.sinClabe?.count ?? 0) + (data?.totals?.porConfirmarFilas?.count ?? 0) }})
     </ui-button>
     <ui-button size="sm" variant="primary" iconClass="fa-solid fa-coins" [disabled]="!selectedRows.length || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!selectedRows.length ? 'Marca las filas que vas a pagar.' : '')" (pressed)="openLote()">
       Registrar pago por lote{{ selectedRows.length ? ' (' + selectedRows.length + ' · ' + formatMoney(selectedTotal) + ')' : '' }}
@@ -76,7 +105,9 @@
               (checkedChange)="toggleAll($event)"></ui-checkbox>
           </th>
           <th class="px-4 py-2">Socia</th>
-          <th class="px-4 py-2 text-right">Monto confirmado</th>
+          <th class="px-4 py-2 text-right">Confirmado</th>
+          <th class="px-4 py-2 text-right">Por confirmar</th>
+          <th class="px-4 py-2 text-right">Bloqueado</th>
           <th class="px-4 py-2">CLABE · banco</th>
           <th class="px-4 py-2">Estado</th>
           <th class="px-4 py-2" *ngIf="canRegister">Acciones</th>
@@ -84,11 +115,11 @@
       </thead>
       <tbody class="divide-y divide-olive-20">
         <tr *ngIf="isLoading && !rows.length">
-          <td class="px-4 py-6 text-center text-xs text-gray-600" colspan="6">Cargando pagos de {{ monthLabel }}...</td>
+          <td class="px-4 py-6 text-center text-xs text-gray-600" colspan="8">Cargando pagos de {{ monthLabel }}…</td>
         </tr>
         <tr *ngIf="!isLoading && !rows.length && !loadError">
-          <td class="px-4 py-6 text-center text-xs text-gray-600" colspan="6">
-            Nadie tiene comisiones confirmadas en {{ monthLabel }}. Las comisiones se confirman cuando el pedido se entrega.
+          <td class="px-4 py-6 text-center text-xs text-gray-600" colspan="8">
+            Nadie tiene comisiones en {{ monthLabel }}: ni confirmadas, ni por confirmar, ni bloqueadas.
           </td>
         </tr>
         <tr *ngFor="let row of rows; trackBy: trackByCustomer" [class.bg-emerald-50]="isSelected(row)">
@@ -100,7 +131,21 @@
             <div class="font-semibold text-main">{{ row.name }}</div>
             <div class="text-xs text-gray-600">{{ row.email }}<span *ngIf="row.phone"> · {{ row.phone }}</span></div>
           </td>
-          <td class="px-4 py-3 align-top text-right font-semibold text-main whitespace-nowrap">{{ formatMoney(row.amount) }}</td>
+          <td class="px-4 py-3 align-top text-right font-semibold text-main whitespace-nowrap">{{ formatMoney(row.confirmado) }}</td>
+          <td class="px-4 py-3 align-top text-right whitespace-nowrap"
+            [class.text-gray-400]="!row.porConfirmar" [class.text-main]="row.porConfirmar">
+            {{ formatMoney(row.porConfirmar) }}
+            <div class="mt-1 whitespace-normal text-left text-xs text-gray-600" *ngIf="row.frenoPorConfirmar">
+              {{ frenoTexto(row.frenoPorConfirmar) }}
+            </div>
+          </td>
+          <td class="px-4 py-3 align-top text-right whitespace-nowrap"
+            [class.text-gray-400]="!row.bloqueado" [class.text-amber-800]="row.bloqueado">
+            {{ formatMoney(row.bloqueado) }}
+            <div class="mt-1 whitespace-normal text-left text-xs text-gray-600" *ngIf="row.frenoBloqueado">
+              {{ frenoTexto(row.frenoBloqueado) }}
+            </div>
+          </td>
           <td class="px-4 py-3 align-top">
             <div class="font-mono text-xs text-main" *ngIf="row.clabeMasked; else sinClabe">{{ row.clabeMasked }}</div>
             <div class="text-xs text-gray-600" *ngIf="row.bankInstitution">{{ row.bankInstitution }}</div>
@@ -115,6 +160,9 @@
             </div>
             <div class="mt-1 text-xs text-amber-800" *ngIf="row.status === 'sin_clabe' && row.clabeReminderAt">
               Recordatorio enviado el {{ formatDate(row.clabeReminderAt) }}
+            </div>
+            <div class="mt-1 text-xs text-gray-600" *ngIf="row.status === 'por_confirmar'">
+              Reconocidas {{ formatMoney(row.reconocido) }} este mes; todavía no hay nada que depositar.
             </div>
           </td>
           <td class="px-4 py-3 align-top" *ngIf="canRegister">

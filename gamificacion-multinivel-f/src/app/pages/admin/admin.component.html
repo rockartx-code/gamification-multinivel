@@ -549,8 +549,10 @@
                     <div class="text-mini text-gray-600">Comisiones por depositar</div>
                     <div class="mt-1 text-2xl font-extrabold">{{ formatMoney(commissionsTotal) }}</div>
                   </div>
-                  <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-excel" (pressed)="downloadCommissionsReport()" title="Descargar reporte Excel">
-                    Exportar
+                  <!-- WP-A · propuesta 17: exporta el mes seleccionado, no el del reloj del navegador. -->
+                  <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-excel" (pressed)="downloadCommissionsReport()"
+                    [title]="'Descargar el Excel de comisiones de ' + commissionsMonthKey">
+                    Exportar {{ commissionsMonthKey }}
                   </ui-button>
                 </div>
               </div>
@@ -2670,6 +2672,12 @@
                   Reporte completo Excel
                 </ui-button>
               </div>
+            </div>
+
+            <!-- WP-A · propuesta 17: ninguna pantalla se planta sola en un mes sin datos sin decirlo. -->
+            <div *ngIf="avisoMesEstadisticasSinDatos"
+              class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ avisoMesEstadisticasSinDatos }}
             </div>
 
             <!-- KPIs del periodo -->

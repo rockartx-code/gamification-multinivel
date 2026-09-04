@@ -39,7 +39,9 @@ import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-tab
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
 import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
 import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
+import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // WP-A · propuesta 1
 import { IndicadoresCliente, PlanSocio, formatoPorcentaje } from '../../models/plan-socio.model';
+import { textoBaseComision } from '../../models/pagos.model'; // WP-A · propuesta 37
 import { PlanSocioService } from '../../services/plan-socio.service';
 import { CustomerShippingAddress } from '../../models/admin.model';
 import { SuscripcionComponent } from './suscripcion/suscripcion.component'; // WP-I2 · suscripción mensual (paquete H) en #ordenes
@@ -64,7 +66,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent, UiTablaDescuentoComponent, SuscripcionComponent /* WP-I2 */],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent, UiTablaDescuentoComponent, UiClabeFormComponent /* WP-A */, SuscripcionComponent /* WP-I2 */],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -221,10 +223,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   showCommissionLedger = false;
   showBlockedTooltip = false;
   showOrdersHelp = false;
-  clabeDraft = '';
-  clabePending = '';
-  isClabeConfirmOpen = false;
-  isClabeSaving = false;
   isGoalsModalOpen = false;
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
@@ -1939,23 +1937,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isCommissionModalOpen = false;
   }
 
-  openClabeConfirm(): void {
-    const clabe = this.clabeDraft.trim();
-    if (!clabe) {
-      this.showToast('Ingresa tu CLABE interbancaria.');
-      return;
+  /**
+   * WP-A · propuesta 1: la CLABE la guarda `ui-clabe-form` de un tirón y
+   * pinta su estado en el propio campo. Aquí solo se refresca el panel para
+   * que el resto de la pantalla (avisos, "sin CLABE") deje de mentir.
+   */
+  onClabeSaved(evento: { clabeLast4: string; removed: boolean }): void {
+    if (this.commissionSummary) {
+      this.commissionSummary.clabeOnFile = !evento.removed;
+      this.commissionSummary.clabeLast4 = evento.clabeLast4;
     }
-    if (!/^\d{18}$/.test(clabe)) {
-      this.showToast('La CLABE debe tener 18 digitos.');
-      return;
-    }
-    this.clabePending = clabe;
-    this.isClabeConfirmOpen = true;
-  }
-
-  closeClabeConfirm(): void {
-    this.isClabeConfirmOpen = false;
-    this.clabePending = '';
+    this.dashboardControl.load({ force: true }).subscribe();
   }
 
   toggleCommissionLedger(): void {
@@ -1991,6 +1983,34 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return value;
     }
     return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /**
+   * WP-A · propuesta 32: la fila muestra la fecha del **pedido**, que es la
+   * que la socia reconoce ("le movieron la fecha a mis comisiones").
+   */
+  ledgerRowDate(row: { orderCreatedAt?: string; createdAt?: string }): string {
+    return this.formatLedgerDate(row.orderCreatedAt || row.createdAt);
+  }
+
+  /**
+   * WP-A · propuesta 37: sobre qué base se pagó esta comisión, con sus números.
+   * *"10 % de $1,350.00 netos, sin envío = $135.00"*.
+   */
+  ledgerRowBase(row: { commissionRate?: number; commissionBaseNet?: number; amount?: number }): string {
+    if (!row.commissionRate || !row.commissionBaseNet) {
+      return '';
+    }
+    return textoBaseComision(row.commissionBaseNet, row.commissionRate, row.amount || 0);
+  }
+
+  /** WP-A · propuesta 32: por qué cambió una comisión, si cambió. */
+  ledgerRowRecalculo(row: { recalculatedAt?: string; recalculatedReason?: string }): string {
+    if (!row.recalculatedAt) {
+      return '';
+    }
+    const motivo = row.recalculatedReason ? ` porque ${row.recalculatedReason}` : '';
+    return `Recalculada el ${this.formatLedgerDate(row.recalculatedAt)}${motivo}.`;
   }
 
   closeGoalsModal(): void {
@@ -2082,34 +2102,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         },
         error: () => {
           this.showToast('No se pudo solicitar el pago.');
-        }
-      });
-  }
-
-  saveCustomerClabe(): void {
-    if (this.isClabeSaving || !this.currentUser?.userId || !this.clabePending) {
-      return;
-    }
-    this.isClabeSaving = true;
-    this.api
-      .saveCustomerClabe({
-        customerId: Number(this.currentUser.userId),
-        clabe: this.clabePending
-      })
-      .pipe(
-        finalize(() => {
-          this.isClabeSaving = false;
-        })
-      )
-      .subscribe({
-        next: (respuesta) => {
-          const terminacion = respuesta?.clabeLast4 ? ` Termina en ${respuesta.clabeLast4}.` : '';
-          this.showToast(`CLABE guardada.${terminacion} Ahí depositaremos tus comisiones.`);
-          this.closeClabeConfirm();
-          this.dashboardControl.load({ force: true }).subscribe();
-        },
-        error: () => {
-          this.showToast('No se pudo actualizar la CLABE.');
         }
       });
   }

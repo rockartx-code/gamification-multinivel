@@ -64,7 +64,7 @@ def _correo_bienvenida_socio(customer: dict) -> None:
     <h1 class="title">Bienvenida al modo socio</h1>
     <p class="lead">Hola <strong>{nombre}</strong>. Tu cuenta ya está en modo socio: desde tu próxima compra aplica el descuento por volumen, tienes tu propio código para invitar y las compras de tu red te generan comisiones.</p>
     <div class="info-box">
-      <p>No te pedimos nada más por ahora. La CLABE solo hace falta cuando tengas tu primera comisión confirmada, y la puedes registrar desde tu panel.</p>
+      <p>Cuando te actives en el mes te pediremos tu CLABE, para poder depositarte el día de pago. La registras en tu panel, en Comisiones, y toma un minuto.</p>
     </div>
     <a class="btn" href="{base}/#/dashboard">Ir a mi panel</a>
     <p><a href="{base}/#/modo-socio">Volver a leer cómo funciona el plan</a></p>
@@ -569,8 +569,11 @@ def construir_plan() -> dict:
         },
         "datos": [
             {"cuando": "registro", "que": ["nombre", "correo", "teléfono"]},
-            {"cuando": "modo socio", "que": []},
-            {"cuando": "primera comisión confirmada", "que": ["CLABE"]},
+            # Paquete A · propuesta 2: la CLABE se pide al activarte (el día
+            # de pago no da tiempo de conseguirla), y el plan lo dice, para
+            # que no contradiga al recordatorio que la socia recibe.
+            {"cuando": "modo socio", "que": ["CLABE, cuando te actives en el mes"]},
+            {"cuando": "primera comisión confirmada", "que": []},
             {"cuando": "facturación", "que": documentos},
         ],
         "rangos": [

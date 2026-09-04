@@ -31,6 +31,21 @@ def _default_app_config() -> dict:
             "blockedGraceDays": Decimal("0"),
             # Aviso "registra tu CLABE" al activarse por primera vez sin CLABE.
             "clabeReminderOnActivation": True,
+            # ── Paquete A · ronda 26 ──
+            # Correo del día de pago (propuesta 34): el día `payoutDay` sale
+            # "te depositamos $X" o "no te pudimos depositar: nos falta tu
+            # CLABE", una sola vez por beneficiaria y mes. En False la tarea
+            # programada no manda nada.
+            "payoutNoticeEnabled": True,
+            # Correo "se desbloquearon tus comisiones" cuando una activación
+            # libera filas que estaban bloqueadas (propuesta 34).
+            "blockedUnlockNotice": True,
+            # Base sobre la que se calcula la comisión (propuesta 37, §4.3 del
+            # doc 26): "neto_con_iva" es lo que el motor hace hoy — el neto
+            # pagado por producto, con IVA incluido y sin contar el envío.
+            # Se dice con estas palabras en el plan, en el simulador, en la
+            # fila de la comisión, en el correo y en Pagos del mes.
+            "commissionBase": "neto_con_iva",
             # Escalera de descuentos por MPN (Monto Personal Neto) acumulado en el mes
             # calendario. Importes en MXN. Plan abril 2026 §3.
             "discountTiers": [

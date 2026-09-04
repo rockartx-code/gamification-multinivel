@@ -70,6 +70,8 @@ import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
 import { PagosMesComponent } from './pagos-mes/pagos-mes.component'; // WP-A
+import { PagosService } from '../../services/pagos.service'; // WP-A · propuesta 17
+import { PagoPeriodo } from '../../models/pagos.model'; // WP-A · propuesta 17
 import { AdminArqueoComponent } from './arqueo/admin-arqueo.component'; // WP-E
 import { CajaService } from '../../services/caja.service'; // WP-E
 import { AbonoCajaRespuesta, AnulacionCajaRespuesta, VentaCajaRespuesta } from '../../models/caja.model'; // WP-E
@@ -1114,12 +1116,14 @@ export class AdminComponent implements OnInit {
           this.adminControl.loadOrders().subscribe();
         }
         this.adminControl.loadEmployees().subscribe();
+        this.cargarPeriodosDelServidor();   // WP-A · 17
         break;
       case 'settings':
         this.syncBusinessConfigDraft();
         break;
       case 'stats':
         this.adminControl.loadCustomers().subscribe();
+        this.cargarPeriodosDelServidor();   // WP-A · 17
         this.loadMonthlyStats(this.activeReportMonth);
         break;
       case 'honor_board':
@@ -2269,6 +2273,44 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  // ── WP-A · ronda 26 · propuesta 17: el mes lo manda el servidor ──────────
+  /** Meses contables con datos, tal como los publica `GET /commissions/periodos`. */
+  serverPeriodos: PagoPeriodo[] = [];
+  /** Mes por omisión del servidor; nunca se calcula con el reloj del navegador. */
+  serverDefaultMonth = '';
+  /** Hora del servidor en el momento de cargar los periodos (§3.6). */
+  serverNow = '';
+  private readonly pagosService = inject(PagosService);
+
+  /**
+   * Alma estuvo media hora creyendo que marzo había cerrado en ceros y se bajó
+   * un `reporte-mensual-2026-09.xlsx`: el navegador iba en 2026-09 y el mundo
+   * en 2027-04. Los meses del dinero salen del servidor.
+   */
+  private cargarPeriodosDelServidor(): void {
+    if (this.serverPeriodos.length || !this.hasPermission('commissions_register_payment')) {
+      return;
+    }
+    this.pagosService.getPeriodos().subscribe({
+      next: (datos) => {
+        this.serverPeriodos = datos.periodos ?? [];
+        this.serverDefaultMonth = datos.defaultMonth || '';
+        this.serverNow = datos.serverNow || '';
+        this.reportMonthsCache = null;
+        if (!this.pagosMesMonth) {
+          this.pagosMesMonth = this.serverDefaultMonth;
+        }
+        this.requestViewUpdate();
+      },
+      error: () => undefined
+    });
+  }
+
+  /** El mes de las comisiones que se está viendo (17): del servidor, no del reloj. */
+  get commissionsMonthKey(): string {
+    return this.pagosMesMonth || this.serverDefaultMonth || this.getPrevMonthKey();
+  }
+
   private reportMonthsCache: { ordersRef: AdminOrder[]; months: { value: string; label: string }[] } | null = null;
 
   get availableReportMonths(): { value: string; label: string }[] {
@@ -2278,10 +2320,12 @@ export class AdminComponent implements OnInit {
       return this.reportMonthsCache.months;
     }
     const monthSet = new Set<string>();
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    // WP-A · 17: primero los meses que el servidor dice que tienen dinero.
+    for (const periodo of this.serverPeriodos) {
+      monthSet.add(periodo.monthKey);
+    }
+    if (this.serverNow) {
+      monthSet.add(this.serverNow.slice(0, 7));
     }
     for (const order of this.orders) {
       if (order.createdAt) {
@@ -2304,8 +2348,23 @@ export class AdminComponent implements OnInit {
 
   get activeReportMonth(): string {
     if (this.statsReportMonth) return this.statsReportMonth;
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // WP-A · 17: el mes vigente del servidor, no el del navegador; si todavía
+    // no llegó, el primero de la lista, que sí tiene pedidos.
+    if (this.serverNow) return this.serverNow.slice(0, 7);
+    return this.availableReportMonths[0]?.value ?? '';
+  }
+
+  /** WP-A · 17: se dice cuando el mes que se está viendo no tiene movimientos. */
+  get avisoMesEstadisticasSinDatos(): string {
+    const mes = this.activeReportMonth;
+    if (!mes || this.isLoadingStats || this.reportOrders.length) {
+      return '';
+    }
+    const conDatos = this.availableReportMonths.filter((m) => m.value !== mes);
+    const nombre = this.availableReportMonths.find((m) => m.value === mes)?.label ?? mes;
+    return conDatos.length
+      ? `${nombre} no tiene pedidos registrados. Elige otro mes: ${conDatos.slice(0, 6).map((m) => m.label).join(', ')}.`
+      : `${nombre} no tiene pedidos registrados.`;
   }
 
   private isInReportMonth(isoDate?: string): boolean {
@@ -3216,7 +3275,10 @@ export class AdminComponent implements OnInit {
   }
 
   downloadCommissionsReport(): void {
-    const prevMonthKey = this.getPrevMonthKey();
+    // WP-A · 17: el archivo se llama y trae los datos del mes **seleccionado**.
+    // Renata mandó como constancia del cierre de marzo un archivo que se
+    // llamaba agosto de 2026 y se contradecía entre sus dos hojas.
+    const prevMonthKey = this.commissionsMonthKey;
     // First fetch commission summary for prev month, then generate report
     this.adminControl.getCommissionsSummary(prevMonthKey).subscribe({
       next: (summary) => this._buildAndDownloadCommissionsReport(prevMonthKey, summary),
@@ -3804,6 +3866,10 @@ export class AdminComponent implements OnInit {
     this.receiptFile = file;
   }
 
+  /**
+   * Último recurso mientras `GET /commissions/periodos` no ha respondido.
+   * Quien decide el mes es el servidor (`commissionsMonthKey`).
+   */
   private getPrevMonthKey(date = new Date()): string {
     const year = date.getUTCFullYear();
     const month = date.getUTCMonth();
@@ -3826,7 +3892,7 @@ export class AdminComponent implements OnInit {
     this.isUploadingReceipt = true;
     const file = this.receiptFile;
     const customerId = this.receiptTargetCustomer.id;
-    const monthKey = this.receiptTargetCustomer.commissionsPrevMonthKey || this.getPrevMonthKey();
+    const monthKey = this.receiptTargetCustomer.commissionsPrevMonthKey || this.commissionsMonthKey;
     this.readFileAsDataUrl(file)
       .pipe(
         switchMap((dataUrl) => {

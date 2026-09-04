@@ -857,6 +857,9 @@ def build_commission_summary(customer: dict, month_key: str, prev_month_key: str
         "hasConfirmed": confirmado > 0,
         "clabeOnFile": bool(clabe),
         "clabeLast4": clabe[-4:] if clabe else "",
+        # Paquete A · propuesta 1: el formulario único muestra el banco junto
+        # a la terminación, para que la socia reconozca su cuenta.
+        "bankInstitution": str(customer.get("bankInstitution") or ""),
         "payoutDay": int(payout_day),
         "paidTotal": float(confirmado_previo),
         "receiptUrl": receipt_url,
