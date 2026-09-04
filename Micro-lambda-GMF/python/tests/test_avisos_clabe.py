@@ -172,3 +172,16 @@ def test_el_aviso_de_activacion_caduca_a_los_30_dias_y_el_de_comision_a_los_45(u
     esperado = lambda d: (datetime.strptime(hoy, "%Y-%m-%d") + timedelta(days=d)).strftime("%Y-%m-%d")
     assert utils._get_by_id("NOTIFICATION", nid_a)["endAt"] == esperado(30)
     assert utils._get_by_id("NOTIFICATION", nid_c)["endAt"] == esperado(45)
+
+
+def test_pedir_la_clabe_sin_comisiones_no_promete_dinero_que_no_existe(utils):
+    """Renata: *"Le estamos prometiendo dinero a dos socias que según el
+    sistema no tienen nada"*."""
+    import dashboard_common, pagos_handlers
+    utils._put_entity("CUSTOMER", 8, {"entityType": "customer", "customerId": 8, "name": "Ximena",
+                                      "email": "ximena@test.com"})
+    pagos_handlers._aviso_panel_clabe(8, "2027-03", "recordatorio")
+    aviso = dashboard_common._active_notifications_for_customer(8)[0]
+    assert "$0.00" not in aviso["description"]
+    assert "comisiones confirmadas" not in aviso["description"]
+    assert aviso["description"].startswith("Nos falta tu CLABE")

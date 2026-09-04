@@ -521,6 +521,11 @@ def _aviso_panel_clabe(customer_id, month_key: str, motivo: str = "comision") ->
     hoy = _hoy()
     plantilla, dias = _TEXTOS_AVISO_CLABE[clave]
     monto = utils._to_decimal(utils._get_ledger_month(customer_id, month_key).get("totalConfirmed", 0))
+    if clave == "comision" and monto <= 0:
+        # La gerente puede pedir la CLABE por adelantado; ni entonces se
+        # promete un dinero que todavía no existe.
+        plantilla = ("Nos falta tu CLABE para poder depositarte. Regístrala en Comisiones "
+                     "y el día {dia} te transferimos lo que tengas confirmado.")
     texto = plantilla.format(monto=_pesos(monto), dia=_dia_de_pago())
     titulo = ("Registra tu CLABE: ya te activaste" if clave == "activacion"
               else "Registra tu CLABE para cobrar tus comisiones")
