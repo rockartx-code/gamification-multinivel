@@ -1,0 +1,383 @@
+{
+ "persona": "Marisol Cepeda, 41",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T21:39:12.131Z",
+ "tareas": [
+  {
+   "quiero": "entrar al sistema para pagar las comisiones del mes pasado",
+   "esperaba": null,
+   "t": 6,
+   "segundos": 48,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "es dia 10, toca pagar comisiones de abril. Espero una pantalla de comisiones con la lista de a quien le toca.",
+     "segundosDesdeLoAnterior": 6,
+     "t": 6
+    },
+    {
+     "texto": "no hay nada de administracion a la vista: primero cierro el aviso de privacidad y entro con mi correo de trabajo.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 29
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 7,
+   "confianza": 5,
+   "comentario": "entré directo; el panel abre en Pedidos y en el menú veo FINANZAS > Comisiones y pagos"
+  },
+  {
+   "quiero": "pagar las comisiones de abril a quien le toque",
+   "esperaba": null,
+   "t": 54,
+   "segundos": 68,
+   "logrado": true,
+   "clicsBase": 3,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "voy a Comisiones y pagos; espero ver el mes de abril, quien tiene saldo y un boton de pagar.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 54
+    },
+    {
+     "texto": "la pantalla se llama \"Clientes\" aunque el menu dice \"Comisiones y pagos\", y me abrio la ficha de Gerardo sola. El bloque de pagos esta hasta abajo y dice $0.00 en abril. Reviso que meses ofrece el selector.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 73
+    },
+    {
+     "texto": "el sistema dice claro \"Nadie tiene comisiones en abril 2027: ni confirmadas, ni por confirmar, ni bloqueadas\". Lo cruzo con la lista de clientes: los tres traen \"Mes anterior $0\". No hay a quien depositarle.",
+     "segundosDesdeLoAnterior": 49,
+     "t": 122
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el selector solo ofrece \"abril 2027\" y dice \"Solo se listan los meses con comisiones\", pero enseguida dice \"Comisión reconocida de abril 2027: $0.00\" y la tabla dice \"Nadie\". No se si es que nadie gano nada o si algo no se calculo",
+     "pantalla": "#/admin/comisiones",
+     "t": 93
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "no hubo nada que pagar; la frase final es clarisima, pero para llegar a ella tuve que bajar toda la ficha de un cliente que se abrio sola"
+  },
+  {
+   "quiero": "revisar que no haya pagos de clientes sin registrar",
+   "esperaba": null,
+   "t": 122,
+   "segundos": 240,
+   "logrado": false,
+   "clicsBase": 4,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "vi un boton \"Conciliar pagos\" en Pedidos; suena a eso. Tambien hay 4 pedidos \"Pendiente de pago\" de hace 5 dias que me huelen a pagos perdidos.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 122
+    },
+    {
+     "texto": "el cuadro viene en \"Ultimas 72 horas\" pero mis pendientes son del 04/05, hace 5 dias: si le doy asi no revisa nada. Cambio a \"Ultimos 7 dias\".",
+     "segundosDesdeLoAnterior": 18,
+     "t": 140
+    },
+    {
+     "texto": "si la herramienta no ve nada, me toca abrir ficha por ficha. Abro el primer pendiente a ver si trae rastro de pago.",
+     "segundosDesdeLoAnterior": 133,
+     "t": 273
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la ventana dice \"Prueba con un periodo mas largo\" cuando ya estoy en 90 dias, que es el maximo que ofrece",
+     "pantalla": "#/admin/pedidos",
+     "t": 233
+    },
+    {
+     "texto": "en el detalle del pedido no viene el nombre del cliente (dice \"Cliente\"), ni telefono, ni referencia de pago: no tengo como saber si esa persona ya pago",
+     "pantalla": "#/admin/pedidos",
+     "t": 336
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: el periodo era una lista desplegable, no botones: tuve que abrirla y elegir \"Ultimos 7 dias\"",
+     "t": 180
+    },
+    {
+     "texto": "me dice \"No hay pedidos pendientes de pago en el periodo que elegiste (ultimos 7 dias)\" mientras en la misma pantalla veo cuatro pedidos Pendiente de pago del 04/05/2027 con \"5 dias\" de antiguedad",
+     "pantalla": null,
+     "t": 202
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "la conciliacion no encuentra los pedidos pendientes ni en 90 dias, asi que no puedo confirmar que no haya pagos sin registrar"
+  },
+  {
+   "quiero": "armar el cierre de abril para contarselo al dueño",
+   "esperaba": null,
+   "t": 362,
+   "segundos": 124,
+   "logrado": false,
+   "clicsBase": 12,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "busco un reporte del mes. Pruebo Estadisticas.",
+     "segundosDesdeLoAnterior": 88,
+     "t": 362
+    },
+    {
+     "texto": "en la pantalla de Comisiones vi un boton \"Exportar abril de 2027\". A ver si de ahi sale el cierre del mes.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 395
+    },
+    {
+     "texto": "el Excel de abril trae una hoja con \"Motivo de perdida: Nivel no configurado\" y tasa 0%. Si los niveles no estan configurados, nadie gana nada aunque venda. Voy a Configuracion a verlo.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 424
+    },
+    {
+     "texto": "en Configuracion SI hay \"Niveles de comision\": Generacion 1 al 10%, luego 5, 4, 3 y 2%. Entonces lo del Excel (\"Nivel no configurado\", tasa 0%) no me cuadra.",
+     "segundosDesdeLoAnterior": 62,
+     "t": 486
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en Estadisticas el unico periodo que puedo elegir es \"Mayo de 2027\"; abril, que es el mes que tengo que reportar, no aparece",
+     "pantalla": "#/admin/estadisticas",
+     "t": 395
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "ver si el sistema me pide confirmar antes de mover dinero",
+   "esperaba": null,
+   "t": 486,
+   "segundos": 171,
+   "logrado": false,
+   "clicsBase": 12,
+   "teclasBase": 0,
+   "clics": 10,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "no voy a marcar pagado un pedido sin comprobante, pero quiero ver si al menos me pregunta antes. Le pico a \"Marcar como pagado\" del pedido de $129 y si sale una confirmacion, la cancelo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 486
+    },
+    {
+     "texto": "recargo para comprobar que lo que vi es de verdad y no un espejismo de pantalla.",
+     "segundosDesdeLoAnterior": 118,
+     "t": 604
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el pedido que marque pagado ahora dice \"6 dias\" de antiguedad y los otros del mismo 04/05/2027 siguen diciendo \"5 dias\"",
+     "pantalla": "#/admin/pedidos",
+     "t": 657
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le di a \"Marcar como pagado\" esperando una confirmacion y el pedido se fue a Pagado de un solo clic, sin preguntarme nada, sin pedirme referencia ni fecha del deposito",
+     "pantalla": null,
+     "t": 527
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "el sistema no confirma nada antes de mover dinero: un clic pasa el pedido a Pagado, sin referencia ni fecha, y ya no hay como regresarlo"
+  },
+  {
+   "quiero": "avisarle al dueño como cerro abril",
+   "esperaba": null,
+   "t": 657,
+   "segundos": 45,
+   "logrado": true,
+   "clicsBase": 22,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "le escribo por WhatsApp con lo que pude comprobar en pantalla y con lo que no pude.",
+     "segundosDesdeLoAnterior": 53,
+     "t": 657
+    },
+    {
+     "texto": "revise las demas pestañas: TODOS los pedidos, hasta los entregados y el cancelado, son del 4 y 5 de mayo. En abril no hubo una sola venta. Entonces el cero de comisiones si es real, y se lo tengo que aclarar al patrón para no alarmarlo de gratis.",
+     "segundosDesdeLoAnterior": 44,
+     "t": 702
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Patrón, buen día. Ya hice el corte del día 10 y le resumo cómo cerró abril:\n1) COMISIONES DE ABRIL: no le deposité a nadie. La pantalla dice textual \"Nadie tiene comisiones en abril 2027: ni confirmadas, ni por confirmar, ni bloqueadas\" y el resumen \"Comisión reconocida de abril 2027: $0.00\". Bajé el Excel \"comisiones-2027-04.xlsx\" y ahí sale una sola línea: Paulina Ríos → Gerardo Lomelí, nivel L1, tasa de comisión 0 %, motivo de pérdida \"Nivel no configurado\". Le digo esto porque en Configuración SÍ están los Niveles de comisión (Generación 1 al 10 %, luego 5, 4, 3 y 2 %), o sea que el reporte dice que no hay nivel configurado cuando sí lo hay. O el mes de veras salió en ceros, o estamos dejando de pagarle a la gente. Necesito que alguien de sistemas me diga cuál de las dos.\n2) PAGOS SIN REGISTRAR: no le puedo firmar que no haya. \"Conciliar pagos\" no sirve: la corrí en 72 horas, 7 días, 30 días y 90 días (el máximo) y las cuatro veces contestó \"Revisados 0 · Acreditados 0 · Sin pago 0\" y \"No hay pedidos pendientes de pago en el periodo que elegiste... Prueba con un periodo más largo\", mientras en esa misma pantalla yo estaba viendo cuatro pedidos en Pendiente de pago del 04/05/2027 con 5 días de antigüedad. Le pide a uno un periodo más largo cuando ya está en el más largo que ofrece.\n3) LO QUE SÍ MOVÍ: le di a \"Marcar como pagado\" en el pedido ORD-BD349B9F ($129) esperando que me preguntara \"¿seguro?\" y no me preguntó nada: de un clic se fue a Pagado, sin pedirme referencia del depósito, ni monto, ni fecha, y ya no hay manera de regresarlo desde el sistema (en la pestaña Pagado las únicas opciones son \"Registrar envío\" y \"Cancelar pedido\"). El tablero pasó de $5,676 a $5,805 cobrado. Se lo reporto yo misma para que quede asentado; si resulta que ese cliente no pagó, hay que corregirlo por contabilidad porque el sistema no me deja deshacerlo.\n4) COMO QUEDÓ LA OPERACIÓN HOY: 12 pedidos cargados, $5,805 cobrado y $2,787 por cobrar; 3 pendientes de pago, 3 pagados sin enviar (el más viejo de 6 días), 4 entregados, 1 cancelado y 1 devolución en curso. Estadísticas me dice $9,921 de ventas del periodo, que no cuadra con los $5,805 + $2,787 del tablero.\n5) CAJA: me llegó el comprobante del corte CUT-2B3D81B9 del 5 de mayo con diferencia de $40 a favor y la nota dice \"Sobran $40 y no sé de dónde salieron... estuve cobrando con el usuario de la gerente porque el mío no abre la caja\". Hay que darle sus permisos a la muchacha de caja, porque mientras tanto todo lo que cobra queda a mi nombre.\nDos cosas que le pido: que revisen por qué el reporte de comisiones dice \"Nivel no configurado\", y que \"Marcar como pagado\" pida confirmación y referencia. Quedo pendiente.",
+     "t": 657,
+     "tarea": "avisarle al dueño como cerro abril"
+    },
+    {
+     "aQuien": "superior",
+     "texto": "Le corrijo un dato del mensaje anterior, patrón: ya revisé pedido por pedido en todas las pestañas (pendientes, pagados, entregados, cancelado y devolución) y TODOS son del 4 y 5 de mayo de 2027. En abril no hubo una sola venta, así que el cero de comisiones de abril sí es real y no hay a quién depositarle el día 10.\nLo que sí sostengo es lo demás: que el reporte de abril traiga el motivo \"Nivel no configurado\" cuando los niveles sí están capturados, que \"Conciliar pagos\" conteste \"Revisados 0\" con pedidos pendientes a la vista, y que \"Marcar como pagado\" mueva dinero de un clic sin preguntar ni dejar deshacer.\nOtro detalle chiquito: en la lista, dos pedidos del mismo 04/05/2027 me marcan uno \"5 días\" y otro \"6 días\" de antigüedad, y hay dos pedidos entregados con total $0. Y en casi todos los renglones el cliente aparece nada más como \"Cliente\", sin nombre ni teléfono, así que si tuviera que cobrarles no sabría a quién llamarle.",
+     "t": 702,
+     "tarea": "avisarle al dueño como cerro abril"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "el cierre lo armé a mano juntando el tablero, el Excel de abril y las pestañas una por una; no hay una pantalla que diga \"así cerró el mes\""
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "si la conciliacion no ve pedidos que yo veo en la lista de atras, no puedo asegurarle al dueño que no hay pagos sin registrar",
+   "t": 202,
+   "tarea": "revisar que no haya pagos de clientes sin registrar"
+  },
+  {
+   "emocion": "susto",
+   "intensidad": 4,
+   "porque": "moví $129 a \"cobrado\" sin quererlo y no veo como deshacerlo",
+   "t": 527,
+   "tarea": "ver si el sistema me pide confirmar antes de mover dinero"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Patrón, buen día. Ya hice el corte del día 10 y le resumo cómo cerró abril:\n1) COMISIONES DE ABRIL: no le deposité a nadie. La pantalla dice textual \"Nadie tiene comisiones en abril 2027: ni confirmadas, ni por confirmar, ni bloqueadas\" y el resumen \"Comisión reconocida de abril 2027: $0.00\". Bajé el Excel \"comisiones-2027-04.xlsx\" y ahí sale una sola línea: Paulina Ríos → Gerardo Lomelí, nivel L1, tasa de comisión 0 %, motivo de pérdida \"Nivel no configurado\". Le digo esto porque en Configuración SÍ están los Niveles de comisión (Generación 1 al 10 %, luego 5, 4, 3 y 2 %), o sea que el reporte dice que no hay nivel configurado cuando sí lo hay. O el mes de veras salió en ceros, o estamos dejando de pagarle a la gente. Necesito que alguien de sistemas me diga cuál de las dos.\n2) PAGOS SIN REGISTRAR: no le puedo firmar que no haya. \"Conciliar pagos\" no sirve: la corrí en 72 horas, 7 días, 30 días y 90 días (el máximo) y las cuatro veces contestó \"Revisados 0 · Acreditados 0 · Sin pago 0\" y \"No hay pedidos pendientes de pago en el periodo que elegiste... Prueba con un periodo más largo\", mientras en esa misma pantalla yo estaba viendo cuatro pedidos en Pendiente de pago del 04/05/2027 con 5 días de antigüedad. Le pide a uno un periodo más largo cuando ya está en el más largo que ofrece.\n3) LO QUE SÍ MOVÍ: le di a \"Marcar como pagado\" en el pedido ORD-BD349B9F ($129) esperando que me preguntara \"¿seguro?\" y no me preguntó nada: de un clic se fue a Pagado, sin pedirme referencia del depósito, ni monto, ni fecha, y ya no hay manera de regresarlo desde el sistema (en la pestaña Pagado las únicas opciones son \"Registrar envío\" y \"Cancelar pedido\"). El tablero pasó de $5,676 a $5,805 cobrado. Se lo reporto yo misma para que quede asentado; si resulta que ese cliente no pagó, hay que corregirlo por contabilidad porque el sistema no me deja deshacerlo.\n4) COMO QUEDÓ LA OPERACIÓN HOY: 12 pedidos cargados, $5,805 cobrado y $2,787 por cobrar; 3 pendientes de pago, 3 pagados sin enviar (el más viejo de 6 días), 4 entregados, 1 cancelado y 1 devolución en curso. Estadísticas me dice $9,921 de ventas del periodo, que no cuadra con los $5,805 + $2,787 del tablero.\n5) CAJA: me llegó el comprobante del corte CUT-2B3D81B9 del 5 de mayo con diferencia de $40 a favor y la nota dice \"Sobran $40 y no sé de dónde salieron... estuve cobrando con el usuario de la gerente porque el mío no abre la caja\". Hay que darle sus permisos a la muchacha de caja, porque mientras tanto todo lo que cobra queda a mi nombre.\nDos cosas que le pido: que revisen por qué el reporte de comisiones dice \"Nivel no configurado\", y que \"Marcar como pagado\" pida confirmación y referencia. Quedo pendiente.",
+   "t": 657,
+   "tarea": "avisarle al dueño como cerro abril"
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Le corrijo un dato del mensaje anterior, patrón: ya revisé pedido por pedido en todas las pestañas (pendientes, pagados, entregados, cancelado y devolución) y TODOS son del 4 y 5 de mayo de 2027. En abril no hubo una sola venta, así que el cero de comisiones de abril sí es real y no hay a quién depositarle el día 10.\nLo que sí sostengo es lo demás: que el reporte de abril traiga el motivo \"Nivel no configurado\" cuando los niveles sí están capturados, que \"Conciliar pagos\" conteste \"Revisados 0\" con pedidos pendientes a la vista, y que \"Marcar como pagado\" mueva dinero de un clic sin preguntar ni dejar deshacer.\nOtro detalle chiquito: en la lista, dos pedidos del mismo 04/05/2027 me marcan uno \"5 días\" y otro \"6 días\" de antigüedad, y hay dos pedidos entregados con total $0. Y en casi todos los renglones el cliente aparece nada más como \"Cliente\", sin nombre ni teléfono, así que si tuviera que cobrarles no sabría a quién llamarle.",
+   "t": 702,
+   "tarea": "avisarle al dueño como cerro abril"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 6,
+  "coherencia": 4,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "cargada",
+   "seria",
+   "desconfiada"
+  ],
+  "mejorPantalla": "el tablero de Pedidos con sus pestañas por estado y el contador de \"SIGUIENTE\"",
+  "peorPantalla": "Comisiones y pagos, que se llama Clientes y me abre la ficha de alguien antes de enseñarme los pagos",
+  "seParece": "a un sistema contable de escritorio de los que usa el contador, no a algo hecho para el día 10 con prisa",
+  "recomendarias": 5,
+  "volverias": "sí, es mi trabajo, pero el día 10 voy a volver a sudar frío",
+  "comentario": "lee bonito y está en español, pero me deja mover dinero de un clic y no me deja comprobar lo que me pide comprobar. Para una gerencia eso es al revés de como debería ser."
+ },
+ "totales": {
+  "clics": 25,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 2,
+  "pantallas": 2,
+  "recargas": 0,
+  "atrases": 0
+ },
+ "pantallas": [
+  {
+   "ruta": "/",
+   "desde": 1788557958574,
+   "primerClicMs": 22898,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/pedidos",
+   "desde": 1788558556520,
+   "primerClicMs": 15945,
+   "clics": 1,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Código requerido para aplicar descuentos de cajero, pagos parciales, crédito y retiros de efectivo.",
+   "t": 427,
+   "tarea": "armar el cierre de abril para contarselo al dueño"
+  },
+  {
+   "texto": "El código debe tener al menos 4 caracteres.",
+   "t": 427,
+   "tarea": "armar el cierre de abril para contarselo al dueño"
+  },
+  {
+   "texto": "Documentos requeridos del cliente",
+   "t": 427,
+   "tarea": "armar el cierre de abril para contarselo al dueño"
+  },
+  {
+   "texto": "Obligatorio",
+   "t": 427,
+   "tarea": "armar el cierre de abril para contarselo al dueño"
+  }
+ ],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "en la lista de pedidos todos los clientes se llaman \"Cliente\", no veo nombres",
+   "pantalla": "#/admin/pedidos",
+   "t": 54
+  }
+ ],
+ "fin": "2026-09-04T21:51:05.415Z",
+ "duracionMin": 12
+}

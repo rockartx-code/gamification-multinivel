@@ -1,0 +1,466 @@
+{
+ "persona": "Nayeli Ocampo, 31",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-04T20:31:57.928Z",
+ "tareas": [
+  {
+   "quiero": "comprar dos cosas, una la proteína, para mí y para mi hermana",
+   "esperaba": null,
+   "t": 11,
+   "segundos": 143,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "me pasaron el link. Voy a ver qué es esto antes de dar mis datos.",
+     "segundosDesdeLoAnterior": 11,
+     "t": 11
+    },
+    {
+     "texto": "primero quito el aviso de privacidad para poder ver la tienda.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 40
+    },
+    {
+     "texto": "quiero la proteína (Finding Pro 500g, $800) y algo para mi hermana. El Naplus de $280 se ve bien.",
+     "segundosDesdeLoAnterior": 1,
+     "t": 40
+    },
+    {
+     "texto": "ahora el Naplus para mi hermana, que suda mucho en el gym. Tengo que encontrar SU botón, todos se llaman igual.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 61
+    },
+    {
+     "texto": "ya llevo los dos. Voy al carrito a ver cuánto sale con envío.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 71
+    },
+    {
+     "texto": "lleno mis datos. Soy de Puebla. Ojalá el envío no sea carísimo.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 91
+    },
+    {
+     "texto": "salió Estafeta $129 y DHL $219. Con la escuela no tengo prisa, me voy con el de $129. Total $1,209. Antes de pagar quiero ver el resumen.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 104
+    },
+    {
+     "texto": "ya. Le doy a Pagar.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 118
+    },
+    {
+     "texto": "me tranquiliza que ya diga cómo funciona una devolución antes de pagar: 48 horas si llegó dañado. Ahora sí, a pagar.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 131
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "me sale un aviso de privacidad encima de todo y abajo de cada producto dice \"6 PC\", \"9 PC\"… no sé qué es PC",
+     "pantalla": "#/",
+     "t": 40
+    },
+    {
+     "texto": "en el carrito me sale un reloj \"Corte de mes 21d 10h 58m\" y \"Cierre del mes de comisiones y de tu descuento por volumen\". Yo solo quiero comprar dos botes, no sé qué me están cobrando o descontando con eso",
+     "pantalla": "#/carrito",
+     "t": 91
+    },
+    {
+     "texto": "dice \"Envío desde $129\" pero abajo dice \"Con tu código postal ya calculamos el envío\". No sé cuánto voy a pagar hasta que ponga todo",
+     "pantalla": "#/carrito",
+     "t": 91
+    },
+    {
+     "texto": "el resumen dice \"Nivel de descuento: Inactivo\" y \"En modo socio habrías ahorrado $108\". Me hace sentir que estoy pagando de más por no ser del club",
+     "pantalla": "#/carrito",
+     "t": 117
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "comprar fue lo más fácil de todo; el resumen antes de pagar me dio confianza"
+  },
+  {
+   "quiero": "ver si me llegó el correo del pedido",
+   "esperaba": null,
+   "t": 168,
+   "segundos": 45,
+   "logrado": true,
+   "clicsBase": 8,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "siempre reviso el correo para tener el comprobante.",
+     "segundosDesdeLoAnterior": 37,
+     "t": 168
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 7,
+   "confianza": 5,
+   "comentario": "el correo \"Recibimos tu pago · pedido ORD-1818C2AF\" llegó solo y trae el desglose completo (cierre reconstruido: la llamada a lograr() se perdió por una carrera de escritura en el guion que manejaba el navegador, no por la app)"
+  },
+  {
+   "quiero": "devolver SOLO la proteína, que llegó estrellada, y saber quién paga el regreso, cuánto me devuelven y cuándo",
+   "esperaba": null,
+   "t": 1348,
+   "segundos": 388,
+   "logrado": true,
+   "clicsBase": 8,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "llegó el paquete. El bote de proteína viene estrellado y todo el polvo regado en la caja; el Naplus está bien. Voy a mi correo a ver qué me mandaron.",
+     "segundosDesdeLoAnterior": 1180,
+     "t": 1348
+    },
+    {
+     "texto": "el correo de entrega ya me dice casi todo: \"El envío de regreso lo paga quien devuelve… en «Llegó dañado o defectuoso» lo pagamos nosotros\". Pero quiero verlo en la pantalla y hacer el trámite.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 1386
+    },
+    {
+     "texto": "le doy a \"Devolver / Llegó dañado\" a ver si me deja escoger solo la proteína.",
+     "segundosDesdeLoAnterior": 75,
+     "t": 1461
+    },
+    {
+     "texto": "me gusta: \"No tienes que regresar todo: marca solo lo que quieres devolver\". Le pongo 1 a la proteína y nada al Naplus.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 1484
+    },
+    {
+     "texto": "ya me contestó lo que más me preocupaba: \"El envío de regreso lo pagamos nosotros: guarda tu ticket, te lo reembolsamos\".",
+     "segundosDesdeLoAnterior": 67,
+     "t": 1551
+    },
+    {
+     "texto": "me pide tres fotos: el producto, la caja y la guía. Ya las tomé con el celular.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 1581
+    },
+    {
+     "texto": "el envío original de $129 no me lo regresan porque me quedo con el Naplus. Me parece justo, aunque me hubiera gustado que lo dijeran con todas sus letras.",
+     "segundosDesdeLoAnterior": 59,
+     "t": 1640
+    },
+    {
+     "texto": "la dirección sí aparece, pero hasta DESPUÉS de confirmar. Antes de darle a \"Confirmar devolución\" yo no sabía a dónde iba a tener que ir a la paquetería.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 1665
+    },
+    {
+     "texto": "recargué y ahí sigue todo: folio, los $800 y la dirección. Y el correo llegó igual.",
+     "segundosDesdeLoAnterior": 72,
+     "t": 1736
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el botón dice \"Te quedan 6 días para pedirla\" pero abajo dice que si llegó dañado son 48 horas. ¿Cuál me aplica a mí?",
+     "pantalla": "#/orden/ORD-1818C2AF",
+     "t": 1461
+    },
+    {
+     "texto": "las tres razones se ven como tarjetas pero no parecen botones ni tienen bolita para marcar; le voy a picar encima a ver",
+     "pantalla": "#/devolver",
+     "t": 1529
+    },
+    {
+     "texto": "aquí me dice cuánto y cuándo, pero NO me dice a qué dirección mando el bote. Eso solo venía en el correo (Bodega Central, Av. Insurgentes Sur 1234)",
+     "pantalla": "#/devolver",
+     "t": 1640
+    },
+    {
+     "texto": "\"Lo pagamos nosotros\" pero igual tengo que pagar yo primero en la paquetería y esperar el reembolso. Con mi sueldo de maestra eso son como $150 que salen de mi bolsa",
+     "pantalla": "#/devolver",
+     "t": 1640
+    },
+    {
+     "texto": "en el paso 4 me preguntaron \"Si YA pagaste el envío de regreso, ¿cuánto te costó?\", pero apenas voy a ir a la paquetería. Ahora en el estado de la devolución ya no hay dónde ponerlo ni dónde subir el ticket",
+     "pantalla": "#/orden/.../devolucion",
+     "t": 1693
+    },
+    {
+     "texto": "en el correo se pegaron dos renglones: \"1 × Finding Pro 500g — $800.00El proceso, paso a paso\"",
+     "pantalla": "correo RET-3C6E604F",
+     "t": 1736
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el correo dice \"Tu pedido ORD-1818C2AF fue entregado\" pero la pantalla de seguimiento sigue diciendo \"Pagado\" y el botón \"Devolver / Llegó dañado\" está apagado con el texto \"Podrás pedir la devolución en cuanto marquemos el pedido como entregado. Ahora está pagado\"",
+     "pantalla": "#/orden/ORD-1818C2AF",
+     "t": 1421
+    },
+    {
+     "texto": "reintento: recargo la página a ver si se actualiza el estatus",
+     "t": 1421
+    },
+    {
+     "texto": "reintento: recargo para comprobar que la solicitud de verdad quedó guardada",
+     "t": 1693
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "devolver solo un producto fue más fácil de lo que esperaba; me dijeron quién paga el regreso, cuánto y cuándo sin tener que hablarle a nadie"
+  },
+  {
+   "quiero": "confirmar en la página de \"Devoluciones y reembolsos\" quién paga el envío de regreso",
+   "esperaba": null,
+   "t": 1736,
+   "segundos": 30,
+   "logrado": true,
+   "clicsBase": 16,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "quiero leerlo también en la página pública, para estar segura de que no me lo van a cambiar después.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1736
+    },
+    {
+     "texto": "la página de \"Devoluciones y reembolsos\" dice justo lo que me pasó: \"Llegó dañado o defectuoso · 48 horas · Lo pagamos nosotros\". Y la tabla de los tres motivos me quedó clarísima.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 1766
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 7,
+   "confianza": 5,
+   "comentario": "la política está escrita en cristiano y con tabla; es la mejor pantalla de todas"
+  },
+  {
+   "quiero": "avisar que ya mandé el paquete y decirles cuánto pagué de paquetería para que me lo reembolsen",
+   "esperaba": null,
+   "t": 1766,
+   "segundos": 58,
+   "logrado": false,
+   "clicsBase": 16,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "el paso 5 dice \"Manda el paquete con el folio escrito y avísanos\". ¿Avisarles por dónde? Vuelvo a mi devolución a buscar el botón.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1766
+    },
+    {
+     "texto": "a lo mejor está en el Centro de ayuda.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 1788
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en el Centro de ayuda se pegaron dos frases: \"Llegó mal o quiero devolverlo.Lee cómo funciona una devolución\"",
+     "pantalla": "#/ayuda",
+     "t": 1824
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "en el estado de mi devolución solo hay \"Regresar a mi pedido\", \"Ver mi pedido\" e \"Ir al inicio\". No hay ningún botón para avisar que ya mandé el paquete, ni para subir el ticket de Estafeta, ni para poner cuánto pagué",
+     "pantalla": "#/orden/ORD-1818C2AF/devolucion",
+     "t": 1788
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, buenas tardes. Soy Nayeli Ocampo, pedido ORD-1818C2AF, devolución RET-3C6E604F. Mi bote de proteína llegó estrellado y ya levanté la devolución. La página dice \"El envío de regreso lo pagamos nosotros: guarda tu ticket\", pero en mi devolución no hay dónde subir el ticket ni dónde poner cuánto me cobró Estafeta, y tampoco hay botón para avisarles que ya lo mandé. ¿Se los mando por aquí? ¿Y me lo depositan junto con los $800?",
+     "t": 1824,
+     "tarea": "avisar que ya mandé el paquete y decirles cuánto pagué de paquetería para que me lo reembolsen"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "no hay forma en la pantalla de avisar que mandé el paquete ni de reclamar el ticket del envío de regreso; hay que escribir por WhatsApp o correo"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "duda",
+   "intensidad": 3,
+   "porque": "todo el rato me empujan al \"modo socio\" y yo solo quiero mis dos botes",
+   "t": 117,
+   "tarea": "comprar dos cosas, una la proteína, para mí y para mi hermana"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "me dice de una vez \"te regresamos $800.00\" sin tener que preguntarle a nadie",
+   "t": 1503,
+   "tarea": "devolver SOLO la proteína, que llegó estrellada, y saber quién paga el regreso, cuánto me devuelven y cuándo"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "no voy a tener que pelear por los $129 del regreso",
+   "t": 1551,
+   "tarea": "devolver SOLO la proteína, que llegó estrellada, y saber quién paga el regreso, cuánto me devuelven y cuándo"
+  },
+  {
+   "emocion": "tranquilidad",
+   "intensidad": 4,
+   "porque": "me dieron folio RET-3C6E604F y me dicen a dónde mandarlo",
+   "t": 1665,
+   "tarea": "devolver SOLO la proteína, que llegó estrellada, y saber quién paga el regreso, cuánto me devuelven y cuándo"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 3,
+   "porque": "para lo único que tuve que escribir por WhatsApp fue para el dinero del envío de regreso, que es justo lo que me preocupaba",
+   "t": 1824,
+   "tarea": "avisar que ya mandé el paquete y decirles cuánto pagué de paquetería para que me lo reembolsen"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, buenas tardes. Soy Nayeli Ocampo, pedido ORD-1818C2AF, devolución RET-3C6E604F. Mi bote de proteína llegó estrellado y ya levanté la devolución. La página dice \"El envío de regreso lo pagamos nosotros: guarda tu ticket\", pero en mi devolución no hay dónde subir el ticket ni dónde poner cuánto me cobró Estafeta, y tampoco hay botón para avisarles que ya lo mandé. ¿Se los mando por aquí? ¿Y me lo depositan junto con los $800?",
+   "t": 1824,
+   "tarea": "avisar que ya mandé el paquete y decirles cuánto pagué de paquetería para que me lo reembolsen"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 8,
+  "legibilidad": 7,
+  "coherencia": 6,
+  "sensacionMovil": 6,
+  "tresAdjetivos": [
+   "clara",
+   "honesta",
+   "insistente"
+  ],
+  "mejorPantalla": "la de \"Devoluciones y reembolsos\", con su tablita de los tres motivos",
+  "peorPantalla": "el carrito en el celular: larguísimo, con un reloj de \"Corte de mes\" que no entiendo",
+  "seParece": "a una tienda mexicana bien portada; el trámite de devolución se siente más serio que el de mi banco",
+  "recomendarias": 8,
+  "volverias": "sí, y eso que me llegó rota la proteína: justo por cómo me trataron después",
+  "comentario": "Me dijeron sin que yo preguntara quién paga el regreso, cuánto me devuelven y cuándo. Lo que me falta es dónde entregarles el ticket de la paquetería y un botón de \"ya lo mandé\". Y que dejen de recordarme en cada pantalla que si fuera socia pagaría menos."
+ },
+ "totales": {
+  "clics": 16,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 8,
+  "pantallas": 9,
+  "recargas": 1,
+  "atrases": 4
+ },
+ "pantallas": [
+  {
+   "ruta": "/",
+   "desde": 1788553928775,
+   "primerClicMs": 28757,
+   "clics": 8,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-1818C2AF",
+   "desde": 1788554058729,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-1818C2AF",
+   "desde": 1788555303868,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-1818C2AF",
+   "desde": 1788555338950,
+   "primerClicMs": 39624,
+   "clics": 8,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-1818C2AF/devolucion",
+   "desde": 1788555611210,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/devoluciones",
+   "desde": 1788555654372,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-1818C2AF/devolucion",
+   "desde": 1788555683778,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/ayuda",
+   "desde": 1788555705529,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/devoluciones",
+   "desde": 1788555654373,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Todos los campos son obligatorios",
+   "t": 93,
+   "tarea": "comprar dos cosas, una la proteína, para mí y para mi hermana"
+  }
+ ],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T21:04:06.132Z",
+ "duracionMin": 32
+}

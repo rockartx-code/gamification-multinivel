@@ -1,0 +1,467 @@
+{
+ "persona": "Valeria Núñez, 27",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-04T20:00:43.532Z",
+ "tareas": [
+  {
+   "quiero": "comprar un bote de colágeno y saber cuánto pago en total antes de dar mis datos",
+   "esperaba": null,
+   "t": 9,
+   "segundos": 204,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 9,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "vi un anuncio en el celular; entro a ver si es una tienda normal donde pueda comprar un bote y ya",
+     "segundosDesdeLoAnterior": 9,
+     "t": 9
+    },
+    {
+     "texto": "lo primero que me tapa la pantalla es un aviso de privacidad; le doy \"Entendido\" para poder ver la tienda",
+     "segundosDesdeLoAnterior": 29,
+     "t": 38
+    },
+    {
+     "texto": "busco el que dice \"Colageno Hidrolizado\", $700. Antes de agregarlo quiero ver qué trae y cuánto sale con envío",
+     "segundosDesdeLoAnterior": 1,
+     "t": 39
+    },
+    {
+     "texto": "entonces tengo que picarle al botón chiquito que dice \"Ver detalle\"",
+     "segundosDesdeLoAnterior": 15,
+     "t": 54
+    },
+    {
+     "texto": "el único que sí trae descripción completa es el \"Finding Pro 500g\" de arriba, que también lleva colágeno. Pero yo quiero colágeno solo. Le voy a dar agregar al de $700 y ver cuánto sale con envío",
+     "segundosDesdeLoAnterior": 25,
+     "t": 79
+    },
+    {
+     "texto": "ah, \"Cantidad actual\" era lo que llevo en el carrito, no el stock. Pero cuando decía 0 pensé que estaba agotado",
+     "segundosDesdeLoAnterior": 11,
+     "t": 90
+    },
+    {
+     "texto": "ya cerré el detalle; ahora sí quiero ver el carrito y, sobre todo, cuánto sale el envío a Querétaro",
+     "segundosDesdeLoAnterior": 49,
+     "t": 139
+    },
+    {
+     "texto": "voy a picar \"Ver resumen\" a ver si ahí me dice el total con envío sin tener que dar mis datos",
+     "segundosDesdeLoAnterior": 21,
+     "t": 160
+    },
+    {
+     "texto": "dice \"Falta el envío: escribe tu CP para verlo completo\". Voy a poner nada más el CP de Querétaro, 76000, sin dar mi nombre ni mi teléfono, a ver si me dice el total",
+     "segundosDesdeLoAnterior": 16,
+     "t": 176
+    },
+    {
+     "texto": "con solo escribir el CP me aparecieron dos opciones: \"Estafeta Terrestre 3 a 5 días hábiles $129 MXN\" y \"DHL Express 1 a 2 días hábiles $219 MXN\", y abajo \"Total $829\". Esto sí me gustó: no tuve que dar mi nombre ni mi teléfono para saber cuánto pago",
+     "segundosDesdeLoAnterior": 20,
+     "t": 196
+    },
+    {
+     "texto": "el resumen ya sí dice \"Total $829.00\" con \"Subtotal sin IVA $714.66\" e \"IVA 16 % $114.34\", y aclara \"Los precios ya incluyen IVA; el envío también\". Eso está claro",
+     "segundosDesdeLoAnterior": 17,
+     "t": 213
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "arriba dice \"Meta para invitados\" y \"Regístrate para obtener beneficios ... desbloquear descuentos y seguimiento de tu red\". ¿Red de qué? Yo solo quiero un bote",
+     "pantalla": "#/",
+     "t": 38
+    },
+    {
+     "texto": "cada producto tiene una etiqueta verde tipo \"13 PC\" que lleva a \"modo-socio\". No sé qué es PC ni por qué me lo ponen si solo quiero comprar",
+     "pantalla": "#/",
+     "t": 38
+    },
+    {
+     "texto": "dice \"Todos los productos / 13 productos\" pero yo cuento 14 en la lista",
+     "pantalla": "#/",
+     "t": 38
+    },
+    {
+     "texto": "los productos de la tienda dicen todos \"Presentación y modo de uso en la etiqueta del producto.\" No dice ni cuántas cápsulas trae ni para cuánto me alcanza",
+     "pantalla": "#/",
+     "t": 54
+    },
+    {
+     "texto": "en el detalle dice \"Cantidad actual: 0\". ¿Está agotado? Porque el botón \"Agregar a carrito\" sí se deja picar. No entiendo si el 0 es el stock o lo que llevo en el carrito",
+     "pantalla": "#/ (detalle Colageno Hidrolizado)",
+     "t": 79
+    },
+    {
+     "texto": "el \"Detalle del producto\" trae exactamente la misma frase que la tarjeta: \"Presentación y modo de uso en la etiqueta del producto.\" No dice cuántos gramos trae ni para cuántos días alcanza",
+     "pantalla": "#/",
+     "t": 79
+    },
+    {
+     "texto": "me salió \"Agregado al carrito / +13 PC hacia tu meta\". Yo no tengo ninguna meta, entré a comprar un bote",
+     "pantalla": "#/",
+     "t": 90
+    },
+    {
+     "texto": "en el carrito, antes que nada, sale un reloj \"Corte de mes / 21d 3h 27m 12s / Cierre del mes de comisiones y de tu descuento por volumen\". Yo no tengo comisiones ni volumen; es una cuenta regresiva que me apura sin decirme para qué",
+     "pantalla": "#/carrito",
+     "t": 160
+    },
+    {
+     "texto": "dice \"Envío desde $129\". \"Desde\" quiere decir que puede ser más. Yo quiero saber CUÁNTO exactamente antes de escribir mi nombre y mi teléfono",
+     "pantalla": "#/carrito",
+     "t": 160
+    },
+    {
+     "texto": "la lista de estados está sin acentos: \"Queretaro\", \"Ciudad de Mexico\", \"Michoacan\", \"Nuevo Leon\", y el campo dice \"Pais\" con la opción \"Mexico\"",
+     "pantalla": "#/carrito",
+     "t": 160
+    },
+    {
+     "texto": "el resumen dice dos veces \"Subtotal $700\" y en ningún lado dice \"Total\". Además \"Nivel de descuento: Inactivo\" y \"Descuento aplicado: Sin descuento\", que no sé qué significan para mí",
+     "pantalla": "#/carrito (resumen)",
+     "t": 176
+    },
+    {
+     "texto": "dice \"Te faltan $0 para Meta de beneficios.\" ¿Me faltan cero? ¿Entonces ya la tengo o no?",
+     "pantalla": "#/carrito (resumen)",
+     "t": 176
+    },
+    {
+     "texto": "\"En modo socio, con $300 más de compra este mes tendrías 10 % de descuento.\" Otra vez me quieren meter a algo; yo solo quiero un bote",
+     "pantalla": "#/carrito (resumen)",
+     "t": 176
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué al nombre \"Colageno Hidrolizado\" y no pasó nada; el nombre del producto no es un enlace",
+     "pantalla": "#/",
+     "t": 54
+    },
+    {
+     "texto": "el avisito \"Agregado al carrito\" trae un botón \"Ver carrito\" que se ve pero NO se puede picar: la ventana del detalle del producto queda encima y se traga el toque. Le piqué varias veces y nada",
+     "pantalla": "#/ (detalle + aviso)",
+     "t": 130
+    },
+    {
+     "texto": "reintento: picar \"Ver carrito\" desde el aviso; no responde con el detalle abierto",
+     "t": 130
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 5,
+   "comentario": "Sí supe el total ($829) antes de dar mis datos, pero me costó llegar: primero tuve que adivinar que \"Ver detalle\" es el único modo de abrir el producto, el botón \"Ver carrito\" del aviso no se dejaba picar, y el total solo aparece después de escribir el CP en un formulario largo lleno de casillas que sí piden mis datos."
+  },
+  {
+   "quiero": "terminar de comprar el bote y que me digan cuándo me llega",
+   "esperaba": null,
+   "t": 213,
+   "segundos": 118,
+   "logrado": true,
+   "clicsBase": 9,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "ya sé que pago $829 con Estafeta. Lleno mis datos: nombre, teléfono, correo y la dirección de mi casa en Querétaro",
+     "segundosDesdeLoAnterior": 0,
+     "t": 213
+    },
+    {
+     "texto": "me quedo con Estafeta, $129, total $829. Le doy Pagar",
+     "segundosDesdeLoAnterior": 13,
+     "t": 226
+    },
+    {
+     "texto": "se creó la orden ORD-AB0806B2 \"Pendiente de pago\" con Total $829.00. Me late que ya me cobraron los datos pero todavía no pago",
+     "segundosDesdeLoAnterior": 20,
+     "t": 247
+    },
+    {
+     "texto": "voy a pagar con MercadoPago",
+     "segundosDesdeLoAnterior": 0,
+     "t": 247
+    },
+    {
+     "texto": "me mandó a una pantalla que dice \"Mercado Pago / Pago simulado · Finding'U / $829.00\" y \"Estás fuera de la tienda. Este es el checkout de la pasarela.\" Cobra exactamente lo que me dijeron, $829.00",
+     "segundosDesdeLoAnterior": 10,
+     "t": 257
+    },
+    {
+     "texto": "quiero comprobar que de verdad quedó: recargo la página de la orden",
+     "segundosDesdeLoAnterior": 26,
+     "t": 283
+    },
+    {
+     "texto": "a lo mejor el \"Centro de ayuda\" me dice en cuántos días llega a Querétaro",
+     "segundosDesdeLoAnterior": 25,
+     "t": 308
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "me dice \"3 a 5 días hábiles\" pero no me dice una fecha. Si compro hoy martes, ¿llega el lunes? ¿el miércoles? Quisiera ver \"llega entre el X y el Y\"",
+     "pantalla": "#/carrito",
+     "t": 226
+    },
+    {
+     "texto": "en \"ENVIAMOS A\" sale \"Ezequiel Montes, 148, Querétaro, Querétaro, QUE, 76000\": repite Querétaro dos veces y luego pone \"QUE\", que parece una clave del sistema, no algo que yo escribí",
+     "pantalla": "#/orden/ORD-AB0806B2",
+     "t": 247
+    },
+    {
+     "texto": "el botón \"Devolver / Llegó dañado\" está apagado y no dice por qué al tocarlo; abajo sí hay un párrafo que lo explica, pero el botón solo se ve muerto",
+     "pantalla": "#/orden/ORD-AB0806B2",
+     "t": 247
+    },
+    {
+     "texto": "en la orden no aparece por ningún lado la fecha en que llega, ni siquiera \"3 a 5 días hábiles\". Solo dice \"Preparación / Armando paquete\"",
+     "pantalla": "#/orden/ORD-AB0806B2",
+     "t": 247
+    },
+    {
+     "texto": "en \"PROGRESO\" el paso del pago se llama \"Pago / Conciliación y confirmación\". \"Conciliación\" es palabra de contadores, yo no sé qué me están diciendo",
+     "pantalla": "#/orden/ORD-AB0806B2",
+     "t": 308
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "recargué la orden ya pagada y en ningún lado dice cuándo me llega: ni una fecha, ni el \"3 a 5 días hábiles\" que sí decía el carrito",
+     "pantalla": "#/orden/ORD-AB0806B2",
+     "t": 308
+    },
+    {
+     "texto": "en el \"Centro de ayuda\" hay Contacto, Sucursales, Devoluciones, Facturación y Mi pedido, pero NO hay nada de envíos ni de cuánto tarda en llegar",
+     "pantalla": "#/ayuda",
+     "t": 331
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, acabo de pagar el pedido ORD-AB0806B2 (colágeno, $829, Estafeta) y en la página del pedido no me dice ninguna fecha. ¿Qué día me llega a Querétaro? Y otra duda: en la tienda cada producto tiene una etiqueta verde que dice \"13 PC\", ¿qué es PC?",
+     "t": 331,
+     "tarea": "terminar de comprar el bote y que me digan cuándo me llega"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Sí compré y sí me llegó el correo \"Recibimos tu pago · pedido ORD-AB0806B2\" con el desglose exacto. Lo que NO logré es saber cuándo llega: la orden no trae fecha de entrega ni el \"3 a 5 días hábiles\" del carrito, y el Centro de ayuda no tiene sección de envíos."
+  },
+  {
+   "quiero": "entender qué son las etiquetas \"13 PC\" y la \"Meta\" que salen por toda la tienda",
+   "esperaba": null,
+   "t": 331,
+   "segundos": 56,
+   "logrado": false,
+   "clicsBase": 12,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "desde el primer momento vi \"6 PC\", \"13 PC\", \"Meta para invitados\", \"+13 PC hacia tu meta\" y \"Te faltan $0 para Meta de beneficios\". Voy a picarle a la etiqueta para ver qué es",
+     "segundosDesdeLoAnterior": 23,
+     "t": 331
+    },
+    {
+     "texto": "la página \"MODO SOCIO\" sí define PC: \"PC son los puntos de lista de cada producto (1 PC ≈ $50 de precio de lista)\". Pero para enterarme tuve que entrar a una página larguísima de comisiones, generaciones, VP, VG, compresión dinámica y una calculadora. Yo solo quería saber qué era la etiqueta verde de mi bote",
+     "segundosDesdeLoAnterior": 31,
+     "t": 362
+    },
+    {
+     "texto": "voy a picarle al chip que dice \"Meta para invitados\" en la tienda a ver si ahí me explican",
+     "segundosDesdeLoAnterior": 0,
+     "t": 362
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la página dice \"Todos los números salen de la configuración vigente (plan abril-2026)\". Estamos en mayo de 2027; \"plan abril-2026\" suena a que está viejo, y además parece nombre de archivo del sistema",
+     "pantalla": "#/modo-socio",
+     "t": 362
+    },
+    {
+     "texto": "en ningún lado de esta página aparece la palabra \"Meta\", y sin embargo el encabezado de la tienda dice \"Meta para invitados\" y el resumen decía \"Te faltan $0 para Meta de beneficios\"",
+     "pantalla": "#/modo-socio",
+     "t": 362
+    },
+    {
+     "texto": "el botón dice \"Registrate\" sin acento, aunque el título de arriba sí dice \"Regístrate para obtener beneficios\"",
+     "pantalla": "#/",
+     "t": 387
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el chip \"Meta para invitados\" del encabezado no se puede picar y no lleva a ninguna explicación",
+     "pantalla": "#/",
+     "t": 387
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "Sí encontré qué es \"PC\" (en la página del modo socio), pero \"Meta\" no se explica en ninguna parte y el chip \"Meta para invitados\" ni siquiera se puede tocar."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "voy a pagar $700 por un bote del que no me dicen ni cuánto trae",
+   "t": 79,
+   "tarea": "comprar un bote de colágeno y saber cuánto pago en total antes de dar mis datos"
+  },
+  {
+   "emocion": "irritación",
+   "intensidad": 3,
+   "porque": "en el celular le piqué como cinco veces a \"Ver carrito\" y no pasaba nada",
+   "t": 130,
+   "tarea": "comprar un bote de colágeno y saber cuánto pago en total antes de dar mis datos"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "el total apareció con solo el código postal, sin pedirme datos",
+   "t": 196,
+   "tarea": "comprar un bote de colágeno y saber cuánto pago en total antes de dar mis datos"
+  },
+  {
+   "emocion": "incertidumbre",
+   "intensidad": 3,
+   "porque": "ya pagué $829 y no sé qué día llega mi paquete",
+   "t": 331,
+   "tarea": "terminar de comprar el bote y que me digan cuándo me llega"
+  },
+  {
+   "emocion": "confusión",
+   "intensidad": 4,
+   "porque": "la tienda me habla de metas, puntos, redes y comisiones cuando yo solo quería un bote de colágeno",
+   "t": 387,
+   "tarea": "entender qué son las etiquetas \"13 PC\" y la \"Meta\" que salen por toda la tienda"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, acabo de pagar el pedido ORD-AB0806B2 (colágeno, $829, Estafeta) y en la página del pedido no me dice ninguna fecha. ¿Qué día me llega a Querétaro? Y otra duda: en la tienda cada producto tiene una etiqueta verde que dice \"13 PC\", ¿qué es PC?",
+   "t": 331,
+   "tarea": "terminar de comprar el bote y que me digan cuándo me llega"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 6,
+  "legibilidad": 6,
+  "coherencia": 4,
+  "sensacionMovil": 5,
+  "tresAdjetivos": [
+   "limpia",
+   "revuelta",
+   "insistente"
+  ],
+  "mejorPantalla": "el resumen del carrito con el total desglosado ($700 + $129 = $829, con el IVA aparte)",
+  "peorPantalla": "la tienda en el celular: puros productos que dicen lo mismo, con etiquetas de puntos que no entiendo",
+  "seParece": "a un catálogo de multinivel disfrazado de tienda; la parte de comprar sí se siente tienda, lo de arriba no",
+  "recomendarias": 6,
+  "volverias": "sí, si el bote sale bueno y me llega; pero me daría flojera volver a leer tanto",
+  "comentario": "Comprar se pudo y el total apareció sin pedirme datos, eso me tranquilizó. Lo que sobra es todo lo de puntos, metas, comisiones y \"modo socio\" metido en medio de mi compra; y lo que falta es lo básico: qué trae el bote y qué día llega."
+ },
+ "totales": {
+  "clics": 13,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 9,
+  "pantallas": 8,
+  "recargas": 1,
+  "atrases": 3
+ },
+ "pantallas": [
+  {
+   "ruta": "/",
+   "desde": 1788552052986,
+   "primerClicMs": 28909,
+   "clics": 9,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-AB0806B2",
+   "desde": 1788552300618,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-AB0806B2",
+   "desde": 1788552326935,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/ayuda",
+   "desde": 1788552351499,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/modo-socio",
+   "desde": 1788552374171,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/",
+   "desde": 1788552405491,
+   "primerClicMs": 1833,
+   "clics": 1,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/modo-socio",
+   "desde": 1788552374172,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/",
+   "desde": 1788552405492,
+   "primerClicMs": 1833,
+   "clics": 1,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Todos los campos son obligatorios",
+   "t": 213,
+   "tarea": "comprar un bote de colágeno y saber cuánto pago en total antes de dar mis datos"
+  }
+ ],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T20:08:56.356Z",
+ "duracionMin": 8
+}
