@@ -96,16 +96,27 @@ export interface ConciliacionResultado {
   hours?: number;
   /** Solo cuando MercadoPago no respondió para ningún pedido (502). */
   message?: string;
+  // ── Paquete G · ronda 26 · propuesta 26 ──
+  /** Cuántos pedidos revisó como mucho esta corrida. */
+  limit?: number;
+  /** Cuántos quedaron fuera del tope y faltan por revisar. */
+  pending?: number;
+  hasMore?: boolean;
+  /** Hora del **servidor**, para no fecharla con el reloj del navegador. */
+  startedAt?: string;
+  finishedAt?: string;
 }
 
 export interface ConciliacionCorrida extends ConciliacionResultado {
-  startedAt?: string;
-  finishedAt?: string;
   triggeredBy?: string;
 }
 
 export interface ConciliacionPayload {
   hours?: number;
+  /** Fecha de inicio (AAAA-MM-DD); el servidor la traduce a horas con su reloj. */ // paquete G · ronda 26
+  since?: string; // paquete G · ronda 26
+  /** Tope de pedidos por corrida: cada uno consulta a MercadoPago. */ // paquete G · ronda 26
+  limit?: number; // paquete G · ronda 26
   orderIds?: string[];
   dryRun?: boolean;
 }

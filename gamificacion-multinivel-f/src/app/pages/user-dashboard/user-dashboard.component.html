@@ -156,14 +156,23 @@
           </div>
 
           <!-- Corte de mes: en móvil va en flujo; en md+ se fija arriba derecha -->
-          <div class="kpi-mini relative mb-4 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
-            [ngClass]="getCountdownColor()" title="Cada dia sin accion reduce tu margen.">
+          <!-- G/29: siete de doce personas lo vieron y ninguna entendió qué se
+               acababa ("¿se me vence el carrito? ¿se acaba una oferta?"). El
+               rótulo dice de qué es el corte y la fecha va en letras junto al reloj. -->
+          <div class="kpi-mini relative mb-4 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6 md:max-w-[15rem]"
+            [ngClass]="getCountdownColor()" [attr.title]="cutoffLabel + ' · ' + cutoffDateText">
             <div class="label flex items-center gap-2">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
               Corte de mes
             </div>
             <div class="value text-lg tracking-tight">
               {{ countdownLabel() }}
+            </div>
+            <div class="mt-1 text-micro font-normal normal-case leading-snug opacity-90">
+              {{ cutoffLabel }}
+            </div>
+            <div class="text-micro font-normal normal-case opacity-80">
+              {{ cutoffDateText }}
             </div>
           </div>
 

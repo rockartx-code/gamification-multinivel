@@ -139,6 +139,13 @@ export interface DashboardSettings {
   cutoffMinute: number;
   userCode: string;
   networkGoal: number;
+  // ── Paquete G · ronda 26 · propuesta 29 ──
+  /** Instante absoluto del próximo corte, del servidor. Manda sobre cutoffDay. */
+  cutoffAt?: string;
+  /** Reloj del servidor al responder; con él se corrige la deriva del navegador. */
+  serverNow?: string;
+  /** De qué es el corte, con todas sus letras. */
+  cutoffLabel?: string;
 }
 
 export interface UserDashboardData {

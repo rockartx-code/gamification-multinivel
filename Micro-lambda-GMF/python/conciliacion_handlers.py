@@ -94,18 +94,69 @@ def _pedidos_pendientes(horas: int, order_ids: Optional[list]) -> list:
     ]
 
 
+#: Pedidos que se revisan en una corrida si no se pide otra cosa. Cada uno
+#: dispara una consulta a MercadoPago, así que con 90 días de ventana (propuesta
+#: 26) una corrida sin tope podría hacer cientos.
+LOTE_POR_OMISION = 50
+LOTE_MAXIMO = 200
+
+#: Ventana máxima que acepta el endpoint: 90 días.
+HORAS_MAXIMAS = 24 * 90
+
+
+def _horas_desde_fecha(fecha: str):
+    """Convierte "desde el 1 de marzo" en horas, con el reloj **del servidor**.
+
+    Devuelve `(horas, None)` o `(0, respuesta 400)`. Se redondea hacia arriba
+    para que el propio día pedido entre completo en la ventana.
+    """
+    try:
+        inicio = datetime.fromisoformat(fecha.replace("Z", "+00:00"))
+    except ValueError:
+        return 0, utils._json_response(400, {"message": "La fecha de inicio no es válida (usa el formato AAAA-MM-DD)"})
+    if inicio.tzinfo is None:
+        inicio = inicio.replace(tzinfo=timezone.utc)
+    segundos = (datetime.now(timezone.utc) - inicio).total_seconds()
+    if segundos <= 0:
+        return 0, utils._json_response(400, {"message": "La fecha de inicio tiene que ser anterior a hoy"})
+    horas = int(segundos // 3600) + 1
+    if horas > HORAS_MAXIMAS:
+        return 0, utils._json_response(400, {
+            "message": "Solo se puede conciliar hasta 90 días atrás; elige una fecha más reciente"})
+    return horas, None
+
+
 def handle_conciliar(body: dict, headers: dict) -> dict:
-    """POST /orders/conciliacion — {hours?, orderIds?, dryRun?}."""
+    """POST /orders/conciliacion — {hours?, limit?, orderIds?, dryRun?}."""
     import order_lambda  # anfitrión; import tardío para evitar el ciclo de importación
 
     cfg = _config_mp()
-    try:
-        horas_pedidas = body.get("hours")
-        horas = int(utils._to_decimal(cfg.get("reconciliationHours") if horas_pedidas in (None, "") else horas_pedidas))
-    except Exception:
-        return utils._json_response(400, {"message": "El número de horas no es válido"})
+    # Propuesta 26: la pantalla estaba clavada en 72 h y a Renata le encargaron
+    # revisar **todo marzo**; obtuvo "Revisados 0". Se puede pedir el rango en
+    # horas o por fecha de inicio, y la fecha la convierte **el servidor** con su
+    # propio reloj: el del navegador iba siete meses atrasado.
+    desde_pedido = str(body.get("since") or "").strip()
+    if desde_pedido:
+        horas, error = _horas_desde_fecha(desde_pedido)
+        if error:
+            return error
+    else:
+        try:
+            horas_pedidas = body.get("hours")
+            horas = int(utils._to_decimal(cfg.get("reconciliationHours") if horas_pedidas in (None, "") else horas_pedidas))
+        except Exception:
+            return utils._json_response(400, {"message": "El número de horas no es válido"})
     if horas <= 0 or horas > 24 * 90:
         return utils._json_response(400, {"message": "El número de horas debe estar entre 1 y 2160 (90 días)"})
+    # Propuesta 26: el rango se abre hasta 90 días, así que la corrida se acota.
+    try:
+        tope_pedido = body.get("limit")
+        tope = LOTE_POR_OMISION if tope_pedido in (None, "") else int(utils._to_decimal(tope_pedido))
+    except Exception:
+        return utils._json_response(400, {"message": "El número de pedidos por corrida no es válido"})
+    if tope < 1 or tope > LOTE_MAXIMO:
+        return utils._json_response(400, {
+            "message": f"El número de pedidos por corrida debe estar entre 1 y {LOTE_MAXIMO}"})
     order_ids = body.get("orderIds") if isinstance(body.get("orderIds"), list) else None
     dry_run = bool(body.get("dryRun"))
     actor = utils._extract_actor(headers)
@@ -113,7 +164,11 @@ def handle_conciliar(body: dict, headers: dict) -> dict:
     inicio = utils._now_iso()
     run_id = f"CONC-{utils.uuid.uuid4().hex[:8].upper()}"
     acreditados, sin_pago, errores = [], [], []
-    pendientes = _pedidos_pendientes(horas, order_ids)
+    candidatos = _pedidos_pendientes(horas, order_ids)
+    # Los más viejos primero: son los que llevan más tiempo cobrados y sin acreditar.
+    candidatos.sort(key=lambda p: str(p.get("createdAt") or ""))
+    pendientes = candidatos[:tope]
+    restantes = max(0, len(candidatos) - len(pendientes))
 
     for pedido in pendientes:
         oid = str(pedido.get("orderId") or "")
@@ -147,19 +202,26 @@ def handle_conciliar(body: dict, headers: dict) -> dict:
             continue
         acreditados.append({"orderId": oid, "paymentId": payment_id})
 
+    fin = utils._now_iso()
     corrida = {
-        "entityType": "reconciliation_run", "runId": run_id, "startedAt": inicio, "finishedAt": utils._now_iso(),
-        "hours": horas, "dryRun": dry_run, "checked": len(pendientes),
+        "entityType": "reconciliation_run", "runId": run_id, "startedAt": inicio, "finishedAt": fin,
+        "hours": horas, "limit": tope, "pending": restantes, "dryRun": dry_run, "checked": len(pendientes),
         "credited": acreditados, "unpaid": sin_pago, "errors": errores,
         "triggeredBy": str(actor.get("user_id") or "sistema"),
     }
     if not dry_run:
         utils._put_entity(ENTIDAD_CORRIDA, run_id, corrida)
-    utils._audit_event("orders.reconcile", headers, {"hours": horas, "dryRun": dry_run},
+    utils._audit_event("orders.reconcile", headers, {"hours": horas, "limit": tope, "dryRun": dry_run},
                        {"runId": run_id, "checked": len(pendientes), "credited": len(acreditados)})
 
+    # `startedAt`/`finishedAt` viajan en la respuesta (propuesta 26): el front
+    # escribía encima `new Date().toISOString()` y, con el navegador en 2026-09 y
+    # el mundo en 2027-04, la tarjeta "última corrida" quedaba fechada siete
+    # meses antes de existir.
     salida = {"runId": run_id, "checked": len(pendientes), "credited": acreditados, "unpaid": sin_pago,
-              "errors": errores, "dryRun": dry_run, "hours": horas}
+              "errors": errores, "dryRun": dry_run, "hours": horas, "limit": tope,
+              "pending": restantes, "hasMore": restantes > 0,
+              "startedAt": inicio, "finishedAt": fin}
     # Si MercadoPago no respondió para NINGÚN pedido consultado, la corrida no sirvió: 502.
     if pendientes and len(errores) == len(pendientes):
         return utils._json_response(502, {"message": "MercadoPago no respondió; no se pudo revisar ningún pedido", **salida})

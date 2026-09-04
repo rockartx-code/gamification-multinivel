@@ -200,3 +200,84 @@ def test_horas_invalidas_responden_400(order_lambda, utils, mercadopago):
 
 def test_la_ruta_esta_declarada_como_tarea_programada(order_lambda):
     assert ("POST", "/orders/conciliacion") in order_lambda.TAREAS_PROGRAMADAS
+
+
+# --- Propuesta 26 · conciliación con rango (paquete G) -------------------------
+
+def test_la_corrida_devuelve_la_hora_del_servidor_para_no_pisarla_con_la_del_navegador(
+        order_lambda, utils, mercadopago):
+    """*"la tarjeta «última corrida» muestra la hora del navegador"*.
+
+    El front escribía `finishedAt: new Date().toISOString()` sobre la respuesta,
+    y con el navegador en 2026-09 y el mundo en 2027-04 la corrida quedaba
+    fechada siete meses antes de existir. Ahora la respuesta ya trae la hora
+    del servidor y no hay nada que inventar.
+    """
+    oid = _pendiente_con_preferencia(order_lambda, utils)
+    mercadopago["pagos"][oid] = [("PAY-1", "approved")]
+    estado, cuerpo = _conciliar(order_lambda, {})
+    assert estado == 200
+    assert cuerpo["startedAt"].endswith("Z") and cuerpo["finishedAt"].endswith("Z")
+    assert cuerpo["finishedAt"] >= cuerpo["startedAt"]
+    guardada = utils._query_bucket("RECONCILIATION_RUN")[0]
+    assert cuerpo["finishedAt"] == guardada["finishedAt"]
+
+
+def test_el_rango_pedido_viaja_y_se_devuelve(order_lambda, utils, mercadopago):
+    """A Renata le encargaron revisar **todo marzo** y la pantalla estaba clavada
+    en 72 horas, así que obtuvo "Revisados 0"."""
+    oid = _pendiente_con_preferencia(order_lambda, utils)
+    mercadopago["pagos"][oid] = [("PAY-2", "approved")]
+    estado, cuerpo = _conciliar(order_lambda, {"hours": 744})
+    assert estado == 200 and cuerpo["hours"] == 744
+    assert cuerpo["checked"] >= 1, "con un mes de ventana el pedido entra"
+
+
+def test_la_corrida_se_acota_para_no_disparar_mil_consultas_a_mercadopago(
+        order_lambda, utils, mercadopago):
+    """Cada pedido candidato dispara una consulta a la pasarela: con 90 días de
+    ventana, sin tope, una sola corrida podría hacer cientos."""
+    ids = [_pendiente_con_preferencia(order_lambda, utils) for _ in range(4)]
+    for oid in ids:
+        mercadopago["pagos"][oid] = [("PAY-X", "approved")]
+    estado, cuerpo = _conciliar(order_lambda, {"hours": 2160, "limit": 2})
+    assert estado == 200
+    assert cuerpo["checked"] == 2 and len(mercadopago["consultas"]) == 2
+    assert cuerpo["limit"] == 2
+    # Y dice cuántos quedaron fuera, para que la gerente sepa que falta pasada.
+    assert cuerpo["pending"] == 2 and cuerpo["hasMore"] is True
+
+
+def test_desde_una_fecha_el_servidor_calcula_las_horas_con_su_propio_reloj(
+        order_lambda, utils, mercadopago):
+    """El "desde-hasta" de la pantalla: la fecha la traduce el servidor, porque
+    el reloj del navegador iba en 2026-09 con el mundo en 2027-04."""
+    ayer = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    estado, cuerpo = _conciliar(order_lambda, {"since": ayer})
+    assert estado == 200, cuerpo
+    assert 24 <= cuerpo["hours"] <= 49
+
+
+def test_una_fecha_imposible_se_rechaza_con_su_motivo(order_lambda, utils, mercadopago):
+    manana = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+    estado, cuerpo = _conciliar(order_lambda, {"since": manana})
+    assert estado == 400 and "anterior a hoy" in cuerpo["message"]
+
+    estado, cuerpo = _conciliar(order_lambda, {"since": "el martes"})
+    assert estado == 400 and "AAAA-MM-DD" in cuerpo["message"]
+
+    viejisima = (datetime.now(timezone.utc) - timedelta(days=200)).strftime("%Y-%m-%d")
+    estado, cuerpo = _conciliar(order_lambda, {"since": viejisima})
+    assert estado == 400 and "90 días" in cuerpo["message"]
+
+
+def test_sin_tope_explicito_hay_un_tope_por_omision(order_lambda, utils, mercadopago):
+    estado, cuerpo = _conciliar(order_lambda, {})
+    assert estado == 200 and cuerpo["limit"] == 50
+
+
+def test_un_tope_absurdo_se_rechaza_con_su_numero(order_lambda, utils, mercadopago):
+    estado, cuerpo = _conciliar(order_lambda, {"limit": 0})
+    assert estado == 400 and "1 y 200" in cuerpo["message"]
+    estado, cuerpo = _conciliar(order_lambda, {"limit": 5000})
+    assert estado == 400 and "1 y 200" in cuerpo["message"]

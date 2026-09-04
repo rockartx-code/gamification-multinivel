@@ -39,7 +39,10 @@ def test_las_plantillas_traen_las_cuatro_situaciones_y_sus_marcadores(modulos):
                                         "queryStringParameters": None, "body": ""}, None)
     assert r["statusCode"] == 200, r["body"]
     cuerpo = json.loads(r["body"])
-    assert set(cuerpo["templates"]) == {"bienvenida", "fria", "clabe_pendiente", "pedido_tardio"}
+    # La situación `activa` existía y no tenía plantilla: la pantalla rellenaba
+    # con `fria` y Gaby estuvo a un clic de mandarle "hace tiempo que no te
+    # vemos" a Julio, con el pedido entregado el viernes (propuesta 11).
+    assert set(cuerpo["templates"]) == {"bienvenida", "fria", "clabe_pendiente", "pedido_tardio", "activa"}
     assert "{nombre}" in cuerpo["templates"]["fria"]["text"] and "{coach}" in cuerpo["templates"]["fria"]["text"]
     assert "{monto}" in cuerpo["templates"]["clabe_pendiente"]["text"]
     assert "{folio}" in cuerpo["templates"]["pedido_tardio"]["text"]
@@ -143,3 +146,120 @@ def test_anotar_un_contacto_exige_el_privilegio_de_clientes(modulos, utils):
     r = _post(customer_lambda, "/customers/11/contacto", {"channel": "whatsapp", "message": "Hola"}, headers=SIN_PRIVILEGIO)
     assert r["statusCode"] == 403
     assert not utils._get_by_id("CUSTOMER", 11).get("contactNotes")
+
+
+# --- Propuesta 11 · la plantilla que decía lo contrario -----------------------
+
+def test_la_situacion_activa_ya_tiene_su_propia_plantilla(modulos):
+    """*"La plantilla no me ahorró trabajo, me puso una trampa."* (`gaby-2027-03-08.md`)
+
+    Gaby estuvo a un clic de mandarle "Hace tiempo que no te vemos por la
+    tienda" a Julio, cuyo pedido se había entregado el viernes, mientras el
+    mismo cuadro le decía arriba "Compró hace poco; no necesita contacto hoy".
+    """
+    customer_lambda, _ = modulos
+    r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/seguimiento/plantillas", "headers": COACH,
+                                        "queryStringParameters": None, "body": ""}, None)
+    plantillas = json.loads(r["body"])["templates"]
+    activa = plantillas["activa"]
+    assert activa["title"] == "Compró hace poco"
+    assert "{nombre}" in activa["text"] and "{coach}" in activa["text"] and "{producto}" in activa["text"]
+    # No dice lo contrario de lo que la pantalla acaba de decir.
+    assert "hace tiempo que no te vemos" not in activa["text"].lower()
+
+
+def test_la_plantilla_de_clabe_manda_a_mi_perfil_que_si_existe(modulos):
+    """La ruta "Mi cuenta → Datos bancarios" no existe en el producto."""
+    customer_lambda, _ = modulos
+    r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/seguimiento/plantillas", "headers": COACH,
+                                        "queryStringParameters": None, "body": ""}, None)
+    texto = json.loads(r["body"])["templates"]["clabe_pendiente"]["text"]
+    assert "Mi cuenta" not in texto and "Datos bancarios" not in texto
+    assert "Mi perfil" in texto and "#/perfil" in texto
+
+
+def test_toda_situacion_de_la_lista_tiene_plantilla(modulos):
+    """Mientras una situación no tenga plantilla no se propone ninguna: al
+    frontend no le queda hueco que rellenar con `fria`."""
+    _, seguimiento = modulos
+    assert set(seguimiento.PLANTILLAS) == set(seguimiento.SITUACIONES)
+
+
+def test_la_fila_de_una_clienta_activa_propone_su_plantilla_y_no_la_de_fria(modulos, utils):
+    """Julio, con el pedido entregado el viernes, sale con `templateKey` propia."""
+    customer_lambda, _ = modulos
+    utils._put_entity("CUSTOMER", 21, {"entityType": "customer", "customerId": 21, "name": "Julio Peña",
+                                       "email": "julio@test.com", "phone": "5544332211",
+                                       "createdAt": "2027-01-05T10:00:00Z"})
+    pedido = {"entityType": "order", "orderId": "ORD-JUL1", "customerId": 21, "customerName": "Julio Peña",
+              "status": "delivered", "total": 1209, "netTotal": 1209,
+              "items": [{"productId": "P1", "name": "Proteína", "quantity": 1}], "createdAt": utils._now_iso()}
+    utils._put_entity("ORDER", "ORD-JUL1", pedido)
+    utils._upsert_order_customer_history(pedido)
+    r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/seguimiento/hoy", "headers": COACH,
+                                        "queryStringParameters": {"scope": "all", "situation": "activa"}, "body": ""}, None)
+    assert r["statusCode"] == 200, r["body"]
+    filas = {f["name"]: f for f in json.loads(r["body"])["rows"]}
+    assert filas["Julio Peña"]["situation"] == "activa"
+    assert filas["Julio Peña"]["templateKey"] == "activa"
+
+
+def test_se_puede_anotar_un_contacto_con_la_plantilla_activa(modulos):
+    customer_lambda, _ = modulos
+    r = _post(customer_lambda, "/customers/11/contacto",
+              {"channel": "whatsapp", "templateKey": "activa", "message": "Hola Rosa, ¿cómo te fue con el Colágeno?"})
+    assert r["statusCode"] == 201, r["body"]
+    assert json.loads(r["body"])["note"]["templateKey"] == "activa"
+
+
+# --- Propuesta 12 · la bitácora firmada con nombre ----------------------------
+
+def test_la_nota_queda_firmada_con_el_nombre_y_conserva_el_id(modulos, utils):
+    """*"Si mañana Mireya lee «1803978000111», no sabe si fui yo o Alma, y le
+    vuelve a escribir a Julio. Para eso, me sigo yendo con mi libreta."*
+    (`gaby-2027-03-08.md`)
+
+    El nombre se resuelve **al escribir**: resolverlo al leer serían N nombres
+    por ficha, un N+1 de manual, y la vista Clientes ni carga empleados.
+    """
+    customer_lambda, _ = modulos
+    r = _post(customer_lambda, "/customers/11/contacto",
+              {"channel": "call", "message": "Llamé, quedó de pedir el viernes"})
+    assert r["statusCode"] == 201, r["body"]
+    nota = json.loads(r["body"])["note"]
+    assert nota["byName"] == "Ivonne Castro"
+    assert nota["by"] == "900", "el id se conserva: el cambio es aditivo"
+    guardada = utils._get_by_id("CUSTOMER", 11)["contactNotes"][-1]
+    assert guardada["byName"] == "Ivonne Castro" and guardada["by"] == "900"
+
+
+def test_la_nota_del_invitado_tambien_queda_firmada(modulos, utils):
+    customer_lambda, _ = modulos
+    r = _post(customer_lambda, "/customers/invitado/contacto",
+              {"channel": "call", "message": "Le avisé del bote estrellado", "guestEmail": "hector@test.com"})
+    assert r["statusCode"] == 201, r["body"]
+    assert json.loads(r["body"])["note"]["byName"] == "Ivonne Castro"
+    assert utils._get_by_id("GUEST_CONTACT", "hector@test.com")["notes"][-1]["byName"] == "Ivonne Castro"
+
+
+def test_sin_nombre_en_la_sesion_se_firma_con_el_de_la_ficha_de_empleada(modulos, utils):
+    customer_lambda, _ = modulos
+    utils._put_entity("EMPLOYEE", 901, {"entityType": "employee", "employeeId": 901, "name": "Alma Rivera"})
+    sin_nombre = {"x-user-id": "901", "x-user-role": "employee",
+                  "x-user-privileges": json.dumps({"access_screen_customers": True})}
+    r = _post(customer_lambda, "/customers/11/contacto",
+              {"channel": "call", "message": "Le marqué"}, headers=sin_nombre)
+    assert r["statusCode"] == 201, r["body"]
+    assert json.loads(r["body"])["note"]["byName"] == "Alma Rivera"
+
+
+def test_la_nota_escrita_desde_la_ficha_de_clientes_tambien_lleva_nombre(modulos, utils):
+    """La otra puerta de la bitácora: PATCH /customers/{id} con `note`."""
+    customer_lambda, _ = modulos
+    r = customer_lambda.lambda_handler({"httpMethod": "PATCH", "path": "/customers/11", "headers": COACH,
+                                        "queryStringParameters": None,
+                                        "body": json.dumps({"note": "Pasó a la sucursal por su pedido"})}, None)
+    assert r["statusCode"] == 200, r["body"]
+    nota = utils._get_by_id("CUSTOMER", 11)["contactNotes"][-1]
+    assert nota["byName"] == "Ivonne Castro"
+    assert "by" in nota, "el id se conserva: el cambio es aditivo"

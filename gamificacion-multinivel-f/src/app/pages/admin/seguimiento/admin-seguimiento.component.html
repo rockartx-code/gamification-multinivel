@@ -40,19 +40,19 @@
         (click)="setSituation(situation === 'bienvenida' ? '' : 'bienvenida')" [attr.title]="situationHelp('bienvenida')">
         <div class="text-mini text-gray-600">Bienvenida</div>
         <div class="mt-1 text-2xl font-extrabold text-main">{{ count('bienvenida') }}</div>
-        <div class="text-micro text-gray-500">Recién registradas, sin compra</div>
+        <div class="text-micro text-gray-500">Se registró y aún no compra</div>
       </button>
       <button type="button" class="rounded-2xl border p-3 text-left transition hover:border-gold-35"
         [class.border-gold-35]="situation === 'fria'" [class.border-olive-30]="situation !== 'fria'"
         (click)="setSituation(situation === 'fria' ? '' : 'fria')" [attr.title]="situationHelp('fria')">
-        <div class="text-mini text-gray-600">Frías</div>
+        <div class="text-mini text-gray-600">Sin comprar hace tiempo</div>
         <div class="mt-1 text-2xl font-extrabold text-main">{{ count('fria') }}</div>
         <div class="text-micro text-gray-500">{{ thresholds.coldDays }}+ días sin comprar</div>
       </button>
       <div class="rounded-2xl border border-olive-30 surface-soft p-3">
         <div class="text-mini text-gray-600">Invitados sin ficha</div>
         <div class="mt-1 text-2xl font-extrabold text-main">{{ guestCount }}</div>
-        <div class="text-micro text-gray-500">Compraron sin cuenta; se les puede crear ficha</div>
+        <div class="text-micro text-gray-500">Compró sin cuenta; se le puede crear ficha</div>
       </div>
     </div>
 

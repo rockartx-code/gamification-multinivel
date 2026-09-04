@@ -672,10 +672,93 @@ def handle_create_order(body, headers):
             pickup_payment = "online"
         order_item["pickupPaymentMethod"] = pickup_payment
 
+    # ── Paquete G · ronda 26 · propuesta 19: la casilla que guarda la dirección ──
+    guardada_id = _guardar_direccion_en_ficha(customer_id, delivery_type, body, shipping_address)
+    if guardada_id:
+        order_item["savedShippingAddressId"] = guardada_id
+        order_item["shippingAddressId"] = guardada_id
+
     utils._put_entity("ORDER", order_id, order_item)
     utils._upsert_order_customer_history(order_item)
     utils._audit_event("order.create", headers, body, {"orderId": order_id})
     return utils._json_response(201, {"order": order_item})
+
+
+# ── Paquete G · ronda 26 ──────────────────────────────────────────────────────
+# Propuesta 19. Ernesto palomeó "Guardar esta dirección para futuras compras",
+# le puso alias "Casa" y compró; el pedido guardó `shippingAddressLabel: 'Casa'`
+# y su ficha siguió con `addresses = 0`, como las siete del mundo sembrado:
+# `handle_create_order` no leía `saveShippingAddress` **nunca**. Y sin dirección
+# guardada la suscripción no se puede crear: en todo marzo no se dio de alta ni
+# una, y el mensaje mandaba a guardarla con la casilla que acababa de usar.
+
+def _clave_direccion(entrada: dict) -> str:
+    """Calle + número + CP, normalizados: con eso se decide si es la misma."""
+    partes = [str(entrada.get(campo) or "").strip().lower() for campo in ("street", "number", "postalCode")]
+    if not any(partes):
+        partes = [str(entrada.get("address") or "").strip().lower(), str(entrada.get("postalCode") or "").strip()]
+    return "|".join(" ".join(p.split()) for p in partes)
+
+
+def _guardar_direccion_en_ficha(customer_id, delivery_type: str, body: dict, shipping_address: dict):
+    """Escribe la dirección del pedido en la ficha con **un solo** `_update_by_id`.
+
+    Devuelve el id de la dirección guardada (o el de la que ya estaba) para que
+    el pedido deje rastro; `None` si no hay nada que guardar. Nunca tumba la
+    creación del pedido: guardar una dirección no puede costar una venta.
+    """
+    if not customer_id or not body.get("saveShippingAddress"):
+        return None
+    # La sucursal no es la casa de nadie.
+    if str(delivery_type or "").strip().lower() == "pickup":
+        return None
+
+    entrada = {
+        "recipientName": str(body.get("recipientName") or shipping_address.get("recipientName") or "").strip(),
+        "phone": str(body.get("phone") or shipping_address.get("phone") or "").strip(),
+        "street": str(body.get("street") or shipping_address.get("street") or "").strip(),
+        "number": str(body.get("number") or shipping_address.get("number") or "").strip(),
+        "address": str(body.get("address") or shipping_address.get("address") or "").strip(),
+        "city": str(body.get("city") or shipping_address.get("city") or "").strip(),
+        "state": str(body.get("state") or shipping_address.get("state") or "").strip(),
+        "postalCode": str(body.get("postalCode") or shipping_address.get("postalCode") or "").strip(),
+        "country": str(body.get("country") or shipping_address.get("country") or "MX").strip(),
+        "betweenStreets": str(body.get("betweenStreets") or shipping_address.get("betweenStreets") or "").strip(),
+        "references": str(body.get("references") or shipping_address.get("references") or "").strip(),
+    }
+    if not any(entrada[c] for c in ("address", "street", "postalCode")):
+        return None
+    entrada["label"] = (str(body.get("shippingAddressLabel") or shipping_address.get("label") or "").strip()
+                        or entrada["city"] or entrada["street"] or "Mi dirección")
+
+    try:
+        ficha = utils._get_by_id("CUSTOMER", utils._customer_entity_id(customer_id))
+        if not ficha:
+            return None
+        actuales = [d for d in (ficha.get("addresses") or ficha.get("shippingAddresses") or []) if isinstance(d, dict)]
+        pedido_id = str(body.get("shippingAddressId") or shipping_address.get("addressId")
+                        or shipping_address.get("id") or "").strip()
+        clave = _clave_direccion(entrada)
+        indice = next((i for i, d in enumerate(actuales)
+                       if (pedido_id and str(d.get("id") or d.get("addressId") or "") == pedido_id)
+                       or _clave_direccion(d) == clave), None)
+        if indice is None:
+            entrada["id"] = pedido_id or f"addr-{utils.uuid.uuid4().hex[:8]}"
+            entrada["isDefault"] = not actuales   # la primera queda como la de siempre
+            actuales.append(entrada)
+            guardada_id = entrada["id"]
+        else:
+            previa = actuales[indice]
+            guardada_id = str(previa.get("id") or previa.get("addressId") or f"addr-{indice + 1}")
+            actuales[indice] = {**previa, **entrada, "id": guardada_id,
+                                "isDefault": bool(previa.get("isDefault"))}
+        utils._update_by_id("CUSTOMER", utils._customer_entity_id(customer_id),
+                            "SET addresses = :a, shippingAddresses = :a, updatedAt = :u",
+                            {":a": actuales[:20], ":u": utils._now_iso()})
+        return guardada_id
+    except Exception as ex:  # noqa: BLE001 - guardar la dirección no puede costar la venta
+        utils._log("save_shipping_address_error", "ERROR", customerId=str(customer_id), err=ex)
+        return None
 
 
 def _anotar_pago_tras_cancelacion(order: dict, body: dict) -> dict:

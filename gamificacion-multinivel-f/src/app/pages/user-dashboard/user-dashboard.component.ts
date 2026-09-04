@@ -716,25 +716,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return `Este producto te acerca a: ${this.activeGoal.title}`;
   }
 
+  // ── Paquete G · ronda 26 · propuesta 29 ──
+  // El componente tenía una copia calcada del cálculo del corte que vivía en el
+  // servicio. Ahora solo pregunta: un único origen, el del servidor.
+
   get cutoffRemainingSeconds(): number {
-    const settings = this.dashboardControl.data?.settings;
-    if (!settings) {
-      return 0;
-    }
-    const next = this.getNextCutoffDate(settings);
-    return Math.max(0, Math.floor((next.getTime() - Date.now()) / 1000));
+    return this.dashboardControl.getCutoffRemainingSeconds();
   }
 
   get cutoffTotalSeconds(): number {
-    const settings = this.dashboardControl.data?.settings;
-    if (!settings) {
-      return 1;
-    }
-    const next = this.getNextCutoffDate(settings);
-    const prev = new Date(next);
-    prev.setMonth(prev.getMonth() - 1);
-    const total = Math.max(1, Math.floor((next.getTime() - prev.getTime()) / 1000));
-    return total;
+    return this.dashboardControl.getCutoffTotalSeconds();
+  }
+
+  /** De qué es el corte: ninguna de las siete personas que lo vieron lo entendió. */
+  get cutoffLabel(): string {
+    return this.dashboardControl.getCutoffLabel();
+  }
+
+  /** La fecha en letras junto al reloj: "lunes 25 de marzo de 2027, 23:59". */
+  get cutoffDateText(): string {
+    return this.dashboardControl.getCutoffDateText();
   }
 
   private readonly emptyFeatured: FeaturedItem = {
@@ -1642,31 +1643,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.canPrevFeatured) {
       this.featuredPage -= 1;
     }
-  }
-
-  private getNextCutoffDate(settings: UserDashboardData['settings']): Date {
-    const now = new Date();
-    let cutoff = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      settings.cutoffDay,
-      settings.cutoffHour,
-      settings.cutoffMinute,
-      59,
-      999
-    );
-    if (cutoff.getTime() <= now.getTime()) {
-      cutoff = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        settings.cutoffDay,
-        settings.cutoffHour,
-        settings.cutoffMinute,
-        59,
-        999
-      );
-    }
-    return cutoff;
   }
 
   setChannel(channel: 'whatsapp' | 'instagram' | 'facebook'): void {

@@ -491,6 +491,8 @@ export interface CustomerContactNote {
   /** whatsapp | email | call, cuando la nota la dejó "Seguimiento de hoy". */ // paquete F
   channel?: string; // paquete F
   templateKey?: string; // paquete F
+  /** Nombre de quien la escribió, resuelto al guardar; `by` se conserva. */ // paquete G · ronda 26
+  byName?: string; // paquete G · ronda 26
 }
 
 export interface CustomerDocumentTypeConfig {
