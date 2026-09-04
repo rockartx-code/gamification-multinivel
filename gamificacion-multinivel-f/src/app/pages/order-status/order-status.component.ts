@@ -214,10 +214,11 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
       return 'Pago registrado';
     }
     if (status === 'shipped') {
-      return 'Pedido enviado';
+      // A quien recoge en sucursal no le enviamos nada: su pedido está listo en el mostrador.
+      return this.isPickup ? 'Listo para recoger' : 'Pedido enviado';
     }
     if (status === 'delivered') {
-      return 'Pedido entregado';
+      return this.isPickup ? 'Entregado en sucursal' : 'Pedido entregado';
     }
     if (status === 'cancelled') {
       return 'Cancelado';
