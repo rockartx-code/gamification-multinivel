@@ -1,0 +1,1009 @@
+{
+ "persona": "Paulina Ríos, 44",
+ "rol": "cliente",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T02:00:11.432Z",
+ "tareas": [
+  {
+   "quiero": "entrar a mi panel a ver cómo va mi mes de marzo",
+   "esperaba": null,
+   "t": 16,
+   "segundos": 453,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Hace semanas que no entro. Abro la página a ver si me acuerdo de la contraseña. Ni siquiera sé si tengo algo pendiente.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 16
+    },
+    {
+     "texto": "Lo primero que veo es un aviso de privacidad tapando todo y un \"Regístrate para obtener beneficios\" — pero yo YA soy socia desde el año pasado. Me da la impresión de que la página no sabe quién soy. Y abajo dice \"Todos los productos: 0 productos\", raro para una tienda.",
+     "segundosDesdeLoAnterior": 70,
+     "t": 85
+    },
+    {
+     "texto": "Pantalla de login limpia. Pongo mi correo y la contraseña que apunté en la libreta. Espero que me lleve directo a algo que diga cuánto llevo ganado este mes.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 117
+    },
+    {
+     "texto": "Lleva un rato diciendo \"Validando acceso...\". Espero un poco más antes de picarle otra vez.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 145
+    },
+    {
+     "texto": "Dos veces el mismo renglón raro. Voy a recargar la página completa, como cuando se me traba el banco.",
+     "segundosDesdeLoAnterior": 100,
+     "t": 245
+    },
+    {
+     "texto": "Ya entré. Lo primero que veo arriba es \"Progreso mensual, Corte de mes 21d 21h 52m\" y luego \"Alcanzar VP mínimo (usuario activo), Meta mensual: 20 VP, Te faltan 20 VP para lograrlo\". Y debajo, tienda y tienda y tienda. En ningún lado dice cuánto llevo ganado ni si tengo algo por cobrar.",
+     "segundosDesdeLoAnterior": 196,
+     "t": 441
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"0 productos\" en la tienda y el pie dice \"© 2026\" cuando estamos en marzo de 2027",
+     "pantalla": "#/",
+     "t": 85
+    },
+    {
+     "texto": "El reloj dice que faltan 21 días para el \"Corte de mes\" pero hoy es 20 de marzo: marzo se acaba en 11 días. ¿De cuál mes es el corte?",
+     "pantalla": "#/dashboard",
+     "t": 441
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le di \"Ingresar al panel\" y salió un renglón en inglés: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error\". No entiendo nada de eso, y no me dice si mi contraseña está mal o si el problema es de ellos.",
+     "pantalla": "#/login",
+     "t": 175
+    },
+    {
+     "texto": "reintento: vuelvo a darle a Ingresar por si fue el internet",
+     "t": 175
+    },
+    {
+     "texto": "reintento: recargo la página entera y vuelvo a escribir mis datos",
+     "t": 245
+    },
+    {
+     "texto": "Tres intentos de entrar y siempre lo mismo. La página está llamando a un servidor de Amazon que no responde; desde mi lado sólo veo un renglón en inglés. Si esto me pasa en la vida real, cierro y le hablo a mi patrocinadora.",
+     "pantalla": "#/login",
+     "t": 394
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Buen día, no puedo entrar a mi panel. Puse mi correo paulina.rios@gmail.com y mi contraseña tres veces y me sale un texto raro: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error\". ¿Está caído el sistema o mi cuenta tiene algo?",
+     "t": 394,
+     "tarea": "entrar a mi panel a ver cómo va mi mes de marzo"
+    }
+   ],
+   "reintentos": 2,
+   "facilidad": 2,
+   "confianza": 4,
+   "comentario": "Entré, pero me costó tres intentos y un mensaje en inglés con una dirección de Amazon. Ya adentro, el panel me recibe con la tienda, no con mi dinero."
+  },
+  {
+   "quiero": "ver si tengo algo por cobrar este mes",
+   "esperaba": null,
+   "t": 469,
+   "segundos": 318,
+   "logrado": true,
+   "clicsBase": 6,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En el menú de arriba veo Tienda, Red, Links, Órdenes, Comisiones, Cuadro de Honor, Mi perfil. \"Comisiones\" suena a lo mío: ahí debe decir cuánto me toca.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 469
+    },
+    {
+     "texto": "Ahora entiendo por qué no me hacía caso el menú: tenía DOS ventanas encimadas que ni siquiera vi bien. Una dice \"¡Estás en el Cuadro de Honor! Red (VG): #2, Personal (VP): #2\" y abajo \"Paulina Ríos (tú) 0\". ¿Segundo lugar con cero? Somos dos personas. Y la otra dice \"¡Buen trabajo! Estas son tus metas alcanzadas en el mes\" cuando yo no he comprado nada.",
+     "segundosDesdeLoAnterior": 147,
+     "t": 616
+    },
+    {
+     "texto": "Ya sin ventanitas encima, ahora sí busco lo mío. En la sección Comisiones leo: \"Total del mes $0\", \"Confirmadas (se depositan el día de pago) $0\", \"Por confirmar (pedidos aún no entregados) $0\" y \"Bloqueadas $117.90\". Ahí está mi dinero: bloqueado. Le voy a picar a \"Ver detalles\" a ver por qué.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 640
+    },
+    {
+     "texto": "El detalle sólo dice: \"ORD-A42EFB51 · L1 · $117.90 · Bloqueada · 05 mar 2027\". Una tabla de cinco columnas y ni una palabra de POR QUÉ está bloqueada ni de QUÉ tengo que hacer. Es mi dinero desde el 5 de marzo.",
+     "segundosDesdeLoAnterior": 68,
+     "t": 708
+    },
+    {
+     "texto": "Veo un botoncito que dice \"Info comisiones bloqueadas\". Ojalá ahí esté la explicación.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 708
+    },
+    {
+     "texto": "Al pasar el dedo por el signito de información aparece un renglón: \"Comisiones de tus referidos generadas mientras no estabas activa/o (20 VP en el mes). Si te activas dentro del mismo mes, se recalculan.\" Ahí está la razón. Me costó encontrarla porque está escondida en un iconito, no en la tabla.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 739
+    },
+    {
+     "texto": "Antes de comprar nada quiero ver si me avisaron por correo. Reviso mi bandeja.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 739
+    },
+    {
+     "texto": "En el correo sí me lo dicen clarito: \"Tienes $117.90 en comisiones bloqueadas que se pierden el 31 de marzo. Te faltan 20.0 VP para activarte; lo más barato que lo cierra: 2 Klinhart ($960.00). Si te activas antes del cierre se recalculan; si no, se pierden.\" Eso es lo que yo esperaba leer EN EL PANEL, no en el correo.",
+     "segundosDesdeLoAnterior": 47,
+     "t": 787
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Me felicitan por estar en segundo lugar con 0 VP y me dicen \"buen trabajo\" el mismo día que el panel me dice que me faltan 20 VP. No sé si voy bien o voy mal.",
+     "pantalla": "#/dashboard",
+     "t": 616
+    },
+    {
+     "texto": "¿\"Bloqueada\" quiere decir que la perdí, que está en revisión, o que falta algo de mi parte? La palabra sola no me dice nada.",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 708
+    },
+    {
+     "texto": "Dice \"se recalculan\". ¿Recalcular es que me las pagan completas, o que me las bajan? Y no me dice hasta qué día tengo para activarme.",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 739
+    },
+    {
+     "texto": "El correo me llegó hoy 20 de marzo, pero la comisión es del 5 de marzo. Quince días sin que nadie me dijera nada, y ahora me quedan once para juntar $960.",
+     "pantalla": "correo",
+     "t": 787
+    },
+    {
+     "texto": "El panel dice arriba \"Corte de mes: 21d 21h\" (o sea el 11 de abril) y el correo dice que se pierden el 31 de marzo. ¿Cuál de los dos me creo?",
+     "pantalla": "#/dashboard",
+     "t": 787
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le piqué a \"Comisiones\" en el menú de arriba y no pasó nada; me quedé viendo la misma pantalla. Resulta que todo está en una sola página larguísima y hay que bajarle con el dedo.",
+     "pantalla": "#/dashboard",
+     "t": 564
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Sí encontré el dinero ($117.90 bloqueados), pero la pantalla no me dice por qué ni hasta cuándo; eso sólo viene en el correo."
+  },
+  {
+   "quiero": "registrar mi CLABE para que me puedan depositar",
+   "esperaba": null,
+   "t": 787,
+   "segundos": 216,
+   "logrado": true,
+   "clicsBase": 11,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 37,
+   "pantallasBase": 3,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Antes de gastar un peso quiero dejar mis datos del banco. En Comisiones dice \"CLABE registrada: No registrada\" y hay una casilla. Nadie me avisó nunca que faltaba esto; si no entro hoy, no me entero.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 787
+    },
+    {
+     "texto": "Ahora sí veo lo que pasaba: al darle Guardar se abre una ventanita que dice \"Confirmacion — Actualizar CLABE interbancaria. Estás a punto de guardar la CLABE: 002180700123456781. Cancelar / Confirmar\". La primera vez ni la vi porque la página es larguísima y la ventana salió mientras yo miraba la tabla de comisiones. Encima \"Confirmacion\" está escrito sin acento.",
+     "segundosDesdeLoAnterior": 159,
+     "t": 946
+    },
+    {
+     "texto": "Ya dice \"CLABE registrada: **** 6781\". Bien que sólo enseñe los últimos cuatro. Recargo para creérmelo.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 971
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Si mi CLABE no está registrada, ¿qué iba a pasar el día de pago? Nadie me lo advirtió por correo.",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 787
+    },
+    {
+     "texto": "\"Confirmacion\" sin acento en una pantalla donde le doy mis datos del banco. Da mala espina.",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 946
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Guardé la CLABE y no pasó nada visible: ni \"guardado\", ni un error. Sigue diciendo \"CLABE registrada: No registrada\".",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 815
+    },
+    {
+     "texto": "reintento: recargo la página para ver si de veras se guardó",
+     "t": 815
+    },
+    {
+     "texto": "Recargué y mi CLABE no quedó: sigue \"No registrada\" y la casilla está vacía otra vez. Escribí 18 dígitos y le di Guardar; ni error ni palomita.",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 847
+    },
+    {
+     "texto": "reintento: la escribo de nuevo, dígito por dígito, por si el copiar-pegar no le gustó",
+     "t": 847
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 3,
+   "confianza": 5,
+   "comentario": "Quedó \"**** 6781\" y aguantó la recarga. Me costó tres intentos porque la ventana de confirmar aparece lejos de donde estoy mirando y la primera vez la perdí al recargar."
+  },
+  {
+   "quiero": "entender qué tengo que hacer para no perder mis $117.90",
+   "esperaba": null,
+   "t": 1003,
+   "segundos": 64,
+   "logrado": true,
+   "clicsBase": 15,
+   "teclasBase": 37,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Antes de gastar $960 quiero leer las reglas. Hay un enlace que dice \"Cómo se calculan: porcentajes por nivel y requisitos\". Voy para allá.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 1003
+    },
+    {
+     "texto": "Esta página \"MODO SOCIO\" sí me explica todo y está bien escrita. Aquí leo: \"Bloqueada — si ese mes tú no estás activa. Si te activas antes del cierre del mes, se recalcula y pasa a pendiente o confirmada; si no, se pierde al cerrar el mes. Te avisamos por correo los días 20 y 27.\" Es la primera vez que entiendo la palabra \"bloqueada\". Llevo como media hora dentro del panel para llegar aquí, y llegué por un renglón chiquito que decía \"Cómo se calculan\".",
+     "segundosDesdeLoAnterior": 64,
+     "t": 1067
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Si esta página explica tan bien las reglas, ¿por qué no está enlazada desde el número de \"Bloqueadas\" con un \"¿por qué?\" grande?",
+     "pantalla": "#/modo-socio",
+     "t": 1067
+    },
+    {
+     "texto": "Aquí dice que la CLABE se pide \"al tener tu primera comisión confirmada\", pero a mí nadie me la pidió; la encontré yo de casualidad.",
+     "pantalla": "#/modo-socio",
+     "t": 1067
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Entendí que \"bloqueada\" es porque yo no compré este mes, y que si me activo antes del 31 se recalcula. Pero la explicación está a dos clics y escondida en un renglón chiquito."
+  },
+  {
+   "quiero": "activarme comprando los 20 VP para rescatar mis $117.90",
+   "esperaba": null,
+   "t": 1067,
+   "segundos": 746,
+   "logrado": false,
+   "clicsBase": 16,
+   "teclasBase": 37,
+   "clics": 12,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 7,
+   "pensamientos": [
+    {
+     "texto": "El correo dice que lo más barato son 2 Klinhart, $960. Me duele: gasto $960 para rescatar $117.90. Pero también me quedo con el producto y me activo el mes. Voy a la tienda.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1067
+    },
+    {
+     "texto": "Busco Klinhart en la lista. Cada tarjeta trae una casilla \"Qty\" y un botón \"Agregar a carrito\". Pongo 2.",
+     "segundosDesdeLoAnterior": 53,
+     "t": 1120
+    },
+    {
+     "texto": "Puse 2 y el carrito de arriba dice $1,440. 480 por 2 son 960, no 1,440. Me agregó tres. Voy a abrir el carrito a ver qué trae.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 1146
+    },
+    {
+     "texto": "El carrito dice \"Cantidad 3\" de Klinhart. Yo escribí 2. Le quito una con el botón de menos. Aunque… con 3 me da 10% de descuento y 27 VP; con 2 pago $960 sin descuento y me da justo 20 VP. El correo me dijo 2 Klinhart $960, así que le voy a hacer caso al correo.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 1177
+    },
+    {
+     "texto": "Ya son 2 piezas, $960, \"Puntos de este pedido (VP) 20\" y \"Con esta compra queda activo el mes\". Eso es exactamente lo que necesito. Como ya estoy gastando de más, no quiero pagar $129 de envío: veo \"Recoger en sucursal — Disponible en: Ciudad de México, Guadalajara\" y yo vivo en la Ciudad de México.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 1207
+    },
+    {
+     "texto": "Al elegir recoger en sucursal, el envío se pone \"Gratis (recoger en sucursal)\" y me deja escoger entre Bodega Central, Sucursal Guadalajara y Tienda Del Valle. Me queda la Del Valle, en Av. Coyoacán 1200. Y me pregunta si pago en línea o en sucursal: pago en línea, porque necesito que cuente YA para activarme antes del 31.",
+     "segundosDesdeLoAnterior": 89,
+     "t": 1295
+    },
+    {
+     "texto": "Se creó la orden ORD-391358BF, \"Pago pendiente\", total $960. Me llama la atención que el progreso diga \"Envío — Ruta de entrega\" cuando yo elegí recoger en la Tienda Del Valle; y \"Realiza tu pago en linea\" está sin acento. Le doy a \"Pagar con MercadoPago\".",
+     "segundosDesdeLoAnterior": 56,
+     "t": 1351
+    },
+    {
+     "texto": "Me sacó a la pasarela: \"Estás fuera de la tienda. Este es el checkout de la pasarela.\" Pago los $960.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 1379
+    },
+    {
+     "texto": "No me llegó ningún correo del pedido: ni \"recibimos tu compra\" ni \"tu pago se aprobó\". Nada. Voy al panel a ver la sección Órdenes.",
+     "segundosDesdeLoAnterior": 110,
+     "t": 1489
+    },
+    {
+     "texto": "En el panel: la orden ORD-391358BF aparece como \"Pendiente\", el VP sigue en 0, y \"Bloqueadas $117.90\" no se movió. Mi pago de $960 no se ve por ningún lado. Le pico a \"Explicar estados de orden\" a ver qué significa Pendiente.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 1525
+    },
+    {
+     "texto": "Van dos pagos de $960 en la pasarela y la orden sigue en \"Pago pendiente\". Ni correo, ni comprobante, ni cambio en el panel. Y ahora que lo pienso: al elegir \"Recoger en sucursal\" desapareció el formulario y nunca me pidió mi nombre ni mi teléfono ni mi correo para ir a recoger. ¿Cómo van a saber quién soy en el mostrador?",
+     "segundosDesdeLoAnterior": 288,
+     "t": 1813
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Si pago \"en sucursal\" cuenta para activarme este mes o hasta que vaya? La pantalla no lo dice.",
+     "pantalla": "#/carrito",
+     "t": 1295
+    },
+    {
+     "texto": "No me queda claro cuál sucursal quedó seleccionada: ninguna dice \"elegida\". Le piqué a Tienda Del Valle y se ve casi igual que las otras.",
+     "pantalla": "#/carrito",
+     "t": 1322
+    },
+    {
+     "texto": "Elegí recoger en sucursal y la orden me habla de \"Envío / Ruta de entrega\". No dice en ningún lado a qué sucursal debo ir ni desde cuándo.",
+     "pantalla": "#/orden/ORD-391358BF",
+     "t": 1351
+    },
+    {
+     "texto": "Compré $960 y no me llegó un solo correo de confirmación. ¿De verdad se registró mi compra?",
+     "pantalla": "correo",
+     "t": 1489
+    },
+    {
+     "texto": "Elegí recoger en tienda y no me pidió nombre, teléfono ni correo. ¿Con qué me presento en la Tienda Del Valle?",
+     "pantalla": "#/carrito",
+     "t": 1813
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Escribí 2 en la casilla de Klinhart y el carrito marcó $1,440, o sea 3 piezas.",
+     "pantalla": "#/dashboard (Tienda)",
+     "t": 1146
+    },
+    {
+     "texto": "reintento: el botón de \"Recoger en sucursal\" no me respondió a la primera",
+     "t": 1266
+    },
+    {
+     "texto": "Pagué en la pasarela y al regresar la orden SIGUE diciendo \"Pago pendiente\" y me vuelve a ofrecer \"Pagar con MercadoPago\". Me da miedo picarle otra vez y que me cobren dos veces.",
+     "pantalla": "#/orden/ORD-391358BF",
+     "t": 1436
+    },
+    {
+     "texto": "reintento: recargo la orden para ver si ya cambió el estatus",
+     "t": 1436
+    },
+    {
+     "texto": "Le piqué a \"Explicar estados de orden\" y no pasó absolutamente nada. Sigo sin saber qué significa \"Pendiente\".",
+     "pantalla": "#/dashboard (Órdenes)",
+     "t": 1594
+    },
+    {
+     "texto": "reintento: vuelvo a entrar a la orden y le doy otra vez a pagar, rezando que no me cobren doble",
+     "t": 1594
+    },
+    {
+     "texto": "Después de pagar la segunda vez, la pantalla de la orden se quedó COMPLETAMENTE EN BLANCO. Ni el número de pedido.",
+     "pantalla": "#/orden/ORD-391358BF",
+     "t": 1659
+    },
+    {
+     "texto": "reintento: recargo la pantalla en blanco",
+     "t": 1659
+    },
+    {
+     "texto": "reintento: espero unos minutos y vuelvo a recargar la orden, a ver si el pago tarda en aparecer",
+     "t": 1741
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, hice el pedido ORD-391358BF por $960 y ya pagué en la pantalla de MercadoPago (me dijo \"Pagar $960.00\" y me regresó a la orden). Pero la orden sigue diciendo \"Pago pendiente\" y mis comisiones siguen bloqueadas. ¿Entró mi pago? No quiero pagar dos veces. Y no me llegó ningún correo del pedido.",
+     "t": 1594,
+     "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+    }
+   ],
+   "reintentos": 5,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "Pagué $960 (dos veces) y la orden ORD-391358BF sigue en \"Pago pendiente\"; mis VP siguen en 0 y los $117.90 siguen bloqueados. No hay nada más que yo pueda hacer desde la pantalla."
+  },
+  {
+   "quiero": "encontrar a quién reclamarle que pagué y no aparece",
+   "esperaba": null,
+   "t": 1813,
+   "segundos": 41,
+   "logrado": false,
+   "clicsBase": 28,
+   "teclasBase": 37,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 12,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Busco un teléfono o un chat de soporte. En la sección Red vi \"Soporte FindingU asignado: Gaby Ledesma, gaby@findingu.mx, WhatsApp 5551100004\". Pero eso es mi coach, no atención a clientes. Busco algo en \"Mi perfil\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1813
+    },
+    {
+     "texto": "En \"Mi perfil\" sí veo \"CLABE INTERBANCARIA •••• •••• •••• 6781 Registrada\", así que eso sí quedó. Pero de soporte, nada: ni un teléfono, ni un correo de atención, ni un \"¿Necesitas ayuda?\". Lo único que hay es el WhatsApp de mi coach Gaby.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 1854
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En \"Carga de documentación\" me dice \"Constancia de situación fiscal — Requerido\", \"INE — Requerido\", \"CURP — Requerido\". Pero la página de Modo Socio decía que eso sólo es \"al facturar comisiones (si aplica)\". ¿Es obligatorio o no? ¿Si no lo subo no me pagan?",
+     "pantalla": "#/perfil",
+     "t": 1854
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "No encontré en ninguna pantalla un contacto de soporte al cliente: sólo el WhatsApp de mi coach.",
+     "pantalla": "#/perfil",
+     "t": 1854
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "No hay ningún canal de soporte en la plataforma: sólo el WhatsApp de mi coach, que no maneja pagos."
+  },
+  {
+   "quiero": "abrir mi red desde el correo que me avisó que Fabiola se unió",
+   "esperaba": null,
+   "t": 1875,
+   "segundos": 33,
+   "logrado": true,
+   "clicsBase": 29,
+   "teclasBase": 37,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 14,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Ese correo del 4 de marzo decía \"Ve tu red: http://localhost:4321/dashboard\". Le doy clic desde el correo.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 1875
+    },
+    {
+     "texto": "El enlace del correo me deja en la pantalla de inicio del panel, no en mi red; tuve que volver a buscar \"Red\" con el dedo. Al menos no se rompió.",
+     "segundosDesdeLoAnterior": 33,
+     "t": 1908
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "El enlace del correo abre el panel pero no la sección Red; hay que buscarla."
+  },
+  {
+   "quiero": "ver cómo va mi red y si Fabiola está activa",
+   "esperaba": null,
+   "t": 1908,
+   "segundos": 30,
+   "logrado": true,
+   "clicsBase": 29,
+   "teclasBase": 37,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 15,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Aquí sí cuadran los números: \"Fabiola Cantú Rangel · L1 · $1,179 · Activa\" y 10% de $1,179 son $117.90, justo lo que tengo bloqueado. Eso me tranquiliza: el dinero es real y es de la compra de Fabiola.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 1938
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En el dibujito de la red mi comadre aparece como \"Fabio C. R.\" — le cortaron el nombre y parece hombre. Y yo salgo como \"Pauli R.\".",
+     "pantalla": "#/dashboard (Red)",
+     "t": 1938
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "La sección Red se entiende: quién es, cuánto compró y si está activa. Sólo los nombres cortados (\"Fabio C. R.\") se ven mal."
+  },
+  {
+   "quiero": "ver si me depositaron mis comisiones de marzo (10 de abril, día de pago)",
+   "esperaba": null,
+   "t": 2033,
+   "segundos": 127,
+   "logrado": false,
+   "clicsBase": 30,
+   "teclasBase": 37,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 15,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Hoy 10 de abril es el día de pago, según decía la pantalla: \"las comisiones confirmadas de un mes se depositan el día 10 del mes siguiente\". Vengo a ver mi estado de cuenta y a ver qué pasó con los $960 que pagué el 20 de marzo.",
+     "segundosDesdeLoAnterior": 95,
+     "t": 2033
+    },
+    {
+     "texto": "Ojo: el reloj de \"Corte de mes\" dice 21d 21h 25m. El 20 de marzo decía 21d 21h 52m. Han pasado TRES SEMANAS y el reloj sólo bajó media hora. Ese contador está muerto: no sabe en qué día vivimos.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 2064
+    },
+    {
+     "texto": "Estoy leyendo con cuidado y no lo puedo creer: hoy es 10 de ABRIL y el panel dice \"Resumen del mes 2027-03\" y en la lista de meses dice \"marzo de 2027 (actual)\". No existe abril en la lista. La plataforma cree que sigue siendo marzo.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 2096
+    },
+    {
+     "texto": "Reviso el correo: hoy es día de pago, algo me tuvieron que mandar.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 2120
+    },
+    {
+     "texto": "Tres semanas después: mi pedido de $960 sigue en \"Pago pendiente\", ni un correo, ni depósito, ni aviso de que se cerró marzo. Mis $117.90 siguen ahí colgados como \"Bloqueada\" en un mes que ya se acabó. Nadie me avisó nada.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 2160
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "El contador \"Corte de mes\" marca casi lo mismo que hace tres semanas. No sirve para saber cuándo cierra el mes.",
+     "pantalla": "#/dashboard",
+     "t": 2064
+    },
+    {
+     "texto": "¿Por qué el panel dice que marzo es el mes \"actual\" si estamos a 10 de abril? ¿Entonces mi mes de marzo nunca cerró?",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 2096
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "No me depositaron nada. El panel sigue diciendo que el mes actual es marzo, mis $117.90 siguen \"Bloqueada\" y mi pedido pagado sigue \"Pago pendiente\". No hay ninguna pantalla que me diga por qué."
+  },
+  {
+   "quiero": "cancelar el pedido de $960 que nunca se registró, para que no me cobren",
+   "esperaba": null,
+   "t": 2160,
+   "segundos": 63,
+   "logrado": true,
+   "clicsBase": 31,
+   "teclasBase": 37,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 17,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Si el sistema nunca vio mi pago, prefiero cancelar el pedido antes que arriesgarme a que me lo cobren tarde. Le doy a \"Cancelar orden\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 2160
+    },
+    {
+     "texto": "La pantalla de cancelar dice \"Estado: pending\" — así, en inglés y en minúsculas — y \"Como el pago aún no fue confirmado, no se generará ningún cargo\". Pero yo YA pagué, dos veces, en su pasarela. Si de verdad no me cobraron, ¿dónde quedó lo que puse? Y si sí me cobraron, este mensaje me está mintiendo.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 2191
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"no se generará ningún cargo\" cuando yo ya pagué dos veces en su MercadoPago. Nadie me dice si me van a devolver algo.",
+     "pantalla": "#/orden/ORD-391358BF/cancelar",
+     "t": 2191
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 3,
+   "comentario": "Cancelar sí fue fácil y claro (\"Tu orden ORD-391358BF quedó con estado Cancelada\"), pero me deja con la duda de dónde quedaron los $960 que sí pagué."
+  },
+  {
+   "quiero": "comprobar por última vez si algo cambió después de cancelar",
+   "esperaba": null,
+   "t": 2272,
+   "segundos": 6,
+   "logrado": true,
+   "clicsBase": 33,
+   "teclasBase": 37,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 18,
+   "pantallas": 1,
+   "pensamientos": [],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "Nada cambió: sigue \"Bloqueadas $117.90\" y el mes \"actual\" sigue siendo marzo."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "me sale una dirección de amazonaws con letras y números; parece que me están enseñando las tripas del sistema",
+   "t": 175,
+   "tarea": "entrar a mi panel a ver cómo va mi mes de marzo"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "no pude ni entrar y no hay un solo mensaje en español que me diga qué hacer",
+   "t": 394,
+   "tarea": "entrar a mi panel a ver cómo va mi mes de marzo"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 3,
+   "porque": "me premian por un segundo lugar entre dos; parece que me están endulzando el oído",
+   "t": 616,
+   "tarea": "ver si tengo algo por cobrar este mes"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "me dicen que tengo $117.90 bloqueados y no me explican por qué",
+   "t": 708,
+   "tarea": "ver si tengo algo por cobrar este mes"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "para cobrar $117.90 me piden gastar $960; me huele a que el premio es el anzuelo",
+   "t": 787,
+   "tarea": "ver si tengo algo por cobrar este mes"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "al menos mis datos del banco ya están y se ven enmascarados",
+   "t": 1003,
+   "tarea": null
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "por fin una pantalla en español claro que me explica el negocio",
+   "t": 1067,
+   "tarea": "entender qué tengo que hacer para no perder mis $117.90"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "tengo que gastar ocho veces lo que voy a cobrar para poder cobrarlo",
+   "t": 1067,
+   "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "estoy soltando $960 sólo para poder cobrar $117.90",
+   "t": 1379,
+   "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "no sé si mi pago de $960 entró o no",
+   "t": 1436,
+   "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "pagué $960, no tengo comprobante de nada y la pantalla actúa como si no hubiera pagado",
+   "t": 1594,
+   "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "pagué dos veces y el sistema se comporta como si no hubiera pagado nunca",
+   "t": 1813,
+   "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "me piden INE, CURP y constancia fiscal como \"requerido\" sin decirme para qué ni cuándo",
+   "t": 1854,
+   "tarea": "encontrar a quién reclamarle que pagué y no aparece"
+  },
+  {
+   "emocion": "gusto",
+   "intensidad": 3,
+   "porque": "ver que la compra de Fabiola sí generó mi comisión y que los números cuadran",
+   "t": 1938,
+   "tarea": "ver cómo va mi red y si Fabiola está activa"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 5,
+   "porque": "es el día de pago y no hay depósito, ni explicación, ni un correo que diga qué pasó con mi dinero",
+   "t": 2160,
+   "tarea": "ver si me depositaron mis comisiones de marzo (10 de abril, día de pago)"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "la pantalla asegura que no hubo cargo cuando yo sí pagué",
+   "t": 2191,
+   "tarea": "cancelar el pedido de $960 que nunca se registró, para que no me cobren"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "terminé cancelando mi propia compra y sin mi comisión; perdí el mes completo",
+   "t": 2223,
+   "tarea": null
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Buen día, no puedo entrar a mi panel. Puse mi correo paulina.rios@gmail.com y mi contraseña tres veces y me sale un texto raro: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error\". ¿Está caído el sistema o mi cuenta tiene algo?",
+   "t": 394,
+   "tarea": "entrar a mi panel a ver cómo va mi mes de marzo"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, hice el pedido ORD-391358BF por $960 y ya pagué en la pantalla de MercadoPago (me dijo \"Pagar $960.00\" y me regresó a la orden). Pero la orden sigue diciendo \"Pago pendiente\" y mis comisiones siguen bloqueadas. ¿Entró mi pago? No quiero pagar dos veces. Y no me llegó ningún correo del pedido.",
+   "t": 1594,
+   "tarea": "activarme comprando los 20 VP para rescatar mis $117.90"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Cancelé el pedido ORD-391358BF porque después de tres semanas seguía en \"Pago pendiente\". La pantalla dice que \"el pago no había sido confirmado, por lo que no se generará ningún cargo\", pero yo pagué DOS VECES en su MercadoPago el 20 de marzo. Necesito que me digan si me cobraron y si me van a devolver. Y también quiero saber qué pasó con mis $117.90 de comisión de marzo: hoy 10 de abril siguen apareciendo como \"Bloqueada\" y no me depositaron nada.",
+   "t": 2223,
+   "tarea": null
+  },
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Gaby, ¿a ti te depositaron lo de marzo? A mí no me llegó nada y el panel sigue diciendo que el mes actual es marzo. Ya no sé si es mi cuenta o le pasa a todas.",
+   "t": 2223,
+   "tarea": null
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 5,
+  "confianzaQueTransmite": 3,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "vendedora",
+   "desordenada",
+   "poco confiable"
+  ],
+  "mejorPantalla": "la página \"Modo Socio\": explica PC, VP y VG con ejemplos y por fin entendí qué es una comisión bloqueada",
+  "peorPantalla": "la pantalla de la orden después de pagar: sigue diciendo \"Pago pendiente\" y te vuelve a ofrecer el botón de pagar, sin un solo correo de por medio",
+  "seParece": "a un catálogo de multinivel con un panel de banco encima: la tienda está pulida y bonita, pero la parte de mi dinero parece hecha por alguien que nunca ha esperado un depósito",
+  "recomendarias": 3,
+  "volverias": "sólo por Fabiola y porque me deben $117.90; si fuera nada más por la plataforma, no",
+  "comentario": "Lo que se ve se lee bien y los productos están bien explicados. El problema es que la plataforma está hecha para que compre, no para que cobre: el panel me recibe con trece productos y el dinero mío está al final, en un número seco que dice \"Bloqueadas $117.90\" sin explicación. El correo hace el trabajo que debería hacer la pantalla. Y lo grave: pagué $960 dos veces y el sistema nunca se enteró; tres semanas después el panel seguía creyendo que era marzo. Con eso se pierde la confianza de golpe."
+ },
+ "totales": {
+  "clics": 33,
+  "teclas": 37,
+  "envios": 0,
+  "campos": 3,
+  "pantallas": 19,
+  "recargas": 6,
+  "atrases": 6
+ },
+ "pantallas": [
+  {
+   "ruta": "/",
+   "desde": 1788487227107,
+   "primerClicMs": 69734,
+   "clics": 4,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/login",
+   "desde": 1788487456533,
+   "primerClicMs": 16801,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/login",
+   "desde": 1788487605777,
+   "primerClicMs": 15717,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788488026644,
+   "primerClicMs": 32088,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788488182736,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788488590541,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788488647759,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788488700804,
+   "primerClicMs": 36109,
+   "clics": 2,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788488805524,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788488832697,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788488870883,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788488952652,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788488700805,
+   "primerClicMs": 36109,
+   "clics": 2,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788489024859,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "/dashboard",
+   "desde": 1788489086075,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788489244666,
+   "primerClicMs": 63258,
+   "clics": 1,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-391358BF",
+   "desde": 1788489331656,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788489244667,
+   "primerClicMs": 63258,
+   "clics": 1,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788489483301,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error",
+   "t": 175,
+   "tarea": "entrar a mi panel a ver cómo va mi mes de marzo"
+  }
+ ],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "Curioso: me mandan correo cuando CANCELO, pero no me mandaron nada cuando compré ni cuando pagué. O sea que el correo sí funciona; simplemente no me avisan de lo que me importa.",
+   "segundosDesdeLoAnterior": 58,
+   "t": 2248
+  },
+  {
+   "texto": "Me llega correo por cancelar un pedido pero no por hacerlo ni por pagarlo.",
+   "pantalla": "correo",
+   "t": 2248
+  }
+ ],
+ "fin": "2026-09-04T02:39:42.147Z",
+ "duracionMin": 40
+}

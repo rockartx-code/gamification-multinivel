@@ -1,0 +1,687 @@
+{
+ "persona": "Mariana Robles, 29",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-03T22:20:27.835Z",
+ "tareas": [
+  {
+   "quiero": "ver qué venden, si es una tienda normal o un rollo de esos de \"unete a mi equipo\"",
+   "esperaba": null,
+   "t": 20,
+   "segundos": 62,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "vi el anuncio en Instagram mientras cenaba. Voy a entrar a la tienda directo desde el cel. Si en los primeros 10 segundos me piden registrarme o me hablan de \"niveles\", cierro.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 20
+    },
+    {
+     "texto": "Lo primero que me tapa la pantalla es un \"Aviso de Privacidad\" completo. Lo bueno: dice \"No te pedimos datos bancarios ni fiscales\" y eso me tranquiliza un poco. Lo malo: es lo primero que veo, antes de saber qué venden.",
+     "segundosDesdeLoAnterior": 48,
+     "t": 68
+    },
+    {
+     "texto": "Ya sin el aviso quiero lo mas basico: cuanto cuesta el bote. En la portada leo \"Cuida tu cuerpo. Potencia tu energia\" y tres palabras sueltas (Energia diaria, Recuperacion, Salud integral) pero NO veo un precio por ningun lado.",
+     "segundosDesdeLoAnterior": 1,
+     "t": 69
+    },
+    {
+     "texto": "Voy a picarle a \"Ver beneficios\" a ver si ahi viene la ficha del producto con el precio, los gramos, el sabor. Es lo que haria en cualquier tienda.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 82
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "lo primero que me sale es un aviso de privacidad de cuatro parrafos, ni siquiera he visto el producto",
+     "pantalla": "#/tienda",
+     "t": 68
+    },
+    {
+     "texto": "no hay precio en ninguna parte de la tienda. Ni \"$\" ni \"MXN\". Solo \"Agregar al carrito\"",
+     "pantalla": "#/tienda",
+     "t": 82
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "ver la ficha del producto (precio, contenido) antes de dar mis datos",
+   "esperaba": null,
+   "t": 82,
+   "segundos": 16,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "No hay ficha del producto. No sé si el bote trae 300g o 30 sobres, ni de qué sabor, ni cuántos días dura. Solo dice COLÁGENO en mayúsculas. Eso en una tienda de suplementos es rarísimo.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 98
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Ver beneficios\" y la pantalla se quedó exactamente igual; los \"beneficios\" son tres palabras sueltas: Energía diaria, Recuperación, Salud integral",
+     "pantalla": null,
+     "t": 98
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no existe ficha del producto: ni precio, ni gramos, ni sabor, ni ingredientes. \"Ver beneficios\" no abre nada"
+  },
+  {
+   "quiero": "saber cuánto cuesta el bote metiéndolo al carrito",
+   "esperaba": null,
+   "t": 98,
+   "segundos": 53,
+   "logrado": false,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Si el precio no está en la portada, a lo mejor aparece al meterlo al carrito. Lo voy a agregar solo para ver el número; si es carísimo lo saco.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 98
+    },
+    {
+     "texto": "A lo mejor sí se agregó y el resumen de abajo no se actualiza. Le doy a \"Ver carrito\" arriba para comprobar, porque no me fío de lo que dice el pie.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 111
+    },
+    {
+     "texto": "Esto está al revés: primero me pide los datos y luego, supongo, me dirá el precio. Yo quería lo contrario. Voy a regresar y volver a darle a Agregar al carrito, con calma, quizá le di al botón equivocado.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 130
+    },
+    {
+     "texto": "Dice \"Todos los productos — 0 productos\". O sea que la tienda que acabo de ver con el colageno aqui aparece vacia. Le doy a \"Ver productos\" a ver si ahi si sale el precio.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 151
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el carrito dice \"Total $0\" y \"0 artículos\" pero de todos modos me está pidiendo nombre, teléfono, correo, calle, número, CP, estado, entre calles y referencias",
+     "pantalla": "#/carrito",
+     "t": 130
+    },
+    {
+     "texto": "dice \"Corte en 27d 1h\" y \"Mínimo requerido\" sin decir mínimo de qué ni corte de qué",
+     "pantalla": "#/carrito",
+     "t": 130
+    },
+    {
+     "texto": "¿qué es \"PC\"? dice \"Cada producto suma PC a tus metas\" y no lo explica en ningún lado",
+     "pantalla": "#/dashboard",
+     "t": 151
+    },
+    {
+     "texto": "\"seguimiento de tu red\" y \"Meta para invitados\" — yo solo quiero un bote de colágeno, no tengo red",
+     "pantalla": "#/dashboard",
+     "t": 151
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: le di a \"Agregar al carrito\" y abajo sigue diciendo \"Sin artículos\" y \"Total en carrito —\"",
+     "t": 111
+    },
+    {
+     "texto": "le di a \"Regresar\" desde el carrito y acabé en una pantalla /#/dashboard que no pedí y que no es la tienda",
+     "pantalla": null,
+     "t": 140
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "encontrar el catálogo con precios desde \"Ver productos\"",
+   "esperaba": null,
+   "t": 151,
+   "segundos": 12,
+   "logrado": false,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "\"Ver productos\" tampoco hace nada: le di y la pantalla se quedó igual, con \"0 productos\"",
+     "pantalla": null,
+     "t": 163
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "el catálogo dice \"0 productos\" y el botón \"Ver productos\" no abre nada"
+  },
+  {
+   "quiero": "encontrar en el menú dónde ver el precio del colágeno",
+   "esperaba": null,
+   "t": 163,
+   "segundos": 89,
+   "logrado": false,
+   "clicsBase": 6,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "El menú entero tiene una sola opción: \"Tienda\". No hay \"Productos\", no hay \"Preguntas frecuentes\", no hay \"Envíos\", no hay \"Contacto\". Para una tienda es poquísimo.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 175
+    },
+    {
+     "texto": "Voy a usar la flecha de atrás del celular, que es lo que hace uno cuando la app no responde.",
+     "segundosDesdeLoAnterior": 44,
+     "t": 219
+    },
+    {
+     "texto": "Tres veces le he dado a \"Agregar al carrito\" y el carrito sigue diciendo \"Sin artículos\" y \"Total en carrito —\". No sale ningún aviso, ni \"inicia sesión para comprar\", ni un error rojo. Nada. Es como picarle a una foto.",
+     "segundosDesdeLoAnterior": 33,
+     "t": 252
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "reintento: vuelvo a la tienda a intentar de nuevo el \"Agregar al carrito\", esta vez viendo el contador del carrito",
+     "t": 176
+    },
+    {
+     "texto": "la opción \"Tienda\" del menú tampoco me lleva a la tienda: sigo en /#/dashboard. Van tres botones que no hacen nada: \"Ver beneficios\", \"Ver productos\" y \"Tienda\"",
+     "pantalla": null,
+     "t": 219
+    },
+    {
+     "texto": "reintento: tercer intento de \"Agregar al carrito\", ahora ya de vuelta en /#/tienda",
+     "t": 229
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, vi su anuncio del colágeno en Instagram. Entro a la tienda desde el celular y no encuentro el precio por ningún lado, y cuando le doy a \"Agregar al carrito\" no pasa nada, el carrito se queda en \"Sin artículos\". ¿Cuánto cuesta el bote y cuánto sale el envío a la CDMX?",
+     "t": 252,
+     "tarea": "encontrar en el menú dónde ver el precio del colágeno"
+    }
+   ],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "nunca vi el precio: no está en la tienda, el carrito da $0 y \"Agregar al carrito\" no responde"
+  },
+  {
+   "quiero": "registrarme (aunque no quería) porque parece que sin cuenta no me deja comprar",
+   "esperaba": null,
+   "t": 252,
+   "segundos": 66,
+   "logrado": false,
+   "clicsBase": 9,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Supongo que el botón no funciona porque no tengo cuenta, aunque nadie me lo dijo. El formulario de registro está ahí mismo abajo y dice \"Crear cuenta y comprar\". Me choca dar mis datos sin saber el precio, pero quiero el bote. Contraseña, teléfono, apellidos... para un bote de colágeno es mucho.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 252
+    },
+    {
+     "texto": "El botón se quedó en \"Creando cuenta...\" — espero, en el cel a veces tarda.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 271
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "me piden apellido paterno y materno por separado y contraseña, para comprar un bote; ninguna tienda normal me pide eso",
+     "pantalla": "#/tienda",
+     "t": 252
+    },
+    {
+     "texto": "no sé si mi cuenta se creó o no, ni si mis datos (nombre, teléfono, correo, contraseña) se quedaron guardados en algún lado",
+     "pantalla": "#/tienda",
+     "t": 292
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "me salió en rojo, tal cual: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/crearcuenta: 0 Unknown Error\"",
+     "pantalla": null,
+     "t": 292
+    },
+    {
+     "texto": "reintento: vuelvo a darle a \"Crear cuenta y comprar\" por si fue el internet del cel",
+     "t": 292
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "el registro truena con un error técnico de Amazon (\"0 Unknown Error\") las dos veces que lo intenté"
+  },
+  {
+   "quiero": "averiguar si mi cuenta quedó creada, entrando con mi correo y contraseña",
+   "esperaba": null,
+   "t": 318,
+   "segundos": 59,
+   "logrado": false,
+   "clicsBase": 11,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Quizá la cuenta sí se creó y el error fue solo al responderme. Voy a intentar entrar con el mismo correo y contraseña; si me deja, existía.",
+     "segundosDesdeLoAnterior": 47,
+     "t": 318
+    },
+    {
+     "texto": "También me llama la atención que le llamen \"panel\" a lo mío: \"Accede a tu panel\", \"Ingresar al panel\". Yo no quiero un panel, quiero un bote de colágeno.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 331
+    },
+    {
+     "texto": "Ya entendí: no es mi cuenta, es que la página no se está conectando con su servidor. Y aun así me dejó llenar todo el formulario con mi contraseña y mi teléfono sin avisarme de nada.",
+     "segundosDesdeLoAnterior": 46,
+     "t": 377
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "aquí dice \"¿COMPRASTE SIN CUENTA? RASTREA TU PEDIDO\", o sea que sí se puede comprar sin cuenta. Entonces ¿por qué el botón de agregar al carrito no me hace nada?",
+     "pantalla": "#/login",
+     "t": 331
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el login da EXACTAMENTE el mismo error: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error\"",
+     "pantalla": null,
+     "t": 377
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no puedo entrar: el login truena con el mismo error de Amazon, así que nunca sabré si mi cuenta existe"
+  },
+  {
+   "quiero": "intentar comprar sin cuenta llenando la dirección y dándole a Pagar",
+   "esperaba": null,
+   "t": 377,
+   "segundos": 94,
+   "logrado": false,
+   "clicsBase": 13,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "En el login vi \"¿Compraste sin cuenta? Rastrea tu pedido\", así que se supone que se puede comprar sin cuenta. Voy al carrito y lleno la dirección aunque el total diga $0, a ver si en algún momento me dice el precio.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 377
+    },
+    {
+     "texto": "Le voy a dar a \"Ver resumen\" y luego a \"Pagar\" aunque el total diga $0, nomás para ver qué me contesta.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 395
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "puse mi CP 06100, que es la colonia Roma en el centro de la CDMX, y me dice \"No se encontraron opciones de envío para este código postal\"",
+     "pantalla": "#/carrito",
+     "t": 395
+    },
+    {
+     "texto": "en el resumen dice \"Envío: Se calcula con tu código postal\" pero abajo dice que no hay opciones de envío para mi código postal. Se contradicen en la misma pantalla",
+     "pantalla": "#/carrito",
+     "t": 438
+    },
+    {
+     "texto": "\"Nivel de descuento: Inactivo\" y \"Te faltan $0 para Meta de beneficios\" — no entiendo ni una ni otra, y no hay ningún \"¿qué es esto?\"",
+     "pantalla": "#/carrito",
+     "t": 438
+    },
+    {
+     "texto": "apareció un campo \"Código de descuento\" que antes no estaba; no sé de dónde saldría un código si acabo de llegar",
+     "pantalla": "#/carrito",
+     "t": 471
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le di a \"Pagar\" con toda mi dirección puesta y no pasó absolutamente nada: ni error, ni \"tu carrito está vacío\", ni pantalla de pago",
+     "pantalla": null,
+     "t": 471
+    },
+    {
+     "texto": "reintento: ahora el mensaje del envío cambió solo a \"No se pudo calcular el envío.\" (antes decía \"No se encontraron opciones de envío para este código postal\")",
+     "t": 471
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no se puede comprar: el producto nunca entra al carrito, el total siempre es $0, el envío no se calcula y \"Pagar\" no responde"
+  },
+  {
+   "quiero": "revisar mi correo a ver si al menos me llegó algo de la cuenta que intenté crear",
+   "esperaba": null,
+   "t": 485,
+   "segundos": 13,
+   "logrado": true,
+   "clicsBase": 16,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Son las 10:35 de la noche. Ya me di por vencida con la compra, pero me quedé con la duda de si mis datos y mi contraseña quedaron en su sistema. Voy a ver si me llegó algún correo.",
+     "segundosDesdeLoAnterior": 90,
+     "t": 485
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "llené el registro con contraseña y teléfono, me dio un error de servidor, y no me llegó NINGÚN correo. No sé si existo en su sistema o no",
+     "pantalla": "correo",
+     "t": 498
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 2,
+   "comentario": "revisar el correo fue fácil, pero no llegó nada: ni bienvenida, ni confirmación, ni una disculpa por el error"
+  },
+  {
+   "quiero": "último intento: recargar la tienda desde cero por si era mi internet",
+   "esperaba": null,
+   "t": 498,
+   "segundos": 45,
+   "logrado": false,
+   "clicsBase": 16,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Antes de borrar la página del cel, la recargo completa. Si de verdad fuera mi señal, al recargar debería jalar.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 498
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "recargué la página completa y el resultado es idéntico: el bote no entra al carrito. Cierro la pestaña."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "una tienda que no me dice cuanto cuesta antes de agregar al carrito me da mala espina; asi son las paginas que te piden registro para ver el precio",
+   "t": 82,
+   "tarea": "ver qué venden, si es una tienda normal o un rollo de esos de \"unete a mi equipo\""
+  },
+  {
+   "emocion": "confusión",
+   "intensidad": 4,
+   "porque": "me está pidiendo mi dirección completa para un carrito vacío y con total $0",
+   "t": 130,
+   "tarea": "saber cuánto cuesta el bote metiéndolo al carrito"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "palabras como \"tu red\", \"metas\" y \"PC\" son justo lo que me hace cerrar una app; huele a piramide",
+   "t": 151,
+   "tarea": "saber cuánto cuesta el bote metiéndolo al carrito"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "llevo como diez minutos y no he podido ni ver el precio; tres botones no responden",
+   "t": 219,
+   "tarea": "encontrar en el menú dónde ver el precio del colágeno"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "no puedo ni meter un producto al carrito ni saber cuánto cuesta; en cualquier otra tienda esto son dos toques",
+   "t": 252,
+   "tarea": "encontrar en el menú dónde ver el precio del colágeno"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "una tienda seria no me enseña la dirección de su servidor de Amazon con un \"Unknown Error\"; parece página pirata o a medio hacer",
+   "t": 292,
+   "tarea": "registrarme (aunque no quería) porque parece que sin cuenta no me deja comprar"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "dos veces el mismo error de Amazon; ya perdí quince minutos por un bote de colágeno",
+   "t": 318,
+   "tarea": "registrarme (aunque no quería) porque parece que sin cuenta no me deja comprar"
+  },
+  {
+   "emocion": "incredulidad",
+   "intensidad": 4,
+   "porque": "si no llega ni a la Roma, ¿a dónde llega? y sigue sin decirme cuánto cuesta el envío",
+   "t": 395,
+   "tarea": "intentar comprar sin cuenta llenando la dirección y dándole a Pagar"
+  },
+  {
+   "emocion": "resignación",
+   "intensidad": 4,
+   "porque": "me rendí: no hay manera de comprar un bote de colágeno en esta página",
+   "t": 471,
+   "tarea": "intentar comprar sin cuenta llenando la dirección y dándole a Pagar"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 2,
+   "porque": "no me llegó nada, ni bienvenida ni \"confirma tu correo\". Al menos no me están escribiendo, pero tampoco sé si guardaron mi contraseña",
+   "t": 498,
+   "tarea": "revisar mi correo a ver si al menos me llegó algo de la cuenta que intenté crear"
+  },
+  {
+   "emocion": "desilusión",
+   "intensidad": 4,
+   "porque": "el anuncio de Instagram se veía bonito y la página también, pero no vende nada; es una maqueta",
+   "t": 543,
+   "tarea": null
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, vi su anuncio del colágeno en Instagram. Entro a la tienda desde el celular y no encuentro el precio por ningún lado, y cuando le doy a \"Agregar al carrito\" no pasa nada, el carrito se queda en \"Sin artículos\". ¿Cuánto cuesta el bote y cuánto sale el envío a la CDMX?",
+   "t": 252,
+   "tarea": "encontrar en el menú dónde ver el precio del colágeno"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Segunda vez que escribo. Llené mi dirección completa en el carrito (CP 06100, Roma Norte, CDMX) y me dice \"No se pudo calcular el envío\". Le doy a Pagar y no pasa nada. Al intentar crear cuenta y al intentar entrar me sale un error que dice \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error\". ¿Su página está caída? ¿Y cuánto cuesta el bote?",
+   "t": 471,
+   "tarea": null
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 2,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": 5,
+  "tresAdjetivos": [
+   "bonita",
+   "hueca",
+   "sospechosa"
+  ],
+  "mejorPantalla": "la portada de la tienda: los colores tierra y la tipografía se ven caros, parecen de marca de skincare",
+  "peorPantalla": "el carrito en el celular: un formulario larguísimo de nombre, teléfono, correo, calle, número, ciudad, CP, estado, país, entre calles, referencias y detalles de entrega, todo para un total de $0 y \"0 artículos\"",
+  "seParece": "a una plantilla de tienda bonita a la que nunca le conectaron los productos; por fuera marca de bienestar gringa, por dentro nada",
+  "recomendarias": 1,
+  "volverias": "no; si acaso volvería en un mes por si la arreglan, pero el colágeno se lo voy a comprar a otra marca esta misma noche",
+  "comentario": "No vi el precio ni una sola vez en toda la sesión. El botón principal (\"Agregar al carrito\") no hace nada y no avisa por qué; \"Ver beneficios\", \"Ver productos\" y \"Tienda\" del menú tampoco. Al registrarme me salió en rojo la dirección del servidor de Amazon con un \"Unknown Error\", y eso mata la confianza: parece página abandonada o clonada. Y lo poco que sí se lee me habla de \"PC\", \"tu red\", \"Meta de beneficios\" y \"socia\" — yo solo quería un bote."
+ },
+ "totales": {
+  "clics": 17,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 15,
+  "pantallas": 8,
+  "recargas": 1,
+  "atrases": 3
+ },
+ "pantallas": [
+  {
+   "ruta": "#/tienda",
+   "desde": 1788474047486,
+   "primerClicMs": 48551,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788474246924,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788474248133,
+   "primerClicMs": 8244,
+   "clics": 1,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788474246925,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788474405265,
+   "primerClicMs": 17204,
+   "clics": 9,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788474525787,
+   "primerClicMs": 17394,
+   "clics": 1,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788474405266,
+   "primerClicMs": 17204,
+   "clics": 3,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788474525788,
+   "primerClicMs": 17394,
+   "clics": 1,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/crearcuenta: 0 Unknown Error",
+   "t": 279,
+   "tarea": "registrarme (aunque no quería) porque parece que sin cuenta no me deja comprar"
+  },
+  {
+   "texto": "Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error",
+   "t": 357,
+   "tarea": "averiguar si mi cuenta quedó creada, entrando con mi correo y contraseña"
+  },
+  {
+   "texto": "Mínimo requerido",
+   "t": 446,
+   "tarea": "intentar comprar sin cuenta llenando la dirección y dándole a Pagar"
+  },
+  {
+   "texto": "No se pudo calcular el envío.",
+   "t": 446,
+   "tarea": "intentar comprar sin cuenta llenando la dirección y dándole a Pagar"
+  }
+ ],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "Voy a abrir el menú de hamburguesa a ver si desde ahí hay una sección de productos o de precios.",
+   "segundosDesdeLoAnterior": 12,
+   "t": 163
+  }
+ ],
+ "fin": "2026-09-03T22:29:35.372Z",
+ "duracionMin": 9
+}

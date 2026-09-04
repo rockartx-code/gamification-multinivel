@@ -1,0 +1,714 @@
+{
+ "persona": "Renata Bustos, 41",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T02:48:55.144Z",
+ "tareas": [
+  {
+   "quiero": "entrar al panel para pagar las comisiones de marzo",
+   "esperaba": null,
+   "t": 26,
+   "segundos": 217,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 5,
+   "pensamientos": [
+    {
+     "texto": "Hoy es 10 de abril, dia de pago de comisiones. El dueno quiere marzo liquidado, revisar pagos que el banco cobro y el sistema no, y un mensaje de cierre. No se donde esta nada: entro y busco.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 26
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Entré, pero primero me tiró un error rarísimo con una dirección de amazonaws y \"0 Unknown Error\", y el botón se quedó en \"Validando acceso...\" hasta que recargué la página a mano."
+  },
+  {
+   "quiero": "encontrar dónde se pagan las comisiones de marzo",
+   "esperaba": null,
+   "t": 243,
+   "segundos": 107,
+   "logrado": false,
+   "clicsBase": 5,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Leo el menú: OPERACIÓN DIARIA (Pedidos, Punto de Venta, Stocks), PERSONAS (Clientes, Empleados), CATÁLOGO Y OFERTA (Productos, Campañas, Cupones), SEGUIMIENTO (Estadísticas, Cuadro de Honor, Notificaciones), SISTEMA (Configuración). No veo la palabra COMISIONES por ningún lado. Y hoy es el día de pago. Me late que están escondidas dentro de Clientes o de Cuadro de Honor.",
+     "segundosDesdeLoAnterior": 217,
+     "t": 243
+    },
+    {
+     "texto": "Antes de perderme, abro \"Acciones 2 urgentes\": si hay algo pendiente de comisiones debería avisarme ahí.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 250
+    },
+    {
+     "texto": "Voy a Clientes: los socios son clientes, y si hay comisiones deberían verse por socio.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 264
+    },
+    {
+     "texto": "En Clientes veo arriba \"Comisiones por depositar $0\" y abajo dos botones apagados: \"Exportar archivo de dispersión (CSV) - No hay socias listas para depositar este mes\" y \"Registrar pago por lote - Marca las filas que vas a pagar\". Eso es lo que busco. Pero vi un selector de meses que dice \"septiembre 2026, agosto 2026...\" y estamos en abril de 2027. Voy a leerlo bien.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 281
+    },
+    {
+     "texto": "Antes de rendirme pruebo el mes más nuevo que hay, septiembre 2026, para ver si al menos la pantalla funciona y qué muestra.",
+     "segundosDesdeLoAnterior": 42,
+     "t": 323
+    },
+    {
+     "texto": "Nota importante que leo en la tabla: \"Las comisiones se confirman cuando el pedido se entrega\". Si los pedidos de marzo no están entregados, no hay comisión que pagar. Eso ya me dice qué contestarle al dueño. Pero primero abro las fichas de los dos socios: Fabiola y Paulina, a ver qué dice cada una.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 336
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el menú no tiene \"Comisiones\" y hoy es el día 10, el día que se pagan",
+     "pantalla": "#/admin",
+     "t": 243
+    },
+    {
+     "texto": "\"Acciones urgentes\" me habla de envíos y transferencias, pero hoy es 10 y no dice una palabra de las comisiones del mes",
+     "pantalla": "#/admin",
+     "t": 263
+    },
+    {
+     "texto": "la pantalla dice \"Se paga el mes anterior el día 10\" pero el mes que me deja elegir por default es \"agosto 2026\"; ¿el sistema cree que estamos en septiembre del año pasado?",
+     "pantalla": "#/admin clientes",
+     "t": 323
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el selector \"Mes de las comisiones\" solo llega hasta septiembre de 2026 y hoy es 10 de abril de 2027: NO existe la opción \"marzo 2027\", que es justo el mes que tengo que pagar. La lista va de septiembre 2026 hacia atrás hasta octubre 2025.",
+     "pantalla": null,
+     "t": 323
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "ver ficha por ficha de los dos socios para saber si alguien tiene comisión de marzo",
+   "esperaba": null,
+   "t": 350,
+   "segundos": 139,
+   "logrado": true,
+   "clicsBase": 5,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Abro la ficha de Fabiola Cantú, que aparece como \"Socio\".",
+     "segundosDesdeLoAnterior": 14,
+     "t": 350
+    },
+    {
+     "texto": "Fabiola: socia desde el 04/03/2027, patrocinada por Paulina Ríos, comisiones mes actual $0 y mes anterior $0 \"Sin movimientos\". Ni la tarjeta me dice de QUÉ mes habla: dice \"mes actual\" y \"mes anterior\" pero no la fecha. Ahora la de Paulina, que es la que tiene red.",
+     "segundosDesdeLoAnterior": 112,
+     "t": 462
+    },
+    {
+     "texto": "Abrí las 3 fichas que importan (Julio, Fabiola y Paulina) y las tres dicen $0. Paulina tiene a Fabiola colgando de ella, pero \"Consumo de la red del cliente en el periodo\" marca \"Pauli | $0\" y \"Fabio | $0\" aunque Fabiola compró el 04/03/2027. O el periodo que mira la pantalla no es marzo, o de plano no hay comisiones.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 489
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 2,
+   "comentario": "Abrí 3 fichas de 4 clientes. Todas dicen $0 sin decirme de qué mes. No sé si es que nadie ganó nada en marzo o si la pantalla está mirando otro mes."
+  },
+  {
+   "quiero": "pagar las comisiones de marzo 2027 y dejar constancia",
+   "esperaba": null,
+   "t": 489,
+   "segundos": 0,
+   "logrado": false,
+   "clicsBase": 11,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "El único lugar que existe para depositar es \"Pagos del mes · comisiones por depositar\" dentro de Clientes. Y ahí no puedo elegir marzo 2027. Sin ese mes no hay archivo de dispersión, no hay CSV para el banco y no hay nada que marcar como pagado.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 489
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata: entré al panel para dejar liquidado marzo. En Clientes hay una sección \"Pagos del mes · comisiones por depositar\" que dice \"Se paga el mes anterior el día 10\", pero el selector \"Mes de las comisiones\" solo llega hasta septiembre 2026 y arranca en agosto 2026. NO existe marzo 2027. Todo marca $0 y los dos botones (Exportar archivo de dispersión y Registrar pago por lote) están apagados. ¿Depositamos por fuera o esperamos a que arreglen la pantalla? No voy a mover dinero sin que el sistema me deje dejar constancia.",
+     "t": 489,
+     "tarea": "pagar las comisiones de marzo 2027 y dejar constancia"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "la pantalla de pagos de comisiones no ofrece el mes que tengo que pagar (marzo 2027): el mes más nuevo del selector es septiembre 2026"
+  },
+  {
+   "quiero": "revisar que no haya pedidos cobrados por el banco que el sistema no registró",
+   "esperaba": null,
+   "t": 498,
+   "segundos": 86,
+   "logrado": true,
+   "clicsBase": 11,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En Pedidos vi un botón que se llama \"Conciliar pagos\". Eso suena exactamente a lo que me pidió el dueño. Voy para allá.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 498
+    },
+    {
+     "texto": "Leo bien: \"Se consultará a MercadoPago por los pedidos pendientes de pago de las ÚLTIMAS 72 HORAS\". Yo estoy buscando pedidos de MARZO que el banco cobró y aquí no entraron. Marzo fue hace más de un mes. O sea que esta herramienta no me sirve para lo que me pidieron, pero es la única que hay. La corro de todos modos.",
+     "segundosDesdeLoAnterior": 67,
+     "t": 565
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿72 horas? si el cobro se perdió hace tres semanas, ¿quién lo encuentra?",
+     "pantalla": "#/admin pedidos",
+     "t": 565
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 3,
+   "comentario": "La corrí y me dijo \"Revisados 0 · Acreditados 0 · Sin pago 0 / No hay pedidos pendientes de pago en las últimas 72 horas\". Clarísimo el mensaje, pero solo mira 3 días atrás y yo venía a revisar marzo entero."
+  },
+  {
+   "quiero": "ver los pedidos de marzo uno por uno para saber cómo cerró el mes",
+   "esperaba": null,
+   "t": 584,
+   "segundos": 143,
+   "logrado": true,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ya tengo el mapa de marzo: 5 pedidos. Dos entregados (POS-585BACA3 $760 y ORD-53CD91D4 de Julio $1,209), dos pagados sin enviar del 04/03 (Fabiola $1,308 y Aurora $1,180) y uno cancelado el 20/03 de Paulina por $960 que sigue sin reembolsar. Lo que me pega: Fabiola es socia DEBAJO de Paulina, compró $1,308 el 4 de marzo, el dinero ya está cobrado... y a Paulina no le aparece ni un peso ni siquiera \"por confirmar\".",
+     "segundosDesdeLoAnterior": 91,
+     "t": 656
+    },
+    {
+     "texto": "Abrí el detalle del pedido de Fabiola: productos, dirección, notas internas. NADA de comisiones: no dice quién gana por ese pedido ni cuántos puntos deja. Si quiero saber a quién le toca cobrar, el pedido no me ayuda.",
+     "segundosDesdeLoAnterior": 70,
+     "t": 727
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "el modal de conciliación se me quedó encima: le di a \"Cerrar\" y la pantalla de atrás no respondía",
+     "pantalla": null,
+     "t": 624
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "Los 5 pedidos de marzo los vi bien y las pestañas están claras, pero tuve que entrar pestaña por pestaña (Entregado, Pagado, Cancelado) porque la lista arranca en \"Pendiente\" que estaba vacía."
+  },
+  {
+   "quiero": "buscar en otro lado las comisiones de marzo (Cuadro de Honor / Estadísticas / Notificaciones / Configuración)",
+   "esperaba": null,
+   "t": 727,
+   "segundos": 33,
+   "logrado": true,
+   "clicsBase": 20,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "¡Aquí SÍ! El Cuadro de Honor dice \"Mes: 2027-04\". O sea que el sistema sí sabe que estamos en abril de 2027. Entonces lo de \"septiembre 2026\" en la pantalla de pagos está mal. Pongo 2027-03 a ver quién produjo en marzo.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 741
+    },
+    {
+     "texto": "Marzo 2027 SÍ tuvo movimiento: Fabiola VG 24 / VP 24 y Paulina VG 24 / VP 0. Entonces no es que el mes esté vacío: es que la pantalla de pagos ni siquiera me deja verlo. Además el rango de las dos sale \"—\" y a Paulina le pone \"FALTA −0\", que no sé qué significa.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 760
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el Cuadro de Honor sabe que estamos en 2027-04 y me deja escribir 2027-03; la pantalla de pagos de comisiones cree que estamos en septiembre de 2026. Son dos calendarios distintos en el mismo panel",
+     "pantalla": "#/admin cuadro de honor",
+     "t": 760
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 3,
+   "comentario": "En Cuadro de Honor sí pude ver marzo 2027 escribiendo la fecha a mano, pero ahí no hay dinero, solo volúmenes (VG/VP) y los rangos salen en \"—\"."
+  },
+  {
+   "quiero": "ver en Configuración cómo están puestas las comisiones",
+   "esperaba": null,
+   "t": 760,
+   "segundos": 65,
+   "logrado": true,
+   "clicsBase": 21,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En Configuración encontré la explicación que ninguna otra pantalla me da: \"Activacion minima (VP) = 20\" y \"Dia de pago = 10\". Generación 1 paga 10%. Paulina tiene VP 0 en marzo, o sea NO se activó, así que no cobra el 10% de la compra de Fabiola. Y encima el pedido de Fabiola nunca se entregó, y las comisiones se confirman al entregar. Dos candados. Pero eso lo deduje yo leyendo la configuración: en ninguna pantalla de comisiones dice \"Paulina no cobra porque no se activó\".",
+     "segundosDesdeLoAnterior": 64,
+     "t": 825
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿por qué tengo que entrar a Configuración para entender por qué una socia no cobra?",
+     "pantalla": "#/admin configuracion",
+     "t": 825
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 4,
+   "comentario": "La configuración tiene TODO (rangos, generaciones, activación mínima, día de pago) pero es una pantalla larguísima de puros campos sueltos; tuve que leerla completa para entender el negocio."
+  },
+  {
+   "quiero": "ver Notificaciones y Estadísticas por si ahí está el cierre del mes",
+   "esperaba": null,
+   "t": 825,
+   "segundos": 59,
+   "logrado": false,
+   "clicsBase": 22,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En Estadísticas SÍ aparece \"Marzo de 2027\" como primera opción de periodo. Tres pantallas, tres calendarios distintos: Cuadro de Honor con 2027-04, Estadísticas con Marzo de 2027 y la de pagos con septiembre 2026. Selecciono marzo 2027.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 854
+    },
+    {
+     "texto": "Cuidado con estos números. Arriba del panel dice \"$4,457 cobrado · 5 pedidos\" y aquí dice \"Ventas del periodo $5,417 · 5 pedidos\". La diferencia son exactamente $960: el pedido CANCELADO de Paulina. O sea que Estadísticas me está sumando como venta un pedido cancelado, y encima lo pone de \"Top cliente #1\". Si le mando esto al dueño le reporto $960 que nunca entraron.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 876
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿cuál cifra es la buena: $4,457 del panel de pedidos o $5,417 de Estadísticas?",
+     "pantalla": "#/admin estadisticas",
+     "t": 876
+    },
+    {
+     "texto": "\"Pedidos por estado\" dice paid 2 $0, delivered 2 $0, cancelled 1 $0: todas las cantidades en cero, y los estados en inglés cuando el resto está en español",
+     "pantalla": "#/admin estadisticas",
+     "t": 876
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "bajar una constancia de cómo cerró marzo para mandársela al dueño",
+   "esperaba": null,
+   "t": 884,
+   "segundos": 66,
+   "logrado": true,
+   "clicsBase": 22,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Veo dos botones: \"Resumen de turno\" y \"Reporte completo Excel\". Si algo me sirve para dejar constancia es eso.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 884
+    },
+    {
+     "texto": "El \"Resumen de turno\" es por persona y por día, no por mes: no me sirve para contarle al dueño cómo cerró marzo. Lo único que me sirvió fue el Excel \"reporte-mensual-2027-03.xlsx\". Cierro esto y vuelvo al panel.",
+     "segundosDesdeLoAnterior": 66,
+     "t": 950
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "el \"Resumen de turno\" me dice \"No hay movimientos de Renata Bustos el 4 sep 2026\". ¡4 de septiembre de 2026! Hoy es 10 de abril de 2027. La pantalla se puso sola una fecha de hace año y medio.",
+     "pantalla": null,
+     "t": 931
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 3,
+   "comentario": "Sí bajé un Excel del mes (reporte-mensual-2027-03.xlsx) pero con los números de Estadísticas, que incluyen el pedido cancelado. El \"Resumen de turno\" venía con la fecha 4 sep 2026 puesta sola."
+  },
+  {
+   "quiero": "probar el botón Exportar de \"Comisiones por depositar\" en Clientes",
+   "esperaba": null,
+   "t": 950,
+   "segundos": 27,
+   "logrado": false,
+   "clicsBase": 28,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "le di a \"Exportar\" en la tarjeta \"Comisiones por depositar $0\" y me bajó un archivo que se llama comisiones-2026-08.xlsx. ¡Agosto de 2026! Y en ningún lado de la tarjeta dice de qué mes es lo que exporta.",
+     "pantalla": null,
+     "t": 977
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "el único export de comisiones que hay me da agosto 2026 y no me deja elegir marzo 2027"
+  },
+  {
+   "quiero": "dejar en orden el pedido cancelado de Paulina ($960 del 20/03) que sigue sin reembolsar",
+   "esperaba": null,
+   "t": 977,
+   "segundos": 149,
+   "logrado": true,
+   "clicsBase": 32,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Marzo no está liquidado si un pedido cancelado sigue con el botón \"Reembolsar\" encendido. Voy a Pedidos > Cancelado y veo QUÉ me pide antes de mover dinero. Si me deja reembolsar sin pedirme nada, eso es lo que tengo que reportar.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 977
+    },
+    {
+     "texto": "El modal me pide \"Importe a reembolsar\" (viene 960), \"Motivo (opcional)\" y \"Comprobante de depósito *\" con asterisco de obligatorio. Pero el botón \"Confirmar reembolso\" está ENCENDIDO y yo todavía no subo ningún comprobante. Voy a picarle a ver si de verdad me deja sacar $960 sin comprobante: si me deja, eso es lo más grave del día.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 1010
+    },
+    {
+     "texto": "Bien: no me dejó, me marcó \"Adjunta el comprobante de depósito.\" Aunque el botón debería estar apagado con el motivo, como hacen otros botones del panel. Ahora pruebo si me deja poner un importe más grande de lo cobrado, todavía sin comprobante para que no se ejecute.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 1032
+    },
+    {
+     "texto": "Regreso el importe a 960, le pongo motivo y le subo el comprobante del SPEI. Ahora sí registro el reembolso de verdad.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 1054
+    },
+    {
+     "texto": "Salió \"Reembolso de $960 registrado para el pedido ORD-391358BF; se avisó al cliente por correo\". No me lo creo hasta recargar y verlo en la pestaña Reembolsado.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 1070
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "escribí 99999 en el importe (el pedido fue de $960) y la pantalla no me dijo absolutamente nada del importe: solo me reclamó el comprobante",
+     "pantalla": "#/admin pedidos reembolso",
+     "t": 1054
+    },
+    {
+     "texto": "a Paulina le llegó primero un correo que dice \"No se hizo ningún cargo\" y luego otro que dice \"devolvimos $960.00\": si no hubo cargo, ¿qué le devolvimos?",
+     "pantalla": "correo del cliente",
+     "t": 1126
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el reembolso SÍ quedó (recargué y el pedido dice \"Reembolsada\", y a Paulina le llegó el correo \"Hoy (2027-04-10) devolvimos $960.00\"), PERO el contador de arriba SUBIÓ: antes decía \"$4,457 cobrado · 5 pedidos\" y ahora dice \"$5,417 cobrado · 5 pedidos\". Devolví $960 y el panel me sumó $960 de ingreso.",
+     "pantalla": null,
+     "t": 1126
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "El reembolso en sí está muy bien hecho: me exigió el comprobante, me sugirió el importe cobrado, avisó al cliente por correo y lo comprobé recargando. Lo que está mal es el contador de arriba, que sumó el reembolso como venta."
+  },
+  {
+   "quiero": "revisar la transferencia pendiente por recibir que sale en Acciones urgentes",
+   "esperaba": null,
+   "t": 1126,
+   "segundos": 48,
+   "logrado": true,
+   "clicsBase": 40,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "La transferencia TRF-ED945EDD salió de Bodega Central a Guadalajara el 03/03/2027 y sigue \"Pendiente\" 38 días después. Eso también va en el reporte del dueño. Ojo que la pantalla avisa: \"sin eso el botón Recibir no responde\" — o sea que ya saben que el botón no responde y en vez de arreglarlo lo escribieron en la ayuda.",
+     "segundosDesdeLoAnterior": 103,
+     "t": 1174
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "La transferencia se ve clarísima con origen, destino y productos. Me gustó que te avisen por qué el botón no va a responder, aunque preferiría que lo apagaran con el motivo, como en otras pantallas."
+  },
+  {
+   "quiero": "mandarle al dueño el cierre de marzo desde la plataforma",
+   "esperaba": null,
+   "t": 1174,
+   "segundos": 0,
+   "logrado": false,
+   "clicsBase": 41,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Busqué a dónde dejar un reporte para el dueño: Notificaciones es para avisarle a los clientes, no a él. El \"Resumen de turno\" es por persona y por día. Estadísticas me deja bajar el Excel pero no mandarlo. No hay ningún lugar en el panel para dejarle un cierre de mes al dueño: se lo voy a tener que mandar por WhatsApp como siempre.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1174
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿dónde se supone que dejo constancia de un cierre de mes? no encontré ninguna bandeja ni bitácora del gerente",
+     "pantalla": "#/admin",
+     "t": 1174
+    }
+   ],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Cierre de MARZO 2027, Renata:\n1) VENTAS. Marzo cerró con 5 pedidos. Ojo: el panel de Pedidos dice \"$4,457 cobrado\" y Estadisticas dice \"Ventas del periodo $5,417\". La diferencia son los $960 del pedido cancelado de Paulina, que Estadisticas cuenta como venta y hasta la pone de Top cliente #1. La cifra buena es $4,457.\n2) COMISIONES. NO SE PAGO NADA y no fue decision mia: la pantalla \"Pagos del mes - comisiones por depositar\" solo me deja elegir hasta septiembre 2026, no existe marzo 2027. El boton de exportar me bajo un archivo llamado comisiones-2026-08.xlsx. Aparte, de todos modos no habria mucho que pagar: Paulina no se activo en marzo (hizo 0 VP y el minimo son 20), y el pedido de Fabiola de $1,308 sigue sin entregarse, y las comisiones solo se confirman al entregar.\n3) CONCILIACION. Corri \"Conciliar pagos\": Revisados 0, Acreditados 0, Sin pago 0. Pero solo mira 72 horas hacia atras, asi que NO puedo garantizarte que no haya un cobro perdido de marzo. Eso hay que checarlo contra el estado de cuenta a mano.\n4) HICE: reembolse los $960 de Paulina (ORD-391358BF) con comprobante y le llego su correo. Baje el Excel reporte-mensual-2027-03.xlsx.\n5) PENDIENTE: 2 pedidos pagados el 04/03 sin enviar (Fabiola $1,308 y Aurora $1,180, 37 dias), la transferencia TRF-ED945EDD a Guadalajara sin recibir desde el 03/03, y las comisiones de marzo sin poder pagarse.\n6) AVISO GRAVE: despues de registrar el reembolso, el contador de arriba SUBIO de $4,457 a $5,417. Devolvimos dinero y el tablero lo suma como venta. No te fies de ese numero.",
+     "t": 1174,
+     "tarea": "mandarle al dueño el cierre de marzo desde la plataforma"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no existe ningún lugar en la plataforma para dejarle el cierre de mes al dueño; lo mandé por WhatsApp"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "es día de pago, el dueño me pidió dejar marzo liquidado y la única pantalla que existe para depositar no me deja ni seleccionar marzo de 2027",
+   "t": 323,
+   "tarea": "encontrar dónde se pagan las comisiones de marzo"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "el dueño me pidió algo que la plataforma simplemente no me deja hacer, y no hay ni un mensaje que me explique por qué",
+   "t": 489,
+   "tarea": "pagar las comisiones de marzo 2027 y dejar constancia"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "si dos pantallas del mismo sistema no coinciden en qué mes es, no me fío de ningún número para mover dinero",
+   "t": 760,
+   "tarea": "buscar en otro lado las comisiones de marzo (Cuadro de Honor / Estadísticas / Notificaciones / Configuración)"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "dos pantallas del mismo panel me dan dos totales distintos del mismo mes",
+   "t": 876,
+   "tarea": "ver Notificaciones y Estadísticas por si ahí está el cierre del mes"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 3,
+   "porque": "pensé que yo había escogido mal la fecha; la revisé tres veces y no, la traía puesta el sistema",
+   "t": 931,
+   "tarea": "bajar una constancia de cómo cerró marzo para mandársela al dueño"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "si no me fijo en el nombre del archivo, le mando al banco un archivo de un mes equivocado",
+   "t": 977,
+   "tarea": "probar el botón Exportar de \"Comisiones por depositar\" en Clientes"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 5,
+   "porque": "saqué dinero de la caja y el tablero lo cuenta como si hubiera entrado; con eso le reporto ventas de más al dueño",
+   "t": 1126,
+   "tarea": "dejar en orden el pedido cancelado de Paulina ($960 del 20/03) que sigue sin reembolsar"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "no moví un peso que no pudiera comprobar y dejé todo escrito",
+   "t": 1174,
+   "tarea": "mandarle al dueño el cierre de marzo desde la plataforma"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Renata: entré al panel para dejar liquidado marzo. En Clientes hay una sección \"Pagos del mes · comisiones por depositar\" que dice \"Se paga el mes anterior el día 10\", pero el selector \"Mes de las comisiones\" solo llega hasta septiembre 2026 y arranca en agosto 2026. NO existe marzo 2027. Todo marca $0 y los dos botones (Exportar archivo de dispersión y Registrar pago por lote) están apagados. ¿Depositamos por fuera o esperamos a que arreglen la pantalla? No voy a mover dinero sin que el sistema me deje dejar constancia.",
+   "t": 489,
+   "tarea": "pagar las comisiones de marzo 2027 y dejar constancia"
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Cierre de MARZO 2027, Renata:\n1) VENTAS. Marzo cerró con 5 pedidos. Ojo: el panel de Pedidos dice \"$4,457 cobrado\" y Estadisticas dice \"Ventas del periodo $5,417\". La diferencia son los $960 del pedido cancelado de Paulina, que Estadisticas cuenta como venta y hasta la pone de Top cliente #1. La cifra buena es $4,457.\n2) COMISIONES. NO SE PAGO NADA y no fue decision mia: la pantalla \"Pagos del mes - comisiones por depositar\" solo me deja elegir hasta septiembre 2026, no existe marzo 2027. El boton de exportar me bajo un archivo llamado comisiones-2026-08.xlsx. Aparte, de todos modos no habria mucho que pagar: Paulina no se activo en marzo (hizo 0 VP y el minimo son 20), y el pedido de Fabiola de $1,308 sigue sin entregarse, y las comisiones solo se confirman al entregar.\n3) CONCILIACION. Corri \"Conciliar pagos\": Revisados 0, Acreditados 0, Sin pago 0. Pero solo mira 72 horas hacia atras, asi que NO puedo garantizarte que no haya un cobro perdido de marzo. Eso hay que checarlo contra el estado de cuenta a mano.\n4) HICE: reembolse los $960 de Paulina (ORD-391358BF) con comprobante y le llego su correo. Baje el Excel reporte-mensual-2027-03.xlsx.\n5) PENDIENTE: 2 pedidos pagados el 04/03 sin enviar (Fabiola $1,308 y Aurora $1,180, 37 dias), la transferencia TRF-ED945EDD a Guadalajara sin recibir desde el 03/03, y las comisiones de marzo sin poder pagarse.\n6) AVISO GRAVE: despues de registrar el reembolso, el contador de arriba SUBIO de $4,457 a $5,417. Devolvimos dinero y el tablero lo suma como venta. No te fies de ese numero.",
+   "t": 1174,
+   "tarea": "mandarle al dueño el cierre de marzo desde la plataforma"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada",
+   "incoherente",
+   "fría"
+  ],
+  "mejorPantalla": "la de Pedidos: las pestañas con contadores (Pendiente / Pagado / Enviado / Entregado / Cancelado) y el modal de reembolso, que me pidió comprobante y me sugirió el importe cobrado",
+  "peorPantalla": "\"Pagos del mes · comisiones por depositar\" dentro de Clientes: es la pantalla más importante del día 10 y está escondida hasta abajo de la ficha de un cliente, con un selector de meses que no tiene el mes que necesito",
+  "seParece": "a un ERP hecho por alguien que entiende de almacén pero nunca cerró una nómina de comisiones; la parte de pedidos parece de una empresa y la parte de comisiones parece de otra",
+  "recomendarias": 4,
+  "volverias": "sí, porque es mi trabajo, pero el día 10 voy a seguir sacando la calculadora y el estado de cuenta del banco",
+  "comentario": "Está bien escrita: los textos de ayuda explican cosas de negocio (\"Se paga el mes anterior el día 10\", \"las comisiones se confirman cuando el pedido se entrega\") y eso se agradece muchísimo. Lo que no perdono es que tres pantallas del mismo panel crean que estamos en tres meses distintos (Cuadro de Honor 2027-04, Estadísticas Marzo de 2027, Pagos de comisiones septiembre 2026) y que el tablero sume un reembolso como si fuera venta. Con eso no se puede cerrar un mes."
+ },
+ "totales": {
+  "clics": 42,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 3,
+  "pantallas": 6,
+  "recargas": 2,
+  "atrases": 2
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788490161236,
+   "primerClicMs": 14872,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/login",
+   "desde": 1788490209285,
+   "primerClicMs": 14770,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/login",
+   "desde": 1788490250903,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/login",
+   "desde": 1788490301673,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/login",
+   "desde": 1788490339698,
+   "primerClicMs": 15668,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788491205652,
+   "primerClicMs": 17773,
+   "clics": 2,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T03:09:05.871Z",
+ "duracionMin": 20
+}

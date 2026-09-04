@@ -1,0 +1,900 @@
+{
+ "persona": "Fabiola Cantú, 41",
+ "rol": "cliente",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T00:58:40.898Z",
+ "tareas": [
+  {
+   "quiero": "entrar por el link que me mandó Paulina y entender qué es esto",
+   "esperaba": null,
+   "t": 27,
+   "segundos": 179,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Paulina me pasó un link. No sé si es una tienda o un negocio. Quiero ver si de verdad puedo ser socia y cuánto tengo que comprar.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 27
+    },
+    {
+     "texto": "Lo primero que busco es el número: cuánto tengo que comprar. Leo \"Ser activo = 20 VP de compra propia en el mes (1 VP = $50 netos)\". O sea $1,000 sin IVA ni envío. Eso sí lo entiendo.",
+     "segundosDesdeLoAnterior": 86,
+     "t": 114
+    },
+    {
+     "texto": "Abajo del formulario dice que me registro como cliente y que el \"modo socio\" se activa solo si lo pido, con un link \"Ver cómo funciona\". Yo quiero ser socia, así que voy a leer eso ANTES de registrarme.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 129
+    },
+    {
+     "texto": "Dice \"Cargando el plan…\". Espero. Esta es justo la página que quiero: \"Cómo funciona, con los números reales\".",
+     "segundosDesdeLoAnterior": 15,
+     "t": 143
+    },
+    {
+     "texto": "Nadie me contesta ahorita. Lo único concreto que leí es \"Ser activo = 20 VP de compra propia en el mes (1 VP = $50 netos)\" = $1,000 al mes. Voy a asumir eso y seguir: me registro y ya adentro busco los descuentos.",
+     "segundosDesdeLoAnterior": 63,
+     "t": 206
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "La tabla de Comisiones de Red tiene encabezados (Generación, Comisión, Directos activos, PC personales, Líneas) pero no veo ni un solo renglón con números. ¿Cuánto me pagan entonces?",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 114
+    },
+    {
+     "texto": "Dice \"Descuentos Progresivos: entre más compras, más ahorras\" pero no dice cuánto. ¿5%? ¿20%? No hay tabla.",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 114
+    },
+    {
+     "texto": "En ningún lado dice que Paulina Ríos es quien me invitó, aunque entré por su liga. ¿Sí quedó registrada?",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 114
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "La tabla de \"Comisiones de Red\" solo tiene los encabezados: no hay ni un renglón. No puedo saber cuánto me pagan por generación.",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 129
+    },
+    {
+     "texto": "La página \"Modo socio – Cómo funciona, con los números reales\" dice: \"No pudimos cargar el plan en este momento. Intenta de nuevo en unos minutos.\" Justo la que tenía los números.",
+     "pantalla": "#/modo-socio",
+     "t": 175
+    },
+    {
+     "texto": "reintento: vuelvo a recargar #/modo-socio a ver si ahora sí",
+     "t": 175
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "patrocinadora",
+     "texto": "Pau, entré a tu liga. La página de \"Modo socio\" me dice \"No pudimos cargar el plan en este momento\" y la tabla de comisiones del inicio está vacía. ¿Cuánto descuento me toca y cuánto tengo que comprar al mes para estar activa? Quiero entrar como socia pero no voy a firmar sin números.",
+     "t": 206,
+     "tarea": "entrar por el link que me mandó Paulina y entender qué es esto"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "la página que explica el modo socio no carga; me registro sin saber los porcentajes"
+  },
+  {
+   "quiero": "registrarme como socia con el código de Paulina",
+   "esperaba": null,
+   "t": 244,
+   "segundos": 336,
+   "logrado": false,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Me regreso a la liga de Paulina, no a la página normal, porque si me registro en otro lado a lo mejor no queda como mi patrocinadora. Ese es mi miedo.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 244
+    },
+    {
+     "texto": "El formulario no pregunta en ningún lado si quiero ser socia ni me deja poner el código de Paulina a mano. Solo confío en que la liga lo trae. Lleno y le doy.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 265
+    },
+    {
+     "texto": "Dice \"Creando cuenta...\" y ahí se queda. Espero.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 289
+    },
+    {
+     "texto": "Ya van dos veces con el mismo error rojo. A lo mejor el formulario de la portada está descompuesto y hay otro camino. Voy a \"Ir a la tienda\" a ver si desde ahí me deja crear cuenta.",
+     "segundosDesdeLoAnterior": 62,
+     "t": 351
+    },
+    {
+     "texto": "Aquí hay OTRO formulario de registro, \"Crear cuenta y comprar\". Es el mismo que en la portada pero con otro botón. Lo intento, a ver si este sí jala. Me preocupa que si me registro aquí se pierda el código de Paulina.",
+     "segundosDesdeLoAnterior": 30,
+     "t": 380
+    },
+    {
+     "texto": "Volví a entrar a la liga y AHORA sí sale \"Paulina Ríos\" con su foto y \"Estoy aquí para acompañarte desde el primer paso\". Antes no aparecía por ningún lado. O sea que cuando la página está fallando, te enseña la versión genérica sin decirte que algo falló: yo creí que el código de Paulina no había servido.",
+     "segundosDesdeLoAnterior": 199,
+     "t": 580
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En la tienda no veo ni el precio ni los PC de nada. Solo \"COLÁGENO\" y \"Agregar al carrito\". ¿Cuánto cuesta? ¿Cuántos puntos da?",
+     "pantalla": "#/tienda",
+     "t": 380
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le di \"Unirme ahora\" y me salió, en rojo, esto: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/crearcuenta: 0 Unknown Error\". No entiendo nada y no me dice qué hacer.",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 321
+    },
+    {
+     "texto": "reintento: vuelvo a picarle a \"Unirme ahora\" por si fue el internet",
+     "t": 321
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "crear mi cuenta ya con la liga de Paulina funcionando",
+   "esperaba": null,
+   "t": 580,
+   "segundos": 53,
+   "logrado": true,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Me pide confirmar por correo. Voy a mi correo.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 602
+    },
+    {
+     "texto": "El correo dice \"Hola Fabiola Cantú Rangel, activa tu cuenta de Finding'U desde este enlace\". Le doy clic.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 614
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "La cuenta se creó y el correo llegó rápido; lo que me costó fue que la primera vez el botón me devolvió un error con una dirección de amazonaws que no entendí."
+  },
+  {
+   "quiero": "entrar a mi cuenta y encontrar dónde me hago socia",
+   "esperaba": null,
+   "t": 633,
+   "segundos": 58,
+   "logrado": true,
+   "clicsBase": 7,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Aquí sí están los números que quería: \"hasta $999 = 0%\", \"de $1,000 a $1,999 = 10%\", \"$2,000 a $2,999 = 20%\", \"$3,000 a $5,999 = 30%\", \"desde $6,000 = 40%\". Y abajo: \"Activación: 20 VP netos · llevas 0\".",
+     "segundosDesdeLoAnterior": 78,
+     "t": 691
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En la portada leí \"1 VP = $50 netos\", o sea $1,000. Pero aquí dice \"Tus VP se cuentan sobre el precio ya con descuento: 20 PC con 10% = 18 VP\". Entonces si me dan descuento necesito comprar MÁS para activarme. ¿Cuál de las dos cuentas es?",
+     "pantalla": "#/dashboard",
+     "t": 691
+    },
+    {
+     "texto": "Los productos traen PC (el Colágeno $700 = 13 PC) pero la meta está en VP y el descuento en pesos. Son tres monedas distintas en la misma pantalla y nadie me explica cómo se convierten.",
+     "pantalla": "#/dashboard",
+     "t": 691
+    },
+    {
+     "texto": "Dice \"Corte de mes 21d 22h 50m\". Estamos a 4 de marzo; 21 días me da como el 26 de marzo, no fin de mes. ¿Cuándo cierra realmente el mes?",
+     "pantalla": "#/dashboard",
+     "t": 691
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Entré al panel y ahí sí aparece la tabla de descuentos; me costó porque esa tabla NO está en la página pública."
+  },
+  {
+   "quiero": "activar el modo socio para tener descuento y mi código",
+   "esperaba": null,
+   "t": 691,
+   "segundos": 151,
+   "logrado": true,
+   "clicsBase": 9,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Veo el botón \"Activar modo socio - Es gratis y no te pide datos extra\". Es justo lo que quiero. Le doy.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 691
+    },
+    {
+     "texto": "El botón del panel decía \"Activar modo socio\" pero no me activó nada: me trajo a una página a leer. Bueno, al menos aquí SÍ está todo, y muy claro: \"1 PC ≈ $50 de precio de lista\", \"20 VP netos (más o menos $1,000 de compra a precio de lista)\", y el ejemplo \"4 × Naplus ($280, 6 PC), compra $1,120, descuento 10%, VP netos 21.6 de 20, sí activa\" contra \"3 × Longevit, 18.9 de 20, no activa\".",
+     "segundosDesdeLoAnterior": 26,
+     "t": 717
+    },
+    {
+     "texto": "Lo que sí me quedó claro y era mi pregunta: me pagan \"el día 10 del mes siguiente\" a mi CLABE, y la CLABE me la piden hasta que tenga la primera comisión confirmada. Ya con eso le entro.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 738
+    },
+    {
+     "texto": "Dice \"Tu cuenta ya está en modo socio. Fabiola Cantú Rangel, modo guardado: socio desde el 04/03/2027 17:12\". Voy a recargar el panel porque no me creo nada hasta verlo otra vez.",
+     "segundosDesdeLoAnterior": 35,
+     "t": 774
+    },
+    {
+     "texto": "Recargué y sigue diciendo modo socio: ya salen \"Red\", \"Links\", \"Comisiones\", mi código \"FABIOLA-FCR\" y aparece \"Patrocinador: Paulina Ríos\". Eso me tranquiliza: sí quedé colgada de Pau.",
+     "segundosDesdeLoAnterior": 68,
+     "t": 842
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"plan abril-2026\" y estamos en marzo de 2027. ¿Estos números siguen vigentes?",
+     "pantalla": "#/modo-socio",
+     "t": 717
+    },
+    {
+     "texto": "Aquí los rangos son \"BRONCE 4500 VG, PLATA 9000, ORO 15000, PLATINO 21000, DIAMANTE 25000\". En la página de inicio decía \"ORO 700 puntos VG, PLATINO 2,000, DIAMANTE 6,000\" y \"Próximamente\". Son números completamente distintos para el mismo rango. ¿A cuál le creo?",
+     "pantalla": "#/modo-socio",
+     "t": 738
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 5,
+   "comentario": "Se activó bien y lo comprobé recargando, pero el botón \"Activar modo socio\" del panel no activa: te manda a leer otra página donde hay que volver a picarle."
+  },
+  {
+   "quiero": "armar una compra que me deje activa este mes sin gastar de más",
+   "esperaba": null,
+   "t": 842,
+   "segundos": 430,
+   "logrado": false,
+   "clicsBase": 12,
+   "teclasBase": 0,
+   "clics": 11,
+   "teclas": 0,
+   "pantallasBase": 7,
+   "pantallas": 4,
+   "pensamientos": [
+    {
+     "texto": "Mi cuenta: necesito 20 VP NETOS. El Keto ($750) da 15 PC y el Naplus ($280) da 6 PC. Son $1,030, con eso ya llego al tramo de 10%. Pero 21 PC menos 10% = 18.9 VP y la página avisó que eso NO activa. Lo voy a meter al carrito a propósito para ver si la plataforma me lo advierte o me deja creer que sí.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 842
+    },
+    {
+     "texto": "El cuadrito del carrito dice \"$1,030\" y nada más. Ni descuento ni puntos. Voy a \"Ver carrito\" a ver si ahí sí me dice cuántos VP llevo.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 864
+    },
+    {
+     "texto": "AQUÍ está la comparación que quería hacer. En la tienda el Keto dice \"15 PC\" y el Naplus \"6 PC\" = 21 PC. El carrito dice \"18.9 VP\" por ese mismo pedido. Y mi panel dice \"VP (Volumen Personal) 0\". Tres números para lo mismo: 21, 18.9 y 0. Ya entendí por qué (el descuento), pero si no hubiera leído la página del modo socio me hubiera peleado con ellos.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 900
+    },
+    {
+     "texto": "Me ofrece \"Agrega 1 Naplus ($252, +5.4 VP) y llegas a 24.3 VP\". Son $252 más, pero es un producto que sí vendo en el salón. Le doy.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 900
+    },
+    {
+     "texto": "Ya dice \"Con esta compra queda activo el mes\" y \"24.3 VP\". Total $1,179 más envío. Ahora la dirección: yo soy de Puebla y \"Recoger en sucursal\" dice \"Disponible en: Ciudad de México, Guadalajara\", así que ni modo, envío a domicilio.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 921
+    },
+    {
+     "texto": "Puse mi CP 72000 y el envío se volvió \"$129 Estafeta Terrestre\". Total $1,308. Me dice \"Recoger en sucursal no está disponible en tu zona. Hay sucursal en: Ciudad de México, Guadalajara\". Está claro, aunque me choca pagar envío.",
+     "segundosDesdeLoAnterior": 50,
+     "t": 971
+    },
+    {
+     "texto": "Yo tengo salón, quiero factura. Le pico al cuadrito \"Quiero factura de esta compra\" para ver qué me pide.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 971
+    },
+    {
+     "texto": "Me pide RFC, razón social, régimen fiscal (601, 605, 606, 612, 616, 621, 626), CP fiscal y uso de CFDI. No traigo mi RFC a la mano y no dice en ningún lado si puedo pedir la factura DESPUÉS de pagar. Voy a quitarlo y luego pregunto.",
+     "segundosDesdeLoAnterior": 78,
+     "t": 1048
+    },
+    {
+     "texto": "También me aparecieron dos envíos: \"Estafeta Terrestre 3 a 5 días hábiles $129\" y \"DHL Express 1 a 2 días hábiles $219\". Me quedo con Estafeta, el salón aguanta.",
+     "segundosDesdeLoAnterior": 2,
+     "t": 1051
+    },
+    {
+     "texto": "Se creó la orden ORD-A42EFB51 en \"Pago pendiente\". Total $1,308. Ahora \"Pagar con MercadoPago\".",
+     "segundosDesdeLoAnterior": 21,
+     "t": 1072
+    },
+    {
+     "texto": "Me sacó a la pasarela: \"Mercado Pago · Pago simulado · Finding'U · Pedido ORD-A42EFB51 · $1,308.00\". Pago.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 1092
+    },
+    {
+     "texto": "Nadie me contesta. Lo dejo así y mañana lo reviso; si mañana sigue igual cancelo la orden y le hablo a Paulina.",
+     "segundosDesdeLoAnterior": 180,
+     "t": 1272
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En la tienda cada producto dice \"Sin descuento\" abajo del precio, aunque yo ya soy socia y en el carrito sí me lo aplican. Eso confunde: parece que no tengo descuento hasta que llegas al carrito.",
+     "pantalla": "#/dashboard",
+     "t": 900
+    },
+    {
+     "texto": "Hay un botón \"Aplicar\" suelto junto a la activación y no dice para qué es. ¿Cupón? ¿Qué aplico?",
+     "pantalla": "#/carrito",
+     "t": 900
+    },
+    {
+     "texto": "El botón \"Aplicar\" era de un campo con el texto gris \"Código de descuento\". No tiene título arriba; hasta que le hice caso al placeholder entendí.",
+     "pantalla": "#/carrito",
+     "t": 946
+    },
+    {
+     "texto": "Si no pido la factura ahorita, ¿la puedo pedir después del mismo pedido? La pantalla no lo dice.",
+     "pantalla": "#/carrito",
+     "t": 1048
+    },
+    {
+     "texto": "No me llegó ningún correo del pedido. Solo tengo \"Activa tu cuenta\" y \"Tu cuenta ya está en modo socio\". Si de verdad me cobraron, ¿por qué no hay correo del pedido?",
+     "pantalla": "#/orden/ORD-A42EFB51",
+     "t": 1197
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Ya pagué en Mercado Pago ($1,308) y el pedido SIGUE diciendo \"Pago pendiente\" y me vuelve a ofrecer \"Pagar con MercadoPago\". ¿Se cobró o no se cobró? Me da miedo pagar dos veces.",
+     "pantalla": "#/orden/ORD-A42EFB51",
+     "t": 1146
+    },
+    {
+     "texto": "reintento: espero y recargo otra vez el pedido a ver si cambia el estatus",
+     "t": 1146
+    },
+    {
+     "texto": "reintento: le vuelvo a dar a \"Pagar con MercadoPago\" aguantándome el miedo de que me cobren doble",
+     "t": 1197
+    },
+    {
+     "texto": "Pagué DOS VECES en la pasarela de Mercado Pago ($1,308 cada vez) y el pedido ORD-A42EFB51 sigue en \"Pago pendiente\". Ni correo, ni cambio de estatus, ni un aviso de \"estamos confirmando tu pago\".",
+     "pantalla": "#/orden/ORD-A42EFB51",
+     "t": 1272
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Buenas tardes. Soy Fabiola Cantú (fabiola.cantu@gmail.com). Pagué el pedido ORD-A42EFB51 por $1,308 con MercadoPago y la pantalla se quedó en blanco; al volver dice \"Pago pendiente\" y me deja pagar otra vez. Ya le di dos veces. ¿Me cobraron dos veces? ¿Cómo sé si mi pago entró? Necesito que cuente para activarme este mes de marzo.",
+     "t": 1272,
+     "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+    }
+   ],
+   "reintentos": 2,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "pagué dos veces y el pedido sigue diciendo \"Pago pendiente\"; no sé si me cobraron"
+  },
+  {
+   "quiero": "dejar registrada mi CLABE para que me puedan pagar las comisiones",
+   "esperaba": null,
+   "t": 1297,
+   "segundos": 230,
+   "logrado": true,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 18,
+   "pantallasBase": 11,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "En la página del modo socio decía que la CLABE se pide \"al tener tu primera comisión confirmada\", pero en el panel vi un campo \"CLABE interbancaria\" con botón \"Guardar\". Prefiero dejarlo listo desde hoy y no andar corriendo el día 10.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 1297
+    },
+    {
+     "texto": "A lo mejor la CLABE va en \"Mi perfil\" y este cuadrito del panel es de adorno. Voy a buscar ahí.",
+     "segundosDesdeLoAnterior": 106,
+     "t": 1403
+    },
+    {
+     "texto": "¡Ahí estaba! Al darle Guardar se abre una ventanita chiquita: \"Confirmacion — Actualizar CLABE interbancaria — Estás a punto de guardar la CLABE: 012914002123456789 — Cancelar / Confirmar\". La primera vez ni la vi y recargué la página, y por eso se me perdió. El botón dice \"Guardar\" pero no guarda: abre otra pregunta.",
+     "segundosDesdeLoAnterior": 83,
+     "t": 1486
+    },
+    {
+     "texto": "Ahora sí dice \"CLABE registrada **** 6789\" y sigue diciéndolo después de recargar. Eso me gusta: solo enseña los últimos cuatro.",
+     "segundosDesdeLoAnterior": 41,
+     "t": 1527
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "El título de la ventana dice \"Confirmacion\", sin acento. Igual que en la dirección: \"Pais\", \"Ciudad de Mexico\", \"Michoacan\", \"Nuevo Leon\", \"Queretaro\". Se ve descuidado.",
+     "pantalla": "#/dashboard",
+     "t": 1486
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Puse mi CLABE 012914002123456789, le di \"Guardar\" y no pasó nada: ni un \"listo\", ni un error. Sigue diciendo \"CLABE registrada: No registrada\" y al recargar el campo está vacío otra vez.",
+     "pantalla": "#/dashboard",
+     "t": 1372
+    },
+    {
+     "texto": "reintento: escribo la CLABE de nuevo, tecla por tecla, y busco el botón Guardar que está pegado al campo",
+     "t": 1372
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 3,
+   "confianza": 5,
+   "comentario": "Sí quedó, pero me costó dos intentos: el botón \"Guardar\" no guarda, abre una ventanita de confirmación que la primera vez no vi y al recargar perdí lo que había escrito."
+  },
+  {
+   "quiero": "revisar mi código de invitación y el enlace para el salón",
+   "esperaba": null,
+   "t": 1527,
+   "segundos": 27,
+   "logrado": true,
+   "clicsBase": 27,
+   "teclasBase": 18,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 14,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Ya tengo mi código FABIOLA-FCR y mi liga http://localhost:4321/#/landing/FABIOLA-FCR. Eso sí me sirve para el salón.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 1554
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En \"Tu Red\" me pusieron como \"Fabio C. R.\". Me llamo Fabiola. Me cortaron el nombre y encima quedó de hombre. Si mis clientas del salón ven eso, ¿qué van a pensar?",
+     "pantalla": "#/dashboard",
+     "t": 1554
+    },
+    {
+     "texto": "Arriba de \"Links de referencia\" hay un asterisco suelto (*) sin nada que explique. ¿Es una nota al pie que no existe?",
+     "pantalla": "#/dashboard",
+     "t": 1554
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "El código y la liga están a la mano y con botón de copiar; lo único feo es que me llaman \"Fabio\"."
+  },
+  {
+   "quiero": "confirmar que mi compra de hoy sí me dejó activa y con mis VP",
+   "esperaba": null,
+   "t": 1554,
+   "segundos": 147,
+   "logrado": true,
+   "clicsBase": 27,
+   "teclasBase": 18,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 15,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Mi panel sigue diciendo VP 0 y \"Te faltan 20 VP\", aunque yo ya pagué $1,308. Claro: como el pedido dice \"Pago pendiente\", mis puntos no cuentan. Los tres números del día: la tienda me sumó 21 PC, el carrito 24.3 VP con el Naplus extra, y mi panel 0. Voy a dormir y mañana reviso.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1554
+    },
+    {
+     "texto": "Es la mañana del 5 de marzo. Abro el celular con miedo: quiero ver si el pedido de ayer ya aparece pagado o si tengo que ir al banco a reclamar dos cargos.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 1574
+    },
+    {
+     "texto": "¡Ya dice \"Pago registrado\"! Y a las 9:00 de hoy me llegó el correo \"Recibimos tu pago · pedido ORD-A42EFB51\". O sea que sí entró, pero se tardó toda la noche y ayer la pantalla me dejó pagar otra vez sin avisarme nada.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 1602
+    },
+    {
+     "texto": "Con la RECARGA COMPLETA sí cambió: \"VP (Volumen Personal) 24.3\", \"VG 24.3\", \"Tramo actual: 10 % (de $1,000 a $1,999) · estás aquí\", \"Activación: 20 VP netos · llevas 24.3\" y en Órdenes \"ORD-A42EFB51 · $1,308 · Pagada\". O sea que el panel estaba enseñándome números viejos: entré desde el pedido y me dijo 0 VP cuando ya tenía 24.3.",
+     "segundosDesdeLoAnterior": 99,
+     "t": 1701
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Y el segundo pago que hice? No veo ningún cargo ni nota de eso en el pedido. Voy a tener que revisar mi estado de cuenta del banco.",
+     "pantalla": "#/orden/ORD-A42EFB51",
+     "t": 1602
+    },
+    {
+     "texto": "Las tres cifras del día: la tienda me sumó 27 PC (Keto 15 + dos Naplus de 6), el carrito dijo 24.3 VP y el panel dice 24.3 VP. Cuadran entre carrito y panel, pero NO con la tienda, porque la tienda habla de PC y todo lo demás de VP. Y antes de recargar el panel decía 0.",
+     "pantalla": "#/dashboard",
+     "t": 1701
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Mi pedido dice \"Pago registrado\", me llegó el correo \"Recibimos tu pago\", pagué $1,308 con 10% de descuento... y mi panel sigue diciendo \"VP (Volumen Personal) 0\", \"Activación: 20 VP netos · llevas 0\", \"Te faltan 20 VP para activar el mes\" y \"Tramo actual: 0 % (hasta $999) · estás aquí\". Como si no hubiera comprado nada.",
+     "pantalla": "#/dashboard",
+     "t": 1638
+    },
+    {
+     "texto": "reintento: recargo el panel completo por si es que no se actualizó solo",
+     "t": 1638
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Sí quedé activa (24.3 VP de 20) pero tuve que esperar a otro día y recargar la página entera para creerlo: el pago tardó toda la noche en registrarse y el panel me enseñó 0 VP con el pedido ya pagado."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "una tabla de comisiones vacía en la página que me quiere convencer de meterme",
+   "t": 129,
+   "tarea": "entrar por el link que me mandó Paulina y entender qué es esto"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "la única pantalla que prometía \"los números reales\" no carga, y ni la tabla de comisiones del landing tiene renglones",
+   "t": 206,
+   "tarea": "entrar por el link que me mandó Paulina y entender qué es esto"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "me aparece una dirección rara de amazonaws en la pantalla; parece que algo está roto por dentro y yo iba a poner mi dinero aquí",
+   "t": 321,
+   "tarea": "registrarme como socia con el código de Paulina"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "por fin veo el nombre de Paulina en la pantalla, ya sé que entré por su liga",
+   "t": 580,
+   "tarea": "registrarme como socia con el código de Paulina"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "esta página es la que yo necesitaba desde el principio y estaba escondida detrás del registro",
+   "t": 717,
+   "tarea": "activar el modo socio para tener descuento y mi código"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "dos tablas de rangos con números que no se parecen en nada, en la misma plataforma",
+   "t": 738,
+   "tarea": "activar el modo socio para tener descuento y mi código"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "ya tengo mi propio código FABIOLA-FCR para pegarlo en el salón",
+   "t": 842,
+   "tarea": "activar el modo socio para tener descuento y mi código"
+  },
+  {
+   "emocion": "gusto",
+   "intensidad": 4,
+   "porque": "el carrito me avisó solito \"te faltan 1.1 VP para activar el mes\" y hasta me dijo qué agregar; eso sí me gustó",
+   "t": 900,
+   "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 2,
+   "porque": "el envío de $129 se come el descuento de $131 que tanto me costó alcanzar: gané $131 y pagué $129 de envío",
+   "t": 971,
+   "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "pagué $1,308 y la pantalla se quedó en blanco y luego me dice que no he pagado; no sé si me cobraron",
+   "t": 1146,
+   "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "dos pagos y la pantalla sigue diciendo que debo; en el salón esto me costaría un cliente",
+   "t": 1272,
+   "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "si no puedo ni guardar mi CLABE, ¿con qué cara me van a depositar el día 10?",
+   "t": 1403,
+   "tarea": "dejar registrada mi CLABE para que me puedan pagar las comisiones"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "al menos el dato del banco sí quedó guardado y lo comprobé recargando",
+   "t": 1527,
+   "tarea": "dejar registrada mi CLABE para que me puedan pagar las comisiones"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 2,
+   "porque": "mi nombre aparece como \"Fabio C. R.\" en mi propia red",
+   "t": 1554,
+   "tarea": "revisar mi código de invitación y el enlace para el salón"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "sí se registró mi pago y parece que solo me cobraron una vez",
+   "t": 1602,
+   "tarea": "confirmar que mi compra de hoy sí me dejó activa y con mis VP"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 4,
+   "porque": "ya estoy activa el mes con 24.3 de 20 VP y con mi 10% de descuento",
+   "t": 1701,
+   "tarea": "confirmar que mi compra de hoy sí me dejó activa y con mis VP"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Pau, entré a tu liga. La página de \"Modo socio\" me dice \"No pudimos cargar el plan en este momento\" y la tabla de comisiones del inicio está vacía. ¿Cuánto descuento me toca y cuánto tengo que comprar al mes para estar activa? Quiero entrar como socia pero no voy a firmar sin números.",
+   "t": 206,
+   "tarea": "entrar por el link que me mandó Paulina y entender qué es esto"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Buenas tardes. Soy Fabiola Cantú (fabiola.cantu@gmail.com). Pagué el pedido ORD-A42EFB51 por $1,308 con MercadoPago y la pantalla se quedó en blanco; al volver dice \"Pago pendiente\" y me deja pagar otra vez. Ya le di dos veces. ¿Me cobraron dos veces? ¿Cómo sé si mi pago entró? Necesito que cuente para activarme este mes de marzo.",
+   "t": 1272,
+   "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 8,
+  "coherencia": 4,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "cuidada",
+   "contradictoria",
+   "lenta"
+  ],
+  "mejorPantalla": "la página \"Modo socio · Cómo funciona, con los números reales\": es la única que me explicó PC, VP y VG con ejemplos y me dijo que me pagan el día 10",
+  "peorPantalla": "la pantalla del pedido después de pagar: se puso en blanco, luego dijo \"Pago pendiente\" y me volvió a ofrecer \"Pagar con MercadoPago\"",
+  "seParece": "a una tienda bien hecha con un backoffice de los noventa pegado atrás; por fuera parece un spa, por dentro parece un Excel de mi contador",
+  "recomendarias": 5,
+  "volverias": "sí, pero no voy a meter a mis clientas del salón hasta que el pago se vea al momento",
+  "comentario": "Lo que me convenció fue la página del modo socio: números claros, ejemplos y una tabla que dice cuándo me pagan. Lo que casi me tumba fue pagar $1,308 y que la pantalla me dijera que no había pagado, dos veces. Yo cobro en mi salón todos los días: si mi terminal me hiciera eso la tiro a la basura."
+ },
+ "totales": {
+  "clics": 27,
+  "teclas": 18,
+  "envios": 0,
+  "campos": 16,
+  "pantallas": 20,
+  "recargas": 5,
+  "atrases": 6
+ },
+ "pantallas": [
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788483548259,
+   "primerClicMs": 86315,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/modo-socio",
+   "desde": 1788483696096,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788483764625,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788484052264,
+   "primerClicMs": 48636,
+   "clics": 1,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-dc2592cf729146b4a913c9370b0a7aeb",
+   "desde": 1788484134658,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788484052265,
+   "primerClicMs": 48636,
+   "clics": 1,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788484298799,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-A42EFB51",
+   "desde": 1788484613037,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-A42EFB51",
+   "desde": 1788484675073,
+   "primerClicMs": 43234,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-A42EFB51",
+   "desde": 1788484739137,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-A42EFB51",
+   "desde": 1788484749192,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788484817862,
+   "primerClicMs": 21825,
+   "clics": 1,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788484843763,
+   "primerClicMs": 49623,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788485012213,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788484817863,
+   "primerClicMs": 21825,
+   "clics": 1,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/orden/ORD-A42EFB51",
+   "desde": 1788485094494,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788485122914,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788485158687,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/orden/ORD-A42EFB51",
+   "desde": 1788485094495,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788485122915,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/crearcuenta: 0 Unknown Error",
+   "t": 297,
+   "tarea": "registrarme como socia con el código de Paulina"
+  },
+  {
+   "texto": "Mínimo requerido",
+   "t": 950,
+   "tarea": "armar una compra que me deje activa este mes sin gastar de más"
+  }
+ ],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T01:29:10.074Z",
+ "duracionMin": 30
+}

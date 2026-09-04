@@ -1,0 +1,611 @@
+{
+ "persona": "Ernesto Vidal, 63",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-03T22:34:17.830Z",
+ "tareas": [
+  {
+   "quiero": "encontrar el omega 3 que me recetó la doctora",
+   "esperaba": null,
+   "t": 21,
+   "segundos": 209,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Mi sobrino me pasó la pagina de Finding U. Voy a abrirla en el celular. No se si es una tienda o que.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 21
+    },
+    {
+     "texto": "Primero le doy a \"Entendido y acepto\" al aviso de privacidad, porque a lo mejor eso me tapa la pagina.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 61
+    },
+    {
+     "texto": "Ahora si, le doy a \"Ver productos\" a ver si aparece el omega 3.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 82
+    },
+    {
+     "texto": "Arriba hay una rayitas de menú. Voy a abrir el menú a ver si por ahí llego a la tienda.",
+     "segundosDesdeLoAnterior": 46,
+     "t": 128
+    },
+    {
+     "texto": "El menú solo trae una palabra: \"Tienda\". Le doy ahi.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 148
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"Todos los productos - 0 productos\". Yo vine por el omega 3 y me sale que no hay nada. ¿Se descompuso o hay que registrarse primero?",
+     "pantalla": "#/",
+     "t": 61
+    },
+    {
+     "texto": "\"Cada producto suma PC a tus metas\" - ¿que es PC? ¿computadora? no entiendo",
+     "pantalla": "#/",
+     "t": 61
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le piqué a \"Ver productos\" y la pantalla se quedó igual: sigue diciendo \"0 productos\"",
+     "pantalla": null,
+     "t": 103
+    },
+    {
+     "texto": "reintento: Le vuelvo a picar a \"Ver productos\" y luego bajo con el dedo por si los productos están más abajo",
+     "t": 103
+    },
+    {
+     "texto": "El menú \"Tienda\" tampoco me lleva a ningún lado: la pantalla es la misma y sigue en \"0 productos\"",
+     "pantalla": null,
+     "t": 170
+    },
+    {
+     "texto": "reintento: Voy a recargar la página completa, como cuando se traba el periódico en el celular",
+     "t": 170
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "La tienda dice \"0 productos\" y ni el botón \"Ver productos\" ni el menú \"Tienda\" ni recargar me mostraron nada. No pude ni ver el omega 3."
+  },
+  {
+   "quiero": "hacerme una cuenta, por si los productos solo salen a los registrados",
+   "esperaba": null,
+   "t": 230,
+   "segundos": 34,
+   "logrado": false,
+   "clicsBase": 5,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "La pantalla insiste en \"Regístrate para obtener beneficios\". A lo mejor la tienda solo se ve con cuenta. No me gusta dar mis datos antes de ver ni el precio, pero lo voy a intentar.",
+     "segundosDesdeLoAnterior": 83,
+     "t": 230
+    },
+    {
+     "texto": "Aqui abajo veo \"Explora la Tienda ... Ir a la tienda\". Antes de darles mis datos quiero VER el frasco y el precio. Le doy ahi.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 264
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Le di a \"Registrate\" y me mandó a una pagina larguísima que habla de \"Construye ingresos\", \"Comisiones de Red\", \"1 VP = $50 MXN netos\", rangos ORO, PLATINO, DIAMANTE. Yo solo quiero mi omega 3, no quiero vender nada.",
+     "pantalla": "#/landing",
+     "t": 264
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "ver el catalogo desde el boton \"Ir a la tienda\" de la pagina larga",
+   "esperaba": null,
+   "t": 264,
+   "segundos": 69,
+   "logrado": false,
+   "clicsBase": 5,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Le voy a dar a \"Ver beneficios\" a ver si ahi vienen los ingredientes y de paso si hay mas productos.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 293
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Llegue a la \"tienda\" y solo hay UN producto: COLAGENO. No veo lista de productos, ni buscador, ni precio. ¿Donde esta el omega 3?",
+     "pantalla": "#/tienda",
+     "t": 293
+    },
+    {
+     "texto": "Dice \"descuentos por tu consumo como socia\" y \"eres socia\". Yo soy hombre, Ernesto. Me habla como si fuera mujer.",
+     "pantalla": "#/tienda",
+     "t": 293
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "\"Ver beneficios\" tampoco hace nada visible: la pantalla se queda exactamente igual, no me abre ninguna ficha con ingredientes",
+     "pantalla": null,
+     "t": 333
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "En la tienda solo hay colageno y ningun buscador. No hay forma de ver la lista de productos ni el omega 3."
+  },
+  {
+   "quiero": "crear mi cuenta para ver si asi aparecen los productos",
+   "esperaba": null,
+   "t": 333,
+   "segundos": 198,
+   "logrado": false,
+   "clicsBase": 8,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Nadie me contesta ahorita. Voy a hacer la cuenta con el formulario que sale aqui abajo, \"Crear cuenta y comprar\". Escribo despacio.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 333
+    },
+    {
+     "texto": "Dice \"Creando cuenta...\" y ahi se quedo. Voy a esperar tantito, uno tiene paciencia.",
+     "segundosDesdeLoAnterior": 61,
+     "t": 394
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "Me salio un renglon en ingles: \"Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/crearcuenta: 0 Unknown Error\". No entiendo nada de eso y no me dice que tengo que hacer",
+     "pantalla": null,
+     "t": 447
+    },
+    {
+     "texto": "reintento: Voy a recargar y a llenar otra vez el formulario, capaz que fue el internet",
+     "t": 447
+    },
+    {
+     "texto": "reintento: Segundo intento de crear la cuenta: exactamente el mismo renglon de error con la direccion de Amazon",
+     "t": 531
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "El registro truena las dos veces con un error tecnico en ingles que no explica nada ni me dice a quien llamar"
+  },
+  {
+   "quiero": "meter el bote al carrito aunque sea sin cuenta, para ver el precio",
+   "esperaba": null,
+   "t": 531,
+   "segundos": 69,
+   "logrado": false,
+   "clicsBase": 10,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En muchas paginas uno puede comprar sin registrarse. Aqui arriba hay \"Agregar al carrito\". A ver si asi por lo menos veo cuanto cuesta.",
+     "segundosDesdeLoAnterior": 137,
+     "t": 531
+    },
+    {
+     "texto": "Aqui no veo por ningun lado la opcion de que me llegue cada mes, que es lo unico que yo queria. Voy a llenar la direccion y a darle Pagar, aunque diga $0, nomas para ver que me dice.",
+     "segundosDesdeLoAnterior": 69,
+     "t": 600
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "El carrito dice \"0 artículos\" y \"Total $0\" aunque le di dos veces a \"Agregar al carrito\". Y arriba dice \"Mínimo requerido\" sin decirme minimo de que",
+     "pantalla": "#/carrito",
+     "t": 600
+    },
+    {
+     "texto": "Dice \"Corte en 27d 1h\". ¿Corte de que? ¿Me van a cobrar en 27 dias?",
+     "pantalla": "#/carrito",
+     "t": 600
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Le di a \"Agregar al carrito\" y el carrito sigue diciendo \"Sin artículos\" y \"Total en carrito —\". Ni un aviso, ni un numerito",
+     "pantalla": null,
+     "t": 562
+    },
+    {
+     "texto": "reintento: Le pico otra vez a \"Agregar al carrito\" y luego abro el carrito con el boton de abajo",
+     "t": 562
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "llenar mi direccion y darle Pagar para ver si me deja comprar",
+   "esperaba": null,
+   "t": 600,
+   "segundos": 44,
+   "logrado": false,
+   "clicsBase": 10,
+   "teclasBase": 0,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [],
+   "dudas": [
+    {
+     "texto": "Tambien salio \"No se encontraron opciones de envío para este código postal.\" Mi CP 64000 es del centro de Monterrey, no es un rancho",
+     "pantalla": "#/carrito",
+     "t": 644
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "Hasta abajo, DESPUES de escribir toda mi direccion con trabajos, aparecio \"Agrega productos para continuar.\" Osea que nunca entro el bote al carrito y nadie me lo dijo antes",
+     "pantalla": null,
+     "t": 644
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "No se puede pagar: el carrito nunca tuvo el producto, el total es $0 y encima dice que no hay envio para mi codigo postal"
+  },
+  {
+   "quiero": "dejar programado que el frasco me llegue cada mes (lo unico que de verdad queria)",
+   "esperaba": null,
+   "t": 644,
+   "segundos": 33,
+   "logrado": false,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En ninguna pantalla que he visto (inicio, la pagina larga, la tienda, el carrito) vi la palabra suscripcion, ni \"cada mes\", ni \"recurrente\". Voy a revisar otra vez el carrito y la tienda con calma antes de rendirme.",
+     "segundosDesdeLoAnterior": 44,
+     "t": 644
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Buenas tardes. Soy Ernesto Vidal, tengo 63 anos y entro desde el celular. Intente comprar omega 3: el catalogo dice \"0 productos\", en la tienda solo aparece colageno, \"Agregar al carrito\" no mete nada (el total siempre dice $0) y al registrarme me sale \"Http failure response ... 0 Unknown Error\". Tampoco encuentro donde dejar programado que me llegue un frasco cada mes. ¿Me pueden ayudar por telefono? 8181002002.",
+     "t": 677,
+     "tarea": "dejar programado que el frasco me llegue cada mes (lo unico que de verdad queria)"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "No existe en ninguna pantalla la opcion de recibir el producto cada mes; ni la palabra suscripcion aparece"
+  },
+  {
+   "quiero": "entrar con mi cuenta por si acaso si se creo, para ver si adentro hay mas productos",
+   "esperaba": null,
+   "t": 697,
+   "segundos": 128,
+   "logrado": false,
+   "clicsBase": 15,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Le di a \"Regresar\" en el carrito y acabe otra vez en la pantalla de \"0 productos\". Osea que esa ES la tienda. Ya me di cuenta de que doy vueltas en el mismo circulo.",
+     "segundosDesdeLoAnterior": 75,
+     "t": 718
+    },
+    {
+     "texto": "\"Validando acceso...\" lleva rato. Espero otro poquito.",
+     "segundosDesdeLoAnterior": 59,
+     "t": 777
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"Accede a tu panel\" e \"Ingresar al panel\". ¿Cual panel? Yo no quiero un panel, quiero un frasco de omega 3",
+     "pantalla": "#/login",
+     "t": 742
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "El \"Ingresar al panel\" se quedo en \"Validando acceso...\" casi medio minuto y termino con el mismo renglon de Amazon: \"auth/login: 0 Unknown Error\"",
+     "pantalla": null,
+     "t": 825
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "No puedo entrar ni saber si mi cuenta existe: el mismo error tecnico de siempre"
+  },
+  {
+   "quiero": "revisar mi correo a ver si me llego algo de Finding U",
+   "esperaba": null,
+   "t": 825,
+   "segundos": 0,
+   "logrado": false,
+   "clicsBase": 17,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Cuando uno se registra siempre llega un correo de bienvenida. Voy a revisar el hotmail.",
+     "segundosDesdeLoAnterior": 48,
+     "t": 825
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": null,
+   "comentario": "No llego ningun correo a ernesto.vidal@hotmail.com"
+  },
+  {
+   "quiero": "intentar otra vez en la noche, a ver si ya sirve",
+   "esperaba": null,
+   "t": 845,
+   "segundos": 37,
+   "logrado": false,
+   "clicsBase": 17,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 1,
+   "pensamientos": [],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "familiar",
+     "texto": "Sobrino, ya le intente en la tarde y otra vez ahorita en la noche. Sigue diciendo \"0 productos\" y no me deja ni hacer cuenta. Mejor manana paso a la farmacia por el omega 3 y ya. Gracias de todos modos, mijo.",
+     "t": 882,
+     "tarea": "intentar otra vez en la noche, a ver si ya sirve"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "En la noche la tienda sigue con \"0 productos\": no se puede comprar nada en todo el dia"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "Le piqué dos veces a \"Ver productos\" y no pasa nada; una tienda sin productos me huele a que no sirve",
+   "t": 128,
+   "tarea": "encontrar el omega 3 que me recetó la doctora"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "Tres veces intenté ver la tienda y siempre me dice \"0 productos\". Empiezo a pensar que la página está descompuesta",
+   "t": 230,
+   "tarea": "encontrar el omega 3 que me recetó la doctora"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "Esto se me parece a las piramides que le vendieron a mi comadre. Mucho de ganar dinero y nada del producto ni del precio",
+   "t": 264,
+   "tarea": "hacerme una cuenta, por si los productos solo salen a los registrados"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 3,
+   "porque": "Siento que ya le estoy dando lata a mi sobrino por algo que debe ser facil, pero no encuentro nada",
+   "t": 333,
+   "tarea": null
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "Escribi todos mis datos despacito, con mis lentes, y me contesta con una direccion de internet rarisima en ingles",
+   "t": 447,
+   "tarea": "crear mi cuenta para ver si asi aparecen los productos"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "Si no me deja ni hacer la cuenta, ¿que va a pasar cuando ponga la tarjeta? Ahi si me da miedo",
+   "t": 531,
+   "tarea": null
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "Llene nombre, telefono, correo, calle, numero, ciudad, CP y estado para que al final me diga que no hay productos. Perdi como diez minutos escribiendo con un dedo",
+   "t": 644,
+   "tarea": "llenar mi direccion y darle Pagar para ver si me deja comprar"
+  },
+  {
+   "emocion": "tristeza",
+   "intensidad": 3,
+   "porque": "Ni un correo. Ni de bienvenida ni de disculpa. Como si nunca hubiera pasado por ahi",
+   "t": 825,
+   "tarea": "revisar mi correo a ver si me llego algo de Finding U"
+  },
+  {
+   "emocion": "resignación",
+   "intensidad": 4,
+   "porque": "En la noche la pagina esta igualita: \"0 productos\". Ya son horas perdidas",
+   "t": 882,
+   "tarea": "intentar otra vez en la noche, a ver si ya sirve"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "familiar",
+   "texto": "Sobrino, buenas tardes. Abri la pagina que me pasaste desde el celular. Le di a \"Ver productos\" y dice \"0 productos\". Entre a la tienda y nomas sale colageno, y no encuentro el omega 3 ni un buscador. ¿Hay que registrarse primero para ver todo, o me equivoque de pagina?",
+   "t": 333,
+   "tarea": null
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Buenas tardes. Soy Ernesto Vidal, tengo 63 anos y entro desde el celular. Intente comprar omega 3: el catalogo dice \"0 productos\", en la tienda solo aparece colageno, \"Agregar al carrito\" no mete nada (el total siempre dice $0) y al registrarme me sale \"Http failure response ... 0 Unknown Error\". Tampoco encuentro donde dejar programado que me llegue un frasco cada mes. ¿Me pueden ayudar por telefono? 8181002002.",
+   "t": 677,
+   "tarea": "dejar programado que el frasco me llegue cada mes (lo unico que de verdad queria)"
+  },
+  {
+   "aQuien": "familiar",
+   "texto": "Sobrino, ya le intente en la tarde y otra vez ahorita en la noche. Sigue diciendo \"0 productos\" y no me deja ni hacer cuenta. Mejor manana paso a la farmacia por el omega 3 y ya. Gracias de todos modos, mijo.",
+   "t": 882,
+   "tarea": "intentar otra vez en la noche, a ver si ya sirve"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 5,
+  "confianzaQueTransmite": 2,
+  "legibilidad": 4,
+  "coherencia": 3,
+  "sensacionMovil": 3,
+  "tresAdjetivos": [
+   "vacía",
+   "presumida",
+   "complicada"
+  ],
+  "mejorPantalla": "la pantalla de la tienda con el fondo del colageno: esa si se ve bonita y grande",
+  "peorPantalla": "el carrito: me hizo escribir toda mi direccion con un dedo para al final decirme \"Agrega productos para continuar.\"",
+  "seParece": "a un folleto de esos que te dan en una junta donde te quieren meter a vender, no a una farmacia",
+  "recomendarias": 1,
+  "volverias": "no, mientras no pueda ver ni un producto ni el precio; mejor voy a la farmacia de la esquina",
+  "comentario": "Habla mucho de ganar dinero, de rangos ORO y DIAMANTE y de \"PC\" y \"VP\", que yo no se que son, y nada de lo que a mi me importa: que trae el frasco, cuanto cuesta y como me llega cada mes. Las letras son chicas para mis ojos y los errores salen en ingles con direcciones de internet."
+ },
+ "totales": {
+  "clics": 17,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 14,
+  "pantallas": 4,
+  "recargas": 1,
+  "atrases": 1
+ },
+ "pantallas": [
+  {
+   "ruta": "#/",
+   "desde": 1788474878881,
+   "primerClicMs": 59255,
+   "clics": 5,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/",
+   "desde": 1788475028278,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/tienda",
+   "desde": 1788475304643,
+   "primerClicMs": 17960,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788475703158,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/crearcuenta: 0 Unknown Error",
+   "t": 406,
+   "tarea": "crear mi cuenta para ver si asi aparecen los productos"
+  },
+  {
+   "texto": "Mínimo requerido",
+   "t": 607,
+   "tarea": "llenar mi direccion y darle Pagar para ver si me deja comprar"
+  },
+  {
+   "texto": "No se pudo calcular el envío.",
+   "t": 644,
+   "tarea": "llenar mi direccion y darle Pagar para ver si me deja comprar"
+  },
+  {
+   "texto": "Http failure response for https://ge2omdgk33.execute-api.us-east-1.amazonaws.com/Prod/auth/login: 0 Unknown Error",
+   "t": 792,
+   "tarea": "entrar con mi cuenta por si acaso si se creo, para ver si adentro hay mas productos"
+  }
+ ],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "Ya intente: el boton \"Ver productos\" del inicio (2 veces), el menu \"Tienda\", recargar, la pagina larga y su boton \"Ir a la tienda\", y \"Ver beneficios\". En ningun lado veo omega 3 ni una lista de productos. Le voy a escribir a mi sobrino que me paso la pagina.",
+   "segundosDesdeLoAnterior": 40,
+   "t": 333
+  },
+  {
+   "texto": "Ya es de tarde-noche. Mi sobrino no me ha contestado y Soporte tampoco. Le voy a dar una ultima oportunidad a la pagina, a ver si ya la compusieron, porque el omega 3 lo necesito.",
+   "segundosDesdeLoAnterior": 20,
+   "t": 845
+  }
+ ],
+ "fin": "2026-09-03T22:49:19.774Z",
+ "duracionMin": 15
+}
