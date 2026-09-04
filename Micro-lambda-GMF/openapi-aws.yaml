@@ -3219,6 +3219,29 @@ paths:
     options:
       <<: *cors-options
 
+  /inventory/turno/resumen/enviar:
+    post:
+      summary: "Entregar el turno: manda el resumen por correo a la gerente"
+      description: |
+        Privilegio: `access_screen_stats`, o el propio usuario para su turno. Cuerpo
+        `{userId?, date?, email?, reenviar?}`. Reutiliza el texto que ya arma el GET y lo manda al
+        correo de `pos.shiftSummaryNotifyEmail` (o al que se escriba). Sella `notifiedTo` y
+        `notifiedAt`: enviar dos veces responde `alreadySent` sin mandar otro correo.
+      operationId: turnoResumenEnviar
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "{sent, to, sentAt, userId, date, counters} o {sent:false, alreadySent:true}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

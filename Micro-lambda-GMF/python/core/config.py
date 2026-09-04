@@ -62,6 +62,10 @@ def _default_app_config() -> dict:
             # monedas para contar por denominación, y si una diferencia entre lo
             # contado y lo esperado exige motivo.
             "cashCutNotifyEmail": "",
+            # Paquete F · ronda 26: a quién se le entrega el turno desde
+            # "Resumen de turno" (vacío = el botón pide escribir el correo).
+            # Toño se lo mandaba a Renata por WhatsApp.
+            "shiftSummaryNotifyEmail": "",
             "denominations": [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
             "requireDifferenceReason": True,
             # Paquete F · ronda 26: abrir turno. Con True, una caja que nunca ha
