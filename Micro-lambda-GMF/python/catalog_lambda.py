@@ -3,6 +3,8 @@ import base64
 import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime
 
+import impuestos                              # paquete B · ronda 26 (IVA, §38)
+
 # Clientes de AWS
 s3 = boto3.client('s3', region_name=utils.AWS_REGION)
 
@@ -325,6 +327,15 @@ def handle_public_config() -> dict:
                 for rule in (bonuses.get("rules") or [])
                 if rule.get("active")
             ],
+        },
+        # ── Paquete B · ronda 26 (propuesta 38) ──────────────────────────────
+        # La tasa de IVA viaja en la config pública para que carrito, recibo,
+        # POS y facturación desglosen sin inventarse el número ni pedir otra vez.
+        "taxes": {
+            "vatRate": float(impuestos.tasa_iva(app_cfg)),
+            "label": impuestos.etiqueta_iva(app_cfg),
+            "pricesIncludeVat": impuestos.precios_con_iva(app_cfg),
+            "appliesToShipping": impuestos.iva_incluye_envio(app_cfg),
         },
     }
     return utils._json_response(200, {"config": public})

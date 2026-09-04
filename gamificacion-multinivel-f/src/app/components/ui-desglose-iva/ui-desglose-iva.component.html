@@ -1,0 +1,17 @@
+<div [ngClass]="variant === 'card' ? 'rounded-2xl border border-olive-30 surface-soft p-4' : ''">
+  <dl class="space-y-1 text-sm text-main">
+    <div class="flex items-baseline justify-between gap-4">
+      <dt class="text-gray-600">Subtotal sin {{ desglose.label }}</dt>
+      <dd class="font-semibold tabular-nums">{{ pesos(desglose.base) }}</dd>
+    </div>
+    <div class="flex items-baseline justify-between gap-4">
+      <dt class="text-gray-600">{{ desglose.label }} {{ porcentaje(desglose.rate) }}</dt>
+      <dd class="font-semibold tabular-nums">{{ pesos(desglose.iva) }}</dd>
+    </div>
+    <div class="flex items-baseline justify-between gap-4 border-t border-olive-20 pt-1">
+      <dt class="font-semibold text-main">Total</dt>
+      <dd class="font-bold tabular-nums">{{ pesos(desglose.total) }}</dd>
+    </div>
+  </dl>
+  <p *ngIf="mostrarNota" class="mt-2 text-xs text-gray-600">{{ nota }}</p>
+</div>

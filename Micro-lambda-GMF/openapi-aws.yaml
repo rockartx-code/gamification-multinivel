@@ -2483,6 +2483,52 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete B · ronda 26 ─────────────────────────────────────────────────────
+  /catalog/plan/simular:
+    post:
+      summary: "Simulador de ganancias con los porcentajes y requisitos reales"
+      description: |
+        Público. Recibe `directos`, `compraPorDirecto`, `compraPropia` y
+        `nivelesProfundidad` y devuelve, calculado con la configuración
+        vigente (escalera de descuento, generaciones, requisitos, activación
+        e IVA): tu tramo y tus VP, la comisión por generación con su requisito
+        cumplido o no y por qué, el gasto propio y la ganancia neta —también
+        cuando es negativa—, la base sobre la que se paga la comisión y el
+        aviso de que es una calculadora, no una promesa de ingresos.
+        No escribe nada. Topes: directos 0-100, importes 0-100000,
+        nivelesProfundidad 1-maxLevels; fuera de rango responde 400 con el
+        tope escrito.
+      operationId: postCatalogPlanSimular
+      tags: [Config]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                directos: { type: integer, minimum: 0, maximum: 100 }
+                compraPorDirecto: { type: number, minimum: 0, maximum: 100000 }
+                compraPropia: { type: number, minimum: 0, maximum: 100000 }
+                nivelesProfundidad: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: "Simulación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  simulacion:
+                    type: object
+                    additionalProperties: true
+        "400":
+          description: "Un dato fuera de los topes, con el tope escrito"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
   /customers/modo:
     get:
       summary: "Modo de la cuenta (cliente/socio) e indicadores del mes"

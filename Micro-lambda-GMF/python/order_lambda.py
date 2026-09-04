@@ -7,6 +7,7 @@ import urllib.request
 import core_utils as utils  # Importado desde la Layer
 from core import order_emails
 import modo_handlers  # paquete B
+import impuestos  # paquete B · ronda 26 (IVA, §38)
 import checkout_handlers  # paquete C
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -123,6 +124,10 @@ def _calculate_totals(items, customer_id, buyer_type):
             rate = _resolve_discount_rate(discount_tiers, basis)
 
     discount_amount = (gross * rate).quantize(utils.D_CENT)
+    # Los campos de IVA (`vatRate`, `taxBase`, `taxAmount`, paquete B §38) no
+    # salen de aquí: la base gravable es todo lo que se cobra —este neto, ya
+    # con cupón, más el envío—, y ese total solo se conoce al armar el pedido.
+    # Se sellan con `impuestos.campos_pedido` en `handle_create_order`.
     return {
         "grossSubtotal": gross,
         "discountRate": rate,
@@ -644,6 +649,12 @@ def handle_create_order(body, headers):
         **coupon_fields,
         **campos_factura,
     }
+    # ── Paquete B · ronda 26 (§38) ──────────────────────────────────────────
+    # El IVA es desglose de `total`, jamás un cargo nuevo: no mueve ni un
+    # centavo de lo cobrado, del neto comisionable ni de una fila del ledger.
+    # Se guarda con el pedido para que un cambio futuro de tasa no reescriba
+    # la historia (docs/arquitectura/26 §4.4).
+    order_item.update(impuestos.campos_pedido(order_item["total"]))
     if delivery_type == "pickup":
         if body.get("pickupStockId"):
             order_item["pickupStockId"] = body.get("pickupStockId")

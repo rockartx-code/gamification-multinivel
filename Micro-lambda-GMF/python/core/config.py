@@ -245,6 +245,22 @@ def _default_app_config() -> dict:
         # Suscripción mensual (paquete H): el día elegido se crea el pedido y se manda
         # el enlace de pago por correo; no hay cobro automático. Día permitido 1–28.
         "subscriptions": {"enabled": True, "minDay": Decimal("1"), "maxDay": Decimal("28"), "reminderDaysBefore": Decimal("0")},
+        # ── Paquete B · ronda 26 (propuesta 38) ──────────────────────────────
+        # IVA. Los precios de lista se manejan CON IVA incluido: el impuesto
+        # nunca se suma, se desglosa de un total que no cambia. La base
+        # gravable es todo lo que se cobra (producto tras descuento y cupón +
+        # envío, que es un servicio gravado); el redondeo es a dos decimales,
+        # mitad arriba, una sola vez y al final. La cuenta vive en
+        # `impuestos.desglose_iva` y nadie la repite.
+        # vatRate: tasa vigente (0.16 = 16 %). pricesIncludeVat: los precios
+        # publicados ya lo traen. appliesToShipping: el envío entra en la base.
+        # label: cómo se llama en pantalla.
+        "taxes": {
+            "vatRate": Decimal("0.16"),
+            "pricesIncludeVat": True,
+            "appliesToShipping": True,
+            "label": "IVA",
+        },
     }
 
 def _normalize_app_config(raw) -> dict:

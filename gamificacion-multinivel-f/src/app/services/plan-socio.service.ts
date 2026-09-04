@@ -9,6 +9,8 @@ import {
   ModoCuenta,
   ModoCuentaRespuesta,
   PlanSocio,
+  SimuladorEntrada,
+  SimuladorResultado,
   calcularAhorroConTramos
 } from '../models/plan-socio.model';
 import { AuthService } from './auth.service';
@@ -111,6 +113,17 @@ export class PlanSocioService {
   /** Cálculo local con la tabla real del plan (misma regla que el pedido). */
   ahorroComoSocio(gross: number, monthNet: number): Observable<AhorroSocio> {
     return this.plan$.pipe(map((plan) => calcularAhorroConTramos(plan.descuento.tramos, gross, monthNet)));
+  }
+
+  /**
+   * Simulador del plan (propuesta 36). Público: quien viene a decidir si esto
+   * es un negocio todavía no tiene cuenta. La cuenta la hace el servidor con
+   * los porcentajes y requisitos reales; el frontend no calcula ninguno.
+   */
+  simular(entrada: SimuladorEntrada): Observable<SimuladorResultado> {
+    return this.http
+      .post<{ simulacion: SimuladorResultado }>(`${this.baseUrl}/catalog/plan/simular`, entrada)
+      .pipe(map((respuesta) => respuesta.simulacion));
   }
 
   /** Cálculo en el servidor (público); con sesión propia considera el neto del mes. */

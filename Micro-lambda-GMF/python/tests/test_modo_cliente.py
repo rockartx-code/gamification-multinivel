@@ -307,7 +307,9 @@ def test_el_panel_en_modo_cliente_no_trae_red_ni_comisiones_y_si_indicadores(mod
     assert ind["monthSavingsIfPartner"] == 120.0
     assert ind["currentRateIfPartner"] == 0.10
     assert ind["nextTier"] == {"rate": 0.20, "missing": 800.0}
-    assert ind["exampleEarnings"] == {"friends": 2, "purchaseEach": 1000.0, "rate": 0.10, "total": 200.0}
+    # Propuesta 14: la compra de ejemplo es el neto de la canasta más barata
+    # que de verdad activa (2 × Klinhart = $960), no el "más o menos $1,000".
+    assert ind["exampleEarnings"] == {"friends": 2, "purchaseEach": 960.0, "rate": 0.10, "total": 192.0}
 
 
 def test_el_panel_en_modo_socio_es_el_de_siempre(modulos, utils):
