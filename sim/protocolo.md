@@ -19,6 +19,27 @@ mide **cuánto cuesta usarlo** y **cómo se siente**.
   Paulina Ríos (código `PAULINA-PR`). Contraseñas en `credenciales.json`.
 - Limitación conocida: Estadísticas (Athena) queda vacía.
 
+## El reloj del navegador (guarda 15)
+
+El mundo vive en 2027; la máquina que corre el arnés, no. Todo lo que la pantalla calcula con `new Date()`
+—el mes contable, "días desde la última compra", el selector de meses del día de pago— saldría de un año
+distinto al del backend, y la persona lo apuntaría como defecto del producto. Cuatro hallazgos de la ronda 6
+eran exactamente eso: del arnés, no de la aplicación.
+
+Por eso `abrirNavegador()` **pone el navegador en la hora del mundo** antes de abrir la página: lee
+`GET /__sim/reloj` y lo fija con `ctx.clock.setSystemTime` (`sim/lib/persona.mjs`, `fijarRelojDelMundo()`).
+La hora que quedó fijada se devuelve como `relojDelMundo` por si la persona la necesita.
+
+- El reloj queda **corriendo**, no congelado: `setSystemTime` mueve el origen y el tiempo sigue fluyendo.
+  `setFixedTime` e `install` lo detendrían, y con él los temporizadores de la aplicación.
+- Si el mundo no da la hora, el arnés no se calla: lo anota en `consola` de la bitácora (`RELOJ: …`).
+- `sim/comprobar.sh` lo verifica de verdad antes de cada ronda (`node sim/lib/comprobar-reloj.mjs`): abre un
+  navegador, entra a la tienda, lee `new Date()` de la página y **falla si se desvía más de un día** del
+  reloj del mundo o si el reloj está congelado. Abre **un solo** navegador y lo cierra; no deja bitácora ni
+  perfil detrás.
+- La fecha se mueve con `dia.sh`, como siempre. El navegador toma la hora **al abrirse**: si mueves el mundo
+  a mitad de sesión, cierra y vuelve a abrir el navegador.
+
 ## Reglas para los agentes-persona
 
 1. **Recibes solo tu historia y tu punto de entrada.** Ninguna instrucción de uso de la plataforma.
@@ -30,6 +51,8 @@ mide **cuánto cuesta usarlo** y **cómo se siente**.
    (los empleados). Cada mensaje se registra con `bitacora.preguntar(...)` y se anota en `helpdesk.md`.
    Una pregunta no es un fracaso: es la medida de lo que la pantalla no explicó.
 5. **Nada cuenta hasta verificarlo en pantalla.** Si dices "quedó guardado", recarga y compruébalo.
+6. **La fecha de tu navegador es la del mundo, no la de la máquina** (arriba). Si una pantalla te muestra un
+   año que no es el del mundo, es un hallazgo del producto: anótalo.
 
 ## Lo que hay que registrar (esto es la ronda)
 

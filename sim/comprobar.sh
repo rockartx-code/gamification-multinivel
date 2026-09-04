@@ -30,5 +30,20 @@ n=$(curl -s localhost:4400/catalog/product -H 'Authorization: Bearer sim-superad
 
 [ -f sim/credenciales.json ] && paso "credenciales.json existe" || falla "falta sim/credenciales.json (semilla)"
 
+# Guarda 15 (docs/qa/27 §4): el arnés tiene que poner el navegador en la hora del
+# mundo. Si no, la persona mide el mes contable, "días desde la última compra" y
+# el selector de meses con la fecha de la máquina, y lo apunta como defecto del
+# producto. Abre UN navegador (regla del arnés: nunca dos) y lo cierra; no deja
+# bitácora ni perfil. Se salta si el mundo no está en pie: ya falló arriba.
+if [ $ok -eq 0 ]; then
+  reloj=$(node sim/lib/comprobar-reloj.mjs 2>&1 | tail -1)
+  case "$reloj" in
+    OK*)    paso "reloj del navegador == reloj del mundo — ${reloj#OK }" ;;
+    *)      falla "reloj del navegador desviado del mundo — ${reloj#FALLA }" ;;
+  esac
+else
+  printf '  · reloj del navegador: sin comprobar (el mundo ya no está listo)\n'
+fi
+
 [ $ok -eq 0 ] && echo "Mundo listo." || echo "MUNDO NO LISTO: no lances agentes."
 exit $ok

@@ -68,6 +68,49 @@ const SONDA = () => {
 };
 
 /**
+ * Pone el reloj del navegador en la hora del mundo simulado (`GET /__sim/reloj`).
+ *
+ * Guarda 15 de `docs/qa/27` §4: sin esto la persona navega en la fecha real de la
+ * máquina mientras el backend vive en 2027, y todo lo que la pantalla calcula con
+ * `new Date()` —el mes contable, "días desde la última compra", el selector de
+ * meses— sale de otro mundo. Cuatro hallazgos de la ronda 6 eran esto, no del
+ * producto.
+ *
+ * Se llama ANTES de abrir la página, para que el reloj ya esté puesto en el primer
+ * script que corra. El reloj queda **corriendo**, no congelado: `setSystemTime`
+ * mueve el origen y el tiempo sigue fluyendo desde ahí (`setFixedTime` e `install`
+ * lo detendrían y con él los temporizadores de la aplicación).
+ *
+ * @returns {Promise<Date|null>} la hora del mundo que se fijó, o null si no se pudo.
+ */
+export async function fijarRelojDelMundo(ctx, consola = []) {
+  let iso;
+  try { iso = await hoy(); }
+  catch (e) { consola.push('RELOJ: no se pudo leer /__sim/reloj (' + String(e).slice(0, 80) + '); el navegador se queda en la hora real'); return null; }
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) { consola.push('RELOJ: /__sim/reloj devolvió una fecha ilegible: ' + String(iso).slice(0, 40)); return null; }
+  if (ctx.clock && typeof ctx.clock.setSystemTime === 'function') {
+    await ctx.clock.setSystemTime(t);            // Playwright >= 1.45
+  } else {
+    // Playwright sin `clock`: se desplaza Date a mano, con el mismo criterio.
+    await ctx.addInitScript(`(() => {
+      const Real = Date;
+      const desfase = ${t.getTime()} - Real.now();
+      function Falso(...a) {
+        if (!(this instanceof Falso)) return new Real(Real.now() + desfase).toString();
+        return a.length ? new Real(...a) : new Real(Real.now() + desfase);
+      }
+      Falso.prototype = Real.prototype;
+      Falso.now = () => Real.now() + desfase;
+      Falso.parse = Real.parse.bind(Real);
+      Falso.UTC = Real.UTC.bind(Real);
+      window.Date = Falso;
+    })()`);
+  }
+  return t;
+}
+
+/**
  * Abre un navegador limpio con la bitácora enganchada.
  * @param {{movil?:boolean, perfil?:string, persona?:string, rol?:string}} opciones
  */
@@ -82,8 +125,10 @@ export async function abrirNavegador({ movil = false, perfil = 'persona', person
     storageState: fs.existsSync(`${dir}/estado.json`) ? `${dir}/estado.json` : undefined,
   });
   await ctx.addInitScript(SONDA);
-  const pagina = await ctx.newPage();
   const consola = [];
+  // El navegador vive en el día del mundo simulado, no en el de la máquina.
+  const relojDelMundo = await fijarRelojDelMundo(ctx, consola);
+  const pagina = await ctx.newPage();
   pagina.on('pageerror', (e) => consola.push('JS: ' + String(e).slice(0, 160)));
   pagina.on('response', (r) => {
     if (r.url().includes(':4400') && r.status() >= 400) consola.push(`HTTP ${r.status()} ${r.request().method()} ${r.url().replace(API, '')}`);
@@ -97,7 +142,7 @@ export async function abrirNavegador({ movil = false, perfil = 'persona', person
     await navegador.close();
     return b.guardar();
   };
-  return { navegador, ctx, pagina, consola, bitacora: b, cerrar };
+  return { navegador, ctx, pagina, consola, bitacora: b, cerrar, relojDelMundo };
 }
 
 /**
