@@ -109,9 +109,9 @@ export class AdminSeguimientoComponent implements OnInit {
     { value: '', label: 'Todas las que necesitan contacto' },
     { value: 'clabe_pendiente', label: 'CLABE pendiente (tienen comisión y no hay dónde depositar)' },
     { value: 'pedido_tardio', label: 'Pedido tardío (pagado sin despachar o enviado sin entregar)' },
-    { value: 'bienvenida', label: 'Bienvenida (recién registradas, sin compra)' },
-    { value: 'fria', label: 'Frías (hace tiempo que no compran)' },
-    { value: 'activa', label: 'Activas (compraron hace poco; solo para consultar)' }
+    { value: 'bienvenida', label: 'Bienvenida (se registró y aún no compra)' },
+    { value: 'fria', label: 'Sin comprar hace tiempo' },
+    { value: 'activa', label: 'Compró hace poco (solo para consultar)' }
   ];
 
   readonly channelOptions: Array<{ value: CanalContacto; label: string }> = [
