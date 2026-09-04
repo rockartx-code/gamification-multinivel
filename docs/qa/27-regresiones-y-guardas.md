@@ -122,3 +122,57 @@ Las quince guardas del §4 se aplican **después** de la ronda que está impleme
 pisar su integración, y antes de darla por cerrada. Las que blindan lo que ya servía (10, 11, 3, 6 y 15) van
 primero; las demás acompañan a la corrección que ya está en curso, porque describen exactamente lo que esas
 propuestas tienen que dejar funcionando.
+
+## 7. Estado de las guardas
+
+Las quince guardas del §4 están escritas y aplicadas sobre
+`claude/ultimos-cambios-integrados-fylhiw`, después de la ronda de las 39 propuestas. **Ninguna quedó en
+`xfail` ni saltada**: las treinta y una pruebas pasan en verde. Diez de las quince pasaron a la primera contra
+el código de hoy —la propuesta correspondiente de la ronda 26 ya estaba implementada— y quedan de candado; las
+otras cinco (5, 11, 13, 14 y 15) destaparon función a medio terminar, y en las cinco se corrigió el producto (o
+el arnés) con el cambio mínimo, nunca la afirmación de la prueba.
+
+| # | Guarda | Archivo | Pruebas | Estado | Qué destapó |
+|---|---|---|---|---|---|
+| 1 | Toda situación del coach tiene plantilla | `Micro-lambda-GMF/python/tests/test_seguimiento_hoy.py::test_toda_situacion_tiene_plantilla` | 1 | **pasa** | Nada: `activa` ya trae plantilla propia. Candado. Comprueba además lo que sirve `/customers/seguimiento/plantillas` con el override de configuración, y que la bitácora acepte `templateKey: "activa"` |
+| 2 | El fondo inicial de caja se declara | `Micro-lambda-GMF/python/tests/test_caja_arqueo.py::test_fondo_inicial_declarable` | 1 | **pasa** | Nada: la propuesta 5 de la ronda 26 ya está. El contrato que el §4 pedía como `openingCashDeclared: false` existe hoy con otro nombre —`openingSource: "sin_declarar"` + `needsOpening: true`— y es ese el que la prueba fija; queda escrito en el archivo para que no parezca una rebaja |
+| 3 | Recalcular no reescribe `createdAt` | `Micro-lambda-GMF/python/tests/test_ledger_fechas.py` | 3 | **pasa** | Nada: la propuesta 32 ya lo corrigió. La guarda no mira solo `createdAt`: compara la fila campo por campo antes y después y exige que lo único que cambie sea `status` y las marcas `recalculatedAt`/`recalculatedReason`. El `updatedAt` que menciona el §4 vive en la cabecera del mes, no en la fila (`core/ledger.py::_write_ledger_rows`). Se corre también con `LEDGER_ROW_SCHEME="rows"` |
+| 4 | Ligar la ficha de un invitado recalcula el mes | `Micro-lambda-GMF/python/tests/test_invitado_mes.py` | 3 | **pasa** | Nada. Fija las tres puertas de activación (VP, volumen, Cuadro de Honor) por los dos caminos: registrarse con un correo que ya compró, y ligar la ficha desde el back office |
+| 5 | El aviso no promete comisiones inexistentes | `Micro-lambda-GMF/python/tests/test_avisos_clabe.py::test_no_avisa_comisiones_inexistentes` | 1 | **pasa (tras corregir el producto)** | La ronda 26 solo había arreglado la mitad. El panel no distinguía "cero" de "pendiente": con $96 en comisiones pendientes decía exactamente lo mismo que con $0. Y el correo de pedir CLABE (`handle_pedir_clabe` → `_correo_clabe`) seguía diciendo literalmente «Ya tienes $0.00 en comisiones confirmadas» — el texto que, según el informe 26, «es lo único que me tiró la confianza» (Ximena). Corregido en `pagos_handlers.py`: rama de pendientes en `_aviso_panel_clabe` y rama de monto 0 en `_correo_clabe`, sin consultas nuevas |
+| 6 | `saveShippingAddress` persiste y la suscripción la acepta | `Micro-lambda-GMF/python/tests/test_direcciones.py` | 3 | **pasa** | Nada en la primera mitad. La segunda —que la suscripción acepte esa dirección después— no estaba cubierta y ahora lo está; se añadieron además el rechazo honesto (alta sin dirección → 400 con motivo y salida desde el perfil) y que la dirección de otra persona no se pueda usar |
+| 7 | El rango de conciliación viaja desde la pantalla | `Micro-lambda-GMF/python/tests/test_conciliacion.py::test_horas_viaja_desde_la_pantalla` | 1 | **pasa** | Nada. Crece más allá del enunciado en la misma dirección: fija que el rango se guarda en la corrida (que es lo que lee la tarjeta después) y que sin `hours` manda la configuración, no un literal |
+| 8 | El código del POS se valida antes del retiro | `Micro-lambda-GMF/python/tests/test_pos_autorizacion.py` | 3 | **pasa** | Nada. Fija que no se escribe nada si se rechaza, que sin código dado de alta se dice eso y no «incorrecto», y que el código nunca viaja de vuelta ni se valida sin privilegio |
+| 9 | La entrega en mostrador no descuenta otra sucursal | `Micro-lambda-GMF/python/tests/test_despacho_bloque.py` | 2 | **pasa** | Nada. Añade que el `stockId` del cuerpo **no** elige de qué bodega se descuenta, y que entregar dos veces no descuenta dos veces |
+| 10 | La CLABE del panel se guarda de un tirón | `gamificacion-multinivel-f/src/app/pages/user-dashboard/user-dashboard.clabe.spec.ts` | 3 | **pasa** | Nada: `ui-clabe-form` ya implementa la propuesta 1 (guarda en un paso, pinta «termina en 6789» en el propio campo, rechaza 17 dígitos sin llamar al API). Comprueba además que no hay ningún `ui-modal` en ese flujo |
+| 11 | Un solo formulario de CLABE en toda la aplicación | `gamificacion-multinivel-f/src/app/pages/user-profile/user-profile.clabe.spec.ts` | 2 | **pasa (tras corregir el producto)** | Primera prueba (el bloque se pinta aunque `GET /customers/modo` falle) pasa: cierra el estrechamiento 1 del §3. La segunda destapó **dos** campos de captura de CLABE: el de `ui-clabe-form` y otro suelto en el modal «Solicitud de pago» del panel (`name="commissionClabe"`), inalcanzable —nada llamaba a `openCommissionModal()`— y que el backend (`handle_payout_request`) ignora por completo. El modal deja de capturar CLABE y dice a qué CLABE registrada va el depósito; `clabe` pasa a opcional en `CommissionRequestPayload` |
+| 12 | Los meses de Pagos del mes salen del servidor | `gamificacion-multinivel-f/src/app/pages/admin/pagos-mes/pagos-mes.component.spec.ts` | 2 | **pasa** | Nada: los meses vienen de `GET /commissions/periodos` y el elegido sobrevive a la recarga aunque el servidor ya no lo liste (`ensureMonthOption`). La prueba fija el navegador en 2026-09 y el servidor en 2027, y comprueba que la fuente del componente no tiene `new Date()` ni `Date.now()` |
+| 13 | El back office lee la hora del servidor | `gamificacion-multinivel-f/src/app/pages/admin/admin.component.reloj.spec.ts` | 2 | **pasa (tras corregir el producto)** | El mes contable ya venía del servidor, pero `daysSinceLastPurchase()` restaba contra `Date.now()` mientras `orderAgingDays()` ya usaba `relojDelServidorMs`. Con el navegador en 2026-09 y las compras en 2027-04 el `Math.max(0, …)` dejaba toda la lista de clientas en «0 días» y `isColdCustomer` en falso para todas: el síntoma que hizo creer a Alma que nadie compraba. Corregido con una línea |
+| 14 | Ningún `*ngFor` sobre un literal; toda tabla con `trackBy` | `gamificacion-multinivel-f/src/app/pages/admin/admin.tablas.spec.ts` | 3 | **pasa (tras corregir el producto)** | La tira de pestañas de reportes iteraba un literal escrito en la plantilla (`admin.component.html:2842`): identidad nueva en cada ciclo de detección de cambios, cinco botones destruidos y recreados sin parar — el sustrato del botón «Ver» que no abre. Y doce tablas dinámicas no declaraban `trackBy` (`pagedCustomers`, `pagedEmployees`, `pagedProducts`, `pagedNotifications` y ocho `<tr *ngFor>` de reportes, Cuadro de Honor y cupones). La lista pasa a la constante `statsReportTabs` con `trackStatsReportTab`; las doce tablas usan `trackFila`. La tira de Pedidos del §3 ya estaba corregida con `orderTabs` |
+| 15 | El navegador del arnés vive en la hora del mundo | `sim/lib/comprobar-reloj.mjs`, cableado en `sim/comprobar.sh`; corrección en `sim/lib/persona.mjs` | 1 | **pasa (tras corregir el arnés)** | `abrirNavegador()` nunca tocaba el reloj: medido contra el mundo en pie, el navegador reportaba 2026-09-04 y `GET /__sim/reloj` daba 2027-05-10 — **247.5 días de desvío**. Son los cuatro hallazgos de la ronda 6 que el §4 atribuye al arnés. Corregido con `fijarRelojDelMundo()` (`ctx.clock.setSystemTime`, antes de `ctx.newPage()`); se usa `setSystemTime` y no `setFixedTime` ni `install` porque esas dos congelan el reloj y matarían los temporizadores de la aplicación |
+
+### Cómo se corre
+
+| Suite | Comando | Hoy |
+|---|---|---|
+| Backend | `cd Micro-lambda-GMF/python && python3 -m pytest -q tests` | **631 pasan** (613 antes de las guardas; 18 nuevas), 0 fallos, 0 xfail |
+| Presupuesto de consultas | `cd Micro-lambda-GMF/python && python3 tools/check_query_budget.py` | dentro de presupuesto en los cuatro endpoints vigilados, sin cambios (`GET /dashboard/honor-board` 4/25 viajes, `ORDER_PAID` 28/40) |
+| Frontend | `cd gamificacion-multinivel-f && npx ng test --watch=false` | **14 pasan** (12 de guardas + 2 del andamio), ~3 s |
+| Tipos | `npx tsc -p tsconfig.app.json --noEmit` y `npx tsc -p tsconfig.spec.json --noEmit` | limpios |
+| Paquete | `npx ng build` | compila (solo los avisos `NG8107` y de presupuesto de tamaño, preexistentes) |
+| Arnés | `sim/comprobar.sh` (corre `node sim/lib/comprobar-reloj.mjs`) | verde contra el mundo en pie: `2027-05-10T10:51:06Z` en el navegador vs `2027-05-10T10:51:07Z` en el mundo, y el reloj corre |
+
+### Lo que hay que saber para mantenerlas
+
+- **Las guardas muerden.** Se comprobó rompiendo el producto a propósito y restaurándolo: guarda 3
+  (`createdAt = ahora` en `_write_row` → 2 fallos), guarda 4 (sin `_reacreditar_volumen_del_pedido` → 3 fallos),
+  guarda 6 (sin leer `saveShippingAddress` → 3 fallos), guarda 9 (descontar `body.stockId` y quitar el 403 de
+  sucursal → 2 fallos), guarda 15 (con `fijarRelojDelMundo` neutralizado, el comprobador sale con código 1 y
+  247.5 días de desvío). No son pruebas que pasen por decorado.
+- **Las guardas 11 y 14 son estructurales**: leen las plantillas del repositorio con `node:fs`. Como el proyecto
+  no instala `@types/node` y `tsconfig.app.json` declara `types: []`, `src/testing/node-builtins.d.ts` aporta las
+  firmas mínimas de `node:fs`/`node:path`. Son solo declaraciones: no entran al paquete de la aplicación.
+- **Guarda 15 y el día del mundo**: el arnés toma la hora del mundo **al abrir** el navegador. Si una ronda mueve
+  la fecha con `dia.sh` a mitad de sesión, hay que cerrar y volver a abrir el navegador para que la persona vea
+  el día nuevo. Queda escrito en `sim/protocolo.md`.
+- Las dos únicas pruebas del backend que pueden saltarse (`test_metas.py`, `test_infraestructura.py`) son
+  condicionales preexistentes y no son guardas de este informe; hoy no se saltan.
