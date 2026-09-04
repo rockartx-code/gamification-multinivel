@@ -125,12 +125,17 @@ FRASE_BASE_COMISION = (
 )
 
 
-def _pesos(monto) -> str:
-    """`$1,350.00`, siempre con centavos: es un importe de dinero, no un dato."""
-    return "${:,.2f}".format(utils._to_decimal(monto))
+def formato_pesos(monto) -> str:
+    """`$1,350.00`, siempre con centavos: es un importe de dinero, no un dato.
+
+    Un negativo se escribe `-$808.00`, con el signo delante del peso: es como
+    se lee un resultado del mes en rojo, y el simulador lo enseña tal cual.
+    """
+    valor = utils._to_decimal(monto)
+    return ("-" if valor < 0 else "") + "${:,.2f}".format(abs(valor))
 
 
-def _porcentaje(tasa) -> str:
+def formato_porcentaje(tasa) -> str:
     """0.10 → `10 %`; 0.075 → `7.5 %`. Sin ceros de relleno."""
     valor = utils._to_decimal(tasa) * Decimal("100")
     texto = format(valor.normalize(), "f")
@@ -147,4 +152,4 @@ def texto_base_comision(neto, tasa, importe) -> str:
     simulador, la fila del panel de la socia, el correo de comisión y Pagos
     del mes. Ningún paquete escribe su propia versión.
     """
-    return f"{_porcentaje(tasa)} de {_pesos(neto)} netos, sin envío = {_pesos(importe)}"
+    return f"{formato_porcentaje(tasa)} de {formato_pesos(neto)} netos, sin envío = {formato_pesos(importe)}"

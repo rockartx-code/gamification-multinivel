@@ -36,7 +36,7 @@ def test_el_plan_es_publico_y_trae_las_ocho_secciones(catalogo, utils):
     assert plan["version"] == "abril-2026"
     assert set(plan) >= {"unidades", "activacion", "descuento", "generaciones", "compresionDinamica", "pago", "datos", "rangos", "bonos"}
     assert plan["unidades"]["mxnPerVp"] == 50 and plan["unidades"]["maxLevels"] == 5
-    assert plan["activacion"]["vpNetos"] == 20 and plan["activacion"]["pesosAprox"] == 1000
+    assert plan["activacion"]["vpNetos"] == 20
     assert [t["rate"] for t in plan["descuento"]["tramos"]] == [0, 0.10, 0.20, 0.30, 0.40]
     assert [g["rate"] for g in plan["generaciones"]] == [0.10, 0.05, 0.04, 0.03, 0.02]
     assert plan["compresionDinamica"] is True
@@ -64,10 +64,70 @@ def test_los_ejemplos_de_activacion_salen_de_los_productos_mas_baratos_con_pc(ca
 def test_sin_productos_el_plan_sigue_publicandose(catalogo, utils):
     plan = _plan(catalogo)
     assert plan["activacion"]["ejemplos"] == [] and plan["descuento"]["tramos"]
+    # Sin catálogo no hay rango honesto que publicar: se calla, no se inventa.
+    assert plan["activacion"]["rango"] is None
+    assert plan["baseComision"]["compraEjemplo"] == 0
+
+
+def test_el_numero_falso_de_la_activacion_ya_no_se_publica(catalogo, utils):
+    """Propuesta 14. Ximena Paredes: "La misma pantalla me dice que $1,000
+    activa y que $1,000 no activa. Es el número más importante del plan"
+    (`ximena-paredes-2027-03-02.md`). `pesosAprox` sale del contrato."""
+    _productos(utils)
+    plan = _plan(catalogo)
+    assert "pesosAprox" not in plan["activacion"]
+    assert json.dumps(plan, ensure_ascii=False).find("pesosAprox") == -1
+
+
+def test_el_rango_de_activacion_sale_del_catalogo_real(catalogo, utils):
+    """Ximena midió el hoyo a mano; ahora lo calcula la página.
+
+    Con Klinhart ($480 / 10 PC) bastan $960 y no hay descuento que reste VP;
+    con Naplus ($545 / 10 PC) los $1,090 caen en el tramo del 10 % y hay que
+    llegar a $1,211.11 para conservar los 20 VP netos.
+    """
+    _productos(utils)
+    rango = _plan(catalogo)["activacion"]["rango"]
+    assert rango["min"] == 960 and rango["max"] == 1211.11
+    assert rango["notaProducto"] == ("Depende del producto: con Klinhart te activas con $960.00; "
+                                     "con Naplus necesitas $1,211.11.")
+
+
+def test_el_rango_respeta_la_escalera_no_solo_el_precio_por_pc(catalogo, utils):
+    """El descuento se muerde la cola: pasar de $1,000 baja los VP un 10 %,
+    así que el costo de activarse salta de tramo en vez de crecer parejo."""
+    _productos(utils)
+    import modo_handlers
+    tiers = utils._load_app_config()["rewards"]["discountTiers"]
+    barato = modo_handlers._costo_para_activar({"price": Decimal("480"), "pc": Decimal("10")}, tiers, Decimal("20"))
+    caro = modo_handlers._costo_para_activar({"price": Decimal("545"), "pc": Decimal("10")}, tiers, Decimal("20"))
+    assert barato == Decimal("960.00")
+    assert caro == Decimal("1211.11")  # 1090 / 0.9, porque a los $1,090 ya aplica el 10 %
+
+
+def test_el_ejemplo_de_comision_usa_una_compra_que_de_verdad_existe(catalogo, utils):
+    """Propuestas 14 y 37: "si compra $960 netos ganas $96" tiene que ser
+    aritmética verdadera sobre la misma base que paga el motor."""
+    _productos(utils)
+    plan = _plan(catalogo)
+    base = plan["baseComision"]
+    assert base["compraEjemplo"] == 960 and base["canastaEjemplo"] == "2 × Klinhart"
+    assert base["clave"] == "neto pagado por producto, sin envío"
+    assert "sin contar el envío" in base["frase"]
+    gen1 = plan["generaciones"][0]
+    assert gen1["ejemplo"]["comision"] == round(base["compraEjemplo"] * gen1["rate"], 2)
+
+
+def test_el_plan_dice_el_iva_que_llevan_dentro_los_precios(catalogo, utils):
+    """Propuesta 38: ningún número queda sin explicación en la página del plan."""
+    plan = _plan(catalogo)
+    assert plan["iva"] == {"tasa": 0.16, "etiqueta": "IVA",
+                           "preciosIncluyenIva": True, "aplicaAlEnvio": True}
 
 
 def test_los_ejemplos_cuadran_con_la_escalera_real_y_con_las_generaciones(catalogo, utils):
     import order_lambda
+    _productos(utils)
     plan = _plan(catalogo)
     tiers = utils._load_app_config()["rewards"]["discountTiers"]
     assert len(plan["descuento"]["ejemplos"]) == 4
@@ -79,8 +139,10 @@ def test_los_ejemplos_cuadran_con_la_escalera_real_y_con_las_generaciones(catalo
     assert plan["descuento"]["ejemplos"][0] == {"compraMes": 1200, "rate": 0.10, "descuento": 120, "pagas": 1080}
 
     g = {x["gen"]: x for x in plan["generaciones"]}
-    assert g[1]["requisitoTexto"] == "sin requisito" and g[1]["ejemplo"] == {"compraReferido": 1000, "comision": 100}
-    assert g[2]["requisitoTexto"] == "2 directas activas" and g[2]["ejemplo"]["comision"] == 50
+    # La compra de referencia es el neto de la canasta más barata que de verdad
+    # activa (2 × Klinhart = $960 sin descuento), no el "más o menos $1,000".
+    assert g[1]["requisitoTexto"] == "sin requisito" and g[1]["ejemplo"] == {"compraReferido": 960, "comision": 96}
+    assert g[2]["requisitoTexto"] == "2 directas activas" and g[2]["ejemplo"]["comision"] == 48
     assert g[3]["requisitoTexto"] == "3 directas activas y 80 PC personales y 2 líneas con 300 PC cada una"
     assert g[3]["requisitos"] == {"activeDirects": 3, "personalPC": 80, "lines": 2, "pcPerLine": 300}
 

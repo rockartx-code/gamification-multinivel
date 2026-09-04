@@ -25,6 +25,7 @@ from decimal import Decimal
 from typing import Optional
 
 import core_utils as utils
+import impuestos  # paquete B · ronda 26: IVA (§38) y base de la comisión (§37)
 from core import email as _correo
 from core.routing import Ruta
 
@@ -243,10 +244,6 @@ def _ahorro_del_mes(customer_id, month_key: str) -> Decimal:
     return total.quantize(utils.D_CENT)
 
 
-def _pesos_activacion(cfg: dict) -> Decimal:
-    return (utils._to_decimal(utils._activation_vp(cfg)) * utils._to_decimal(utils._mxn_per_vp(cfg))).quantize(utils.D_CENT)
-
-
 def _primera_generacion(cfg: dict) -> Decimal:
     niveles = (cfg.get("rewards") or {}).get("commissionLevels") or []
     primera = sorted(niveles, key=lambda n: int(utils._to_decimal(n.get("gen") or 0)))[0] if niveles else {}
@@ -260,7 +257,10 @@ def indicadores_cliente(customer: dict) -> dict:
     cid = customer.get("customerId")
     month_key = utils._month_key()
     gasto = _neto_del_mes(cid, month_key)
-    compra_ejemplo = _pesos_activacion(cfg)
+    # Mismo criterio que el plan (§14): la compra de ejemplo es el neto de la
+    # canasta más barata que de verdad activa, no un "más o menos $1,000".
+    canasta = _canasta_mas_barata_que_activa(tiers, utils._to_decimal(utils._activation_vp(cfg)))
+    compra_ejemplo = canasta["neto"] if canasta else utils.D_ZERO
     tasa_gen1 = _primera_generacion(cfg)
     siguiente = siguiente_tramo(tiers, gasto)
     return {
@@ -345,8 +345,8 @@ def _ejemplo_activacion(producto: dict, qty: int, tiers: list, vp_netos: Decimal
     }
 
 
-def _ejemplos_activacion(tiers: list, vp_netos: Decimal) -> list:
-    productos = _productos_con_pc()
+def _ejemplos_activacion(tiers: list, vp_netos: Decimal, productos: Optional[list] = None) -> list:
+    productos = productos if productos is not None else _productos_con_pc()
     if not productos:
         return []
     ejemplos = []
@@ -358,6 +358,82 @@ def _ejemplos_activacion(tiers: list, vp_netos: Decimal) -> list:
     else:
         ejemplos.append(_ejemplo_activacion(primero, int(math.ceil(vp_netos / primero["pc"])) + 1, tiers, vp_netos))
     return ejemplos
+
+
+#: Tope de piezas del mismo producto que se prueban al buscar la canasta que
+#: activa. Con la escalera real ninguna pasa de cuatro; el tope solo evita un
+#: bucle infinito si alguien configura un producto con 0.01 PC.
+_MAX_PIEZAS_CANASTA = 60
+
+
+def _costo_para_activar(producto: dict, tiers: list, vp_netos: Decimal) -> Optional[Decimal]:
+    """Cuánto hay que comprar de **este** producto para activarse, en pesos de lista.
+
+    El descuento por volumen se muerde la cola: al pasar de $1,000 baja los VP
+    un 10 %, así que comprar más de lista puede no bastar. Se resuelve por
+    tramo: para cada tasa de la escalera se despeja el bruto que da los VP
+    netos y se acepta si ese bruto cae de verdad dentro del tramo.
+    """
+    precio, pc = producto["price"], producto["pc"]
+    if precio <= 0 or pc <= 0:
+        return None
+    candidatos = []
+    for tier in sorted(tiers, key=lambda t: float(utils._to_decimal(t.get("min", 0)))):
+        tasa = utils._to_decimal(tier.get("rate", 0))
+        if tasa >= 1:
+            continue
+        minimo = utils._to_decimal(tier.get("min", 0))
+        maximo = utils._to_decimal(tier.get("max")) if tier.get("max") is not None else None
+        bruto = (vp_netos * precio / (pc * (1 - tasa))).quantize(utils.D_CENT)
+        if bruto >= minimo and (maximo is None or bruto < maximo):
+            candidatos.append(bruto)
+    return min(candidatos) if candidatos else None
+
+
+def _rango_activacion(tiers: list, vp_netos: Decimal, productos: Optional[list] = None) -> Optional[dict]:
+    """Lo que de verdad cuesta activarse, de lo más barato a lo más caro.
+
+    Sustituye al "más o menos $1,000" que la propia página desmentía tres
+    renglones abajo. Ximena Paredes midió el hoyo a mano —"con $980 de Naplus
+    activa, con $1,000 no"— y lo llamó *"el número más importante del plan, en
+    la página que se llama «con los números reales»"*.
+    """
+    productos = productos if productos is not None else _productos_con_pc()
+    costos = []
+    for producto in productos:
+        costo = _costo_para_activar(producto, tiers, vp_netos)
+        if costo is not None:
+            costos.append((costo, producto))
+    if not costos:
+        return None
+    barato = min(costos, key=lambda c: c[0])
+    caro = max(costos, key=lambda c: c[0])
+    pesos = impuestos.formato_pesos
+    nota = (f"Depende del producto: con {barato[1]['name']} te activas con {pesos(barato[0])}; "
+            f"con {caro[1]['name']} necesitas {pesos(caro[0])}.") if barato[1]["id"] != caro[1]["id"] else \
+        f"Con {barato[1]['name']} te activas con {pesos(barato[0])}."
+    return {"min": _f(barato[0]), "max": _f(caro[0]), "notaProducto": nota}
+
+
+def _canasta_mas_barata_que_activa(tiers: list, vp_netos: Decimal, productos: Optional[list] = None) -> Optional[dict]:
+    """La compra real más barata —piezas enteras— que sí activa el mes.
+
+    Es la compra de referencia de los ejemplos de comisión: así "si compra
+    $960 netos ganas $96" es aritmética verdadera sobre la misma base que
+    paga el motor (el neto pagado por producto, sin envío).
+    """
+    mejor = None
+    for producto in (productos if productos is not None else _productos_con_pc()):
+        for qty in range(1, _MAX_PIEZAS_CANASTA + 1):
+            ejemplo = _ejemplo_activacion(producto, qty, tiers, vp_netos)
+            if not ejemplo["activa"]:
+                continue
+            neto = (utils._to_decimal(ejemplo["bruto"]) * (1 - utils._to_decimal(ejemplo["rate"]))).quantize(utils.D_CENT)
+            if mejor is None or neto < mejor["neto"]:
+                mejor = {"neto": neto, "producto": producto["name"], "qty": qty,
+                         "bruto": utils._to_decimal(ejemplo["bruto"]), "rate": utils._to_decimal(ejemplo["rate"])}
+            break
+    return mejor
 
 
 def _pct(tasa) -> str:
@@ -429,7 +505,14 @@ def construir_plan() -> dict:
     tiers = _tiers(cfg)
     vp_netos = utils._to_decimal(utils._activation_vp(cfg))
     mxn_por_vp = utils._to_decimal(utils._mxn_per_vp(cfg))
-    pesos_aprox = _pesos_activacion(cfg)
+    productos = _productos_con_pc()
+    rango = _rango_activacion(tiers, vp_netos, productos)
+    # La compra de referencia de los ejemplos de comisión es una compra que de
+    # verdad existe y de verdad activa, y se toma por su **neto pagado**, que
+    # es la base sobre la que el motor paga (§37). Sin canasta (catálogo sin
+    # PC) no se inventa ninguna: los ejemplos salen en cero.
+    canasta = _canasta_mas_barata_que_activa(tiers, vp_netos, productos)
+    compra_ejemplo = canasta["neto"] if canasta else utils.D_ZERO
     primer_tramo = next((t for t in tiers if utils._to_decimal(t.get("rate", 0)) > 0), None)
     tasa_primer_tramo = utils._to_decimal((primer_tramo or {}).get("rate", 0))
     vp_con_descuento = (vp_netos * (1 - tasa_primer_tramo)).quantize(utils.D_CENT)
@@ -449,8 +532,11 @@ def construir_plan() -> dict:
         },
         "activacion": {
             "vpNetos": _f(vp_netos),
-            "pesosAprox": _f(pesos_aprox),
-            "ejemplos": _ejemplos_activacion(tiers, vp_netos),
+            # `pesosAprox` (el "más o menos $1,000" que la propia página
+            # desmentía tres renglones abajo) se borró del contrato: en su
+            # lugar va el rango real, calculado del catálogo (propuesta 14).
+            "rango": rango,
+            "ejemplos": _ejemplos_activacion(tiers, vp_netos, productos),
             "nota": (f"{_f(vp_netos):g} PC de lista con {_pct(tasa_primer_tramo)} % de descuento = "
                      f"{_f(vp_con_descuento):g} VP: no activa."),
         },
@@ -458,7 +544,22 @@ def construir_plan() -> dict:
             "tramos": [_tramo_json(t) for t in tiers],
             "ejemplos": _ejemplos_descuento(tiers),
         },
-        "generaciones": _generaciones(cfg, pesos_aprox),
+        "generaciones": _generaciones(cfg, compra_ejemplo),
+        # Sobre qué base se paga la comisión, dicho con las palabras de §3.2
+        # y en el propio contrato, para que ninguna pantalla escriba la suya.
+        "baseComision": {
+            "clave": impuestos.BASE_COMISION,
+            "frase": impuestos.FRASE_BASE_COMISION,
+            "compraEjemplo": _f(compra_ejemplo),
+            "canastaEjemplo": (f"{canasta['qty']} × {canasta['producto']}" if canasta else ""),
+        },
+        # El IVA que llevan dentro los precios de lista (propuesta 38).
+        "iva": {
+            "tasa": _f(impuestos.tasa_iva(cfg)),
+            "etiqueta": impuestos.etiqueta_iva(cfg),
+            "preciosIncluyenIva": impuestos.precios_con_iva(cfg),
+            "aplicaAlEnvio": impuestos.iva_incluye_envio(cfg),
+        },
         "compresionDinamica": str(rewards.get("cutRule") or "") == "dynamic_compression",
         "pago": {
             "dia": int(utils._to_decimal(rewards.get("payoutDay") or 0)),
@@ -491,6 +592,187 @@ def construir_plan() -> dict:
 def handle_plan() -> dict:
     """GET /catalog/plan — público."""
     return utils._json_response(200, {"plan": construir_plan()})
+
+
+# ---------------------------------------------------------------------------
+# Simulador de ganancias reales (propuesta 36)
+# ---------------------------------------------------------------------------
+
+#: Topes de entrada del simulador. Fuera de rango se responde 400 con el tope
+#: escrito, nunca se recorta en silencio.
+MAX_DIRECTOS = 100
+MAX_IMPORTE = Decimal("100000")
+
+#: Lo único que el simulador promete: que no promete nada.
+AVISO_SIMULADOR = "Esto es una calculadora con las reglas del plan, no una promesa de ingresos."
+
+
+def _entero(valor, nombre: str, minimo: int, maximo: int):
+    try:
+        numero = int(utils._to_decimal(valor if valor not in (None, "") else 0))
+    except (TypeError, ValueError, ArithmeticError):
+        return None, f"{nombre} tiene que ser un número entre {minimo} y {maximo}."
+    if numero < minimo or numero > maximo:
+        return None, f"{nombre} tiene que estar entre {minimo} y {maximo}."
+    return numero, None
+
+
+def _importe(valor, nombre: str):
+    try:
+        monto = utils._to_decimal(valor if valor not in (None, "") else 0).quantize(utils.D_CENT)
+    except (TypeError, ValueError, ArithmeticError):
+        return None, f"{nombre} tiene que ser un importe entre $0 y {impuestos.formato_pesos(MAX_IMPORTE)}."
+    if monto < 0 or monto > MAX_IMPORTE:
+        return None, f"{nombre} tiene que estar entre $0 y {impuestos.formato_pesos(MAX_IMPORTE)}."
+    return monto, None
+
+
+def _requisito_cumplido(nivel: dict, directos: int, vp_propios: Decimal, pc_por_linea: Decimal):
+    """(cumple, motivo). Con la misma tabla de requisitos que usa el motor."""
+    faltas = []
+    pide_directas = int(utils._to_decimal(nivel.get("reqActiveDirects") or 0))
+    if directos < pide_directas:
+        faltas.append(f"te faltan {pide_directas - directos} directas activas de las {pide_directas} que pide")
+    pide_pc = utils._to_decimal(nivel.get("reqPersonalPC") or 0)
+    if vp_propios < pide_pc:
+        faltas.append(f"llevas {_f(vp_propios):g} PC personales de los {_f(pide_pc):g} que pide")
+    pide_lineas = int(utils._to_decimal(nivel.get("reqLines") or 0))
+    pide_pc_linea = utils._to_decimal(nivel.get("reqPCPerLine") or 0)
+    if pide_lineas > 0:
+        lineas_ok = directos if pc_por_linea >= pide_pc_linea else 0
+        if lineas_ok < pide_lineas:
+            faltas.append(f"te faltan líneas con {_f(pide_pc_linea):g} PC: pide {pide_lineas} y tienes {lineas_ok}")
+    return (not faltas), ("cumples el requisito" if not faltas else "; ".join(faltas))
+
+
+def simular(entrada: dict) -> dict:
+    """El cálculo del simulador, con la misma configuración que cobra el motor.
+
+    Ximena Paredes hizo esta cuenta a mano, con lápiz y papel, en diez de sus
+    dieciséis tareas: *"para recuperar los ~$1,350 que tengo que gastar cada
+    mes necesito diez personas comprando $1,350 cada una, todos los meses"*.
+    Aquí la hace la plataforma, con sus propios porcentajes y requisitos, y
+    enseña **siempre** la ganancia neta, también cuando sale en rojo.
+    """
+    cfg = utils._load_app_config()
+    tiers = _tiers(cfg)
+    mxn_por_vp = utils._to_decimal(utils._mxn_per_vp(cfg))
+    vp_activacion = utils._to_decimal(utils._activation_vp(cfg))
+
+    directos = int(entrada["directos"])
+    compra_directo = utils._to_decimal(entrada["compraPorDirecto"])
+    compra_propia = utils._to_decimal(entrada["compraPropia"])
+    niveles_pedidos = int(entrada["nivelesProfundidad"])
+
+    # Tu compra: la misma escalera, el mismo redondeo y los mismos VP netos
+    # que aplica el pedido de verdad.
+    tasa = _tasa(tiers, compra_propia)
+    descuento = (compra_propia * tasa).quantize(utils.D_CENT)
+    neto_propio = (compra_propia - descuento).quantize(utils.D_CENT)
+    vp_propios = (neto_propio / mxn_por_vp).quantize(utils.D_CENT) if mxn_por_vp > 0 else utils.D_ZERO
+    activa = vp_propios >= vp_activacion
+    desglose = impuestos.desglose_iva(neto_propio, cfg)
+
+    niveles = sorted((cfg.get("rewards") or {}).get("commissionLevels") or [],
+                     key=lambda n: int(utils._to_decimal(n.get("gen") or 0)))
+    pc_por_linea = (compra_directo / mxn_por_vp).quantize(utils.D_CENT) if mxn_por_vp > 0 else utils.D_ZERO
+
+    generaciones, comision_total = [], utils.D_ZERO
+    for nivel in niveles[:niveles_pedidos]:
+        tasa_gen = utils._to_decimal(nivel.get("rate", 0))
+        cumple_req, motivo = _requisito_cumplido(nivel, directos, vp_propios, pc_por_linea)
+        cumple = bool(activa and cumple_req and directos > 0 and compra_directo > 0)
+        if not activa:
+            motivo = (f"no activas el mes: llevas {_f(vp_propios):g} VP netos de los "
+                      f"{_f(vp_activacion):g} que pide la activación")
+        elif directos <= 0 or compra_directo <= 0:
+            motivo = "nadie de tu red compró en el mes"
+        comision = (compra_directo * directos * tasa_gen).quantize(utils.D_CENT) if cumple else utils.D_ZERO
+        comision_total += comision
+        generaciones.append({
+            "gen": int(utils._to_decimal(nivel.get("gen") or 0)),
+            "rate": _f(tasa_gen),
+            "personas": directos,
+            "compraNetaPorPersona": _f(compra_directo),
+            "requisitoTexto": _texto_requisito(nivel),
+            "cumple": cumple,
+            "porQue": motivo,
+            "comision": _f(comision),
+            "textoBase": impuestos.texto_base_comision(compra_directo * directos, tasa_gen, comision),
+        })
+
+    ganancia_neta = (comision_total - neto_propio).quantize(utils.D_CENT)
+    pesos = impuestos.formato_pesos
+    explicacion = []
+    if directos > 0 and compra_directo > 0:
+        explicacion.append(
+            f"Con {directos} directa{'s' if directos != 1 else ''} que compra"
+            f"{'n' if directos != 1 else ''} {pesos(compra_directo)} ganas {pesos(comision_total)} al mes."
+        )
+    else:
+        explicacion.append("Sin nadie en tu red comprando este mes, tu comisión es de $0.00.")
+    if neto_propio > 0:
+        explicacion.append(
+            f"Tú pagaste {pesos(neto_propio)}"
+            + (" para activarte" if activa else " y con eso no activas el mes")
+            + f": tu resultado del mes es {pesos(ganancia_neta)}."
+        )
+    else:
+        explicacion.append(f"No capturaste compra propia, así que tu resultado del mes es {pesos(ganancia_neta)}.")
+    if not activa and comision_total == 0 and directos > 0:
+        explicacion.append(
+            f"Sin activarte, las comisiones de tu red quedan bloqueadas: necesitas "
+            f"{_f(vp_activacion):g} VP netos en el mes."
+        )
+
+    return {
+        "tuCompra": {
+            "bruto": _f(compra_propia), "tramo": _f(tasa), "descuento": _f(descuento),
+            "netoPagado": _f(neto_propio), "vp": _f(vp_propios), "activa": activa,
+            "vpParaActivar": _f(vp_activacion),
+            "iva": {"base": _f(desglose["base"]), "iva": _f(desglose["iva"]),
+                    "tasa": _f(desglose["rate"]), "etiqueta": desglose["label"]},
+        },
+        "generaciones": generaciones,
+        "comisionTotal": _f(comision_total),
+        "gastoPropio": _f(neto_propio),
+        "gananciaNeta": _f(ganancia_neta),
+        "baseComision": impuestos.BASE_COMISION,
+        "fraseBaseComision": impuestos.FRASE_BASE_COMISION,
+        "explicacion": explicacion,
+        "supuestos": [
+            "Cada generación se calcula con las mismas personas y la misma compra que capturaste arriba: "
+            "no suponemos que tu red crezca sola.",
+            "El importe de cada persona es lo que paga, ya con su descuento y sin envío: "
+            "es la misma base sobre la que se paga la comisión.",
+        ],
+        "aviso": AVISO_SIMULADOR,
+    }
+
+
+def handle_simular_plan(body: dict) -> dict:
+    """POST /catalog/plan/simular — pública."""
+    body = body or {}
+    cfg = utils._load_app_config()
+    max_niveles = utils._max_network_levels(cfg)
+
+    directos, error = _entero(body.get("directos"), "El número de personas directas", 0, MAX_DIRECTOS)
+    if error:
+        return utils._json_response(400, {"message": error})
+    niveles, error = _entero(body.get("nivelesProfundidad") or 1, "Los niveles de profundidad", 1, max_niveles)
+    if error:
+        return utils._json_response(400, {"message": error})
+    compra_directo, error = _importe(body.get("compraPorDirecto"), "Lo que compra cada persona")
+    if error:
+        return utils._json_response(400, {"message": error})
+    compra_propia, error = _importe(body.get("compraPropia"), "Tu propia compra")
+    if error:
+        return utils._json_response(400, {"message": error})
+
+    return utils._json_response(200, {"simulacion": simular({
+        "directos": directos, "compraPorDirecto": compra_directo,
+        "compraPropia": compra_propia, "nivelesProfundidad": niveles,
+    })})
 
 
 def _cliente_de_la_sesion(headers: dict):
@@ -612,4 +894,8 @@ def atender(request) -> Optional[dict]:
 RUTAS_CATALOGO = [
     Ruta("GET", "catalog/plan", publica=True, descripcion="Plan publicado con los números reales de la configuración",
          handler=lambda p: handle_plan()),
+    # ── Paquete B · ronda 26 (propuesta 36) ─────────────────────────────────
+    Ruta("POST", "catalog/plan/simular", publica=True,
+         descripcion="Simulador de ganancias con los porcentajes y requisitos reales",
+         handler=lambda p: handle_simular_plan(p.body)),
 ]

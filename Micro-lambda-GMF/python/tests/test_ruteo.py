@@ -180,7 +180,14 @@ def test_la_tabla_de_rutas_declara_el_privilegio_de_cada_endpoint():
         f for f in tabla
         if f["metodo"] in ("POST", "PATCH", "DELETE") and f["privilegio"] == "público"
     ]
-    permitidas = {"/notifications/{id}/read"}          # acuse del propio cliente
+    permitidas = {
+        "/notifications/{id}/read",        # acuse del propio cliente
+        # Paquete B · ronda 26 (propuesta 36): el simulador del plan no escribe
+        # nada —es una calculadora— y es POST solo porque recibe cuatro
+        # números; tiene que contestar sin sesión, porque quien viene a decidir
+        # si esto es un negocio todavía no tiene cuenta.
+        "/catalog/plan/simular",
+    }
     inesperadas = [f["patron"] for f in escrituras_publicas if f["patron"] not in permitidas]
     assert not inesperadas, f"escrituras sin privilegio: {inesperadas}"
 
