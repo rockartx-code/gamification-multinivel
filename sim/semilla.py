@@ -159,11 +159,14 @@ def main():
         print("sucursal", s["name"], f"({s['city']}) con {s['uds']} uds de cada producto")
 
     # 4. configuración que las mejoras necesitan para poder probarse
-    st, actual = llamar("GET", "/commissions/config", token=SUPER)
+    st, actual = llamar("GET", "/commissions/config/app", token=SUPER)
     cfg = actual.get("config", {})
     pagos = dict(cfg.get("payments", {}))
     ml = dict(pagos.get("mercadoLibre", {}))
     ml["webhookSecret"] = "sim-webhook-2027"
+    # Sin notificationUrl el checkout no anexa el secreto y el webhook llega sin él (401):
+    # con el secreto puesto y la URL vacía, ningún pago se acreditaría.
+    ml["notificationUrl"] = f"{API}/orders/webhooks/mercadolibre"
     pagos["mercadoLibre"] = ml
     pos = dict(cfg.get("pos", {}))
     pos["cashCutNotifyEmail"] = "renata@findingu.mx"

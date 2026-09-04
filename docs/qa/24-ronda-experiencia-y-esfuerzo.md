@@ -1,5 +1,15 @@
 # 24 · Sexta ronda: cuánto cuesta usarlo y cómo se siente
 
+> **Aviso de validez (añadido al cerrar la ronda).** Esta corrida se ejecutó con el frontend apuntando por
+> error a la API de producción en AWS en vez de al backend local (`environment.ts` había vuelto a la URL de
+> producción y `ng serve` se relanzó sin comprobarlo). El síntoma —`Http failure response … 0 Unknown Error`—
+> frenó en la puerta a 11 de las 12 personas, así que **las cifras de esfuerzo, facilidad, confianza y emoción
+> de este documento no son atribuibles al producto**: miden una aplicación sin backend. Se conserva porque su
+> §3, §5 y §7 sí contienen hallazgos reales que el incidente destapó (el mensaje de error crudo que se muestra
+> al usuario, la falta de estado "confirmando tu pago", las cinco funciones nuevas fuera del menú, los dos
+> relojes del panel) y porque su §8.2 documenta el incidente. **Las métricas válidas están en
+> [25](25-ronda-experiencia-medida.md)**, que repite la misma ronda con el mundo bien configurado.
+
 Las rondas 18 a 21 preguntaron *¿funciona?*. La [22](22-diarios-inquietudes-friccion-automatizacion.md) preguntó *¿qué les preocupa?* y la [23](23-implementacion-23-propuestas.md) construyó 23 propuestas. Esta ronda pregunta otra cosa: **cuánto le cuesta a una persona sacar adelante lo que vino a hacer, y cómo se siente mientras lo hace.**
 
 Doce personas trabajaron con la plataforma entre el 2 de marzo y el 10 de abril de 2027 del mundo simulado: siete de fuera (clientas, prospectas y socias) y cinco del personal. Ninguna había visto el producto antes, ninguna leyó código, y cada una escribió su diario al terminar (`sim/diarios/`, 14 archivos contando los dos días de Paulina y el cierre de soporte). El arnés contó por su lado clics, teclas, pantallas, recargas y segundos; la persona registró a mano lo que pensaba, lo que dudaba, dónde se atoró y qué sintió (`sim/metricas/*.json`). Las 31 preguntas que no pudo contestar la pantalla quedaron en `sim/helpdesk.md` con la respuesta de Daniel (soporte) o de la gerente. Una verificación posterior revisó cada síntoma contra el código y contra la API, y clasificó los 40 hallazgos en **confirmada**, **percepción** y **dato o arnés**.
