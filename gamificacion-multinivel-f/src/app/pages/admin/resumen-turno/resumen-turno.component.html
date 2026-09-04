@@ -103,7 +103,7 @@
           <ul class="mt-2 space-y-1 text-sm">
             <li *ngFor="let v of resumen.pos.sales">
               <a [routerLink]="['/orden', v.orderId]" class="font-semibold text-main hover:underline">{{ v.orderId }}</a>
-              <span class="text-muted"> · {{ v.customer || 'Público en general' }} · {{ money(v.total) }} · {{ v.paymentMethod }}</span>
+              <span class="text-muted"> · {{ v.customer || 'Público en general' }} · {{ money(v.total) }} · {{ metodoPago(v.paymentMethod) }}</span>
             </li>
             <li *ngFor="let c of resumen.pos.cuts"><strong class="text-main">Corte {{ c.cashCutId }}</strong> <span class="text-muted">· {{ money(c.total) }}</span></li>
           </ul>

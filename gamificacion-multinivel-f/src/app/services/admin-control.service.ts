@@ -69,8 +69,15 @@ export class AdminControlService {
   /** Carga inicial mínima: solo warnings */
   load(): Observable<AdminData> {
     return this.api.getAdminWarnings().pipe(
-      tap((warnings) => {
-        this.patchData({ warnings: warnings as AdminData['warnings'] });
+      tap((respuesta) => {
+        // Integración de la ronda 26 (propuesta 21): `serverNow` y
+        // `agingRedDays` viajan con los avisos y son de donde sale la
+        // antigüedad de cada pedido en la tabla.
+        this.patchData({
+          warnings: respuesta.warnings as AdminData['warnings'],
+          serverNow: respuesta.serverNow,
+          agingRedDays: respuesta.agingRedDays
+        });
         this.loadedSections.add('warnings');
       }),
       map(() => this.dataSubject.value as AdminData)

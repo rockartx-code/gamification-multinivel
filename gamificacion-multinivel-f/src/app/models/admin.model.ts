@@ -461,6 +461,8 @@ export interface AdminCustomer {
   commissionsPrevReceiptUrl?: string;
   clabeInterbancaria?: string;
   bankInstitution?: string;
+  /** Terminación de la CLABE guardada; la ficha nunca enseña los 18 dígitos. */
+  clabeLast4?: string; // paquete A · ronda 26 (montado en la integración)
   canAccessAdmin?: boolean;
   privileges?: UserPrivileges;
   lastPurchaseAt?: string;
@@ -590,6 +592,19 @@ export interface AdminWarning {
   monthKey?: string;
 }
 
+/**
+ * Lo que devuelve `GET /dashboard/admin/warnings` completo (integración de la
+ * ronda 26, propuesta 21): además de los avisos, el reloj del servidor y el
+ * umbral en días a partir del cual la antigüedad se pinta en rojo.
+ */
+export interface AdminWarningsRespuesta {
+  warnings: AdminWarning[];
+  /** Hora del servidor, para medir la antigüedad sin el reloj del navegador. */
+  serverNow: string;
+  /** `orders.agingRedDays` de la configuración; 7 por omisión. */
+  agingRedDays: number;
+}
+
 export interface Coupon {
   code: string;
   type: 'percent' | 'fixed';
@@ -702,6 +717,10 @@ export interface AdminData {
   assetSlots: AdminAssetSlot[];
   productOfMonthId?: number | null;
   categories?: ProductCategory[];
+  /** Reloj del servidor que acompaña a los avisos (§3.6). */
+  serverNow?: string;
+  /** Días a partir de los cuales la antigüedad de un pedido va en rojo. */
+  agingRedDays?: number;
 }
 
 export interface UpdateCustomerPrivilegesPayload {

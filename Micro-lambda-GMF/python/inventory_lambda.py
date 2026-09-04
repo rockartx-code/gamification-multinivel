@@ -4,6 +4,7 @@ import core_utils as utils
 from core import order_emails # Importado desde la Lambda Layer
 import despacho_handlers  # paquete D
 import caja_handlers  # paquete E: arqueo, comprobante y correo del corte
+import impuestos  # paquete B · ronda 26: el desglose de IVA (§38)
 
 # Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus
 # rutas y devuelve None si no son suyas. D la introduce; E añade la suya.
@@ -403,6 +404,11 @@ def handle_pos_sale(body, headers):
         "deliveryType": "pickup", "stockId": stock_id, "attendantUserId": user_id,
         "monthKey": utils._month_key(), "paymentMethod": payment_method, "createdAt": now
     }
+    # ── Paquete B/F · ronda 26 (propuesta 38), montado en la integración ──
+    # La venta de mostrador congela la tasa del día igual que el checkout: si
+    # mañana `taxes.vatRate` cambia, el comprobante de ayer sigue desglosando lo
+    # que se cobró ayer. El total no se mueve un centavo; el IVA es desglose.
+    order_item.update(impuestos.campos_pedido(order_item["total"]))
     utils._put_entity("ORDER", order_id, order_item)
     utils._upsert_order_customer_history(order_item)
 

@@ -29,11 +29,12 @@ import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahor
 import { PlanSocio } from '../../models/plan-socio.model';
 import { ModoVisible, PlanSocioService } from '../../services/plan-socio.service';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent, UiTablaDescuentoComponent, UiAhorroSocioComponent, UiFooterComponent],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent, UiTablaDescuentoComponent, UiAhorroSocioComponent, UiFooterComponent, UiDesgloseIvaComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })
@@ -1313,20 +1314,36 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private updateCountdown(): void {
-    // El mismo corte que el panel (cutoffDay de la configuración): el carrito decía
-    // "27d" y el panel "22d" para el mismo mes.
-    const delPanel = this.dashboardControl.getCountdownLabel();
-    if (delPanel) {
-      this.cartControl.updateCountdown(delPanel);
-      return;
-    }
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    lastDay.setHours(23, 59, 59, 999);
-    const diff = Math.max(0, lastDay.getTime() - Date.now());
-    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    this.cartControl.updateCountdown(`${d}d ${h}h`);
+    // Paquete G · ronda 26 (propuesta 29), montado en la integración.
+    // Un solo origen del corte: el del servidor. El respaldo local caía al
+    // último día del mes y por eso el carrito decía 26 días donde el panel
+    // decía 21, en el mismo minuto. `getCountdownLabel()` nunca devuelve
+    // cadena vacía: sin sesión usa los mismos ajustes publicados.
+    this.cartControl.updateCountdown(this.dashboardControl.getCountdownLabel());
+  }
+
+  /** "Corte del mes para comisiones y descuento": Ernesto preguntó de qué era. */
+  get cutoffLabel(): string {
+    return this.dashboardControl.getCutoffLabel();
+  }
+
+  /** La fecha en letras junto al reloj: "lunes 25 de marzo de 2027, 23:59". */
+  get cutoffDateText(): string {
+    return this.dashboardControl.getCutoffDateText();
+  }
+
+  /** Tasa vigente para el desglose de IVA del resumen (§3.1). */
+  get vatRate(): number {
+    return this.plan?.iva?.tasa ?? 0.16;
+  }
+
+  get vatLabel(): string {
+    return this.plan?.iva?.etiqueta || 'IVA';
+  }
+
+  /** El envío que ya está dentro del total; 0 mientras no se haya elegido. */
+  get shippingInTotal(): number {
+    return this.totalLabel === 'Total' ? Number(this.shipping) || 0 : 0;
   }
 
   private get projectedDiscountPercentValue(): number {

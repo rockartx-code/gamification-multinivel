@@ -7,6 +7,8 @@ import {
   AdminCustomer,
   AdminData,
   AdminCampaign,
+  AdminWarning,
+  AdminWarningsRespuesta,
   AppBusinessConfig,
   AdminOrder,
   CustomerOrdersPage,
@@ -250,9 +252,22 @@ export class RealApiService {
       );
   }
 
-  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
-    return this.http.get<{ warnings: { type: string; text: string; severity: string }[] }>(`${this.baseUrl}/dashboard/admin/warnings`, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.warnings ?? []));
+  /**
+   * Avisos del back office con el reloj del servidor.
+   *
+   * Integración de la ronda 26 (propuesta 21): el servidor ya mandaba
+   * `serverNow` y `agingRedDays` y aquí se tiraban al quedarse solo con
+   * `r.warnings`. La antigüedad de un pedido se mide contra ese reloj, nunca
+   * contra el del navegador (§3.6).
+   */
+  getAdminWarnings(): Observable<AdminWarningsRespuesta> {
+    return this.http.get<{ warnings?: AdminWarning[]; serverNow?: string; agingRedDays?: number }>(
+      `${this.baseUrl}/dashboard/admin/warnings`, { headers: this.actorHeaders() })
+      .pipe(map((r) => ({
+        warnings: r.warnings ?? [],
+        serverNow: r.serverNow ?? '',
+        agingRedDays: Number(r.agingRedDays ?? 7) || 7
+      })));
   }
 
   private normalizeAdminCustomer(raw: Record<string, unknown>): AdminCustomer {
@@ -273,6 +288,15 @@ export class RealApiService {
       commissionsPrevStatus: raw['commissionsPrevStatus'] as AdminCustomer['commissionsPrevStatus'],
       commissionsPrevReceiptUrl: raw['commissionsPrevReceiptUrl'] != null ? String(raw['commissionsPrevReceiptUrl']) : undefined,
       clabeInterbancaria: raw['clabeInterbancaria'] != null ? String(raw['clabeInterbancaria']) : undefined,
+      // Integración de la ronda 26: la ficha monta `ui-clabe-form` y este es el
+      // dato que necesita ("guardada, termina en 6789"). El servidor manda la
+      // CLABE enmascarada, así que la terminación se saca de ahí cuando no
+      // viene suelta; los 18 dígitos no salen nunca del backend.
+      clabeLast4: raw['clabeLast4'] != null
+        ? String(raw['clabeLast4'])
+        : (raw['clabeInterbancaria'] != null
+            ? String(raw['clabeInterbancaria']).replace(/\D/g, '').slice(-4) || undefined
+            : undefined),
       bankInstitution: raw['bankInstitution'] != null ? String(raw['bankInstitution']) : undefined,
       documents: raw['documents'] as AdminCustomer['documents'],
       lastPurchaseAt: this.readString(raw, ['lastPurchaseAt']) || undefined,

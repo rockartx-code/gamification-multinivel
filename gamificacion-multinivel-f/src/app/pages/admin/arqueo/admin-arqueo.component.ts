@@ -18,6 +18,8 @@ import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-
 import { UiModalComponent } from '../../../components/ui-modal/ui-modal.component';
 import { ArqueoCaja, CorteCaja, MovimientoCaja, RetiroCaja } from '../../../models/caja.model';
 import { CajaService } from '../../../services/caja.service';
+import { UiDesgloseIvaComponent } from '../../../components/ui-desglose-iva/ui-desglose-iva.component'; // paquete B · ronda 26
+import { PlanSocioService } from '../../../services/plan-socio.service'; // paquete B · ronda 26 (tasa de IVA)
 
 type PasoCorte = 1 | 2 | 3 | 4;
 type PasoRetiro = 1 | 2 | 3;
@@ -35,7 +37,7 @@ type DestinoEfectivo = 'fondo' | 'retiro';
 @Component({
   selector: 'app-admin-arqueo',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiChoiceCardComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiChoiceCardComponent, UiDesgloseIvaComponent],
   templateUrl: './admin-arqueo.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -83,6 +85,13 @@ export class AdminArqueoComponent implements OnChanges {
 
   // --- Comprobante ---
   comprobante: CorteCaja | null = null;
+
+  /**
+   * Tasa y etiqueta del IVA del comprobante (§3.1), montado en la integración.
+   * Salen del plan público, que ya publica `taxes`: el corte no las inventa.
+   */
+  tasaIva = 0.16;
+  etiquetaIva = 'IVA';
   comprobanteAbierto = false;
   correoDestino = '';
   enviandoCorreo = false;
@@ -100,7 +109,20 @@ export class AdminArqueoComponent implements OnChanges {
   guardandoRetiro = false;
   retiroConfirmado: { folio: string; monto: number; receptor: string; restante: number } | null = null;
 
-  constructor(private readonly caja: CajaService, private readonly cdr: ChangeDetectorRef) {}
+  constructor(private readonly caja: CajaService,
+              private readonly planSocio: PlanSocioService,
+              private readonly cdr: ChangeDetectorRef) {
+    // `plan$` está cacheado y es público; si falla, se queda la tasa por
+    // omisión y `base + IVA` sigue dando el total al centavo.
+    this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.tasaIva = plan?.iva?.tasa ?? this.tasaIva;
+        this.etiquetaIva = plan?.iva?.etiqueta || this.etiquetaIva;
+        this.cdr.markForCheck();
+      },
+      error: () => undefined
+    });
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['stockId'] || changes['refreshToken']) {

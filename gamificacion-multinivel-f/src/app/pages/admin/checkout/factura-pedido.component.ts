@@ -8,6 +8,7 @@ import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-
 import { AdminOrder } from '../../../models/admin.model';
 import { FacturaEmitida } from '../../../models/checkout.model';
 import { CheckoutService } from '../../../services/checkout.service';
+import { UiDesgloseIvaComponent } from '../../../components/ui-desglose-iva/ui-desglose-iva.component'; // paquete B · ronda 26
 
 /**
  * Paquete C · bloque de factura dentro del detalle de un pedido del back office.
@@ -17,7 +18,7 @@ import { CheckoutService } from '../../../services/checkout.service';
 @Component({
   selector: 'app-factura-pedido',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiDesgloseIvaComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div *ngIf="order.invoiceStatus === 'solicitada' || order.invoiceStatus === 'emitida'"
@@ -35,6 +36,14 @@ import { CheckoutService } from '../../../services/checkout.service';
         <div><span class="text-gray-600">CP fiscal:</span> {{ d.cpFiscal }}</div>
         <div><span class="text-gray-600">Uso CFDI:</span> {{ d.usoCfdi }}</div>
         <div><span class="text-gray-600">Enviar a:</span> {{ d.email }}</div>
+      </div>
+
+      <!-- Paquete G/B · propuesta 38 (§3.1), montado en la integración: quien
+           factura necesita leer aquí mismo la base gravable y el impuesto, con
+           la tasa que se cobró en ESE pedido, no con la de hoy. -->
+      <div *ngIf="order.vatRate" class="mt-2 rounded-lg border border-olive-20 bg-white/70 p-2">
+        <ui-desglose-iva [total]="order.total" [shipping]="order.shippingCost || 0"
+          [rate]="order.vatRate"></ui-desglose-iva>
       </div>
 
       <ng-container *ngIf="order.invoiceStatus === 'emitida'">

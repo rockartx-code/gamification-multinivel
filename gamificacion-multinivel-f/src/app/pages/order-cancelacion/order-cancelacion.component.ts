@@ -6,6 +6,7 @@ import { AdminOrder, OrderCancelResponse } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { textoEstadoPedido } from '../../models/vocabulario.model'; // paquete G · ronda 26 (§3.7)
 
 @Component({
   selector: 'app-order-cancelacion',
@@ -14,6 +15,14 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
   templateUrl: './order-cancelacion.component.html'
 })
 export class OrderCancelacionComponent implements OnInit {
+  /**
+   * Paquete G · propuesta 25 (§3.7), montado en la integración: aquí se leía
+   * "Estado: paid", en inglés y crudo, en la pantalla de cancelar un pedido.
+   */
+  estadoTexto(status: string | null | undefined, deliveryType?: string | null): string {
+    return textoEstadoPedido(status, deliveryType) || '—';
+  }
+
   orderId = '';
   order: AdminOrder | null = null;
   isLoading = true;

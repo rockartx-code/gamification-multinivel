@@ -4,6 +4,7 @@ import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime
 
 import impuestos                              # paquete B · ronda 26 (IVA, §38)
+import corte_mes                              # paquete G · ronda 26 (corte del mes, §29)
 
 # Clientes de AWS
 s3 = boto3.client('s3', region_name=utils.AWS_REGION)
@@ -269,6 +270,17 @@ def handle_products(method: str, body: dict, product_id=None) -> dict:
             "updatedAt": now,
         }
 
+        # ── Paquete F · ronda 26 (propuesta 28c), montado en la integración ──
+        # `minStock` lo escribe la vista Stocks por su propio camino
+        # (`PUT /inventory/stocks/minimos`) y el formulario de Productos no lo
+        # manda: sin esta línea, guardar el nombre de un producto le borraba en
+        # silencio su mínimo y el aviso de "bajo su mínimo" desaparecía. Se
+        # conserva igual que `createdAt`, solo cuando el cuerpo no lo trae.
+        if body.get("minStock") is not None:
+            product_item["minStock"] = utils._to_decimal(body.get("minStock"))
+        elif existing and existing.get("minStock") is not None:
+            product_item["minStock"] = existing.get("minStock")
+
         saved = utils._put_entity("PRODUCT", pid, product_item, created_at_iso=original_created_at)
         utils._audit_event("product.save", None, body, {"productId": pid})
         return utils._json_response(201, {"product": saved})
@@ -289,6 +301,11 @@ def handle_public_config() -> dict:
     bonuses = app_cfg.get("bonuses") or {}
 
     public = {
+        # ── Paquete G · ronda 26 (propuesta 29), montado en la integración ──
+        # El esqueleto de invitado se arma en el cliente: sin `cutoffAt` del
+        # servidor, quien entra sin sesión contaba los días con el reloj de su
+        # navegador y veía 26 días donde la socia con sesión veía 21.
+        **corte_mes.campos_corte(),
         "rewards": {
             "discountTiers": [
                 {"min": float(utils._to_decimal(t.get("min"))),
@@ -580,7 +597,10 @@ RUTAS = [
 
     # ── Campañas y assets ───────────────────────────────────────────────────
     Ruta("GET", "campaigns", publica=True, handler=lambda p: handle_campaigns(p.method, p.body)),
-    Ruta("POST", "campaigns", privilegio="access_screen_stocks",
+    # ── Paquete E · ronda 26 (propuesta 27a), montado en la integración ──
+    # Campañas tiene privilegio propio: con `access_screen_stocks` la cajera ya
+    # no lo veía en el menú, pero un POST a mano seguía pasando.
+    Ruta("POST", "campaigns", privilegio="access_screen_campaigns",
          handler=lambda p: handle_campaigns(p.method, p.body)),
     Ruta("GET", "assets", publica=True, handler=lambda p: handle_assets(p.method, p.body, None)),
     Ruta("POST", "assets", privilegio="product_add",

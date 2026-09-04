@@ -61,7 +61,7 @@ def _correo_bienvenida_socio(customer: dict) -> None:
         base = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx").rstrip("/")
         cuerpo = f"""
     <div class="icon">🤝</div>
-    <h1 class="title">Bienvenida al modo socio</h1>
+    <h1 class="title">Te damos la bienvenida al modo socio</h1>
     <p class="lead">Hola <strong>{nombre}</strong>. Tu cuenta ya está en modo socio: desde tu próxima compra aplica el descuento por volumen, tienes tu propio código para invitar y las compras de tu red te generan comisiones.</p>
     <div class="info-box">
       <p>Cuando te actives en el mes te pediremos tu CLABE, para poder depositarte el día de pago. La registras en tu panel, en Comisiones, y toma un minuto.</p>
@@ -69,7 +69,7 @@ def _correo_bienvenida_socio(customer: dict) -> None:
     <a class="btn" href="{base}/#/dashboard">Ir a mi panel</a>
     <p><a href="{base}/#/modo-socio">Volver a leer cómo funciona el plan</a></p>
     """
-        texto = (f"Bienvenida al modo socio\n\nHola {nombre}. Tu cuenta ya está en modo socio: desde tu próxima compra "
+        texto = (f"Te damos la bienvenida al modo socio\n\nHola {nombre}. Tu cuenta ya está en modo socio: desde tu próxima compra "
                  f"aplica el descuento por volumen, tienes tu propio código y las compras de tu red generan comisiones.\n\n"
                  f"Tu panel: {base}/#/dashboard\nCómo funciona el plan: {base}/#/modo-socio\n")
         _correo._send_ses_email(para, "Tu cuenta ya está en modo socio", texto, _correo._email_shell(cuerpo))

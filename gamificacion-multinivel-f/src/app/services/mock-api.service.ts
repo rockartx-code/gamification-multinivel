@@ -4,6 +4,7 @@ import { delay, Observable, of, throwError } from 'rxjs';
 import {
   AdminCustomer,
   AdminData,
+  AdminWarningsRespuesta,
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
@@ -1257,12 +1258,18 @@ export class MockApiService {
     return of({ orders: pagina.map((order) => ({ ...order })), total: filtrados.length }).pipe(delay(80));
   }
 
-  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
-    return of([
-      { type: 'stock', text: 'Producto Beta por debajo del mínimo en Bodega Central', severity: 'high' },
-      { type: 'shipping', text: '2 pedidos pagados sin número de guía', severity: 'high' },
-      { type: 'assets', text: 'Producto Gamma sin imagen para redes', severity: 'medium' }
-    ]).pipe(delay(80));
+  getAdminWarnings(): Observable<AdminWarningsRespuesta> {
+    // El modo mock no tiene reloj de servidor: la antigüedad se mide con el del
+    // navegador, que es lo único que hay aquí (§2.1: el mock queda sin lo nuevo).
+    return of({
+      warnings: [
+        { type: 'stock', text: 'Producto Beta por debajo del mínimo en Bodega Central', severity: 'high' },
+        { type: 'shipping', text: '2 pedidos pagados sin número de guía', severity: 'high' },
+        { type: 'assets', text: 'Producto Gamma sin imagen para redes', severity: 'medium' }
+      ] as AdminWarningsRespuesta['warnings'],
+      serverNow: '',
+      agingRedDays: 7
+    }).pipe(delay(80));
   }
 
   listCustomers(): Observable<AdminCustomer[]> {

@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import core_utils as utils
+import impuestos  # paquete B · §3.2: el texto de la base de la comisión, escrito una sola vez
 
 Ruta = utils.routing.Ruta
 
@@ -124,30 +125,16 @@ def _recibos_pagados(month_key: str) -> dict:
 def texto_base_comision(neto, tasa, importe) -> str:
     """Propuesta 37, §3.2: *"10 % de $1,350.00 netos, sin envío = $135.00"*.
 
-    La redacción la publica el paquete B en `impuestos.py`; mientras no esté
-    desplegado se arma aquí con las mismas palabras, para que no haya dos
-    versiones del texto en producción.
+    La redacción vive en `impuestos.py` (paquete B) y se usa tal cual en los
+    cinco sitios donde aparece un importe de comisión. Aquí solo se delega:
+    ningún paquete escribe su propia versión del texto.
     """
-    try:
-        import impuestos  # paquete B
-        return impuestos.texto_base_comision(neto, tasa, importe)
-    except Exception:
-        porcentaje = float(utils._to_decimal(tasa)) * 100
-        porcentaje_txt = f"{porcentaje:.0f}" if abs(porcentaje - round(porcentaje)) < 0.05 else f"{porcentaje:.1f}"
-        return f"{porcentaje_txt} % de {_pesos(neto)} netos, sin envío = {_pesos(importe)}"
+    return impuestos.texto_base_comision(neto, tasa, importe)
 
 
 def frase_base_comision() -> str:
-    """La frase larga de §3.2, con la base que dice la configuración."""
-    try:
-        import impuestos  # paquete B
-        return impuestos.FRASE_BASE_COMISION
-    except Exception:
-        rewards = utils._load_app_config().get("rewards") or {}
-        con_iva = str(rewards.get("commissionBase") or "neto_con_iva") == "neto_con_iva"
-        matiz = "el precio ya con su descuento, con IVA incluido" if con_iva else "el precio ya con su descuento, sin IVA"
-        return ("La comisión se calcula sobre el neto que pagó la referida por producto "
-                f"—{matiz}— y sin contar el envío.")
+    """La frase larga de §3.2, escrita una sola vez en `impuestos.py`."""
+    return impuestos.FRASE_BASE_COMISION
 
 
 def _dias_desde(iso: str) -> int:

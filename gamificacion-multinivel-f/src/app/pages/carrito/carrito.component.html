@@ -55,12 +55,17 @@
           </div>
 
           <div class="mt-3 grid grid-cols-3 gap-2">
-            <div class="rounded-2xl border border-olive-30 surface-soft p-3">
+            <!-- G/29 · "¿se me vence el carrito? ¿se acaba una oferta?": el
+                 rótulo dice de qué es el corte y la fecha va en letras, con la
+                 hora del servidor, igual que en el panel. -->
+            <div class="rounded-2xl border border-olive-30 surface-soft p-3" [attr.title]="cutoffLabel + ' · ' + cutoffDateText">
               <div class="flex items-center gap-2 text-mini text-gray-600">
                 <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                Corte en
+                Corte de mes
               </div>
               <div class="text-sm font-extrabold">{{ countdownLabel }}</div>
+              <div class="mt-1 text-micro leading-snug text-gray-600">{{ cutoffLabel }}</div>
+              <div class="text-micro text-gray-500">{{ cutoffDateText }}</div>
             </div>
             <div class="rounded-2xl border border-olive-30 surface-soft p-3">
               <div class="flex items-center gap-2 text-mini text-gray-600">
@@ -318,7 +323,10 @@
         <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
         Entrega
       </div>
-      <div class="text-mini text-gray-500">Mínimo requerido</div>
+      <!-- G/25 · "¿mínimo de qué?" lo preguntaron tres personas: el rótulo no
+           decía ni el sujeto ni el número. Son los campos obligatorios de la
+           dirección, no un importe mínimo de compra. -->
+      <div class="text-mini text-gray-500">Todos los campos son obligatorios</div>
     </div>
 
     <!-- Mobile: 1 col, sm+: 2 cols -->
@@ -707,11 +715,21 @@
               </div>
 
               <div class="my-2 border-t border-olive-20"></div>
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-main">{{ totalLabel }}</span>
-                <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
-              </div>
-              <div *ngIf="totalNote" class="text-mini text-amber-800">{{ totalNote }}</div>
+              <!-- Paquete B · propuesta 38, montado en la integración: los precios ya
+                   incluyen IVA; el desglose explica un total que no cambia. Mientras
+                   falte el envío el importe todavía no es el final, así que se sigue
+                   llamando "Subtotal" y no se desglosa nada. -->
+              <ng-container *ngIf="totalLabel === 'Total'; else resumenCajonSinEnvio">
+                <ui-desglose-iva [total]="total" [shipping]="shippingInTotal"
+                  [rate]="vatRate" [label]="vatLabel"></ui-desglose-iva>
+              </ng-container>
+              <ng-template #resumenCajonSinEnvio>
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-main">{{ totalLabel }}</span>
+                  <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
+                </div>
+                <div *ngIf="totalNote" class="text-mini text-amber-800">{{ totalNote }}</div>
+              </ng-template>
               <!-- Ola B · I2: "Como socia habrías ahorrado" bajo el total (paquete B); en modo socio no pinta nada -->
               <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
             </div>
@@ -888,11 +906,21 @@
           Con el cupón, este pedido te deja en {{ cartVp }} VP y tu meta de activación es {{ vpGoalTarget }} VP: te faltarían {{ vpGoalGap }} VP.
         </div>
         <div class="my-2 border-t border-olive-20"></div>
-        <div class="flex items-center justify-between">
-          <span class="font-semibold text-main">{{ totalLabel }}</span>
-          <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
-        </div>
-        <div *ngIf="totalNote" class="text-mini text-amber-800">{{ totalNote }}</div>
+        <!-- Paquete B · propuesta 38, montado en la integración: los precios ya
+             incluyen IVA; el desglose explica un total que no cambia. Mientras
+             falte el envío el importe todavía no es el final, así que se sigue
+             llamando "Subtotal" y no se desglosa nada. -->
+        <ng-container *ngIf="totalLabel === 'Total'; else resumenAsideSinEnvio">
+          <ui-desglose-iva [total]="total" [shipping]="shippingInTotal"
+            [rate]="vatRate" [label]="vatLabel"></ui-desglose-iva>
+        </ng-container>
+        <ng-template #resumenAsideSinEnvio>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-main">{{ totalLabel }}</span>
+            <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
+          </div>
+          <div *ngIf="totalNote" class="text-mini text-amber-800">{{ totalNote }}</div>
+        </ng-template>
         <!-- Ola B · I2: "Como socia habrías ahorrado" bajo el total (paquete B) -->
         <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
       </div>

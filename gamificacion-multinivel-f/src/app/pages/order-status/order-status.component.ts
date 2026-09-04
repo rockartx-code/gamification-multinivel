@@ -10,12 +10,13 @@ import { ApiService } from '../../services/api.service';
 import { CheckoutService } from '../../services/checkout.service';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 import { UiDevolucionBotonComponent } from '../../components/ui-devolucion-boton/ui-devolucion-boton.component';
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component';
 import { EstadoDevolucionPedido } from '../../models/ayuda.model';
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent, UiFooterComponent, UiDevolucionBotonComponent],
+  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent, UiFooterComponent, UiDevolucionBotonComponent, UiDesgloseIvaComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
@@ -423,9 +424,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return this.order?.taxBase != null && this.order?.taxAmount != null;
   }
 
-  get vatLabel(): string {
-    const tasa = Number(this.order?.vatRate ?? 0) * 100;
-    return tasa > 0 ? `IVA ${Math.round(tasa)} %` : 'IVA';
+  /** La tasa con la que se cobró ESTE pedido, no la de hoy. */
+  get orderVatRate(): number {
+    return Number(this.order?.vatRate ?? 0);
   }
 
   /** Fecha en las palabras de la gente: "2 de marzo de 2027, 11:18", no "2027-03-02T11:18:04Z". */

@@ -10,6 +10,7 @@ import { UiKpiCardComponent } from '../../../components/ui-kpi-card/ui-kpi-card.
 import { ResumenTurno } from '../../../models/despacho.model';
 import { AuthService } from '../../../services/auth.service';
 import { DespachoService } from '../../../services/despacho.service';
+import { textoMetodoPago } from '../../../models/vocabulario.model'; // paquete G · ronda 26 (§3.7)
 
 /**
  * Paquete D · Resumen automático de turno (propuesta 23a).
@@ -205,6 +206,15 @@ export class ResumenTurnoComponent implements OnInit {
         this.requestViewUpdate();
       }
     );
+  }
+
+  /**
+   * Paquete G · propuesta 25 (§3.7), montado en la integración: el resumen del
+   * turno decía `cash` y `mixed` en inglés, en la lista que la cajera le manda
+   * a su gerente.
+   */
+  metodoPago(method: string | null | undefined): string {
+    return textoMetodoPago(method) || '—';
   }
 
   money(value: number | string | null | undefined): string {

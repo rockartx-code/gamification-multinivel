@@ -116,27 +116,21 @@
                 <span class="text-gray-700">{{ formatMoney(orderShipping) }}</span>
               </div>
 
-              <!-- Paquete C · §38: el IVA es desglose de un total que no cambia -->
-              <ng-container *ngIf="hasVatBreakdown">
+              <!-- Paquete C · §38: el IVA es desglose de un total que no cambia.
+                   El componente es de B (§3.1) y en la integración sustituye al
+                   marcado propio, sin cambiar una sola palabra. Un pedido de
+                   antes de esta ronda no trae `vatRate`: entonces no se inventa
+                   ningún desglose y solo se pinta el total. -->
+              <ui-desglose-iva *ngIf="hasVatBreakdown; else soloTotal"
+                [total]="orderTotal" [shipping]="orderShipping" [rate]="orderVatRate"></ui-desglose-iva>
+              <ng-template #soloTotal>
                 <div class="flex justify-between gap-4">
-                  <span class="text-gray-600">Subtotal sin IVA</span>
-                  <span class="text-gray-700">{{ formatMoney(order?.taxBase || 0) }}</span>
+                  <span class="text-gray-600">Total</span>
+                  <span class="font-semibold text-gold">
+                    {{ formatMoney(orderTotal) }}
+                  </span>
                 </div>
-                <div class="flex justify-between gap-4">
-                  <span class="text-gray-600">{{ vatLabel }}</span>
-                  <span class="text-gray-700">{{ formatMoney(order?.taxAmount || 0) }}</span>
-                </div>
-              </ng-container>
-
-              <div class="flex justify-between gap-4">
-                <span class="text-gray-600">Total</span>
-                <span class="font-semibold text-gold">
-                  {{ formatMoney(orderTotal) }}
-                </span>
-              </div>
-              <p *ngIf="hasVatBreakdown" class="text-mini text-gray-500">
-                Los precios ya incluyen IVA; el envío también.
-              </p>
+              </ng-template>
 
               <!-- Cómo se entrega: con las mismas palabras que se eligieron en el carrito -->
               <div *ngIf="isPickup" class="rounded-xl border border-olive-20 bg-ivory-80 p-3">

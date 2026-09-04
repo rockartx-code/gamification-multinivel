@@ -140,15 +140,9 @@ export interface AvisoBloqueadasRespuesta {
 
 /**
  * Propuesta 37, §3.2: *"10 % de $1,350.00 netos, sin envío = $135.00"*.
- * La redacción la publica el paquete B en `models/plan-socio.model.ts`;
- * mientras tanto vive aquí con las mismas palabras, para que no haya dos
- * versiones del texto en pantalla.
+ *
+ * La redacción vive en `models/plan-socio.model.ts` (paquete B, el dueño según
+ * §3.2). Aquí solo se reexporta para que las pantallas de A la importen desde
+ * su propio modelo sin que exista una segunda versión del texto.
  */
-export function textoBaseComision(neto: number, tasa: number, importe: number): string {
-  const pesos = (v: number) => `$${(v ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const porcentaje = (tasa ?? 0) * 100;
-  const porcentajeTexto = Math.abs(porcentaje - Math.round(porcentaje)) < 0.05
-    ? porcentaje.toFixed(0)
-    : porcentaje.toFixed(1);
-  return `${porcentajeTexto} % de ${pesos(neto)} netos, sin envío = ${pesos(importe)}`;
-}
+export { textoBaseComision, FRASE_BASE_COMISION } from './plan-socio.model';

@@ -85,6 +85,9 @@ import { FacturaEmitida } from '../../models/checkout.model'; // WP-C
 import { DespachoService } from '../../services/despacho.service'; // WP-D
 import { UiConfirmComponent } from '../../components/ui-confirm/ui-confirm.component'; // WP-I1
 import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component'; // WP-I1
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component'; // paquete B · ronda 26
+import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // paquete A · ronda 26
+import { PlanSocioService } from '../../services/plan-socio.service'; // paquete B · ronda 26 (tasa de IVA)
 
 /** Diálogo de confirmación genérico del back office (I1): un solo `ui-confirm` para todas las acciones. */
 /**
@@ -316,7 +319,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */, UiConfirmComponent /* WP-I1 */, UiTablaDescuentoComponent /* WP-I1 */],
+  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */, UiConfirmComponent /* WP-I1 */, UiTablaDescuentoComponent /* WP-I1 */, UiDesgloseIvaComponent /* paquete B · ronda 26 */, UiClabeFormComponent /* paquete A · ronda 26 */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -371,17 +374,18 @@ export class AdminComponent implements OnInit {
       }
     | null = null;
   private warningsCache: { warningsRef: AdminWarning[]; warnings: AdminWarning[] } | null = null;
-  private readonly orderStatusOptionsValue: Array<SelectOption<AdminOrder['status']>> = [
-    { value: 'pending', label: 'Pendiente' },
-    { value: 'paid', label: 'Pagado' },
-    { value: 'shipped', label: 'Enviado' },
-    { value: 'delivered', label: 'Entregado' },
-    { value: 'cancelled', label: 'Cancelado' },
-    { value: 'refunded', label: 'Reembolsado' },
-    { value: 'en_devolucion', label: 'Devolución en curso' },
-    { value: 'devuelto_validado', label: 'Devolución validada' },
-    { value: 'devolucion_rechazada', label: 'Devolución rechazada' }
-  ];
+  /**
+   * Paquete G · ronda 26 (propuesta 25), montado en la integración.
+   *
+   * Los textos ya no se escriben aquí: salen de `ESTADOS_PEDIDO`, la tabla
+   * única de §3.7. Antes esta lista decía "Pendiente", "Por devolver" y
+   * "Devuelto" mientras el resto del producto decía otra cosa para el mismo
+   * pedido, y de aquí salía además el nombre de la pestaña.
+   */
+  private readonly orderStatusOptionsValue: Array<SelectOption<AdminOrder['status']>> =
+    (['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded',
+      'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as Array<AdminOrder['status']>)
+      .map((value) => ({ value, label: textoEstadoPedido(value) }));
 
   /**
    * Paquete E · ronda 26 · La tira de pestañas de Pedidos, fuera de la plantilla.
@@ -397,16 +401,16 @@ export class AdminComponent implements OnInit {
    * rompería la lógica de secciones cargadas de `admin-control.service`).
    */
   readonly orderTabs: ReadonlyArray<{ key: string; status?: AdminOrder['status']; label: string }> = [
-    { key: 'pending', status: 'pending', label: 'Pendiente de pago' },
-    { key: 'paid', status: 'paid', label: 'Pagado' },
-    { key: 'shipped', status: 'shipped', label: 'Enviado' },
-    { key: 'delivered', status: 'delivered', label: 'Entregado' },
+    { key: 'pending', status: 'pending', label: textoEstadoPedido('pending') },
+    { key: 'paid', status: 'paid', label: textoEstadoPedido('paid') },
+    { key: 'shipped', status: 'shipped', label: textoEstadoPedido('shipped') },
+    { key: 'delivered', status: 'delivered', label: textoEstadoPedido('delivered') },
     { key: 'factura_solicitada', label: 'Factura solicitada' },
-    { key: 'cancelled', status: 'cancelled', label: 'Cancelado' },
-    { key: 'refunded', status: 'refunded', label: 'Reembolsado' },
-    { key: 'en_devolucion', status: 'en_devolucion', label: 'Devolución en curso' },
-    { key: 'devuelto_validado', status: 'devuelto_validado', label: 'Devolución validada' },
-    { key: 'devolucion_rechazada', status: 'devolucion_rechazada', label: 'Devolución rechazada' }
+    { key: 'cancelled', status: 'cancelled', label: textoEstadoPedido('cancelled') },
+    { key: 'refunded', status: 'refunded', label: textoEstadoPedido('refunded') },
+    { key: 'en_devolucion', status: 'en_devolucion', label: textoEstadoPedido('en_devolucion') },
+    { key: 'devuelto_validado', status: 'devuelto_validado', label: textoEstadoPedido('devuelto_validado') },
+    { key: 'devolucion_rechazada', status: 'devolucion_rechazada', label: textoEstadoPedido('devolucion_rechazada') }
   ];
 
   /** Pestaña encendida: una clave de estado o la bandeja de facturas. */
@@ -568,6 +572,17 @@ export class AdminComponent implements OnInit {
 
   orderSearch = '';
   orderPage = 0;
+  /**
+   * Paquete F · ronda 26 (propuesta 21), montado en la integración sobre la
+   * región de Pedidos, que es de E.
+   *
+   * "1 pedido pagado sin envío · 37 días" decía el aviso, y en la tabla no
+   * había manera de saber cuál. La columna de antigüedad se puede ordenar y
+   * se pinta en rojo desde `agingRedDays` (7 por omisión). El reloj es el del
+   * servidor (§3.6): con el mundo en 2027 y el navegador en 2026, medirlo con
+   * `new Date()` daba números imposibles.
+   */
+  orderAgingSort: 'none' | 'desc' | 'asc' = 'none';
   customerSearch = '';
   customerPage = 0;
   productSearch = '';
@@ -1067,6 +1082,17 @@ export class AdminComponent implements OnInit {
     if (!this.adminControl.hasLoadedWarnings()) {
       this.adminControl.load().subscribe();
     }
+    // Integración de la ronda 26 (§3.1): la tasa del IVA del resumen del POS.
+    // `plan$` está cacheado y es público; si no llega, se queda la de la
+    // configuración por omisión y el desglose sigue cuadrando al centavo.
+    this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.vatRate = plan?.iva?.tasa ?? this.vatRate;
+        this.vatLabel = plan?.iva?.etiqueta || this.vatLabel;
+        this.requestViewUpdate();
+      },
+      error: () => undefined
+    });
   }
 
   /** Pedido pedido por URL (`#/admin/pedido/:idPedido`), para abrirlo al llegar. */
@@ -1224,6 +1250,66 @@ export class AdminComponent implements OnInit {
 
   get orders(): AdminOrder[] {
     return this.adminData()?.orders ?? [];
+  }
+
+  /**
+   * Tasa y etiqueta del IVA para el resumen del POS (§3.1), montado en la
+   * integración. Salen de `GET /catalog/plan`, que es público y ya está
+   * cacheado por `PlanSocioService`: el back office no inventa el número.
+   */
+  vatRate = 0.16;
+  vatLabel = 'IVA';
+
+  /** Umbral en días a partir del cual la antigüedad va en rojo (configuración). */
+  get agingRedDays(): number {
+    return Number(this.adminData()?.agingRedDays ?? 7) || 7;
+  }
+
+  /** El reloj del servidor: el de los avisos o, si aún no llegó, el de los periodos. */
+  private get relojDelServidorMs(): number {
+    const iso = this.adminData()?.serverNow || this.serverNow;
+    const t = iso ? Date.parse(iso) : NaN;
+    return Number.isFinite(t) ? t : Date.now();
+  }
+
+  /** Días completos que lleva el pedido desde que se creó. `null` si no se sabe. */
+  orderAgingDays(order: AdminOrder): number | null {
+    const creado = Date.parse(String(order.createdAt ?? ''));
+    if (!Number.isFinite(creado)) {
+      return null;
+    }
+    return Math.max(0, Math.floor((this.relojDelServidorMs - creado) / 86400000));
+  }
+
+  /** "37 días", "1 día", "hoy": como lo diría una persona. */
+  orderAgingLabel(order: AdminOrder): string {
+    const dias = this.orderAgingDays(order);
+    if (dias === null) {
+      return '—';
+    }
+    if (dias === 0) {
+      return 'hoy';
+    }
+    return dias === 1 ? '1 día' : `${dias} días`;
+  }
+
+  orderAgingIsRed(order: AdminOrder): boolean {
+    const dias = this.orderAgingDays(order);
+    return dias !== null && dias >= this.agingRedDays;
+  }
+
+  /** Sin ordenar → más viejos primero → más nuevos primero → sin ordenar. */
+  toggleOrderAgingSort(): void {
+    this.orderAgingSort = this.orderAgingSort === 'none' ? 'desc'
+      : this.orderAgingSort === 'desc' ? 'asc' : 'none';
+    this.orderPage = 0;
+    this.requestViewUpdate();
+  }
+
+  get orderAgingSortLabel(): string {
+    return this.orderAgingSort === 'desc' ? 'De más viejo a más nuevo'
+      : this.orderAgingSort === 'asc' ? 'De más nuevo a más viejo'
+      : 'Sin ordenar por antigüedad';
   }
 
   get customers(): AdminCustomer[] {
@@ -1981,8 +2067,7 @@ export class AdminComponent implements OnInit {
         (o) => o.stockId === this.orderStockFilter || o.pickupStockId === this.orderStockFilter
       );
     }
-    if (!q) return byStatus;
-    return byStatus.filter((o) =>
+    const filtradas = !q ? byStatus : byStatus.filter((o) =>
       (o.customer || '').toLowerCase().includes(q) ||
       (o.id || '').toLowerCase().includes(q) ||
       (o.trackingNumber || '').toLowerCase().includes(q) ||
@@ -1991,6 +2076,18 @@ export class AdminComponent implements OnInit {
       (o.recipientName || '').toLowerCase().includes(q) ||
       (o.cancelReason || '').toLowerCase().includes(q)
     );
+    if (this.orderAgingSort === 'none') {
+      return filtradas;
+    }
+    // Copia antes de ordenar: `orders` es el arreglo del servicio.
+    const signo = this.orderAgingSort === 'desc' ? -1 : 1;
+    return [...filtradas].sort((a, b) => {
+      const ta = Date.parse(String(a.createdAt ?? ''));
+      const tb = Date.parse(String(b.createdAt ?? ''));
+      const va = Number.isFinite(ta) ? ta : Number.MAX_SAFE_INTEGER;
+      const vb = Number.isFinite(tb) ? tb : Number.MAX_SAFE_INTEGER;
+      return (va - vb) * signo;
+    });
   }
 
   get pagedOrders(): AdminOrder[] {
@@ -2458,6 +2555,7 @@ export class AdminComponent implements OnInit {
   /** Hora del servidor en el momento de cargar los periodos (§3.6). */
   serverNow = '';
   private readonly pagosService = inject(PagosService);
+  private readonly planSocio = inject(PlanSocioService);
 
   /**
    * Alma estuvo media hora creyendo que marzo había cerrado en ceros y se bajó
@@ -5367,35 +5465,32 @@ export class AdminComponent implements OnInit {
     { value: 'tienda_fisica', label: 'Tienda física' }
   ];
 
-  // ── CLABE capturada por administración (la socia la manda por WhatsApp) ──
-  clabeDraft = '';
-  isSavingClabe = false;
-
-  get clabeDraftValid(): boolean {
-    return /^\d{18}$/.test(this.clabeDraft.replace(/\s/g, ''));
-  }
-
-  saveCustomerClabeAdmin(customer: AdminCustomer | null | undefined): void {
-    const clabe = this.clabeDraft.replace(/\s/g, '');
-    if (!customer || this.isSavingClabe || !/^\d{18}$/.test(clabe)) {
+  /**
+   * Paquete A · propuesta 1, montado en la integración.
+   *
+   * El formulario ya no vive aquí: lo guarda `ui-clabe-form` (el mismo del
+   * panel y del perfil) y esto solo refresca la ficha abierta con lo que el
+   * servidor confirmó, para que "No se puede depositar" desaparezca sin
+   * recargar la pantalla.
+   */
+  onClabeGuardadaDesdeFicha(customer: AdminCustomer | null | undefined,
+                            evento: { clabeLast4: string; bankInstitution: string; removed: boolean }): void {
+    if (!customer) {
       return;
     }
-    this.isSavingClabe = true;
-    this.api
-      .saveCustomerClabe({ customerId: Number(customer.id), clabe })
-      .pipe(finalize(() => { this.isSavingClabe = false; this.requestViewUpdate(); }))
-      .subscribe({
-        next: (r) => {
-          this.clabeDraft = '';
-          const patch = { clabeInterbancaria: clabe, clabeLast4: r?.clabeLast4 ?? clabe.slice(-4) };
-          this.adminControl.patchCustomer(customer.id, patch);
-          if (this.selectedCustomer?.id === customer.id) {
-            this.selectedCustomer = { ...this.selectedCustomer, ...patch };
-          }
-          this.showSnackbar(`CLABE guardada (termina en ${patch.clabeLast4}). Ya puedes registrar el depósito de ${customer.name}.`);
-        },
-        error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la CLABE.'), 'error')
-      });
+    const patch = {
+      clabeInterbancaria: evento.removed ? '' : `********${evento.clabeLast4}`,
+      clabeLast4: evento.removed ? '' : evento.clabeLast4,
+      bankInstitution: evento.bankInstitution || ''
+    };
+    this.adminControl.patchCustomer(customer.id, patch);
+    if (this.selectedCustomer?.id === customer.id) {
+      this.selectedCustomer = { ...this.selectedCustomer, ...patch };
+    }
+    this.showSnackbar(evento.removed
+      ? `Se quitó la CLABE de ${customer.name}.`
+      : `CLABE guardada (termina en ${evento.clabeLast4}). Ya puedes registrar el depósito de ${customer.name}.`);
+    this.requestViewUpdate();
   }
 
   // ── Paquete G · ronda 26 · propuesta 25: un solo vocabulario ──────────────
@@ -7594,14 +7689,14 @@ export class AdminComponent implements OnInit {
     return partes.join(' ');
   }
 
+  /**
+   * Paquete G · propuesta 25 (§3.7), montado en la integración.
+   *
+   * Alma se topó con `mixed` en inglés justo en el número que venía a cuadrar.
+   * El texto sale del vocabulario único; ninguna pantalla escribe el suyo.
+   */
   posMethodLabel(metodo: string | undefined): string {
-    switch (metodo) {
-      case 'cash': return 'efectivo';
-      case 'card': return 'tarjeta';
-      case 'transfer': return 'transferencia';
-      case 'mixed': return 'efectivo + tarjeta/transferencia';
-      default: return metodo || '';
-    }
+    return textoMetodoPago(metodo);
   }
 
   /** Tras un corte o un retiro en <app-admin-arqueo>: refresca caja, ventas e historial. */
@@ -8534,14 +8629,9 @@ export class AdminComponent implements OnInit {
     return 'Salida por venta POS';
   }
 
+  /** El mismo vocabulario único de §3.7, también en la bitácora de movimientos. */
   posPaymentMethodLabel(method?: PosSale['paymentMethod'] | InventoryMovement['paymentMethod']): string {
-    if (method === 'card') {
-      return 'Tarjeta';
-    }
-    if (method === 'transfer') {
-      return 'Transferencia';
-    }
-    return 'Efectivo';
+    return textoMetodoPago(method ?? 'cash');
   }
 
   private movementSignedQty(movement: InventoryMovement): number {

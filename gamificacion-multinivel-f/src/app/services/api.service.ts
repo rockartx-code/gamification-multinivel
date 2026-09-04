@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   AdminCustomer,
   AdminData,
+  AdminWarningsRespuesta,
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
@@ -126,7 +127,7 @@ export class ApiService {
     return this.resolveApi().getAdminOrders(params);
   }
 
-  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
+  getAdminWarnings(): Observable<AdminWarningsRespuesta> {
     return this.resolveApi().getAdminWarnings();
   }
 

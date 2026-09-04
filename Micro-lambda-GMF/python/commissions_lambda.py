@@ -1518,7 +1518,12 @@ def handle_get_config(peticion) -> dict:
     """GET /commissions/config/{ámbito} — `rewards` o `app`."""
     if peticion.params["ambito"] == "rewards":
         return utils._json_response(200, {"config": utils._load_app_config().get("rewards")})
-    return utils._json_response(200, {"config": utils._load_app_config()})
+    # ── Paquete G · ronda 26 (propuesta 29), montado en la integración ──
+    # §3.6 pide `cutoffAt`/`serverNow` en los tres paneles; este es el tercero.
+    # Sale de configuración ya cargada: no cuesta ni una consulta más.
+    import corte_mes
+    return utils._json_response(200, {"config": utils._load_app_config(),
+                                      **corte_mes.campos_corte()})
 
 
 def handle_put_config(peticion) -> dict:
