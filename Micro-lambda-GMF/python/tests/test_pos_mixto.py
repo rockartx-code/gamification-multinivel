@@ -9,7 +9,10 @@ import pytest
 def inventory_lambda(utils, monkeypatch):
     import inventory_lambda
     monkeypatch.setattr(inventory_lambda, "ORDER_SFN_ARN", "arn:sim:sfn")
-    monkeypatch.setattr(inventory_lambda, "_validate_pos_auth", lambda code: code == "2468")
+    # Código real (no un doble): así la pantalla puede distinguir "no hay código
+    # configurado" de "código incorrecto", que es la propuesta 6.
+    utils._put_entity("CONFIG", "pos-auth-v1", {"entityType": "config", "configId": "pos-auth-v1",
+                                                "posAuthCode": "2468"})
     return inventory_lambda
 
 

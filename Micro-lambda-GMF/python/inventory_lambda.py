@@ -183,6 +183,20 @@ def handle_transfers(method, body, query, transfer_id=None, headers=None):
 
 # --- HANDLERS: PUNTO DE VENTA (POS) ---
 
+#: Lo que la cajera necesita oír cuando no hay ningún código configurado: no
+#: es que el suyo esté mal, es que nadie ha puesto uno. Mireya escribió 1234
+#: "a ver qué pasaba", la pantalla la dejó pasar y el 403 le llegó al final,
+#: con el dinero contado en la mano y el turno terminado.
+SIN_CODIGO_POS = ("Todavía no hay un código de autorización configurado: nadie puede autorizar "
+                  "un retiro. Deja todo como fondo y avisa a tu gerente para que lo configure.")
+
+
+def _pos_auth_configurado() -> bool:
+    """¿Hay un código de autorización guardado? (sin decir cuál, nunca)."""
+    cfg = utils._get_by_id("CONFIG", "pos-auth-v1")
+    return bool(cfg and str(cfg.get("posAuthCode") or "").strip())
+
+
 def _validate_pos_auth(code: str) -> bool:
     """Validates a POS authorization code against stored config."""
     cfg = utils._get_by_id("CONFIG", "pos-auth-v1")
@@ -610,8 +624,11 @@ def handle_cash_cut(body, headers):
                 "message": f"El fondo (${cash_to_keep:,.2f}) más el retiro (${withdrawal_amount:,.2f}) deben sumar exactamente lo contado (${cash_counted:,.2f})"})
         receiver = str(body.get("withdrawalReceiver") or "").strip()[:120]
         if withdrawal_amount > utils.D_ZERO:
+            if not _pos_auth_configurado():
+                return utils._json_response(403, {"authCodeConfigured": False, "message": SIN_CODIGO_POS})
             if not _validate_pos_auth(str(body.get("authCode") or "").strip()):
-                return utils._json_response(403, {"message": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código"})
+                return utils._json_response(403, {"authCodeConfigured": True,
+                                                  "message": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código"})
             if not receiver:
                 return utils._json_response(400, {"message": "Indica quién recibe el efectivo retirado"})
         crudo = body.get("denominations")
@@ -698,13 +715,21 @@ def handle_cash_cut(body, headers):
 
 
 def handle_validate_pos_auth(body, headers):
-    """POST /pos/validate-auth"""
+    """POST /pos/validate-auth — tres estados, no dos (propuesta 6).
+
+    Sin código configurado no se dice "incorrecto": se dice que no hay ninguno
+    y se ofrece la salida honesta (dejar todo como fondo, que no exige código).
+    """
     code = str(body.get("code") or "").strip()
+    if not _pos_auth_configurado():
+        return utils._json_response(409, {"configured": False, "ok": False, "message": SIN_CODIGO_POS})
     if not code:
-        return utils._json_response(400, {"message": "Se requiere el codigo de autorizacion"})
+        return utils._json_response(400, {"configured": True, "ok": False,
+                                          "message": "Escribe el código de autorización de tu gerente"})
     if not _validate_pos_auth(code):
-        return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
-    return utils._json_response(200, {"ok": True})
+        return utils._json_response(403, {"configured": True, "ok": False,
+                                          "message": "Código de autorización incorrecto: pídeselo a tu gerente"})
+    return utils._json_response(200, {"ok": True, "configured": True})
 
 
 def handle_pos_auth_config(method, body, headers):
@@ -750,8 +775,11 @@ def handle_pos_withdrawal(body, headers):
     if amount > disponible:
         return utils._json_response(400, {
             "message": f"Solo hay ${disponible:,.2f} en caja: no puedes retirar ${amount:,.2f}"})
+    if not _pos_auth_configurado():
+        return utils._json_response(403, {"authCodeConfigured": False, "message": SIN_CODIGO_POS})
     if not _validate_pos_auth(auth_code):
-        return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
+        return utils._json_response(403, {"authCodeConfigured": True,
+                                          "message": "Código de autorización incorrecto: pídeselo a tu gerente"})
 
     wdr_id = f"WDR-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()

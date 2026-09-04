@@ -15,7 +15,10 @@ import pytest
 def inventory_lambda(utils, monkeypatch):
     import inventory_lambda
     monkeypatch.setattr(inventory_lambda, "ORDER_SFN_ARN", None)
-    monkeypatch.setattr(inventory_lambda, "_validate_pos_auth", lambda code: code == "2468")
+    # Código real (no un doble): así la pantalla puede distinguir "no hay código
+    # configurado" de "código incorrecto", que es la propuesta 6.
+    utils._put_entity("CONFIG", "pos-auth-v1", {"entityType": "config", "configId": "pos-auth-v1",
+                                                "posAuthCode": "2468"})
     return inventory_lambda
 
 
@@ -309,3 +312,75 @@ def test_abrir_turno_pide_privilegio_sucursal_y_monto_valido(inventory_lambda, u
     r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
                   cuerpo={"stockId": "STK-1", "openingCash": -50}, headers=ADMIN | CAJERA)
     assert r["statusCode"] == 400 and "negativo" in json.loads(r["body"])["message"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El código de autorización, con tres estados (paquete F · ronda 26, propuesta 6)
+#
+# Mireya escribió 1234 "a ver qué pasaba", la pantalla la dejó pasar, le hizo
+# leer todo el resumen del arqueo y el HTTP 403 le llegó en "Cerrar el corte",
+# con el dinero contado en la mano y el turno terminado. En este mundo, además,
+# NO hay ningún código configurado: decirle "incorrecto" es mentirle.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _sin_codigo(utils):
+    utils._put_entity("CONFIG", "pos-auth-v1", {"entityType": "config", "configId": "pos-auth-v1",
+                                                "posAuthCode": ""})
+
+
+def test_sin_codigo_configurado_se_dice_eso_y_se_ofrece_dejar_todo_como_fondo(inventory_lambda, utils):
+    pid, stock = _mostrador(utils)
+    _sin_codigo(utils)
+
+    # La pantalla lo sabe antes del paso 3, sin pedir el privilegio de configuración.
+    r = _peticion(inventory_lambda, "GET", "/inventory/pos/arqueo", headers=ADMIN | CAJERA, query={"stockId": stock})
+    assert json.loads(r["body"])["arqueo"]["config"]["authCodeConfigured"] is False
+
+    # Y al validar se dice con esas palabras, no "incorrecto".
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/validate-auth",
+                  cuerpo={"code": "1234"}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 409, r["body"]
+    cuerpo = json.loads(r["body"])
+    assert cuerpo["configured"] is False
+    assert "no hay un código de autorización configurado" in cuerpo["message"]
+    assert "Deja todo como fondo" in cuerpo["message"]
+
+    # La salida honesta sigue funcionando: sin retiro, el corte cierra sin código.
+    _venta(inventory_lambda, pid, stock)
+    r = inventory_lambda.handle_cash_cut({"stockId": stock, "cashCounted": 480, "cashToKeep": 480,
+                                          "withdrawalAmount": 0}, CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+
+
+def test_el_retiro_sin_codigo_configurado_no_dice_incorrecto(inventory_lambda, utils):
+    pid, stock = _mostrador(utils)
+    _sin_codigo(utils)
+    _venta(inventory_lambda, pid, stock)
+
+    r = inventory_lambda.handle_cash_cut({"stockId": stock, "cashCounted": 480, "cashToKeep": 80,
+                                          "withdrawalAmount": 400, "withdrawalReceiver": "Sofía",
+                                          "authCode": "1234"}, CAJERA)
+    assert r["statusCode"] == 403, r["body"]
+    cuerpo = json.loads(r["body"])
+    assert cuerpo["authCodeConfigured"] is False and "incorrecto" not in cuerpo["message"]
+
+    r = inventory_lambda.handle_pos_withdrawal({"stockId": stock, "amount": 100, "reason": "paquetería",
+                                                "receiver": "Beto", "authCode": "1234"}, CAJERA)
+    assert r["statusCode"] == 403 and json.loads(r["body"])["authCodeConfigured"] is False
+
+
+def test_con_codigo_configurado_se_distingue_correcto_de_incorrecto(inventory_lambda, utils):
+    _mostrador(utils)
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/validate-auth",
+                  cuerpo={"code": "1234"}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 403 and json.loads(r["body"])["message"].startswith("Código de autorización incorrecto")
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/validate-auth",
+                  cuerpo={"code": ""}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 400 and "Escribe el código" in json.loads(r["body"])["message"]
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/validate-auth",
+                  cuerpo={"code": "2468"}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 200 and json.loads(r["body"])["ok"] is True
+
+    r = _peticion(inventory_lambda, "GET", "/inventory/pos/arqueo", headers=ADMIN | CAJERA, query={"stockId": "STK-1"})
+    assert json.loads(r["body"])["arqueo"]["config"]["authCodeConfigured"] is True

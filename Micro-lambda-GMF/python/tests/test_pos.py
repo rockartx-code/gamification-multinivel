@@ -118,7 +118,10 @@ def test_el_retiro_de_efectivo_se_guarda_sin_floats(inventory_lambda, utils, mon
     """Regresión: "Internal Inventory Error" al retirar $400 para la paquetería."""
     pid, stock = _mostrador(utils)
     monkeypatch.setattr(inventory_lambda, "sfn", _SfnFalso([]))
-    monkeypatch.setattr(inventory_lambda, "_validate_pos_auth", lambda code: code == "2468")
+    # Código real (no un doble): así la pantalla puede distinguir "no hay código
+    # configurado" de "código incorrecto", que es la propuesta 6.
+    utils._put_entity("CONFIG", "pos-auth-v1", {"entityType": "config", "configId": "pos-auth-v1",
+                                                "posAuthCode": "2468"})
     _venta(inventory_lambda, pid, stock)
     r = inventory_lambda.handle_pos_withdrawal({"stockId": stock, "amount": 400, "reason": "paquetería", "authCode": "2468"}, {"x-user-id": "paco"})
     assert r["statusCode"] == 201, r["body"]

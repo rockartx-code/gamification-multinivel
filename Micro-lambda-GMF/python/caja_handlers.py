@@ -26,6 +26,16 @@ def config_pos() -> dict:
     return dict((utils._load_app_config() or {}).get("pos") or {})
 
 
+def codigo_autorizacion_configurado() -> bool:
+    """¿La gerencia ya configuró un código de autorización del POS?
+
+    La pantalla necesita distinguir "no hay código" de "el código está mal"
+    (propuesta 6). Nunca se devuelve el código, solo si existe.
+    """
+    cfg = utils._get_by_id("CONFIG", "pos-auth-v1")
+    return bool(cfg and str(cfg.get("posAuthCode") or "").strip())
+
+
 def denominaciones() -> list:
     return [int(utils._to_decimal(d)) for d in (config_pos().get("denominations") or [])]
 
@@ -250,6 +260,9 @@ def arqueo_para_respuesta(arqueo: dict) -> dict:
             "requireDifferenceReason": bool(cfg.get("requireDifferenceReason", True)),
             "notifyEmailConfigured": bool(str(cfg.get("cashCutNotifyEmail") or "").strip()),
             "requireOpeningCash": bool(cfg.get("requireOpeningCash", True)),
+            # Tres estados en el paso 3 del corte: sin código configurado, código
+            # incorrecto o correcto. Sin esto el 403 llegaba en "Cerrar el corte".
+            "authCodeConfigured": codigo_autorizacion_configurado(),
         },
         # La caja nunca cerró un corte ni declaró fondo: la pantalla pide capturarlo.
         "needsOpening": (arqueo.get("openingSource") == "sin_declarar"
