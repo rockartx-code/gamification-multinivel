@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
 import { UiBadgeComponent } from '../ui-badge/ui-badge.component';
+import { ALIAS_ESTADO, textoEstadoPedido } from '../../models/vocabulario.model'; // paquete G · ronda 26
 
 @Component({
   selector: 'ui-status-badge',
@@ -13,6 +14,11 @@ export class UiStatusBadgeComponent {
   @Input() status = '';
   @Input() context: 'order' | 'network' = 'order';
   @Input() showIcon = true;
+  /**
+   * Recolección en sucursal: cambia el texto, no el estado (paquete G · ronda 26).
+   * Paulina llevaba 21 días sin saber en qué tienda estaba su pedido.
+   */
+  @Input() deliveryType = '';
 
   get displayStatus(): string {
     const value = this.normalized;
@@ -29,34 +35,10 @@ export class UiStatusBadgeComponent {
       return this.status || '-';
     }
 
-    if (value === 'pending') {
-      return 'Pendiente';
-    }
-    if (value === 'paid') {
-      return 'Pagada';
-    }
-    if (value === 'shipped') {
-      return 'Enviada';
-    }
-    if (value === 'delivered') {
-      return 'Entregada';
-    }
-    if (value === 'cancelled') {
-      return 'Cancelada';
-    }
-    if (value === 'refunded') {
-      return 'Reembolsada';
-    }
-    if (value === 'en_devolucion') {
-      return 'En devolución';
-    }
-    if (value === 'devuelto_validado') {
-      return 'Devuelta';
-    }
-    if (value === 'devolucion_rechazada') {
-      return 'Dev. rechazada';
-    }
-    return this.status || '-';
+    // Paquete G · ronda 26, propuesta 25: el texto sale del vocabulario único.
+    // Julio contó cuatro nombres del mismo estado en cuatro pantallas; esta
+    // insignia era uno de los cuatro ("Pagada", en femenino, contra "Pagado").
+    return textoEstadoPedido(this.status, this.deliveryType) || '-';
   }
 
   get tone(): 'active' | 'inactive' | 'pending' | 'delivered' | 'danger' {
@@ -201,6 +183,8 @@ export class UiStatusBadgeComponent {
   }
 
   private get normalized(): string {
-    return String(this.status || '').toLowerCase();
+    const value = String(this.status || '').toLowerCase();
+    // Los alias históricos ("canceled", "in_return") pintan como su estado.
+    return ALIAS_ESTADO[value] ?? value;
   }
 }

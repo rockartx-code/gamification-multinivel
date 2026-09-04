@@ -2708,7 +2708,8 @@
                   <div class="text-sm font-semibold text-main">Pedidos por estado</div>
                   <div class="mt-3 space-y-2">
                     <div *ngFor="let row of reportOrdersByStatus" class="flex items-center justify-between gap-2 text-sm">
-                      <span class="text-gray-700">{{ row.status }}</span>
+                      <!-- G/25: aquí vivía `paid` crudo, el cuarto nombre del mismo estado -->
+                      <span class="text-gray-700">{{ estadoTexto(row.status) }}</span>
                       <div class="flex items-center gap-3">
                         <span class="rounded-full border border-olive-20 bg-ivory-80 px-2 py-0.5 text-mini">{{ row.count }}</span>
                         <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
@@ -2764,7 +2765,7 @@
                   <div class="text-sm font-semibold text-main">Por estado</div>
                   <div class="mt-3 space-y-2">
                     <div *ngFor="let row of reportOrdersByStatus" class="flex items-center justify-between gap-2 rounded-xl border border-olive-20 bg-ivory-70 px-3 py-2 text-sm">
-                      <span class="text-gray-700">{{ row.status }}</span>
+                      <span class="text-gray-700">{{ estadoTexto(row.status) }}</span>
                       <div class="flex items-center gap-3">
                         <span class="text-mini text-gray-500">{{ row.count }} pedidos</span>
                         <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
@@ -2777,7 +2778,8 @@
                   <div class="text-sm font-semibold text-main">Por método de pago</div>
                   <div class="mt-3 space-y-2">
                     <div *ngFor="let row of reportOrdersByPaymentMethod" class="flex items-center justify-between gap-2 rounded-xl border border-olive-20 bg-ivory-70 px-3 py-2 text-sm">
-                      <span class="capitalize text-gray-700">{{ row.method }}</span>
+                      <!-- G/25: "mixed" era el número que Alma venía a cuadrar, escondido en inglés -->
+                      <span class="text-gray-700">{{ metodoPagoTexto(row.method) }}</span>
                       <div class="flex items-center gap-3">
                         <span class="text-mini text-gray-500">{{ row.count }} pedidos</span>
                         <span class="font-semibold text-main">{{ formatMoney(row.total) }}</span>
@@ -2806,7 +2808,7 @@
                         <td class="py-1.5 pr-3 font-mono text-mini text-gray-500">{{ o.id }}</td>
                         <td class="py-1.5 pr-3 text-mini text-gray-500">{{ formatDateTime(o.createdAt) }}</td>
                         <td class="py-1.5 pr-3 font-medium text-main">{{ o.customer || 'Público General' }}</td>
-                        <td class="py-1.5 pr-3 text-mini">{{ o.status }}</td>
+                        <td class="py-1.5 pr-3 text-mini">{{ estadoTexto(o.status, o.deliveryType) }}</td>
                         <td class="py-1.5 text-right font-semibold text-main">{{ formatMoney(o.total) }}</td>
                       </tr>
                       <tr *ngIf="!reportOrders.length">

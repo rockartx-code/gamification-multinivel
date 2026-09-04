@@ -1,44 +1,74 @@
+<!--
+  Aviso de privacidad (paquete G · ronda 26, propuesta 9).
+
+  Era un modal a pantalla completa sobre todas las rutas, sin X y sin "no
+  acepto", y le costó tiempo a 11 de las 12 personas: Ximena y Fabiola le
+  picaron dos y tres veces a "Ver cómo funciona" creyendo que el botón estaba
+  roto, y Paulina creyó que "Iniciar sesión" no servía.
+
+  Ahora es un banner inferior que no bloquea nada: se puede seguir usando la
+  tienda con él abierto. La clave `privacy-notice-accepted-v1` se conserva, así
+  que quien ya aceptó no lo vuelve a ver.
+-->
 <div *ngIf="visible"
-  class="fixed inset-0 z-[1000] flex items-end justify-center bg-black/45 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-  role="dialog" aria-modal="true" aria-labelledby="privacy-notice-title">
-  <div class="w-full max-w-2xl overflow-hidden rounded-t-3xl border border-olive-30 bg-[color:var(--color-surface-1)] shadow-2xl sm:rounded-3xl">
-    <div class="flex items-center gap-3 border-b border-olive-30 px-5 py-4">
-      <span class="medallion h-9 w-9 text-sm">
+  class="fixed inset-x-0 bottom-0 z-[900] px-3 pb-3 sm:px-4 sm:pb-4"
+  role="region" aria-labelledby="privacy-notice-title">
+  <div
+    class="mx-auto max-w-3xl rounded-2xl border border-olive-30 bg-[color:var(--color-surface-1)] p-4 shadow-2xl sm:p-5">
+    <div class="flex items-start gap-3">
+      <span class="medallion hidden h-9 w-9 shrink-0 text-sm sm:inline-flex">
         <i class="fa-solid fa-shield-halved text-accent" aria-hidden="true"></i>
       </span>
-      <h2 id="privacy-notice-title" class="text-lg font-semibold text-main">Aviso de Privacidad</h2>
-    </div>
+      <div class="min-w-0 flex-1">
+        <h2 id="privacy-notice-title" class="text-sm font-semibold text-main">Aviso de privacidad</h2>
 
-    <div class="max-h-[60vh] space-y-3 overflow-y-auto px-5 py-4 text-sm leading-relaxed text-gray-700">
-      <p *ngIf="modoEfectivo === 'cliente'">
-        En <strong>Finding'U</strong> protegemos tus datos personales. Para comprar solo te pedimos
-        nombre, correo electrónico, teléfono y dirección de entrega, y los usamos únicamente para
-        operar tu cuenta y procesar tus pedidos. No te pedimos datos bancarios ni fiscales.
-      </p>
-      <p *ngIf="modoEfectivo === 'socio'">
-        En <strong>Finding'U</strong> protegemos tus datos personales. La información que nos
-        proporcionas (nombre, correo electrónico, teléfono, datos fiscales y bancarios) se utiliza
-        únicamente para operar tu cuenta, procesar tus pedidos, calcular tus comisiones y mantener
-        la relación con tu red de afiliados.
-      </p>
-      <p>
-        No vendemos ni compartimos tus datos con terceros ajenos a la operación del servicio.
-        Tus datos se conservan mientras tu cuenta esté activa y se resguardan con medidas de
-        seguridad razonables.
-      </p>
-      <p>
-        Puedes ejercer tus derechos de acceso, rectificación, cancelación u oposición (ARCO)
-        escribiéndonos a través de los canales de contacto oficiales de Finding'U.
-      </p>
-      <p class="text-xs text-gray-500">
-        Este aviso no utiliza cookies de seguimiento ni herramientas de analítica de terceros.
-      </p>
-    </div>
+        <!-- Por etapas y en orden: lo que se pide en cada momento, sin prometer
+             de menos. El texto anterior juraba "No te pedimos datos bancarios ni
+             fiscales" mientras el carrito pedía RFC, razón social, régimen, CP
+             fiscal y uso de CFDI, y a Aurora casi le cuesta la compra. -->
+        <p *ngIf="modoEfectivo === 'cliente'" class="mt-1 text-sm leading-relaxed text-gray-700">
+          En <strong>Finding'U</strong> te pedimos tus datos por etapas: al comprar, tu nombre,
+          contacto y dirección de entrega; si pides factura, tus datos fiscales (RFC, razón social,
+          régimen y código postal); y si activas el modo socio, tu CLABE y los documentos que ahí se
+          te expliquen. Los usamos solo para operar tu cuenta, procesar tus pedidos y facturarte.
+        </p>
+        <p *ngIf="modoEfectivo === 'socio'" class="mt-1 text-sm leading-relaxed text-gray-700">
+          En <strong>Finding'U</strong> te pedimos tus datos por etapas: al comprar, tu nombre,
+          contacto y dirección de entrega; si pides factura, tus datos fiscales; y como socio, tu
+          CLABE y tus documentos de identidad. Los usamos solo para operar tu cuenta, procesar tus
+          pedidos, depositarte tus comisiones y mantener la relación con tu red.
+        </p>
 
-    <div class="flex justify-end gap-2 border-t border-olive-30 px-5 py-4">
-      <ui-button variant="forest" size="md" iconClass="fa-solid fa-circle-check" (pressed)="accept()">
-        Entendido y acepto
-      </ui-button>
+        <div *ngIf="expandido" class="mt-3 space-y-2 border-t border-olive-30 pt-3 text-sm leading-relaxed text-gray-700">
+          <p>
+            No vendemos ni compartimos tus datos con terceros ajenos a la operación del servicio.
+            Se conservan mientras tu cuenta esté activa y se resguardan con medidas de seguridad
+            razonables.
+          </p>
+          <p>
+            Puedes ejercer tus derechos de acceso, rectificación, cancelación u oposición (ARCO)
+            desde <a class="font-semibold underline text-olive-70" href="#/contacto">nuestra página de contacto</a>,
+            donde vienen el correo, el WhatsApp y el horario de atención.
+          </p>
+          <p class="text-xs text-gray-500">
+            Este aviso no utiliza cookies de seguimiento ni herramientas de analítica de terceros.
+          </p>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <ui-button variant="forest" size="sm" iconClass="fa-solid fa-circle-check" (pressed)="accept()">
+            Entendido
+          </ui-button>
+          <ui-button variant="ghost" size="sm" (pressed)="alternarDetalle()">
+            {{ expandido ? 'Ocultar el aviso' : 'Leer el aviso' }}
+          </ui-button>
+        </div>
+      </div>
+
+      <button type="button" class="shrink-0 rounded-full p-1.5 text-gray-500 hover:bg-ivory-70 hover:text-main"
+        aria-label="Cerrar el aviso de privacidad" (click)="accept()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
     </div>
   </div>
 </div>

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject, type Signal } from '@angular/core';
 import { ConciliacionService } from '../../services/conciliacion.service'; // WP-H
 import { ConciliacionCorrida, ConciliacionPayload, ConciliacionResultado } from '../../models/suscripcion.model'; // WP-H
+import { fechaEnLetras, textoEstadoPedido, textoMetodoPago } from '../../models/vocabulario.model'; // paquete G · ronda 26
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -4849,6 +4850,26 @@ export class AdminComponent implements OnInit {
         },
         error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la CLABE.'), 'error')
       });
+  }
+
+  // ── Paquete G · ronda 26 · propuesta 25: un solo vocabulario ──────────────
+  // Julio contó cuatro nombres para el mismo estado en cuatro pantallas y el
+  // cuarto era `paid` crudo, en inglés, aquí en Estadísticas. Alma se topó con
+  // `mixed`, también en inglés, en el número que venía a cuadrar.
+
+  /** Estado del pedido en español, con el matiz de recolección si aplica. */
+  estadoTexto(status?: string | null, deliveryType?: string | null): string {
+    return textoEstadoPedido(status, deliveryType) || '—';
+  }
+
+  /** Método de pago en español; `mixed` con su desglose cuando se conoce. */
+  metodoPagoTexto(method?: string | null, efectivo?: number | null, noEfectivo?: number | null): string {
+    return textoMetodoPago(method, efectivo, noEfectivo) || '—';
+  }
+
+  /** «2 de marzo de 2027, 11:18»: nunca un ISO crudo. */
+  fechaTexto(value?: string | null): string {
+    return fechaEnLetras(value ?? '');
   }
 
   /** Nombre de quien escribió la nota; el id solo si no hay nada mejor. */
