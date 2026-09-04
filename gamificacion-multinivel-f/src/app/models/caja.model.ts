@@ -30,11 +30,46 @@ export interface ArqueoCaja {
   startedAt?: string | null;
   lastSaleAt?: string | null;
   movements: MovimientoCaja[];
+  /**
+   * De dónde sale el fondo inicial (paquete F · ronda 26, propuesta 5):
+   * `apertura` lo declaró quien abrió el turno, `corte_anterior` lo dejó el
+   * corte de ayer y `sin_declarar` significa que esta caja nunca ha cerrado un
+   * corte: la pantalla pide capturarlo en vez de enseñar un $0.00 de adorno.
+   */
+  openingSource?: OrigenFondoCaja;
+  openingDeclaredAt?: string | null;
+  openingDeclaredBy?: string;
+  /** Hay que declarar el fondo antes de operar. */
+  needsOpening?: boolean;
   config: {
     denominations: number[];
     requireDifferenceReason: boolean;
     notifyEmailConfigured: boolean;
+    /** Con False, el corte no pide el fondo aunque la caja nunca haya cortado. */
+    requireOpeningCash?: boolean;
+    /** ¿La gerencia ya configuró un código de autorización? (propuesta 6). */
+    authCodeConfigured?: boolean;
   };
+}
+
+export type OrigenFondoCaja = 'apertura' | 'corte_anterior' | 'sin_declarar';
+
+export interface AperturaTurnoPayload {
+  stockId: string;
+  openingCash: number;
+  note?: string;
+}
+
+export interface AperturaTurnoRespuesta {
+  opening: {
+    openingId: string;
+    stockId: string;
+    openingCash: number;
+    declaredBy: string;
+    createdAt: string;
+    reabierto?: boolean;
+  };
+  arqueo: ArqueoCaja;
 }
 
 export interface CorteCaja {

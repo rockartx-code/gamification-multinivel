@@ -120,3 +120,102 @@ def test_la_gerente_ve_el_turno_de_beto_y_un_companero_solo_el_suyo(inventory_la
 
     st, d = _llamar(inventory_lambda, "GET", "/inventory/turno/resumen", headers={}, query={"userId": BETO})
     assert st == 403
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Entregar el turno sin WhatsApp (paquete F · ronda 26, propuesta 30)
+#
+# Toño se lo mandó a Renata por WhatsApp; Mireya no tuvo dónde reportar el
+# sobrante. El corte de caja ya se puede mandar por correo: el turno, no.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def correos(monkeypatch):
+    """Solo los correos de resumen de turno (el turno de Beto manda los del pedido)."""
+    enviados = []
+
+    def _guardar(para, asunto, texto, html):
+        if str(asunto).startswith("Resumen de turno"):
+            enviados.append({"to": para, "asunto": asunto, "texto": texto, "html": html})
+
+    from core import email as correo
+    monkeypatch.setattr(correo, "_send_ses_email", _guardar)
+    return enviados
+
+
+def _correo_de_la_gerente(utils, direccion="renata@findingu.mx"):
+    utils._put_entity("CONFIG", "app-v1", {"entityType": "config", "configId": "app-v1",
+                                           "config": {"pos": {"shiftSummaryNotifyEmail": direccion}}})
+    utils._invalidate_app_config_cache()
+
+
+def test_sin_correo_configurado_el_boton_explica_donde_se_configura(inventory_lambda, utils, correos):
+    beto, _ = _turno_de_beto(inventory_lambda, utils)
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar", {"userId": BETO}, headers=beto)
+    assert st == 400, d
+    assert "Configuración → Punto de venta" in d["message"]
+    assert not correos
+
+
+def test_el_turno_se_entrega_por_correo_con_los_pedidos_y_sus_guias(inventory_lambda, utils, correos):
+    beto, tid = _turno_de_beto(inventory_lambda, utils)
+    _correo_de_la_gerente(utils)
+
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar", {"userId": BETO}, headers=beto)
+    assert st == 200, d
+    assert d["sent"] is True and d["to"] == "renata@findingu.mx"
+    assert d["counters"]["dispatched"] == 2
+
+    assert len(correos) == 1
+    enviado = correos[0]
+    assert enviado["to"] == "renata@findingu.mx"
+    assert enviado["asunto"].startswith("Resumen de turno · Beto ·")
+    assert "2 despachados" in enviado["asunto"]
+    for fragmento in ("ORD-1 (Estafeta EST-1)", "ORD-2 (DHL DHL-2)", f"{tid} → Del Valle"):
+        assert fragmento in enviado["texto"], fragmento
+    assert "Resumen de turno" in enviado["html"]
+
+    # Queda sellado: quién y cuándo, y el GET lo dice.
+    registro = utils._get_by_id("POS_SHIFT_SUMMARY", f"TRN-{BETO}-{d['date']}")
+    assert registro["notifiedTo"] == "renata@findingu.mx" and registro["notifiedAt"]
+    st, resumen = _llamar(inventory_lambda, "GET", "/inventory/turno/resumen", headers=beto, query={"userId": BETO})
+    assert resumen["notifiedTo"] == "renata@findingu.mx" and resumen["notifiedAt"] == registro["notifiedAt"]
+    assert resumen["notifyEmailConfigured"] is True
+
+
+def test_enviar_dos_veces_no_manda_dos_correos(inventory_lambda, utils, correos):
+    beto, _ = _turno_de_beto(inventory_lambda, utils)
+    _correo_de_la_gerente(utils)
+    _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar", {"userId": BETO}, headers=beto)
+
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar", {"userId": BETO}, headers=beto)
+    assert st == 200 and d["sent"] is False and d["alreadySent"] is True
+    assert "ya se entregó a renata@findingu.mx" in d["message"]
+    assert len(correos) == 1
+
+    # A propósito sí se puede volver a mandar, y queda contado.
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar",
+                    {"userId": BETO, "reenviar": True}, headers=beto)
+    assert st == 200 and d["sent"] is True and len(correos) == 2
+    registro = utils._get_by_id("POS_SHIFT_SUMMARY", f"TRN-{BETO}-{d['date']}")
+    assert int(registro["sentCount"]) == 2
+
+
+def test_entregar_el_turno_de_otra_persona_pide_estadisticas(inventory_lambda, utils, correos):
+    beto, _ = _turno_de_beto(inventory_lambda, utils)
+    _correo_de_la_gerente(utils)
+    nadia = _empleado(utils, "7002", {"access_screen_pos": True}, "Nadia")
+
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar", {"userId": BETO}, headers=nadia)
+    assert st == 403 and "access_screen_stats" in d["message"]
+    assert not correos
+
+    # El suyo sí, y a un correo escrito a mano.
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar",
+                    {"email": "sofia@findingu.mx"}, headers=nadia)
+    assert st == 200 and d["to"] == "sofia@findingu.mx" and d["userId"] == "7002"
+
+    sofia = _empleado(utils, "7003", {"access_screen_stats": True}, "Sofía")
+    st, d = _llamar(inventory_lambda, "POST", "/inventory/turno/resumen/enviar", {"userId": BETO}, headers=sofia)
+    assert st == 200 and d["sent"] is True

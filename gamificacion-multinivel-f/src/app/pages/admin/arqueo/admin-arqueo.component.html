@@ -28,8 +28,35 @@
       {{ movimientosAbiertos ? 'Ocultar movimientos' : 'Ver movimientos (' + arqueo.movements.length + ')' }}
     </ui-button>
   </div>
+  <!-- Abrir turno: el fondo lo declara quien tiene el dinero en la mano (propuesta 5) -->
+  <div *ngIf="necesitaApertura" class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
+    <div class="text-sm font-semibold text-amber-900">Esta caja nunca ha cerrado un corte: captura el fondo con el que arrancas</div>
+    <div class="mt-1 text-mini text-amber-800">
+      Cuenta el dinero que hay ahora en el cajón y escríbelo aquí. Con eso, tu corte de hoy compara contra lo que
+      de verdad había y no te sale un sobrante que no existe.
+    </div>
+    <div class="mt-2 grid gap-2 sm:grid-cols-[minmax(0,14rem)_auto] sm:items-end">
+      <ui-form-field
+        type="text"
+        label="Fondo con el que arrancas"
+        placeholder="Ej. 500"
+        [ngModel]="fondoAperturaTexto"
+        (ngModelChange)="fondoAperturaTexto = $event">
+      </ui-form-field>
+      <div class="flex flex-col items-start gap-1">
+        <ui-button size="sm" variant="primary" [disabled]="!!motivoAperturaDeshabilitada()" (pressed)="guardarApertura()">
+          <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
+          {{ guardandoApertura ? 'Guardando…' : 'Abrir turno con este fondo' }}
+        </ui-button>
+        <span *ngIf="motivoAperturaDeshabilitada() as motivo" class="max-w-[16rem] text-micro text-amber-800">{{ motivo }}</span>
+      </div>
+    </div>
+    <div *ngIf="errorApertura" class="mt-2 text-mini text-red-700">{{ errorApertura }}</div>
+  </div>
+  <div *ngIf="aperturaGuardada" class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ aperturaGuardada }}</div>
+
   <div class="mt-2 flex flex-wrap gap-2 text-mini text-gray-600">
-    <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Fondo inicial {{ dinero(arqueo.openingCash) }}</span>
+    <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">{{ textoFondoInicial }} {{ dinero(arqueo.openingCash) }}</span>
     <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Ventas en efectivo {{ dinero(arqueo.cashSales) }}</span>
     <span *ngIf="arqueo.cashSettlements > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Abonos {{ dinero(arqueo.cashSettlements) }}</span>
     <span *ngIf="arqueo.cashFromMixed > 0" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Efectivo de pagos mixtos {{ dinero(arqueo.cashFromMixed) }}</span>
@@ -73,7 +100,7 @@
   <div *ngIf="pasoCorte === 1" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-4 text-sm">
     <div *ngIf="!arqueo" class="text-gray-600">Cargando el efectivo esperado...</div>
     <ng-container *ngIf="arqueo">
-      <div class="flex justify-between gap-3 py-1"><span>Fondo que dejó el corte anterior</span><strong>{{ dinero(arqueo.openingCash) }}</strong></div>
+      <div class="flex justify-between gap-3 py-1"><span>{{ textoFondoInicial }}</span><strong>{{ dinero(arqueo.openingCash) }}</strong></div>
       <div class="flex justify-between gap-3 py-1"><span>Ventas en efectivo</span><strong>{{ dinero(arqueo.cashSales) }}</strong></div>
       <div class="flex justify-between gap-3 py-1"><span>Abonos en efectivo</span><strong>{{ dinero(arqueo.cashSettlements) }}</strong></div>
       <div class="flex justify-between gap-3 py-1"><span>Parte en efectivo de pagos mixtos</span><strong>{{ dinero(arqueo.cashFromMixed) }}</strong></div>
@@ -158,6 +185,7 @@
       <ui-choice-card [selected]="destino === 'retiro'" (pressed)="elegirDestino('retiro')">
         <div class="text-sm font-semibold text-main">Retirar una parte (o todo)</div>
         <div class="text-mini text-gray-600">Se anota quién se lo lleva y se pide el código de la gerente.</div>
+        <div *ngIf="!codigoConfigurado" class="mt-1 text-micro text-amber-800">{{ textoSinCodigo }}</div>
       </ui-choice-card>
     </div>
     <ng-container *ngIf="destino === 'retiro'">
@@ -187,10 +215,17 @@
         type="password"
         label="Código de autorización"
         placeholder="****"
-        helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
+        helpText="Lo tiene tu gerente. Se comprueba aquí, antes de seguir: no al final."
         [ngModel]="codigoCorte"
-        (ngModelChange)="codigoCorte = $event">
+        (ngModelChange)="alCambiarCodigoCorte($event)">
       </ui-form-field>
+      <div *ngIf="estadoCodigo === 'validando'" class="text-mini text-gray-600">Comprobando el código de autorización…</div>
+      <div *ngIf="estadoCodigo === 'correcto'" class="text-mini text-emerald-700">Código correcto: ya puedes continuar.</div>
+      <div *ngIf="estadoCodigo === 'incorrecto'" class="text-mini text-red-700">{{ motivoCodigo }}</div>
+      <ui-button *ngIf="!codigoConfigurado || estadoCodigo === 'incorrecto'" size="sm" variant="ghost" (pressed)="elegirDestino('fondo')">
+        <i class="fa-solid fa-vault" aria-hidden="true"></i>
+        Dejar todo como fondo y avisar a mi gerente
+      </ui-button>
     </ng-container>
   </div>
 
@@ -341,8 +376,9 @@
         placeholder="****"
         helpText="Lo tiene la gerencia (Configuración → Código de autorización POS); pídeselo a tu gerente."
         [ngModel]="retiroCodigo"
-        (ngModelChange)="retiroCodigo = $event">
+        (ngModelChange)="alCambiarCodigoRetiro($event)">
       </ui-form-field>
+      <div *ngIf="!codigoConfigurado" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-mini text-amber-900">{{ textoSinCodigo }}</div>
     </div>
 
     <div *ngIf="errorRetiro" class="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorRetiro }}</div>

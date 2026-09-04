@@ -148,6 +148,18 @@ type AdminStock = {
   state?: string;  // paquete C
 };
 
+/** Una fila de la tabla producto × sucursal de Stocks (paquete F · ronda 26). */
+type InventarioPorSucursalFila = {
+  productId: number;
+  productName: string;
+  /** Mínimo del producto (el suyo o el de la configuración). 0 = no se vigila. */
+  minStock: number;
+  /** Piezas sumando todas las sucursales. */
+  total: number;
+  porSucursal: Array<{ stockId: string; stockName: string; qty: number; bajoMinimo: boolean }>;
+  bajoMinimo: boolean;
+};
+
 type StockTransferLine = {
   productId: number;
   qty: number;
@@ -347,6 +359,14 @@ export class AdminComponent implements OnInit {
         rows: Array<
           InventoryMovement & { stockName: string; productName: string; userName: string; typeLabel: string; signedQty: number }
         >;
+      }
+    | null = null;
+  private inventarioPorSucursalCache:
+    | {
+        stocksRef: AdminStock[];
+        productsRef: AdminProduct[];
+        minimosRef: Record<string, number>;
+        rows: InventarioPorSucursalFila[];
       }
     | null = null;
   private warningsCache: { warningsRef: AdminWarning[]; warnings: AdminWarning[] } | null = null;
@@ -791,6 +811,23 @@ export class AdminComponent implements OnInit {
   };
   /** Paquete C: ciudad y estado editables del stock activo. */
   stockUbicacionDraft = { city: '', state: '' };
+
+  // ── Paquete F · ronda 26 (propuesta 28) ─────────────────────────────────
+  // Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+  // hasta que un cliente pague y no haya". La vista abre con el inventario de
+  // todas las sucursales, con su total y su mínimo; fundar una bodega queda
+  // detrás de un botón.
+  /** Formulario de alta de bodega, plegado por omisión. */
+  altaStockAbierta = false;
+  /** Mínimo por producto, tal como lo guardó el servidor. */
+  stockMinimos: Record<string, number> = {};
+  minStockDefault = 0;
+  /** Lo que la persona está escribiendo en la columna "Mínimo". */
+  minimoBorrador: Record<string, string> = {};
+  guardandoMinimos = false;
+  mensajeMinimos = '';
+  errorMinimos = '';
+  private minimosPedidos = false;
   readonly estadoOptionsStock = ESTADOS_MX_OPTIONS;
   stockUserLinkDraft = new Set<number>();
   isStockEntryModalOpen = false;
@@ -1448,8 +1485,10 @@ export class AdminComponent implements OnInit {
       commissions_ready: 'customers',
       commissions_no_clabe: 'customers',
       shipping: 'orders',
+      pickup: 'orders',      // paquete F · ronda 26: pedidos por recoger en mostrador
       assets: 'products',
       stocks: 'stocks',
+      stock_min: 'stocks',   // paquete F · ronda 26: productos bajo su mínimo
       pos: 'pos',
       payments: 'orders',
       refunds: 'orders'
@@ -1722,6 +1761,143 @@ export class AdminComponent implements OnInit {
       rows
     };
     return rows;
+  }
+
+  /**
+   * Inventario producto × sucursal, con el total de cada producto y su mínimo.
+   * Sale del estado que la pantalla ya tiene (`stocks[].inventory`): ni una
+   * consulta más al servidor.
+   */
+  get inventarioPorSucursalStable(): InventarioPorSucursalFila[] {
+    if (
+      this.inventarioPorSucursalCache?.stocksRef === this.stocks &&
+      this.inventarioPorSucursalCache.productsRef === this.products &&
+      this.inventarioPorSucursalCache.minimosRef === this.stockMinimos
+    ) {
+      return this.inventarioPorSucursalCache.rows;
+    }
+    const rows: InventarioPorSucursalFila[] = this.products.map((product) => {
+      const minimo = this.minimoDe(product.id);
+      const porSucursal = this.stocks.map((stock) => {
+        const qty = Number((stock.inventory as Record<string, number>)[String(product.id)] ?? 0);
+        return { stockId: stock.id, stockName: stock.name, qty, bajoMinimo: minimo > 0 && qty < minimo };
+      });
+      return {
+        productId: product.id,
+        productName: product.name,
+        minStock: minimo,
+        total: porSucursal.reduce((suma, celda) => suma + celda.qty, 0),
+        porSucursal,
+        bajoMinimo: porSucursal.some((celda) => celda.bajoMinimo)
+      };
+    });
+    this.inventarioPorSucursalCache = {
+      stocksRef: this.stocks,
+      productsRef: this.products,
+      minimosRef: this.stockMinimos,
+      rows
+    };
+    return rows;
+  }
+
+  /** Totales por sucursal (el renglón de abajo de la tabla). */
+  get totalesPorSucursalStable(): Array<{ stockId: string; stockName: string; total: number }> {
+    return this.stocks.map((stock) => ({
+      stockId: stock.id,
+      stockName: stock.name,
+      total: Object.values((stock.inventory as Record<string, number>) ?? {}).reduce((a, b) => a + Number(b ?? 0), 0)
+    }));
+  }
+
+  get totalDeTodoElInventario(): number {
+    return this.totalesPorSucursalStable.reduce((suma, s) => suma + s.total, 0);
+  }
+
+  /** Cuántos productos están por debajo de su mínimo en alguna sucursal. */
+  get productosBajoMinimo(): number {
+    return this.inventarioPorSucursalStable.filter((fila) => fila.bajoMinimo).length;
+  }
+
+  minimoDe(productId: number): number {
+    const propio = this.stockMinimos[String(productId)];
+    return Number.isFinite(propio) ? Number(propio) : this.minStockDefault;
+  }
+
+  /** Trae los mínimos guardados; sin permiso de almacén, la tabla no los pinta. */
+  private cargarMinimosDeStock(): void {
+    if (this.minimosPedidos || !this.hasPermission('access_screen_stocks')) {
+      return;
+    }
+    this.minimosPedidos = true;
+    this.despachoService.minimosDeStock().subscribe({
+      next: (res) => {
+        this.minStockDefault = Number(res.minStockDefault ?? 0);
+        this.stockMinimos = { ...(res.minimos ?? {}) };
+        this.minimoBorrador = {};
+        this.requestViewUpdate();
+      },
+      error: () => { this.minimosPedidos = false; }
+    });
+  }
+
+  cambiarMinimo(productId: number, valor: string): void {
+    this.minimoBorrador = { ...this.minimoBorrador, [String(productId)]: valor };
+    this.mensajeMinimos = '';
+    this.errorMinimos = '';
+  }
+
+  minimoEnPantalla(productId: number): string {
+    const borrador = this.minimoBorrador[String(productId)];
+    return borrador !== undefined ? borrador : String(this.minimoDe(productId));
+  }
+
+  get hayMinimosSinGuardar(): boolean {
+    return Object.keys(this.minimoBorrador).some(
+      (pid) => Number(this.minimoBorrador[pid]) !== this.minimoDe(Number(pid))
+    );
+  }
+
+  /** Guarda de un golpe los mínimos que se cambiaron. */
+  guardarMinimos(): void {
+    if (this.guardandoMinimos || !this.hayMinimosSinGuardar) {
+      return;
+    }
+    const cambios: Record<string, number> = {};
+    for (const [pid, valor] of Object.entries(this.minimoBorrador)) {
+      const piezas = Number(valor);
+      if (!Number.isFinite(piezas) || piezas < 0) {
+        this.errorMinimos = 'Un mínimo tiene que ser un número de piezas de 0 en adelante.';
+        this.requestViewUpdate();
+        return;
+      }
+      if (piezas !== this.minimoDe(Number(pid))) {
+        cambios[pid] = Math.round(piezas);
+      }
+    }
+    this.guardandoMinimos = true;
+    this.errorMinimos = '';
+    this.mensajeMinimos = '';
+    this.despachoService.guardarMinimosDeStock(cambios).subscribe({
+      next: () => {
+        this.stockMinimos = { ...this.stockMinimos, ...cambios };
+        this.minimoBorrador = {};
+        this.guardandoMinimos = false;
+        const cuantos = Object.keys(cambios).length;
+        this.mensajeMinimos = `Mínimo guardado en ${cuantos} producto${cuantos === 1 ? '' : 's'}. `
+          + 'Por debajo de él, la existencia se pinta en rojo y sale en Acciones urgentes.';
+        this.requestViewUpdate();
+      },
+      error: (err: unknown) => {
+        this.guardandoMinimos = false;
+        this.errorMinimos = this.mensajeDeErrorStock(err, 'No se pudieron guardar los mínimos.');
+        this.requestViewUpdate();
+      }
+    });
+  }
+
+  private mensajeDeErrorStock(err: unknown, porOmision: string): string {
+    const e = err as { error?: { message?: string }; message?: string } | null;
+    return e?.error?.message || e?.message || porOmision;
   }
 
   get stockTransferRowsStable(): Array<StockTransfer & { sourceName: string; destinationName: string; productSummary: string }> {
@@ -3600,6 +3776,9 @@ export class AdminComponent implements OnInit {
   }
 
   private loadStocksAndPosState(): void {
+    // Los mínimos por producto (paquete F) viajan aparte y una sola vez: la
+    // tabla los necesita para pintar en rojo lo que está por debajo.
+    this.cargarMinimosDeStock();
     this.adminControl.loadStocksAndPosState().subscribe({
       next: (state) => {
         this.stocks = (state.stocks ?? []).map((stock) => ({
@@ -3773,7 +3952,9 @@ export class AdminComponent implements OnInit {
       return;
     }
     const target: AdminViewId = this.warningTargetView(warning.type);
-    const estado = warning.type === 'shipping' ? 'paid'
+    // 'pickup' entra aquí por el paquete F (propuesta 21): los pedidos por
+    // recoger en mostrador también están pagados y esperando trabajo.
+    const estado = warning.type === 'shipping' || warning.type === 'pickup' ? 'paid'
       : warning.type === 'payments' ? 'pending'
       : warning.type === 'refunds' ? 'cancelled'
       : '';

@@ -1,6 +1,8 @@
 import boto3
 import base64
 import time
+from datetime import datetime
+
 import core_utils as utils # Importado desde la Layer
 import dashboard_common
 from dashboard_common import (
@@ -225,15 +227,95 @@ def get_admin_orders(query):
     items = items[:limit]
     return utils._json_response(200, {"orders": items, "total": total, "limit": limit})
 
+def _bajo_minimo(stocks: list, productos: list, por_omision: int) -> list:
+    """Pares (producto, sucursal) por debajo de su mínimo, del más urgente al menos.
+
+    Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+    hasta que un cliente pague y no haya". Se resuelve con un solo recorrido de
+    productos y otro de almacenes: ni un `_get_by_id` por producto dentro del
+    bucle (docs/arquitectura/26 §0.1).
+    """
+    minimos = {}
+    nombres = {}
+    for p in productos:
+        pid = str(p.get("productId"))
+        nombres[pid] = str(p.get("name") or f"Producto {pid}")
+        if p.get("minStock") is None:
+            minimo = por_omision
+        else:
+            try:
+                minimo = max(0, int(utils._to_decimal(p.get("minStock"))))
+            except Exception:
+                minimo = por_omision
+        if minimo > 0 and bool(p.get("active", True)):
+            minimos[pid] = minimo
+
+    faltantes = []
+    for stock in stocks:
+        inventario = stock.get("inventory") or {}
+        nombre_stock = str(stock.get("name") or stock.get("stockId") or "")
+        for pid, minimo in minimos.items():
+            try:
+                existencia = int(utils._to_decimal(inventario.get(pid, inventario.get(int(pid) if pid.isdigit() else pid, 0))))
+            except Exception:
+                existencia = 0
+            if existencia < minimo:
+                faltantes.append({"productId": pid, "productName": nombres.get(pid, pid),
+                                  "stockId": str(stock.get("stockId") or ""), "stockName": nombre_stock,
+                                  "qty": existencia, "minStock": minimo})
+    faltantes.sort(key=lambda f: (f["qty"] - f["minStock"], f["productName"]))
+    return faltantes
+
+
+def _es_recoleccion(order: dict) -> bool:
+    """Recoge en sucursal: no es un envío pendiente, es un cliente por venir."""
+    return str(order.get("deliveryType") or "").strip().lower() == "pickup"
+
+
+def _dias_parados(order: dict, ahora_iso: str):
+    """Días que lleva parado el pedido, contra la hora del servidor.
+
+    Nunca con el reloj del navegador: así salían "0 días" en todos los pedidos.
+    """
+    fecha = str(order.get("paidAt") or order.get("createdAt") or "")[:10]
+    hoy = str(ahora_iso or "")[:10]
+    if len(fecha) != 10 or len(hoy) != 10:
+        return None
+    try:
+        desde = datetime.strptime(fecha, "%Y-%m-%d")
+        hasta = datetime.strptime(hoy, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return max(0, (hasta - desde).days)
+
+
+def _dias_del_mas_viejo(orders: list, ahora_iso: str):
+    """Días del pedido más viejo del grupo (None si ninguno trae fecha)."""
+    dias = [d for d in (_dias_parados(o, ahora_iso) for o in orders) if d is not None]
+    return max(dias) if dias else None
+
+
 def get_admin_warnings():
     """GET /admin/warnings - Alertas reales desde DynamoDB"""
     cfg = utils._load_app_config()
     warning_cfg = cfg.get("adminWarnings") if isinstance(cfg.get("adminWarnings"), dict) else {}
 
     orders = utils._query_bucket("ORDER")
-    now_date = utils._now_iso()[:10]
+    ahora_iso = utils._now_iso()
+    now_date = ahora_iso[:10]
 
-    paid_no_ship = sum(1 for o in orders if (o.get("status") or "").lower() == "paid")
+    # Paquete F · ronda 26 (propuesta 21). "4 pedidos pagados sin envío" metía
+    # tres recolecciones de mostrador en el mismo saco, y ninguna columna decía
+    # cuántos días llevaban parados: "37 días se ven igual que 1 día"
+    # (renata-2027-04-10). De ese pedido colgaba la comisión de una socia.
+    dias_rojo = int(utils._to_decimal((cfg.get("orders") or {}).get("agingRedDays", 7)))
+    por_enviar, por_recoger = [], []
+    for o in orders:
+        if (o.get("status") or "").lower() != "paid":
+            continue
+        (por_recoger if _es_recoleccion(o) else por_enviar).append(o)
+    dias_envio_mas_viejo = _dias_del_mas_viejo(por_enviar, ahora_iso)
+    dias_pickup_mas_viejo = _dias_del_mas_viejo(por_recoger, ahora_iso)
     pending_pay = sum(1 for o in orders if (o.get("status") or "").lower() == "pending")
     # Pagos que entraron a un pedido ya cancelado: hay que devolver el dinero.
     pagos_tras_cancelar = [o for o in orders if o.get("paymentStatusDetail") == "approved_after_cancel"
@@ -273,6 +355,14 @@ def get_admin_warnings():
             if now_date >= f"{siguiente}-{max(payout_day - 2, 1):02d}":
                 destino["urgent"] = True
 
+    # Productos bajo su mínimo, por sucursal (paquete F · ronda 26, propuesta 28).
+    stocks_cfg = dict(cfg.get("stocks") or {})
+    try:
+        min_default = max(0, int(utils._to_decimal(stocks_cfg.get("minStockDefault", 0))))
+    except Exception:
+        min_default = 0
+    bajo_minimo = _bajo_minimo(utils._query_bucket("STOCK"), utils._query_bucket("PRODUCT"), min_default)
+
     # Transferencias pendientes
     transfers = utils._query_bucket("STOCK_TRANSFER")
     pending_transfers = sum(1 for t in transfers if (t.get("status") or "").lower() == "pending")
@@ -295,8 +385,24 @@ def get_admin_warnings():
                          "text": f"{sin_clabe['count']} socias con comisión y sin CLABE · ${sin_clabe['amount']:,.2f}",
                          "severity": "high" if sin_clabe["urgent"] else "low",
                          "count": sin_clabe["count"], "amount": sin_clabe["amount"], "monthKey": max(sin_clabe["months"], default="")})
-    if warning_cfg.get("showShipping", True) and paid_no_ship:
-        warnings.append({"type": "shipping", "text": f"{paid_no_ship} pedidos pagados sin envío", "severity": "medium"})
+    if warning_cfg.get("showShipping", True) and por_enviar:
+        plural = "" if len(por_enviar) == 1 else "s"
+        texto = f"{len(por_enviar)} pedido{plural} pagado{plural} sin envío"
+        if dias_envio_mas_viejo is not None:
+            texto += f" · {dias_envio_mas_viejo} día{'' if dias_envio_mas_viejo == 1 else 's'} el más viejo"
+        warnings.append({"type": "shipping", "text": texto,
+                         "severity": "high" if (dias_envio_mas_viejo or 0) >= dias_rojo else "medium",
+                         "count": len(por_enviar), "oldestDays": dias_envio_mas_viejo,
+                         "orderIds": [o.get("orderId") for o in por_enviar[:20]]})
+    if warning_cfg.get("showShipping", True) and por_recoger:
+        plural = "" if len(por_recoger) == 1 else "s"
+        texto = f"{len(por_recoger)} pedido{plural} por recoger en mostrador"
+        if dias_pickup_mas_viejo is not None:
+            texto += f" · {dias_pickup_mas_viejo} día{'' if dias_pickup_mas_viejo == 1 else 's'} el más viejo"
+        warnings.append({"type": "pickup", "text": texto,
+                         "severity": "high" if (dias_pickup_mas_viejo or 0) >= dias_rojo else "low",
+                         "count": len(por_recoger), "oldestDays": dias_pickup_mas_viejo,
+                         "orderIds": [o.get("orderId") for o in por_recoger[:20]]})
     if warning_cfg.get("showPendingPayments", True) and pending_pay:
         warnings.append({"type": "payments", "text": f"{pending_pay} pedidos pendientes de pago", "severity": "low"})
     if pagos_tras_cancelar:
@@ -304,13 +410,26 @@ def get_admin_warnings():
                          "text": f"{len(pagos_tras_cancelar)} pedidos cancelados recibieron el pago: hay que reembolsar",
                          "severity": "high", "count": len(pagos_tras_cancelar),
                          "orderIds": [o.get("orderId") for o in pagos_tras_cancelar]})
+    if warning_cfg.get("showLowStock", True) and bajo_minimo:
+        peor = bajo_minimo[0]
+        plural = "" if len(bajo_minimo) == 1 else "s"
+        warnings.append({
+            "type": "stock_min",
+            "text": (f"{len(bajo_minimo)} producto{plural} bajo su mínimo · "
+                     f"{peor['productName']} en {peor['stockName']}: {peor['qty']} de {peor['minStock']}"),
+            "severity": "high" if peor["qty"] <= 0 else "medium",
+            "count": len(bajo_minimo), "items": bajo_minimo[:20],
+        })
     if warning_cfg.get("showPendingTransfers", True) and pending_transfers:
         warnings.append({"type": "stocks", "text": f"{pending_transfers} transferencias pendientes por recibir", "severity": "medium"})
     if warning_cfg.get("showPosSalesToday", True) and pos_sales_today:
         plural = "" if pos_sales_today == 1 else "s"
         warnings.append({"type": "pos", "text": f"{pos_sales_today} venta{plural} POS registrada{plural} hoy", "severity": "low"})
 
-    return utils._json_response(200, {"warnings": warnings})
+    # La antigüedad de la tabla de Pedidos se mide contra el reloj del servidor,
+    # nunca con `Date.now()` del navegador (o vuelven a salir "0 días" en todos).
+    return utils._json_response(200, {"warnings": warnings, "serverNow": ahora_iso,
+                                      "agingRedDays": dias_rojo})
 
 # --- HANDLERS USUARIO (GRANULARES) ---
 

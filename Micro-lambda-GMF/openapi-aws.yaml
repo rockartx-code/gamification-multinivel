@@ -3336,6 +3336,85 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete F · ronda 26 ──
+  /inventory/pos/turno/abrir:
+    post:
+      summary: "Abrir turno de caja declarando el fondo inicial"
+      description: |
+        Privilegio: `pos_register_sale`. Cuerpo `{stockId?, openingCash, note?}`. Escribe la
+        apertura del turno (quién declaró el fondo y a qué hora) y el arqueo la prefiere sobre
+        el fondo heredado del corte anterior. Con el turno ya andando (ventas o retiros) responde
+        400: el fondo se corrige cerrando el corte.
+      operationId: posAbrirTurno
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "{opening:{openingId, openingCash, declaredBy, createdAt}, arqueo}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/turno/resumen/enviar:
+    post:
+      summary: "Entregar el turno: manda el resumen por correo a la gerente"
+      description: |
+        Privilegio: `access_screen_stats`, o el propio usuario para su turno. Cuerpo
+        `{userId?, date?, email?, reenviar?}`. Reutiliza el texto que ya arma el GET y lo manda al
+        correo de `pos.shiftSummaryNotifyEmail` (o al que se escriba). Sella `notifiedTo` y
+        `notifiedAt`: enviar dos veces responde `alreadySent` sin mandar otro correo.
+      operationId: turnoResumenEnviar
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "{sent, to, sentAt, userId, date, counters} o {sent:false, alreadySent:true}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/stocks/minimos:
+    get:
+      summary: "Mínimo de piezas por producto"
+      description: "Privilegio: `access_screen_stocks`. Devuelve `{minStockDefault, minimos:{productId: piezas}}`."
+      operationId: stockMinimosLeer
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{minStockDefault, minimos}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    put:
+      summary: "Guardar el mínimo de piezas de uno o varios productos"
+      description: |
+        Privilegio: `stock_add_inventory`. Cuerpo `{minimos: {productId: piezas}}` (máximo 200).
+        Guarda `minStock` en cada producto; por debajo de él la tabla de Stocks lo pinta en rojo
+        y sale en Acciones urgentes con su sucursal.
+      operationId: stockMinimosGuardar
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{ok, minStockDefault, minimos}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

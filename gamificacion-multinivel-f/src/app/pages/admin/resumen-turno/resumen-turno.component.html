@@ -134,6 +134,31 @@
         <p *ngIf="copyMessage" class="mt-2 text-xs" [class.text-forest]="!copyFailed" [class.text-danger-deep]="copyFailed" role="status" aria-live="polite">{{ copyMessage }}</p>
         <textarea readonly class="mt-3 w-full rounded-xl border border-olive-20 bg-white/70 p-3 font-mono text-xs text-main" rows="8" [value]="resumen.text" aria-label="Texto del resumen de turno"></textarea>
       </div>
+
+      <!-- Entregar el turno por correo (paquete F · ronda 26, propuesta 30) -->
+      <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+        <h2 class="text-sm font-extrabold text-main">Entregar el turno</h2>
+        <p class="text-xs text-muted">
+          Se manda este mismo resumen por correo, como ya se manda el corte de caja. Así queda escrito quién lo
+          recibió y a qué hora, sin depender de WhatsApp.
+        </p>
+        <p *ngIf="yaEntregado" class="mt-2 rounded-xl border border-olive-20 bg-white/70 px-3 py-2 text-xs text-main">{{ yaEntregado }}</p>
+        <div class="mt-3 flex flex-wrap items-end gap-3">
+          <ui-form-field type="email" label="Correo de tu gerente" name="correoGerente"
+            [placeholder]="correoConfigurado ? 'Se usa el correo que ya está configurado' : 'gerente@tutienda.mx'"
+            [ngModel]="correoDestino" (ngModelChange)="correoDestino = $event" wrapperClass="block min-w-[16rem]"
+            [helpText]="correoConfigurado ? 'Déjalo vacío para mandarlo al correo configurado por gerencia.' : 'Todavía no hay un correo configurado para los resúmenes de turno.'"></ui-form-field>
+          <div class="flex flex-col items-start gap-1 pb-1">
+            <ui-button size="md" variant="primary" [disabled]="!!motivoEnvioDeshabilitado()" (pressed)="enviar()">
+              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+              {{ enviando ? 'Enviando…' : (reenviarPendiente ? 'Enviarlo otra vez' : 'Enviar a mi gerente') }}
+            </ui-button>
+            <span *ngIf="motivoEnvioDeshabilitado() as motivo" class="max-w-[18rem] text-xs text-muted">{{ motivo }}</span>
+          </div>
+        </div>
+        <p *ngIf="mensajeEnvio" class="mt-2 text-xs text-forest" role="status" aria-live="polite">{{ mensajeEnvio }}</p>
+        <p *ngIf="errorEnvio" class="mt-2 text-xs text-danger-deep" role="status" aria-live="polite">{{ errorEnvio }}</p>
+      </div>
     </ng-container>
   </main>
 </section>

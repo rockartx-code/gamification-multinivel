@@ -199,4 +199,18 @@ export interface ResumenTurno {
   text: string;
   /** Solo llega a quien puede ver el turno de otros (access_screen_stats). */
   team?: Array<{ id: string; name: string }>;
+  // ── Paquete F · ronda 26 (propuesta 30): entregar el turno por correo ──
+  /** A quién se le entregó ya este turno, y cuándo. */
+  notifiedTo?: string;
+  notifiedAt?: string;
+  /** Hay un correo de gerencia configurado (`pos.shiftSummaryNotifyEmail`). */
+  notifyEmailConfigured?: boolean;
+}
+
+export interface EnvioResumenTurno {
+  sent: boolean;
+  alreadySent?: boolean;
+  to: string;
+  sentAt?: string;
+  message?: string;
 }

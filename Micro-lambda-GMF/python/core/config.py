@@ -66,7 +66,11 @@ def _default_app_config() -> dict:
                 {"gen": 5, "rate": Decimal("0.02"), "reqActiveDirects": 5, "reqPersonalPC": 160, "reqLines": 3, "reqPCPerLine": 750},
             ],
         },
-        "orders": {"requireStockOnShipped": True, "requireDispatchLinesOnShipped": True},
+        # agingRedDays (paquete F · ronda 26): días a partir de los cuales un pedido
+        # pagado sin envío se pinta en rojo en la tabla y su aviso sube a urgente.
+        # "37 días se ven igual que 1 día" (renata-2027-04-10).
+        "orders": {"requireStockOnShipped": True, "requireDispatchLinesOnShipped": True,
+                   "agingRedDays": 7},
         "pos": {
             "defaultCustomerName": "Publico en General",
             "defaultPaymentStatus": "paid_branch",
@@ -77,10 +81,22 @@ def _default_app_config() -> dict:
             # monedas para contar por denominación, y si una diferencia entre lo
             # contado y lo esperado exige motivo.
             "cashCutNotifyEmail": "",
+            # Paquete F · ronda 26: a quién se le entrega el turno desde
+            # "Resumen de turno" (vacío = el botón pide escribir el correo).
+            # Toño se lo mandaba a Renata por WhatsApp.
+            "shiftSummaryNotifyEmail": "",
             "denominations": [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
             "requireDifferenceReason": True,
+            # Paquete F · ronda 26: abrir turno. Con True, una caja que nunca ha
+            # cerrado un corte pide el fondo con el que arranca en vez de enseñar
+            # un "$0.00" de solo lectura (el sobrante falso de $540 de Mireya).
+            "requireOpeningCash": True,
         },
-        "stocks": {"requireLinkedUserForTransferReceive": True},
+        # minStockDefault (paquete F · ronda 26): mínimo de piezas por producto y
+        # sucursal cuando el producto no trae el suyo (`PRODUCT.minStock`). Con 0
+        # no se vigila nada; con un número, la tabla lo pinta en rojo y sale en
+        # Acciones urgentes.
+        "stocks": {"requireLinkedUserForTransferReceive": True, "minStockDefault": 0},
         "payments": {
             "mercadoLibre": {
                 "enabled": False, "accessToken": "", "currencyId": "MXN",
@@ -96,6 +112,8 @@ def _default_app_config() -> dict:
         "adminWarnings": {
             "showCommissions": True, "showShipping": True, "showPendingPayments": True,
             "showPendingTransfers": True, "showPosSalesToday": True,
+            # Paquete F · ronda 26: productos por debajo de su mínimo.
+            "showLowStock": True,
         },
         # freeShippingMin: importe a partir del cual el envío es gratis; 0 = sin regla.
         # freeShippingBasis: "gross" mide la regla sobre el subtotal bruto (lo que el

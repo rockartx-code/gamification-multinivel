@@ -1664,9 +1664,74 @@
           <div class="space-y-4" *ngIf="currentView === 'stocks' && canAccessView('stocks')">
             <div class="grid gap-3 md:grid-cols-4">
               <ui-kpi-card label="Stocks" [value]="stocks.length"></ui-kpi-card>
-              <ui-kpi-card label="Transferencias" [value]="transfers.length"></ui-kpi-card>
+              <ui-kpi-card label="Piezas en inventario" [value]="totalDeTodoElInventario"></ui-kpi-card>
+              <ui-kpi-card label="Bajo su mínimo" [value]="productosBajoMinimo"></ui-kpi-card>
               <ui-kpi-card label="Pendientes recibir" [value]="pendingTransfersCount"></ui-kpi-card>
-              <ui-kpi-card label="Danos registrados" [value]="stockDamages.length"></ui-kpi-card>
+            </div>
+
+            <!-- Paquete F · ronda 26 (propuesta 28): el inventario de todas las
+                 sucursales, con su total y su mínimo, antes que cualquier formulario. -->
+            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold text-main">Existencias por producto y sucursal</div>
+                  <div class="mt-1 text-xs text-gray-600">
+                    Lo que hay hoy en cada bodega, con el total y el mínimo de cada producto. Por debajo del mínimo
+                    se pinta en rojo y sale en Acciones urgentes.
+                    <a href="#bitacora-inventario" class="font-semibold text-main underline">Ver la bitácora de entradas y salidas</a>.
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-1" *ngIf="hasPermission('stock_add_inventory')">
+                  <ui-button size="sm" variant="primary" [disabled]="!hayMinimosSinGuardar || guardandoMinimos" (pressed)="guardarMinimos()">
+                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                    {{ guardandoMinimos ? 'Guardando…' : 'Guardar mínimos' }}
+                  </ui-button>
+                  <span *ngIf="!hayMinimosSinGuardar" class="max-w-[16rem] text-right text-micro text-gray-500">
+                    Escribe el mínimo de un producto para poder guardarlo.
+                  </span>
+                </div>
+              </div>
+
+              <div *ngIf="mensajeMinimos" class="mt-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{{ mensajeMinimos }}</div>
+              <div *ngIf="errorMinimos" class="mt-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorMinimos }}</div>
+
+              <div *ngIf="!stocks.length" class="mt-3 text-sm text-gray-600">
+                Todavía no hay ninguna bodega dada de alta. Créala en "Alta de stock" y aquí verás sus existencias.
+              </div>
+
+              <div *ngIf="stocks.length" class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
+                <div class="flex min-w-[42rem] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
+                  <div class="w-56 shrink-0">Producto</div>
+                  <div *ngFor="let s of totalesPorSucursalStable" class="flex-1 text-right">{{ s.stockName }}</div>
+                  <div class="w-20 shrink-0 text-right">Total</div>
+                  <div class="w-24 shrink-0 text-right">Mínimo</div>
+                </div>
+                <div *ngFor="let fila of inventarioPorSucursalStable"
+                  class="flex min-w-[42rem] items-center border-b border-olive-20 px-4 py-3 last:border-b-0">
+                  <div class="w-56 shrink-0 truncate" [title]="fila.productName">{{ fila.productName }}</div>
+                  <div *ngFor="let celda of fila.porSucursal" class="flex-1 text-right"
+                    [ngClass]="celda.bajoMinimo ? 'font-bold text-red-700' : 'text-main'">
+                    {{ celda.qty }}
+                    <span *ngIf="celda.bajoMinimo" class="ml-1 text-micro">bajo mínimo</span>
+                  </div>
+                  <div class="w-20 shrink-0 text-right font-semibold">{{ fila.total }}</div>
+                  <div class="w-24 shrink-0 text-right">
+                    <input *ngIf="hasPermission('stock_add_inventory'); else soloMinimo"
+                      type="number" min="0" inputmode="numeric"
+                      class="w-16 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-right text-sm"
+                      [attr.aria-label]="'Mínimo de ' + fila.productName"
+                      [ngModel]="minimoEnPantalla(fila.productId)"
+                      (ngModelChange)="cambiarMinimo(fila.productId, $event)" />
+                    <ng-template #soloMinimo><span class="text-gray-600">{{ fila.minStock }}</span></ng-template>
+                  </div>
+                </div>
+                <div class="flex min-w-[42rem] items-center border-t border-olive-30 bg-ivory-80 px-4 py-3 font-semibold">
+                  <div class="w-56 shrink-0">Total por sucursal</div>
+                  <div *ngFor="let s of totalesPorSucursalStable" class="flex-1 text-right">{{ s.total }}</div>
+                  <div class="w-20 shrink-0 text-right">{{ totalDeTodoElInventario }}</div>
+                  <div class="w-24 shrink-0"></div>
+                </div>
+              </div>
             </div>
 
             <div *ngIf="stockFeedbackMessage" class="rounded-2xl border px-4 py-3 text-sm"
@@ -1679,10 +1744,21 @@
                    pintaba para cualquiera y solo el botón estaba condicionado: ver
                    el formulario es lo que hizo escribir a la cajera de tercer día
                    "puedo dar de alta una bodega o sucursal nueva; ¿por qué me deja
-                   hacer eso a mí?". Sin `stock_create` ya no se pinta. -->
+                   hacer eso a mí?". Sin `stock_create` ya no se pinta.
+                   Paquete F · ronda 26 · propuesta 28d · y quien sí puede lo ve
+                   plegado: Stocks abre con el inventario, no con el alta. -->
               <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('stock_create')">
-                <div class="text-sm font-semibold text-main">Alta de stock</div>
-                <div class="mt-1 text-xs text-gray-600">Crea bodega/sucursal con nombre y ubicacion.</div>
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div class="text-sm font-semibold text-main">Alta de stock</div>
+                    <div class="mt-1 text-xs text-gray-600">Fundar una bodega o sucursal nueva. Casi nunca hace falta.</div>
+                  </div>
+                  <ui-button size="sm" variant="ghost" (pressed)="altaStockAbierta = !altaStockAbierta">
+                    <i class="fa-solid" [ngClass]="altaStockAbierta ? 'fa-chevron-up' : 'fa-plus'" aria-hidden="true"></i>
+                    {{ altaStockAbierta ? 'Ocultar el formulario' : 'Dar de alta una bodega' }}
+                  </ui-button>
+                </div>
+                <ng-container *ngIf="altaStockAbierta">
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                   <ui-form-field
                     label="Nombre"
@@ -1734,6 +1810,7 @@
                   <i class="fa-solid fa-plus" aria-hidden="true"></i>
                   Crear stock
                 </ui-button>
+                </ng-container>
               </div>
 
               <div class="rounded-2xl border border-olive-30 surface-soft p-4">
@@ -1800,7 +1877,10 @@
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div class="text-sm font-semibold text-main">Inventario por producto</div>
-                  <div class="mt-1 text-xs text-gray-600">Solo se registran entradas; las salidas quedan en bitacora.</div>
+                  <div class="mt-1 text-xs text-gray-600">
+                    Solo se registran entradas; las salidas quedan en la
+                    <a href="#bitacora-inventario" class="font-semibold text-main underline">bitácora de entradas y salidas</a>.
+                  </div>
                 </div>
                 <div class="flex flex-wrap gap-2" *ngIf="hasPermission('stock_add_inventory')">
                   <ui-button size="sm" variant="ghost" (pressed)="downloadInventoryTemplate()">
@@ -1913,9 +1993,9 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div id="bitacora-inventario" class="rounded-2xl border border-olive-30 surface-soft p-4">
               <div class="text-sm font-semibold text-main">Registro de entradas y salidas</div>
-              <div class="mt-1 text-xs text-gray-600">Bitacora de inventario por producto y stock.</div>
+              <div class="mt-1 text-xs text-gray-600">Bitácora de inventario por producto y sucursal.</div>
               <div class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
                 <div class="grid grid-cols-[.9fr_1fr_1fr_.9fr_.8fr_1fr_1fr] border-b border-olive-20 bg-ivory-80 px-4 py-3 font-semibold">
                   <div>Fecha</div><div>Stock</div><div>Producto</div><div>Tipo</div><div>Cantidad</div><div>Motivo/Ref</div><div>Usuario</div>

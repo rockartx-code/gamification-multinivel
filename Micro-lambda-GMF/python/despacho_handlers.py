@@ -12,6 +12,7 @@ Rutas (prefijo `/inventory` ya retirado por el anfitrión):
     POST envios/cerrar          (programable)  order_mark_delivered o superadmin
     GET|POST envios/{orderId}/confirmar-entrega?token=   pública (enlace del correo)
     GET  turno/resumen?userId=&date=           access_screen_stats o el propio usuario
+    POST turno/resumen/enviar                  access_screen_stats o el propio usuario
 
 Lo que vivió la gente (docs/qa/22 §6): Beto transcribía 13 productos por 10
 pedidos para saber si alcanzaba el inventario, copiaba cada guía de WhatsApp
@@ -19,6 +20,7 @@ en 7 pasos, marcaba entregados uno a uno y redactaba a mano el mensaje de
 cierre de turno; cuatro pedidos se quedaron meses en "Enviada".
 """
 import csv
+import html
 import io
 import json
 import secrets
@@ -27,6 +29,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import core_utils as utils
+from core import email as correo
 from core import order_emails
 from core.http import HttpRequest
 
@@ -698,24 +701,102 @@ def _texto_resumen(resumen: dict) -> str:
     return "\n".join(partes)
 
 
-def handle_turno_resumen(query: dict, headers: dict) -> dict:
-    """GET turno/resumen?userId=&date= — calculado al vuelo desde la bitácora."""
+def _escapar(texto) -> str:
+    return html.escape(str(texto or ""))
+
+
+def _id_resumen(user_id: str, fecha: str) -> str:
+    """Un registro de envío por persona y día: mandar dos veces no duplica."""
+    return f"TRN-{user_id}-{fecha}"
+
+
+def _correo_resumen_configurado() -> str:
+    """`pos.shiftSummaryNotifyEmail`: a quién se le entrega el turno."""
+    pos = dict((utils._load_app_config() or {}).get("pos") or {})
+    return str(pos.get("shiftSummaryNotifyEmail") or "").strip()
+
+
+def _html_resumen(resumen: dict) -> str:
+    """El mismo texto del resumen, en el correo, sin volver a calcularlo."""
+    lineas = "".join(f"<p style='margin:6px 0'>{_escapar(linea)}</p>"
+                     for linea in str(resumen.get("text") or "").split("\n") if linea.strip())
+    cuerpo = (f"<h1 class='title'>Resumen de turno · {_escapar(str(resumen['user']['name']))}</h1>"
+              f"<p>{_escapar(str(resumen['date']))}</p>{lineas}")
+    return correo._email_shell(cuerpo)
+
+
+def handle_enviar_resumen(body: dict, headers: dict) -> dict:
+    """POST turno/resumen/enviar — entregar el turno sin WhatsApp (propuesta 30).
+
+    Toño se lo mandaba a Renata por WhatsApp y Mireya no tuvo dónde reportar el
+    sobrante. Calcado del correo del corte de caja: mismo destinatario
+    configurable, mismo sello para que no se mande dos veces sin rastro.
+    """
+    user_id, fecha, err = _turno_pedido(body or {}, headers)
+    if err:
+        return err
+    destino = str((body or {}).get("email") or "").strip() or _correo_resumen_configurado()
+    if not destino or "@" not in destino:
+        return utils._json_response(400, {
+            "message": "No hay un correo al que entregar el turno: escribe uno aquí o pide a la gerente que lo "
+                       "configure en Configuración → Punto de venta → Correo para resúmenes de turno."})
+
+    registro_id = _id_resumen(user_id, fecha)
+    previo = utils._get_by_id("POS_SHIFT_SUMMARY", registro_id) or {}
+    if previo.get("notifiedAt") and not bool((body or {}).get("reenviar")):
+        return utils._json_response(200, {
+            "sent": False, "alreadySent": True, "to": previo.get("notifiedTo"), "sentAt": previo.get("notifiedAt"),
+            "message": f"Este turno ya se entregó a {previo.get('notifiedTo')} el "
+                       f"{previo.get('notifiedAt')}. Vuelve a enviarlo solo si hace falta."})
+
+    resumen = armar_resumen(user_id, fecha)
+    c = resumen["counters"]
+    asunto = (f"Resumen de turno · {resumen['user']['name']} · {fecha}: "
+              f"{c['dispatched']} despachados, {c['delivered']} entregados")
+    correo._send_ses_email(destino, asunto, resumen["text"], _html_resumen(resumen))
+    now = utils._now_iso()
+    utils._put_entity("POS_SHIFT_SUMMARY", registro_id, {
+        "entityType": "posShiftSummary", "summaryId": registro_id,
+        "userId": user_id, "date": fecha,
+        "notifiedTo": destino, "notifiedAt": now,
+        "sentCount": int(previo.get("sentCount") or 0) + 1,
+        "counters": c, "createdAt": previo.get("createdAt") or now,
+    }, created_at_iso=previo.get("createdAt"))
+    utils._audit_event("turno.resumen_enviado", headers, {"userId": user_id, "date": fecha},
+                       {"to": destino})
+    return utils._json_response(200, {"sent": True, "to": destino, "sentAt": now,
+                                      "userId": user_id, "date": fecha, "counters": c})
+
+
+def _turno_pedido(datos: dict, headers: dict):
+    """(userId, fecha, error) del turno solicitado, con la misma autorización.
+
+    El propio turno siempre; el de otra persona exige `access_screen_stats`.
+    """
     actor = utils._extract_actor(headers or {})
     if actor.get("role") not in ("admin", "employee"):
-        return utils._json_response(403, {"message": "Acceso denegado: se requiere perfil admin"})
-    user_id = str((query or {}).get("userId") or actor.get("user_id") or "").strip()
+        return "", "", utils._json_response(403, {"message": "Acceso denegado: se requiere perfil admin"})
+    user_id = str((datos or {}).get("userId") or actor.get("user_id") or "").strip()
     if not user_id:
-        return utils._json_response(400, {"message": "Indica de quién es el turno (userId)"})
+        return "", "", utils._json_response(400, {"message": "Indica de quién es el turno (userId)"})
     if user_id != str(actor.get("user_id") or ""):
         err = utils._require_admin(headers, "access_screen_stats")
         if err:
-            return err
-    fecha = str((query or {}).get("date") or "").strip() or _ahora().strftime("%Y-%m-%d")
+            return "", "", err
+    fecha = str((datos or {}).get("date") or "").strip() or _ahora().strftime("%Y-%m-%d")
     try:
         datetime.strptime(fecha, "%Y-%m-%d")
     except ValueError:
-        return utils._json_response(400, {"message": "La fecha debe ir como AAAA-MM-DD"})
+        return "", "", utils._json_response(400, {"message": "La fecha debe ir como AAAA-MM-DD"})
+    return user_id, fecha, None
 
+
+def armar_resumen(user_id: str, fecha: str) -> dict:
+    """El resumen del turno, calculado una sola vez desde la bitácora.
+
+    Es de los endpoints más llamados de la simulación: ni se recalcula dos
+    veces ni se amplían sus ventanas de fecha.
+    """
     stocks = _nombres_de_stocks()
 
     despachados, entregados = [], []
@@ -781,6 +862,20 @@ def handle_turno_resumen(query: dict, headers: dict) -> dict:
         },
     }
     resumen["text"] = _texto_resumen(resumen)
+    return resumen
+
+
+def handle_turno_resumen(query: dict, headers: dict) -> dict:
+    """GET turno/resumen?userId=&date= — calculado al vuelo desde la bitácora."""
+    user_id, fecha, err = _turno_pedido(query, headers)
+    if err:
+        return err
+    resumen = armar_resumen(user_id, fecha)
+    envio = utils._get_by_id("POS_SHIFT_SUMMARY", _id_resumen(user_id, fecha)) or {}
+    if envio.get("notifiedAt"):
+        resumen["notifiedTo"] = envio.get("notifiedTo")
+        resumen["notifiedAt"] = envio.get("notifiedAt")
+    resumen["notifyEmailConfigured"] = bool(_correo_resumen_configurado())
     # La gerente elige de quién es el turno: solo quien puede ver el de otros recibe la lista.
     if utils._require_admin(headers, "access_screen_stats") is None:
         resumen["team"] = sorted(
@@ -826,4 +921,6 @@ def atender(peticion: HttpRequest) -> Optional[dict]:
         return handle_confirmar_entrega(seg[1], metodo, query, headers)
     if seg == ["turno", "resumen"] and metodo == "GET":
         return handle_turno_resumen(query, headers)
+    if seg == ["turno", "resumen", "enviar"] and metodo == "POST":
+        return handle_enviar_resumen(cuerpo, headers)
     return None

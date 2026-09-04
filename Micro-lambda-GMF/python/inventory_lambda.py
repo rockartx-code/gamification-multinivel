@@ -80,6 +80,67 @@ def _nombre_empleado(user_id) -> str:
     except Exception:
         return ""
 
+# --- MÍNIMOS DE INVENTARIO (paquete F · ronda 26, propuesta 28) ---
+
+def _min_stock_default() -> int:
+    """`stocks.minStockDefault`: el mínimo que aplica a un producto sin el suyo."""
+    stocks_cfg = dict((utils._load_app_config() or {}).get("stocks") or {})
+    try:
+        return max(0, int(utils._to_decimal(stocks_cfg.get("minStockDefault", 0))))
+    except Exception:
+        return 0
+
+
+def minimo_de(product: dict, por_omision: int) -> int:
+    """Mínimo de un producto: el suyo si lo tiene, si no el de la configuración."""
+    if product.get("minStock") is None:
+        return por_omision
+    try:
+        return max(0, int(utils._to_decimal(product.get("minStock"))))
+    except Exception:
+        return por_omision
+
+
+def handle_stock_minimos(method, body, headers):
+    """GET|PUT /stocks/minimos — el mínimo por producto.
+
+    Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+    hasta que un cliente pague y no haya". El mínimo se guarda en el producto
+    y lo vigila Acciones urgentes.
+    """
+    productos = utils._query_bucket("PRODUCT")
+    por_omision = _min_stock_default()
+    if method == "GET":
+        return utils._json_response(200, {
+            "minStockDefault": por_omision,
+            "minimos": {str(p.get("productId")): minimo_de(p, por_omision) for p in productos},
+        })
+
+    crudo = (body or {}).get("minimos")
+    if not isinstance(crudo, dict) or not crudo:
+        return utils._json_response(400, {"message": "Manda los mínimos como {productId: piezas}"})
+    if len(crudo) > 200:
+        return utils._json_response(400, {"message": "Son demasiados productos de una vez (máximo 200)"})
+    conocidos = {str(p.get("productId")): p for p in productos}
+    limpios = {}
+    for pid, valor in crudo.items():
+        if str(pid) not in conocidos:
+            return utils._json_response(400, {"message": f"El producto {pid} no existe"})
+        try:
+            piezas = int(utils._to_decimal(valor))
+        except Exception:
+            return utils._json_response(400, {"message": f"El mínimo de {conocidos[str(pid)].get('name') or pid} tiene que ser un número de piezas"})
+        if piezas < 0:
+            return utils._json_response(400, {"message": "Un mínimo no puede ser negativo"})
+        limpios[str(pid)] = piezas
+    for pid, piezas in limpios.items():
+        producto = conocidos[pid]
+        utils._update_by_id("PRODUCT", producto.get("productId"), "SET minStock = :m",
+                            {":m": utils._to_decimal(piezas)})
+    utils._audit_event("stock.minimos", headers, {}, {"productos": len(limpios)})
+    return utils._json_response(200, {"ok": True, "minStockDefault": por_omision, "minimos": limpios})
+
+
 # --- HANDLERS: GESTIÓN DE ALMACENES ---
 
 def handle_stocks(method, body, stock_id=None):
@@ -182,6 +243,20 @@ def handle_transfers(method, body, query, transfer_id=None, headers=None):
         return utils._json_response(201, {"transfer": item})
 
 # --- HANDLERS: PUNTO DE VENTA (POS) ---
+
+#: Lo que la cajera necesita oír cuando no hay ningún código configurado: no
+#: es que el suyo esté mal, es que nadie ha puesto uno. Mireya escribió 1234
+#: "a ver qué pasaba", la pantalla la dejó pasar y el 403 le llegó al final,
+#: con el dinero contado en la mano y el turno terminado.
+SIN_CODIGO_POS = ("Todavía no hay un código de autorización configurado: nadie puede autorizar "
+                  "un retiro. Deja todo como fondo y avisa a tu gerente para que lo configure.")
+
+
+def _pos_auth_configurado() -> bool:
+    """¿Hay un código de autorización guardado? (sin decir cuál, nunca)."""
+    cfg = utils._get_by_id("CONFIG", "pos-auth-v1")
+    return bool(cfg and str(cfg.get("posAuthCode") or "").strip())
+
 
 def _validate_pos_auth(code: str) -> bool:
     """Validates a POS authorization code against stored config."""
@@ -610,8 +685,11 @@ def handle_cash_cut(body, headers):
                 "message": f"El fondo (${cash_to_keep:,.2f}) más el retiro (${withdrawal_amount:,.2f}) deben sumar exactamente lo contado (${cash_counted:,.2f})"})
         receiver = str(body.get("withdrawalReceiver") or "").strip()[:120]
         if withdrawal_amount > utils.D_ZERO:
+            if not _pos_auth_configurado():
+                return utils._json_response(403, {"authCodeConfigured": False, "message": SIN_CODIGO_POS})
             if not _validate_pos_auth(str(body.get("authCode") or "").strip()):
-                return utils._json_response(403, {"message": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código"})
+                return utils._json_response(403, {"authCodeConfigured": True,
+                                                  "message": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código"})
             if not receiver:
                 return utils._json_response(400, {"message": "Indica quién recibe el efectivo retirado"})
         crudo = body.get("denominations")
@@ -642,6 +720,10 @@ def handle_cash_cut(body, headers):
         "withdrawalCount": len(pending_withdrawals),
         # Arqueo (paquete E)
         "openingCash": utils._to_decimal(opening),
+        # De dónde salió el fondo inicial (paquete F, ronda 26): lo declaró la
+        # cajera al abrir el turno o lo heredó el corte anterior.
+        "openingSource": arqueo.get("openingSource") or "sin_declarar",
+        "openingId": (arqueo.get("opening") or {}).get("openingId"),
         "cashSales": utils._to_decimal(arqueo["cashSales"]),
         "cashSettlements": utils._to_decimal(arqueo["cashSettlements"]),
         "cashFromMixed": utils._to_decimal(arqueo["cashFromMixed"]),
@@ -668,6 +750,12 @@ def handle_cash_cut(body, headers):
         if w_id:
             utils._update_by_id("POS_WITHDRAWAL", w_id, "SET cashCutId = :c", {":c": cut_id})
 
+    # La apertura del turno queda dentro del corte: el siguiente arqueo hereda el
+    # fondo de este corte y no vuelve a sumar el que se declaró al abrir.
+    apertura_id = (arqueo.get("opening") or {}).get("openingId")
+    if apertura_id:
+        utils._update_by_id("POS_SHIFT_OPENING", apertura_id, "SET cashCutId = :c", {":c": cut_id})
+
     # El retiro del corte queda como un retiro más, ya ligado al corte para que
     # el siguiente arqueo no lo vuelva a restar.
     if modo_arqueo and withdrawal_amount > utils.D_ZERO:
@@ -688,13 +776,21 @@ def handle_cash_cut(body, headers):
 
 
 def handle_validate_pos_auth(body, headers):
-    """POST /pos/validate-auth"""
+    """POST /pos/validate-auth — tres estados, no dos (propuesta 6).
+
+    Sin código configurado no se dice "incorrecto": se dice que no hay ninguno
+    y se ofrece la salida honesta (dejar todo como fondo, que no exige código).
+    """
     code = str(body.get("code") or "").strip()
+    if not _pos_auth_configurado():
+        return utils._json_response(409, {"configured": False, "ok": False, "message": SIN_CODIGO_POS})
     if not code:
-        return utils._json_response(400, {"message": "Se requiere el codigo de autorizacion"})
+        return utils._json_response(400, {"configured": True, "ok": False,
+                                          "message": "Escribe el código de autorización de tu gerente"})
     if not _validate_pos_auth(code):
-        return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
-    return utils._json_response(200, {"ok": True})
+        return utils._json_response(403, {"configured": True, "ok": False,
+                                          "message": "Código de autorización incorrecto: pídeselo a tu gerente"})
+    return utils._json_response(200, {"ok": True, "configured": True})
 
 
 def handle_pos_auth_config(method, body, headers):
@@ -740,8 +836,11 @@ def handle_pos_withdrawal(body, headers):
     if amount > disponible:
         return utils._json_response(400, {
             "message": f"Solo hay ${disponible:,.2f} en caja: no puedes retirar ${amount:,.2f}"})
+    if not _pos_auth_configurado():
+        return utils._json_response(403, {"authCodeConfigured": False, "message": SIN_CODIGO_POS})
     if not _validate_pos_auth(auth_code):
-        return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
+        return utils._json_response(403, {"authCodeConfigured": True,
+                                          "message": "Código de autorización incorrecto: pídeselo a tu gerente"})
 
     wdr_id = f"WDR-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
@@ -834,6 +933,18 @@ def _route_stocks(method: str, segments: list, body: dict, query: dict, headers:
                 err = utils._require_admin(headers, "stock_create_transfer")
                 if err: return err
             return handle_transfers(method, body, query, headers=headers)
+
+        # /stocks/minimos — mínimo por producto (antes de /stocks/{id})
+        if segments[1] == "minimos" and len(segments) == 2:
+            if method == "GET":
+                err = utils._require_admin(headers, "access_screen_stocks")
+                if err: return err
+                return handle_stock_minimos("GET", body, headers)
+            if method == "PUT":
+                err = utils._require_admin(headers, "stock_add_inventory")
+                if err: return err
+                return handle_stock_minimos("PUT", body, headers)
+            return utils._json_response(405, {"message": "Método no permitido"})
 
         # /stocks/movements
         if segments[1] == "movements":

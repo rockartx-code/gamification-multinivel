@@ -9,6 +9,7 @@ import {
   DespachoEnviarPayload,
   DespachoEnviarResponse,
   DespachoPendientesResponse,
+  EnvioResumenTurno,
   PreferenciasDespacho,
   RastreoResponse,
   ResumenTurno,
@@ -84,5 +85,28 @@ export class DespachoService {
       params = params.set('date', date);
     }
     return this.http.get<ResumenTurno>(`${this.baseUrl}/inventory/turno/resumen`, { headers: this.headers, params });
+  }
+
+  /**
+   * Paquete F · ronda 26 (propuesta 28): mínimo de piezas por producto. Toño no
+   * tenía forma de saber que Guadalajara se quedó en una pieza hasta que un
+   * cliente pagara y no hubiera.
+   */
+  minimosDeStock(): Observable<{ minStockDefault: number; minimos: Record<string, number> }> {
+    return this.http.get<{ minStockDefault: number; minimos: Record<string, number> }>(
+      `${this.baseUrl}/inventory/stocks/minimos`, { headers: this.headers });
+  }
+
+  guardarMinimosDeStock(minimos: Record<string, number>): Observable<{ ok: boolean; minimos: Record<string, number> }> {
+    return this.http.put<{ ok: boolean; minimos: Record<string, number> }>(
+      `${this.baseUrl}/inventory/stocks/minimos`, { minimos }, { headers: this.headers });
+  }
+
+  /**
+   * Paquete F · ronda 26 (propuesta 30): entregar el turno por correo, como ya
+   * se entrega el corte de caja. Toño se lo mandaba a Renata por WhatsApp.
+   */
+  enviarResumenTurno(body: { userId?: string; date?: string; email?: string; reenviar?: boolean }): Observable<EnvioResumenTurno> {
+    return this.http.post<EnvioResumenTurno>(`${this.baseUrl}/inventory/turno/resumen/enviar`, body, { headers: this.headers });
   }
 }
