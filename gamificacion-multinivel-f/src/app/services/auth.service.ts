@@ -234,7 +234,9 @@ export class AuthService {
 
   defaultRoute(user: AuthUser | null | undefined = this.currentUser): string {
     if (this.hasAdminPanelAccess(user)) {
-      return '/admin';
+      // Paquete E · ronda 26 · Al entrar se abre la pantalla de esta persona,
+      // no una lista de pedidos que no es de nadie (propuesta 33).
+      return this.adminLandingRoute(user);
     }
     return '/dashboard';
   }
