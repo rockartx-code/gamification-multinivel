@@ -45,6 +45,21 @@ def ultimo_corte(stock_id: str, attendant_user_id) -> dict:
     return {}
 
 
+def ultima_apertura(stock_id: str, attendant_user_id, since: Optional[str] = None) -> dict:
+    """Apertura de turno vigente: la más reciente posterior al último corte.
+
+    Mireya llegó con $500 en el cajón y la pantalla le dijo "Fondo inicial
+    $0.00": el fondo solo podía heredarse del corte anterior. Aquí se lee lo
+    que la persona que tiene el dinero en la mano declaró al abrir.
+    """
+    for item in utils._iter_bucket("POS_SHIFT_OPENING", forward=False, sk_from=since or None):
+        if (_stock_str(item.get("stockId")) == _stock_str(stock_id)
+                and str(item.get("attendantUserId")) == str(attendant_user_id)
+                and not item.get("cashCutId")):
+            return item
+    return {}
+
+
 def ventas_desde(stock_id: str, attendant_user_id, since: Optional[str]) -> list:
     """Ventas del operador en ese almacén sin corte, de cualquier forma de pago.
 
@@ -123,10 +138,26 @@ def calcular_arqueo(stock_id: str, attendant_user_id) -> dict:
     ventas = ventas_desde(stock_id, attendant_user_id, since)
     retiros = retiros_desde(stock_id, attendant_user_id, since)
 
-    opening = utils._to_decimal(corte.get("cashToKeep")) if corte else utils.D_ZERO
+    # Gana la apertura del turno vigente sobre el corte anterior (docs 26 §4.11):
+    # es el dato más reciente y lo declaró quien tiene el dinero en la mano.
+    apertura = ultima_apertura(stock_id, attendant_user_id, since)
+    if apertura:
+        opening = utils._to_decimal(apertura.get("openingCash"))
+        origen_fondo = "apertura"
+    elif corte:
+        opening = utils._to_decimal(corte.get("cashToKeep"))
+        origen_fondo = "corte_anterior"
+    else:
+        opening = utils.D_ZERO
+        origen_fondo = "sin_declarar"
     cash_sales = cash_settlements = cash_mixed = no_efectivo = utils.D_ZERO
     movimientos = []
-    if opening > utils.D_ZERO:
+    if origen_fondo == "apertura":
+        quien = str(apertura.get("declaredByName") or "").strip()
+        movimientos.append({"type": "opening", "id": apertura.get("openingId"), "at": apertura.get("createdAt"),
+                            "amount": opening, "label": "Fondo declarado al abrir el turno",
+                            "customerName": quien})
+    elif opening > utils.D_ZERO:
         movimientos.append({"type": "opening", "id": corte.get("cashCutId"), "at": corte.get("createdAt"),
                             "amount": opening, "label": "Fondo que dejó el corte anterior"})
     ventas_vivas = 0
@@ -167,6 +198,8 @@ def calcular_arqueo(stock_id: str, attendant_user_id) -> dict:
         "attendantUserId": attendant_user_id,
         "since": since,
         "lastCut": corte,
+        "opening": apertura,
+        "openingSource": origen_fondo,
         "ventas": ventas,
         "retiros": retiros,
         "openingCash": opening,
@@ -186,6 +219,7 @@ def arqueo_para_respuesta(arqueo: dict) -> dict:
     """Versión JSON (floats) del arqueo, con lo que la pantalla necesita."""
     cfg = config_pos()
     corte = arqueo.get("lastCut") or {}
+    apertura = arqueo.get("opening") or {}
     ventas = [v for v in arqueo["ventas"] if v.get("status") != "voided"]
     return {
         "stockId": arqueo["stockId"],
@@ -194,6 +228,12 @@ def arqueo_para_respuesta(arqueo: dict) -> dict:
         "lastCutId": corte.get("cashCutId"),
         "lastCutAt": corte.get("createdAt"),
         "openingCash": float(arqueo["openingCash"]),
+        # De dónde sale el fondo: "apertura" (lo declaró la cajera), "corte_anterior"
+        # (lo dejó el corte de ayer) o "sin_declarar" (esta caja nunca ha cerrado un
+        # corte: la pantalla pide capturarlo en vez de enseñar un $0.00 de adorno).
+        "openingSource": arqueo.get("openingSource") or "sin_declarar",
+        "openingDeclaredAt": apertura.get("createdAt"),
+        "openingDeclaredBy": apertura.get("declaredByName") or "",
         "cashSales": float(arqueo["cashSales"]),
         "cashSettlements": float(arqueo["cashSettlements"]),
         "cashFromMixed": float(arqueo["cashFromMixed"]),
@@ -209,7 +249,11 @@ def arqueo_para_respuesta(arqueo: dict) -> dict:
             "denominations": denominaciones(),
             "requireDifferenceReason": bool(cfg.get("requireDifferenceReason", True)),
             "notifyEmailConfigured": bool(str(cfg.get("cashCutNotifyEmail") or "").strip()),
+            "requireOpeningCash": bool(cfg.get("requireOpeningCash", True)),
         },
+        # La caja nunca cerró un corte ni declaró fondo: la pantalla pide capturarlo.
+        "needsOpening": (arqueo.get("openingSource") == "sin_declarar"
+                         and bool(cfg.get("requireOpeningCash", True))),
     }
 
 
@@ -233,6 +277,74 @@ def handle_arqueo(query: dict, headers: dict) -> dict:
     return utils._json_response(200, {"arqueo": arqueo_para_respuesta(calcular_arqueo(stock_id, user_id))})
 
 
+def _nombre_de_quien_declara(user_id) -> str:
+    """Nombre del empleado para la bitácora del turno (una sola lectura)."""
+    if user_id in (None, ""):
+        return ""
+    try:
+        emp = utils._get_by_id("EMPLOYEE", user_id)
+        if not emp and str(user_id).isdigit():
+            emp = utils._get_by_id("EMPLOYEE", int(user_id))
+        return str((emp or {}).get("name") or "")
+    except Exception:
+        return ""
+
+
+def handle_abrir_turno(body: dict, headers: dict) -> dict:
+    """POST /pos/turno/abrir — declara el fondo con el que arranca la caja.
+
+    Antes no había ninguna forma de decirlo: el fondo se heredaba del corte
+    anterior y, sin corte, era cero. Mireya arrancó con $500 reales contra un
+    "Fondo inicial $0.00" y su corte salió con un sobrante falso de $540.
+    """
+    user_id = (headers or {}).get("x-user-id")
+    if not user_id:
+        return utils._json_response(400, {"message": "Se requiere x-user-id"})
+    stock_id = str((body or {}).get("stockId") or "").strip() or _stock_del_usuario(user_id)
+    if not stock_id:
+        return utils._json_response(400, {"message": "Sin sucursal vinculada: pide a la gerente que te ligue a una"})
+    if (body or {}).get("openingCash") is None:
+        return utils._json_response(400, {"message": "Escribe el fondo con el que arrancas (puede ser $0.00)"})
+    try:
+        fondo = utils._to_decimal(body.get("openingCash"))
+    except Exception:
+        fondo = None
+    if fondo is None or fondo < utils.D_ZERO:
+        return utils._json_response(400, {"message": "El fondo con el que arrancas no puede ser negativo"})
+
+    arqueo = calcular_arqueo(stock_id, user_id)
+    if arqueo["salesCount"] or arqueo["withdrawalCount"]:
+        return utils._json_response(400, {
+            "message": f"Este turno ya tiene movimientos ({arqueo['salesCount']} venta(s) y "
+                       f"{arqueo['withdrawalCount']} retiro(s)): el fondo ya no se puede cambiar. "
+                       f"Ciérralo con el corte de caja y anota la diferencia con su motivo."})
+
+    anterior = arqueo.get("opening") or {}
+    now = utils._now_iso()
+    apertura_id = anterior.get("openingId") or f"APE-{utils.uuid.uuid4().hex[:8].upper()}"
+    item = {
+        "entityType": "posShiftOpening",
+        "openingId": apertura_id,
+        "stockId": stock_id,
+        "attendantUserId": user_id,
+        "openingCash": fondo,
+        "declaredBy": str(user_id),
+        "declaredByName": _nombre_de_quien_declara(user_id),
+        "note": str((body or {}).get("note") or "").strip()[:200],
+        "createdAt": anterior.get("createdAt") or now,
+        "updatedAt": now,
+    }
+    utils._put_entity("POS_SHIFT_OPENING", apertura_id, item, created_at_iso=item["createdAt"])
+    utils._audit_event("pos.shift_open", headers, {"stockId": stock_id},
+                       {"openingId": apertura_id, "openingCash": str(fondo)})
+    return utils._json_response(201, {
+        "opening": {"openingId": apertura_id, "stockId": stock_id, "openingCash": float(fondo),
+                    "declaredBy": item["declaredByName"] or str(user_id), "createdAt": item["createdAt"],
+                    "reabierto": bool(anterior)},
+        "arqueo": arqueo_para_respuesta(calcular_arqueo(stock_id, user_id)),
+    })
+
+
 def handle_get_cash_cut(cut_id: str, headers: dict) -> dict:
     """GET /pos/cash-cuts/{id} — el corte completo, para imprimir el comprobante."""
     cut = utils._get_by_id("POS_CASH_CUT", cut_id)
@@ -245,6 +357,14 @@ def _dinero(valor) -> str:
     return f"${utils._to_decimal(valor):,.2f}"
 
 
+def _origen_fondo(origen) -> str:
+    """De dónde salió el fondo inicial, en palabras, para el comprobante."""
+    return {
+        "apertura": "declarado al abrir el turno",
+        "corte_anterior": "lo dejó el corte anterior",
+    }.get(str(origen or ""), "sin declarar")
+
+
 def texto_comprobante(cut: dict) -> str:
     """Comprobante del corte en texto plano (también sirve de cuerpo del correo)."""
     lineas = [
@@ -252,7 +372,7 @@ def texto_comprobante(cut: dict) -> str:
         f"Sucursal: {cut.get('stockId')} · Operador: {cut.get('attendantUserId')}",
         f"Periodo: {cut.get('startedAt') or '-'} a {cut.get('endedAt') or cut.get('createdAt') or '-'}",
         "",
-        f"Fondo inicial: {_dinero(cut.get('openingCash'))}",
+        f"Fondo inicial: {_dinero(cut.get('openingCash'))} ({_origen_fondo(cut.get('openingSource'))})",
         f"Ventas en efectivo: {_dinero(cut.get('cashSales'))}",
         f"Abonos en efectivo: {_dinero(cut.get('cashSettlements'))}",
         f"Parte en efectivo de pagos mixtos: {_dinero(cut.get('cashFromMixed'))}",
@@ -272,7 +392,7 @@ def texto_comprobante(cut: dict) -> str:
 
 def html_comprobante(cut: dict) -> str:
     filas = [
-        ("Fondo inicial", cut.get("openingCash")),
+        (f"Fondo inicial ({_origen_fondo(cut.get('openingSource'))})", cut.get("openingCash")),
         ("Ventas en efectivo", cut.get("cashSales")),
         ("Abonos en efectivo", cut.get("cashSettlements")),
         ("Parte en efectivo de pagos mixtos", cut.get("cashFromMixed")),
@@ -324,6 +444,11 @@ def atender(peticion):
     if seg[:1] != ["pos"]:
         return None
     metodo = peticion.method
+    if seg == ["pos", "turno", "abrir"] and metodo == "POST":
+        err = utils._require_admin(peticion.headers, PRIVILEGIO)
+        if err:
+            return err
+        return handle_abrir_turno(peticion.body, peticion.headers)
     if seg == ["pos", "arqueo"] and metodo == "GET":
         err = utils._require_admin(peticion.headers, PRIVILEGIO)
         if err:

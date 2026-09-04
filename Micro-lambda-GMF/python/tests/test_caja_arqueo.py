@@ -211,3 +211,101 @@ def test_una_venta_anulada_no_cuenta_en_el_efectivo_esperado(inventory_lambda, u
     assert r["statusCode"] == 200, r["body"]
     control = inventory_lambda._build_pos_cash_control(stock, "paco")
     assert control["currentTotal"] == 480 and control["salesCount"] == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Abrir turno (paquete F · ronda 26, propuesta 5)
+#
+# Mireya, cajera de tercer día: "llegué con $500 en el cajón y la pantalla me
+# dijo Fondo inicial $0.00 en un campo de solo lectura". Vendió todo el día
+# descuadrada, el corte le salió con un sobrante falso de $540 y los $1,040 se
+# quedaron toda la noche en el cajón de la tienda.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_una_caja_sin_corte_previo_pide_el_fondo_y_lo_declara(inventory_lambda, utils):
+    pid, stock = _mostrador(utils)
+
+    # Antes de declarar nada: la pantalla no enseña un $0.00 de adorno, pide el fondo.
+    r = _peticion(inventory_lambda, "GET", "/inventory/pos/arqueo", headers=ADMIN | CAJERA, query={"stockId": stock})
+    arqueo = json.loads(r["body"])["arqueo"]
+    assert arqueo["openingCash"] == 0
+    assert arqueo["openingSource"] == "sin_declarar"
+    assert arqueo["needsOpening"] is True
+
+    # Mireya declara los $500 con los que arrancó.
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"stockId": stock, "openingCash": 500}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+    cuerpo = json.loads(r["body"])
+    assert cuerpo["opening"]["openingCash"] == 500
+    assert cuerpo["arqueo"]["openingCash"] == 500 and cuerpo["arqueo"]["needsOpening"] is False
+
+    # El fondo declarado manda en el arqueo y aparece en "Ver movimientos".
+    _venta(inventory_lambda, pid, stock)  # 480 en efectivo
+    r = _peticion(inventory_lambda, "GET", "/inventory/pos/arqueo", headers=ADMIN | CAJERA, query={"stockId": stock})
+    arqueo = json.loads(r["body"])["arqueo"]
+    assert arqueo["openingCash"] == 500 and arqueo["openingSource"] == "apertura"
+    assert arqueo["expectedCash"] == 980
+    apertura = arqueo["movements"][0]
+    assert apertura["type"] == "opening" and apertura["amount"] == 500
+    assert apertura["label"] == "Fondo declarado al abrir el turno"
+    assert apertura["at"] and apertura["id"].startswith("APE-")
+
+
+def test_con_el_fondo_declarado_el_corte_cuadra_en_vez_de_sobrar_540(inventory_lambda, utils):
+    """El corte de Mireya: $500 de fondo + $40 de venta = $540 contados, diferencia $0."""
+    pid, stock = _mostrador(utils)
+    _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+              cuerpo={"stockId": stock, "openingCash": 500}, headers=ADMIN | CAJERA)
+    _venta(inventory_lambda, pid, stock, items=[{"productId": pid, "name": "Klinhart", "price": 40, "quantity": 1}])
+
+    r = inventory_lambda.handle_cash_cut({"stockId": stock, "cashCounted": 540, "cashToKeep": 540,
+                                          "withdrawalAmount": 0}, CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+    corte = json.loads(r["body"])["cut"]
+    assert corte["cashExpected"] == 540 and corte["difference"] == 0
+    assert corte["openingSource"] == "apertura"
+    assert "declarado al abrir el turno" in inventory_lambda.caja_handlers.texto_comprobante(corte)
+
+    # La apertura queda dentro del corte: el siguiente turno hereda el fondo del corte.
+    control = inventory_lambda._build_pos_cash_control(stock, "paco")
+    assert control["openingCash"] == 540
+
+
+def test_el_fondo_no_se_cambia_con_el_turno_ya_andando(inventory_lambda, utils):
+    pid, stock = _mostrador(utils)
+    _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+              cuerpo={"stockId": stock, "openingCash": 500}, headers=ADMIN | CAJERA)
+    # Corregirse antes de vender sí se puede: no se crea una segunda apertura.
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"stockId": stock, "openingCash": 300}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+    assert json.loads(r["body"])["arqueo"]["openingCash"] == 300
+    assert len(utils._query_bucket("POS_SHIFT_OPENING")) == 1
+
+    _venta(inventory_lambda, pid, stock)
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"stockId": stock, "openingCash": 900}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 400
+    mensaje = json.loads(r["body"])["message"]
+    assert "ya tiene movimientos" in mensaje and "corte de caja" in mensaje
+
+
+def test_abrir_turno_pide_privilegio_sucursal_y_monto_valido(inventory_lambda, utils):
+    _mostrador(utils)
+    empleado = {"x-user-id": "nadia", "x-user-role": "employee", "x-user-privileges": "{}"}
+    assert _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                     cuerpo={"stockId": "STK-1", "openingCash": 100}, headers=empleado)["statusCode"] == 403
+
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"openingCash": 100}, headers=ADMIN | {"x-user-id": "nadia"})
+    assert r["statusCode"] == 400 and "gerente" in json.loads(r["body"])["message"]
+
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"stockId": "STK-1"}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 400 and "fondo" in json.loads(r["body"])["message"]
+
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"stockId": "STK-1", "openingCash": -50}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 400 and "negativo" in json.loads(r["body"])["message"]

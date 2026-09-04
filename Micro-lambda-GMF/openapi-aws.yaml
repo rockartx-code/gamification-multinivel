@@ -3195,6 +3195,30 @@ paths:
     options:
       <<: *cors-options
 
+  # ── Paquete F · ronda 26 ──
+  /inventory/pos/turno/abrir:
+    post:
+      summary: "Abrir turno de caja declarando el fondo inicial"
+      description: |
+        Privilegio: `pos_register_sale`. Cuerpo `{stockId?, openingCash, note?}`. Escribe la
+        apertura del turno (quién declaró el fondo y a qué hora) y el arqueo la prefiere sobre
+        el fondo heredado del corte anterior. Con el turno ya andando (ventas o retiros) responde
+        400: el fondo se corrige cerrando el corte.
+      operationId: posAbrirTurno
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "{opening:{openingId, openingCash, declaredBy, createdAt}, arqueo}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth

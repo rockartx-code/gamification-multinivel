@@ -642,6 +642,10 @@ def handle_cash_cut(body, headers):
         "withdrawalCount": len(pending_withdrawals),
         # Arqueo (paquete E)
         "openingCash": utils._to_decimal(opening),
+        # De dónde salió el fondo inicial (paquete F, ronda 26): lo declaró la
+        # cajera al abrir el turno o lo heredó el corte anterior.
+        "openingSource": arqueo.get("openingSource") or "sin_declarar",
+        "openingId": (arqueo.get("opening") or {}).get("openingId"),
         "cashSales": utils._to_decimal(arqueo["cashSales"]),
         "cashSettlements": utils._to_decimal(arqueo["cashSettlements"]),
         "cashFromMixed": utils._to_decimal(arqueo["cashFromMixed"]),
@@ -667,6 +671,12 @@ def handle_cash_cut(body, headers):
         w_id = w.get("withdrawalId") or w.get("id")
         if w_id:
             utils._update_by_id("POS_WITHDRAWAL", w_id, "SET cashCutId = :c", {":c": cut_id})
+
+    # La apertura del turno queda dentro del corte: el siguiente arqueo hereda el
+    # fondo de este corte y no vuelve a sumar el que se declaró al abrir.
+    apertura_id = (arqueo.get("opening") or {}).get("openingId")
+    if apertura_id:
+        utils._update_by_id("POS_SHIFT_OPENING", apertura_id, "SET cashCutId = :c", {":c": cut_id})
 
     # El retiro del corte queda como un retiro más, ya ligado al corte para que
     # el siguiente arqueo no lo vuelva a restar.

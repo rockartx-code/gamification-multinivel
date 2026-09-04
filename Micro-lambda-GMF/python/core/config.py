@@ -64,6 +64,10 @@ def _default_app_config() -> dict:
             "cashCutNotifyEmail": "",
             "denominations": [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
             "requireDifferenceReason": True,
+            # Paquete F · ronda 26: abrir turno. Con True, una caja que nunca ha
+            # cerrado un corte pide el fondo con el que arranca en vez de enseñar
+            # un "$0.00" de solo lectura (el sobrante falso de $540 de Mireya).
+            "requireOpeningCash": True,
         },
         "stocks": {"requireLinkedUserForTransferReceive": True},
         "payments": {
