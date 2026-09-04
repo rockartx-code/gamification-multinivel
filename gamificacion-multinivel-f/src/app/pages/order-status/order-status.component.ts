@@ -17,7 +17,14 @@ import { ApiService } from '../../services/api.service';
 })
 export class OrderStatusComponent implements OnInit, OnDestroy {
   private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'] as const;
-  private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private pollingTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Paquete C · ronda 26 · propuesta 13 ──
+  /** Se pregunta pronto y luego cada vez menos: 5 s, 10 s, 20 s y 30 s. Antes era un minuto fijo,
+   *  y Ernesto y Mariana se quedaron mirando una pantalla en blanco con $609 y $829 en juego. */
+  private readonly pollingDelaysMs = [5000, 10000, 20000, 30000];
+  private pollingIndex = 0;
+  /** Se agotaron los reintentos y el pago sigue sin confirmarse: se dice qué hacer. */
+  paymentConfirmTimedOut = false;
   orderId = '';
   orderReference = '';
   paymentId = '';
@@ -69,9 +76,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     );
 
     if (this.redirectStatus === 'failure') {
-      this.redirectMessage = 'Tu operacion fue rechazada.';
+      this.redirectMessage = 'Tu operación fue rechazada. No se te cobró nada: puedes volver a intentarlo.';
     } else if (this.redirectStatus === 'pending' || this.redirectStatus === 'success') {
-      this.redirectMessage = 'Tu operacion esta siendo procesada y validando por tu banco.';
+      this.redirectMessage = 'Tu operación está siendo procesada y validándose con tu banco.';
     }
 
     this.orderId = this.orderReference || routeOrderId || this.paymentId;
@@ -86,7 +93,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
       this.loadOrder(this.orderReference || this.paymentId || this.orderId);
     }
 
-    if (this.redirectStatus === 'success') {
+    if (this.redirectStatus === 'success' || this.redirectStatus === 'pending') {
       this.startSuccessPolling();
     }
   }
@@ -119,22 +126,59 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (!lookupId) {
       return;
     }
-    this.pollingTimer = setInterval(() => this.loadOrder(lookupId), 60000);
+    this.pollingIndex = 0;
+    this.paymentConfirmTimedOut = false;
+    this.scheduleNextPoll(lookupId);
+  }
+
+  private scheduleNextPoll(lookupId: string): void {
+    const espera = this.pollingDelaysMs[this.pollingIndex];
+    if (espera === undefined) {
+      // Se acabaron los reintentos: en vez de callar, se dice qué hacer.
+      this.paymentConfirmTimedOut = true;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.pollingIndex += 1;
+    this.pollingTimer = setTimeout(() => {
+      this.pollingTimer = null;
+      this.loadOrder(lookupId);
+      if (this.isConfirmingPayment) {
+        this.scheduleNextPoll(lookupId);
+      }
+    }, espera);
   }
 
   private stopSuccessPolling(): void {
     if (this.pollingTimer) {
-      clearInterval(this.pollingTimer);
+      clearTimeout(this.pollingTimer);
       this.pollingTimer = null;
     }
+  }
+
+  /** Volvimos de la pasarela y el pedido todavía no está pagado: no hay nada que cobrar otra vez. */
+  get isConfirmingPayment(): boolean {
+    if (this.redirectStatus !== 'success' && this.redirectStatus !== 'pending') {
+      return false;
+    }
+    if (this.order?.markedByWebhook) {
+      return false;
+    }
+    return this.normalizeStatus(this.order?.status) === 'pending';
+  }
+
+  /** Mientras se confirma no se pinta el resumen: un total en $0 al volver de pagar asusta. */
+  get isSummaryVisible(): boolean {
+    return Boolean(this.order) && !this.isLoading;
   }
 
   private syncOrderStatusState(order: AdminOrder | null | undefined): void {
     const backendStatus = this.normalizeStatus(order?.status);
     const markedByWebhook = Boolean(order?.markedByWebhook);
     const shouldStop = markedByWebhook || ['paid', 'shipped', 'delivered'].includes(backendStatus);
-    if (markedByWebhook) {
+    if (shouldStop) {
       this.redirectMessage = '';
+      this.paymentConfirmTimedOut = false;
     }
 
     const cutoffWindow = Boolean(order?.discountCutoffWindow);
@@ -152,10 +196,10 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   get statusLabel(): string {
     if (this.redirectStatus === 'failure') {
-      return 'Operacion rechazada';
+      return 'Operación rechazada';
     }
-    if ((this.redirectStatus === 'success' || this.redirectStatus === 'pending') && this.normalizeStatus(this.order?.status) === 'pending') {
-      return 'Operacion en validacion';
+    if (this.isConfirmingPayment) {
+      return 'Estamos confirmando tu pago';
     }
     const status = this.normalizeStatus(this.order?.status);
     if (status === 'paid') {
@@ -344,7 +388,15 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
     this.checkoutError = '';
     this.isCheckoutLoading = true;
-    this.api.createOrderCheckout(targetOrderId).subscribe({
+    // Sin `successUrl` la pasarela no sabía a dónde regresar y el mensaje "estamos confirmando tu
+    // pago", que ya estaba escrito, no se encendía nunca. El cuerpo manda mano sobre la
+    // configuración del servidor, así que aquí se le dice a dónde volver.
+    const regreso = this.buildReturnUrl(targetOrderId);
+    this.api.createOrderCheckout(targetOrderId, regreso ? {
+      successUrl: regreso,
+      pendingUrl: regreso,
+      failureUrl: regreso
+    } : {}).subscribe({
       next: (response) => {
         const checkout = response?.checkout;
         const initPoint = String(checkout?.initPoint || checkout?.sandboxInitPoint || '').trim();
@@ -362,6 +414,18 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /** URL de esta misma pantalla, para que la pasarela devuelva a la persona a su pedido. */
+  private buildReturnUrl(orderId: string): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    const { origin, pathname } = window.location;
+    if (!origin) {
+      return '';
+    }
+    return `${origin}${pathname}#/orden/${encodeURIComponent(orderId)}`;
   }
 
   private normalizeRedirectStatusFromList(...candidates: Array<string | null>): 'success' | 'failure' | 'pending' | '' {

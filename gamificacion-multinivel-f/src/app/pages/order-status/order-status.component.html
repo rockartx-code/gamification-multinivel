@@ -46,8 +46,27 @@
           </span>
         </div>
 
+        <!-- Paquete C · propuesta 13: mientras se confirma el pago no se pinta un resumen en $0 -->
+        <div *ngIf="isConfirmingPayment" class="mt-5 rounded-2xl border border-gold-35 bg-gold-12 p-5">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-circle-notch fa-spin mt-1 text-gold" aria-hidden="true"></i>
+            <div>
+              <div class="text-lg font-extrabold text-main">Estamos confirmando tu pago</div>
+              <p class="mt-1 text-sm text-gray-700">
+                Tu banco ya recibió la operación y estamos esperando la confirmación. No cierres esta página
+                y <strong>no vuelvas a pagar</strong>: en cuanto se confirme, esta pantalla cambia sola y te
+                llega un correo.
+              </p>
+              <p *ngIf="paymentConfirmTimedOut" class="mt-2 text-sm text-amber-800">
+                Sigue en validación. Actualiza esta página en unos minutos; si tu banco ya te cobró y el pedido
+                no cambia, escríbenos con tu folio <strong>{{ displayOrderRef }}</strong> y lo revisamos.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Order summary -->
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <div *ngIf="isSummaryVisible" class="mt-5 grid gap-4 sm:grid-cols-2">
           <div class="rounded-2xl border border-olive-30 bg-white/70 p-4">
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               Detalle
@@ -121,7 +140,8 @@
           </div>
         </div>
 
-        <div *ngIf="redirectMessage" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-main">
+        <!-- Mientras se confirma, el aviso ya lo da la tarjeta de arriba: no se repite. -->
+        <div *ngIf="redirectMessage && !isConfirmingPayment" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-main">
           {{ redirectMessage }}
         </div>
         <div *ngIf="cutoffCountdownMessage" class="mt-3 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-main">
@@ -267,13 +287,13 @@
           <div class="mt-1 text-lg font-extrabold text-main">Pagas al recoger en sucursal</div>
           <div class="mt-1 text-xs text-gray-500">Tu pedido está reservado. Pasa a la sucursal, paga en caja y ahí mismo te lo entregan.</div>
         </div>
-        <div *ngIf="statusValue === 'pending' && !(order?.deliveryType === 'pickup' && order?.pickupPaymentMethod === 'at_store')" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
+        <div *ngIf="statusValue === 'pending' && !isConfirmingPayment && !(order?.deliveryType === 'pickup' && order?.pickupPaymentMethod === 'at_store')" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Pago</div>
               <div class="mt-1 text-lg font-extrabold text-main">MercadoPago</div>
               <div class="mt-1 text-xs text-gray-500">
-                Realiza tu pago en linea de forma segura.
+                Realiza tu pago en línea de forma segura.
               </div>
             </div>
 
@@ -289,7 +309,7 @@
               size="md"
               [disabled]="isCheckoutLoading"
               (pressed)="payWithMercadoPago()">
-              {{ isCheckoutLoading ? 'Redirigiendo...' : 'Pagar con MercadoPago' }}
+              {{ isCheckoutLoading ? 'Te llevamos a la pasarela...' : 'Pagar con MercadoPago' }}
             </ui-button>
             <div *ngIf="checkoutError" class="mt-2 text-xs text-red-600">
               {{ checkoutError }}
@@ -348,8 +368,8 @@
         </div>
 
         <!-- States -->
-        <div *ngIf="isLoading" class="mt-4 text-xs text-gray-600">
-          Cargando estado de la orden...
+        <div *ngIf="isLoading && !isConfirmingPayment" class="mt-4 text-xs text-gray-600">
+          Cargando el estado de tu pedido...
         </div>
 
         <div *ngIf="!isLoading && !order && redirectStatus !== 'success'"
@@ -357,8 +377,8 @@
           <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">
             Sin resultados
           </div>
-          <div class="mt-2 font-medium text-main">No se encontro la orden.</div>
-          <div class="mt-1 text-xs text-gray-500">Verifica el ID o intenta nuevamente.</div>
+          <div class="mt-2 font-medium text-main">No encontramos la orden.</div>
+          <div class="mt-1 text-xs text-gray-500">Revisa el folio o vuelve a intentarlo.</div>
         </div>
       </div>
     </div>
