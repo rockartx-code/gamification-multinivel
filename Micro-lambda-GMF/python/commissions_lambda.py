@@ -103,7 +103,8 @@ def _compute_order_vp(order: dict, mxn_per_vp: float) -> float:
 # `_get_by_id` (1-3 GetItem). Estos mapas viven mientras dura la invocación del
 # Lambda y se vacían al empezar cada acción para no arrastrar datos entre
 # eventos distintos de un mismo contenedor tibio.
-_CACHE: dict = {"customers": {}, "states": {}, "children": {}, "vg": {}, "activos_forzados": set()}
+_CACHE: dict = {"customers": {}, "states": {}, "children": {}, "vg": {}, "activos_forzados": set(),
+                "recalculo": {}}
 
 
 def _reset_request_cache() -> None:
@@ -114,6 +115,11 @@ def _reset_request_cache() -> None:
     # Paquete A: `(cliente, mes)` que se consideran activos aunque el mes no lo
     # diga (gracia `blockedGraceDays`: la activación de este mes libera el anterior).
     _CACHE["activos_forzados"] = set()
+    # Paquete A · propuesta 32: "Le movieron la fecha a mis comisiones". Al
+    # recalcular se anula la fila (que queda tachada, con su fecha) y se
+    # escribe otra con el mismo `rowId`: aquí viaja el motivo del recálculo
+    # para poder decirlo en la fila.
+    _CACHE["recalculo"] = {}
 
 
 def _cached_customer(customer_id) -> dict:
@@ -640,18 +646,43 @@ def _distribute_commissions(order: dict, order_id: str, month_key: str, commissi
         row_id = f"{order_id}#G{gen}"
 
         cambio = {"nuevo": True}
+        ahora = utils._now_iso()
+        # Propuesta 32: la fecha de la comisión es la del pedido y no se mueve.
+        fecha_pedido = str(order.get("createdAt") or "") or ahora
 
         def _mutate(item):
+            # La reevaluación anula la fila (queda tachada, con su fecha) antes
+            # de reescribirla con el mismo `rowId`: de ahí sale su nacimiento.
+            previa = next((r for r in item['ledger'] if r.get('rowId') == row_id), None)
+            nacio = str((previa or {}).get("createdAt") or "") or ahora
             new_row = {
                 "rowId": row_id, "orderId": order_id, "amount": amount,
                 "level": gen, "generation": gen, "status": status,
-                "createdAt": utils._now_iso(),
+                "createdAt": nacio,
+                # La fila la lee la socia: se guarda la fecha del pedido y la
+                # base sobre la que se calculó, para poder explicar el importe
+                # ("10 % de $1,350.00 netos, sin envío = $135.00").
+                "orderCreatedAt": fecha_pedido,
+                "commissionRate": utils._to_decimal(gens.get(gen, {}).get("rate", 0)),
+                "commissionBaseNet": utils._to_decimal(commissionable_net),
             }
             if reason:
                 new_row["reason"] = reason
-            previa = next((r for r in item['ledger'] if r.get('rowId') == row_id), None)
+            cambiada = bool(previa) and not (
+                (previa.get("status") or "").lower() == status
+                and utils._to_decimal(previa.get("amount")) == utils._to_decimal(amount)
+            )
+            if cambiada and _CACHE["recalculo"].get("motivo"):
+                propio = utils._customer_id_str(b_id) == str(_CACHE["recalculo"].get("activador") or "")
+                new_row["recalculatedAt"] = ahora
+                new_row["recalculatedReason"] = (
+                    _CACHE["recalculo"].get("motivoPropio") if propio else _CACHE["recalculo"]["motivo"]
+                )
+            elif previa and previa.get("recalculatedAt"):
+                new_row["recalculatedAt"] = previa["recalculatedAt"]
+                new_row["recalculatedReason"] = previa.get("recalculatedReason") or ""
             # Si la fila ya existía igual (reevaluación del mismo pedido), no es un aviso nuevo.
-            if previa and (previa.get("status") or "").lower() == status and utils._to_decimal(previa.get("amount")) == utils._to_decimal(amount):
+            if previa and not cambiada:
                 cambio["nuevo"] = False
             item['ledger'] = [r for r in item['ledger'] if r.get('rowId') != row_id]
             item['ledger'].append(new_row)
@@ -780,11 +811,13 @@ def _reevaluate_blocked_rows(beneficiary_ids: list, month_key: str) -> list:
     activarse se recalculan esas órdenes con la situación actual del mes.
     """
     orders = {}
+    bloqueadas_antes = {}
     for b_id in beneficiary_ids:
         ledger = _get_ledger_month(b_id, month_key)
         for r in ledger.get("ledger") or []:
             if (r.get("status") or "").lower() == "blocked" and r.get("orderId"):
                 orders[r["orderId"]] = True
+                bloqueadas_antes.setdefault(utils._customer_id_str(b_id), {})[str(r["rowId"])] = utils._to_decimal(r.get("amount"))
 
     redistribuidas = []
     for oid in orders:
@@ -804,7 +837,57 @@ def _reevaluate_blocked_rows(beneficiary_ids: list, month_key: str) -> list:
         redistribuidas.append(oid)
     if redistribuidas:
         utils._log("blocked_rows_reevaluated", "INFO", month=month_key, orders=redistribuidas)
+        _avisar_desbloqueadas(bloqueadas_antes, month_key)
     return redistribuidas
+
+
+def _avisar_desbloqueadas(bloqueadas_antes: dict, month_key: str) -> list:
+    """Propuesta 34: "tu comisión bloqueada se desbloqueó".
+
+    Paulina se activó el 20 y sus comisiones bloqueadas se liberaron sin que
+    nadie se lo dijera. Se compara lo que estaba bloqueado antes del recálculo
+    con lo que quedó: lo que dejó de estarlo se avisa, una sola vez.
+    """
+    if not utils._load_app_config().get("rewards", {}).get("blockedUnlockNotice", True):
+        return []
+    avisadas = []
+    for cid, filas in bloqueadas_antes.items():
+        ledger = _get_ledger_month(cid, month_key)
+        vigentes = {str(r.get("rowId")): (r.get("status") or "").lower() for r in ledger.get("ledger") or []}
+        liberado = sum(
+            (monto for row_id, monto in filas.items() if vigentes.get(row_id) in ("pending", "confirmed")),
+            utils.D_ZERO,
+        )
+        if liberado <= 0:
+            continue
+        if _correo_desbloqueadas(cid, month_key, liberado):
+            avisadas.append(str(cid))
+    return avisadas
+
+
+def _correo_desbloqueadas(cid, month_key: str, monto) -> bool:
+    try:
+        cliente = _cached_customer(cid)
+        para = str((cliente or {}).get("email") or "").strip()
+        if not para or (cliente or {}).get("doNotContact"):
+            return False
+        nombre = (cliente.get("name") or "").split(" ")[0] or "Hola"
+        importe = f"${float(monto):,.2f}"
+        from core.email import _email_shell
+        cuerpo = f"""
+    <div class="icon">🔓</div>
+    <h1 class="title">Se desbloquearon {importe} de comisiones</h1>
+    <p class="lead">Hola <strong>{nombre}</strong>. Ya te activaste este mes, así que las comisiones que estaban bloqueadas pasaron a contar: <strong>{importe}</strong>.</p>
+    <p class="lead">Se confirman cuando los pedidos de tu red se entreguen, y se depositan el día de pago. Las ves en tu panel, en Comisiones.</p>
+    <p class="lead"><a class="btn" href="{pagos_handlers.ENLACE_COMISIONES}">Ver mis comisiones</a></p>"""
+        utils._send_ses_email(para, f"Se desbloquearon {importe} de tus comisiones",
+                              f"Hola {nombre}. Se desbloquearon {importe} de tus comisiones de {month_key} porque ya te activaste. "
+                              f"Las ves en tu panel, en Comisiones: {pagos_handlers.ENLACE_COMISIONES}",
+                              _email_shell(cuerpo))
+        return True
+    except Exception as e:  # pragma: no cover
+        utils._log("blocked_unlock_email_error", "ERROR", customer=cid, err=e)
+        return False
 
 
 def handle_apply_rewards(order_id):
@@ -857,6 +940,10 @@ def handle_apply_rewards(order_id):
     #    activos pudieron cambiar) se vuelven a evaluar.
     if se_activo and cfg.get("reevaluateBlockedOnActivation", True):
         chain = utils._get_customer_upline_ids(buyer_id, MAX_COMMISSION_LEVELS)
+        # Propuesta 32: el recálculo deja dicho por qué, en la propia fila.
+        _CACHE["recalculo"] = {"activador": utils._customer_id_str(buyer_id),
+                               "motivoPropio": "te activaste este mes",
+                               "motivo": "alguien de tu red se activó"}
         _reevaluate_blocked_rows([str(buyer_id), *chain], month_key)
         # Gracia (política 22, opción a; apagada por omisión): si se activó en
         # los primeros N días del mes, lo bloqueado del mes anterior también se
@@ -867,6 +954,7 @@ def handle_apply_rewards(order_id):
             mes_anterior = pagos_handlers._mes_anterior(month_key)
             _CACHE["activos_forzados"].add((utils._customer_id_str(buyer_id), mes_anterior))
             _reevaluate_blocked_rows([str(buyer_id), *chain], mes_anterior)
+        _CACHE["recalculo"] = {}
 
     # 4. Primera activación sin CLABE: se le pide desde ya, no el día de pago.
     if se_activo and cfg.get("clabeReminderOnActivation", True):
