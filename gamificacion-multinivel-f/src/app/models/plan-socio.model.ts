@@ -174,3 +174,57 @@ export function formatoPuntos(valor: number): string {
   const numero = Number.isFinite(valor) ? valor : 0;
   return Number.isInteger(Math.round(numero * 10) / 10) ? String(Math.round(numero)) : numero.toFixed(1);
 }
+
+// ── Paquete B · ronda 26 ────────────────────────────────────────────────────
+// Gemelas de `Micro-lambda-GMF/python/impuestos.py`: la misma cuenta del IVA y
+// la misma redacción de la base de la comisión, escritas una sola vez.
+
+/** Importe siempre con centavos: `$1,350.00`. Es dinero, no un dato suelto. */
+export function formatoPesosExactos(valor: number): string {
+  const monto = Number.isFinite(valor) ? valor : 0;
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(monto);
+}
+
+export interface DesgloseIva {
+  /** Lo que se cobra. No cambia: el IVA se desglosa, nunca se suma. */
+  total: number;
+  /** Base gravable: `total / (1 + tasa)`, redondeada a dos decimales. */
+  base: number;
+  /** `total − base`, de modo que `base + iva === total` al centavo. */
+  iva: number;
+  rate: number;
+  label: string;
+}
+
+/**
+ * Desglosa el IVA de un total que ya lo incluye, con el mismo supuesto que el
+ * servidor (docs/arquitectura/26 §3.1): una sola redondeada, a dos decimales,
+ * mitad arriba, al final y sobre el total; nunca por línea.
+ */
+export function desgloseIva(totalCobrado: number, rate: number, label = 'IVA'): DesgloseIva {
+  const total = Math.round((Number(totalCobrado) || 0) * 100) / 100;
+  const tasa = Number(rate) || 0;
+  if (total <= 0 || tasa <= 0 || tasa >= 1) {
+    return { total, base: total, iva: 0, rate: tasa, label };
+  }
+  const base = Math.round((total / (1 + tasa)) * 100) / 100;
+  return { total, base, iva: Math.round((total - base) * 100) / 100, rate: tasa, label };
+}
+
+/** Cómo llama el negocio a la base de la comisión, con las palabras del plan. */
+export const BASE_COMISION = 'neto pagado por producto, sin envío';
+
+/** La frase larga: página del plan, simulador y correo de comisión. */
+export const FRASE_BASE_COMISION =
+  'Tu comisión se calcula sobre el neto que pagó tu referida por producto ' +
+  '—el precio ya con su descuento, con IVA incluido— y sin contar el envío.';
+
+/** La frase por fila: `10 % de $1,350.00 netos, sin envío = $135.00`. */
+export function textoBaseComision(neto: number, tasa: number, importe: number): string {
+  return `${formatoPorcentaje(tasa)} de ${formatoPesosExactos(neto)} netos, sin envío = ${formatoPesosExactos(importe)}`;
+}
