@@ -174,3 +174,41 @@ def test_la_direccion_guardada_sale_en_el_panel_del_cliente(mundo, utils):
     normalizada = customer_lambda._normalize_dashboard_customer(utils._get_by_id("CUSTOMER", 700))
     assert [d["label"] for d in normalizada["addresses"]] == ["Casa"]
     assert normalizada["defaultAddressId"] == normalizada["addresses"][0]["id"]
+
+
+def test_la_persona_puede_dar_de_alta_su_direccion_desde_su_propio_perfil(mundo, utils):
+    """La otra mitad de la propuesta 19: *"y que la suscripción deje capturar una
+    dirección ahí mismo"*. Sin esto, quien no compró antes con la casilla
+    palomeada seguía sin poder dar de alta la suscripción con envío a domicilio,
+    y el aviso lo mandaba de vuelta a la casilla del carrito."""
+    _, customer_lambda = mundo
+    token = "session-token-ernesto"
+    utils._put_session(token, {"sessionId": token, "userId": "700", "role": "cliente",
+                               "name": "Ernesto Salas", "privileges": {}})
+    cabeceras = {"Authorization": f"Bearer {token}"}
+
+    r = customer_lambda.lambda_handler({"httpMethod": "PATCH", "path": "/customers/profile", "headers": cabeceras,
+                                        "queryStringParameters": None,
+                                        "body": json.dumps({"newAddress": {**DIRECCION, "label": "Casa",
+                                                                           "recipientName": "Ernesto Salas"}})}, None)
+    assert r["statusCode"] == 200, r["body"]
+    direcciones = json.loads(r["body"])["customer"]["addresses"]
+    assert len(direcciones) == 1
+    guardada = direcciones[0]
+    assert guardada["label"] == "Casa" and guardada["postalCode"] == "64000"
+    assert guardada["id"] and guardada["isDefault"] is True, "la primera queda como la de siempre"
+
+    # La misma dirección otra vez no duplica la lista (misma dedupe que el checkout).
+    r = customer_lambda.lambda_handler({"httpMethod": "PATCH", "path": "/customers/profile", "headers": cabeceras,
+                                        "queryStringParameters": None,
+                                        "body": json.dumps({"newAddress": {**DIRECCION, "label": "Casa"}})}, None)
+    assert len(json.loads(r["body"])["customer"]["addresses"]) == 1
+
+
+def test_sin_sesion_no_se_le_escribe_una_direccion_a_nadie(mundo, utils):
+    _, customer_lambda = mundo
+    r = customer_lambda.lambda_handler({"httpMethod": "PATCH", "path": "/customers/profile", "headers": {},
+                                        "queryStringParameters": None,
+                                        "body": json.dumps({"newAddress": dict(DIRECCION)})}, None)
+    assert r["statusCode"] == 401, r["body"]
+    assert not (utils._get_by_id("CUSTOMER", 700).get("addresses") or [])

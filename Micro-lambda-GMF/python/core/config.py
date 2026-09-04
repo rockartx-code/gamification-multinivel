@@ -114,6 +114,8 @@ def _default_app_config() -> dict:
             "showPendingTransfers": True, "showPosSalesToday": True,
             # Paquete F · ronda 26: productos por debajo de su mínimo.
             "showLowStock": True,
+            # Facturas solicitadas sin emitir (propuesta 20).
+            "showInvoices": True,
         },
         # freeShippingMin: importe a partir del cual el envío es gratis; 0 = sin regla.
         # freeShippingBasis: "gross" mide la regla sobre el subtotal bruto (lo que el

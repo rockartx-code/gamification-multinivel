@@ -173,7 +173,13 @@ def _detalle_mes(cid, month_key: str, item: dict) -> dict:
     bloqueado = utils._to_decimal(item.get("totalBlocked", 0))
     detalle = {"frenoPorConfirmar": None, "frenoBloqueado": None}
     if pendiente > 0 or bloqueado > 0:
-        filas = utils._get_ledger_month(cid, month_key).get("ledger") or []
+        # El listado ya trae las filas en el esquema por omisión: releer el mes
+        # aquí era un GetItem más por beneficiaria (la pantalla del día de pago
+        # en O(2N)) para sacar lo que ya estaba en la mano. En el esquema por
+        # filas la cabecera viene sin `ledger` y ahí sí hay que ir por ellas.
+        filas = list(item.get("ledger") or [])
+        if not filas:
+            filas = utils._get_ledger_month(cid, month_key).get("ledger") or []
         if pendiente > 0:
             detalle["frenoPorConfirmar"] = _freno(
                 filas, "pending", "se confirma cuando el pedido se entrega")
@@ -303,15 +309,21 @@ def handle_pendientes_csv(peticion) -> dict:
     for fila in estado_pagos(mes)["rows"]:
         if fila["status"] == "sin_clabe":
             motivo = "Falta su CLABE: no se le puede depositar."
+            # Lo que la CLABE destraba es el **confirmado**, que es el mismo
+            # número que el archivo del banco pondría para esa persona. Con el
+            # reconocido, el anexo decía 259.20 y dispersion.csv 135.00 del
+            # mismo dinero: el descuadre que este paquete vino a quitar.
+            monto = fila["confirmado"]
         elif fila["status"] == "por_confirmar":
             freno = fila.get("frenoPorConfirmar") or fila.get("frenoBloqueado") or {}
             dias = f" ({freno['dias']} días)" if freno.get("dias") else ""
             motivo = (f"Sin comisión confirmada todavía: {freno.get('texto') or 'esperando el cierre del pedido'}"
                       f"{(' · pedido ' + freno['orderId'] + dias) if freno.get('orderId') else ''}.")
+            monto = fila["reconocido"]
         else:
             continue
         escritor.writerow([
-            _celda_segura(fila["name"]), f"{fila['reconocido']:.2f}",
+            _celda_segura(fila["name"]), f"{monto:.2f}",
             _celda_segura(fila["email"]), _celda_segura(fila["phone"]), motivo,
         ])
     cabeceras = utils._cors_headers("text/csv; charset=utf-8")

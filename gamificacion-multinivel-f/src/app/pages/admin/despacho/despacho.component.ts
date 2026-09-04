@@ -5,11 +5,13 @@ import { RouterLink } from '@angular/router';
 import { finalize, forkJoin, of, catchError } from 'rxjs';
 import { AdminControlService } from '../../../services/admin-control.service';
 
+import { UiAvisoSinAccesoComponent } from '../../../components/ui-aviso-sin-acceso/ui-aviso-sin-acceso.component';
 import { UiBadgeComponent } from '../../../components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../../components/ui-button/ui-button.component';
 import { UiCheckboxComponent } from '../../../components/ui-checkbox/ui-checkbox.component';
 import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-field.component';
 import { UiKpiCardComponent } from '../../../components/ui-kpi-card/ui-kpi-card.component';
+import { UiMenuPanelComponent } from '../../../components/ui-menu-panel/ui-menu-panel.component';
 import { UiModalComponent } from '../../../components/ui-modal/ui-modal.component';
 import {
   BodegaResumen,
@@ -39,7 +41,7 @@ type Tone = 'success' | 'error' | 'info';
 @Component({
   selector: 'app-despacho',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiCheckboxComponent, UiModalComponent, UiKpiCardComponent, UiBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiAvisoSinAccesoComponent, UiMenuPanelComponent, UiButtonComponent, UiFormFieldComponent, UiCheckboxComponent, UiModalComponent, UiKpiCardComponent, UiBadgeComponent],
   templateUrl: './despacho.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [

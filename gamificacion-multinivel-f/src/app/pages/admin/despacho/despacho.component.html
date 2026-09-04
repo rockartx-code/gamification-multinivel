@@ -15,7 +15,15 @@
     </div>
   </header>
 
-  <main class="mx-auto max-w-6xl space-y-5 px-4 py-6">
+  <main class="mx-auto max-w-7xl px-4 py-6">
+    <div class="grid gap-4 lg:grid-cols-[260px_1fr]">
+      <!-- El menú del back office: aquí empieza su día el de almacén y era la
+           única navegación que tenía «Volver a Pedidos», sin menú ni «Cerrar
+           sesión». -->
+      <aside class="no-print hidden lg:block"><ui-menu-panel activeId="despacho"></ui-menu-panel></aside>
+
+      <div class="space-y-5">
+    <ui-aviso-sin-acceso pantallaActual="Despacho en bloque"></ui-aviso-sin-acceso>
 
     <!-- Mensaje del servidor (siempre con el dato guardado) -->
     <div *ngIf="message" class="no-print rounded-2xl border px-4 py-3 text-sm"
@@ -289,6 +297,8 @@
       <div *ngIf="rastreo && rastreo.enabled" class="mt-3 text-xs text-main">
         Último rastreo: {{ rastreo.checked }} consultados · {{ rastreo.delivered.length }} entregados · {{ rastreo.inTransit.length }} en camino
         <span *ngIf="rastreo.errors.length" class="text-danger-deep"> · incidencias: <span *ngFor="let e of rastreo.errors; let last = last">{{ e.orderId }} ({{ e.text }}){{ last ? '' : ', ' }}</span></span>
+      </div>
+    </div>
       </div>
     </div>
   </main>

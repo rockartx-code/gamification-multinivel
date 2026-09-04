@@ -408,7 +408,7 @@ def handle_pos_sale(body, headers):
     # La venta de mostrador congela la tasa del día igual que el checkout: si
     # mañana `taxes.vatRate` cambia, el comprobante de ayer sigue desglosando lo
     # que se cobró ayer. El total no se mueve un centavo; el IVA es desglose.
-    order_item.update(impuestos.campos_pedido(order_item["total"]))
+    order_item.update(impuestos.campos_pedido(order_item["total"], envio=order_item.get("shippingCost", 0)))
     utils._put_entity("ORDER", order_id, order_item)
     utils._upsert_order_customer_history(order_item)
 

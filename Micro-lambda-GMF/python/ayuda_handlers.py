@@ -238,6 +238,10 @@ def handle_ayuda() -> dict:
         "contacto": contacto(cfg),
         "sucursales": sucursales(),
         "devoluciones": politica_devolucion(cfg),
+        # El año del pie salía de `new Date()` del navegador: con el mundo en
+        # 2027 y un equipo atrasado seguía diciendo "© 2026 finding U", que es
+        # lo que nueve de doce personas anotaron. La hora la manda el servidor.
+        "serverNow": utils._now_iso(),
     })
 
 

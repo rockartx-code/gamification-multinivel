@@ -2,7 +2,7 @@
 
 "Yo quería un bote de proteína y salí dado de alta como vendedor" (ivan-dia5).
 Todo registro nuevo nace cliente: compra a precio de lista, no ve red ni
-comisiones y cada compra le dice cuánto habría ahorrado como socia.
+comisiones y cada compra le dice cuánto habría ahorrado en modo socio.
 """
 import json
 from decimal import Decimal
@@ -272,7 +272,7 @@ def test_el_correo_de_pago_de_una_clienta_lleva_el_ahorro_y_el_de_un_socio_no(mo
     order_lambda.handle_update_status(pedido["orderId"], {"status": "paid"}, {})
     para, asunto, html = buzon[-1]
     assert para == "karla@test.com" and "Recibimos tu pago" in asunto
-    assert "Como socia habrías ahorrado <strong>$120.00</strong>" in html
+    assert "En modo socio habrías ahorrado <strong>$120.00</strong>" in html, "sin género (§4.17)"
     assert f"/#/modo-socio?desde=orden&id={pedido['orderId']}" in html
 
     pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=2), {})["body"])["order"]
@@ -281,7 +281,7 @@ def test_el_correo_de_pago_de_una_clienta_lleva_el_ahorro_y_el_de_un_socio_no(mo
 
     pedido = json.loads(order_lambda.handle_create_order(_pedido(555, pid, qty=1, precio=1200), {})["body"])["order"]
     order_lambda.handle_update_status(pedido["orderId"], {"status": "paid"}, {})
-    assert buzon[-1][0] == "r@test.com" and "Como socia" not in buzon[-1][2] and "modo-socio" not in buzon[-1][2]
+    assert buzon[-1][0] == "r@test.com" and "modo socio habrías" not in buzon[-1][2] and "modo-socio" not in buzon[-1][2]
 
 
 # ── El panel ───────────────────────────────────────────────────────────────

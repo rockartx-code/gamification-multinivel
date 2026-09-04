@@ -318,6 +318,15 @@ def get_admin_warnings():
     dias_envio_mas_viejo = _dias_del_mas_viejo(por_enviar, ahora_iso)
     dias_pickup_mas_viejo = _dias_del_mas_viejo(por_recoger, ahora_iso)
     pending_pay = sum(1 for o in orders if (o.get("status") or "").lower() == "pending")
+    # Facturas solicitadas sin emitir (propuesta 20). La pestaña de Pedidos ya
+    # existía, pero sin aviso la bandeja dependía de que alguien abriera Pedidos
+    # y mirara la novena pestaña: dos facturas del 4 de marzo llevaban 37 días.
+    # Se cuenta sobre los pedidos que ya están en la mano: ni una consulta más.
+    facturas = [o for o in orders
+                if str(o.get("invoiceStatus") or "").lower() == "solicitada"
+                and str(o.get("status") or "").lower() not in ("cancelled", "canceled", "refunded")]
+    dias_factura_mas_vieja = _dias_del_mas_viejo(
+        [{"createdAt": o.get("invoiceRequestedAt") or o.get("createdAt")} for o in facturas], ahora_iso)
     # Pagos que entraron a un pedido ya cancelado: hay que devolver el dinero.
     pagos_tras_cancelar = [o for o in orders if o.get("paymentStatusDetail") == "approved_after_cancel"
                            and o.get("pendingRefund") and (o.get("status") or "").lower() != "refunded"]
@@ -406,6 +415,15 @@ def get_admin_warnings():
                          "orderIds": [o.get("orderId") for o in por_recoger[:20]]})
     if warning_cfg.get("showPendingPayments", True) and pending_pay:
         warnings.append({"type": "payments", "text": f"{pending_pay} pedidos pendientes de pago", "severity": "low"})
+    if warning_cfg.get("showInvoices", True) and facturas:
+        plural = "" if len(facturas) == 1 else "s"
+        texto = f"{len(facturas)} factura{plural} solicitada{plural} sin emitir"
+        if dias_factura_mas_vieja is not None:
+            texto += f" · {dias_factura_mas_vieja} día{'' if dias_factura_mas_vieja == 1 else 's'} la más vieja"
+        warnings.append({"type": "invoices", "text": texto,
+                         "severity": "high" if (dias_factura_mas_vieja or 0) >= dias_rojo else "medium",
+                         "count": len(facturas), "oldestDays": dias_factura_mas_vieja,
+                         "orderIds": [o.get("orderId") for o in facturas[:20]]})
     if pagos_tras_cancelar:
         warnings.append({"type": "refunds",
                          "text": f"{len(pagos_tras_cancelar)} pedidos cancelados recibieron el pago: hay que reembolsar",

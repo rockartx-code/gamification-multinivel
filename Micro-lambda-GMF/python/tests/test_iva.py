@@ -10,6 +10,7 @@ el IVA se **desglosa** de un total que no cambia, la base es todo lo que se
 cobra (envío incluido), se redondea una sola vez al final y `base + IVA` da
 el total al centavo.
 """
+import json
 from decimal import Decimal
 
 import pytest
@@ -88,6 +89,46 @@ def test_los_campos_del_pedido_son_los_tres_del_contrato(iva):
     campos = iva.campos_pedido(Decimal("1479.00"))
     assert set(campos) == {"vatRate", "taxBase", "taxAmount"}
     assert campos["taxBase"] + campos["taxAmount"] == Decimal("1479.00")
+
+
+def test_apagar_appliesToShipping_saca_el_envio_de_la_base_gravada(iva, utils):
+    """La llave se publicaba en la página del plan y en la configuración pública
+    pero no movía un centavo: el envío quedaba gravado siempre."""
+    total, envio = Decimal("1329.00"), Decimal("129.00")
+
+    con_envio_gravado = iva.desglose_iva(total, envio=envio)
+    assert con_envio_gravado["base"] == Decimal("1145.69")
+    assert con_envio_gravado["iva"] == Decimal("183.31"), "por omisión el envío va dentro"
+
+    _config(utils, {"vatRate": Decimal("0.16"), "appliesToShipping": False})
+    d = iva.desglose_iva(total, envio=envio)
+    assert d["iva"] == Decimal("165.52"), "el IVA sale solo de los $1,200.00 de producto"
+    assert d["base"] == Decimal("1163.48"), "el envío entra íntegro a la base"
+    assert d["base"] + d["iva"] == total, "el total no se mueve ni un centavo"
+
+    campos = iva.campos_pedido(total, envio=envio)
+    assert campos["taxAmount"] == Decimal("165.52") and campos["taxBase"] == Decimal("1163.48")
+    # Un pedido ya guardado se relee con su propio envío.
+    assert iva.desglose_de_pedido({"total": total, "shippingCost": envio})["iva"] == Decimal("165.52")
+
+
+def test_el_pedido_del_checkout_sella_el_iva_sin_gravar_el_envio(iva, utils):
+    """Lo que sella `handle_create_order`: si el negocio apaga la llave, el
+    pedido deja de desglosar IVA sobre el flete."""
+    _config(utils, {"vatRate": Decimal("0.16"), "appliesToShipping": False})
+    import order_lambda
+    utils._put_entity("PRODUCT", 9, {"entityType": "product", "productId": 9, "name": "Gel",
+                                     "price": Decimal("400"), "isActive": True})
+    cuerpo = {"items": [{"productId": 9, "quantity": 3, "price": 400, "name": "Gel"}],
+              "buyerType": "guest", "email": "x@x.mx", "deliveryType": "delivery",
+              "shippingCost": 129, "shippingAddress": {"street": "X", "number": "1", "city": "GDL",
+                                                       "state": "Jal", "postalCode": "44100"}}
+    r = order_lambda.handle_create_order(cuerpo, {})
+    assert r["statusCode"] in (200, 201), r["body"]
+    pedido = json.loads(r["body"])["order"]
+    assert Decimal(str(pedido["total"])) == Decimal("1329.00")
+    assert Decimal(str(pedido["taxAmount"])) == Decimal("165.52")
+    assert Decimal(str(pedido["taxBase"])) == Decimal("1163.48")
 
 
 def test_un_pedido_viejo_sin_campos_de_iva_se_desglosa_al_vuelo(iva):

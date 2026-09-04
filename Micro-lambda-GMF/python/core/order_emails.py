@@ -224,7 +224,10 @@ def _seguimiento(order: dict, frontend_url: str) -> str:
 
 
 def _parrafo_ahorro_socio(order: dict, frontend_url: str) -> str:
-    """Paquete B: al comprador en modo cliente (o invitado) le decimos cuánto habría ahorrado como socia.
+    """Paquete B: al comprador en modo cliente (o invitado) le decimos cuánto habría ahorrado en modo socio.
+
+    Sin género (§4.17): "al señor de 63 años el sistema le dijo «socia» cinco
+    veces, incluso en el correo".
 
     Los campos `partnerSavings*` los deja `_calculate_totals` en el pedido; a un socio no se le dice nada.
     """
@@ -233,13 +236,13 @@ def _parrafo_ahorro_socio(order: dict, frontend_url: str) -> str:
     ahorro = Decimal(str(order.get("partnerSavings") or 0))
     enlace = f"{frontend_url.rstrip('/')}/#/modo-socio?desde=orden&id={order.get('orderId')}"
     if ahorro > 0:
-        frase = f"Como socia habrías ahorrado <strong>{_mxn(ahorro)}</strong> en esta compra."
+        frase = f"En modo socio habrías ahorrado <strong>{_mxn(ahorro)}</strong> en esta compra."
     else:
         faltan = Decimal(str(order.get("partnerSavingsNextMissing") or 0))
         tasa = Decimal(str(order.get("partnerSavingsNextRate") or 0)) * 100
         if faltan <= 0 or tasa <= 0:
             return ""
-        frase = f"Como socia, con <strong>{_mxn(faltan)}</strong> más de compra este mes tendrías {tasa:.0f} % de descuento."
+        frase = f"En modo socio, con <strong>{_mxn(faltan)}</strong> más de compra este mes tendrías {tasa:.0f} % de descuento."
     return (f'<div class="info-box"><p>{frase} El modo socio es gratis, no te pide datos extra y lo activas cuando quieras.</p>'
             f'<p><a href="{enlace}">Conoce el modo socio</a></p></div>')
 

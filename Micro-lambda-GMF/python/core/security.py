@@ -6,7 +6,8 @@ import json
 import os
 from typing import Any, Optional
 
-from .settings import PASSWORD_HASH_ITERATIONS, PASSWORD_HASH_SCHEME, _ALL_PRIVILEGES, _SUPERADMIN_TOKEN
+from .settings import (PASSWORD_HASH_ITERATIONS, PASSWORD_HASH_SCHEME, _ALL_PRIVILEGES,
+                       _SUPERADMIN_TOKEN, _confia_en_encabezados_de_actor)
 from .http import _json_response
 from .network import _get_session
 
@@ -93,7 +94,13 @@ def _extract_actor(headers: dict) -> dict:
         if isinstance(session, dict):
             return _actor_de_sesion(session)
 
-    # Fallback: headers legacy inyectados por API Gateway / Authorizer
+    # Encabezados legacy: solo si el despliegue declara que un autorizador los
+    # inyecta y el borde borra los del cliente (`TRUST_ACTOR_HEADERS`). Sin eso
+    # el rol y los privilegios los elegiría quien llama, que es exactamente lo
+    # que dejaba abierto `x-user-role: admin` sin credencial ninguna.
+    if not _confia_en_encabezados_de_actor():
+        return {"user_id": None, "role": "", "privileges": _normalize_privileges({})}
+
     user_id = (h.get("x-user-id") or h.get("X-User-Id") or "").strip() or None
     role = (h.get("x-user-role") or h.get("X-User-Role") or "").strip().lower()
     raw_privs = h.get("x-user-privileges") or h.get("X-User-Privileges") or "{}"

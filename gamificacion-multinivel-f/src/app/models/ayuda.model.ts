@@ -58,6 +58,8 @@ export interface AyudaPublica {
   contacto: ContactoPublico;
   sucursales: SucursalPublica[];
   devoluciones: PoliticaDevolucion;
+  /** Hora del servidor: el año del pie no se saca del reloj del navegador. */
+  serverNow?: string;
 }
 
 /**

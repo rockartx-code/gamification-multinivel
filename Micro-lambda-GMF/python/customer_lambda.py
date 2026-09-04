@@ -677,7 +677,9 @@ def handle_update_customer(customer_id, body, headers):
         eav[":dnc"] = bool(body["doNotContact"])
     nota = str(body.get("note") or "").strip()
     if nota:
-        actor = utils._extract_actor_from_bearer(headers or {})
+        # El mismo actor que firma en Seguimiento: `by` y `byName` tienen que
+        # salir de la misma lectura, o la nota queda con un id y otro nombre.
+        actor = utils._extract_actor(headers or {})
         notas = list(existing.get("contactNotes") or [])
         # Propuesta 12: la firma se resuelve al escribir y se guarda junto al id
         # (aditivo: `by` se conserva). La bitácora decía "1803978000111".
@@ -807,6 +809,18 @@ def handle_update_profile(body, headers):
     existing = utils._get_by_id("CUSTOMER", cid)
     if not existing:
         return utils._json_response(404, {"message": "Cliente no encontrado"})
+
+    # ── Propuesta 19 · dar de alta una dirección desde donde hace falta ──
+    # La suscripción solo ofrecía un desplegable de direcciones ya guardadas y,
+    # sin ninguna, mandaba a "la casilla del carrito que acababas de usar": quien
+    # no había comprado antes con la casilla palomeada no podía darse de alta con
+    # envío a domicilio. La dedupe (calle + número + CP) y el id son los mismos
+    # que usa el checkout: una sola forma de guardar una dirección.
+    nueva = body.get("newAddress")
+    if isinstance(nueva, dict):
+        import order_lambda
+        order_lambda._guardar_direccion_en_ficha(
+            actor["user_id"], "delivery", {**nueva, "saveShippingAddress": True}, nueva)
 
     # DynamoDB reserved keywords must be aliased via ExpressionAttributeNames
     _reserved = {"name"}

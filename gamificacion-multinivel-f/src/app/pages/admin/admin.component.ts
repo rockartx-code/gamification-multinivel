@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject, type Signal } from '@angular/core';
 import { ConciliacionService } from '../../services/conciliacion.service'; // WP-H
 import { ConciliacionCorrida, ConciliacionPayload, ConciliacionResultado } from '../../models/suscripcion.model'; // WP-H
-import { fechaEnLetras, textoEstadoPedido, textoMetodoPago } from '../../models/vocabulario.model'; // paquete G · ronda 26
+import { fechaEnLetras, mesEnLetras, textoEstadoPedido, textoMetodoPago } from '../../models/vocabulario.model'; // paquete G · ronda 26
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -49,11 +49,15 @@ import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
 import {
   ADMIN_ROUTE_BY_VIEW,
+  AdminMenuEntry,
+  adminMenuVisible,
   AdminViewId,
   AppPrivilege,
   normalizePrivileges,
   UserPrivileges
 } from '../../models/privileges.model';
+import { AccesoPantallaService } from '../../services/acceso-pantalla.service';
+import { UiAvisoSinAccesoComponent } from '../../components/ui-aviso-sin-acceso/ui-aviso-sin-acceso.component';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -95,17 +99,6 @@ import { PlanSocioService } from '../../services/plan-socio.service'; // paquete
  * la vista que monta (si vive dentro del caparazón) y el privilegio que exige.
  * Se escribe una sola vez y la reusan la barra lateral y la barra del móvil.
  */
-type AdminMenuEntry = {
-  id: string;
-  icon: string;
-  label: string;
-  /** Nombre corto para la barra inferior del móvil, donde no cabe el largo. */
-  short: string;
-  route: string;
-  view?: AdminViewId;
-  privilege?: AppPrivilege;
-};
-
 type ConfirmacionAdmin = {
   title: string;
   effect: string;
@@ -319,7 +312,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */, UiConfirmComponent /* WP-I1 */, UiTablaDescuentoComponent /* WP-I1 */, UiDesgloseIvaComponent /* paquete B · ronda 26 */, UiClabeFormComponent /* paquete A · ronda 26 */],
+  imports: [CommonModule, FormsModule, UiAvisoSinAccesoComponent, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */, UiConfirmComponent /* WP-I1 */, UiTablaDescuentoComponent /* WP-I1 */, UiDesgloseIvaComponent /* paquete B · ronda 26 */, UiClabeFormComponent /* paquete A · ronda 26 */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
@@ -507,6 +500,7 @@ export class AdminComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly route: ActivatedRoute, // paquete E · ronda 26: la vista viene de la URL
+    private readonly acceso: AccesoPantallaService, // paquete E · ronda 26: el aviso de pantalla negada
 
     private readonly cdr: ChangeDetectorRef,
     private readonly api: ApiService,
@@ -1054,7 +1048,11 @@ export class AdminComponent implements OnInit {
       // (Comisiones y pagos) viajan en la URL para sobrevivir a la navegación.
       const estado = params.get('estado');
       if (estado) {
-        this.currentOrderStatus = estado as AdminOrder['status'];
+        // "factura_solicitada" es una bandeja, no un estado guardado: se abre
+        // como pestaña y el filtro por estado se queda como estaba.
+        if (estado !== 'factura_solicitada') {
+          this.currentOrderStatus = estado as AdminOrder['status'];
+        }
         this.currentOrderTab = estado;
         this.orderStatusFijadoPorUrl = true;
       }
@@ -1063,7 +1061,13 @@ export class AdminComponent implements OnInit {
         this.pagosMesMonth = mes;
       }
       // La guarda de pantalla no quita una pantalla en silencio: dice cuál era.
-      this.pantallaSinAcceso = params.get('sinAcceso') ?? '';
+      // El aviso lo pinta `ui-aviso-sin-acceso` desde `AccesoPantallaService`;
+      // aquí solo se recoge el que viene en la URL, que es el caso de la
+      // recarga completa (la guarda no corrió en esta pestaña).
+      const sinAcceso = params.get('sinAcceso') ?? '';
+      if (sinAcceso) {
+        this.acceso.anotar(sinAcceso);
+      }
     });
     this.route.paramMap.subscribe((params) => {
       // `#/admin/pedido/:idPedido`: el pedido abre su detalle solo, sin buscarlo.
@@ -1102,7 +1106,6 @@ export class AdminComponent implements OnInit {
   private orderStatusFijadoPorUrl = false;
 
   /** Pantalla que se quiso abrir sin tener su privilegio; se dice y se puede cerrar. */
-  pantallaSinAcceso = ''; // paquete E · ronda 26
 
   private aplicarVistaDeRuta(vista: AdminViewId, panel: string): void {
     this.currentView = vista;
@@ -1133,6 +1136,11 @@ export class AdminComponent implements OnInit {
         }
         break;
       case 'customers':
+        // WP-A · 17: «Comisiones y pagos» vive en esta vista y su KPI exporta
+        // `commissionsMonthKey`. Sin pedir los periodos aquí, el mes salía de
+        // `new Date()` del navegador y la pantalla enseñaba dos meses del mismo
+        // dinero: el panel decía «abril 2027» y el botón «Exportar 2026-08».
+        this.cargarPeriodosDelServidor();
         this.adminControl.loadCustomers().subscribe(() => {
           if (!this.selectedCustomer) {
             this.selectedCustomer = this.customers[0] ?? null;
@@ -1578,7 +1586,11 @@ export class AdminComponent implements OnInit {
       stock_min: 'stocks',   // paquete F · ronda 26: productos bajo su mínimo
       pos: 'pos',
       payments: 'orders',
-      refunds: 'orders'
+      refunds: 'orders',
+      // Propuesta 20: la pestaña "Factura solicitada" existía y el contador de
+      // Acciones urgentes no; sin el aviso, la bandeja dependía de que alguien
+      // abriera Pedidos y mirara la novena pestaña.
+      invoices: 'orders'
     };
     return map[type] ?? 'stats';
   }
@@ -1593,62 +1605,8 @@ export class AdminComponent implements OnInit {
    * encima de una tabla dentro de Clientes y Despacho en bloque estaba entre
    * las pestañas de estado de Pedidos. Ahora cada entrada lleva su URL.
    */
-  private get adminMenuGroups(): Array<{ label: string; links: AdminMenuEntry[] }> {
-    return [
-      {
-        label: 'Operación diaria',
-        links: [
-          { id: 'orders', view: 'orders', route: ADMIN_ROUTE_BY_VIEW.orders, icon: 'fa-receipt', label: 'Pedidos', short: 'Pedidos' },
-          { id: 'despacho', privilege: 'order_mark_shipped', route: '/admin/despacho', icon: 'fa-boxes-packing', label: 'Despacho en bloque', short: 'Despacho' },
-          { id: 'pos', view: 'pos', route: ADMIN_ROUTE_BY_VIEW.pos, icon: 'fa-cash-register', label: 'Punto de Venta', short: 'PV' },
-          { id: 'stocks', view: 'stocks', route: ADMIN_ROUTE_BY_VIEW.stocks, icon: 'fa-warehouse', label: 'Stocks', short: 'Stocks' },
-          { id: 'resumen-turno', privilege: 'access_screen_stocks', route: '/admin/resumen-turno', icon: 'fa-clipboard-check', label: 'Resumen de turno', short: 'Turno' }
-        ]
-      },
-      {
-        label: 'Personas',
-        links: [
-          { id: 'customers', view: 'customers', route: ADMIN_ROUTE_BY_VIEW.customers, icon: 'fa-users', label: 'Clientes', short: 'Clientes' },
-          { id: 'seguimiento', privilege: 'access_screen_customers', route: '/admin/seguimiento', icon: 'fa-headset', label: 'Seguimiento de hoy', short: 'Seguimiento' },
-          { id: 'employees', view: 'employees', route: ADMIN_ROUTE_BY_VIEW.employees, icon: 'fa-id-badge', label: 'Empleados', short: 'Empleados' }
-        ]
-      },
-      {
-        label: 'Finanzas',
-        links: [
-          { id: 'comisiones', privilege: 'commissions_register_payment', route: '/admin/comisiones', icon: 'fa-hand-holding-dollar', label: 'Comisiones y pagos', short: 'Comisiones' }
-        ]
-      },
-      {
-        label: 'Catálogo y oferta',
-        links: [
-          { id: 'products', view: 'products', route: ADMIN_ROUTE_BY_VIEW.products, icon: 'fa-boxes-stacked', label: 'Productos', short: 'Productos' },
-          { id: 'campaigns', view: 'campaigns', route: ADMIN_ROUTE_BY_VIEW.campaigns, icon: 'fa-bullhorn', label: 'Campañas', short: 'Campañas' },
-          { id: 'coupons', view: 'coupons', route: ADMIN_ROUTE_BY_VIEW.coupons, icon: 'fa-ticket', label: 'Cupones', short: 'Cupones' }
-        ]
-      },
-      {
-        label: 'Reportes y avisos',
-        links: [
-          { id: 'stats', view: 'stats', route: ADMIN_ROUTE_BY_VIEW.stats, icon: 'fa-chart-line', label: 'Estadísticas', short: 'Estadísticas' },
-          { id: 'honor_board', view: 'honor_board', route: ADMIN_ROUTE_BY_VIEW.honor_board, icon: 'fa-ranking-star', label: 'Cuadro de Honor', short: 'Honor' },
-          { id: 'notifications', view: 'notifications', route: ADMIN_ROUTE_BY_VIEW.notifications, icon: 'fa-bell', label: 'Notificaciones', short: 'Avisos' }
-        ]
-      },
-      {
-        label: 'Sistema',
-        links: [
-          { id: 'settings', view: 'settings', route: ADMIN_ROUTE_BY_VIEW.settings, icon: 'fa-sliders', label: 'Configuración', short: 'Configuración' }
-        ]
-      }
-    ];
-  }
-
-  private puedeVerEntrada(entrada: AdminMenuEntry): boolean {
-    if (entrada.view) {
-      return this.canAccessView(entrada.view);
-    }
-    return entrada.privilege ? this.hasPermission(entrada.privilege) : true;
+  private get adminMenuGroups(): Array<{ label: string; entries: AdminMenuEntry[] }> {
+    return adminMenuVisible(this.currentUser?.privileges, this.authService.isSuperUser(this.currentUser));
   }
 
   /** Las entradas visibles, sin encabezados: la barra inferior del móvil las reusa. */
@@ -1670,12 +1628,8 @@ export class AdminComponent implements OnInit {
     const links: SidebarLink[] = [];
     const entries: AdminMenuEntry[] = [];
     for (const group of this.adminMenuGroups) {
-      const visibles = group.links.filter((entrada) => this.puedeVerEntrada(entrada));
-      if (visibles.length === 0) {
-        continue;
-      }
       links.push({ id: `heading-${group.label}`, icon: '', label: group.label, heading: true });
-      for (const entrada of visibles) {
+      for (const entrada of group.entries) {
         links.push({ id: entrada.id, icon: entrada.icon, label: entrada.label, subtitle: '' });
         entries.push(entrada);
       }
@@ -2584,6 +2538,11 @@ export class AdminComponent implements OnInit {
   /** El mes de las comisiones que se está viendo (17): del servidor, no del reloj. */
   get commissionsMonthKey(): string {
     return this.pagosMesMonth || this.serverDefaultMonth || this.getPrevMonthKey();
+  }
+
+  /** El mismo mes, en letras (§3.7): «marzo de 2027», nunca la clave cruda. */
+  get commissionsMonthLabel(): string {
+    return mesEnLetras(this.commissionsMonthKey);
   }
 
   private reportMonthsCache: { ordersRef: AdminOrder[]; months: { value: string; label: string }[] } | null = null;
@@ -4106,6 +4065,7 @@ export class AdminComponent implements OnInit {
     const estado = warning.type === 'shipping' || warning.type === 'pickup' ? 'paid'
       : warning.type === 'payments' ? 'pending'
       : warning.type === 'refunds' ? 'cancelled'
+      : warning.type === 'invoices' ? 'factura_solicitada'
       : '';
     this.router.navigate([ADMIN_ROUTE_BY_VIEW[target]], estado ? { queryParams: { estado } } : {});
   }

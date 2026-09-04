@@ -346,6 +346,12 @@ export interface UpdateProfilePayload {
   phone?: string;
   rfc?: string;
   curp?: string;
+  /**
+   * Dirección nueva para la ficha (propuesta 19). El backend la guarda con la
+   * misma dedupe (calle + número + CP) que la casilla del carrito, así que dar
+   * de alta una dirección desde la suscripción no duplica la que ya estaba.
+   */
+  newAddress?: Omit<CustomerShippingAddress, 'id'>;
 }
 
 export interface CreateStructureCustomerPayload {
@@ -698,6 +704,17 @@ export interface AppBusinessConfig {
   };
   customerDocumentTypes?: CustomerDocumentTypeConfig[];
   bonuses?: BonusConfig;
+  // ── Corte de mes (propuesta 29) ──
+  // `GET /catalog/config/public` los publica para que quien no tiene sesión
+  // cuente los días con el reloj del servidor y no con el de su navegador.
+  cutoffDay?: number;
+  cutoffHour?: number;
+  cutoffMinute?: number;
+  cutoffLabel?: string;
+  cutoffAt?: string;
+  serverNow?: string;
+  /** IVA vigente, para desglosar sin volver a pedirlo. */
+  taxes?: { vatRate: number; label: string; pricesIncludeVat: boolean; appliesToShipping: boolean };
 }
 
 export interface AdminAssetSlot {

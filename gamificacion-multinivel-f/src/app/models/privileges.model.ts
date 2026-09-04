@@ -179,3 +179,97 @@ export function privilegeForAdminRoute(route: string): AppPrivilege | null {
   const view = (Object.keys(ADMIN_ROUTE_BY_VIEW) as AdminViewId[]).find((v) => ADMIN_ROUTE_BY_VIEW[v] === route);
   return view ? SCREEN_PRIVILEGE_BY_VIEW[view] : null;
 }
+
+// ── Paquete E · ronda 26 · El menú del back office, escrito UNA sola vez ─────
+// Vivía dentro de `AdminComponent`, así que las dos pantallas que son
+// componentes aparte (Despacho en bloque y Seguimiento de hoy) no tenían menú
+// —y son justo donde empiezan su día el de almacén y la coach—. Aquí es una
+// tabla pura que cualquiera puede montar.
+
+/**
+ * Una entrada del menú: su URL, la vista que monta (si vive dentro del
+ * caparazón) y el privilegio que exige.
+ */
+export type AdminMenuEntry = {
+  id: string;
+  icon: string;
+  label: string;
+  /** Nombre corto para la barra inferior del móvil, donde no cabe el largo. */
+  short: string;
+  route: string;
+  view?: AdminViewId;
+};
+
+export const ADMIN_MENU_GROUPS: ReadonlyArray<{ label: string; links: AdminMenuEntry[] }> = [
+  {
+    label: 'Operación diaria',
+    links: [
+      { id: 'orders', view: 'orders', route: ADMIN_ROUTE_BY_VIEW.orders, icon: 'fa-receipt', label: 'Pedidos', short: 'Pedidos' },
+      { id: 'despacho', route: '/admin/despacho', icon: 'fa-boxes-packing', label: 'Despacho en bloque', short: 'Despacho' },
+      { id: 'pos', view: 'pos', route: ADMIN_ROUTE_BY_VIEW.pos, icon: 'fa-cash-register', label: 'Punto de Venta', short: 'PV' },
+      { id: 'stocks', view: 'stocks', route: ADMIN_ROUTE_BY_VIEW.stocks, icon: 'fa-warehouse', label: 'Stocks', short: 'Stocks' },
+      { id: 'resumen-turno', route: '/admin/resumen-turno', icon: 'fa-clipboard-check', label: 'Resumen de turno', short: 'Turno' }
+    ]
+  },
+  {
+    label: 'Personas',
+    links: [
+      { id: 'customers', view: 'customers', route: ADMIN_ROUTE_BY_VIEW.customers, icon: 'fa-users', label: 'Clientes', short: 'Clientes' },
+      { id: 'seguimiento', route: '/admin/seguimiento', icon: 'fa-headset', label: 'Seguimiento de hoy', short: 'Seguimiento' },
+      { id: 'employees', view: 'employees', route: ADMIN_ROUTE_BY_VIEW.employees, icon: 'fa-id-badge', label: 'Empleados', short: 'Empleados' }
+    ]
+  },
+  {
+    label: 'Finanzas',
+    links: [
+      { id: 'comisiones', route: '/admin/comisiones', icon: 'fa-hand-holding-dollar', label: 'Comisiones y pagos', short: 'Comisiones' }
+    ]
+  },
+  {
+    label: 'Catálogo y oferta',
+    links: [
+      { id: 'products', view: 'products', route: ADMIN_ROUTE_BY_VIEW.products, icon: 'fa-boxes-stacked', label: 'Productos', short: 'Productos' },
+      { id: 'campaigns', view: 'campaigns', route: ADMIN_ROUTE_BY_VIEW.campaigns, icon: 'fa-bullhorn', label: 'Campañas', short: 'Campañas' },
+      { id: 'coupons', view: 'coupons', route: ADMIN_ROUTE_BY_VIEW.coupons, icon: 'fa-ticket', label: 'Cupones', short: 'Cupones' }
+    ]
+  },
+  {
+    label: 'Reportes y avisos',
+    links: [
+      { id: 'stats', view: 'stats', route: ADMIN_ROUTE_BY_VIEW.stats, icon: 'fa-chart-line', label: 'Estadísticas', short: 'Estadísticas' },
+      { id: 'honor_board', view: 'honor_board', route: ADMIN_ROUTE_BY_VIEW.honor_board, icon: 'fa-ranking-star', label: 'Cuadro de Honor', short: 'Honor' },
+      { id: 'notifications', view: 'notifications', route: ADMIN_ROUTE_BY_VIEW.notifications, icon: 'fa-bell', label: 'Notificaciones', short: 'Avisos' }
+    ]
+  },
+  {
+    label: 'Sistema',
+    links: [
+      { id: 'settings', view: 'settings', route: ADMIN_ROUTE_BY_VIEW.settings, icon: 'fa-sliders', label: 'Configuración', short: 'Configuración' }
+    ]
+  }
+];
+
+/**
+ * Los grupos del menú con solo las entradas que esta persona puede abrir.
+ *
+ * El privilegio sale SIEMPRE de `privilegeForAdminRoute`, la misma tabla que
+ * usa la guarda de la URL (§3.5): el menú pedía `order_mark_shipped` para
+ * "Despacho en bloque" y la guarda `access_screen_orders`, así que la cajera no
+ * veía la entrada y la pantalla se le abría escribiendo la dirección.
+ */
+export function adminMenuVisible(
+  privileges: UserPrivileges | undefined,
+  isSuperUser = false
+): Array<{ label: string; entries: AdminMenuEntry[] }> {
+  const grupos: Array<{ label: string; entries: AdminMenuEntry[] }> = [];
+  for (const grupo of ADMIN_MENU_GROUPS) {
+    const entries = grupo.links.filter((entrada) => {
+      const privilegio = privilegeForAdminRoute(entrada.route);
+      return isSuperUser || !privilegio || tiene(privileges, privilegio);
+    });
+    if (entries.length > 0) {
+      grupos.push({ label: grupo.label, entries });
+    }
+  }
+  return grupos;
+}

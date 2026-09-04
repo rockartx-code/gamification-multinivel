@@ -6,7 +6,14 @@
     <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-arrow-left" routerLink="/admin">Volver al panel</ui-button>
   </ui-header>
 
-  <main class="mx-auto max-w-7xl px-4 py-6 space-y-4">
+  <main class="mx-auto max-w-7xl px-4 py-6">
+    <div class="grid gap-4 lg:grid-cols-[260px_1fr]">
+      <!-- El menú del back office: aquí empieza su día la coach y era la única
+           pantalla sin navegación y sin «Cerrar sesión». -->
+      <aside class="hidden lg:block"><ui-menu-panel activeId="seguimiento"></ui-menu-panel></aside>
+
+      <div class="space-y-4">
+    <ui-aviso-sin-acceso pantallaActual="Seguimiento de hoy"></ui-aviso-sin-acceso>
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 class="text-2xl font-extrabold text-main">Seguimiento de hoy</h1>
@@ -170,6 +177,8 @@
           </div>
         </ng-template>
       </ui-data-table>
+    </div>
+      </div>
     </div>
   </main>
 

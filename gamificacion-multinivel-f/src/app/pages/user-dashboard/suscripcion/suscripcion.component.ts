@@ -26,6 +26,7 @@ import {
   SuscripcionEntrega,
   SuscripcionPayload
 } from '../../../models/suscripcion.model';
+import { ApiService } from '../../../services/api.service';
 import { SuscripcionService } from '../../../services/suscripcion.service';
 
 interface LineaBorrador {
@@ -86,15 +87,38 @@ export class SuscripcionComponent implements OnInit, OnChanges {
 
   readonly dayOptions: Opcion[] = Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: `Día ${i + 1}` }));
 
-  constructor(private readonly servicio: SuscripcionService, private readonly cdr: ChangeDetectorRef) {}
+  // ── Propuesta 19 · dar de alta la dirección aquí mismo ─────────────────────
+  // El paso "3. Dónde lo recibes" solo tenía un desplegable de direcciones ya
+  // guardadas y, sin ninguna, mandaba de vuelta a "la casilla del carrito que
+  // acababas de usar": quien no había comprado antes no podía dar de alta la
+  // suscripción con envío a domicilio.
+  /** Las del perfil más las que se den de alta aquí, sin recargar el panel. */
+  direcciones: CustomerShippingAddress[] = [];
+  formularioDireccionAbierto = false;
+  isSavingAddress = false;
+  addressError = '';
+  nuevaDireccion = {
+    label: '', recipientName: '', phone: '', street: '', number: '',
+    city: '', state: '', postalCode: '', betweenStreets: '', references: ''
+  };
+
+  constructor(
+    private readonly servicio: SuscripcionService,
+    private readonly api: ApiService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
+    this.direcciones = [...this.addresses];
     this.cargar();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['customerId'] && !changes['customerId'].firstChange) {
       this.cargar();
+    }
+    if (changes['addresses']) {
+      this.direcciones = [...this.addresses];
     }
     if (changes['defaultAddressId'] && !this.shippingAddressId) {
       this.shippingAddressId = this.defaultAddressId || '';
@@ -115,10 +139,69 @@ export class SuscripcionComponent implements OnInit, OnChanges {
   }
 
   get addressOptions(): Opcion[] {
-    return this.addresses.map((a) => ({
+    return this.direcciones.map((a) => ({
       value: a.id,
       label: `${a.label || 'Dirección'} · ${[a.street, a.number].filter(Boolean).join(' ') || a.address}, ${[a.city, a.state].filter(Boolean).join(', ')} ${a.postalCode || ''}`.trim()
     }));
+  }
+
+  abrirFormularioDireccion(): void {
+    this.formularioDireccionAbierto = true;
+    this.addressError = '';
+  }
+
+  cerrarFormularioDireccion(): void {
+    this.formularioDireccionAbierto = false;
+    this.addressError = '';
+  }
+
+  /** Guarda la dirección en la ficha (la misma dedupe que el checkout) y la deja elegida. */
+  guardarDireccion(): void {
+    const d = this.nuevaDireccion;
+    if (!d.street.trim() || !d.postalCode.trim() || !d.city.trim() || !d.state.trim()) {
+      this.addressError = 'Necesitamos calle, ciudad, estado y código postal para poder enviarte el pedido.';
+      return;
+    }
+    this.isSavingAddress = true;
+    this.addressError = '';
+    this.api
+      .updateProfile(this.customerId, {
+        newAddress: {
+          label: d.label.trim() || d.city.trim(),
+          recipientName: d.recipientName.trim(),
+          phone: d.phone.trim(),
+          street: d.street.trim(),
+          number: d.number.trim(),
+          address: [d.street.trim(), d.number.trim()].filter(Boolean).join(' '),
+          city: d.city.trim(),
+          state: d.state.trim(),
+          postalCode: d.postalCode.trim(),
+          betweenStreets: d.betweenStreets.trim(),
+          references: d.references.trim()
+        }
+      })
+      .pipe(finalize(() => {
+        this.isSavingAddress = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (perfil) => {
+          this.direcciones = perfil.addresses ?? this.direcciones;
+          const nueva = this.direcciones[this.direcciones.length - 1];
+          if (nueva) {
+            this.shippingAddressId = nueva.id;
+          }
+          this.formularioDireccionAbierto = false;
+          this.nuevaDireccion = {
+            label: '', recipientName: '', phone: '', street: '', number: '',
+            city: '', state: '', postalCode: '', betweenStreets: '', references: ''
+          };
+          this.changed.emit();
+        },
+        error: () => {
+          this.addressError = 'No se pudo guardar la dirección. Reintenta en unos segundos.';
+        }
+      });
   }
 
   get pickupOptions(): Opcion[] {

@@ -3,11 +3,13 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
+import { UiAvisoSinAccesoComponent } from '../../../components/ui-aviso-sin-acceso/ui-aviso-sin-acceso.component';
 import { UiBadgeComponent } from '../../../components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../../components/ui-button/ui-button.component';
 import { UiDataTableComponent } from '../../../components/ui-data-table/ui-data-table.component';
 import { UiFormFieldComponent } from '../../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../../components/ui-header/ui-header.component';
+import { UiMenuPanelComponent } from '../../../components/ui-menu-panel/ui-menu-panel.component';
 import { UiModalComponent } from '../../../components/ui-modal/ui-modal.component';
 import { UiStatusBadgeComponent } from '../../../components/ui-status-badge/ui-status-badge.component';
 import {
@@ -62,7 +64,7 @@ const ETIQUETAS_CANAL: Record<CanalContacto, string> = {
 @Component({
   selector: 'app-admin-seguimiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiHeaderComponent, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiStatusBadgeComponent, UiBadgeComponent, UiDataTableComponent],
+  imports: [CommonModule, FormsModule, UiHeaderComponent, UiAvisoSinAccesoComponent, UiMenuPanelComponent, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiStatusBadgeComponent, UiBadgeComponent, UiDataTableComponent],
   templateUrl: './admin-seguimiento.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

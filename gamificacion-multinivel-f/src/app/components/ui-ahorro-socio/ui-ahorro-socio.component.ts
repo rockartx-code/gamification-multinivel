@@ -7,7 +7,7 @@ import { AhorroSocio, PlanTramo, calcularAhorroConTramos, formatoPesos, formatoP
 import { PlanSocioService } from '../../services/plan-socio.service';
 
 /**
- * "Como socia habrías ahorrado $X en esta compra" (paquete B).
+ * "En modo socio habrías ahorrado $X en esta compra" (paquete B). Sin género (§4.17).
  *
  * Se monta bajo el total en tienda, carrito y confirmación de pedido. Calcula
  * con la tabla real del plan (`GET /catalog/plan`, cacheado); en modo socio
@@ -95,10 +95,10 @@ export class UiAhorroSocioComponent implements OnInit {
       return '';
     }
     if (ahorro.savings > 0) {
-      return `Como socia habrías ahorrado ${this.pesos(ahorro.savings)} en esta compra.`;
+      return `En modo socio habrías ahorrado ${this.pesos(ahorro.savings)} en esta compra.`;
     }
     if (ahorro.nextTier) {
-      return `Como socia, con ${this.pesos(ahorro.nextTier.missing)} más de compra este mes tendrías ${this.porcentaje(ahorro.nextTier.rate)} de descuento.`;
+      return `En modo socio, con ${this.pesos(ahorro.nextTier.missing)} más de compra este mes tendrías ${this.porcentaje(ahorro.nextTier.rate)} de descuento.`;
     }
     return '';
   }

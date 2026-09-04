@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
 import { ADMIN_EXTRA_ROUTE_PRIVILEGE, AdminViewId, SCREEN_PRIVILEGE_BY_VIEW } from '../models/privileges.model';
+import { AccesoPantallaService } from '../services/acceso-pantalla.service';
 import { AuthService, AuthUser } from '../services/auth.service';
 
 const userHome = (auth: AuthService, user: AuthUser): string => auth.defaultRoute(user);
@@ -64,12 +65,17 @@ export const adminViewGuard: CanActivateFn = (route, state) => {
   if (privilegio && !auth.hasPrivilege(privilegio, user)) {
     // Nunca se deja el contenedor vacío: se cae a la pantalla que sí es suya y
     // se DICE en pantalla cuál se quiso abrir, en vez de quitarla en silencio.
+    // El aviso se anota en el servicio —lo lee `ui-aviso-sin-acceso` monte donde
+    // monte, también en Despacho y en Seguimiento— y además viaja en la URL,
+    // para que sobreviva a una recarga completa.
     const destino = auth.adminLandingRoute(user);
     const titulo = (route.data?.['titulo'] as string | undefined) ?? '';
+    inject(AccesoPantallaService).anotar(titulo);
     return router.createUrlTree([destino === ruta ? '/admin/pedidos' : destino],
                                 titulo ? { queryParams: { sinAcceso: titulo } } : {});
   }
 
+  inject(AccesoPantallaService).navegacionPermitida();
   return true;
 };
 

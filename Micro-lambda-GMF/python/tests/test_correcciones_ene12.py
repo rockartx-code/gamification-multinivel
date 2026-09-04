@@ -104,7 +104,7 @@ def test_un_pedido_tardio_pesa_mas_que_la_clabe_pendiente(utils):
 
 
 def test_el_correo_de_pago_en_texto_plano_no_deja_espacios_dobles_ni_pega_el_enlace(utils):
-    """"Como socia, con  $300.00  más..." con el enlace pegado al final del párrafo."""
+    """"En modo socio, con  $300.00  más..." con el enlace pegado al final del párrafo."""
     from core import order_emails
     order = {"orderId": "ORD-X", "customerName": "Diana", "partnerMode": "invitado", "partnerSavings": 0,
              "partnerSavingsNextMissing": 300, "partnerSavingsNextRate": "0.10", "items": [], "total": 829}

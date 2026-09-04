@@ -212,17 +212,7 @@
           <!-- Paquete E · ronda 26 · Una pantalla que no te toca no se quita en
                silencio ni deja el contenedor vacío: se dice cuál era y dónde
                quedaste. -->
-          <div *ngIf="pantallaSinAcceso"
-            class="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-            role="status">
-            <div>
-              <span class="font-semibold">{{ pantallaSinAcceso }} no está entre tus pantallas.</span>
-              Te dejamos en {{ viewTitle }}. Si necesitas entrar, pídeselo a quien administra los permisos.
-            </div>
-            <ui-button size="sm" variant="ghost" ariaLabel="Cerrar el aviso" (pressed)="pantallaSinAcceso = ''">
-              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-            </ui-button>
-          </div>
+          <ui-aviso-sin-acceso [pantallaActual]="viewTitle"></ui-aviso-sin-acceso>
 
           <div class="space-y-4" *ngIf="currentView === 'orders' && canAccessView('orders')">
             <div class="grid gap-3 md:grid-cols-4">
@@ -590,8 +580,8 @@
                   </div>
                   <!-- WP-A · propuesta 17: exporta el mes seleccionado, no el del reloj del navegador. -->
                   <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-excel" (pressed)="downloadCommissionsReport()"
-                    [title]="'Descargar el Excel de comisiones de ' + commissionsMonthKey">
-                    Exportar {{ commissionsMonthKey }}
+                    [title]="'Descargar el Excel de comisiones de ' + commissionsMonthLabel">
+                    Exportar {{ commissionsMonthLabel }}
                   </ui-button>
                 </div>
               </div>

@@ -10,7 +10,11 @@ from urllib.parse import unquote
 
 import pytest
 
-COACH = {"x-user-id": "900", "x-user-role": "employee", "x-user-name": "Ivonne Castro",
+# La firma de la bitácora sale de la sesión o de la ficha de empleada, nunca de
+# `x-user-name`: ese encabezado lo escribe quien llama y con él una nota de
+# Mireya podía quedar firmada por Alma.
+IVONNE = 900
+COACH = {"x-user-id": str(IVONNE), "x-user-role": "employee",
          "x-user-privileges": json.dumps({"access_screen_customers": True})}
 SIN_PRIVILEGIO = {"x-user-id": "77", "x-user-role": "employee", "x-user-privileges": "{}"}
 
@@ -18,6 +22,8 @@ SIN_PRIVILEGIO = {"x-user-id": "77", "x-user-role": "employee", "x-user-privileg
 @pytest.fixture
 def modulos(utils):
     import customer_lambda, seguimiento_handlers
+    utils._put_entity("EMPLOYEE", IVONNE, {"entityType": "employee", "employeeId": IVONNE,
+                                           "name": "Ivonne Castro", "active": True})
     utils._put_entity("CUSTOMER", 11, {"entityType": "customer", "customerId": 11, "name": "Rosa Elena Ortiz",
                                        "email": "rosa@test.com", "phone": "+52 1 55 1234 5678", "createdAt": utils._now_iso()})
     utils._put_entity("CUSTOMER", 14, {"entityType": "customer", "customerId": 14, "name": "Karla Méndez",

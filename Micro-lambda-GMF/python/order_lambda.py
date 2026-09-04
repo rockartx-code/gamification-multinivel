@@ -338,6 +338,15 @@ def _serialize_order_list_item(item: dict) -> dict:
         "discountAmount": item.get("discountAmount", utils.D_ZERO),
         "netTotal": item.get("netTotal", total),
         "total": total,
+        # El envío y el desglose del IVA: sin ellos el detalle del back office
+        # pintaba "Gel x3 · $1,200" y debajo "Total $1,329", sin la línea de
+        # envío y sin "Subtotal sin IVA / IVA / Total" (la plantilla los pide y
+        # el listado no los proyectaba), y el bloque de facturación no salía.
+        "shippingCost": item.get("shippingCost"),
+        "shippingFreeApplied": item.get("shippingFreeApplied"),
+        "vatRate": item.get("vatRate"),
+        "taxBase": item.get("taxBase"),
+        "taxAmount": item.get("taxAmount"),
         # Delivery / shipping
         "deliveryType": item.get("deliveryType"),
         "deliveryNotes": item.get("deliveryNotes"),
@@ -654,7 +663,7 @@ def handle_create_order(body, headers):
     # centavo de lo cobrado, del neto comisionable ni de una fila del ledger.
     # Se guarda con el pedido para que un cambio futuro de tasa no reescriba
     # la historia (docs/arquitectura/26 §4.4).
-    order_item.update(impuestos.campos_pedido(order_item["total"]))
+    order_item.update(impuestos.campos_pedido(order_item["total"], envio=order_item.get("shippingCost", 0)))
     if delivery_type == "pickup":
         if body.get("pickupStockId"):
             order_item["pickupStockId"] = body.get("pickupStockId")

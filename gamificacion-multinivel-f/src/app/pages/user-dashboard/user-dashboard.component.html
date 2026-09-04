@@ -438,14 +438,14 @@
       <div class="mt-6 grid gap-4 sm:grid-cols-3">
         <ui-kpi-card label="Este mes has comprado" iconClass="fa-solid fa-cart-shopping text-accent"
           [value]="formatMoney(clientIndicators?.monthSpend ?? 0)"></ui-kpi-card>
-        <ui-kpi-card label="Como socia habrías ahorrado este mes" iconClass="fa-solid fa-piggy-bank text-gold"
+        <ui-kpi-card label="En modo socio habrías ahorrado este mes" iconClass="fa-solid fa-piggy-bank text-gold"
           [value]="formatMoney(clientIndicators?.monthSavingsIfPartner ?? 0)"></ui-kpi-card>
         <div class="rounded-2xl border border-olive-30 surface-soft p-4">
           <div class="flex items-center gap-2 text-mini text-gray-600">
             <i class="fa-solid fa-users text-forest" aria-hidden="true"></i>
             <span>Qué ganarías</span>
           </div>
-          <div class="mt-1 text-sm font-semibold text-main">{{ queGanarias || 'Como socia, las compras de las personas que invites te generan comisión.' }}</div>
+          <div class="mt-1 text-sm font-semibold text-main">{{ queGanarias || 'En modo socio, las compras de las personas que invites te generan comisión.' }}</div>
         </div>
       </div>
 

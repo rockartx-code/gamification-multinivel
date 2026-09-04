@@ -308,7 +308,7 @@ def ajustar_dashboard(customer: dict, response: dict) -> dict:
             metas.append({
                 **meta,
                 "title": "Meta de compra del mes",
-                "subtitle": "Al llegar aquí, como socia tendrías descuento y te activarías",
+                "subtitle": "Al llegar aquí, en modo socio tendrías descuento y te activarías",
             })
     datos["goals"] = metas
     datos["clientIndicators"] = indicadores_cliente(customer)

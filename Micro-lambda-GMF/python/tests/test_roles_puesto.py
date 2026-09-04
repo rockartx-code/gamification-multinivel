@@ -80,6 +80,47 @@ def test_al_editar_privilegios_se_respeta_la_misma_siembra(auth, utils):
     assert json.loads(resp["body"])["employee"]["privileges"]["access_screen_campaigns"] is True
 
 
+def test_apagar_la_casilla_de_campanas_se_respeta_aunque_administre_la_configuracion(auth, utils):
+    """La gerente apagaba la casilla, el backend respondía 200 y la devolvía en
+    `true`: al recargar volvía a aparecer palomeada. La siembra mira si la llave
+    **viene**, no su valor, así que un `false` explícito manda."""
+    st, r = _alta(auth, "Alma Rentería", "alma2@findingu.mx",
+                  ["access_screen_customers", "config_manage"])
+    eid = r["employee"]["employeeId"]
+    assert r["employee"]["privileges"]["access_screen_campaigns"] is True
+
+    resp = auth.lambda_handler({"httpMethod": "PATCH", "path": f"/auth/employees/{eid}", "headers": SUPER,
+                                "queryStringParameters": None,
+                                "body": json.dumps({"privileges": {"access_screen_customers": True,
+                                                                   "config_manage": True,
+                                                                   "access_screen_campaigns": False}})}, None)
+    assert resp["statusCode"] == 200, resp["body"]
+    assert json.loads(resp["body"])["employee"]["privileges"]["access_screen_campaigns"] is False
+    guardada = utils._get_by_id("EMPLOYEE", eid)
+    assert guardada["privileges"]["access_screen_campaigns"] is False, "y queda apagada en la ficha"
+
+
+def test_una_ficha_guardada_antes_del_privilegio_lo_recibe_al_leerla(auth, utils):
+    """En un mundo ya sembrado, la ficha no trae la llave nueva: sin migración
+    al leer, la gerente y la de finanzas se quedaban sin Campañas hasta que
+    alguien volviera a guardar cada empleado a mano."""
+    st, r = _alta(auth, "Renata Bustos", "renata2@findingu.mx",
+                  ["access_screen_orders", "config_manage"])
+    eid = r["employee"]["employeeId"]
+    vieja = dict(utils._get_by_id("EMPLOYEE", eid))
+    vieja["privileges"] = {k: v for k, v in vieja["privileges"].items() if k != "access_screen_campaigns"}
+    utils._put_entity("EMPLOYEE", eid, vieja)
+    assert "access_screen_campaigns" not in utils._get_by_id("EMPLOYEE", eid)["privileges"]
+
+    listado = auth.lambda_handler({"httpMethod": "GET", "path": "/auth/employees", "headers": SUPER,
+                                   "queryStringParameters": None, "body": ""}, None)
+    fichas = {e["employeeId"]: e for e in json.loads(listado["body"])["employees"]}
+    assert fichas[eid]["privileges"]["access_screen_campaigns"] is True
+
+    st, sesion = _login(auth, "renata2@findingu.mx", r["tempPassword"])
+    assert sesion["user"]["privileges"]["access_screen_campaigns"] is True, "y la sesión también"
+
+
 # ── El puesto (propuesta 27c) ──
 
 def test_el_alta_guarda_el_puesto_y_el_login_lo_devuelve(auth):
@@ -92,7 +133,9 @@ def test_el_alta_guarda_el_puesto_y_el_login_lo_devuelve(auth):
     st, sesion = _login(auth, "gaby@findingu.mx", r["tempPassword"])
     assert st == 200, sesion
     assert sesion["user"]["jobTitle"] == "Coach", "la insignia necesita el puesto, no el rol"
-    assert sesion["user"]["role"] == "admin", "el rol no cambia: es la llave de _require_admin"
+    assert sesion["user"]["role"] == "employee", (
+        "una ficha de empleado entra como employee: con admin, _require_admin daba "
+        "acceso total y sus privilegios no restringían nada")
 
 
 def test_el_puesto_se_puede_corregir_sin_tocar_los_privilegios(auth):

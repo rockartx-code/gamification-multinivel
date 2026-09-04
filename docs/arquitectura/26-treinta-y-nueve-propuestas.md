@@ -123,7 +123,7 @@ Y dos correcciones al informe que cambian el trabajo antes de empezarlo:
 
 **23 · Enlazar donde nace la duda.** El enlace "Cómo se calculan" recibe `fragment: 'generaciones'` (y el router activa el desplazamiento por fragmento, §3.5); se añade el enlace desde la tarjeta de producto (hoy el "13 PC" es solo un `title`) y desde el bloque de metas del panel. `#/modo-socio` gana anclas `id` en sus secciones (`unidades`, `activacion`, `descuento`, `generaciones`, `pago`, `datos`, `simulador`, `iva`). El correo de bienvenida **ya enlaza**: no se toca.
 
-**36 · Simulador de ganancias reales.** Componente `pages/modo-socio/simulador/` (selector `plan-simulador`, §3.3) y endpoint público `POST /catalog/plan/simular`. La persona mete **cuántos directos tiene, cuánto compra cada uno y cuánto compra ella**; la respuesta sale entera de la configuración (mismos `discountTiers`, `commissionLevels` y requisitos que el motor) y trae: su tramo de descuento, sus VP y si activa, la comisión por generación con el requisito cumplido o no y **por qué**, el gasto propio y la **ganancia neta** (`comisiones − gasto propio`), con la frase honesta calculada: *"Con 2 directas que compran $1,000 ganas $200 al mes, y tú gastaste $1,120 para activarte: tu resultado del mes es −$920."* Sin promesas: el texto fijo *"Esto es una calculadora con las reglas del plan, no una promesa de ingresos"* y sin extrapolar rangos.
+**36 · Simulador de ganancias reales.** Componente `pages/modo-socio/simulador/` (selector `plan-simulador`, §3.3) y endpoint público `POST /catalog/plan/simular`. La persona mete **cuántos directos tiene, cuánto compra cada uno y cuánto compra ella**; la respuesta sale entera de la configuración (mismos `discountTiers`, `commissionLevels` y requisitos que el motor) y trae: su tramo de descuento, sus VP y si activa, la comisión por generación con el requisito cumplido o no y **por qué**, el gasto propio —**lo que de verdad paga**, ya con su descuento de socia, no el precio de lista— y la **ganancia neta** (`comisiones − gasto propio`), con la frase honesta calculada: *"Con 2 directas que compran $1,000 ganas $200 al mes, y tú pagaste $1,008 para activarte: tu resultado del mes es −$808."* Sin promesas: el texto fijo *"Esto es una calculadora con las reglas del plan, no una promesa de ingresos"* y sin extrapolar rangos.
 
 **37 · Decir sobre qué base se paga.** Una sola frase, escrita una vez (§3.2) y usada en cinco sitios: la página del plan, el simulador, **la fila de cada comisión del panel de la socia**, el correo de comisión y la pantalla de pagos del back office. Formato de fila: *"10 % de $1,350.00 netos, sin envío = $135.00"*. B publica el texto y la función que lo arma (`impuestos.texto_base_comision` y su gemela en el frontend); **A y G lo colocan en sus regiones**.
 
@@ -438,14 +438,14 @@ Topes de entrada: `directos` 0–100, importes 0–100,000, `nivelesProfundidad`
 
 ```json
 {"simulacion": {
-  "tuCompra": {"bruto": 1120, "tramo": 0.0, "descuento": 0, "netoPagado": 1120,
-               "vp": 21.6, "activa": true, "iva": {"base": 965.52, "iva": 154.48}},
+  "tuCompra": {"bruto": 1120, "tramo": 0.10, "descuento": 112, "netoPagado": 1008,
+               "vp": 20.16, "activa": true, "iva": {"base": 868.97, "iva": 139.03}},
   "generaciones": [{"gen": 1, "rate": 0.10, "personas": 2, "compraNetaPorPersona": 1000,
                     "requisitoTexto": "sin requisito", "cumple": true, "comision": 200}],
-  "comisionTotal": 200, "gastoPropio": 1120, "gananciaNeta": -920,
+  "comisionTotal": 200, "gastoPropio": 1008, "gananciaNeta": -808,
   "baseComision": "neto pagado por producto, sin envío",
   "explicacion": ["Con 2 directas que compran $1,000 ganas $200 al mes.",
-                  "Tú gastaste $1,120 para activarte: tu resultado del mes es −$920."],
+                  "Tú pagaste $1,008.00 para activarte: tu resultado del mes es -$808.00."],
   "aviso": "Esto es una calculadora con las reglas del plan, no una promesa de ingresos."}}
 ```
 
@@ -659,7 +659,7 @@ Una línea por propuesta: la pantalla o el comando que lo demuestra. Con el harn
 | 33 | Cada credencial de `sim/credenciales.json` aterriza en su pantalla (caja → POS, almacén → Despacho, coach → Seguimiento, finanzas → Comisiones); Pedidos abre en la pestaña con trabajo y el buscador encuentra "Ximena" esté donde esté. |
 | 34 | Mover el reloj al día 10 (`POST /__sim/reloj`) y revisar `sim/buzon/`: sale "Te depositamos $135…" o "No te pudimos depositar porque nos falta tu CLABE"; disparar la tarea dos veces no manda dos correos (`pytest tests/test_dia_de_pago.py`). |
 | 35 | Con una socia sin CLABE y otra lista: el CSV del banco trae solo la lista, se descarga aparte `pendientes-2027-03.csv` y el botón apagado dice "1 espera CLABE ($135.00)". |
-| 36 | En `#/modo-socio#simulador`, con 2 directos × $1,000 y compra propia $1,120: muestra comisión $200, gasto $1,120 y ganancia neta −$920, con el aviso de que no es una promesa de ingresos. |
+| 36 | En `#/modo-socio#simulador`, con 2 directos × $1,000 y compra propia $1,120: muestra comisión $200, gasto $1,008 —lo que paga de verdad, con su 10 % de descuento; el campo se captura a precio de lista— y ganancia neta −$808, con el aviso de que no es una promesa de ingresos. |
 | 37 | La misma frase aparece en `#/modo-socio`, en el simulador, en la fila de la comisión del panel, en el correo de comisión y en Pagos del mes: "10 % de $1,350.00 netos, sin envío = $135.00". |
 | 38 | Carrito, recibo, correo de pago, detalle del pedido, POS, corte y facturación muestran "Subtotal sin IVA / IVA 16 % / Total" con `base + IVA == total` al centavo; cambiar `taxes.vatRate` a 0.08 cambia el desglose y **no** el total (`pytest tests/test_iva.py`). |
 | 39 | `#/devoluciones` publica los seis puntos del proceso; el asistente y los dos correos dicen lo mismo, leído de la misma fuente; cambiar `returns.motivos[].limiteHoras` cambia el plazo en las tres salidas (`pytest tests/test_devoluciones*.py`). |

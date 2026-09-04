@@ -426,12 +426,17 @@ def firmar_nota(headers: dict, actor: Optional[dict] = None) -> str:
     verlos, así que resolver al leer serían N nombres por ficha (un N+1) y
     encima con 403. Si no hay de dónde sacar el nombre devuelve cadena vacía
     y la pantalla cae al id, que es lo que hay hoy.
+
+    El nombre sale de la **sesión** o de la ficha, nunca del encabezado
+    `x-user-name`: ese lo escribe quien llama, y con él la bitácora podía
+    firmarse con cualquier nombre —una nota escrita por Mireya quedaba a
+    nombre de Alma— que es justo lo contrario de para lo que se puso la firma.
     """
     h = headers or {}
-    nombre = str(h.get("x-user-name") or h.get("X-User-Name") or "").strip()
+    actor = actor if isinstance(actor, dict) else utils._extract_actor(h)
+    nombre = str(actor.get("name") or "").strip()
     if nombre:
         return nombre
-    actor = actor if isinstance(actor, dict) else utils._extract_actor(h)
     uid = str(actor.get("user_id") or "").strip()
     if not uid:
         return ""

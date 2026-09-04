@@ -47,6 +47,15 @@ def test_sin_sesion_se_publica_el_telefono_y_el_horario_de_la_tienda(utils):
     assert contacto["direccion"]
 
 
+def test_la_ayuda_publica_manda_la_hora_del_servidor_para_el_ano_del_pie(utils):
+    """El pie decía "© 2026 finding U" con el mundo en 2027: el año salía de
+    `new Date()` del navegador. Nueve de doce personas lo anotaron."""
+    from freezegun import freeze_time
+    with freeze_time("2027-05-04 09:44:48"):
+        datos = _ayuda(utils)
+    assert datos["serverNow"].startswith("2027-05-04"), datos["serverNow"]
+
+
 def test_las_sucursales_salen_con_su_ciudad_y_sin_un_solo_dato_de_inventario(utils):
     """Aurora pagó $1,500 sin saber a qué hora abre la sucursal donde va a recoger;
     lo que nunca debe salir de aquí es el inventario ni cuál es la bodega principal."""

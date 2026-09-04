@@ -50,16 +50,16 @@
 
     <div *ngIf="mode === 'cliente'">
       <div *ngIf="hayCompra && ahorroHipotetico > 0" class="font-semibold text-accent">
-        Como socia habrías ahorrado {{ pesos(ahorroHipotetico) }} en esta compra ({{ porcentaje(tasaConCompra) }}).
+        En modo socio habrías ahorrado {{ pesos(ahorroHipotetico) }} en esta compra ({{ porcentaje(tasaConCompra) }}).
       </div>
       <div *ngIf="hayCompra && ahorroHipotetico === 0 && siguiente">
-        Como socia, con {{ pesos(siguiente.missing) }} más de compra este mes tendrías {{ porcentaje(siguiente.rate) }} de descuento.
+        En modo socio, con {{ pesos(siguiente.missing) }} más de compra este mes tendrías {{ porcentaje(siguiente.rate) }} de descuento.
       </div>
       <div *ngIf="!hayCompra && siguiente">
-        Como socia, al llegar a {{ pesos(monthNet + siguiente.missing) }} de compra en el mes tendrías {{ porcentaje(siguiente.rate) }} de descuento.
+        En modo socio, al llegar a {{ pesos(monthNet + siguiente.missing) }} de compra en el mes tendrías {{ porcentaje(siguiente.rate) }} de descuento.
       </div>
       <div *ngIf="!hayCompra && !siguiente && tasaActual > 0">
-        Como socia, tus compras de este mes ya tendrían {{ porcentaje(tasaActual) }} de descuento.
+        En modo socio, tus compras de este mes ya tendrían {{ porcentaje(tasaActual) }} de descuento.
       </div>
       <div class="mt-1 border-t border-olive-20 pt-1 text-gray-600">
         {{ textoActivacion }} · Los VP se acumulan aunque estés en modo cliente.

@@ -61,6 +61,45 @@ def test_el_pedido_nace_con_factura_solicitada_y_se_ve_en_el_listado(modulos, ut
     assert filtrado["orders"][0]["invoiceData"]["razonSocial"] == "Rodrigo Gómez"
 
 
+def test_el_listado_proyecta_el_envio_y_el_desglose_del_iva(modulos, utils):
+    """El detalle del back office pintaba "Klinhart x2 · $960" y debajo
+    "Total $1,089", sin la línea de envío y sin "Subtotal sin IVA / IVA / Total":
+    la plantilla los pide y el listado no los proyectaba. Con `vatRate` fuera,
+    el bloque de facturación del pedido tampoco se pintaba."""
+    order_lambda, _ = modulos
+    _producto(utils)
+    estado, d = _llamar(order_lambda, "POST", "/orders/create",
+                        _pedido(shippingCost=129, invoiceRequested=True, invoiceData=DATOS))
+    assert estado == 201, d
+    guardado = d["order"]
+
+    estado, lista = _llamar(order_lambda, "GET", "/orders/find", headers=ADMIN)
+    assert estado == 200
+    fila = lista["orders"][0]
+    assert float(fila["shippingCost"]) == 129.0
+    assert float(fila["total"]) == float(guardado["total"])
+    assert float(fila["vatRate"]) == float(guardado["vatRate"])
+    assert float(fila["taxBase"]) == float(guardado["taxBase"])
+    assert float(fila["taxAmount"]) == float(guardado["taxAmount"])
+    assert float(fila["taxBase"]) + float(fila["taxAmount"]) == float(fila["total"])
+
+
+def test_las_facturas_solicitadas_salen_en_acciones_urgentes(modulos, utils):
+    """Dos facturas del 4 de marzo con 37 días encima: sin el aviso, la bandeja
+    dependía de que alguien abriera Pedidos y mirara la novena pestaña."""
+    import dashboard_lambda
+    order_lambda, _ = modulos
+    _producto(utils)
+    _llamar(order_lambda, "POST", "/orders/create", _pedido(invoiceRequested=True, invoiceData=DATOS))
+    _llamar(order_lambda, "POST", "/orders/create", _pedido())
+
+    avisos = {a["type"]: a for a in json.loads(dashboard_lambda.get_admin_warnings()["body"])["warnings"]}
+    assert "invoices" in avisos, "no había ningún aviso de facturas en ninguna capa"
+    assert avisos["invoices"]["count"] == 1
+    assert avisos["invoices"]["text"].startswith("1 factura solicitada sin emitir")
+    assert avisos["invoices"]["orderIds"], "el aviso lleva a los pedidos que hay que facturar"
+
+
 def test_rfc_invalido_se_rechaza_al_crear_y_al_solicitar(modulos, utils):
     order_lambda, _ = modulos
     _producto(utils)

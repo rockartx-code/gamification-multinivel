@@ -15,8 +15,10 @@ info:
     El API Gateway público de auth entra por `/auth/{proxy+}`.
     `POST /auth/login` devuelve el JWT de sesión y el perfil del usuario.
     `POST /auth/password/recovery` y `POST /auth/password/reset` también son públicas y no requieren JWT.
-    Las rutas protegidas aceptan los headers `x-user-id`, `x-user-name` y `x-user-role`
-    y también `Authorization: Bearer <jwt>` cuando el cliente ya tiene sesión iniciada.
+    Las rutas protegidas exigen `Authorization: Bearer <token de sesión>`: el rol y
+    los privilegios se leen de la sesión guardada. Los headers `x-user-id`,
+    `x-user-name` y `x-user-role` son informativos y el backend los ignora salvo
+    que el despliegue declare un autorizador que los inyecte (`TRUST_ACTOR_HEADERS`).
 
     ## Variables a sustituir antes de importar
     - `${AWS_REGION}` — Región AWS (ej. `us-east-1`)
@@ -102,10 +104,12 @@ x-amazon-apigateway-request-validators:
 components:
   securitySchemes:
     UserSession:
-      type: apiKey
-      in: header
-      name: x-user-id
-      description: "ID del usuario en sesión (numérico como string)"
+      type: http
+      scheme: bearer
+      description: >-
+        Token de sesión devuelto por POST /auth/login (Authorization: Bearer …).
+        El rol y los privilegios salen de la sesión guardada, nunca de un
+        encabezado que escriba quien llama.
 
   parameters:
     xUserId:

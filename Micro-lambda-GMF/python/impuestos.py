@@ -61,13 +61,19 @@ def iva_incluye_envio(cfg: Optional[dict] = None) -> bool:
     return bool(_taxes(cfg).get("appliesToShipping", True))
 
 
-def desglose_iva(total_cobrado, cfg: Optional[dict] = None) -> dict:
+def desglose_iva(total_cobrado, cfg: Optional[dict] = None, envio=0) -> dict:
     """Desglosa el IVA de un total que ya lo incluye.
 
     Devuelve `{"total", "base", "iva", "rate", "label"}` con
     `base + iva == total` al centavo, siempre. Un total ≤ 0 (o una tasa en
     cero) devuelve el total como base y cero de impuesto: nunca un negativo
     ni un "IVA" inventado.
+
+    `envio` es lo que del total cobrado corresponde al flete. Solo importa
+    cuando el negocio apaga `taxes.appliesToShipping`: entonces el envío sale
+    de la parte gravada y entra íntegro a la base. La llave se publicaba en la
+    página del plan y en la configuración pública, pero no movía un centavo del
+    desglose: el envío quedaba gravado siempre.
     """
     cfg = cfg if cfg is not None else utils._load_app_config()
     total = utils._to_decimal(total_cobrado).quantize(CENTAVO, rounding=ROUND_HALF_UP)
@@ -75,19 +81,27 @@ def desglose_iva(total_cobrado, cfg: Optional[dict] = None) -> dict:
     if total <= 0 or tasa <= 0:
         return {"total": total, "base": total, "iva": Decimal("0.00"),
                 "rate": tasa, "label": etiqueta_iva(cfg)}
-    base = (total / (Decimal("1") + tasa)).quantize(CENTAVO, rounding=ROUND_HALF_UP)
-    return {"total": total, "base": base, "iva": (total - base).quantize(CENTAVO),
+    flete = utils._to_decimal(envio).quantize(CENTAVO, rounding=ROUND_HALF_UP)
+    if iva_incluye_envio(cfg) or flete <= 0:
+        flete = Decimal("0.00")
+    gravado = total - flete
+    if gravado <= 0:
+        return {"total": total, "base": total, "iva": Decimal("0.00"),
+                "rate": tasa, "label": etiqueta_iva(cfg)}
+    base_gravada = (gravado / (Decimal("1") + tasa)).quantize(CENTAVO, rounding=ROUND_HALF_UP)
+    iva = (gravado - base_gravada).quantize(CENTAVO)
+    return {"total": total, "base": (total - iva).quantize(CENTAVO), "iva": iva,
             "rate": tasa, "label": etiqueta_iva(cfg)}
 
 
-def campos_pedido(total_cobrado, cfg: Optional[dict] = None) -> dict:
+def campos_pedido(total_cobrado, cfg: Optional[dict] = None, envio=0) -> dict:
     """Los tres campos que el pedido guarda al crearse: `vatRate`, `taxBase`,
     `taxAmount`.
 
     Se guardan con el pedido —no se recalculan al leerlo— para que un cambio
     futuro de tasa no reescriba la historia (docs/arquitectura/26 §4.4).
     """
-    desglose = desglose_iva(total_cobrado, cfg)
+    desglose = desglose_iva(total_cobrado, cfg, envio=envio)
     return {"vatRate": desglose["rate"], "taxBase": desglose["base"], "taxAmount": desglose["iva"]}
 
 
@@ -108,7 +122,7 @@ def desglose_de_pedido(order: dict, cfg: Optional[dict] = None) -> dict:
             "rate": utils._to_decimal(order.get("vatRate", 0)),
             "label": etiqueta_iva(cfg),
         }
-    return desglose_iva(total, cfg)
+    return desglose_iva(total, cfg, envio=order.get("shippingCost", 0))
 
 
 # ---------------------------------------------------------------------------

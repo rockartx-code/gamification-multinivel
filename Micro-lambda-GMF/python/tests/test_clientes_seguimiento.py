@@ -9,7 +9,9 @@ def modulos(utils, monkeypatch):
     import customer_lambda, auth_utils
     monkeypatch.setattr(utils, "_require_admin", lambda *a, **k: None)
     monkeypatch.setattr(utils, "_require_self_or_admin_from_bearer", lambda *a, **k: None)
-    monkeypatch.setattr(utils, "_extract_actor_from_bearer", lambda h: {"user_id": "sofia", "role": "admin", "privileges": {}})
+    sofia = {"user_id": "sofia", "role": "admin", "privileges": {}, "name": ""}
+    monkeypatch.setattr(utils, "_extract_actor_from_bearer", lambda h: dict(sofia))
+    monkeypatch.setattr(utils, "_extract_actor", lambda h: dict(sofia))
     return customer_lambda, auth_utils
 
 

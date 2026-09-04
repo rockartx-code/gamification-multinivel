@@ -42,6 +42,19 @@ LEDGER_MAX_ATTEMPTS = 6
 #: Ver core/ledger.py para el porqué y tools/migrate_ledger_rows.py para poblar.
 LEDGER_ROW_SCHEME = os.getenv("LEDGER_ROW_SCHEME", "off").strip().lower()
 
+# Los encabezados `x-user-id` / `x-user-role` / `x-user-privileges` solo valen
+# si un autorizador los inyecta Y el borde borra los que manda el cliente.
+# `openapi-aws.yaml` publica las rutas sin autorizador, así que hoy los escribe
+# quien llama: confiar en ellos era dejar que el cliente eligiera su propio rol
+# ("x-user-role: admin" y adentro, hasta el CSV con las CLABES completas).
+# Por omisión NO se confía: el rol y los privilegios salen de la sesión del
+# Bearer. La suite los sigue usando como atajo de identidad y por eso existe la
+# variable, que ningún despliegue define.
+def _confia_en_encabezados_de_actor() -> bool:
+    """Se lee en cada petición (no al importar) para que una prueba pueda
+    encender y apagar la confianza sin recargar el módulo."""
+    return os.getenv("TRUST_ACTOR_HEADERS", "").strip().lower() in ("1", "true", "yes", "on")
+
 PASSWORD_HASH_SCHEME = "pbkdf2_sha256"
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "210000"))

@@ -12,6 +12,7 @@ import { UiFooterComponent } from '../../components/ui-footer/ui-footer.componen
 import { UiDevolucionBotonComponent } from '../../components/ui-devolucion-boton/ui-devolucion-boton.component';
 import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component';
 import { EstadoDevolucionPedido } from '../../models/ayuda.model';
+import { fechaEnLetras, textoEstadoPedido } from '../../models/vocabulario.model'; // paquete G · ronda 26
 
 @Component({
   selector: 'app-order-status',
@@ -213,34 +214,13 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (this.isConfirmingPayment) {
       return 'Estamos confirmando tu pago';
     }
+    // El vocabulario único (§3.7): el mismo pedido se llama igual en el recibo
+    // del cliente y en el back office. Esta pantalla tenía su propia tabla
+    // ("Pago registrado" donde la insignia del panel decía "Pagado"), que es lo
+    // que hizo a Julio contar cuatro nombres del mismo estado. El matiz de
+    // recolección también vive ahí: `paid` + `pickup` es "Listo para recoger".
     const status = this.normalizeStatus(this.order?.status);
-    if (status === 'paid') {
-      return 'Pago registrado';
-    }
-    if (status === 'shipped') {
-      // A quien recoge en sucursal no le enviamos nada: su pedido está listo en el mostrador.
-      return this.isPickup ? 'Listo para recoger' : 'Pedido enviado';
-    }
-    if (status === 'delivered') {
-      return this.isPickup ? 'Entregado en sucursal' : 'Pedido entregado';
-    }
-    if (status === 'cancelled') {
-      return 'Cancelado';
-    }
-    if (status === 'en_devolucion') {
-      return 'En devolución';
-    }
-    if (status === 'devuelto_validado') {
-      return 'Devolución aprobada';
-    }
-    if (status === 'devolucion_rechazada') {
-      return 'Devolución rechazada';
-    }
-    if (status === 'refunded') {
-      // Un pedido reembolsado se mostraba como "Pago pendiente".
-      return 'Reembolsado';
-    }
-    return 'Pago pendiente';
+    return textoEstadoPedido(status, this.isPickup ? 'pickup' : 'delivery') || 'Pendiente de pago';
   }
 
   get statusClass(): string {
@@ -431,13 +411,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   /** Fecha en las palabras de la gente: "2 de marzo de 2027, 11:18", no "2027-03-02T11:18:04Z". */
   formatDate(value?: string): string {
-    const fecha = new Date(String(value ?? ''));
-    if (!value || Number.isNaN(fecha.getTime())) {
-      return String(value ?? '');
-    }
-    return new Intl.DateTimeFormat('es-MX', {
-      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    }).format(fecha);
+    // El formato único de §3.7 ("4 de mayo de 2027, 09:11"), no un quinto
+    // formato propio: el `Intl` de esta pantalla rendía "09:11 a. m." en es-MX.
+    return fechaEnLetras(value) || String(value ?? '');
   }
 
   formatMoney(value: number): string {

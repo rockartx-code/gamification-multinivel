@@ -176,6 +176,43 @@ def test_el_anexo_de_pendientes_lista_a_quien_falta_y_por_que(motor, escenario):
     assert not any("012345678901236789" in l for l in lineas), "nunca la CLABE de nadie"
 
 
+def test_en_sin_clabe_el_anexo_pone_el_confirmado_no_el_reconocido(motor, escenario, utils):
+    """Lo que la CLABE destraba son los $135.00 confirmados; los $124.20 esperan
+    la entrega del pedido y seguirían esperando aunque registrara la CLABE hoy.
+    Con el reconocido, el anexo decía 259.20 y el archivo del banco 135.00 del
+    mismo dinero: el descuadre que esta pantalla vino a quitar."""
+    import pagos_handlers
+    _fila(utils, escenario["fabiola"], "124.20", estado="pending", order_id="ORD-2B",
+          creado="2027-03-02T11:18:00Z")
+    fila = {f["name"]: f for f in pagos_handlers.estado_pagos(MES)["rows"]}["Fabiola"]
+    assert fila["status"] == "sin_clabe"
+    assert (fila["confirmado"], fila["porConfirmar"], fila["reconocido"]) == (135.0, 124.2, 259.2)
+
+    with freeze_time("2027-04-10"):
+        lineas = [l for l in _get(motor, "/commissions/pagos/pendientes.csv", {"month": MES})["body"].split("\r\n") if l]
+    de_fabiola = next(l for l in lineas if l.startswith("Fabiola,"))
+    assert de_fabiola.startswith("Fabiola,135.00,"), de_fabiola
+    assert "259.20" not in de_fabiola
+    # La que todavía no confirma nada sí lleva su reconocido: es lo único que tiene.
+    assert any(l.startswith("Ximena,124.20") for l in lineas)
+
+
+def test_la_pantalla_del_dia_de_pago_no_relee_el_mes_una_vez_por_beneficiaria(motor, escenario, utils, monkeypatch):
+    """El listado ya trae el ledger completo; releerlo era un GetItem más por
+    fila (la pantalla en O(2N)) y `check_query_budget` no vigila este endpoint."""
+    import pagos_handlers
+    _fila(utils, escenario["fabiola"], "124.20", estado="pending", order_id="ORD-2B")
+    relecturas = []
+    original = utils._get_ledger_month
+    monkeypatch.setattr(utils, "_get_ledger_month",
+                        lambda cid, mes: relecturas.append((cid, mes)) or original(cid, mes))
+    filas = {f["name"]: f for f in pagos_handlers.estado_pagos(MES)["rows"]}
+    assert relecturas == [], f"se releyó el mes contable: {relecturas}"
+    # Y el detalle que se sacaba de esa relectura sigue ahí.
+    assert filas["Fabiola"]["frenoPorConfirmar"]["orderId"] == "ORD-2B"
+    assert filas["Ximena"]["frenoPorConfirmar"]["orderId"] == "ORD-3"
+
+
 def test_el_anexo_exige_privilegio_y_valida_el_mes(motor, escenario):
     assert _get(motor, "/commissions/pagos/pendientes.csv", {"month": MES},
                 headers=SIN_PRIVILEGIO)["statusCode"] == 403

@@ -28,13 +28,20 @@ export class UiFooterComponent implements OnInit {
   @Input() containerClass = 'mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-10 md:flex-row md:items-start';
 
   contacto: ContactoPublico = { email: '', whatsapp: '', horario: '', direccion: '' };
-  readonly anio = new Date().getFullYear();
+  /** El año del negocio, no el del equipo de quien mira: `GET /catalog/ayuda`
+   *  —que este pie ya consulta— manda `serverNow`. Con el reloj del navegador
+   *  atrasado el pie seguía diciendo "© 2026" con el mundo en 2027. */
+  anio = new Date().getFullYear();
 
   constructor(private readonly ayudaService: AyudaService) {}
 
   ngOnInit(): void {
     this.ayudaService.ayuda().subscribe((ayuda) => {
       this.contacto = ayuda.contacto;
+      const delServidor = new Date(String(ayuda.serverNow ?? ''));
+      if (!Number.isNaN(delServidor.getTime())) {
+        this.anio = delServidor.getFullYear();
+      }
     });
   }
 

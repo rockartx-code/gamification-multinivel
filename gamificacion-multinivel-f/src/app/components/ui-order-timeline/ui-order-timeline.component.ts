@@ -22,7 +22,9 @@ export class UiOrderTimelineComponent {
     { key: 'paid', label: 'Pago', description: 'Conciliación y confirmación.' },
     { key: 'packing', label: 'Preparación', description: 'Armando paquete.' },
     { key: 'shipped', label: 'Envío', description: 'Ruta de entrega.' },
-    { key: 'delivered', label: 'Entregada', description: 'Pedido finalizado.' }
+    // Género neutro (§4.17): la insignia de arriba dice "Entregado" y este paso
+    // decía "Entregada" en el mismo recibo.
+    { key: 'delivered', label: 'Entregado', description: 'Pedido finalizado.' }
   ];
 
   // ── Paquete C · ronda 26 · propuesta 7 ──

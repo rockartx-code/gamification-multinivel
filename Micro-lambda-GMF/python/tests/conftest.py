@@ -12,6 +12,19 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..") )
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
+
+def pytest_configure(config):
+    """La suite usa los encabezados `x-user-*` como atajo de identidad.
+
+    En un despliegue NO se confía en ellos (los escribe quien llama): ver
+    `core/settings.py` y `tests/test_encabezados_forjados.py`, que apaga esta
+    variable y comprueba que sin Bearer no se entra a ningún lado. Va en el
+    gancho de pytest y NO al importar el módulo, porque `sim/servidor.py`
+    importa este archivo para reusar la tabla en memoria: encenderlo ahí abriría
+    el mundo simulado a `x-user-role: admin` sin credencial.
+    """
+    os.environ.setdefault("TRUST_ACTOR_HEADERS", "1")
+
 from boto3.dynamodb.conditions import (  # noqa: E402
     And, BeginsWith, Between, Equals, GreaterThanEquals, LessThanEquals,
 )

@@ -140,12 +140,20 @@ def _abrir_sesion(auth: dict, profile: dict, entity_type: str, user_id, remember
     # Clave directa: validar el Bearer cuesta 1 GetItem en vez de 2, y no deja
     # un puntero REF por sesión. El TTL (epoch) hace que DynamoDB las purgue;
     # `expiresAt` es informativo para el frontend.
+    # Una ficha de empleado entra como `employee`, aunque su credencial venga
+    # marcada `admin` de antes de esta ronda: con `admin`, `_require_admin` daba
+    # acceso total y los privilegios de su ficha no restringían nada.
+    rol = "employee" if entity_type == "EMPLOYEE" else auth.get("role")
+    privilegios = _sembrar_privilegios_de_pantalla(profile.get("privileges"))
     utils._put_session(token, {
         "sessionId": token,
         "userId": str(user_id),
-        "role": auth.get("role"),
+        "role": rol,
+        # El nombre viaja en la sesión: la bitácora se firma con él y así no hay
+        # que creerle el nombre a un encabezado que escribe quien llama.
+        "name": str(profile.get("name") or "").strip(),
         "authId": auth.get("authId") or auth.get("email"),
-        "privileges": utils._normalize_privileges(profile.get("privileges")),
+        "privileges": privilegios,
         # Una socia con acceso al back office entra con rol cliente: el backend
         # necesita saberlo para aplicar sus privilegios.
         "canAccessAdmin": bool(profile.get("canAccessAdmin")),
@@ -160,9 +168,9 @@ def _abrir_sesion(auth: dict, profile: dict, entity_type: str, user_id, remember
         "user": {
             "userId": str(user_id),
             "name": profile.get("name"),
-            "role": auth.get("role"),
+            "role": rol,
             "canAccessAdmin": bool(profile.get("canAccessAdmin")),
-            "privileges": utils._normalize_privileges(profile.get("privileges")),
+            "privileges": privilegios,
             "isEmployee": (entity_type == "EMPLOYEE"),
             # Paquete E · ronda 26: el puesto que pinta la insignia del back office.
             "jobTitle": str(profile.get("jobTitle") or "").strip(),
@@ -1027,20 +1035,35 @@ def handle_get_referrer(referrer_id):
 
 # --- GESTIÓN DE EMPLEADOS ---
 
-def _sembrar_privilegios_de_pantalla(privilegios: dict) -> dict:
-    """Enciende `access_screen_campaigns` a quien administra la configuración.
+def _sembrar_privilegios_de_pantalla(privilegios) -> dict:
+    """Normaliza el mapa y siembra `access_screen_campaigns` **solo si la llave
+    no viene**.
 
     Campañas colgaba de `access_screen_stocks`: el encargado de almacén veía el
     formulario para crear una campaña de publicidad solo por tener inventario.
     Al estrenar privilegio propio, quien ya administra la configuración
-    (`config_manage`) lo conserva y el resto se queda sin él, salvo que se le
-    encienda a mano. El superadmin y el rol `admin` no pasan por aquí: su acceso
-    lo resuelve `_require_admin`.
+    (`config_manage`) lo conserva.
+
+    Que la siembra mire la **ausencia** de la llave, y no su valor, es lo que
+    distingue "ficha guardada antes de la ronda" de "la gerente apagó la
+    casilla": con la llave presente en `false` se respeta el `false` (antes el
+    PATCH la volvía a encender y la casilla quedaba clavada), y con la llave
+    ausente se migra al leer la ficha vieja (antes se quedaba sin Campañas
+    hasta que alguien volviera a guardar cada empleado a mano). El superadmin y
+    el rol `admin` no pasan por aquí: su acceso lo resuelve `_require_admin`.
     """
-    privs = dict(privilegios or {})
-    if privs.get("config_manage") and not privs.get("access_screen_campaigns"):
+    crudos = privilegios if isinstance(privilegios, dict) else {}
+    privs = utils._normalize_privileges(crudos)
+    if "access_screen_campaigns" not in crudos and crudos.get("config_manage"):
         privs["access_screen_campaigns"] = True
     return privs
+
+
+def _ficha_de_empleado(item: dict) -> dict:
+    """La ficha como se publica: con la migración de privilegios ya aplicada."""
+    ficha = dict(item or {})
+    ficha["privileges"] = _sembrar_privilegios_de_pantalla(ficha.get("privileges"))
+    return ficha
 
 
 def handle_employees(method, body, employee_id=None, headers=None):
@@ -1050,7 +1073,7 @@ def handle_employees(method, body, employee_id=None, headers=None):
     if method == "GET":
         err = utils._require_admin(headers, "access_screen_employees")
         if err: return err
-        items = utils._query_bucket("EMPLOYEE")
+        items = [_ficha_de_empleado(e) for e in utils._query_bucket("EMPLOYEE")]
         return utils._json_response(200, {"employees": items})
 
     if method == "POST":
@@ -1067,10 +1090,9 @@ def handle_employees(method, body, employee_id=None, headers=None):
             "entityType": "employee", "employeeId": emp_id, "name": body.get("name"),
             "email": email, "phone": body.get("phone"), "canAccessAdmin": True,
             # El puesto es solo presentación: la insignia decía ADMIN sobre el
-            # nombre de la cajera, igual que sobre el de la gerente. `role` no
-            # cambia (es la llave de _require_admin y de media docena de guardas).
+            # nombre de la cajera, igual que sobre el de la gerente.
             "jobTitle": str(body.get("jobTitle") or "").strip(),
-            "privileges": _sembrar_privilegios_de_pantalla(utils._normalize_privileges(body.get("privileges"))),
+            "privileges": _sembrar_privilegios_de_pantalla(body.get("privileges")),
             "active": True,
             "createdAt": now
         }
@@ -1078,7 +1100,12 @@ def handle_employees(method, body, employee_id=None, headers=None):
         
         utils._put_entity("AUTH", email, {
             "entityType": "auth", "authId": email, "email": email, "employeeId": emp_id,
-            "passwordHash": utils._hash_password(temp_pass), "role": "admin"
+            # El rol de una ficha de empleado es `employee`, nunca `admin`: con
+            # `admin` _require_admin daba acceso total y ningún privilegio de
+            # los que se le configuran restringía nada (la cajera pasaba las
+            # guardas de comisiones). Quien necesita todo, lo tiene todo
+            # palomeado en sus privilegios.
+            "passwordHash": utils._hash_password(temp_pass), "role": "employee"
         })
 
         return utils._json_response(201, {"employee": emp_item, "tempPassword": temp_pass})
@@ -1102,10 +1129,10 @@ def handle_employees(method, body, employee_id=None, headers=None):
         if "canAccessAdmin" in body: updates.append("canAccessAdmin = :ca"); eav[":ca"] = bool(body["canAccessAdmin"])
         if "privileges" in body:
             updates.append("privileges = :p")
-            eav[":p"] = _sembrar_privilegios_de_pantalla(utils._normalize_privileges(body["privileges"]))
+            eav[":p"] = _sembrar_privilegios_de_pantalla(body["privileges"])
         
         updated = utils._update_by_id("EMPLOYEE", eid, f"SET {', '.join(updates)}", eav, {"#n": "name"} if "name" in body else None)
-        return utils._json_response(200, {"employee": updated})
+        return utils._json_response(200, {"employee": _ficha_de_empleado(updated)})
 
 # --- LAMBDA HANDLER PRINCIPAL ---
 

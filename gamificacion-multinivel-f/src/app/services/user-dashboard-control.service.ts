@@ -99,9 +99,29 @@ export class UserDashboardControlService {
       settings: { ...AJUSTES_SIN_SESION },
       goals: [], featured: [], campaigns: [], networkMembers: [], buyAgainIds: [], commissions: null, notifications: [], customer: null
     };
+    // Sin sesión el corte también sale del servidor (propuesta 29): la
+    // configuración pública ya publica `cutoffAt` y `serverNow`, y sin pedirlos
+    // el carrito del invitado contaba los días con `new Date()` del navegador
+    // —26 d sin cuenta y 21 d con cuenta en el mismo minuto, y dos fechas en
+    // letras separadas por ocho meses—. `AJUSTES_SIN_SESION` queda solo como
+    // último recurso si la petición falla.
     const dashboardRequest = this.authService.hasSession
       ? this.api.getDashboardData().pipe(catchError(() => of<DashboardData>({ ...esqueleto, isGuest: false })))
-      : of<DashboardData>({ ...esqueleto });
+      : this.api.getPublicBusinessConfig().pipe(
+          map((config) => ({
+            ...esqueleto,
+            settings: {
+              ...esqueleto.settings,
+              cutoffDay: Number(config?.cutoffDay ?? esqueleto.settings.cutoffDay),
+              cutoffHour: Number(config?.cutoffHour ?? esqueleto.settings.cutoffHour),
+              cutoffMinute: Number(config?.cutoffMinute ?? esqueleto.settings.cutoffMinute),
+              cutoffLabel: String(config?.cutoffLabel ?? esqueleto.settings.cutoffLabel),
+              cutoffAt: config?.cutoffAt,
+              serverNow: config?.serverNow
+            }
+          } satisfies DashboardData)),
+          catchError(() => of<DashboardData>({ ...esqueleto }))
+        );
 
     const request = forkJoin([
       this.api.getCatalogData(),

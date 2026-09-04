@@ -1341,9 +1341,18 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return this.plan?.iva?.etiqueta || 'IVA';
   }
 
-  /** El envío que ya está dentro del total; 0 mientras no se haya elegido. */
+  /** El envío que ya está dentro del total; 0 mientras no se haya elegido.
+   *
+   *  Tiene que ser **el mismo** que suma `total`: con la tarifa de la cotización
+   *  elegida, `this.shipping` vale 0 y el desglose recibía envío 0, así que la
+   *  nota decía "Los precios ya incluyen IVA." y se callaba que el envío va
+   *  dentro de la base, justo lo contrario de lo que dice el recibo del pedido. */
   get shippingInTotal(): number {
-    return this.totalLabel === 'Total' ? Number(this.shipping) || 0 : 0;
+    if (this.deliveryType === 'pickup' || this.isShippingFree || this.totalLabel !== 'Total') {
+      return 0;
+    }
+    const cotizado = this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping;
+    return Number(cotizado) || 0;
   }
 
   private get projectedDiscountPercentValue(): number {
