@@ -19,6 +19,8 @@ import { UiButtonComponent } from '../../components/ui-button/ui-button.componen
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { PoliticaDevolucion } from '../../models/ayuda.model';
+import { AyudaService } from '../../services/ayuda.service';
 
 type Paso = 1 | 2 | 3 | 4;
 
@@ -77,44 +79,56 @@ export class OrderDevolucionComponent implements OnInit {
   readonly plazoPorOmision = '3 a 5';
   readonly medioPorOmision = 'mismo medio de pago';
 
-  readonly motivos: MotivoOpcion[] = [
-    {
-      value: 'DANADO_DEFECTUOSO',
-      label: 'Llegó dañado o no funciona',
-      hint: 'El producto llegó roto, golpeado, abierto o en mal estado.',
-      plazo: 'Tienes 48 horas desde la entrega.',
-      envio: 'El envío de regreso lo pagamos nosotros: guarda tu ticket, te lo reembolsamos.',
-      evidencia: 'Necesitamos tres fotos: del producto, del empaque y de la guía de envío.'
-    },
-    {
-      value: 'ERROR_ENVIO',
-      label: 'Me llegó otra cosa',
-      hint: 'Recibiste un producto distinto o una cantidad diferente a la que pediste.',
-      plazo: 'Tienes 48 horas desde la entrega.',
-      envio: 'El envío de regreso lo pagamos nosotros: guarda tu ticket, te lo reembolsamos.',
-      evidencia: 'Necesitamos tres fotos: del producto, del empaque y de la guía de envío.'
-    },
-    {
-      value: 'DESISTIMIENTO',
-      label: 'Ya no lo quiero',
-      hint: 'Cambiaste de opinión y el paquete sigue cerrado.',
-      plazo: 'Tienes 7 días desde la entrega.',
-      envio: 'El envío de regreso corre por tu cuenta y no se reembolsa el envío original.',
-      evidencia: 'Basta una foto del paquete cerrado donde se vea la guía.'
-    }
-  ];
+  /**
+   * Paquete D · propuesta 39: los plazos, el responsable del envío y la
+   * evidencia **ya no se escriben aquí**. Llegan de `GET /catalog/ayuda`, la
+   * misma fuente que la página pública y los dos correos; si el negocio cambia
+   * `returns.motivos[].limiteHoras`, cambia en las cuatro salidas a la vez.
+   * Lo único propio del asistente es la explicación en corto de cada opción.
+   */
+  private readonly pistaPorMotivo: Record<DevolucionMotivo, string> = {
+    DANADO_DEFECTUOSO: 'El producto llegó roto, golpeado, abierto o en mal estado.',
+    ERROR_ENVIO: 'Recibiste un producto distinto o una cantidad diferente a la que pediste.',
+    DESISTIMIENTO: 'Cambiaste de opinión y el paquete sigue cerrado.'
+  };
+
+  /** La política publicada; hasta que llega, la pantalla no promete plazos. */
+  politica: PoliticaDevolucion | null = null;
+
+  get motivos(): MotivoOpcion[] {
+    return (this.politica?.motivos ?? [])
+      .filter((motivo): motivo is typeof motivo & { key: DevolucionMotivo } =>
+        motivo.key in this.pistaPorMotivo)
+      .map((motivo) => ({
+        value: motivo.key,
+        label: motivo.label,
+        hint: this.pistaPorMotivo[motivo.key],
+        plazo: `Tienes ${motivo.plazoTexto} desde la entrega.`,
+        envio: motivo.responsableEnvio === 'empresa'
+          ? 'El envío de regreso lo pagamos nosotros: guarda tu ticket, te lo reembolsamos.'
+          : 'El envío de regreso corre por tu cuenta y no se reembolsa el envío original.',
+        evidencia: `Te pedimos ${motivo.evidenciaTexto}.`
+      }));
+  }
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly api: ApiService,
     private readonly devoluciones: DevolucionesService,
+    private readonly ayudaService: AyudaService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('idOrden') ?? '';
     if (!this.orderId) { void this.router.navigate(['/dashboard']); return; }
+    // Paquete D · propuesta 39: el asistente lee la misma política que se
+    // publica en `#/devoluciones` y viaja en los correos.
+    this.ayudaService.ayuda().subscribe((ayuda) => {
+      this.politica = ayuda.devoluciones;
+      this.cdr.markForCheck();
+    });
 
     this.api.getOrder(this.orderId)
       .pipe(finalize(() => { this.isLoading = false; this.requestViewUpdate(); }))
@@ -173,6 +187,18 @@ export class OrderDevolucionComponent implements OnInit {
   }
 
   get orderIsDelivered(): boolean { return this.order?.status === 'delivered'; }
+
+  /**
+   * Paquete D · propuesta 24: por qué no se puede pedir la devolución todavía.
+   * Lo dice el servidor en `GET /orders/{id}`, con las mismas palabras que el
+   * botón apagado del pedido, para que la persona no lea dos explicaciones
+   * distintas de lo mismo en dos pantallas seguidas.
+   */
+  get motivoNoDisponible(): string {
+    return this.order?.devolucion?.motivo
+      || this.error
+      || 'Solo se puede pedir la devolución de un pedido ya entregado. Cuando te llegue, vuelve aquí.';
+  }
 
   enFlujoDeDevolucion(status?: string): boolean {
     return ['en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'].includes(status ?? '');

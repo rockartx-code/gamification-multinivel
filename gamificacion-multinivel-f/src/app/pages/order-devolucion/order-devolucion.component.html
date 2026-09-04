@@ -131,7 +131,13 @@
         <i class="fa-solid fa-lock mt-0.5 text-amber-500" aria-hidden="true"></i>
         <div>
           <p class="text-sm font-semibold text-amber-800">Todavía no se puede devolver</p>
-          <p class="mt-1 text-xs text-amber-700">{{ error || 'Solo se puede pedir la devolución de un pedido ya entregado. Cuando te llegue, vuelve aquí.' }}</p>
+          <p class="mt-1 text-xs text-amber-700">{{ motivoNoDisponible }}</p>
+          <p *ngIf="order?.devolucion?.plazoTexto" class="mt-1 text-xs text-amber-700">
+            Plazos desde la entrega — {{ order?.devolucion?.plazoTexto }}
+          </p>
+          <a routerLink="/devoluciones" class="mt-2 inline-block text-xs text-amber-800 underline">
+            Cómo funciona una devolución
+          </a>
         </div>
       </div>
       <div class="mt-4">
@@ -163,6 +169,21 @@
           <div *ngIf="!last" class="h-px flex-1 bg-olive-20"></div>
         </ng-container>
       </div>
+
+      <!-- Paquete D · propuesta 39: el proceso completo, leído de la misma
+           fuente que `#/devoluciones` y que los correos. Julio preguntó las
+           cuatro cosas por WhatsApp porque no estaban escritas en ningún lado. -->
+      <details *ngIf="politica?.pasos?.length" class="mt-5 rounded-2xl border border-olive-20 bg-white/60 p-4">
+        <summary class="cursor-pointer text-sm font-semibold text-main">
+          Antes de empezar: cómo funciona una devolución
+        </summary>
+        <ul class="mt-3 space-y-2">
+          <li *ngFor="let paso of politica?.pasos" class="text-xs text-gray-600">
+            <span class="font-semibold text-main">{{ paso.titulo }}.</span> {{ paso.texto }}
+          </li>
+        </ul>
+        <a routerLink="/devoluciones" class="mt-3 inline-block text-xs text-accent underline">Ver la política completa</a>
+      </details>
 
       <!-- PASO 1: ¿Qué devuelves? -->
       <div *ngIf="step === 1" class="mt-6 space-y-4">
