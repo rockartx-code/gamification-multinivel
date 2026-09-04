@@ -57,7 +57,7 @@
           </div>
           <div class="relative">
             <div class="text-xs text-gray-600">Navegación</div>
-            <ui-sidebar-nav [links]="adminNavLinksStable" [activeId]="currentView" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
+            <ui-sidebar-nav [links]="adminNavLinksStable" [activeId]="activeMenuId" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
           </div>
         </div>
 
@@ -4866,52 +4866,18 @@
     </div>
   </ui-modal>
 
+  <!-- Paquete E · ronda 26 · La barra del móvil lee la MISMA lista que el menú
+       lateral (antes eran dos copias de doce enlaces que ya no coincidían). -->
   <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-90 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">
       <div class="grid grid-cols-3 gap-2">
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('orders')" [variant]="currentView === 'orders' ? 'primary' : 'ghost'" (click)="setView('orders')">
-          <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-          Pedidos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('customers')" [variant]="currentView === 'customers' ? 'primary' : 'ghost'" (click)="setView('customers')">
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-          Clientes
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('products')" [variant]="currentView === 'products' ? 'primary' : 'ghost'" (click)="setView('products')">
-          <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-          Productos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stocks')" [variant]="currentView === 'stocks' ? 'primary' : 'ghost'" (click)="setView('stocks')">
-          <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
-          Stocks
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('campaigns')" [variant]="currentView === 'campaigns' ? 'primary' : 'ghost'" (click)="setView('campaigns')">
-          <i class="fa-solid fa-bullhorn" aria-hidden="true"></i>
-          Campañas
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('pos')" [variant]="currentView === 'pos' ? 'primary' : 'ghost'" (click)="setView('pos')">
-          <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
-          PV
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stats')" [variant]="currentView === 'stats' ? 'primary' : 'ghost'" (click)="setView('stats')">
-          <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-          Stats
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('honor_board')" [variant]="currentView === 'honor_board' ? 'primary' : 'ghost'" (click)="setView('honor_board')">
-          <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
-          Honor
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('notifications')" [variant]="currentView === 'notifications' ? 'primary' : 'ghost'" (click)="setView('notifications')">
-          <i class="fa-solid fa-bell" aria-hidden="true"></i>
-          Avisos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('coupons')" [variant]="currentView === 'coupons' ? 'primary' : 'ghost'" (click)="setView('coupons')">
-          <i class="fa-solid fa-ticket" aria-hidden="true"></i>
-          Cupones
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('settings')" [variant]="currentView === 'settings' ? 'primary' : 'ghost'" (click)="setView('settings')">
-          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-          Config
+        <ui-button size="md" extraClass="mobbtn"
+          *ngFor="let entrada of adminMenuLinksStable; trackBy: trackMenuEntry"
+          [variant]="activeMenuId === entrada.id ? 'primary' : 'ghost'"
+          [ariaLabel]="'Ir a ' + entrada.label"
+          (pressed)="irAEntradaDeMenu(entrada)">
+          <i class="fa-solid" [ngClass]="entrada.icon" aria-hidden="true"></i>
+          {{ entrada.short }}
         </ui-button>
       </div>
     </div>

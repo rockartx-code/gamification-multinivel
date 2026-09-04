@@ -99,6 +99,12 @@ export class AdminControlService {
     );
   }
 
+  /** Paquete E · ronda 26: con una URL por pantalla, el caparazón se vuelve a
+   *  montar en cada salto de menú; los avisos no se vuelven a pedir por eso. */
+  hasLoadedWarnings(): boolean {
+    return this.loadedSections.has('warnings');
+  }
+
   hasLoadedOrders(status?: AdminOrder['status']): boolean {
     if (!status) return this.loadedSections.has('orders:all');
     return this.loadedSections.has(`orders:${status}`) || this.loadedSections.has('orders:all');
