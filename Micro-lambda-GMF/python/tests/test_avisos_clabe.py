@@ -185,3 +185,72 @@ def test_pedir_la_clabe_sin_comisiones_no_promete_dinero_que_no_existe(utils):
     assert "$0.00" not in aviso["description"]
     assert "comisiones confirmadas" not in aviso["description"]
     assert aviso["description"].startswith("Nos falta tu CLABE")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Guarda 5 (docs/qa/27 §4): el aviso no nombra dinero que no existe,
+# y sí nombra el que existe con el nombre que le toca.
+#
+# Ximena y Fabiola recibieron "Ya tienes comisiones a tu favor" con $0.00 y la
+# red vacía: *"Es lo único que me tiró la confianza en todo lo demás"*. El otro
+# lado del mismo error es igual de caro: quien tiene $96 **pendientes** (el
+# pedido aún no se entrega) no los tiene "confirmados", y prometerle un depósito
+# el día 10 es prometer algo que puede no pasar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _aviso_de(dashboard_common, cid):
+    avisos = dashboard_common._active_notifications_for_customer(cid)
+    assert len(avisos) == 1, [a["title"] for a in avisos]
+    return avisos[0]["description"]
+
+
+def test_no_avisa_comisiones_inexistentes(modulos, utils, correos, monkeypatch):
+    order_lambda, commissions_lambda, dashboard_common = modulos
+    import pagos_handlers
+    mes = utils._month_key()
+
+    # 1. Sin nada confirmado ni pendiente: no se promete un peso.
+    sola = _cliente(utils, 1, "Ximena")
+    pagos_handlers._aviso_panel_clabe(sola, mes, "recordatorio")
+    texto = _aviso_de(dashboard_common, sola)
+    assert "a tu favor" not in texto and "comisiones confirmadas" not in texto
+    assert "pendientes" not in texto
+    assert "$" not in texto, "sin comisiones no hay ninguna cifra que enseñar"
+
+    # …y el correo de la misma petición tampoco: el $0.00 no viaja por ningún canal.
+    cuerpos = []
+    monkeypatch.setattr(utils, "_send_ses_email",
+                        lambda para, asunto, texto, html: cuerpos.append(html))
+    assert pagos_handlers._correo_clabe(utils._get_by_id("CUSTOMER", sola), 0, "recordatorio") is True
+    assert cuerpos and "$0.00" not in cuerpos[0]
+    assert "en comisiones confirmadas" not in cuerpos[0]
+
+    # 2. Con $96 pendientes (el pedido de su red aún no se entrega): se dicen
+    #    pendientes, con su palabra, y NO se llaman confirmadas.
+    paulina = _cliente(utils, 2, "Paulina")
+    ximena = _cliente(utils, 3, "Ximena Ruiz", leader=paulina, clabeInterbancaria="002180000000005678")
+    pid = _producto(utils)
+    _pagar(order_lambda, commissions_lambda, paulina, pid, 2)          # Paulina se activa
+    oid = _pagar(order_lambda, commissions_lambda, ximena, pid, 2)     # $96 pendientes para Paulina
+    ledger = utils._get_ledger_month(paulina, mes)
+    assert float(utils._to_decimal(ledger["totalPending"])) == 96.0
+    assert float(utils._to_decimal(ledger.get("totalConfirmed") or 0)) == 0.0
+
+    pagos_handlers._aviso_panel_clabe(paulina, mes, "comision")
+    aviso = [a for a in dashboard_common._active_notifications_for_customer(paulina)
+             if a["title"] == TITULO_COMISION][0]["description"]
+    assert "pendientes" in aviso, "$96 pendientes no son $0, y tampoco son confirmadas"
+    assert "$96.00" in aviso
+    assert "en comisiones confirmadas" not in aviso, "todavía no lo están"
+
+    # 3. Cuando se entrega y la comisión se confirma, ahí sí: confirmadas.
+    _entregar(utils, commissions_lambda, oid)
+    marcela = _cliente(utils, 4, "Marcela")
+    rodrigo = _cliente(utils, 5, "Rodrigo", leader=marcela, clabeInterbancaria="002180000000005678")
+    _pagar(order_lambda, commissions_lambda, marcela, pid, 2)
+    _entregar(utils, commissions_lambda, _pagar(order_lambda, commissions_lambda, rodrigo, pid, 2))
+    assert float(utils._to_decimal(utils._get_ledger_month(marcela, mes)["totalConfirmed"])) == 96.0
+    aviso = [a for a in dashboard_common._active_notifications_for_customer(marcela)
+             if a["title"] == TITULO_COMISION][0]["description"]
+    assert "$96.00 en comisiones confirmadas" in aviso

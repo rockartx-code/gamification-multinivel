@@ -315,6 +315,62 @@ def test_abrir_turno_pide_privilegio_sucursal_y_monto_valido(inventory_lambda, u
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Guarda 2 (docs/qa/27 §4): el fondo inicial se declara.
+#
+# El caso de Mireya, entero y en una sola prueba: sin corte anterior la pantalla
+# dice que nadie declaró el fondo (no un $0.00 de adorno), se declaran los $500,
+# se vende $40, el esperado es $540 y el corte cierra con diferencia 0 en vez del
+# sobrante falso de $540 que dejó $1,040 toda la noche en el cajón.
+#
+# El informe 27 pedía el campo `openingCashDeclared: false`; el contrato que la
+# ronda 26 (propuesta 5) dejó en pie dice lo mismo con dos campos —
+# `openingSource: "sin_declarar"` y `needsOpening: true`— y son los que se fijan.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_fondo_inicial_declarable(inventory_lambda, utils):
+    pid, stock = _mostrador(utils)
+
+    def _arqueo():
+        r = _peticion(inventory_lambda, "GET", "/inventory/pos/arqueo",
+                      headers=ADMIN | CAJERA, query={"stockId": stock})
+        assert r["statusCode"] == 200, r["body"]
+        return json.loads(r["body"])["arqueo"]
+
+    # 1. Nadie lo declaró: la respuesta lo dice, y el $0.00 no se hace pasar por dato.
+    sin_declarar = _arqueo()
+    assert sin_declarar["openingSource"] == "sin_declarar", "el fondo no está declarado y hay que decirlo"
+    assert sin_declarar["needsOpening"] is True
+    assert sin_declarar["openingCash"] == 0 and sin_declarar["openingDeclaredAt"] is None
+    assert sin_declarar["openingDeclaredBy"] == ""
+
+    # 2. Mireya declara los $500 con los que llegó, sin corte anterior de dónde heredarlos.
+    r = _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
+                  cuerpo={"stockId": stock, "openingCash": 500}, headers=ADMIN | CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+    assert json.loads(r["body"])["opening"]["openingCash"] == 500
+
+    declarado = _arqueo()
+    assert declarado["openingCash"] == 500 and declarado["openingSource"] == "apertura"
+    assert declarado["needsOpening"] is False and declarado["openingDeclaredAt"]
+
+    # 3. Con $40 en efectivo el esperado es $540…
+    _venta(inventory_lambda, pid, stock, items=[{"productId": pid, "name": "Klinhart", "price": 40, "quantity": 1}])
+    assert _arqueo()["expectedCash"] == 540
+
+    # 4. …y contar $540 cierra con diferencia 0, sin motivo que inventar.
+    r = inventory_lambda.handle_cash_cut({"stockId": stock, "cashCounted": 540, "cashToKeep": 0,
+                                          "withdrawalAmount": 540, "withdrawalReceiver": "Sofía",
+                                          "authCode": "2468"}, CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+    corte = json.loads(r["body"])["cut"]
+    assert corte["cashExpected"] == 540 and corte["cashCounted"] == 540 and corte["difference"] == 0
+    assert corte["openingCash"] == 500 and corte["openingSource"] == "apertura"
+    # Los $1,040 ya no se quedan en el cajón: el retiro salió con quien lo recibió.
+    assert corte["withdrawnAmount"] == 540 and corte["withdrawalReceiver"] == "Sofía"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # El código de autorización, con tres estados (paquete F · ronda 26, propuesta 6)
 #
 # Mireya escribió 1234 "a ver qué pasaba", la pantalla la dejó pasar, le hizo

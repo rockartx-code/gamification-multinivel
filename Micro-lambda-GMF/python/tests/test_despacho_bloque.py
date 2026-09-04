@@ -282,3 +282,88 @@ def test_una_linea_sin_nombre_toma_el_del_catalogo(inventory_lambda, utils):
                     headers={"x-user-id": BETO, "x-user-role": "employee", "x-user-privileges": json.dumps({"order_mark_shipped": True})})
     assert st == 200, d
     assert d["lines"][0]["name"] == "Colágeno" and d["lines"][0]["status"] == "short"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Guarda 9 (docs/qa/27 §4): la entrega en mostrador descuenta la sucursal correcta.
+#
+# "La entrega que movió inventario de otra ciudad": un pedido para recoger en
+# Del Valle (Monterrey) entregado desde la pantalla, y el descuento salió de la
+# Bodega Central (Guadalajara). Dos formas de estar bien, y solo dos: o se
+# rechaza con su motivo, o se descuenta la sucursal de retiro **y la respuesta
+# dice cuál** —para que quien lo entrega pueda verificarlo sin abrir Stocks.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _pickup(utils, oid, stock_id, cantidad=2):
+    return _pedido(utils, oid, delivery="pickup", pickupStockId=stock_id,
+                   items=[{"productId": 101, "name": "Magnesio", "price": 480, "quantity": cantidad}])
+
+
+def _inventarios(utils):
+    return {sid: dict(utils._get_by_id("STOCK", sid)["inventory"]) for sid in ("STK-CENTRAL", "STK-VALLE")}
+
+
+def test_entrega_en_mostrador_no_descuenta_otra_sucursal(inventory_lambda, utils, buzon):
+    import order_lambda
+
+    _bodegas(utils)
+    # Beto atiende la Bodega Central (Guadalajara); Mireya, Del Valle (Monterrey).
+    _empleado(utils, nombre="Beto")
+    _empleado(utils, user_id="7002", nombre="Mireya")
+    utils._update_by_id("STOCK", "STK-CENTRAL", "SET linkedUserIds = :u", {":u": [BETO]})
+    utils._update_by_id("STOCK", "STK-VALLE", "SET linkedUserIds = :u", {":u": ["7002"]})
+    _pickup(utils, "ORD-VALLE", "STK-VALLE")
+    antes = _inventarios(utils)
+
+    # 1. Beto, que está en la otra ciudad, no puede entregarlo: se rechaza con motivo.
+    r = order_lambda.handle_update_status("ORD-VALLE", {"status": "delivered"},
+                                          {"x-user-id": BETO, "x-user-role": "employee"})
+    assert r["statusCode"] == 403, r["body"]
+    assert "sucursal de entrega" in json.loads(r["body"])["message"]
+    assert _inventarios(utils) == antes, "se rechazó la entrega y aun así se movió inventario"
+    assert utils._get_by_id("ORDER", "ORD-VALLE")["status"] == "paid"
+
+    # 2. Mireya sí, y el descuento sale de Del Valle: Guadalajara no se toca.
+    r = order_lambda.handle_update_status("ORD-VALLE", {"status": "delivered"},
+                                          {"x-user-id": "7002", "x-user-role": "employee"})
+    assert r["statusCode"] == 200, r["body"]
+    despues = _inventarios(utils)
+    assert despues["STK-VALLE"]["101"] == antes["STK-VALLE"]["101"] - 2
+    assert despues["STK-CENTRAL"] == antes["STK-CENTRAL"], "movió inventario de otra ciudad"
+
+    # 3. Y la respuesta dice de qué sucursal salió, sin ir a buscarlo a Stocks.
+    pedido = json.loads(r["body"])["order"]
+    assert pedido["stockId"] == "STK-VALLE"
+    assert pedido["pickupStockDeductedAt"], "sin la marca, la segunda entrega vuelve a descontar"
+    movimientos = [m for m in utils._query_bucket("INVENTORY_MOVEMENT") if m.get("referenceId") == "ORD-VALLE"]
+    assert movimientos and {m["stockId"] for m in movimientos} == {"STK-VALLE"}
+    assert sum(m["qty"] for m in movimientos) == 2
+
+    # 4. Marcarlo entregado otra vez no vuelve a descontar.
+    order_lambda.handle_update_status("ORD-VALLE", {"status": "delivered"},
+                                      {"x-user-id": "7002", "x-user-role": "employee"})
+    assert _inventarios(utils) == despues
+
+
+def test_la_entrega_en_mostrador_ignora_la_sucursal_que_venga_en_el_cuerpo(inventory_lambda, utils, buzon):
+    """La sucursal de retiro la fija el pedido, no quien pulsa "Entregado"."""
+    import order_lambda
+
+    _bodegas(utils)
+    _empleado(utils, user_id="7002", nombre="Mireya")
+    utils._update_by_id("STOCK", "STK-VALLE", "SET linkedUserIds = :u", {":u": ["7002"]})
+    _pickup(utils, "ORD-VALLE2", "STK-VALLE", cantidad=1)
+    antes = _inventarios(utils)
+
+    r = order_lambda.handle_update_status(
+        "ORD-VALLE2",
+        {"status": "delivered", "stockId": "STK-CENTRAL",
+         "dispatchLines": [{"productId": 101, "quantity": 1}]},
+        {"x-user-id": "7002", "x-user-role": "employee"})
+    assert r["statusCode"] == 200, r["body"]
+
+    despues = _inventarios(utils)
+    assert despues["STK-CENTRAL"] == antes["STK-CENTRAL"], "el cuerpo no elige de qué bodega se descuenta"
+    assert despues["STK-VALLE"]["101"] == antes["STK-VALLE"]["101"] - 1
+    assert json.loads(r["body"])["order"]["stockId"] == "STK-VALLE"

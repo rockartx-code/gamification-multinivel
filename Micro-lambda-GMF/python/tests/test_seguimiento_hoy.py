@@ -197,3 +197,54 @@ def test_los_invitados_se_leen_acotados_por_fecha_y_no_todo_el_historico(mundo, 
     _, por_nombre = _filas(_hoy(mundo, COACH))
     assert "Héctor Mora" in por_nombre and "Viejo Invitado" not in por_nombre
     assert consultas and all(desde and desde >= _hace(61)[:10] for desde in consultas), consultas
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Guarda 1 (docs/qa/27 §4): toda situación trae su plantilla.
+#
+# La situación `activa` existía, tenía etiqueta y NO tenía plantilla, así que la
+# pantalla rellenaba con la de cliente fría: Gaby estuvo a un clic de mandarle
+# "Hace tiempo que no te vemos por la tienda" a Julio, con el pedido entregado
+# el viernes. La propuesta 11 le dio plantilla propia; esta prueba es el candado.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _plantillas(customer_lambda, headers=COACH):
+    r = customer_lambda.lambda_handler({"httpMethod": "GET", "path": "/customers/seguimiento/plantillas",
+                                        "headers": headers, "queryStringParameters": None, "body": ""}, None)
+    assert r["statusCode"] == 200, r["body"]
+    return json.loads(r["body"])["templates"]
+
+
+def test_toda_situacion_tiene_plantilla(mundo, utils):
+    import seguimiento_handlers as sh
+
+    # Ninguna situación puede quedarse sin plantilla: si alguien añade una
+    # sexta a SITUACIONES, esto se cae antes de que la coach lo descubra.
+    faltantes = set(sh.SITUACIONES) - set(sh.PLANTILLAS)
+    assert faltantes == set(), f"situaciones sin plantilla: {sorted(faltantes)}"
+    assert set(sh.SITUACIONES) == set(sh.ETIQUETAS_SITUACION)
+
+    # …y `activa` trae la suya, no la de `fria`.
+    activa, fria = sh.PLANTILLAS["activa"], sh.PLANTILLAS["fria"]
+    assert activa["text"] != fria["text"]
+    assert "Hace tiempo que no te vemos" not in activa["text"], "la trampa de la plantilla de fría"
+
+    # Lo que la pantalla realmente sirve (plantillas de código + override de config).
+    plantillas = _plantillas(mundo)
+    assert set(sh.SITUACIONES) <= set(plantillas)
+    assert plantillas["activa"]["text"] != plantillas["fria"]["text"]
+
+    # Y la fila de Bety (compró hace 3 días) apunta a esa plantilla, no a "fria".
+    _, por_nombre = _filas(_hoy(mundo, COACH, situation="activa"))
+    assert por_nombre["Bety Flores"]["templateKey"] == "activa"
+    assert por_nombre["Bety Flores"]["situationLabel"] == "Activa"
+
+    # La bitácora firma con la plantilla que se usó: "activa" es una clave válida.
+    r = mundo.lambda_handler({"httpMethod": "POST", "path": "/customers/18/contacto", "headers": COACH,
+                              "queryStringParameters": None,
+                              "body": json.dumps({"channel": "whatsapp", "templateKey": "activa",
+                                                  "message": "¿cómo te fue con el Colágeno?"})}, None)
+    assert r["statusCode"] == 201, r["body"]
+    nota = (utils._get_by_id("CUSTOMER", 18).get("contactNotes") or [])[-1]
+    assert nota["templateKey"] == "activa" and "plantilla activa" in nota["text"]

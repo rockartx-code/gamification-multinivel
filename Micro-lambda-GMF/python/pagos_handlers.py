@@ -519,12 +519,22 @@ def _aviso_panel_clabe(customer_id, month_key: str, motivo: str = "comision") ->
         return nid
     hoy = _hoy()
     plantilla, dias = _TEXTOS_AVISO_CLABE[clave]
-    monto = utils._to_decimal(utils._get_ledger_month(customer_id, month_key).get("totalConfirmed", 0))
+    mes_contable = utils._get_ledger_month(customer_id, month_key)
+    monto = utils._to_decimal(mes_contable.get("totalConfirmed", 0))
     if clave == "comision" and monto <= 0:
         # La gerente puede pedir la CLABE por adelantado; ni entonces se
         # promete un dinero que todavía no existe.
-        plantilla = ("Nos falta tu CLABE para poder depositarte. Regístrala en Comisiones "
-                     "y el día {dia} te transferimos lo que tengas confirmado.")
+        pendiente = utils._to_decimal(mes_contable.get("totalPending", 0))
+        if pendiente > 0:
+            # Guarda 5 (docs/qa/27 §4): una comisión pendiente es dinero real,
+            # pero todavía no es depositable —el pedido no se ha entregado— y
+            # llamarla "confirmada" es la misma promesa falsa por el otro lado.
+            monto = pendiente
+            plantilla = ("Tienes {monto} en comisiones pendientes: se confirman cuando se entregue "
+                         "el pedido. Registra tu CLABE en Comisiones para poder depositártelas.")
+        else:
+            plantilla = ("Nos falta tu CLABE para poder depositarte. Regístrala en Comisiones "
+                         "y el día {dia} te transferimos lo que tengas confirmado.")
     texto = plantilla.format(monto=_pesos(monto), dia=_dia_de_pago())
     titulo = ("Registra tu CLABE: ya te activaste" if clave == "activacion"
               else "Registra tu CLABE para cobrar tus comisiones")
@@ -550,8 +560,13 @@ def _correo_clabe(ficha: dict, monto, motivo: str) -> bool:
     nombre = _nombre_pila(ficha)
     if motivo == "activacion":
         razon = "Acabas de activarte este mes: desde hoy las compras de tu red te generan comisiones."
-    else:
+    elif utils._to_decimal(monto or 0) > 0:
         razon = f"Ya tienes <strong>{_pesos(monto)}</strong> en comisiones confirmadas."
+    else:
+        # Guarda 5: la gerente puede pedir la CLABE por adelantado. El correo no
+        # puede decir "Ya tienes $0.00 en comisiones confirmadas": es la misma
+        # promesa falsa que el aviso del panel ya dejó de hacer.
+        razon = "Nos falta tu CLABE para poder depositarte lo que se te confirme."
     from core.email import _email_shell
     cuerpo = f"""
     <div class="icon">🏦</div>

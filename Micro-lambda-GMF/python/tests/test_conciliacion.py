@@ -309,3 +309,45 @@ def test_sin_nada_que_revisar_pero_con_pendientes_la_corrida_lo_dice(order_lambd
 
     assert estado == 200 and cuerpo["checked"] == 0
     assert cuerpo["withoutReference"] == 1 and cuerpo["withoutReferenceOrderIds"] == [sin_referencia]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Guarda 7 (docs/qa/27 §4): el rango sale de la pantalla, no del código.
+#
+# A Renata le encargaron revisar **todo marzo**; la pantalla estaba clavada en
+# 72 horas y obtuvo "Revisados 0" sobre un mes entero de pendientes. El rango
+# tiene que viajar desde el cliente, ecoarse en la respuesta (para que la
+# tarjeta de la corrida diga qué se revisó de verdad) y rechazarse fuera de
+# 1..2160 horas, que son los 90 días de tope.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_horas_viaja_desde_la_pantalla(order_lambda, utils, mercadopago, monkeypatch):
+    oid = _pendiente_con_preferencia(order_lambda, utils)
+    mercadopago["pagos"][oid] = [("PAY-R", "approved")]
+
+    # Los dos extremos del rango son válidos y se ecoan tal cual.
+    for horas in (1, 72, 744, 2160):
+        estado, cuerpo = _conciliar(order_lambda, {"hours": horas, "dryRun": True})
+        assert estado == 200, cuerpo
+        assert cuerpo["hours"] == horas, f"la corrida no revisó las {horas} h que se le pidieron"
+
+    # Con todo marzo el pedido entra; el eco no es decorativo.
+    estado, cuerpo = _conciliar(order_lambda, {"hours": 744})
+    assert estado == 200 and cuerpo["hours"] == 744 and cuerpo["checked"] >= 1
+    # …y queda guardado en la corrida, que es lo que lee la tarjeta después.
+    assert utils._query_bucket("RECONCILIATION_RUN")[0]["hours"] == 744
+
+    # Fuera de rango: 400 con el rango escrito, no un recorte silencioso.
+    for horas in (0, -3, 2161, 100000):
+        estado, cuerpo = _conciliar(order_lambda, {"hours": horas})
+        assert estado == 400, (horas, cuerpo)
+        assert "1 y 2160" in cuerpo["message"], (horas, cuerpo)
+    # Y lo que no es un número tampoco pasa por bueno.
+    assert _conciliar(order_lambda, {"hours": "muchas"})[0] == 400
+
+    # Sin `hours` se usa el valor de configuración, no un literal del código.
+    import conciliacion_handlers
+    monkeypatch.setattr(conciliacion_handlers, "_config_mp", lambda: {"reconciliationHours": 96})
+    estado, cuerpo = _conciliar(order_lambda, {"dryRun": True})
+    assert estado == 200 and cuerpo["hours"] == 96
