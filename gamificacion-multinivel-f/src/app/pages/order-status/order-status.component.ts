@@ -7,11 +7,12 @@ import { UiButtonComponent } from '../../components/ui-button/ui-button.componen
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
 import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { ApiService } from '../../services/api.service';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent],
+  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent, UiFooterComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })

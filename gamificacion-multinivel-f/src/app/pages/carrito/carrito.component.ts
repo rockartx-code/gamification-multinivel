@@ -28,11 +28,12 @@ import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/u
 import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { PlanSocio } from '../../models/plan-socio.model';
 import { ModoVisible, PlanSocioService } from '../../services/plan-socio.service';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent, UiTablaDescuentoComponent, UiAhorroSocioComponent],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent, UiTablaDescuentoComponent, UiAhorroSocioComponent, UiFooterComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })

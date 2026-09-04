@@ -18,6 +18,7 @@ import { DevolucionesService } from '../../services/devoluciones.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 type Paso = 1 | 2 | 3 | 4;
 
@@ -41,7 +42,7 @@ interface MotivoOpcion {
 @Component({
   selector: 'app-order-devolucion',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiQtyStepperComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiQtyStepperComponent, UiFooterComponent],
   templateUrl: './order-devolucion.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
