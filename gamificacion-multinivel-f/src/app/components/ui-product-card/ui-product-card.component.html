@@ -103,12 +103,13 @@
     <!-- Acciones inferiores (solo para productos sin variantes) -->
     <div *ngIf="activeVariants.length === 0" class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2 rounded-2xl border border-olive-30 px-3 py-2">
-          <span class="text-xs text-gray-600">Cantidad</span>
+        <div class="rounded-2xl border border-olive-30 px-3 py-2">
           <!-- La cantidad es un borrador: entra al carrito al pulsar "Agregar a carrito", no al teclear. -->
           <ui-form-field
             type="number"
-            [attr.aria-label]="'Cantidad de ' + product.name"
+            label="Cantidad"
+            [name]="'cantidad-' + product.id"
+            wrapperClass="flex items-center gap-2"
             [ngModel]="qtyDraft"
             (ngModelChange)="setQtyDraft($event)"
             inputClass="w-14 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main text-center">
