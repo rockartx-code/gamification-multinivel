@@ -22,6 +22,21 @@ def _direccion_bodega_principal() -> str:
         pass
     return ""
 
+def _sucursal_de_recoleccion(order: dict) -> str:
+    """Nombre y dirección de la sucursal donde se recoge el pedido ("Sucursal Guadalajara, Av. Chapultepec 480")."""
+    if str(order.get("deliveryType") or "") != "pickup":
+        return ""
+    stock_id = str(order.get("pickupStockId") or "").strip()
+    if not stock_id:
+        return ""
+    try:
+        from core import db as _db
+        stock = _db._get_by_id("STOCK", stock_id) or {}
+    except Exception:
+        return ""
+    return ", ".join(x for x in (stock.get("name"), stock.get("location")) if x)
+
+
 def _mxn(valor) -> str:
     try:
         return f"${Decimal(str(valor or 0)):,.2f}"
@@ -41,17 +56,102 @@ def _destinatario(order: dict, buscar_cliente) -> str:
     return ""
 
 
-def _lineas(order: dict) -> str:
+def _renglones_detalle(order: dict) -> list[str]:
+    """El detalle del pedido, renglón a renglón, para el correo HTML y el de texto plano.
+
+    Mariana compró sin cuenta y su único comprobante fue un correo que no decía qué había
+    comprado: la versión de texto plano nunca llamaba a este detalle.
+    """
     filas = []
     for it in order.get("items") or []:
         qty = int(it.get("quantity") or it.get("qty") or 1)
-        filas.append(f"<p>{qty} × {it.get('name') or it.get('productId')} — {_mxn(Decimal(str(it.get('price') or 0)) * qty)}</p>")
+        filas.append(f"{qty} × {it.get('name') or it.get('productId')} — {_mxn(Decimal(str(it.get('price') or 0)) * qty)}")
+    descuento = order.get("discountAmount")
+    if descuento:
+        filas.append(f"Descuento — -{_mxn(descuento)}")
     envio = order.get("shippingCost")
     if envio:
-        filas.append(f"<p>Envío ({order.get('shippingCarrier') or 'paquetería'}) — {_mxn(envio)}</p>")
+        filas.append(f"Envío ({order.get('shippingCarrier') or 'paquetería'}) — {_mxn(envio)}")
     total = order.get("total") if order.get("total") is not None else order.get("netTotal")
-    filas.append(f"<p><strong>Total — {_mxn(total)}</strong></p>")
-    return "".join(filas)
+    filas.extend(_renglones_iva(order))
+    filas.append(f"Total — {_mxn(total)}")
+    return filas
+
+
+def _renglones_iva(order: dict) -> list[str]:
+    """Desglose del IVA guardado en el pedido (paquete B, §38): el total no cambia, se explica.
+
+    Los pedidos anteriores a la ronda no traen `taxBase`/`taxAmount`; en ese caso no se
+    inventa nada y el correo enseña el total como siempre.
+    """
+    base, iva = order.get("taxBase"), order.get("taxAmount")
+    if base is None or iva is None:
+        return []
+    try:
+        tasa = Decimal(str(order.get("vatRate") or 0)) * 100
+    except Exception:
+        tasa = Decimal(0)
+    etiqueta = f"IVA {tasa.quantize(Decimal('1'))} %" if tasa > 0 else "IVA"
+    return [f"Subtotal sin IVA — {_mxn(base)}", f"{etiqueta} — {_mxn(iva)}"]
+
+
+def _lineas(order: dict) -> str:
+    renglones = _renglones_detalle(order)
+    if not renglones:
+        return ""
+    cuerpo = "".join(f"<p>{fila}</p>" for fila in renglones[:-1])
+    return cuerpo + f"<p><strong>{renglones[-1]}</strong></p>"
+
+
+def _renglones_entrega(order: dict) -> list[str]:
+    """Cómo y a dónde se entrega, con las palabras que la persona eligió en el carrito."""
+    if str(order.get("deliveryType") or "") == "pickup":
+        sucursal = _sucursal_de_recoleccion(order)
+        # Tres personas que eligieron recoger recibieron "estamos preparando tu paquete
+        # y te avisaremos cuando salga": nadie iba a salir a ningún lado.
+        renglones = [f"Recoges en {sucursal}" if sucursal else "Recoges en sucursal"]
+        if str(order.get("pickupPaymentMethod") or "") == "at_store":
+            renglones.append("Pagas al recoger, en la caja de la sucursal.")
+        return renglones
+    direccion = ", ".join(
+        str(x).strip() for x in (
+            order.get("address") or " ".join(str(x) for x in (order.get("street"), order.get("number")) if x),
+            order.get("city"), order.get("state"), order.get("postalCode"),
+        ) if x
+    )
+    if not direccion:
+        return []
+    nombre = order.get("recipientName") or order.get("customerName") or ""
+    return [f"Envío a domicilio: {direccion}" + (f" · a nombre de {nombre}" if nombre else "")]
+
+
+def _renglones_factura(order: dict) -> list[str]:
+    """El detalle fiscal que la persona capturó. Aurora abandonó buscando dónde releer su RFC."""
+    if not order.get("invoiceRequested"):
+        return []
+    datos = order.get("invoiceData") or {}
+    nombre = str(datos.get("razonSocial") or "").strip()
+    rfc = str(datos.get("rfc") or "").strip()
+    correo = str(datos.get("email") or "").strip()
+    estado = str(order.get("invoiceStatus") or "").strip()
+    cabecera = "Factura emitida" if estado == "emitida" else "Factura solicitada"
+    renglones = [cabecera + (f" a nombre de {nombre}" if nombre else "") + (f" · RFC {rfc}" if rfc else "")]
+    if correo:
+        renglones.append(f"Te la mandamos a {correo}.")
+    folio = str(order.get("invoiceFolio") or "").strip()
+    if folio:
+        renglones.append(f"Folio fiscal {folio}.")
+    return renglones
+
+
+def _bloque_pedido(order: dict) -> str:
+    """La caja de "esto fue lo que compraste": detalle, entrega y factura, en ese orden."""
+    renglones = _renglones_detalle(order)
+    cuerpo = "".join(f"<p>{fila}</p>" for fila in renglones[:-1])
+    cuerpo += f"<p><strong>{renglones[-1]}</strong></p>" if renglones else ""
+    for fila in _renglones_entrega(order) + _renglones_factura(order):
+        cuerpo += f"<p>{fila}</p>"
+    return cuerpo
 
 
 def _politica_reembolso(datos: dict) -> dict:
@@ -125,13 +225,27 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     lugar = datos.get("deliveryPlace") or order.get("deliveryPlace") or ""
     fecha = datos.get("deliveryDate") or order.get("deliveryDate") or ""
 
+    recoge = str(order.get("deliveryType") or "") == "pickup"
+    sucursal = _sucursal_de_recoleccion(order)
+
     if evento == "paid":
         asunto = f"Recibimos tu pago · pedido {oid}"
         titulo, icono = "¡Gracias por tu compra!", "✅"
-        lead = "Tu pago quedó confirmado. Estamos preparando tu paquete y te avisaremos por este medio cuando salga."
+        if recoge:
+            # A tres compradores de mostrador este correo les prometió un paquete en camino.
+            lead = ("Tu pago quedó confirmado. Lo preparamos y te avisamos por este medio en cuanto esté "
+                    + (f"listo para recoger en <strong>{sucursal}</strong>." if sucursal else "listo para recoger en la sucursal que elegiste."))
+        else:
+            lead = "Tu pago quedó confirmado. Estamos preparando tu paquete y te avisaremos por este medio cuando salga."
         if order.get("invoiceRequested"):
-            lead += " Recibimos tu solicitud de factura: te la mandaremos a este mismo correo."
+            lead += " Recibimos tu solicitud de factura: te la mandaremos al correo que nos diste."
         extra = _parrafo_ahorro_socio(order, frontend_url)
+    elif evento == "shipped" and recoge:
+        asunto = f"Tu pedido {oid} ya está listo para recoger"
+        titulo, icono = "Ya lo puedes recoger", "🏪"
+        lead = ("Pasa por él a " + (f"<strong>{sucursal}</strong>" if sucursal else "la sucursal que elegiste")
+                + " con tu folio y una identificación.")
+        extra = ""
     elif evento == "shipped":
         asunto = f"Tu pedido {oid} va en camino"
         titulo, icono = "Tu paquete ya salió", "🚚"
@@ -144,8 +258,11 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         extra = ""
     elif evento == "delivered":
         asunto = f"Tu pedido {oid} fue entregado"
-        titulo, icono = "¡Llegó tu pedido!", "📦"
-        lead = "Revisa que todo esté bien. Si algo llegó dañado tienes 48 horas para pedir la devolución desde tu seguimiento; si simplemente te arrepentiste, 7 días."
+        titulo, icono = ("Recogiste tu pedido" if recoge else "¡Llegó tu pedido!"), "📦"
+        entregado = ("Ya nos consta que recogiste tu pedido" + (f" en {sucursal}" if sucursal else " en sucursal") + ". "
+                     if recoge else "")
+        lead = (entregado + "Revisa que todo esté bien. Si algo llegó dañado tienes 48 horas para pedir la devolución "
+                "desde tu seguimiento; si simplemente te arrepentiste, 7 días.")
         extra = ""
     elif evento == "return_received":
         asunto = f"Recibimos tu solicitud de devolución · {datos.get('requestId') or oid}"
@@ -233,12 +350,16 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
     <p class="lead">Hola <strong>{nombre}</strong>. {lead}</p>
     <div class="info-box">
       <p><strong>Pedido {oid}</strong></p>
-      {_lineas(order)}
+      {_bloque_pedido(order)}
     </div>
     {extra}
     <a class="btn" href="{url}">Ver mi pedido</a>
     """
-    texto = f"{titulo}\n\nHola {nombre}. " + lead.replace("<strong>", "").replace("</strong>", "") + f"\n\nPedido {oid}. Seguimiento: {url}\n"
+    # El correo de texto plano repite el mismo detalle: era el único comprobante de
+    # quien compró sin cuenta y llegaba sin una sola línea de lo comprado.
+    detalle_plano = "\n".join(_renglones_detalle(order) + _renglones_entrega(order) + _renglones_factura(order))
+    texto = (f"{titulo}\n\nHola {nombre}. " + lead.replace("<strong>", "").replace("</strong>", "")
+             + f"\n\nPedido {oid}\n{detalle_plano}\n\nSeguimiento: {url}\n")
     if evento == "delivery_check":
         texto += f"\nSí, ya llegó: {datos.get('confirmUrl') or url}\nAún no llega: {datos.get('supportUrl') or ''}\n"
     elif extra:

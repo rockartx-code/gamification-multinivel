@@ -2,11 +2,12 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
-import { AdminOrder } from '../../models/admin.model';
+import { AdminOrder, AdminOrderItem } from '../../models/admin.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
 import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { ApiService } from '../../services/api.service';
+import { CheckoutService } from '../../services/checkout.service';
 
 @Component({
   selector: 'app-order-status',
@@ -35,11 +36,17 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
   isCheckoutLoading = false;
   isLoading = false;
   order: AdminOrder | null = null;
+  // ── Paquete C · ronda 26 · propuesta 7 ──
+  /** Sucursal donde se recoge el pedido, con su dirección: "Sucursal Guadalajara, Av. Chapultepec 480". */
+  pickupBranchName = '';
+  pickupBranchLocation = '';
+  private pickupBranchAskedFor = '';
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly api: ApiService,
+    private readonly checkout: CheckoutService,
     private readonly cdr: ChangeDetectorRef
   ) { }
 
@@ -110,6 +117,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         if (order?.id) {
           this.orderId = order.id;
         }
+        this.loadPickupBranch(order);
         this.syncOrderStatusState(order);
         this.isLoading = false;
         this.cdr.markForCheck();
@@ -329,6 +337,102 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
       return net + this.orderShipping;
     }
     return 0;
+  }
+
+  // ── Paquete C · ronda 26 · propuesta 7: el recibo repite lo que se eligió ──
+
+  /** La dirección de la sucursal ya la publica el checkout; el recibo solo la vuelve a leer. */
+  private loadPickupBranch(order: AdminOrder | null | undefined): void {
+    const stockId = String(order?.pickupStockId ?? '').trim();
+    if (order?.deliveryType !== 'pickup' || !stockId || this.pickupBranchAskedFor === stockId) {
+      return;
+    }
+    this.pickupBranchAskedFor = stockId;
+    this.checkout.sucursalesRecoger({ items: [] }).subscribe({
+      next: (respuesta) => {
+        const sucursal = (respuesta?.stocks ?? []).find((s) => String(s.id) === stockId);
+        this.pickupBranchName = sucursal?.name ?? '';
+        this.pickupBranchLocation = sucursal?.location ?? '';
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
+  }
+
+  get isPickup(): boolean {
+    return this.order?.deliveryType === 'pickup';
+  }
+
+  /** "Recoges en Sucursal Guadalajara, Av. Chapultepec 480". */
+  get pickupText(): string {
+    if (!this.isPickup) {
+      return '';
+    }
+    const donde = [this.pickupBranchName, this.pickupBranchLocation].filter(Boolean).join(', ');
+    return donde ? `Recoges en ${donde}` : 'Recoges en la sucursal que elegiste';
+  }
+
+  get paysAtStore(): boolean {
+    return this.isPickup && this.order?.pickupPaymentMethod === 'at_store';
+  }
+
+  get orderItems(): AdminOrderItem[] {
+    return this.order?.items ?? [];
+  }
+
+  /** La dirección de entrega depende del tipo de entrega, no de `shippingType`, que solo se
+   *  escribe al despachar: por eso la tarjeta no aparecía hasta que alguien mandaba el paquete. */
+  get hasShippingAddress(): boolean {
+    if (this.isPickup) {
+      return false;
+    }
+    return Boolean(this.order?.address || this.order?.street || this.order?.city || this.order?.postalCode);
+  }
+
+  get shippingAddressLine(): string {
+    const o = this.order;
+    if (!o) {
+      return '';
+    }
+    const calle = o.address || [o.street, o.number].filter(Boolean).join(' ');
+    return [calle, o.city, o.state, o.postalCode].filter(Boolean).join(', ');
+  }
+
+  get invoiceVisible(): boolean {
+    return Boolean(this.order?.invoiceRequested);
+  }
+
+  /** "Factura solicitada a nombre de Aurora Vega · RFC VEAA850101AB1". */
+  get invoiceText(): string {
+    const datos = this.order?.invoiceData;
+    if (!datos) {
+      return this.order?.invoiceStatus === 'emitida' ? 'Factura emitida' : 'Factura solicitada';
+    }
+    const cabecera = this.order?.invoiceStatus === 'emitida' ? 'Factura emitida' : 'Factura solicitada';
+    const nombre = datos.razonSocial ? ` a nombre de ${datos.razonSocial}` : '';
+    const rfc = datos.rfc ? ` · RFC ${datos.rfc}` : '';
+    return `${cabecera}${nombre}${rfc}`;
+  }
+
+  /** Desglose del IVA guardado en el pedido (§38): el total no cambia, se explica. */
+  get hasVatBreakdown(): boolean {
+    return this.order?.taxBase != null && this.order?.taxAmount != null;
+  }
+
+  get vatLabel(): string {
+    const tasa = Number(this.order?.vatRate ?? 0) * 100;
+    return tasa > 0 ? `IVA ${Math.round(tasa)} %` : 'IVA';
+  }
+
+  /** Fecha en las palabras de la gente: "2 de marzo de 2027, 11:18", no "2027-03-02T11:18:04Z". */
+  formatDate(value?: string): string {
+    const fecha = new Date(String(value ?? ''));
+    if (!value || Number.isNaN(fecha.getTime())) {
+      return String(value ?? '');
+    }
+    return new Intl.DateTimeFormat('es-MX', {
+      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }).format(fecha);
   }
 
   formatMoney(value: number): string {
