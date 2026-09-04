@@ -114,7 +114,7 @@ export class MockApiService {
       requireDispatchLinesOnShipped: true
     },
     pos: {
-      defaultCustomerName: 'Publico en General',
+      defaultCustomerName: 'Público en general',
       defaultPaymentStatus: 'paid_branch',
       defaultDeliveryStatus: 'delivered_branch',
       orderStatusByDeliveryStatus: {
@@ -1655,7 +1655,7 @@ export class MockApiService {
       stockId: payload.stockId,
       attendantUserId: actorId,
       customerId: customer?.id ?? null,
-      customerName: customer?.name || payload.customerName || 'Publico en General',
+      customerName: customer?.name || payload.customerName || 'Público en general',
       paymentStatus,
       deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
       paymentMethod: payload.paymentMethod ?? 'cash',

@@ -82,7 +82,29 @@ export class SimuladorPlanComponent implements OnInit {
     return neta > 0 ? 'gana' : neta < 0 ? 'pierde' : 'empata';
   }
 
+  /**
+   * Ronda 7 · Gerardo: «el resultado no se actualiza mientras se escribe: solo
+   * al salir del campo». En un celular uno teclea y mira el resultado sin salir
+   * del campo, y concluye que la calculadora está muerta. Se recalcula al
+   * escribir, con una pausa corta para no disparar una petición por tecla.
+   */
+  alEscribir(): void {
+    if (this.reboteId !== null) {
+      clearTimeout(this.reboteId);
+    }
+    this.reboteId = setTimeout(() => {
+      this.reboteId = null;
+      this.calcular();
+    }, 350) as unknown as number;
+  }
+
+  private reboteId: number | null = null;
+
   calcular(): void {
+    if (this.reboteId !== null) {
+      clearTimeout(this.reboteId);
+      this.reboteId = null;
+    }
     this.isLoading = true;
     this.errorMensaje = '';
     this.cdr.markForCheck();

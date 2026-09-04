@@ -105,6 +105,10 @@ export interface ConciliacionResultado {
   /** Hora del **servidor**, para no fecharla con el reloj del navegador. */
   startedAt?: string;
   finishedAt?: string;
+  // ── Ronda 7 · propuesta de Marisol ──
+  /** Pendientes del periodo que NO se pagan por la pasarela: no se pueden conciliar. */
+  withoutReference?: number;
+  withoutReferenceOrderIds?: string[];
 }
 
 export interface ConciliacionCorrida extends ConciliacionResultado {

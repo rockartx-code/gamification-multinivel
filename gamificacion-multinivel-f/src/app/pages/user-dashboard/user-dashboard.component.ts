@@ -323,7 +323,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get dashboardNavLinks(): SidebarLink[] {
-    const key = `${this.isGuest ? 'guest' : 'user'}|${this.isClientMode ? 'cliente' : 'socio'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|honor`;
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.isClientMode ? 'cliente' : 'socio'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|${this.honorBoard ? 'honor' : 'sin-honor'}`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
     }
@@ -347,8 +347,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }
     }
     if (!this.isGuest) {
-      if (!this.isClientMode) {
-        // §2.2: en modo cliente no se ve red ni VP; el ranking es por VG y VP.
+      // §2.2: en modo cliente no se ve red ni VP; el ranking es por VG y VP.
+      // Ronda 7 · Gerardo: el enlace se pintaba siempre y la sección solo existe
+      // cuando hay tabla del mes, así que en un socio recién activado era un
+      // botón muerto —igual que Comisiones, que sí se condiciona—.
+      if (!this.isClientMode && this.honorBoard) {
         links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
       }
       links.push({ id: 'perfil', icon: 'fa-circle-user', label: 'Mi perfil' });
@@ -357,6 +360,23 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.dashboardNavLinksKey = key;
     this.dashboardNavLinksCache = links;
     return this.dashboardNavLinksCache;
+  }
+
+  /**
+   * ¿Hay una ventana modal abierta? El fondo oscuro cubre toda la pantalla y se
+   * traga cualquier toque, así que nada que quede debajo debe seguir pintado
+   * como si se pudiera usar (ronda 7 · Valeria).
+   */
+  get hayModalAbierto(): boolean {
+    return (
+      this.isProductDetailsOpen ||
+      this.isGoalsModalOpen ||
+      this.isHonorBoardModalOpen ||
+      this.isNotificationsCenterOpen ||
+      this.isNotificationModalOpen ||
+      this.isCommissionModalOpen ||
+      this.showGuestRegisterModal
+    );
   }
 
   handleDashboardNavSelect(sectionId: string): void {
@@ -2123,9 +2143,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   scrollToSection(sectionId: string): void {
     const node = document.getElementById(sectionId);
     if (!node) {
+      // Ronda 7 · Gerardo: «los botones del menú no navegan: la URL se queda en
+      // #/dashboard, no sale error, no hay mensaje, la consola está limpia».
+      // Si la sección todavía no existe se dice, en vez de no hacer nada.
+      this.showToast(`Todavía no hay nada que mostrar en ${this.nombreDeSeccion(sectionId)} este mes.`);
       return;
     }
     node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  private nombreDeSeccion(sectionId: string): string {
+    return this.dashboardNavLinks.find((link) => link.id === sectionId)?.label ?? sectionId;
   }
 
   notifyAction(message: string): void {

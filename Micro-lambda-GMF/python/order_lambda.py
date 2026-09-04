@@ -600,6 +600,19 @@ def handle_create_order(body, headers):
         if customer_name in ("", "Cliente", None) and ficha.get("name"):
             customer_name = str(ficha.get("name"))
 
+    # Ronda 7 · Marisol: «cuatro de cuatro pendientes aparecen como "Cliente"…
+    # si la conciliación no me dice quién pagó y la ficha no me dice quién es,
+    # no hay a quién llamarle para cobrar un pendiente de 5 días». El nombre casi
+    # siempre está en el propio pedido —a nombre de quién se entrega, o el correo
+    # con el que se compró—; lo que faltaba era mirarlo antes de rendirse.
+    if str(customer_name or "").strip() in ("", "Cliente"):
+        for candidato in (body.get("recipientName"),
+                          (body.get("shippingAddress") or {}).get("recipientName"),
+                          body.get("email")):
+            if str(candidato or "").strip():
+                customer_name = str(candidato).strip()
+                break
+
     raw_items = body.get("items", [])
     # Enriquecer ítems con la bandera commissionable del catálogo
     enriched_items = _enrich_items_commissionable(raw_items)
@@ -871,6 +884,10 @@ def handle_update_status(order_id, body, headers):
             extra_updates["paymentId"] = str(body["paymentId"])
         if body.get("paymentStatusDetail"):
             extra_updates["paymentStatusDetail"] = str(body["paymentStatusDetail"])
+        # Ronda 7 · Marisol: dar por cobrado un pedido a mano no dejaba ninguna
+        # referencia del depósito, y luego no había con qué cuadrar el banco.
+        if str(body.get("paymentReference") or "").strip():
+            extra_updates["paymentReference"] = str(body["paymentReference"]).strip()[:120]
         for marca in ("webhookReceivedAt", "reconciledAt"):
             if body.get(marca):
                 extra_updates[marca] = str(body[marca])

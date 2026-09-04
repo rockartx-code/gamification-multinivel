@@ -80,18 +80,28 @@ def _pago_aprobado(pagos: list) -> Optional[dict]:
 # Corrida
 # ---------------------------------------------------------------------------
 
-def _pedidos_pendientes(horas: int, order_ids: Optional[list]) -> list:
-    """Pedidos `pending` con preferencia de pago creados en la ventana."""
+def _pedidos_pendientes(horas: int, order_ids: Optional[list]):
+    """`(revisables, sin_referencia)` de los pedidos `pending` de la ventana.
+
+    Solo se le puede preguntar a MercadoPago por un pedido que llegó a generar
+    su preferencia de pago. Los demás —los que se cobran en sucursal, por
+    transferencia o los que se capturaron a mano en el back office— siguen
+    pendientes y **no** se pueden conciliar, pero existen: Marisol tenía cuatro
+    en pantalla y la corrida le contestaba "Revisados 0 · no había nada que
+    revisar" en los cuatro periodos, hasta el máximo de 90 días. Se devuelven
+    aparte para poder decirlo en vez de fingir que no hay pendientes.
+    """
     if order_ids:
         pedidos = [utils._get_by_id("ORDER", oid) for oid in order_ids]
-        return [p for p in pedidos if p]
-    desde = (datetime.now(timezone.utc) - timedelta(hours=horas)).replace(microsecond=0)
-    desde_iso = desde.isoformat().replace("+00:00", "Z")
-    candidatos = utils._query_bucket("ORDER", sk_from=desde_iso)
-    return [
-        p for p in candidatos
-        if str(p.get("status") or "").lower() == "pending" and p.get("paymentPreferenceId")
-    ]
+        pendientes = [p for p in pedidos if p]
+    else:
+        desde = (datetime.now(timezone.utc) - timedelta(hours=horas)).replace(microsecond=0)
+        desde_iso = desde.isoformat().replace("+00:00", "Z")
+        pendientes = [p for p in utils._query_bucket("ORDER", sk_from=desde_iso)
+                      if str(p.get("status") or "").lower() == "pending"]
+    revisables = [p for p in pendientes if p.get("paymentPreferenceId")]
+    sin_referencia = [p for p in pendientes if not p.get("paymentPreferenceId")]
+    return revisables, sin_referencia
 
 
 #: Pedidos que se revisan en una corrida si no se pide otra cosa. Cada uno
@@ -164,7 +174,7 @@ def handle_conciliar(body: dict, headers: dict) -> dict:
     inicio = utils._now_iso()
     run_id = f"CONC-{utils.uuid.uuid4().hex[:8].upper()}"
     acreditados, sin_pago, errores = [], [], []
-    candidatos = _pedidos_pendientes(horas, order_ids)
+    candidatos, sin_referencia = _pedidos_pendientes(horas, order_ids)
     # Los más viejos primero: son los que llevan más tiempo cobrados y sin acreditar.
     candidatos.sort(key=lambda p: str(p.get("createdAt") or ""))
     pendientes = candidatos[:tope]
@@ -206,6 +216,7 @@ def handle_conciliar(body: dict, headers: dict) -> dict:
     corrida = {
         "entityType": "reconciliation_run", "runId": run_id, "startedAt": inicio, "finishedAt": fin,
         "hours": horas, "limit": tope, "pending": restantes, "dryRun": dry_run, "checked": len(pendientes),
+        "withoutReference": len(sin_referencia),
         "credited": acreditados, "unpaid": sin_pago, "errors": errores,
         "triggeredBy": str(actor.get("user_id") or "sistema"),
     }
@@ -221,6 +232,11 @@ def handle_conciliar(body: dict, headers: dict) -> dict:
     salida = {"runId": run_id, "checked": len(pendientes), "credited": acreditados, "unpaid": sin_pago,
               "errors": errores, "dryRun": dry_run, "hours": horas, "limit": tope,
               "pending": restantes, "hasMore": restantes > 0,
+              # Pendientes de la ventana que NO se pagan por la pasarela: no se
+              # revisan, pero se cuentan y se nombran para que la pantalla no
+              # los dé por inexistentes.
+              "withoutReference": len(sin_referencia),
+              "withoutReferenceOrderIds": [str(p.get("orderId") or "") for p in sin_referencia[:20]],
               "startedAt": inicio, "finishedAt": fin}
     # Si MercadoPago no respondió para NINGÚN pedido consultado, la corrida no sirvió: 502.
     if pendientes and len(errores) == len(pendientes):

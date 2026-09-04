@@ -14,7 +14,7 @@ Rutas (prefijo `/commissions`, todas con `commissions_register_payment`):
     POST /pagos/pedir-clabe            recordatorio manual de CLABE
     POST /pagos/dia-de-pago            correo del día 10 (tarea programada)
     GET  /periodos                     meses con datos y hora del servidor
-    POST /avisos/bloqueadas            tarea programable (días 20 y 27)
+    POST /avisos/bloqueadas            tarea programable (días de aviso, antes del corte)
 
 El motor (`commissions_lambda`) se importa de forma perezosa: él mismo importa
 este módulo al final de su archivo para colgar las rutas, y un import circular
@@ -940,7 +940,7 @@ RUTAS = [
     Ruta("POST", "pagos/pedir-clabe", privilegio=PRIVILEGIO,
          descripcion="Reenviar el recordatorio de CLABE a una socia", handler=handle_pedir_clabe),
     Ruta("POST", "avisos/bloqueadas", privilegio=PRIVILEGIO,
-         descripcion="Aviso de comisiones bloqueadas (días 20 y 27; programable)", handler=handle_avisos_bloqueadas),
+         descripcion="Aviso de comisiones bloqueadas (días de aviso configurables, siempre antes del corte; programable)", handler=handle_avisos_bloqueadas),
     # ── Paquete A · ronda 26 ──
     Ruta("GET", "periodos", privilegio=PRIVILEGIO,
          descripcion="Meses contables con datos, mes por omisión y hora del servidor", handler=handle_periodos),

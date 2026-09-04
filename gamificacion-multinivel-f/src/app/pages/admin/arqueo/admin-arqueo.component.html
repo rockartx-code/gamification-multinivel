@@ -295,7 +295,10 @@
          nada al corte; explica de qué está hecho el total. -->
     <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
       <div class="text-xs font-semibold text-main">Vendido en el turno</div>
-      <ui-desglose-iva class="mt-2 block" [total]="c.total || 0" [rate]="tasaIva" [label]="etiquetaIva"></ui-desglose-iva>
+      <!-- Ronda 7 · Rubén: aquí se pintaba `c.total`, que es el movimiento NETO
+           del cajón, y una venta mixta de $980 se declaraba como $500 vendidos.
+           Lo vendido es `salesTotal`; el cajón se explica en el bloque de arriba. -->
+      <ui-desglose-iva class="mt-2 block" [total]="c.salesTotal || 0" [rate]="tasaIva" [label]="etiquetaIva"></ui-desglose-iva>
     </div>
 
     <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-3">

@@ -129,6 +129,8 @@ export interface SimuladorGeneracion {
   comision: number;
   /** `10 % de $1,350.00 netos, sin envío = $135.00`. */
   textoBase: string;
+  /** De la generación 2 en adelante son personas que el usuario NO capturó. */
+  supuesta?: boolean;
 }
 
 export interface SimuladorResultado {
@@ -150,6 +152,8 @@ export interface SimuladorResultado {
   baseComision: string;
   fraseBaseComision: string;
   explicacion: string[];
+  /** Aviso del acantilado del tramo de descuento: '' si esta compra no está en un escalón. */
+  advertenciaTramo?: string;
   supuestos: string[];
   aviso: string;
 }

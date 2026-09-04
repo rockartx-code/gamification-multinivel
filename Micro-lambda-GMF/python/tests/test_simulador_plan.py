@@ -96,7 +96,11 @@ def test_cada_generacion_dice_si_cumple_su_requisito_y_por_que_no(catalogo, util
     assert gens[1]["cumple"] is True and gens[1]["comision"] == 100
     assert gens[2]["cumple"] is False and gens[2]["comision"] == 0
     assert gens[2]["porQue"] == "te faltan 1 directas activas de las 2 que pide"
-    assert gens[3]["cumple"] is False and "PC personales" in gens[3]["porQue"]
+    # Ronda 7 · Gerardo: el requisito se mide con VP NETOS (lo pagado ÷ el precio
+    # por punto), no con los PC de lista del carrito. Decía "llevas 72 PC
+    # personales" teniendo 120 PC de lista: la etiqueta mentía sobre la unidad.
+    assert gens[3]["cumple"] is False and "VP netos" in gens[3]["porQue"]
+    assert "PC personales" not in gens[3]["porQue"]
     assert cuerpo["simulacion"]["comisionTotal"] == 100
 
 
@@ -116,15 +120,32 @@ def test_el_simulador_desglosa_el_iva_de_tu_propia_compra(catalogo, utils):
     assert iva["base"] + iva["iva"] == cuerpo["simulacion"]["tuCompra"]["netoPagado"]
 
 
-def test_el_simulador_no_promete_ni_extrapola(catalogo, utils):
-    """§4.10: aviso fijo, supuestos dichos y ninguna red que crezca sola."""
+def test_el_simulador_no_promete_y_marca_las_generaciones_supuestas(catalogo, utils):
+    """§4.10 + ronda 7 · Gerardo.
+
+    El pie decía "no suponemos que tu red crezca sola" mientras la tabla cobraba
+    dos veces a las mismas personas capturadas: con 8 directas, la generación 2
+    sumaba $480 de gente que nadie capturó y −$75 se volvía +$405. Las personas
+    de la generación 2 en adelante son supuestas, y ahora la salida lo dice.
+    """
     _, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 1000,
                                     "compraPropia": 1120, "nivelesProfundidad": 3})
     s = cuerpo["simulacion"]
     assert s["aviso"] == "Esto es una calculadora con las reglas del plan, no una promesa de ingresos."
-    assert any("no suponemos que tu red crezca sola" in t for t in s["supuestos"])
-    # Las tres generaciones usan las mismas personas capturadas: nada de 2, 4, 8.
+    assert not any("no suponemos que tu red crezca sola" in t for t in s["supuestos"])
+    assert any("todavía no existen" in t.lower() for t in s["supuestos"])
+    assert [g["supuesta"] for g in s["generaciones"]] == [False, True, True]
+    # El número de personas por fila no cambió: lo que cambió es que se dice
+    # que de la 2 en adelante son gente que el usuario no capturó.
     assert [g["personas"] for g in s["generaciones"]] == [2, 2, 2]
+
+
+def test_con_una_sola_generacion_no_se_supone_a_nadie(catalogo, utils):
+    _, cuerpo = _simular(catalogo, {"directos": 8, "compraPorDirecto": 1200,
+                                    "compraPropia": 1120, "nivelesProfundidad": 1})
+    s = cuerpo["simulacion"]
+    assert [g["supuesta"] for g in s["generaciones"]] == [False]
+    assert not any("todavía no existen" in t.lower() for t in s["supuestos"])
 
 
 def test_los_topes_se_dicen_con_su_numero_en_vez_de_recortar_en_silencio(catalogo, utils):
@@ -157,3 +178,40 @@ def test_el_simulador_usa_la_misma_escalera_que_cobra_el_pedido(catalogo, utils)
         _, cuerpo = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": bruto})
         esperado = order_lambda._resolve_discount_rate(tiers, Decimal(str(bruto)))
         assert Decimal(str(cuerpo["simulacion"]["tuCompra"]["tramo"])) == esperado
+
+
+def test_el_acantilado_del_tramo_se_advierte_antes_de_comprar(catalogo, utils):
+    """Ronda 7 · Gerardo: «comprar un peso más ($6,000 en vez de $5,999) me
+    quita $1,200.70 al mes».
+
+    Al saltar de tramo el descuento sube y los VP netos BAJAN, porque los puntos
+    se cuentan sobre lo que pagas. La página vendía el tramo como el premio
+    ("entre más compras, menos pagas") sin una sola advertencia.
+    """
+    _, justo_encima = _simular(catalogo, {"directos": 3, "compraPorDirecto": 15000,
+                                          "compraPropia": 6000, "nivelesProfundidad": 3})
+    _, justo_debajo = _simular(catalogo, {"directos": 3, "compraPorDirecto": 15000,
+                                          "compraPropia": 5999, "nivelesProfundidad": 3})
+
+    # El hecho que Gerardo midió: un peso más deja menos puntos.
+    assert justo_encima["simulacion"]["tuCompra"]["vp"] < justo_debajo["simulacion"]["tuCompra"]["vp"]
+
+    aviso = justo_encima["simulacion"]["advertenciaTramo"]
+    assert aviso and "menos puntos" in aviso.lower()
+    assert "$5,999.00" in aviso and "$6,000.00" in aviso
+    # Dentro de un tramo no hay acantilado y no se asusta a nadie.
+    assert justo_debajo["simulacion"]["advertenciaTramo"] == ""
+
+
+def test_el_verde_de_activacion_dice_que_depende_del_producto(catalogo, utils):
+    """Ronda 7 · Gerardo: «"Con eso activas el mes" usando $50/PC fijos cuando
+    el catálogo va de $46.67 a $72.22 por PC»."""
+    utils._put_entity("PRODUCT", 1, {"entityType": "product", "productId": 1, "name": "Naplus",
+                                     "price": Decimal("280"), "vpPoints": 6, "active": True})
+    utils._put_entity("PRODUCT", 2, {"entityType": "product", "productId": 2, "name": "Creatina Monohidratada",
+                                     "price": Decimal("650"), "vpPoints": 9, "active": True})
+
+    _, cuerpo = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": 1150})
+    texto = " ".join(cuerpo["simulacion"]["explicacion"])
+    assert "Depende de qué compres" in texto
+    assert "revisa los PC del producto" in texto

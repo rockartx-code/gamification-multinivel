@@ -54,11 +54,13 @@
             </div>
           </div>
 
-          <div class="mt-3 grid grid-cols-3 gap-2">
+          <div class="mt-3 grid gap-2" [ngClass]="relojCorteVisible ? 'grid-cols-3' : 'grid-cols-2'">
             <!-- G/29 · "¿se me vence el carrito? ¿se acaba una oferta?": el
                  rótulo dice de qué es el corte y la fecha va en letras, con la
-                 hora del servidor, igual que en el panel. -->
-            <div class="rounded-2xl border border-olive-30 surface-soft p-3" [attr.title]="cutoffLabel + ' · ' + cutoffDateText">
+                 hora del servidor, igual que en el panel.
+                 Ronda 7 · Valeria y Nayeli: solo para quien tiene un mes que se
+                 le cierra; a una invitada la apuraba con algo que no es suyo. -->
+            <div *ngIf="relojCorteVisible" class="rounded-2xl border border-olive-30 surface-soft p-3" [attr.title]="cutoffLabel + ' · ' + cutoffDateText">
               <div class="flex items-center gap-2 text-mini text-gray-600">
                 <i class="fa-solid fa-clock" aria-hidden="true"></i>
                 Corte de mes
@@ -79,7 +81,7 @@
                 <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                 Entrega
               </div>
-              <div class="text-sm font-extrabold">{{ deliveryType === 'pickup' ? 'Sucursal' : '3 a 5 días hábiles' }}</div>
+              <div class="text-sm font-extrabold">{{ deliveryType === 'pickup' ? 'Sucursal' : plazoEntrega }}</div>
             </div>
           </div>
         </div>
@@ -418,7 +420,7 @@
       ></ui-form-field>
 
       <ui-form-field
-        label="Pais"
+        label="País"
         kind="select"
         placeholder="Selecciona un pais"
         name="deliveryCountry"
@@ -623,7 +625,9 @@
 
             <div class="mt-5 space-y-3 text-sm">
               <div class="flex items-center justify-between text-muted">
-                <span>Subtotal</span>
+                <!-- Ronda 7 · Valeria: este renglón y el de abajo se llamaban los
+                     dos «Subtotal» y ninguno «Total». -->
+                <span>Subtotal de productos</span>
                 <span>{{ formatMoney(subtotal) }}</span>
               </div>
               <div class="flex items-center justify-between text-muted">
@@ -740,12 +744,12 @@
                   Meta para invitados
                 </div>
                 <div class="mt-2 text-lg font-extrabold tracking-tight">
-                  Registrate para obtener descuentos y beneficios
+                  Regístrate para obtener descuentos y beneficios
                 </div>
                 <div class="mt-1 text-xs text-muted">Crea tu cuenta para desbloquear promociones y seguimiento.</div>
                 <ui-button size="sm" variant="primary" type="button" class="mt-3" (pressed)="openGuestRegisterModal()">
                   <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-                  Registrate
+                  Regístrate
                 </ui-button>
               </ng-container>
               <ng-template #goalProgress>
@@ -826,7 +830,7 @@
 
       <div class="mt-4 space-y-3 text-sm">
         <div class="flex items-center justify-between text-muted">
-          <span>Subtotal</span>
+          <span>Subtotal de productos</span>
           <span>{{ formatMoney(subtotal) }}</span>
         </div>
         <div class="flex items-center justify-between text-muted">
@@ -925,8 +929,13 @@
         <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
       </div>
 
-      <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-600">
+      <!-- Ronda 7 · Valeria y Gerardo: sin este guardia salía «Te faltan $0 para
+           Meta de beneficios» junto a «Nivel de descuento: Inactivo». Si faltan
+           cero, ¿ya la tengo? ¿Y qué gano? Ahora solo se dice cuando falta algo,
+           y se dice para qué sirve llegar. -->
+      <div *ngIf="hasGoalGap" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-600">
         Te faltan <span class="font-semibold text-gold">{{ gapToGoalLabel }}</span> para {{ goalTitle }}.
+        <div class="mt-1 text-gray-500">Al llegar, el descuento por volumen del mes sube y se aplica solo en tu siguiente pedido.</div>
       </div>
   </ui-modal>
 

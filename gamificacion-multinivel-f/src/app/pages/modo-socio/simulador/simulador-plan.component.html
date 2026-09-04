@@ -10,28 +10,28 @@
   <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <label class="block">
       <span class="text-xs font-semibold text-gray-700">¿Cuántas personas directas tienes?</span>
-      <input type="number" min="0" max="100" step="1" [(ngModel)]="directos" (change)="calcular()"
+      <input type="number" min="0" max="100" step="1" [(ngModel)]="directos" (ngModelChange)="alEscribir()" (change)="calcular()"
         name="simDirectos" inputmode="numeric"
         class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70" />
       <span class="mt-1 block text-xs text-gray-500">Las que invitaste tú (generación 1).</span>
     </label>
     <label class="block">
       <span class="text-xs font-semibold text-gray-700">¿Cuánto paga cada una al mes?</span>
-      <input type="number" min="0" max="100000" step="10" [(ngModel)]="compraPorDirecto" (change)="calcular()"
+      <input type="number" min="0" max="100000" step="10" [(ngModel)]="compraPorDirecto" (ngModelChange)="alEscribir()" (change)="calcular()"
         name="simCompraDirecto" inputmode="decimal"
         class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70" />
       <span class="mt-1 block text-xs text-gray-500">Lo que pagan, ya con su descuento y sin envío.</span>
     </label>
     <label class="block">
       <span class="text-xs font-semibold text-gray-700">¿Cuánto compras tú al mes?</span>
-      <input type="number" min="0" max="100000" step="10" [(ngModel)]="compraPropia" (change)="calcular()"
+      <input type="number" min="0" max="100000" step="10" [(ngModel)]="compraPropia" (ngModelChange)="alEscribir()" (change)="calcular()"
         name="simCompraPropia" inputmode="decimal"
         class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70" />
       <span class="mt-1 block text-xs text-gray-500">A precio de lista; abajo te decimos qué pagas de verdad.</span>
     </label>
     <label class="block">
       <span class="text-xs font-semibold text-gray-700">¿Cuántas generaciones cuento?</span>
-      <select [(ngModel)]="niveles" (change)="calcular()" name="simNiveles"
+      <select [(ngModel)]="niveles" (ngModelChange)="alEscribir()" (change)="calcular()" name="simNiveles"
         class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70">
         <option *ngFor="let n of nivelesDisponibles" [ngValue]="n">{{ n }}</option>
       </select>
@@ -56,6 +56,13 @@
         {{ pesos(r.gananciaNeta) }}
       </div>
       <p class="mt-2 text-sm text-main" *ngFor="let linea of r.explicacion">{{ linea }}</p>
+      <!-- Ronda 7 · Gerardo: comprar un peso más saltaba de tramo, bajaba los VP
+           netos y le costaba $1,200.70 al mes, sin una sola advertencia. -->
+      <p *ngIf="r.advertenciaTramo"
+        class="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ r.advertenciaTramo }}
+      </p>
       <div class="mt-3 grid gap-2 text-sm text-main sm:grid-cols-3">
         <div class="rounded-xl border border-olive-20 bg-white/50 px-3 py-2">
           <div class="text-xs text-gray-600">Comisiones</div>
@@ -115,7 +122,14 @@
         <tbody>
           <tr *ngFor="let g of r.generaciones" class="border-t border-olive-20 align-top text-main">
             <td class="px-4 py-2 font-semibold">{{ g.gen }}</td>
-            <td class="px-4 py-2">{{ g.personas }} × {{ pesos(g.compraNetaPorPersona) }}</td>
+            <td class="px-4 py-2">
+              {{ g.personas }} × {{ pesos(g.compraNetaPorPersona) }}
+              <!-- Ronda 7 · Gerardo: la tabla cobraba dos veces a las mismas
+                   personas capturadas y el pie juraba lo contrario. -->
+              <div *ngIf="g.supuesta" class="text-xs font-semibold text-amber-800">
+                Personas supuestas: todavía no las tienes
+              </div>
+            </td>
             <td class="px-4 py-2">
               <div>{{ g.requisitoTexto }}</div>
               <div class="text-xs" [ngClass]="g.cumple ? 'text-emerald-700' : 'text-amber-800'">

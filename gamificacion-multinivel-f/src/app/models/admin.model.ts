@@ -299,6 +299,8 @@ export interface UpdateOrderStatusPayload {
   cashReceived?: number;
   attendantUserId?: number | null;
   dispatchLines?: Array<{ productId: number; quantity: number }>;
+  /** Folio del depósito o de la terminal con el que la gerencia da por cobrado el pedido. */
+  paymentReference?: string;
 }
 
 export interface CustomerDocument {

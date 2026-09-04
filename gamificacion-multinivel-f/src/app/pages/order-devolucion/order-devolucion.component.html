@@ -224,22 +224,33 @@
       <div *ngIf="step === 2" class="mt-6 space-y-4">
         <p class="text-sm font-semibold text-main">¿Por qué lo devuelves?</p>
 
-        <div *ngFor="let m of motivos"
-          class="cursor-pointer rounded-2xl border p-4 transition-colors"
-          [ngClass]="motivo === m.value ? 'border-main bg-main/5' : 'border-olive-20 bg-white/60 hover:border-main/40'"
-          (click)="seleccionarMotivo(m.value)">
-          <div class="flex items-start gap-3">
-            <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border"
-              [ngClass]="motivo === m.value ? 'border-main bg-main' : 'border-olive-30 bg-white'">
-              <span *ngIf="motivo === m.value" class="h-2 w-2 rounded-full bg-white"></span>
-            </span>
-            <div>
-              <p class="text-sm font-semibold text-main">{{ m.label }}</p>
-              <p class="mt-0.5 text-xs text-gray-500">{{ m.hint }}</p>
-              <p class="mt-1 text-xs text-gray-600"><i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>{{ m.plazo }}</p>
+        <!-- Ronda 7 · Nayeli: estas tarjetas eran <div> con (click): sin role, sin
+             tabindex y sin control de opción. En el celular había que adivinar que
+             se les pica encima, y con teclado o lector de pantalla no se podían
+             elegir. Ahora son un grupo de opciones de verdad; la tarjeta entera
+             sigue siendo el área tocable porque es la etiqueta del radio. -->
+        <fieldset class="space-y-4 border-0 p-0">
+          <legend class="sr-only">Motivo de la devolución</legend>
+          <label *ngFor="let m of motivos"
+            class="block cursor-pointer rounded-2xl border p-4 transition-colors"
+            [ngClass]="motivo === m.value ? 'border-main bg-main/5' : 'border-olive-20 bg-white/60 hover:border-main/40'">
+            <div class="flex items-start gap-3">
+              <input type="radio" name="motivoDevolucion" class="sr-only"
+                [value]="m.value" [checked]="motivo === m.value"
+                (change)="seleccionarMotivo(m.value)" />
+              <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border"
+                aria-hidden="true"
+                [ngClass]="motivo === m.value ? 'border-main bg-main' : 'border-olive-30 bg-white'">
+                <span *ngIf="motivo === m.value" class="h-2 w-2 rounded-full bg-white"></span>
+              </span>
+              <div>
+                <p class="text-sm font-semibold text-main">{{ m.label }}</p>
+                <p class="mt-0.5 text-xs text-gray-500">{{ m.hint }}</p>
+                <p class="mt-1 text-xs text-gray-600"><i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>{{ m.plazo }}</p>
+              </div>
             </div>
-          </div>
-        </div>
+          </label>
+        </fieldset>
 
         <div *ngIf="motivoActual as m" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 space-y-1">
           <p><i class="fa-solid fa-truck mr-1" aria-hidden="true"></i>{{ m.envio }}</p>

@@ -31,17 +31,14 @@ export class UiFooterComponent implements OnInit {
   /** El año del negocio, no el del equipo de quien mira: `GET /catalog/ayuda`
    *  —que este pie ya consulta— manda `serverNow`. Con el reloj del navegador
    *  atrasado el pie seguía diciendo "© 2026" con el mundo en 2027. */
-  anio = new Date().getFullYear();
+  anio = AyudaService.anioNegocio;
 
   constructor(private readonly ayudaService: AyudaService) {}
 
   ngOnInit(): void {
     this.ayudaService.ayuda().subscribe((ayuda) => {
       this.contacto = ayuda.contacto;
-      const delServidor = new Date(String(ayuda.serverNow ?? ''));
-      if (!Number.isNaN(delServidor.getTime())) {
-        this.anio = delServidor.getFullYear();
-      }
+      this.anio = AyudaService.anioNegocio;
     });
   }
 

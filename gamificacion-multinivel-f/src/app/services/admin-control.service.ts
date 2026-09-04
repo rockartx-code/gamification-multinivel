@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { BehaviorSubject, catchError, forkJoin, map, Observable, of, tap } from 'rxjs';
 
 import {
   OrderCancelResponse,
@@ -669,18 +669,47 @@ export class AdminControlService {
     return this.api.getCommissionsSummary(monthKey);
   }
 
+  /**
+   * Ronda 7 · Rubén (crítica): con el usuario de caja, el Punto de Venta decía
+   * siempre «Sin stock asignado» y Stocks «Todavía no hay ninguna bodega dada
+   * de alta», aunque la gerente tuviera a los cinco empleados palomeados en las
+   * tres bodegas. La causa no era la vinculación: era este `forkJoin`. Bastaba
+   * con que UNA de las cinco peticiones respondiera 403 —el rol de caja no
+   * tiene «Ver Productos»— para que fallara el combinado entero, el `next`
+   * nunca corriera y las bodegas, las ventas y los movimientos se quedaran en
+   * la lista vacía con la que arranca la pantalla. Ningún error en consola.
+   *
+   * Cada petición se resuelve por su cuenta: la que no se puede leer se queda
+   * vacía y **se nombra** en `sinAcceso`, para que la pantalla diga "no tienes
+   * permiso" en vez de "no hay nada".
+   */
   loadStocksAndPosState(): Observable<{
     stocks: AdminStock[];
     transfers: StockTransfer[];
     movements: InventoryMovement[];
     posSales: PosSale[];
+    sinAcceso: string[];
   }> {
+    const negados: string[] = [];
+    const opcional = <T>(fuente: Observable<T>, seccion: string, vacio: T): Observable<T> =>
+      fuente.pipe(
+        catchError((error: unknown) => {
+          const codigo = (error as { status?: number })?.status;
+          // 401 no se apunta: la sesión caducó y de eso se encarga el interceptor.
+          if (codigo === 403) {
+            negados.push(seccion);
+          }
+          return of(vacio);
+        })
+      );
+
     return forkJoin({
-      productsResponse: this.api.listProducts(),
-      stocks: this.api.listStocks(),
-      transfers: this.api.listStockTransfers(),
-      movements: this.api.listInventoryMovements(),
-      posSales: this.api.listPosSales()
+      productsResponse: opcional(this.api.listProducts(), 'Productos',
+        { products: [] as AdminProduct[], productOfMonthId: null as number | null }),
+      stocks: opcional(this.api.listStocks(), 'Stocks', [] as AdminStock[]),
+      transfers: opcional(this.api.listStockTransfers(), 'Traspasos', [] as StockTransfer[]),
+      movements: opcional(this.api.listInventoryMovements(), 'Movimientos de inventario', [] as InventoryMovement[]),
+      posSales: opcional(this.api.listPosSales(), 'Ventas de mostrador', [] as PosSale[])
     }).pipe(
       tap((response) => {
         if (this.loadedSections.has('products')) {
@@ -696,7 +725,8 @@ export class AdminControlService {
         stocks: response.stocks ?? [],
         transfers: response.transfers ?? [],
         movements: response.movements ?? [],
-        posSales: response.posSales ?? []
+        posSales: response.posSales ?? [],
+        sinAcceso: negados
       }))
     );
   }

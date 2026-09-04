@@ -328,3 +328,56 @@ def test_la_cotizacion_de_envio_solo_necesita_el_codigo_postal(utils):
     assert con_estado["statusCode"] == 400, con_estado["body"]
 
     assert cotizar({"zipTo": "031"})["statusCode"] == 400
+
+
+def test_dar_por_cobrado_a_mano_guarda_la_referencia_del_deposito(order_lambda, utils):
+    """Ronda 7 · Marisol: «"Marcar como pagado" mueve dinero de un clic: sin
+    confirmación, sin referencia y sin deshacer». La pantalla ya pregunta; el
+    servidor guarda con qué se dio por cobrado, que es lo que después permite
+    cuadrar el banco."""
+    _producto(utils)
+    respuesta = order_lambda.handle_create_order(_pedido_invitado(), {})
+    oid = next(v for (pk, sk), v in utils._table.store.items() if pk == "ORDER" and sk != "REF")["orderId"]
+
+    admin = {"x-user-id": "1", "x-user-role": "admin"}
+    r = order_lambda.handle_update_status(oid, {"status": "paid", "paymentReference": "SPEI 4482910"}, admin)
+    assert r["statusCode"] == 200, r["body"]
+
+    pedido = utils._get_by_id("ORDER", oid)
+    assert pedido["status"] == "paid"
+    assert pedido["paymentReference"] == "SPEI 4482910"
+
+
+def test_sin_referencia_el_pedido_no_inventa_una(order_lambda, utils):
+    _producto(utils)
+    order_lambda.handle_create_order(_pedido_invitado(), {})
+    oid = next(v for (pk, sk), v in utils._table.store.items() if pk == "ORDER" and sk != "REF")["orderId"]
+    admin = {"x-user-id": "1", "x-user-role": "admin"}
+
+    order_lambda.handle_update_status(oid, {"status": "paid", "paymentReference": "   "}, admin)
+
+    assert "paymentReference" not in utils._get_by_id("ORDER", oid)
+
+
+def test_un_pedido_de_invitado_lleva_un_nombre_con_el_que_se_pueda_llamar(order_lambda, utils):
+    """Ronda 7 · Marisol: «cuatro de cuatro pendientes aparecen como "Cliente",
+    sin nombre de persona… no hay a quién llamarle para cobrar un pendiente de 5
+    días». El dato estaba en el propio pedido."""
+    _producto(utils)
+    pedido = _pedido_invitado()
+    pedido.pop("customerName")
+    order_lambda.handle_create_order(pedido, {})
+
+    guardado = next(v for (pk, sk), v in utils._table.store.items() if pk == "ORDER" and sk != "REF")
+    assert guardado["customerName"] == "Lucía Fernández"   # el nombre de a quién se le entrega
+
+
+def test_sin_nombre_ni_destinatario_queda_el_correo_antes_que_la_palabra_cliente(order_lambda, utils):
+    _producto(utils)
+    pedido = _pedido_invitado()
+    pedido.pop("customerName")
+    pedido.pop("recipientName")
+    order_lambda.handle_create_order(pedido, {})
+
+    guardado = next(v for (pk, sk), v in utils._table.store.items() if pk == "ORDER" and sk != "REF")
+    assert guardado["customerName"] == "lucia@test.com"

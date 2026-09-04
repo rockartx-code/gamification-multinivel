@@ -5,6 +5,7 @@ import { finalize, Subscription } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 
 import { ESTADOS_MX_CODES, ESTADOS_MX_OPTIONS } from '../../constants/states-mx';
+import { PLAZO_ENTREGA_ESTANDAR } from '../../constants/envio';
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
 import { AdminOrderItem, CustomerShippingAddress, ShippingRate, ShippingQuoteItem, CouponValidation } from '../../models/admin.model';
@@ -39,6 +40,9 @@ import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desg
   styleUrl: './carrito.component.css'
 })
 export class CarritoComponent implements OnInit, OnDestroy {
+  /** El plazo que se promete en el resumen; la orden pagada repite el mismo. */
+  readonly plazoEntrega = PLAZO_ENTREGA_ESTANDAR;
+
   readonly dashboardLink = ['/dashboard'];
   readonly stateOptions = ESTADOS_MX_OPTIONS;
   readonly countryOptions = [{ value: 'MX', label: 'Mexico' }];
@@ -451,7 +455,9 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   get discountLevelLabel(): string {
     if (!this.discountActiveValue) {
-      return 'Inactivo';
+      // Ronda 7 · Valeria: «"Inactivo" suena a que algo mío está apagado y no sé
+      // cómo prenderlo». No está apagado: todavía no se alcanza el primer tramo.
+      return 'Todavía no alcanzas ningún tramo';
     }
     const pct = this.discountPercentValue;
     if (!pct) {
@@ -639,14 +645,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
   /** El rótulo del resumen se llama "Subtotal" mientras falte el envío, y "Total" cuando ya está todo.
    *  Mariana leyó "$700" arriba y pagó "$829": el número no mentía, el nombre sí. */
   get totalLabel(): string {
+    // Ronda 7 · Valeria: se llamaba «Subtotal», igual que el renglón de los
+    // productos, y así el resumen decía dos veces «Subtotal» y ninguna «Total».
     return this.deliveryType === 'delivery' && !this.selectedShippingRate && !this.isShippingFree
-      ? 'Subtotal'
+      ? 'Total sin envío'
       : 'Total';
   }
 
-  /** Aclaración de una línea junto al rótulo, para que "Subtotal" no quede sin explicación. */
+  /** Aclaración de una línea junto al rótulo, para que el total parcial no quede sin explicación. */
   get totalNote(): string {
-    return this.totalLabel === 'Subtotal' ? 'Falta el envío: escribe tu CP para verlo completo.' : '';
+    return this.totalLabel === 'Total sin envío' ? 'Falta el envío: escribe tu CP para verlo completo.' : '';
   }
 
   // ── Completa tu activación ──
@@ -1323,6 +1331,20 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   /** "Corte del mes para comisiones y descuento": Ernesto preguntó de qué era. */
+  /**
+   * ¿Se le enseña el reloj del corte a quien está pagando?
+   *
+   * Ronda 7 · Valeria y Nayeli: lo primero del carrito, antes de su producto,
+   * era «Corte de mes — 21d 3h 27m 12s — Cierre del mes de comisiones y de tu
+   * descuento por volumen». Una invitada no tiene comisiones ni descuento por
+   * volumen: es una cuenta regresiva que la apura con algo que no es suyo, y
+   * hace dudar de si esto es una tienda o una pirámide. El corte solo se enseña
+   * a quien de verdad tiene un mes que se le cierra.
+   */
+  get relojCorteVisible(): boolean {
+    return this.modoCuenta === 'socio';
+  }
+
   get cutoffLabel(): string {
     return this.dashboardControl.getCutoffLabel();
   }

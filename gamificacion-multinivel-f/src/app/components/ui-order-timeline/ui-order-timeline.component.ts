@@ -19,7 +19,10 @@ export class UiOrderTimelineComponent {
   @Input() deliveryType: 'delivery' | 'pickup' = 'delivery';
   @Input() steps: TimelineStep[] = [
     { key: 'created', label: 'Orden creada', description: 'Tu pedido fue registrado.' },
-    { key: 'paid', label: 'Pago', description: 'Conciliación y confirmación.' },
+    // Ronda 7 · Valeria: «"Conciliación" es palabra de contadores; como clienta
+    // no sé qué me están diciendo que está pasando con mi dinero.» La barra de
+    // recolección ya lo decía bien.
+    { key: 'paid', label: 'Pago', description: 'Ya confirmamos tu pago.' },
     { key: 'packing', label: 'Preparación', description: 'Armando paquete.' },
     { key: 'shipped', label: 'Envío', description: 'Ruta de entrega.' },
     // Género neutro (§4.17): la insignia de arriba dice "Entregado" y este paso

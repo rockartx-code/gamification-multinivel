@@ -3,6 +3,8 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 import { AdminOrder, AdminOrderItem } from '../../models/admin.model';
+import { ESTADOS_MX_OPTIONS } from '../../constants/states-mx';
+import { PLAZO_ENTREGA_ESTANDAR } from '../../constants/envio';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
 import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
@@ -108,10 +110,43 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (this.redirectStatus === 'success' || this.redirectStatus === 'pending') {
       this.startSuccessPolling();
     }
+
+    // Ronda 7 · Nayeli (alta): con el correo «tu pedido fue entregado» ya en el
+    // buzón y el pedido entregado en el servidor, esta pantalla seguía diciendo
+    // «Estatus: Pagado» y el botón de devolución apagado; solo cambiaba
+    // recargando a mano. Los datos se leían una vez, en `ngOnInit`, y volver a
+    // la misma ruta dentro de la aplicación no la vuelve a montar. Como el
+    // motivo «llegó dañado» solo dura 48 horas, quedarse con la pantalla vieja
+    // le vence el plazo a quien no se le ocurra recargar.
+    this.route.paramMap.subscribe((params) => {
+      const id = this.normalizeLookupValue(params.get('idOrden'));
+      if (id && !this.orderReference && !this.paymentId) {
+        this.loadOrder(id);
+      }
+    });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.refrescarAlVolver);
+      window.addEventListener('focus', this.refrescarAlVolver);
+    }
   }
+
+  /** Al volver a la pestaña se relee el pedido: el estado pudo cambiar mientras tanto. */
+  private readonly refrescarAlVolver = (): void => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+    const id = this.orderReference || this.paymentId || this.orderId;
+    if (id && !this.isLoading) {
+      this.loadOrder(id);
+    }
+  };
 
   ngOnDestroy(): void {
     this.stopSuccessPolling();
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.refrescarAlVolver);
+      window.removeEventListener('focus', this.refrescarAlVolver);
+    }
   }
 
   private loadOrder(id: string): void {
@@ -380,7 +415,53 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
       return '';
     }
     const calle = o.address || [o.street, o.number].filter(Boolean).join(' ');
-    return [calle, o.city, o.state, o.postalCode].filter(Boolean).join(', ');
+    // Ronda 7 · Valeria: salía «Ezequiel Montes, 148, Querétaro, Querétaro,
+    // QUE, 76000». «QUE» es la clave interna del estado, no algo que ella
+    // escribiera, y la ciudad venía repetida desde la calle.
+    const partes = [calle, o.city, this.nombreDeEstado(o.state), o.postalCode];
+    const vistas = new Set<string>();
+    return partes
+      .map((parte) => String(parte ?? '').trim())
+      .filter((parte) => {
+        if (!parte) {
+          return false;
+        }
+        const clave = parte
+          .toLocaleLowerCase('es-MX')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        if (vistas.has(clave)) {
+          return false;
+        }
+        vistas.add(clave);
+        return true;
+      })
+      .join(', ');
+  }
+
+  /** «QUE» → «Querétaro». Si no es una clave conocida, se deja tal cual. */
+  private nombreDeEstado(valor: string | null | undefined): string {
+    const bruto = String(valor ?? '').trim();
+    if (!bruto) {
+      return '';
+    }
+    return ESTADOS_MX_OPTIONS.find((opcion) => opcion.value === bruto.toUpperCase())?.label ?? bruto;
+  }
+
+  /**
+   * El plazo que el carrito prometió, repetido donde de verdad hace falta.
+   *
+   * Ronda 7 · Valeria: «el carrito sí dice "Estafeta · Terrestre · 3 a 5 días
+   * hábiles"; al pagar, la pantalla de la orden no repite ese plazo ni pone una
+   * fecha, y el correo tampoco. La pregunta más obvia después de pagar no tiene
+   * respuesta en ningún lado.»
+   */
+  get plazoDeEntrega(): string {
+    if (this.isPickup || !this.hasShippingAddress) {
+      return '';
+    }
+    const paqueteria = String(this.order?.shippingCarrier ?? '').trim();
+    return paqueteria ? `${paqueteria} · ${PLAZO_ENTREGA_ESTANDAR}` : PLAZO_ENTREGA_ESTANDAR;
   }
 
   get invoiceVisible(): boolean {

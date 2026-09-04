@@ -7,11 +7,16 @@
       Devolver / Llegó dañado
     </ui-button>
     <span *ngIf="restanteTexto" class="text-xs text-gray-500">{{ restanteTexto }}</span>
+    <span *ngIf="plazoCortoTexto" class="basis-full text-xs font-semibold text-amber-800">{{ plazoCortoTexto }}</span>
   </ng-container>
 
   <!-- No se puede: el botón sigue ahí, apagado y diciendo por qué. -->
   <ng-container *ngIf="!puede">
-    <ui-button variant="ghost" size="md" [disabled]="true"
+    <!-- Ronda 7 · Valeria: el arnés lo reportaba como «SIN MOTIVO» porque el
+         motivo solo vivía en el párrafo de al lado. `disabledReason` lo pone
+         también en el propio botón, que es donde se toca. -->
+    <ui-button variant="ghost" size="md" [disabled]="true" [disabledReason]="motivo"
+      reasonPlacement="title"
       [attr.aria-describedby]="'motivo-devolucion'">
       <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
       Devolver / Llegó dañado

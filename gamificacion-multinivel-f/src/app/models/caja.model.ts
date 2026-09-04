@@ -76,7 +76,10 @@ export interface CorteCaja {
   cashCutId: string;
   stockId: string;
   attendantUserId?: string | number | null;
+  /** Movimiento neto del cajón en el turno (esperado − fondo). No es lo vendido. */
   total: number;
+  /** Lo vendido en el turno, cobre como cobre. Es la cifra que busca la gerencia. */
+  salesTotal?: number;
   salesCount: number;
   cashToKeep: number;
   withdrawnAmount: number;

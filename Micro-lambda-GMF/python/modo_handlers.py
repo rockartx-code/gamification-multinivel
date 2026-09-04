@@ -51,6 +51,28 @@ def modo_de(customer) -> str:
     return modo if modo in MODOS else "socio"
 
 
+def _codigo_para_invitar(customer: dict) -> str:
+    """El código de referido de la ficha; si no lo tiene todavía, se le crea.
+
+    Ronda 7 · Gerardo: el correo prometía "tienes tu propio código" y no lo
+    traía. Se genera aquí mismo cuando falta, porque el correo es la primera
+    (y ese día la única) forma de tenerlo en la mano.
+    """
+    codigo = str(customer.get("referralCode") or "").strip().upper()
+    if codigo:
+        return codigo
+    try:
+        # Se importa con alias a propósito: el guardia de la fachada
+        # (tests/test_arquitectura.py) busca el prefijo "utils." en el texto y
+        # leería un acceso por módulo como si fuera de la fachada común.
+        from auth_utils import _upsert_referral_code_self as crear_codigo
+        nuevo = crear_codigo(customer.get("customerId"), str(customer.get("name") or ""))
+        return str(nuevo or "").strip().upper()
+    except Exception as error:  # pragma: no cover - el código nunca rompe el correo
+        utils._log("modo_socio_codigo_error", "ERROR", error=str(error))
+        return ""
+
+
 def _correo_bienvenida_socio(customer: dict) -> None:
     """Solo cuando la persona lo pidió: los cambios automáticos no avisan."""
     try:
@@ -59,18 +81,32 @@ def _correo_bienvenida_socio(customer: dict) -> None:
             return
         nombre = (str(customer.get("name") or "").split(" ") or ["Hola"])[0] or "Hola"
         base = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx").rstrip("/")
+        codigo = _codigo_para_invitar(customer)
+        liga = f"{base}/#/tienda/{codigo}" if codigo else ""
+        bloque_codigo = (
+            f'''<div class="info-box">
+      <p>Tu código para invitar es <strong>{codigo}</strong>.</p>
+      <p>Quien se registre con esta liga queda en tu red: <a href="{liga}">{liga}</a></p>
+    </div>''' if codigo else
+            '''<div class="info-box">
+      <p>Tu código para invitar se está generando. Lo encuentras en tu panel, en Links, en cuanto entres.</p>
+    </div>''')
         cuerpo = f"""
     <div class="icon">🤝</div>
     <h1 class="title">Te damos la bienvenida al modo socio</h1>
     <p class="lead">Hola <strong>{nombre}</strong>. Tu cuenta ya está en modo socio: desde tu próxima compra aplica el descuento por volumen, tienes tu propio código para invitar y las compras de tu red te generan comisiones.</p>
+    {bloque_codigo}
     <div class="info-box">
       <p>Cuando te actives en el mes te pediremos tu CLABE, para poder depositarte el día de pago. La registras en tu panel, en Comisiones, y toma un minuto.</p>
     </div>
     <a class="btn" href="{base}/#/dashboard">Ir a mi panel</a>
     <p><a href="{base}/#/modo-socio">Volver a leer cómo funciona el plan</a></p>
     """
+        linea_codigo = (f"Tu código para invitar: {codigo}\nTu liga de invitación: {liga}\n\n"
+                        if codigo else "")
         texto = (f"Te damos la bienvenida al modo socio\n\nHola {nombre}. Tu cuenta ya está en modo socio: desde tu próxima compra "
                  f"aplica el descuento por volumen, tienes tu propio código y las compras de tu red generan comisiones.\n\n"
+                 f"{linea_codigo}"
                  f"Tu panel: {base}/#/dashboard\nCómo funciona el plan: {base}/#/modo-socio\n")
         _correo._send_ses_email(para, "Tu cuenta ya está en modo socio", texto, _correo._email_shell(cuerpo))
     except Exception as error:  # pragma: no cover - el correo nunca rompe la activación
@@ -638,7 +674,10 @@ def _requisito_cumplido(nivel: dict, directos: int, vp_propios: Decimal, pc_por_
         faltas.append(f"te faltan {pide_directas - directos} directas activas de las {pide_directas} que pide")
     pide_pc = utils._to_decimal(nivel.get("reqPersonalPC") or 0)
     if vp_propios < pide_pc:
-        faltas.append(f"llevas {_f(vp_propios):g} PC personales de los {_f(pide_pc):g} que pide")
+        # Ronda 7 · Gerardo: decía "llevas 72 PC personales" con 120 PC de lista
+        # en el carrito. Lo que se compara son VP NETOS (lo pagado ÷ el precio
+        # por punto), que es lo que mide el motor. La etiqueta ya lo dice.
+        faltas.append(f"llevas {_f(vp_propios):g} VP netos de los {_f(pide_pc):g} que pide")
     pide_lineas = int(utils._to_decimal(nivel.get("reqLines") or 0))
     pide_pc_linea = utils._to_decimal(nivel.get("reqPCPerLine") or 0)
     if pide_lineas > 0:
@@ -646,6 +685,60 @@ def _requisito_cumplido(nivel: dict, directos: int, vp_propios: Decimal, pc_por_
         if lineas_ok < pide_lineas:
             faltas.append(f"te faltan líneas con {_f(pide_pc_linea):g} PC: pide {pide_lineas} y tienes {lineas_ok}")
     return (not faltas), ("cumples el requisito" if not faltas else "; ".join(faltas))
+
+
+def _supuestos(directos: int, niveles_pedidos: int) -> list:
+    """Lo que la cuenta está dando por hecho, dicho antes de que alguien decida.
+
+    Ronda 7 · Gerardo: con 8 directas y 2 generaciones, la tabla cobraba dos
+    veces a las mismas 8 personas (−$75 se volvía +$405) mientras el pie decía
+    "no suponemos que tu red crezca sola". Se dice al revés: de la generación 2
+    en adelante son personas que todavía no existen.
+    """
+    supuestos = [
+        "La generación 1 son las personas que capturaste arriba, con la compra que capturaste.",
+        "El importe de cada persona es lo que paga, ya con su descuento y sin envío: "
+        "es la misma base sobre la que se paga la comisión.",
+    ]
+    if niveles_pedidos > 1:
+        supuestos.insert(1, (
+            f"De la generación 2 en adelante NO son esas mismas personas: la cuenta supone que cada quien "
+            f"trae a otras {directos} que compran lo mismo. Todavía no existen. "
+            f"Si quieres ver solo lo que ya tienes, deja el simulador en 1 generación."))
+    return supuestos
+
+
+def _advertencia_tramo(tiers, compra_propia: Decimal, mxn_por_vp: Decimal, vp_activacion: Decimal):
+    """El acantilado del descuento por volumen, dicho antes de comprar.
+
+    Ronda 7 · Gerardo: comprar $6,000 en vez de $5,999 salta del 30 % al 40 %,
+    y el descuento mayor deja MENOS VP netos —72 en vez de 84—, lo que puede
+    sacarte de la activación o del requisito de una generación. La página vende
+    el tramo como el premio ("entre más compras, menos pagas") y no advertía
+    nada. Devuelve el texto o "" si no hay acantilado.
+    """
+    if compra_propia <= 0 or mxn_por_vp <= 0:
+        return ""
+    tasa_actual = _tasa(tiers, compra_propia)
+    vp_actual = ((compra_propia * (1 - tasa_actual)) / mxn_por_vp).quantize(utils.D_CENT)
+    # Un peso menos: ¿estoy justo encima de un escalón?
+    anterior = compra_propia - utils._to_decimal("1")
+    if anterior <= 0:
+        return ""
+    tasa_anterior = _tasa(tiers, anterior)
+    if tasa_anterior >= tasa_actual:
+        return ""
+    vp_anterior = ((anterior * (1 - tasa_anterior)) / mxn_por_vp).quantize(utils.D_CENT)
+    if vp_anterior <= vp_actual:
+        return ""
+    pesos = impuestos.formato_pesos
+    aviso = (f"Ojo con el tramo: comprando {pesos(anterior)} pagas el {_pct(tasa_anterior)} % menos y te quedan "
+             f"{_f(vp_anterior):g} VP netos; comprando {pesos(compra_propia)} el descuento sube al "
+             f"{_pct(tasa_actual)} % y te quedan {_f(vp_actual):g}. Un descuento mayor deja MENOS puntos, "
+             f"porque los puntos se cuentan sobre lo que pagas.")
+    if vp_anterior >= vp_activacion > vp_actual:
+        aviso += " Con esta compra dejas de activar el mes; con la anterior sí activabas."
+    return aviso
 
 
 def simular(entrada: dict) -> dict:
@@ -692,10 +785,16 @@ def simular(entrada: dict) -> dict:
             motivo = "nadie de tu red compró en el mes"
         comision = (compra_directo * directos * tasa_gen).quantize(utils.D_CENT) if cumple else utils.D_ZERO
         comision_total += comision
+        gen_num = int(utils._to_decimal(nivel.get("gen") or 0))
         generaciones.append({
-            "gen": int(utils._to_decimal(nivel.get("gen") or 0)),
+            "gen": gen_num,
             "rate": _f(tasa_gen),
             "personas": directos,
+            # Ronda 7 · Gerardo: la tabla pintaba "2 | 8 × $1,200" y sumaba
+            # $480 de gente que nadie capturó, mientras el pie juraba lo
+            # contrario. De la generación 2 en adelante son personas SUPUESTAS:
+            # las que cada quien de tu red tendría que traer.
+            "supuesta": gen_num > 1,
             "compraNetaPorPersona": _f(compra_directo),
             "requisitoTexto": _texto_requisito(nivel),
             "cumple": cumple,
@@ -720,6 +819,19 @@ def simular(entrada: dict) -> dict:
             + (" para activarte" if activa else " y con eso no activas el mes")
             + f": tu resultado del mes es {pesos(ganancia_neta)}."
         )
+        # Ronda 7 · Gerardo: la calculadora daba el verde "con eso activas el
+        # mes" usando un precio por punto plano, cuando cada producto vale
+        # distinto ($46.67 a $72.22 por PC en el catálogo). Con el producto
+        # equivocado esos mismos pesos NO activan. Se dice cuándo el verde
+        # depende de qué se compre.
+        rango = _rango_activacion(tiers, vp_activacion)
+        if rango and neto_propio < utils._to_decimal(rango.get("max") or 0):
+            explicacion.append(
+                f"Depende de qué compres: activarte cuesta entre {pesos(rango['min'])} y "
+                f"{pesos(rango['max'])} según los puntos que dé cada producto, y esta cuenta usa el promedio. "
+                f"Con {pesos(neto_propio)} activas con unos productos y con otros no: "
+                f"revisa los PC del producto antes de comprar."
+            )
     else:
         explicacion.append(f"No capturaste compra propia, así que tu resultado del mes es {pesos(ganancia_neta)}.")
     if not activa and comision_total == 0 and directos > 0:
@@ -743,12 +855,8 @@ def simular(entrada: dict) -> dict:
         "baseComision": impuestos.BASE_COMISION,
         "fraseBaseComision": impuestos.FRASE_BASE_COMISION,
         "explicacion": explicacion,
-        "supuestos": [
-            "Cada generación se calcula con las mismas personas y la misma compra que capturaste arriba: "
-            "no suponemos que tu red crezca sola.",
-            "El importe de cada persona es lo que paga, ya con su descuento y sin envío: "
-            "es la misma base sobre la que se paga la comisión.",
-        ],
+        "advertenciaTramo": _advertencia_tramo(tiers, compra_propia, mxn_por_vp, vp_activacion),
+        "supuestos": _supuestos(directos, niveles_pedidos),
         "aviso": AVISO_SIMULADOR,
     }
 

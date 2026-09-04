@@ -384,3 +384,45 @@ def test_con_codigo_configurado_se_distingue_correcto_de_incorrecto(inventory_la
 
     r = _peticion(inventory_lambda, "GET", "/inventory/pos/arqueo", headers=ADMIN | CAJERA, query={"stockId": "STK-1"})
     assert json.loads(r["body"])["arqueo"]["config"]["authCodeConfigured"] is True
+
+
+def test_el_corte_declara_lo_vendido_no_el_movimiento_del_cajon(inventory_lambda, utils, monkeypatch):
+    """Ronda 7 · Rubén: «el comprobante declara $500 vendidos cuando la única
+    venta del turno fue de $980».
+
+    `total` es el movimiento NETO del cajón (esperado − fondo), que con una
+    venta mixta de $980 cobrada mitad en efectivo vale $500. Lo vendido es otra
+    cosa y ahora viaja aparte, en el comprobante y en el correo.
+    """
+    pid, stock = _mostrador(utils)
+    utils._put_entity("EMPLOYEE", "paco", {"entityType": "employee", "employeeId": "paco", "name": "Mireya Solano"})
+    # Una sola venta de $980: $500 en efectivo y $480 con tarjeta.
+    r = inventory_lambda.handle_pos_sale({
+        "stockId": stock,
+        "items": [{"productId": pid, "name": "Klinhart", "price": 980, "quantity": 1}],
+        "payments": [{"method": "cash", "amount": 500}, {"method": "card", "amount": 480}],
+    }, CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+
+    r = inventory_lambda.handle_cash_cut({"stockId": stock, "cashCounted": 500, "cashToKeep": 500,
+                                          "withdrawalAmount": 0}, CAJERA)
+    assert r["statusCode"] == 201, r["body"]
+    cut = json.loads(r["body"])["cut"]
+    assert cut["total"] == Decimal("500")          # el cajón se movió $500: sigue siendo cierto
+    assert cut["salesTotal"] == Decimal("980")     # …pero lo vendido fueron $980
+    assert cut["nonCashTotal"] == Decimal("480")
+
+    enviados = []
+    from core import email as correo
+    monkeypatch.setattr(correo, "_send_ses_email",
+                        lambda para, asunto, texto, html: enviados.append((asunto, texto, html)))
+    r = _peticion(inventory_lambda, "POST", f"/inventory/pos/cash-cuts/{cut['cashCutId']}/enviar",
+                  {"email": "renata@findingu.mx"})
+    assert r["statusCode"] == 200, r["body"]
+    asunto, texto, html = enviados[0]
+    assert "Total vendido: $980.00" in texto and "$980.00" in html
+    assert "vendido $980.00" in asunto
+    # …y sin claves internas: la sucursal y la persona van por su nombre.
+    assert "Tienda" in texto and "Mireya Solano" in texto
+    assert stock not in texto and "paco" not in texto
+    assert "2026-" not in texto and "Z" not in texto.split("\n")[1]   # nada de ISO crudo

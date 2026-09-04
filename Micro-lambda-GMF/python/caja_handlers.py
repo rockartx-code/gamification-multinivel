@@ -13,6 +13,7 @@ from decimal import Decimal
 from typing import Optional
 
 import core_utils as utils
+import vocabulario
 from core import email as correo
 
 #: Todas las rutas de caja reutilizan el privilegio de la pantalla del POS.
@@ -370,6 +371,30 @@ def _dinero(valor) -> str:
     return f"${utils._to_decimal(valor):,.2f}"
 
 
+def _nombre_de_sucursal(stock_id) -> str:
+    """«Tienda Del Valle», no «STK-46603B» (ronda 7 · Marisol).
+
+    El comprobante del corte es la prueba de una diferencia de caja: la gerencia
+    no sabe de memoria qué tienda es una clave interna ni quién es un id de
+    usuario.
+    """
+    try:
+        stock = utils._get_by_id("STOCK", str(stock_id or ""))
+    except Exception:
+        stock = None
+    return str((stock or {}).get("name") or "").strip() or str(stock_id or "")
+
+
+def _encabezado_comprobante(cut: dict) -> str:
+    """«Sucursal Tienda Del Valle · operó Mireya Solano · 5 de mayo de 2027, 10:16 a 10:22»."""
+    sucursal = _nombre_de_sucursal(cut.get("stockId"))
+    operador = _nombre_de_quien_declara(cut.get("attendantUserId")) or "sin identificar"
+    desde = vocabulario.fecha_larga(cut.get("startedAt"))
+    hasta = vocabulario.fecha_larga(cut.get("endedAt") or cut.get("createdAt"))
+    periodo = f"{desde} a {hasta}" if desde and hasta else (desde or hasta or "")
+    return f"Sucursal {sucursal} · operó {operador}" + (f" · {periodo}" if periodo else "")
+
+
 def _origen_fondo(origen) -> str:
     """De dónde salió el fondo inicial, en palabras, para el comprobante."""
     return {
@@ -382,8 +407,7 @@ def texto_comprobante(cut: dict) -> str:
     """Comprobante del corte en texto plano (también sirve de cuerpo del correo)."""
     lineas = [
         f"Comprobante del corte {cut.get('cashCutId')}",
-        f"Sucursal: {cut.get('stockId')} · Operador: {cut.get('attendantUserId')}",
-        f"Periodo: {cut.get('startedAt') or '-'} a {cut.get('endedAt') or cut.get('createdAt') or '-'}",
+        _encabezado_comprobante(cut),
         "",
         f"Fondo inicial: {_dinero(cut.get('openingCash'))} ({_origen_fondo(cut.get('openingSource'))})",
         f"Ventas en efectivo: {_dinero(cut.get('cashSales'))}",
@@ -398,7 +422,9 @@ def texto_comprobante(cut: dict) -> str:
         f"Se deja como fondo: {_dinero(cut.get('cashToKeep'))}",
         f"Se retira: {_dinero(cut.get('withdrawnAmount'))}"
         + (f" (recibe {cut.get('withdrawalReceiver')})" if cut.get("withdrawalReceiver") else ""),
-        f"Ventas del turno: {int(cut.get('salesCount') or 0)} · Tarjeta/transferencia: {_dinero(cut.get('nonCashTotal'))}",
+        f"Ventas del turno: {int(cut.get('salesCount') or 0)}"
+        f" · Total vendido: {_dinero(cut.get('salesTotal'))}"
+        f" · Tarjeta/transferencia: {_dinero(cut.get('nonCashTotal'))}",
     ]
     return "\n".join(lineas)
 
@@ -416,6 +442,9 @@ def html_comprobante(cut: dict) -> str:
         ("Se deja como fondo", cut.get("cashToKeep")),
         ("Se retira", cut.get("withdrawnAmount")),
         ("Tarjeta y transferencia (no entran a caja)", cut.get("nonCashTotal")),
+        # Lo vendido en el turno no suma al cajón, pero es la cifra que la
+        # gerencia busca: sin ella el correo parecía declarar $480 de venta.
+        ("Total vendido en el turno", cut.get("salesTotal")),
     ]
     tabla = "".join(
         f"<tr><td style='text-align:left;padding:4px 8px'>{nombre}</td>"
@@ -426,8 +455,7 @@ def html_comprobante(cut: dict) -> str:
     recibe = f"<p>El retiro lo recibe: {cut.get('withdrawalReceiver')}</p>" if cut.get("withdrawalReceiver") else ""
     cuerpo = (
         f"<h1 class='title'>Corte de caja {cut.get('cashCutId')}</h1>"
-        f"<p>Sucursal {cut.get('stockId')} · operador {cut.get('attendantUserId')} · "
-        f"{int(cut.get('salesCount') or 0)} ventas.</p>"
+        f"<p>{_encabezado_comprobante(cut)} · {int(cut.get('salesCount') or 0)} ventas.</p>"
         f"<table style='width:100%;border-collapse:collapse'>{tabla}</table>{motivo}{recibe}"
     )
     return correo._email_shell(cuerpo)
@@ -443,7 +471,8 @@ def handle_enviar_corte(cut_id: str, body: dict, headers: dict) -> dict:
         return utils._json_response(400, {
             "message": "No hay un correo al que enviar el corte: escribe uno aquí o pide a la gerente que lo "
                        "configure en Configuración → Punto de venta → Correo para cortes."})
-    asunto = f"Corte de caja {cut_id}: efectivo contado {_dinero(cut.get('cashCounted'))}"
+    asunto = (f"Corte de caja {cut_id}: vendido {_dinero(cut.get('salesTotal'))}"
+              f" · efectivo contado {_dinero(cut.get('cashCounted'))}")
     correo._send_ses_email(destino, asunto, texto_comprobante(cut), html_comprobante(cut))
     now = utils._now_iso()
     utils._update_by_id("POS_CASH_CUT", cut_id, "SET notifiedTo = :d, notifiedAt = :t",

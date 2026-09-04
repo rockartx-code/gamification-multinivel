@@ -104,6 +104,7 @@ type ConfirmacionAdmin = {
   effect: string;
   requireReason: boolean;
   reasonLabel?: string;
+  reasonPlaceholder?: string;
   confirmLabel: string;
   danger: boolean;
   busy: boolean;
@@ -911,7 +912,7 @@ export class AdminComponent implements OnInit {
   posVoidError = '';
   isVoidingPosSale = false;
   posVoidResult: AnulacionCajaRespuesta | null = null;
-  posCustomerSearch = 'Publico en General';
+  posCustomerSearch = 'Público en general';
   selectedPosCustomerId: number | null = null;
   posCustomerRecommendations: PosCustomerRecommendation[] = [];
   posSelectedCustomerMonth: AssociateMonth | null = null;
@@ -2331,7 +2332,7 @@ export class AdminComponent implements OnInit {
       return 'No tienes el permiso "Ventas en caja": pídeselo a tu gerente.';
     }
     if (!this.hasLinkedPosStock || !this.currentPosStock) {
-      return 'Sin sucursal vinculada: pide a la gerente que te ligue a una en Almacenes → tu sucursal → "Usuarios ligados".';
+      return 'Sin sucursal vinculada: pide a tu gerente que te agregue en Stocks → tu sucursal → "Empleados vinculados".';
     }
     if (accion === 'descuento') {
       if (this.posSubtotal <= 0) return 'Elige al menos un producto para aplicar un descuento.';
@@ -2856,6 +2857,42 @@ export class AdminComponent implements OnInit {
       return this.conciliacionDesde ? `desde el ${this.conciliacionDesde}` : 'desde la fecha que elijas';
     }
     return (elegido?.label ?? 'las últimas 72 horas').toLowerCase();
+  }
+
+  /** ¿Ya se está usando el periodo más largo que ofrece la pantalla? */
+  get conciliacionEnElMaximo(): boolean {
+    if (this.conciliacionRangoEsFecha) {
+      return false;
+    }
+    const horas = this.conciliacionRangos.find((r) => r.value === this.conciliacionRango)?.hours ?? 0;
+    return horas >= Math.max(...this.conciliacionRangos.map((r) => r.hours));
+  }
+
+  /**
+   * Qué decir cuando la corrida no revisó nada.
+   *
+   * Ronda 7 · Marisol (crítica): con cuatro pedidos "Pendiente de pago" en esa
+   * misma pantalla, la conciliación contestaba «no había nada que revisar.
+   * Prueba con un periodo más largo» en los cuatro periodos, incluido el máximo
+   * de 90 días: un consejo imposible de seguir y una respuesta falsa. Los
+   * pendientes existen; lo que pasa es que no se pagan por MercadoPago.
+   */
+  get textoConciliacionSinRevisar(): string {
+    const sinReferencia = this.conciliacionResultado?.withoutReference ?? 0;
+    if (sinReferencia > 0) {
+      const folios = (this.conciliacionResultado?.withoutReferenceOrderIds ?? []).join(', ');
+      return (
+        `En ${this.conciliacionRangoTexto} hay ${sinReferencia} ` +
+        `${sinReferencia === 1 ? 'pedido pendiente que no tiene' : 'pedidos pendientes que no tienen'} ` +
+        'pago en línea que consultar (se cobran en sucursal, por transferencia o se capturaron a mano), ' +
+        'así que la conciliación no puede resolverlos: hay que darlos por cobrado uno por uno desde su pedido' +
+        (folios ? `. Son: ${folios}.` : '.')
+      );
+    }
+    if (this.conciliacionEnElMaximo) {
+      return `No hay ningún pedido pendiente de pago en ${this.conciliacionRangoTexto}, que es el periodo más largo que se puede revisar: no quedó nada por conciliar.`;
+    }
+    return `No hay pedidos pendientes de pago en el periodo que elegiste (${this.conciliacionRangoTexto}): no había nada que revisar. Puedes probar con un periodo más largo.`;
   }
 
   get conciliacionBloqueada(): string {
@@ -3968,12 +4005,28 @@ export class AdminComponent implements OnInit {
         } else if (this.selectedStockId && !this.stocks.some((stock) => stock.id === this.selectedStockId)) {
           this.selectStock(this.stocks[0]?.id ?? '');
         }
+        // Ronda 7 · Rubén: una sección que el rol no puede leer se queda vacía,
+        // pero se dice con esas palabras. Antes el 403 se convertía en «no hay
+        // ninguna bodega dada de alta» y el cajero pasaba el turno buscando un
+        // alta que no le tocaba hacer.
+        this.seccionesSinAcceso = state.sinAcceso ?? [];
         this.syncPosOperatorContext();
         this.refreshPosCashControl();
         this.applyEmployeeDefaultStock(); // WP-D
         this.requestViewUpdate();
       }
     });
+  }
+
+  /** Secciones que el rol no puede leer (403), para no fingir que están vacías. */
+  seccionesSinAcceso: string[] = [];
+
+  get avisoSeccionesSinAcceso(): string {
+    if (!this.seccionesSinAcceso.length) {
+      return '';
+    }
+    const lista = this.seccionesSinAcceso.join(', ');
+    return `No tienes permiso para ver ${lista}. No es que esté vacío: pídele a quien administra los permisos que te lo conceda.`;
   }
 
   private normalizeInventoryRecord(raw: Record<number, number> | Record<string, number> | undefined): Record<number, number> {
@@ -4273,6 +4326,57 @@ export class AdminComponent implements OnInit {
     if (nextStatus === order.status) {
       return;
     }
+    // Ronda 7 · Marisol (crítica): «"Marcar como pagado" mueve dinero de un
+    // clic: sin confirmación, sin referencia y sin deshacer». Dar por cobrado
+    // un pedido dispara comisiones y no hay acción para revertirlo; borrar los
+    // datos de un cliente sí avisaba con tres renglones. El acto que toca el
+    // dinero es el que ahora pregunta, y pide la referencia del depósito.
+    if (nextStatus === 'paid') {
+      this.abrirConfirmacion({
+        title: `Dar por pagado ${order.id}`,
+        effect:
+          `Vas a registrar el cobro de ${this.formatMoney(order.total ?? 0)} de ${order.customer}. ` +
+          'El pedido pasa a Pagado, se dispara el cálculo de comisiones y se avisa por correo. ' +
+          'No hay forma de revertirlo desde esta pantalla: si te equivocas, tendrás que cancelar el pedido.',
+        requireReason: true,
+        reasonLabel: 'Referencia del depósito o del pago',
+        reasonPlaceholder: 'Folio de la transferencia, terminal o "efectivo en mostrador"',
+        confirmLabel: 'Sí, ya se cobró',
+        danger: true,
+        ejecutar: (referencia: string) => this.marcarPedidoPagado(order, referencia)
+      });
+      return;
+    }
+    this.cambiarEstadoPedido(order, nextStatus);
+  }
+
+  /** Registra el cobro con su referencia; la confirmación muestra lo que guardó el servidor. */
+  private marcarPedidoPagado(order: AdminOrder, referencia: string): void {
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .updateOrderStatus(order.id, { status: 'paid', paymentReference: referencia.trim() })
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: (guardado) => {
+          const texto = `Pedido ${guardado?.id || order.id} de ${order.customer}: quedó ${this.orderStatusLabel(guardado?.status || 'paid')}` +
+            (referencia.trim() ? ` con la referencia ${referencia.trim()}.` : '.');
+          this.confirmacionLista(texto, 'Cobro registrado');
+          this.showSnackbar(texto);
+        },
+        error: (error: unknown) => {
+          const mensaje = this.resolveUiErrorMessage(error, 'No se pudo registrar el cobro.');
+          this.confirmacionFallo(mensaje);
+          this.showSnackbar(mensaje, 'error');
+        }
+      });
+  }
+
+  private cambiarEstadoPedido(order: AdminOrder, nextStatus: AdminOrder['status']): void {
     this.updatingOrderIds.add(order.id);
     this.adminControl
       .updateOrderStatus(order.id, { status: nextStatus })
@@ -4286,7 +4390,7 @@ export class AdminComponent implements OnInit {
         next: (guardado) =>
           // El estado que se anuncia es el que devolvió el servidor, no el que se pidió.
           this.showSnackbar(
-            `Pedido ${guardado?.id || order.id} de ${order.customer}: el servidor lo dejó ${this.orderStatusLabel(guardado?.status || nextStatus)}.`
+            `Pedido ${guardado?.id || order.id} de ${order.customer}: quedó ${this.orderStatusLabel(guardado?.status || nextStatus)}.`
           ),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
@@ -7223,7 +7327,7 @@ export class AdminComponent implements OnInit {
 
   selectPublicGeneralCustomer(): void {
     this.selectedPosCustomerId = null;
-    this.posCustomerSearch = 'Publico en General';
+    this.posCustomerSearch = 'Público en general';
     this.posSelectedCustomerMonth = null;
     this.isLoadingPosCustomerProjection = false;
     this.refreshPosCustomerRecommendations();
@@ -7397,7 +7501,7 @@ export class AdminComponent implements OnInit {
       rows.push([
         'Venta',
         sale.createdAt ? new Date(sale.createdAt).toLocaleString('es-MX') : '',
-        sale.customerName || 'Publico en General',
+        sale.customerName || 'Público en general',
         sale.paymentMethod || 'cash',
         (sale.grossSubtotal ?? sale.total).toFixed(2),
         ((sale.discountAmount ?? 0) + (sale.cashierDiscountAmount ?? 0)).toFixed(2),
@@ -7577,7 +7681,7 @@ export class AdminComponent implements OnInit {
       .registrarVenta({
         stockId: this.currentPosStock.id,
         customerId: this.selectedPosCustomer?.id,
-        customerName: this.selectedPosCustomer?.name || 'Publico en General',
+        customerName: this.selectedPosCustomer?.name || 'Público en general',
         paymentMethod: esMixto ? undefined : this.posSalePaymentMethod,
         // Pago mixto (paquete E): dos partes que suman el total; el servidor lo comprueba centavo a centavo.
         payments: esMixto
@@ -7715,7 +7819,7 @@ export class AdminComponent implements OnInit {
       email: customer.email,
       label: `${customer.name} · ${customer.email}`
     }));
-    this.posCustomerRecommendations = (!query || query === this.normalizePosCustomerSearch('Publico en General')
+    this.posCustomerRecommendations = (!query || query === this.normalizePosCustomerSearch('Público en general')
       ? base
       : base.filter((candidate) => this.normalizePosCustomerSearch(`${candidate.name} ${candidate.email}`).includes(query))
     ).slice(0, 8);
@@ -8412,7 +8516,7 @@ export class AdminComponent implements OnInit {
         requireDispatchLinesOnShipped: true
       },
       pos: {
-        defaultCustomerName: 'Publico en General',
+        defaultCustomerName: 'Público en general',
         defaultPaymentStatus: 'paid_branch',
         defaultDeliveryStatus: 'delivered_branch',
         orderStatusByDeliveryStatus: {
@@ -8828,7 +8932,7 @@ export class AdminComponent implements OnInit {
     if (transfer.status === 'received') return 'Este traspaso ya se recibió.';
     if (!this.transferReceiverUserId) return 'Elige arriba quién recibe.';
     if (!this.isReceiverEligible(transfer)) {
-      return `Quien recibe debe estar ligado al almacén destino (${this.stockName(transfer.destinationStockId)}). Se liga en Almacenes → "Usuarios ligados".`;
+      return `Quien recibe debe estar ligado al almacén destino (${this.stockName(transfer.destinationStockId)}). Se liga en Stocks → esa sucursal → "Empleados vinculados".`;
     }
     return '';
   }

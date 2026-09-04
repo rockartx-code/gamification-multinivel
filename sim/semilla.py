@@ -96,6 +96,61 @@ FICHAS = {
                  "magnesio, 12 mg de vitamina C y 5 g de carbohidratos. Sin azúcar añadida. "
                  "Disuelve un sobre en 500 ml de agua durante o después del ejercicio."),
         "tags": ["electrolitos", "hidratacion", "sodio", "potasio", "limon"]},
+    # Ronda 7 · Valeria, y antes Ximena, Aurora, Mariana y Ernesto: ocho de los
+    # catorce productos caían al texto de relleno ("Presentación y modo de uso en
+    # la etiqueta del producto") y el botón "Ver detalle" abría exactamente esa
+    # misma frase. «Pagué $700 por un bote sin saber cuántos gramos trae.»
+    "colageno": {
+        "hook": "Colágeno hidrolizado tipo I y III con vitamina C",
+        "desc": ("Bote de 300 g · 30 porciones de 10 g. Por porción: 10 g de colágeno hidrolizado "
+                 "tipo I y III (péptidos bioactivos, peso molecular 2,000 Da), 80 mg de vitamina C y "
+                 "50 mg de ácido hialurónico. Sin sabor, sin azúcar, se disuelve en frío o en caliente. "
+                 "Una porción al día en agua, café o jugo. Rinde un mes."),
+        "tags": ["colageno", "piel", "articulaciones", "acido hialuronico", "sin sabor"]},
+    "creatina": {
+        "hook": "Creatina monohidratada micronizada",
+        "desc": ("Bote de 300 g · 60 porciones de 5 g. Por porción: 5 g de creatina monohidratada "
+                 "micronizada al 99.9 %, sin aditivos ni saborizantes. Una porción al día, cualquier "
+                 "hora, disuelta en 250 ml de agua. No requiere fase de carga. Rinde dos meses."),
+        "tags": ["creatina", "fuerza", "monohidratada", "sin sabor"]},
+    "gel reductivo": {
+        "hook": "Gel de aplicación tópica con cafeína y centella",
+        "desc": ("Envase de 250 ml · uso externo. Fórmula con 5 % de cafeína, extracto de centella "
+                 "asiática, algas marinas y mentol. Textura en gel, de rápida absorción, no graso. "
+                 "Aplica una capa delgada sobre abdomen, muslos o brazos con masaje circular, dos veces "
+                 "al día. No aplicar sobre piel irritada. Rinde entre 6 y 8 semanas."),
+        "tags": ["gel", "topico", "cafeina", "centella", "uso externo"]},
+    "crt-1200": {
+        "hook": "L-carnitina líquida de 1,200 mg por toma",
+        "desc": ("Frasco de 480 ml · 16 tomas de 30 ml. Por toma: 1,200 mg de L-carnitina tartrato, "
+                 "50 mg de vitamina B6 y 30 mg de extracto de té verde. Sabor frutos rojos, sin azúcar. "
+                 "Toma 30 ml treinta minutos antes de entrenar, o en ayunas los días de descanso."),
+        "tags": ["carnitina", "liquida", "frutos rojos", "pre entreno"]},
+    "keto": {
+        "hook": "Electrolitos sin carbohidratos para dieta cetogénica",
+        "desc": ("Bote de 300 g · 30 porciones de 10 g. Por porción: 1,000 mg de sodio, 400 mg de "
+                 "potasio, 120 mg de magnesio y 200 mg de calcio. Cero carbohidratos y cero azúcares: "
+                 "no rompe el ayuno. Sabor mango. Disuelve una porción en 500 ml de agua al día."),
+        "tags": ["keto", "electrolitos", "sin carbohidratos", "ayuno", "mango"]},
+    "biotina": {
+        "hook": "Biotina de 10,000 mcg para cabello, piel y uñas",
+        "desc": ("60 cápsulas · 2 meses. Por cápsula: 10,000 mcg de biotina (vitamina B7), 100 mg de "
+                 "MSM, 50 mg de extracto de cola de caballo y 30 mg de zinc. Apto para vegetarianos. "
+                 "Una cápsula al día con alimentos."),
+        "tags": ["biotina", "cabello", "unas", "piel", "zinc"]},
+    "bhb": {
+        "hook": "Sales de BHB (beta-hidroxibutirato) para cetosis",
+        "desc": ("Bote de 240 g · 30 porciones de 8 g. Por porción: 6,000 mg de beta-hidroxibutirato "
+                 "en sales de calcio, sodio y magnesio, más 500 mg de MCT en polvo. Sabor limón, sin "
+                 "azúcar. Disuelve una porción en 350 ml de agua, una vez al día, de preferencia en ayunas."),
+        "tags": ["bhb", "cetosis", "keto", "mct", "limon"]},
+    "glu-10": {
+        "hook": "Ácido alfa lipoico con cromo para el metabolismo de la glucosa",
+        "desc": ("60 cápsulas · 2 meses. Por cápsula: 600 mg de ácido alfa lipoico, 200 mcg de picolinato "
+                 "de cromo, 250 mg de extracto de canela y 100 mg de berberina. Una cápsula al día con "
+                 "la comida principal. No sustituye ningún tratamiento médico: consulta a tu médico si "
+                 "tomas medicamento para la glucosa."),
+        "tags": ["acido alfa lipoico", "cromo", "glucosa", "berberina", "canela"]},
 }
 
 SUCURSALES = [

@@ -360,3 +360,22 @@ def test_ahorro_socio_solo_usa_el_neto_del_mes_de_la_propia_sesion(modulos, util
     assert anonimo["monthNet"] == 0 and anonimo["savings"] == 0
     propio = json.loads(customer_lambda.lambda_handler(_evento("POST", "/customers/ahorro-socio", cuerpo, _sesion(utils, cid)), None)["body"])
     assert propio["monthNet"] == 900.0 and propio["savings"] == 30.0
+
+
+def test_el_correo_de_bienvenida_trae_el_codigo_y_la_liga_para_invitar(modulos, utils, buzon):
+    """Ronda 7 · Gerardo: «El correo promete el código y no lo trae; su enlace
+    de "panel" va a la tienda». Con el menú del panel de por medio, ese correo
+    era la única ruta al código y no lo llevaba."""
+    auth, customer_lambda, _, _, _ = modulos
+    cid = _alta(auth, "Gerardo Lomelí", "gerardo@test.com")
+    buzon.clear()
+
+    r = customer_lambda.lambda_handler(
+        _evento("POST", "/customers/modo-socio", {"acceptedPlanVersion": "abril-2026"}, _sesion(utils, cid)), None)
+    assert r["statusCode"] == 200, r["body"]
+
+    codigo = str(_ficha(utils, cid).get("referralCode") or "")
+    assert codigo, "la activación tiene que dejar un código utilizable"
+    _, _, html = buzon[0]
+    assert codigo in html
+    assert f"/#/tienda/{codigo}" in html

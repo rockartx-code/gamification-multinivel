@@ -144,6 +144,9 @@
                 <div class="mt-1 font-medium text-main">{{ order?.recipientName || order?.customer }}</div>
                 <div class="text-xs text-gray-600">{{ shippingAddressLine }}</div>
                 <div *ngIf="order?.phone" class="text-xs text-gray-500">Tel: {{ order?.phone }}</div>
+                <!-- Ronda 7 · Valeria: el plazo que prometió el carrito, repetido donde se pregunta. -->
+                <div *ngIf="plazoDeEntrega" class="mt-2 text-xs font-semibold text-main">Llega en {{ plazoDeEntrega }}</div>
+                <div *ngIf="plazoDeEntrega" class="text-xs text-gray-500">Los días hábiles se cuentan desde que sale del almacén, de lunes a viernes.</div>
               </div>
 
               <!-- Paquete C · propuesta 7: Aurora abandonó buscando dónde releer su RFC -->

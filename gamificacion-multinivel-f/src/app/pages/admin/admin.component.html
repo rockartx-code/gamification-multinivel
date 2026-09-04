@@ -178,7 +178,10 @@
                 Última revisión: {{ conciliacionUltima.finishedAt ? (conciliacionUltima.finishedAt | date:'d \'de\' MMMM \'de\' y, HH:mm') : 'sin fecha' }} ·
                 Revisados {{ conciliacionUltima.checked }} · Acreditados {{ conciliacionUltima.credited?.length || 0 }} · Sin pago {{ conciliacionUltima.unpaid?.length || 0 }}
               </div>
-              <div *ngIf="conciliacionResultado" class="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-main">
+              <!-- Ronda 7 · Marisol: el resultado se pintaba en verde de éxito aunque no se
+                   hubiera revisado nada. El verde se reserva para lo que sí se acreditó. -->
+              <div *ngIf="conciliacionResultado" class="mt-4 rounded-xl px-4 py-3 text-sm text-main"
+                [ngClass]="conciliacionResultado.credited.length ? 'border border-green-200 bg-green-50' : 'border border-amber-200 bg-amber-50'">
                 <div class="font-semibold">Resultado: {{ resumenConciliacion(conciliacionResultado) }}</div>
                 <ul *ngIf="conciliacionResultado.credited.length" class="mt-2 space-y-1">
                   <li *ngFor="let c of conciliacionResultado.credited" class="flex flex-wrap items-center gap-2">
@@ -190,7 +193,8 @@
                 <p *ngIf="!conciliacionResultado.credited.length && conciliacionResultado.checked > 0" class="mt-2 text-gray-700">
                   Ninguno de los pedidos pendientes aparece pagado en MercadoPago. Si una clienta dice que pagó, pídele el comprobante y márcalo pagado desde su pedido.
                 </p>
-                <p *ngIf="conciliacionResultado.checked === 0" class="mt-2 text-gray-700">No hay pedidos pendientes de pago en el periodo que elegiste ({{ conciliacionRangoTexto }}): no había nada que revisar. Prueba con un periodo más largo.</p>
+                <p *ngIf="conciliacionResultado.checked === 0" class="mt-2 text-gray-700">{{ textoConciliacionSinRevisar }}</p>
+                <p *ngIf="conciliacionResultado.checked > 0 && (conciliacionResultado.withoutReference || 0) > 0" class="mt-2 text-gray-700">{{ textoConciliacionSinRevisar }}</p>
                 <p *ngIf="conciliacionResultado.hasMore" class="mt-2 text-gray-700">Faltan {{ conciliacionResultado.pending }} pedidos por revisar en este periodo: vuelve a pulsar "Revisar de nuevo" para seguir con los siguientes.</p>
                 <ul *ngIf="conciliacionResultado.errors.length" class="mt-2 space-y-1 text-xs text-amber-800">
                   <li *ngFor="let e of conciliacionResultado.errors">Sin respuesta para {{ e.orderId }}: {{ e.error }}</li>
@@ -1105,7 +1109,7 @@
                   <div class="mt-3 space-y-3">
                     <ui-form-field label="Nombre" placeholder="Nombre completo" [(ngModel)]="employeeForm.name"></ui-form-field>
                     <ui-form-field label="Correo" placeholder="correo@empresa.com" [(ngModel)]="employeeForm.email"></ui-form-field>
-                    <ui-form-field label="Telefono" placeholder="+52 55 1234 5678" [(ngModel)]="employeeForm.phone"></ui-form-field>
+                    <ui-form-field label="Teléfono" placeholder="+52 55 1234 5678" [(ngModel)]="employeeForm.phone"></ui-form-field>
                     <!-- Paquete E · ronda 26 · El puesto que verá la persona (y el
                          cliente del mostrador) en lugar de ADMIN. No cambia su rol
                          ni sus privilegios: eso se decide abajo, uno por uno. -->
@@ -1269,7 +1273,7 @@
           <div class="space-y-4" *ngIf="currentView === 'products' && canAccessView('products')">
             <div class="grid gap-3 md:grid-cols-3">
               <ui-kpi-card label="Productos activos" [value]="productsCount"></ui-kpi-card>
-              <ui-kpi-card label="Assets faltantes" [value]="productsMissingAssetsCount"></ui-kpi-card>
+              <ui-kpi-card label="Productos sin imagen" [value]="productsMissingAssetsCount"></ui-kpi-card>
               <ui-kpi-card label="Producto del mes" [value]="productOfMonthName"></ui-kpi-card>
             </div>
 
@@ -1488,8 +1492,8 @@
                   <ui-form-field
                     kind="textarea"
                     [rows]="3"
-                    label="Copy WhatsApp"
-                    placeholder="Copy para WhatsApp..."
+                    label="Texto para WhatsApp"
+                    placeholder="Texto que se comparte por WhatsApp…"
                     [ngModel]="productForm.copyWhatsapp"
                     (ngModelChange)="updateProductField('copyWhatsapp', $event)"
                     wrapperClass="block md:col-span-2"
@@ -1498,7 +1502,7 @@
                   <ui-form-field
                     kind="textarea"
                     [rows]="3"
-                    label="Copy Instagram"
+                    label="Texto para Instagram"
                     placeholder="Copy para Instagram..."
                     [ngModel]="productForm.copyInstagram"
                     (ngModelChange)="updateProductField('copyInstagram', $event)"
@@ -1508,7 +1512,7 @@
                   <ui-form-field
                     kind="textarea"
                     [rows]="3"
-                    label="Copy Facebook"
+                    label="Texto para Facebook"
                     placeholder="Copy para Facebook..."
                     [ngModel]="productForm.copyFacebook"
                     (ngModelChange)="updateProductField('copyFacebook', $event)"
@@ -1652,7 +1656,7 @@
                 <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
                   <div class="text-sm font-semibold text-main">Imágenes / Assets</div>
                   <div class="mt-1 text-xs text-gray-600">
-                    Sube las imágenes necesarias para: CTA, links de redes, miniatura de carrito y Producto del Mes.
+                    Sube las imágenes necesarias para: el botón principal, los enlaces de redes, la miniatura del carrito y el Producto del Mes.
                   </div>
 
                   <div class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -1725,8 +1729,13 @@
               <div *ngIf="mensajeMinimos" class="mt-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{{ mensajeMinimos }}</div>
               <div *ngIf="errorMinimos" class="mt-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorMinimos }}</div>
 
-              <div *ngIf="!stocks.length" class="mt-3 text-sm text-gray-600">
-                Todavía no hay ninguna bodega dada de alta. Créala en "Alta de stock" y aquí verás sus existencias.
+              <div *ngIf="!stocks.length && !avisoSeccionesSinAcceso" class="mt-3 text-sm text-gray-600">
+                Todavía no hay ninguna bodega dada de alta. Se crean aquí mismo, en el bloque "Alta de stock" de esta pantalla, y ahí verás sus existencias.
+              </div>
+              <div *ngIf="!stocks.length && avisoSeccionesSinAcceso"
+                class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                role="status" aria-live="polite">
+                <i class="fa-solid fa-lock mr-1" aria-hidden="true"></i>{{ avisoSeccionesSinAcceso }}
               </div>
 
               <div *ngIf="stocks.length" class="mt-3 table-soft text-sm overflow-auto rounded-2xl border border-olive-30">
@@ -1897,7 +1906,7 @@
                   </div>
                   <ui-button size="sm" variant="primary" class="mt-3" (pressed)="saveStockLinks()">
                     <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-                    Guardar vinculacion
+                    Guardar vinculación
                   </ui-button>
                 </div>
               </div>
@@ -1950,7 +1959,7 @@
                     </ui-button>
                     <ui-button size="sm" variant="ghost" *ngIf="hasPermission('stock_mark_damaged')" (pressed)="openDamageModal(row.productId)">
                       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                      Marcar danado
+                      Marcar dañado
                     </ui-button>
                   </div>
                 </div>
@@ -2134,6 +2143,15 @@
               </div>
             </div>
 
+<!-- Ronda 7 · Rubén: una sección que el rol no puede leer se decía como si
+                 estuviera vacía ("Catálogo · 0 productos", "no hay ninguna bodega
+                 dada de alta"). Un 403 no es un vacío. -->
+            <div *ngIf="avisoSeccionesSinAcceso"
+              class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              role="status" aria-live="polite">
+              <i class="fa-solid fa-lock mr-1" aria-hidden="true"></i>{{ avisoSeccionesSinAcceso }}
+            </div>
+
             <div class="grid gap-3 md:grid-cols-4">
               <ui-kpi-card label="Ventas en caja" [value]="visiblePosSales.length"></ui-kpi-card>
               <ui-kpi-card label="Caja actual" [value]="formatMoney(posCashControl ? posCashControl.currentTotal : 0)"></ui-kpi-card>
@@ -2148,7 +2166,7 @@
 
                 <div *ngIf="!hasLinkedPosStock"
                   class="mt-4 flex flex-col items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
-                  <span>No tienes un almacén ligado a tu usuario, así que no puedes cobrar todavía. Pide a tu gerente que te agregue en Almacenes → tu sucursal → "Usuarios ligados".</span>
+                  <span>No tienes un almacén ligado a tu usuario, así que no puedes cobrar todavía. Pide a tu gerente que te agregue en Stocks → tu sucursal → "Empleados vinculados".</span>
                   <ui-button *ngIf="canAccessView('stocks')" size="sm" variant="ghost" class="shrink-0"
                     (pressed)="onAdminNavSelect('stocks')">
                     <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
@@ -2187,7 +2205,7 @@
                     <div class="flex items-center justify-between gap-3">
                       <div>
                         <div class="text-xs font-semibold text-main">Cliente</div>
-                        <div class="mt-1 text-mini text-gray-600">Autocomplete por nombre o correo. Por defecto se usa Publico en General.</div>
+                        <div class="mt-1 text-mini text-gray-600">Búscalo por nombre o correo. Si no eliges a nadie, la venta queda a nombre de Público en general.</div>
                       </div>
                       <div class="flex flex-wrap gap-2">
                         <ui-button size="sm" variant="ghost" *ngIf="hasPermission('customer_add')" (pressed)="openPosCustomerModal()">
@@ -2200,7 +2218,7 @@
                         </span>
                         <ui-button size="sm" [variant]="selectedPosCustomer ? 'ghost' : 'primary'" (pressed)="selectPublicGeneralCustomer()">
                           <i class="fa-solid fa-user" aria-hidden="true"></i>
-                          Publico en General
+                          Público en general
                         </ui-button>
                       </div>
                     </div>
@@ -2226,14 +2244,14 @@
                         </div>
                       </div>
                       <ng-template #publicCustomerCard>
-                        <div class="mt-2 text-sm font-semibold text-main">Publico en General</div>
+                        <div class="mt-2 text-sm font-semibold text-main">Público en general</div>
                         <div class="text-mini text-gray-600">Venta mostrador sin metas ni descuentos acumulados.</div>
                       </ng-template>
                     </div>
 
                     <div class="mt-3 flex flex-wrap gap-2">
                       <ui-button size="sm" [variant]="selectedPosCustomer ? 'ghost' : 'primary'" (pressed)="selectPublicGeneralCustomer()">
-                        Publico en General
+                        Público en general
                       </ui-button>
                       <ui-button
                         size="sm"
@@ -2281,7 +2299,7 @@
 
                     <ng-template #publicCustomerNotice>
                       <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-sm text-gray-700">
-                        Publico en General no acumula consumo, metas ni descuentos personalizados.
+                        Público en general no acumula consumo, metas ni descuentos personalizados.
                       </div>
                     </ng-template>
                   </div>
@@ -2315,7 +2333,7 @@
                             [ngModel]="posItems.get(product.id) || 1"
                             (ngModelChange)="updatePosQty(product.id, $event)">
                           </ui-form-field>
-                          <span class="text-mini text-gray-600">Maximo disponible: {{ stockQty(currentPosStock.id, product.id) }}</span>
+                          <span class="text-mini text-gray-600">Máximo disponible: {{ stockQty(currentPosStock.id, product.id) }}</span>
                         </div>
                       </div>
                     </div>
@@ -2522,7 +2540,7 @@
                   </div>
 
                   <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 p-3">
-                    <div class="text-mini text-gray-500">Ultimo corte</div>
+                    <div class="text-mini text-gray-500">Último corte</div>
                     <div class="mt-1 text-sm font-semibold text-main">{{ formatDateTime(posCashControl?.lastCutAt) }}</div>
                     <div class="mt-2 flex flex-wrap gap-2 text-mini text-gray-600">
                       <span class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1">Efectivo del turno: {{ formatMoney(posCashControl ? (posCashControl.lastCutTotal || 0) : 0) }}</span>
@@ -2555,7 +2573,7 @@
                   <div class="mt-3 space-y-2">
                     <div *ngFor="let sale of posSalesWithBalance" class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-white/80 p-3">
                       <div>
-                        <div class="text-xs font-semibold text-main">{{ sale.orderId }} · {{ sale.customerName || 'Publico en General' }}</div>
+                        <div class="text-xs font-semibold text-main">{{ sale.orderId }} · {{ sale.customerName || 'Público en general' }}</div>
                         <div class="text-mini text-gray-600">Total {{ formatMoney(sale.total) }} · pagado {{ formatMoney(sale.amountPaid || 0) }} · {{ formatDateTime(sale.createdAt) }}</div>
                       </div>
                       <div class="flex items-center gap-2">
@@ -2584,7 +2602,7 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Público en general' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
@@ -2613,7 +2631,7 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Público en general' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
@@ -2642,7 +2660,7 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Público en general' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
@@ -2671,7 +2689,7 @@
                           <div class="flex items-start justify-between gap-3">
                             <div>
                               <div class="text-xs font-semibold text-main">{{ sale.orderId }}</div>
-                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Publico en General' }}</div>
+                              <div class="mt-1 text-mini text-gray-600">{{ sale.customerName || 'Público en general' }}</div>
                             </div>
                             <div class="text-right">
                               <div class="text-sm font-semibold text-main">{{ formatMoney(sale.total) }}</div>
@@ -3577,7 +3595,7 @@
                     Restaurar defaults
                   </ui-button>
                   <ui-button size="sm" variant="primary" *ngIf="hasPermission('config_manage')" [disabled]="isSavingBusinessConfig" [disabledReason]="isSavingBusinessConfig ? 'Guardando…' : ''" (pressed)="saveBusinessConfig()">
-                    Guardar configuracion
+                    Guardar configuración
                   </ui-button>
                 </div>
               </div>
@@ -3595,7 +3613,7 @@
                     (checkedChange)="businessConfigDraft.orders.requireStockOnShipped = $event"></ui-checkbox>
                   <ui-checkbox
                     layout="row"
-                    label="Exigir lineas de salida al marcar enviado"
+                    label="Exigir líneas de salida al marcar enviado"
                     [checked]="businessConfigDraft.orders.requireDispatchLinesOnShipped"
                     (checkedChange)="businessConfigDraft.orders.requireDispatchLinesOnShipped = $event"></ui-checkbox>
                 </div>
@@ -3608,7 +3626,7 @@
                   <ui-form-field
                     kind="input"
                     type="password"
-                    label="Nuevo codigo (min. 4 caracteres)"
+                    label="Nuevo código (mínimo 4 caracteres)"
                     placeholder="****"
                     [ngModel]="posAuthCodeDraft"
                     (ngModelChange)="posAuthCodeDraft = $event">
@@ -3618,7 +3636,7 @@
                     {{ posAuthCodeMessage }}
                   </div>
                   <ui-button size="sm" variant="primary" [disabled]="isSavingPosAuthCode || (posAuthCodeDraft || '').length < 4" [disabledReason]="isSavingPosAuthCode ? 'Guardando…' : ((posAuthCodeDraft || '').length < 4 ? 'El código debe tener al menos 4 caracteres.' : '')" (pressed)="savePosAuthCode()">
-                    {{ isSavingPosAuthCode ? 'Guardando...' : 'Actualizar codigo' }}
+                    {{ isSavingPosAuthCode ? 'Guardando...' : 'Actualizar código' }}
                   </ui-button>
                 </div>
               </div>
@@ -3677,7 +3695,7 @@
                 <div class="text-sm font-semibold text-main">Advertencias admin</div>
                 <div class="mt-3 space-y-3 text-sm">
                   <ui-checkbox layout="row" label="Comisiones pendientes" [checked]="businessConfigDraft.adminWarnings.showCommissions" (checkedChange)="businessConfigDraft.adminWarnings.showCommissions = $event"></ui-checkbox>
-                  <ui-checkbox layout="row" label="Pedidos pagados sin envio" [checked]="businessConfigDraft.adminWarnings.showShipping" (checkedChange)="businessConfigDraft.adminWarnings.showShipping = $event"></ui-checkbox>
+                  <ui-checkbox layout="row" label="Pedidos pagados sin envío" [checked]="businessConfigDraft.adminWarnings.showShipping" (checkedChange)="businessConfigDraft.adminWarnings.showShipping = $event"></ui-checkbox>
                   <ui-checkbox layout="row" label="Pedidos pendientes de pago" [checked]="businessConfigDraft.adminWarnings.showPendingPayments" (checkedChange)="businessConfigDraft.adminWarnings.showPendingPayments = $event"></ui-checkbox>
                   <ui-checkbox layout="row" label="Transferencias pendientes" [checked]="businessConfigDraft.adminWarnings.showPendingTransfers" (checkedChange)="businessConfigDraft.adminWarnings.showPendingTransfers = $event"></ui-checkbox>
                   <ui-checkbox layout="row" label="Ventas POS del dia" [checked]="businessConfigDraft.adminWarnings.showPosSalesToday" (checkedChange)="businessConfigDraft.adminWarnings.showPosSalesToday = $event"></ui-checkbox>
@@ -4052,11 +4070,11 @@
                         </div>
                       </div>
                       <div class="mt-3 grid gap-3 md:grid-cols-2">
-                        <ui-form-field type="number" [min]="0" [step]="1" label="Monto minimo" [ngModel]="tier.min" (ngModelChange)="updateDiscountTierMin(index, $event)"></ui-form-field>
+                        <ui-form-field type="number" [min]="0" [step]="1" label="Monto mínimo" [ngModel]="tier.min" (ngModelChange)="updateDiscountTierMin(index, $event)"></ui-form-field>
                         <ui-form-field type="number" [min]="0" [max]="100" [step]="0.1" label="Descuento (%)" [ngModel]="discountTierPercentValue(tier)" (ngModelChange)="updateDiscountTierRate(index, $event)"></ui-form-field>
                       </div>
                       <div class="mt-2 text-mini text-gray-600">
-                        {{ tier.max == null ? 'Sin tope maximo en este nivel.' : 'Tope automatico: ' + formatMoney(tier.max) }}
+                        {{ tier.max == null ? 'Sin tope máximo en este nivel.' : 'Tope automático: ' + formatMoney(tier.max) }}
                       </div>
                     </div>
                     <ui-button size="sm" variant="ghost" type="button" class="w-full" (pressed)="addDiscountTier()">
@@ -4077,11 +4095,11 @@
               </div>
             </div>
 
-            <!-- Niveles de comision unificados -->
+            <!-- Niveles de comisión unificados -->
             <div class="rounded-2xl border border-olive-30 surface-soft p-5 md:col-span-2">
               <div class="flex items-start justify-between gap-3 mb-4">
                 <div>
-                  <div class="text-base font-bold text-main">Niveles de comision</div>
+                  <div class="text-base font-bold text-main">Niveles de comisión</div>
                   <div class="mt-0.5 text-sm text-gray-500">Cada nivel aplica al patrocinador en esa profundidad de la red. Las condiciones son requisitos minimos para cobrar. Cada nivel debe ser &ge; al anterior.</div>
                 </div>
                 <div class="text-xs text-gray-600 shrink-0">{{ businessConfigDraft.rewards.commissionLevels.length }} niveles</div>
@@ -4277,7 +4295,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-lg font-extrabold text-main">Enviar pedido</div>
-          <div class="mt-1 text-sm text-gray-600">Ingresa la gu?a o los datos de entrega personal.</div>
+          <div class="mt-1 text-sm text-gray-600">Ingresa la guía o los datos de entrega personal.</div>
         </div>
         <ui-button size="sm" variant="ghost" (pressed)="closeShippingModal()">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -4326,9 +4344,9 @@
             El cliente eligió {{ shippingTargetOrder?.shippingCarrier }} al pagar.
           </div>
           <ui-form-field
-            label="Numero de guia"
+            label="Número de guía"
             leadingIconClass="fa-solid fa-barcode"
-            placeholder="Guia de paqueteria"
+            placeholder="Guía de paquetería"
             [errorText]="shippingType === 'carrier' ? shippingError : ''"
             [(ngModel)]="shippingTrackingNumber"></ui-form-field>
         </div>
@@ -4677,7 +4695,7 @@
       <div>
         <div class="text-lg font-extrabold text-main">Cobrar saldo pendiente</div>
         <div class="mt-1 text-sm text-gray-600" *ngIf="posSettleTarget as venta">
-          Venta {{ venta.orderId }} · {{ venta.customerName || 'Publico en General' }}. Saldo pendiente: <strong>{{ formatMoney(venta.pendingAmount || 0) }}</strong>.
+          Venta {{ venta.orderId }} · {{ venta.customerName || 'Público en general' }}. Saldo pendiente: <strong>{{ formatMoney(venta.pendingAmount || 0) }}</strong>.
         </div>
       </div>
       <ui-button size="sm" variant="ghost" [disabled]="isSettlingPosSale" [disabledReason]="isSettlingPosSale ? 'Espera a que termine el registro.' : ''" (pressed)="closePosSettleModal()">
@@ -4942,7 +4960,7 @@
       <ui-form-field wrapperClass="block sm:col-span-2" label="Nombre(s) *" [ngModel]="posCustomerForm.firstName" (ngModelChange)="updatePosCustomerField('firstName', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block" label="Apellido paterno *" [ngModel]="posCustomerForm.apellidoPaterno" (ngModelChange)="updatePosCustomerField('apellidoPaterno', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block" label="Apellido materno (opcional)" [ngModel]="posCustomerForm.apellidoMaterno" (ngModelChange)="updatePosCustomerField('apellidoMaterno', $event)"></ui-form-field>
-      <ui-form-field wrapperClass="block" label="Telefono" [ngModel]="posCustomerForm.phone" (ngModelChange)="updatePosCustomerField('phone', $event)"></ui-form-field>
+      <ui-form-field wrapperClass="block" label="Teléfono" [ngModel]="posCustomerForm.phone" (ngModelChange)="updatePosCustomerField('phone', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" type="email" label="Email (opcional)" placeholder="correo@dominio.com" [ngModel]="posCustomerForm.email" (ngModelChange)="updatePosCustomerField('email', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" label="Direccion" [ngModel]="posCustomerForm.address" (ngModelChange)="updatePosCustomerField('address', $event)"></ui-form-field>
       <ui-form-field wrapperClass="block sm:col-span-2" label="Ciudad / Estado" [ngModel]="posCustomerForm.city" (ngModelChange)="updatePosCustomerField('city', $event)"></ui-form-field>
@@ -5089,6 +5107,7 @@
   [effect]="c.effect"
   [requireReason]="c.requireReason"
   [reasonLabel]="c.reasonLabel || 'Motivo'"
+  [reasonPlaceholder]="c.reasonPlaceholder || 'Escribe por qué (queda guardado con la acción)'"
   [confirmLabel]="c.confirmLabel"
   [danger]="c.danger"
   [busy]="c.busy"

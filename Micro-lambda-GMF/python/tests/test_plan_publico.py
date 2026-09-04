@@ -40,7 +40,8 @@ def test_el_plan_es_publico_y_trae_las_ocho_secciones(catalogo, utils):
     assert [t["rate"] for t in plan["descuento"]["tramos"]] == [0, 0.10, 0.20, 0.30, 0.40]
     assert [g["rate"] for g in plan["generaciones"]] == [0.10, 0.05, 0.04, 0.03, 0.02]
     assert plan["compresionDinamica"] is True
-    assert plan["pago"]["dia"] == 10 and plan["pago"]["bloqueo"] == {"avisos": [20, 27], "graciaDias": 0}
+    # Ronda 7 · Gerardo: los avisos caen antes del corte del mes (día 25), no después.
+    assert plan["pago"]["dia"] == 10 and plan["pago"]["bloqueo"] == {"avisos": [20, 24], "graciaDias": 0}
     assert [d["cuando"] for d in plan["datos"]] == ["registro", "modo socio", "primera comisión confirmada", "facturación"]
     # Paquete A · propuesta 2: la CLABE se pide al activarse, no al confirmar
     # la primera comisión; el plan lo dice para no contradecir el recordatorio.

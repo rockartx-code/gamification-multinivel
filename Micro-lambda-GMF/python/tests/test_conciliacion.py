@@ -281,3 +281,31 @@ def test_un_tope_absurdo_se_rechaza_con_su_numero(order_lambda, utils, mercadopa
     assert estado == 400 and "1 y 200" in cuerpo["message"]
     estado, cuerpo = _conciliar(order_lambda, {"limit": 5000})
     assert estado == 400 and "1 y 200" in cuerpo["message"]
+
+
+def test_los_pendientes_sin_referencia_de_pago_se_cuentan_y_se_nombran(order_lambda, utils, mercadopago):
+    """Ronda 7 · Marisol: cuatro pedidos "Pendiente de pago" en pantalla y la
+    corrida contestaba "Revisados 0 · no había nada que revisar" en los cuatro
+    periodos, hasta el máximo de 90 días. No se pueden conciliar (nunca
+    generaron preferencia en la pasarela), pero existen y hay que decirlo."""
+    con_referencia = _pendiente_con_preferencia(order_lambda, utils)
+    mercadopago["pagos"][con_referencia] = [("mp-9", "approved")]
+    sin_referencia = _crear_pedido_invitado(order_lambda, utils)   # se paga en sucursal: sin preferencia
+
+    estado, cuerpo = _conciliar(order_lambda)
+
+    assert estado == 200, cuerpo
+    assert cuerpo["checked"] == 1                       # solo el que sí se puede consultar
+    assert cuerpo["withoutReference"] == 1
+    assert cuerpo["withoutReferenceOrderIds"] == [sin_referencia]
+    assert mercadopago["consultas"] == [con_referencia]
+
+
+def test_sin_nada_que_revisar_pero_con_pendientes_la_corrida_lo_dice(order_lambda, utils, mercadopago):
+    """El caso exacto del reporte: cero revisables y pendientes en pantalla."""
+    sin_referencia = _crear_pedido_invitado(order_lambda, utils)
+
+    estado, cuerpo = _conciliar(order_lambda)
+
+    assert estado == 200 and cuerpo["checked"] == 0
+    assert cuerpo["withoutReference"] == 1 and cuerpo["withoutReferenceOrderIds"] == [sin_referencia]

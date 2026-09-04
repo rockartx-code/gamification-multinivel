@@ -25,7 +25,14 @@ def _default_app_config() -> dict:
             # Paquete A · pagos-comisiones. Política de bloqueadas (opción b):
             # días del mes en que se avisa a la socia inactiva cuánto tiene
             # bloqueado y qué producto la activa. Vacío = sin avisos.
-            "blockedNoticeDays": [Decimal("20"), Decimal("27")],
+            #
+            # Ronda 7 · Gerardo: el segundo aviso caía el 27 y el corte del mes es
+            # el 25 (`corte_mes.CUTOFF_DAY`), así que llegaba dos días DESPUÉS de
+            # que la comisión ya se había perdido, presentándose como el
+            # recordatorio para alcanzar a activarse. Un aviso que llega tarde no
+            # es un aviso. El último cae la víspera del corte;
+            # `tests/test_avisos_bloqueadas.py` fija que ninguno lo rebase.
+            "blockedNoticeDays": [Decimal("20"), Decimal("24")],
             # Opción a (apagada): si vale N > 0, una socia que se activa en los
             # primeros N días del mes libera también lo bloqueado del mes anterior.
             "blockedGraceDays": Decimal("0"),

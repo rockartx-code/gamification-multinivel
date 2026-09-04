@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, shareReplay } from 'rxjs';
+import { Observable, catchError, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { AyudaPublica } from '../models/ayuda.model';
@@ -37,9 +37,30 @@ export class AyudaService {
     }
   };
 
+  /**
+   * Último año que dijo el servidor, compartido por toda la aplicación.
+   *
+   * Ronda 7 · Nayeli: «#/login cierra con "© 2026 finding U"; la tienda, el
+   * carrito y la orden cierran con "© 2027"». Cada pie caía por su cuenta al
+   * reloj del navegador cuando todavía no tenía respuesta —o cuando la
+   * respuesta venía del respaldo vacío—, así que dos pantallas del mismo sitio
+   * podían fechar distinto. Guardado aquí, no pueden discrepar.
+   */
+  private static anioDelServidor: number | null = null;
+
+  static get anioNegocio(): number {
+    return AyudaService.anioDelServidor ?? new Date().getFullYear();
+  }
+
   ayuda(): Observable<AyudaPublica> {
     if (!this.peticion) {
       this.peticion = this.http.get<AyudaPublica>(`${this.baseUrl}/catalog/ayuda`).pipe(
+        tap((ayuda) => {
+          const delServidor = new Date(String(ayuda?.serverNow ?? ''));
+          if (!Number.isNaN(delServidor.getTime())) {
+            AyudaService.anioDelServidor = delServidor.getFullYear();
+          }
+        }),
         catchError(() => of(AyudaService.vacia)),
         shareReplay(1)
       );

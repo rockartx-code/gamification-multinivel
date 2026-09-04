@@ -117,7 +117,16 @@
       <!-- ── CARGA DE DOCUMENTACIÓN ─────────────────────────────────── -->
       <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Carga de documentación</h2>
-        <p class="mb-5 text-xs text-gray-500">Sube los documentos requeridos para completar tu registro.</p>
+        <!-- Ronda 7 · Gerardo: la página del plan promete «es gratis, no te pide
+             datos extra» y «nada por adelantado: cada dato se pide cuando hace
+             falta», y aquí los tres salían marcados «Requerido» como si el
+             registro estuviera incompleto. Tu registro ya está completo: estos
+             papeles se piden el día que haya comisiones que facturarte. -->
+        <p class="mb-5 text-xs text-gray-500">
+          Tu registro ya está completo: no necesitas subir nada para comprar ni para invitar.
+          Estos documentos se piden el día que tengamos que facturarte y depositarte comisiones,
+          y los puedes dejar listos desde ahora si prefieres.
+        </p>
 
         <div class="flex flex-col gap-4">
           <div *ngFor="let docType of requiredDocTypes"
@@ -141,7 +150,7 @@
                 <ng-container *ngIf="getOwnDocForType(docType.key) as existing">
                   <p class="text-xs text-green-600">Subido el {{ formatDate(existing.uploadedAt) }}</p>
                 </ng-container>
-                <p *ngIf="docType.required && !getOwnDocForType(docType.key)" class="text-xs text-amber-600">Requerido</p>
+                <p *ngIf="docType.required && !getOwnDocForType(docType.key)" class="text-xs text-gray-500">Se pide al cobrar comisiones</p>
               </div>
             </div>
 

@@ -242,7 +242,7 @@
             </div>
             <ui-button size="lg" variant="primary" type="button" [routerLink]="['/landing']">
               <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-              Registrate
+              Regístrate
             </ui-button>
           </div>
         </div>
@@ -1084,7 +1084,7 @@
                 </div>
                 <div>
                   <div class="font-semibold text-main">Copia tu link</div>
-                  <div class="text-xs text-gray-500">Pegalo en tu bio o chat.</div>
+                  <div class="text-xs text-gray-500">Pégalo en tu bio o en un chat.</div>
                 </div>
               </div>
               <!--div class="flex items-center gap-3">
@@ -1695,7 +1695,7 @@
               {{ discountAppliedLabel() }}
             </div>
           </div>
-          <div class="mt-3 text-xs text-gray-600">Cantidad actual: {{ getCartQty(product.id) }}</div>
+          <div class="mt-3 text-xs text-gray-600">Llevas {{ getCartQty(product.id) }} en el carrito</div>
         </div>
       </div>
 
@@ -1809,7 +1809,11 @@
     </div>
   </ui-modal>
 
-  <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
+  <!-- Ronda 7 · Valeria: con el detalle del producto abierto, este botón se
+       seguía viendo encendido sobre el fondo oscuro del modal (z-40 contra el
+       z-50 del fondo) y el toque se lo tragaba el fondo. Se veía una app
+       trabada. Un botón que no se puede tocar no se pinta. -->
+  <div *ngIf="cartTotal > 0 && !hayModalAbierto" class="fixed bottom-6 right-6 z-40 md:hidden">
     <ui-button size="lg" variant="primary" type="button" (pressed)="goToCart()">
       <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
       Ver carrito

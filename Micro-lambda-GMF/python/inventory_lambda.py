@@ -719,6 +719,11 @@ def handle_cash_cut(body, headers):
         # DynamoDB rechaza float ("Float types are not supported"): el corte de
         # caja respondía 500 y el cajero no podía cerrar. Se guardan Decimal.
         "total": utils._to_decimal(expected - opening),
+        # Ronda 7 · Rubén: el comprobante declaraba "Vendido en el turno $500"
+        # cuando la única venta fue de $980, porque `total` es el movimiento
+        # NETO del cajón (esperado menos fondo), no lo vendido. Lo vendido es la
+        # suma de las ventas vivas, cobren como cobren.
+        "salesTotal": sum((utils._to_decimal(v.get("total")) for v in ventas_vivas), utils.D_ZERO),
         "salesCount": len(ventas_vivas),
         "cashToKeep": utils._to_decimal(cash_to_keep),
         "withdrawnAmount": utils._to_decimal(withdrawal_amount),

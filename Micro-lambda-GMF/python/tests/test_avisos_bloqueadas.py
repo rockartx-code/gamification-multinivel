@@ -1,7 +1,8 @@
 """Política de comisiones bloqueadas (paquete A, propuesta 22, opción b).
 
 Marcela perdió $166 al cierre del mes sin que nadie le avisara. Ahora los
-días 20 y 27 la socia inactiva recibe cuánto tiene bloqueado, cuántos VP le
+días 20 y 24 —los dos antes del corte del 25— la socia inactiva recibe
+cuánto tiene bloqueado, cuántos VP le
 faltan y el producto más barato que la activa. La opción a (gracia) queda
 como parámetro apagado.
 """
@@ -96,12 +97,17 @@ def test_el_dia_20_avisa_con_el_producto_mas_barato_que_la_activa(modulos, utils
     assert [int(d) for d in utils._get_ledger_month(2, "2026-10")["blockedNoticeSentDays"]] == [20]
 
 
-def test_el_dia_21_no_avisa_y_el_27_si(modulos, utils, correos, bety):
+def test_el_dia_21_no_avisa_y_el_24_si(modulos, utils, correos, bety):
+    """Ronda 7 · Gerardo: el segundo aviso era el 27, dos días DESPUÉS del corte
+    del 25. Ahora es la víspera del corte, que es cuando todavía sirve."""
     _, motor, _ = modulos
     with freeze_time("2026-10-21"):
         datos = json.loads(_post(motor)["body"])
     assert datos["notified"] == [] and datos["skipped"] == "not_notice_day" and correos == []
     with freeze_time("2026-10-27"):
+        datos = json.loads(_post(motor)["body"])
+    assert datos["notified"] == [] and datos["skipped"] == "not_notice_day"   # ya cerró el mes
+    with freeze_time("2026-10-24"):
         datos = json.loads(_post(motor)["body"])
     assert [n["customerId"] for n in datos["notified"]] == ["2"] and len(correos) == 1
 
@@ -113,10 +119,10 @@ def test_dos_llamadas_el_mismo_dia_mandan_un_solo_correo(modulos, utils, correos
         datos = json.loads(_post(motor)["body"])
     assert datos["notified"] == [] and datos["alreadyNotified"] == ["2"]
     assert len(correos) == 1
-    with freeze_time("2026-10-27"):
+    with freeze_time("2026-10-24"):
         _post(motor)
     assert len(correos) == 2
-    assert [int(d) for d in utils._get_ledger_month(2, "2026-10")["blockedNoticeSentDays"]] == [20, 27]
+    assert [int(d) for d in utils._get_ledger_month(2, "2026-10")["blockedNoticeSentDays"]] == [20, 24]
 
 
 def test_force_y_dry_run_sirven_para_probar_sin_dejar_huella(modulos, utils, correos, bety):
@@ -204,3 +210,22 @@ def test_gracia_apagada_no_reevalua_el_mes_anterior_y_encendida_si(modulos, util
     with freeze_time("2026-09-06"):
         _pagar(order_lambda, motor, marcela3, klinhart)
     assert {r["orderId"]: r["status"] for r in utils._get_ledger_month(marcela3, "2026-08")["ledger"]}[oid3] == "blocked"
+
+
+def test_ningun_aviso_de_bloqueadas_cae_despues_del_corte_del_mes():
+    """Ronda 7 · Gerardo: «el corte del mes es el 25 pero el segundo aviso de
+    comisión bloqueada llega el 27».
+
+    El aviso dice qué comprar para alcanzar a activarse: si llega después del
+    corte, la comisión ya se perdió y el correo es una burla. El último aviso
+    tiene que caer, como mucho, el mismo día del corte.
+    """
+    import corte_mes
+    from core.config import _default_app_config
+
+    dias = [int(d) for d in ((_default_app_config().get("rewards") or {}).get("blockedNoticeDays") or [])]
+
+    assert dias, "sin días de aviso no hay nada que comprobar"
+    assert max(dias) <= corte_mes.CUTOFF_DAY, (
+        f"el aviso del día {max(dias)} llega después del corte del día {corte_mes.CUTOFF_DAY}: "
+        f"la comisión ya se perdió cuando el correo pide activarse")

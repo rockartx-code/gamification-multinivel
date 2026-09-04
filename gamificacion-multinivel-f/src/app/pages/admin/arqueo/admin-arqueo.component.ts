@@ -174,7 +174,7 @@ export class AdminArqueoComponent implements OnChanges {
   /** Por qué no se puede guardar el fondo todavía. Vacío si se puede. */
   motivoAperturaDeshabilitada(): string {
     if (!this.canOperate) return 'No tienes el permiso "Ventas en caja": pídeselo a tu gerente.';
-    if (!this.stockId) return 'Sin sucursal vinculada: pide a la gerente que te ligue a una en Almacenes.';
+    if (!this.stockId) return 'Sin sucursal vinculada: pide a tu gerente que te agregue en Stocks → tu sucursal → "Empleados vinculados".';
     if (this.guardandoApertura) return 'Guardando el fondo…';
     if (String(this.fondoAperturaTexto).trim() === '') return 'Escribe con cuánto arrancas (puede ser $0).';
     if (this.fondoAperturaNumero < 0) return 'El fondo no puede ser negativo.';
@@ -228,7 +228,7 @@ export class AdminArqueoComponent implements OnChanges {
       return 'No tienes el permiso "Ventas en caja": pídeselo a tu gerente.';
     }
     if (!this.stockId) {
-      return 'Sin sucursal vinculada: pide a la gerente que te ligue a una en Almacenes.';
+      return 'Sin sucursal vinculada: pide a tu gerente que te agregue en Stocks → tu sucursal → "Empleados vinculados".';
     }
     if (this.cargando && !this.arqueo) {
       return 'Leyendo el estado de la caja…';
