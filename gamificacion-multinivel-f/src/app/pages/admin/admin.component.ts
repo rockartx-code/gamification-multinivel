@@ -1038,12 +1038,8 @@ export class AdminComponent implements OnInit {
   /** Pantalla que se quiso abrir sin tener su privilegio; se dice y se puede cerrar. */
   pantallaSinAcceso = ''; // paquete E · ronda 26
 
-  /** Panel al que baja la pantalla al llegar por URL (hoy solo `pagos-mes`). */
-  private panelDeRuta = '';
-
   private aplicarVistaDeRuta(vista: AdminViewId, panel: string): void {
     this.currentView = vista;
-    this.panelDeRuta = panel;
     this.orderPage = 0;
     this.customerPage = 0;
     this.productPage = 0;
