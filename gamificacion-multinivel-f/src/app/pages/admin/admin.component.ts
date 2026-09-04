@@ -990,10 +990,10 @@ export class AdminComponent implements OnInit {
     // siempre volvía a la vista por omisión y Renata no podía mandar un enlace
     // ("tendría que contestarle: en Clientes, hasta abajo, después de los
     // documentos"). `getFirstAllowedView()` es solo el respaldo de `#/admin`.
-    this.route.data.subscribe((data) => {
-      const vista = (data['view'] as AdminViewId | undefined) ?? this.getFirstAllowedView();
-      this.aplicarVistaDeRuta(vista, (data['panel'] as string | undefined) ?? '');
-    });
+    //
+    // El orden importa: los parámetros de la URL se leen ANTES de montar la
+    // vista, para que la pestaña que pidió la URL no la pise el cálculo de
+    // "la primera pestaña con trabajo".
     this.route.queryParamMap.subscribe((params) => {
       // `?estado=paid` (la cola de trabajo y las acciones urgentes) y `?mes=`
       // (Comisiones y pagos) viajan en la URL para sobrevivir a la navegación.
@@ -1007,6 +1007,8 @@ export class AdminComponent implements OnInit {
       if (mes) {
         this.pagosMesMonth = mes;
       }
+      // La guarda de pantalla no quita una pantalla en silencio: dice cuál era.
+      this.pantallaSinAcceso = params.get('sinAcceso') ?? '';
     });
     this.route.paramMap.subscribe((params) => {
       // `#/admin/pedido/:idPedido`: el pedido abre su detalle solo, sin buscarlo.
@@ -1016,6 +1018,10 @@ export class AdminComponent implements OnInit {
         this.orderDeepLinkId = idPedido;
         this.abrirPedidoDeUrl();
       }
+    });
+    this.route.data.subscribe((data) => {
+      const vista = (data['view'] as AdminViewId | undefined) ?? this.getFirstAllowedView();
+      this.aplicarVistaDeRuta(vista, (data['panel'] as string | undefined) ?? '');
     });
     // Carga mínima: solo warnings (ya cacheados si se viene de otra pantalla).
     if (!this.adminControl.hasLoadedWarnings()) {
@@ -1028,6 +1034,9 @@ export class AdminComponent implements OnInit {
 
   /** true cuando la pestaña de Pedidos la eligió la URL: no se recalcula sola. */
   private orderStatusFijadoPorUrl = false;
+
+  /** Pantalla que se quiso abrir sin tener su privilegio; se dice y se puede cerrar. */
+  pantallaSinAcceso = ''; // paquete E · ronda 26
 
   /** Panel al que baja la pantalla al llegar por URL (hoy solo `pagos-mes`). */
   private panelDeRuta = '';
@@ -1056,6 +1065,9 @@ export class AdminComponent implements OnInit {
           this.adminControl.loadOrders().subscribe(() => {
             this.syncInitialOrderDeps();
           });
+        } else {
+          this.abrirPrimeraPestanaConTrabajo();
+          this.abrirPedidoDeUrl();
         }
         break;
       case 'customers':
@@ -1125,7 +1137,30 @@ export class AdminComponent implements OnInit {
   private syncInitialOrderDeps(): void {
     this.ensureCurrentViewAllowed();
     this.selectPublicGeneralCustomer();
+    this.abrirPrimeraPestanaConTrabajo();
     this.abrirPedidoDeUrl();
+  }
+
+  /**
+   * Paquete E · ronda 26 · propuesta 33 · Pedidos abre donde hay trabajo.
+   *
+   * Abría siempre en "Pendiente", vacía, mientras el resumen de al lado decía
+   * "Pagados 3": Toño leyó las dos cosas a la vez y anotó "si yo fuera menos
+   * necio me voy a la bodega a barrer". La cola de trabajo (`nextActions`) ya
+   * calcula cuál es la primera pestaña con algo que hacer; se usa esa. Si la
+   * pestaña la pidió la URL (`?estado=`) o se llegó a un pedido concreto, manda
+   * la URL: nunca se le mueve la pantalla a quien pidió una en particular.
+   */
+  private abrirPrimeraPestanaConTrabajo(): void {
+    if (this.orderStatusFijadoPorUrl || this.orderDeepLinkId) {
+      return;
+    }
+    const primera = this.nextActions.find((accion) => !!accion.status);
+    if (primera?.status) {
+      this.currentOrderStatus = primera.status;
+      this.currentOrderTab = primera.status;
+      this.orderPage = 0;
+    }
   }
 
   /**
@@ -1753,16 +1788,22 @@ export class AdminComponent implements OnInit {
   }
 
   get filteredOrdersStable(): AdminOrder[] {
-    let byStatus = this.currentOrderTab === 'factura_solicitada'
-      ? this.orders.filter((o) => o.invoiceStatus === 'solicitada')
-      : this.orders.filter((o) => o.status === this.currentOrderStatus);
+    const q = this.orderSearch.trim().toLowerCase();
+    // Paquete E · ronda 26 · propuesta 33 · Buscar cruza estados: se busca sobre
+    // todos los pedidos cargados, no solo sobre la pestaña abierta. Cada fila
+    // muestra su estado, así que no hay dónde perderse. Antes había que adivinar
+    // en cuál de las diez pestañas estaba "Ximena" antes de poder encontrarla.
+    let byStatus = q
+      ? this.orders
+      : this.currentOrderTab === 'factura_solicitada'
+        ? this.orders.filter((o) => o.invoiceStatus === 'solicitada')
+        : this.orders.filter((o) => o.status === this.currentOrderStatus);
     // Stock filter (applies to all statuses when a stock is selected)
     if (this.orderStockFilter) {
       byStatus = byStatus.filter(
         (o) => o.stockId === this.orderStockFilter || o.pickupStockId === this.orderStockFilter
       );
     }
-    const q = this.orderSearch.trim().toLowerCase();
     if (!q) return byStatus;
     return byStatus.filter((o) =>
       (o.customer || '').toLowerCase().includes(q) ||

@@ -63,9 +63,11 @@ export const adminViewGuard: CanActivateFn = (route, state) => {
 
   if (privilegio && !auth.hasPrivilege(privilegio, user)) {
     // Nunca se deja el contenedor vacío: se cae a la pantalla que sí es suya y
-    // la propia pantalla lo dice ("Esta pantalla no es tuya…").
+    // se DICE en pantalla cuál se quiso abrir, en vez de quitarla en silencio.
     const destino = auth.adminLandingRoute(user);
-    return router.parseUrl(destino === ruta ? '/admin/pedidos' : destino);
+    const titulo = (route.data?.['titulo'] as string | undefined) ?? '';
+    return router.createUrlTree([destino === ruta ? '/admin/pedidos' : destino],
+                                titulo ? { queryParams: { sinAcceso: titulo } } : {});
   }
 
   return true;
