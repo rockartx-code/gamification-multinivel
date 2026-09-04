@@ -5,11 +5,12 @@ import { finalize } from 'rxjs';
 
 import { ApiService } from '../../services/api.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 @Component({
   selector: 'app-verify-email',
   standalone: true,
-  imports: [CommonModule, RouterLink, UiButtonComponent],
+  imports: [CommonModule, RouterLink, UiButtonComponent, UiFooterComponent],
   templateUrl: './verify-email.component.html'
 })
 export class VerifyEmailComponent implements OnInit {

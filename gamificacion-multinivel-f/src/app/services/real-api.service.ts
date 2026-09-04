@@ -1430,6 +1430,8 @@ export class RealApiService {
       cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
       returnRequestId: this.readString(order, ['returnRequestId']) || undefined,
       returnInspection: (order['returnInspection'] as AdminOrder['returnInspection']) || undefined,
+      // paquete D · ronda 26 (propuesta 24)
+      devolucion: (order['devolucion'] as AdminOrder['devolucion']) || undefined,
       rejectionReason: this.readString(order, ['rejectionReason']) || undefined,
       rejectedAt: this.readString(order, ['rejectedAt']) || undefined,
       refundReceiptUrl: this.readString(order, ['refundReceiptUrl']) || undefined,

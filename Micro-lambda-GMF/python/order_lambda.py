@@ -1194,20 +1194,72 @@ def handle_cancel_order(order_id: str, body: dict, headers: dict) -> dict:
 #: (Reglas 3.1, 3.3 y 4). La evidencia depende del motivo (propuesta 18):
 #: quien no abrió el paquete solo manda una foto del paquete cerrado con la
 #: guía visible; quien reporta daño o error manda producto, empaque y guía.
+#:
+#: Paquete D · ronda 26 (propuesta 39): esto dejó de ser una constante. Julio
+#: preguntó por WhatsApp las cuatro cosas —plazo, evidencia, quién paga el
+#: envío y a dónde se manda— porque no estaban escritas en ninguna pantalla.
+#: Ahora viven en la configuración (`returns.motivos`, `core/config.py`) con
+#: valores por omisión **idénticos** a los de siempre, y se leen con
+#: `_motivos_devolucion()`. `RETURN_MOTIVOS` se conserva como los valores por
+#: omisión, para que nadie se quede sin regla si la configuración viene rota.
+_EVIDENCIA_POR_REGLA = {
+    "completa": devoluciones_handlers.EVIDENCIA_COMPLETA,
+    "paquete_cerrado": devoluciones_handlers.EVIDENCIA_PAQUETE_CERRADO,
+}
+
 RETURN_MOTIVOS = {
     "DANADO_DEFECTUOSO": {"limite_horas": 48, "responsable_envio": "empresa",
-                          "evidencia": devoluciones_handlers.EVIDENCIA_COMPLETA, "regla_evidencia": "completa"},
+                          "evidencia": devoluciones_handlers.EVIDENCIA_COMPLETA, "regla_evidencia": "completa",
+                          "label": "Llegó dañado o defectuoso"},
     "ERROR_ENVIO": {"limite_horas": 48, "responsable_envio": "empresa",
-                    "evidencia": devoluciones_handlers.EVIDENCIA_COMPLETA, "regla_evidencia": "completa"},
+                    "evidencia": devoluciones_handlers.EVIDENCIA_COMPLETA, "regla_evidencia": "completa",
+                    "label": "Me llegó algo distinto a lo que pedí"},
     "DESISTIMIENTO": {"limite_horas": 7 * 24, "responsable_envio": "cliente",
-                      "evidencia": devoluciones_handlers.EVIDENCIA_PAQUETE_CERRADO, "regla_evidencia": "paquete_cerrado"},
+                      "evidencia": devoluciones_handlers.EVIDENCIA_PAQUETE_CERRADO, "regla_evidencia": "paquete_cerrado",
+                      "label": "Cambié de opinión"},
 }
 
 
-def _evidencia_faltante(motivo: str, evidencia: dict) -> list:
+def _motivos_devolucion(cfg=None) -> dict:
+    """Los motivos de devolución vigentes, con la misma forma que `RETURN_MOTIVOS`.
+
+    Se leen de `returns.motivos`. Una entrada mal escrita (plazo no numérico,
+    responsable desconocido, regla de evidencia inexistente) **se ignora**: la
+    validación dura vive en `devoluciones_handlers.validar_returns`, que corre
+    al guardar la configuración; aquí nunca se deja al cliente sin regla.
+    """
+    cfg = cfg if cfg is not None else utils._load_app_config()
+    crudos = ((cfg.get("returns") or {}).get("motivos")) or []
+    salida = {}
+    for crudo in crudos:
+        if not isinstance(crudo, dict):
+            continue
+        clave = str(crudo.get("key") or "").strip().upper()
+        regla = str(crudo.get("evidencia") or "").strip()
+        responsable = str(crudo.get("responsableEnvio") or "").strip()
+        if not clave or regla not in _EVIDENCIA_POR_REGLA or responsable not in ("empresa", "cliente"):
+            continue
+        try:
+            horas = int(utils._to_decimal(crudo.get("limiteHoras")))
+        except (TypeError, ValueError, ArithmeticError):
+            continue
+        if horas <= 0:
+            continue
+        salida[clave] = {
+            "limite_horas": horas,
+            "responsable_envio": responsable,
+            "evidencia": _EVIDENCIA_POR_REGLA[regla],
+            "regla_evidencia": regla,
+            "label": str(crudo.get("label") or RETURN_MOTIVOS.get(clave, {}).get("label") or clave),
+        }
+    return salida or dict(RETURN_MOTIVOS)
+
+
+def _evidencia_faltante(motivo: str, evidencia: dict, motivos=None) -> list:
     """Categorías que exige el motivo y no llegaron. En desistimiento se acepta
     también el juego completo de tres fotos (solicitudes del asistente anterior)."""
-    exigidas = RETURN_MOTIVOS[motivo]["evidencia"]
+    motivos = motivos if motivos is not None else _motivos_devolucion()
+    exigidas = motivos[motivo]["evidencia"]
     faltan = [c for c in exigidas if not (evidencia.get(c) or [])]
     if faltan and exigidas == devoluciones_handlers.EVIDENCIA_PAQUETE_CERRADO:
         if all(evidencia.get(c) for c in devoluciones_handlers.EVIDENCIA_COMPLETA):
@@ -1239,6 +1291,68 @@ def _horas_desde_entrega(order: dict) -> float:
         return 0.0
 
 
+#: Cómo se llama en pantalla el estado de un pedido que todavía no se puede devolver.
+_ESTADO_EN_PALABRAS = {
+    "pending": "pendiente de pago",
+    "paid": "pagado",
+    "shipped": "enviado",
+    "cancelled": "cancelado",
+    "returned": "devuelto",
+    "refunded": "reembolsado",
+    "rejected": "rechazado",
+    "en_devolucion": "con una devolución en curso",
+    "devuelto_validado": "con la devolución validada",
+    "devolucion_rechazada": "con la devolución rechazada",
+}
+
+
+def _estado_devolucion(order: dict, cfg=None) -> dict:
+    """Paquete D · propuesta 24: si se puede pedir la devolución y, si no, por qué.
+
+    Julio necesitaba devolver un solo bote de proteína rota. La pantalla existía
+    y hacía exactamente eso, pero el botón solo se pintaba con el pedido
+    "entregado" y el suyo estaba en `paid`: 17 clics, 9 pantallas, 341 segundos,
+    facilidad 1 de 7 y se quedó con la proteína rota.
+
+    Ahora el botón se pinta siempre, apagado y con su motivo. El motivo y el
+    plazo **no se recalculan en el cliente**: salen de aquí, que lee los mismos
+    `_motivos_devolucion()` con los que el servidor valida la solicitud, para no
+    inventar una quinta versión de la regla.
+    """
+    import ayuda_handlers
+    cfg = cfg if cfg is not None else utils._load_app_config()
+    motivos = ayuda_handlers.motivos_publicados(cfg)
+    plazo_texto = " ".join(f"«{m['label']}»: {m['plazoTexto']}." for m in motivos)
+    base = {"puedeSolicitar": False, "motivo": "", "horasRestantes": None,
+            "plazoTexto": plazo_texto, "motivos": motivos}
+
+    estado = (order.get("status") or "").lower()
+    if order.get("returnRequestId"):
+        return {**base, "motivo": (
+            f"Ya tienes una devolución en curso para este pedido (folio {order.get('returnRequestId')}). "
+            "Sigue su avance desde el mismo pedido.")}
+    if estado != utils.OrderStatus.DELIVERED:
+        if estado in (utils.OrderStatus.CANCELLED, utils.OrderStatus.REJECTED, utils.OrderStatus.REFUNDED):
+            return {**base, "motivo": (
+                f"Este pedido está {_ESTADO_EN_PALABRAS.get(estado, estado)}: ya no hay nada que devolver.")}
+        return {**base, "motivo": (
+            f"Podrás pedir la devolución en cuanto marquemos el pedido como entregado. "
+            f"Ahora está {_ESTADO_EN_PALABRAS.get(estado, estado)}. "
+            "Si algo llegó mal antes de eso, escríbenos y lo resolvemos contigo.")}
+
+    horas = _horas_desde_entrega(order)
+    restantes = [(m, m["limiteHoras"] - horas) for m in motivos]
+    vivos = [(m, r) for m, r in restantes if r > 0]
+    if not vivos:
+        mayor = max(motivos, key=lambda m: m["limiteHoras"])
+        return {**base, "horasRestantes": 0, "motivo": (
+            f"El plazo para devolver este pedido terminó: pasaron {int(horas / 24)} días desde la entrega "
+            f"y el plazo más largo es de {mayor['plazoTexto']}. Escríbenos y vemos qué podemos hacer.")}
+
+    mejor, resto = max(vivos, key=lambda par: par[1])
+    return {**base, "puedeSolicitar": True, "horasRestantes": round(resto, 1), "motivo": ""}
+
+
 def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, horas: float, lines=None):
     """Aplica las reglas 3.1 (plazo), 3.3 (evidencia según motivo) y la de
     líneas (propuesta 18). Devuelve una respuesta de error o None."""
@@ -1254,10 +1368,11 @@ def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, hor
             "code": "RETURN_ALREADY_EXISTS",
         })
 
-    regla = RETURN_MOTIVOS.get(motivo)
+    motivos = _motivos_devolucion()
+    regla = motivos.get(motivo)
     if not regla:
         return utils._json_response(400, {
-            "message": "Motivo inválido. Use: " + ", ".join(RETURN_MOTIVOS) + ".",
+            "message": "Motivo inválido. Use: " + ", ".join(motivos) + ".",
             "code": "INVALID_MOTIVO",
         })
 
@@ -1284,7 +1399,7 @@ def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, hor
         return error_lineas
 
     # Regla 3.3 — la evidencia que exige el motivo
-    faltantes = _evidencia_faltante(motivo, evidencia)
+    faltantes = _evidencia_faltante(motivo, evidencia, motivos)
     if faltantes:
         nombres = {"fotos_producto": "fotos del producto", "fotos_empaque": "fotos del empaque",
                    "fotos_guia_envio": "foto de la guía de envío", "fotos_paquete_cerrado": "foto del paquete cerrado con la guía visible"}
@@ -1292,7 +1407,7 @@ def _validar_solicitud_devolucion(order: dict, motivo: str, evidencia: dict, hor
             "message": "Falta evidencia: " + ", ".join(nombres.get(c, c) for c in faltantes) + ".",
             "code": "MISSING_EVIDENCE",
             "missing": faltantes,
-            "evidenceRule": RETURN_MOTIVOS[motivo]["regla_evidencia"],
+            "evidenceRule": motivos[motivo]["regla_evidencia"],
         })
     return None
 
@@ -1365,7 +1480,8 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
     parcial = reembolso.pop("partial")
 
     # Regla 4 — quién paga el envío de la devolución
-    responsable = RETURN_MOTIVOS[motivo]["responsable_envio"]
+    regla_motivo = _motivos_devolucion()[motivo]
+    responsable = regla_motivo["responsable_envio"]
 
     request_id = f"RET-{utils.uuid.uuid4().hex[:8].upper()}"
     subidas = _subir_evidencia_devolucion(order_id, request_id, evidencia)
@@ -1384,7 +1500,7 @@ def handle_return_request(order_id: str, body: dict, headers: dict) -> dict:
         "status": "PENDIENTE",
         "shippingResponsibility": responsable,
         "evidence": subidas,
-        "evidenceRule": RETURN_MOTIVOS[motivo]["regla_evidencia"],
+        "evidenceRule": regla_motivo["regla_evidencia"],
         # Lo que el cliente pagó por regresar el paquete (ticket de paquetería);
         # se suma al reembolso por omisión.
         "returnShippingCost": envio_regreso,
@@ -2058,6 +2174,9 @@ def lambda_handler(event, context):
                     salida = _con_totales_visibles(order)
                     if _is_guest_order(order) and _sin_sesion(headers):
                         salida = _vista_publica_invitado(salida)
+                    # Paquete D · propuesta 24: el botón "Devolver / Llegó dañado"
+                    # se pinta siempre, y su motivo y su plazo salen del servidor.
+                    salida = {**salida, "devolucion": _estado_devolucion(order)}
                     # La gerente necesita ver en la ficha la inspección de la devolución (notas, fotos, checklist).
                     if order.get("returnRequestId") and utils._extract_actor(headers).get("role") in ("admin", "employee"):
                         salida = {**salida, "returnInspection": _resumen_devolucion(order.get("returnRequestId"))}

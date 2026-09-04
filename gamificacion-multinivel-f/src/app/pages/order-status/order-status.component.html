@@ -403,18 +403,17 @@
           <div *ngIf="cancelBlocked && !canRequestReturn && order.status !== 'cancelled' && !inReturnFlow"
             class="flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2.5 text-xs text-gray-500">
             <i class="fa-solid fa-lock text-gray-400" aria-hidden="true"></i>
-            Pedido en proceso logístico — solicita una devolución si aplica
+            Pedido en proceso logístico — abajo dice si ya puedes pedir la devolución
           </div>
 
-          <!-- Solicitar devolución (solo si entregado) -->
-          <ui-button
-            *ngIf="canRequestReturn"
-            variant="primary"
-            size="md"
-            (pressed)="navigateToReturn()">
-            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-            Solicitar devolución
-          </ui-button>
+          <!-- Paquete D · propuesta 24: el botón se pinta SIEMPRE, apagado con
+               su motivo. Antes solo existía con el pedido entregado, y Julio,
+               con el pedido en `paid` y la proteína rota, no lo vio nunca. -->
+          <ui-devolucion-boton
+            [devolucion]="estadoDevolucion"
+            [orderId]="orderId"
+            [enCurso]="inReturnFlow"
+            (solicitar)="navigateToReturn()" />
 
           <!-- Estado cancelado -->
           <div *ngIf="order.status === 'cancelled'"
@@ -448,3 +447,6 @@
     </div>
   </main>
 </section>
+
+<!-- Paquete D · ronda 26: el pie con contacto, horario y los enlaces de ayuda. -->
+<ui-footer />

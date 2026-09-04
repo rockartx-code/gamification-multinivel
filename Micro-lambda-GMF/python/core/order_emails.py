@@ -186,6 +186,37 @@ def _lineas_devueltas(datos: dict) -> str:
     return f'<div class="info-box"><p><strong>{titulo}</strong></p>{filas}</div>'
 
 
+# ── Paquete D · ronda 26 ── la política de devolución en el correo ─────────
+# Julio preguntó por WhatsApp las cuatro cosas —plazo, evidencia, quién paga el
+# envío y a dónde se manda— porque no estaban escritas en ninguna pantalla. El
+# texto no se escribe aquí: se lee de `ayuda_handlers.texto_politica`, la misma
+# fuente que `#/devoluciones` y el asistente, para que cambiar el plazo en
+# configuración lo cambie en las cuatro salidas a la vez.
+
+def _motivos_publicados_seguro() -> list:
+    try:
+        import ayuda_handlers
+        return ayuda_handlers.motivos_publicados()
+    except Exception:   # pragma: no cover - el correo nunca rompe el pedido
+        return []
+
+
+def _pasos_politica_devolucion() -> list:
+    try:
+        import ayuda_handlers
+        return ayuda_handlers.texto_politica()
+    except Exception:   # pragma: no cover - el correo nunca rompe el pedido
+        return []
+
+
+def _bloque_politica_devolucion(titulo: str = "Cómo funciona una devolución") -> str:
+    pasos = _pasos_politica_devolucion()
+    if not pasos:
+        return ""
+    filas = "".join(f"<p><strong>{p['titulo']}.</strong> {p['texto']}</p>" for p in pasos)
+    return f'<div class="info-box"><p><strong>{titulo}</strong></p>{filas}</div>'
+
+
 def _seguimiento(order: dict, frontend_url: str) -> str:
     # La ruta real del seguimiento es /#/orden/{id}; la primera versión
     # enlazaba a una página que no existe ("link muerto" en el primer correo útil).
@@ -255,12 +286,20 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
         extra = ""
     elif evento == "delivered":
         asunto = f"Tu pedido {oid} fue entregado"
+        # C · propuesta 7: quien recogió en mostrador no leyó "llegó tu pedido".
         titulo, icono = ("Recogiste tu pedido" if recoge else "¡Llegó tu pedido!"), "📦"
         entregado = ("Ya nos consta que recogiste tu pedido" + (f" en {sucursal}" if sucursal else " en sucursal") + ". "
                      if recoge else "")
-        lead = (entregado + "Revisa que todo esté bien. Si algo llegó dañado tienes 48 horas para pedir la devolución "
-                "desde tu seguimiento; si simplemente te arrepentiste, 7 días.")
-        extra = ""
+        # D · propuesta 39: los plazos no se escriben a mano en el correo (decían
+        # 48 h y 7 días aunque la configuración dijera otra cosa); se leen de la
+        # misma política que publica la pantalla de devoluciones.
+        plazos = " ".join(f"«{m['label']}»: {m['plazoTexto']}."
+                          for m in _motivos_publicados_seguro())
+        lead = (entregado
+                + "Revisa que todo esté bien. Si algo salió mal puedes pedir la devolución desde tu "
+                  "seguimiento, del pedido completo o solo de lo que falló. "
+                + (f"El plazo se cuenta desde hoy. {plazos}" if plazos else ""))
+        extra = _bloque_politica_devolucion()
     elif evento == "return_received":
         asunto = f"Recibimos tu solicitud de devolución · {datos.get('requestId') or oid}"
         titulo, icono = "Solicitud de devolución recibida", "↩️"
@@ -279,7 +318,7 @@ def _plantillas(order: dict, evento: str, datos: dict, frontend_url: str):
                   if monto is not None else f" Cuando lo revisemos te devolvemos tu dinero {_texto_plazo(datos)}.")
         lead = (f"Folio <strong>{datos.get('requestId') or ''}</strong>. Envía {que}, en su empaque, a "
                 f"<strong>{direccion or 'nuestro almacén'}</strong> con el folio escrito en el paquete. {envio_txt}{cuanto}")
-        extra = _lineas_devueltas(datos)
+        extra = _lineas_devueltas(datos) + _bloque_politica_devolucion("El proceso, paso a paso")
     elif evento == "return_approved":
         asunto = f"Devolución aprobada · pedido {oid}"
         titulo, icono = "Devolución aprobada", "👍"

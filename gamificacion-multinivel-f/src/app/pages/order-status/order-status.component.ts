@@ -8,11 +8,14 @@ import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-
 import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { ApiService } from '../../services/api.service';
 import { CheckoutService } from '../../services/checkout.service';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { UiDevolucionBotonComponent } from '../../components/ui-devolucion-boton/ui-devolucion-boton.component';
+import { EstadoDevolucionPedido } from '../../models/ayuda.model';
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent],
+  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent, UiFooterComponent, UiDevolucionBotonComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
@@ -471,6 +474,30 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   get canRequestReturn(): boolean {
     return this.normalizeStatus(this.order?.status) === 'delivered';
+  }
+
+  /**
+   * Paquete D · propuesta 24. El motivo y el plazo del botón los manda el
+   * servidor en `GET /orders/{id}`; aquí no se recalcula la regla. Con un
+   * pedido viejo (o si la respuesta aún no llega) se arma un estado apagado con
+   * el motivo genérico, para que el botón nunca desaparezca sin explicación.
+   */
+  get estadoDevolucion(): EstadoDevolucionPedido | null {
+    if (!this.order) {
+      return null;
+    }
+    if (this.order.devolucion) {
+      return this.order.devolucion;
+    }
+    return {
+      puedeSolicitar: this.canRequestReturn && !this.inReturnFlow,
+      motivo: this.canRequestReturn
+        ? ''
+        : 'Podrás pedir la devolución en cuanto marquemos el pedido como entregado.',
+      horasRestantes: null,
+      plazoTexto: '',
+      motivos: []
+    };
   }
 
   navigateToCancel(): void {

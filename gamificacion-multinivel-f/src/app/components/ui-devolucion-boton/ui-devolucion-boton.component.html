@@ -1,0 +1,40 @@
+<div *ngIf="devolucion" class="flex flex-wrap items-center gap-2">
+
+  <!-- Se puede pedir: el botón lleva al asistente. -->
+  <ng-container *ngIf="puede">
+    <ui-button variant="primary" size="md" (pressed)="solicitar.emit()">
+      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+      Devolver / Llegó dañado
+    </ui-button>
+    <span *ngIf="restanteTexto" class="text-xs text-gray-500">{{ restanteTexto }}</span>
+  </ng-container>
+
+  <!-- No se puede: el botón sigue ahí, apagado y diciendo por qué. -->
+  <ng-container *ngIf="!puede">
+    <ui-button variant="ghost" size="md" [disabled]="true"
+      [attr.aria-describedby]="'motivo-devolucion'">
+      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+      Devolver / Llegó dañado
+    </ui-button>
+    <span id="motivo-devolucion"
+      class="flex items-start gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-3 py-2 text-xs text-gray-600">
+      <i class="fa-solid fa-circle-info mt-0.5 text-gray-400" aria-hidden="true"></i>
+      <span>{{ motivo }}</span>
+    </span>
+  </ng-container>
+
+  <!-- Ya hay una solicitud: el camino es verla, no abrir otra. -->
+  <a *ngIf="enCurso && orderId" [routerLink]="['/orden', orderId, 'devolucion']"
+    class="text-xs text-accent underline">
+    Ver mi devolución
+  </a>
+
+  <!-- Las reglas, publicadas, se lean o no antes de comprar. -->
+  <a routerLink="/devoluciones" class="text-xs text-gray-500 underline hover:text-accent">
+    Cómo funciona una devolución
+  </a>
+</div>
+
+<p *ngIf="devolucion?.plazoTexto" class="mt-2 basis-full text-xs text-gray-500">
+  Plazos desde la entrega — {{ devolucion?.plazoTexto }}
+</p>

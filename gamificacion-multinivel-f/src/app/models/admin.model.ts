@@ -1,3 +1,5 @@
+import { EstadoDevolucionPedido } from './ayuda.model'; // paquete D · ronda 26
+
 import { UserPrivileges } from './privileges.model';
 import { AdminEmployee } from './employee.model';
 import { PortalNotification, SavePortalNotificationPayload } from './portal-notification.model';
@@ -122,6 +124,10 @@ export interface AdminOrder {
   /** Importe sin IVA; `taxBase + taxAmount === total`, al centavo. */
   taxBase?: number;
   taxAmount?: number;
+  // ── Paquete D · ronda 26 ── propuesta 24: si se puede pedir la devolución y,
+  // si no, por qué. Lo calcula el servidor con la misma regla que valida la
+  // solicitud; la pantalla no vuelve a decidirlo.
+  devolucion?: EstadoDevolucionPedido;
 }
 
 export interface AdminRefundPayload {

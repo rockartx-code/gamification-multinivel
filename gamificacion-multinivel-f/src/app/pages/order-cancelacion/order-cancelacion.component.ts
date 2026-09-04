@@ -5,11 +5,12 @@ import { finalize } from 'rxjs';
 import { AdminOrder, OrderCancelResponse } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 @Component({
   selector: 'app-order-cancelacion',
   standalone: true,
-  imports: [CommonModule, RouterLink, UiButtonComponent],
+  imports: [CommonModule, RouterLink, UiButtonComponent, UiFooterComponent],
   templateUrl: './order-cancelacion.component.html'
 })
 export class OrderCancelacionComponent implements OnInit {

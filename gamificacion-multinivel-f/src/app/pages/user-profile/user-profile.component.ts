@@ -12,6 +12,7 @@ import { AuthService } from '../../services/auth.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // WP-A · propuesta 1
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 interface OwnDocUploadState {
   file: File | null;
@@ -22,7 +23,7 @@ interface OwnDocUploadState {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiClabeFormComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiClabeFormComponent, UiFooterComponent],
   templateUrl: './user-profile.component.html'
 })
 export class UserProfileComponent implements OnInit {

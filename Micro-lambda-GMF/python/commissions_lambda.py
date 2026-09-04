@@ -1534,6 +1534,13 @@ def handle_put_config(peticion) -> dict:
         return utils._json_response(400, {"message": "config invalida"})
     entrante = (peticion.body.get("config")
                 if isinstance(peticion.body.get("config"), dict) else peticion.body)
+    # ── Paquete D · ronda 26 ── el plazo y el responsable del envío entran
+    # directo en el importe reembolsado: una política mal escrita se rechaza
+    # entera y no se guarda nada (docs/arquitectura/26 §3.4 y §4.5).
+    import ayuda_handlers
+    error_returns = ayuda_handlers.validar_returns(entrante.get("returns") if isinstance(entrante, dict) else None)
+    if error_returns:
+        return utils._json_response(400, {"message": error_returns, "code": "INVALID_RETURNS_POLICY"})
     guardada = _save_app_config(utils._merge_dict(utils._load_app_config(), entrante))
     utils._audit_event("config.app.update", peticion.headers, peticion.body, {"scope": "app"})
     return utils._json_response(200, {"config": guardada})

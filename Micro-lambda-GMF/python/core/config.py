@@ -253,10 +253,42 @@ def _default_app_config() -> dict:
             "lateOrderDays": Decimal("5"),
             "templates": {},
         },
-        # Paquete G · devoluciones. Medio y plazo del reembolso que se prometen en
-        # pantalla y en el correo ("al mismo medio de pago, en 3 a 5 días hábiles
-        # tras validar el paquete"). Texto libre para que el negocio lo ajuste.
-        "returns": {"refundMethod": "mismo medio de pago", "refundBusinessDays": "3 a 5"},
+        # ── Paquete D · ronda 26 ── devoluciones (propuesta 39).
+        # Medio y plazo del reembolso que se prometen en pantalla y en el correo
+        # ("al mismo medio de pago, en 3 a 5 días hábiles tras validar el paquete").
+        # `motivos` deja de ser la constante `order_lambda.RETURN_MOTIVOS`: los
+        # valores por omisión son idénticos a los que el código aplicaba hasta
+        # hoy (48 h / 48 h / 7 días; empresa, empresa, cliente), pero ahora el
+        # negocio los puede cambiar sin tocar código y la política se publica
+        # **antes** de comprar. Nunca es retroactiva: la solicitud ya creada
+        # conserva su `refundPolicy`.
+        # `direccionDevolucion` vacía = se toma la sucursal principal.
+        "returns": {
+            "refundMethod": "mismo medio de pago",
+            "refundBusinessDays": "3 a 5",
+            "inspeccionDiasHabiles": "2",
+            "direccionDevolucion": "",
+            "motivos": [
+                {"key": "DANADO_DEFECTUOSO", "label": "Llegó dañado o defectuoso",
+                 "limiteHoras": Decimal("48"), "responsableEnvio": "empresa", "evidencia": "completa"},
+                {"key": "ERROR_ENVIO", "label": "Me llegó algo distinto a lo que pedí",
+                 "limiteHoras": Decimal("48"), "responsableEnvio": "empresa", "evidencia": "completa"},
+                {"key": "DESISTIMIENTO", "label": "Cambié de opinión",
+                 "limiteHoras": Decimal("168"), "responsableEnvio": "cliente", "evidencia": "paquete_cerrado"},
+            ],
+        },
+        # ── Paquete D · ronda 26 ── contacto público (propuesta 8).
+        # Julio compró como invitado, le llegó el bote estrellado y tuvo que
+        # crear una cuenta y verificar su correo para encontrar el teléfono de
+        # la tienda a la que ya le había pagado $1,209. Estos cuatro datos son
+        # los que el pie de página, `#/ayuda` y `#/contacto` publican sin sesión.
+        "contacto": {
+            "email": "hola@findingu.mx",
+            "whatsapp": "+52 33 1234 5678",
+            "horario": "Lunes a viernes de 9:00 a 18:00 y sábados de 10:00 a 14:00 (hora del centro de México)",
+            "direccion": "Av. Chapultepec 480, Col. Americana, Guadalajara, Jalisco",
+            "avisoPrivacidadUrl": "",
+        },
         # Suscripción mensual (paquete H): el día elegido se crea el pedido y se manda
         # el enlace de pago por correo; no hay cobro automático. Día permitido 1–28.
         "subscriptions": {"enabled": True, "minDay": Decimal("1"), "maxDay": Decimal("28"), "reminderDaysBefore": Decimal("0")},

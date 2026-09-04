@@ -1,8 +1,37 @@
 <footer class="border-t border-olive-20 bg-sand-200">
   <div [class]="containerClass">
-    <img src="Logo-colores.svg" width="320" height="96" alt="Logo findingU" [class]="logoClass" />
+    <div class="flex flex-col items-start gap-3">
+      <img src="Logo-colores.svg" width="320" height="96" alt="Logo findingU" [class]="logoClass" />
+      <div *ngIf="contacto.horario" class="max-w-xs text-xs text-gray-600">
+        {{ contacto.horario }}
+      </div>
+      <div *ngIf="contacto.direccion" class="max-w-xs text-xs text-gray-600">
+        {{ contacto.direccion }}
+      </div>
+    </div>
+
+    <nav aria-label="Ayuda y contacto" class="flex flex-col items-start gap-2 text-xs">
+      <div class="font-semibold tracking-wide text-main uppercase">¿Necesitas ayuda?</div>
+      <a *ngIf="correoUrl" [href]="correoUrl" class="text-main hover:text-gold">
+        <i class="fa-regular fa-envelope mr-1" aria-hidden="true"></i>{{ contacto.email }}
+      </a>
+      <a *ngIf="whatsappUrl" [href]="whatsappUrl" target="_blank" rel="noopener" class="text-main hover:text-gold">
+        <i class="fa-brands fa-whatsapp mr-1" aria-hidden="true"></i>WhatsApp {{ contacto.whatsapp }}
+      </a>
+      <a routerLink="/ayuda" class="text-main hover:text-gold">Centro de ayuda</a>
+      <a routerLink="/contacto" class="text-main hover:text-gold">Contacto</a>
+    </nav>
+
+    <nav aria-label="Compras y devoluciones" class="flex flex-col items-start gap-2 text-xs">
+      <div class="font-semibold tracking-wide text-main uppercase">Tu compra</div>
+      <a routerLink="/devoluciones" class="text-main hover:text-gold">Devoluciones y reembolsos</a>
+      <a routerLink="/sucursales" class="text-main hover:text-gold">Sucursales y horarios</a>
+      <a routerLink="/facturacion" class="text-main hover:text-gold">Facturación</a>
+      <a routerLink="/modo-socio" class="text-main hover:text-gold">Cómo funciona el modo socio</a>
+    </nav>
+
     <div class="flex flex-col items-start gap-3 md:items-end">
-      <div class="text-xs text-gray-500">© 2026 finding U</div>
+      <div class="text-xs text-gray-500">© {{ anio }} finding U</div>
     </div>
   </div>
 </footer>

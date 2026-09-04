@@ -22,10 +22,13 @@ def _pedido(**extra):
             "items": [{"productId": 7, "name": "Naplus", "price": 280, "quantity": 1}], **extra}
 
 
-def test_cada_motivo_declara_su_evidencia(order_lambda):
-    assert order_lambda.RETURN_MOTIVOS["DESISTIMIENTO"]["evidencia"] == ("fotos_paquete_cerrado",)
+def test_cada_motivo_declara_su_evidencia(order_lambda, utils):
+    """Paquete D · ronda 26: la evidencia se lee de configuración
+    (`returns.motivos[].evidencia`), con los mismos valores de siempre."""
+    motivos = order_lambda._motivos_devolucion()
+    assert motivos["DESISTIMIENTO"]["evidencia"] == ("fotos_paquete_cerrado",)
     for motivo in ("DANADO_DEFECTUOSO", "ERROR_ENVIO"):
-        assert order_lambda.RETURN_MOTIVOS[motivo]["evidencia"] == ("fotos_producto", "fotos_empaque", "fotos_guia_envio")
+        assert motivos[motivo]["evidencia"] == ("fotos_producto", "fotos_empaque", "fotos_guia_envio")
     assert not hasattr(order_lambda, "RETURN_EVIDENCIA_REQUERIDA"), "la evidencia ya no es una constante global"
 
 

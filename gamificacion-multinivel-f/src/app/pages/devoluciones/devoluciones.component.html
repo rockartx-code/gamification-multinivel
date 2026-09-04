@@ -1,0 +1,116 @@
+<section class="min-h-screen overflow-x-hidden bg-sand-200 text-charcoal antialiased">
+
+  <ui-header variant="landing"
+    containerClass="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+    <ui-button size="sm" variant="ghost" [routerLink]="['/tienda']">
+      <i class="fa-solid fa-store text-gold" aria-hidden="true"></i>
+      <span class="hidden sm:inline">Tienda</span>
+    </ui-button>
+    <ui-button size="sm" variant="ghost" [routerLink]="['/ayuda']">
+      <i class="fa-solid fa-circle-question text-accent" aria-hidden="true"></i>
+      Ayuda
+    </ui-button>
+  </ui-header>
+
+  <main class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+
+    <header>
+      <p class="eyebrow">Devoluciones</p>
+      <h1 class="mt-3 text-3xl font-semibold tracking-tight text-main sm:text-4xl">
+        Si algo sale mal, esto es lo que pasa
+      </h1>
+      <p class="mt-3 max-w-2xl text-gray-600">
+        Lo escribimos completo y antes de que compres: qué puedes devolver, en qué plazo, qué fotos te
+        pedimos, quién paga el envío de regreso, a dónde mandas el paquete y cuándo te llega el dinero.
+        Estas mismas reglas son las que aplica el sistema cuando abres una devolución.
+      </p>
+    </header>
+
+    <div *ngIf="cargando" class="mt-10 text-sm text-gray-500">
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Cargando la política…
+    </div>
+
+    <!-- ── El proceso, en seis puntos ──────────────────────────────────── -->
+    <ol *ngIf="ayuda.devoluciones.pasos.length" class="mt-8 space-y-4">
+      <li *ngFor="let paso of ayuda.devoluciones.pasos; let i = index"
+        [id]="paso.clave"
+        class="scroll-mt-24 rounded-2xl border border-olive-30 bg-ivory-80 p-5">
+        <div class="flex items-start gap-4">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sand-200 text-sm font-semibold text-main">
+            {{ i + 1 }}
+          </span>
+          <div>
+            <h2 class="text-base font-semibold text-main">
+              <i [class]="icono(paso.clave)" class="mr-1 text-gold" aria-hidden="true"></i>
+              {{ paso.titulo }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-700">{{ paso.texto }}</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <!-- ── Tabla de motivos ────────────────────────────────────────────── -->
+    <section *ngIf="ayuda.devoluciones.motivos.length" class="mt-12">
+      <h2 class="text-xl font-semibold text-main">Los motivos, uno por uno</h2>
+      <p class="mt-2 text-sm text-gray-600">
+        Al abrir una devolución eliges uno de estos motivos. De él dependen el plazo, las fotos y quién
+        paga el envío de regreso.
+      </p>
+      <div class="mt-4 overflow-x-auto">
+        <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+          <thead>
+            <tr class="border-b border-olive-30 text-xs tracking-wide text-gray-600 uppercase">
+              <th scope="col" class="py-2 pr-4">Motivo</th>
+              <th scope="col" class="py-2 pr-4">Plazo desde la entrega</th>
+              <th scope="col" class="py-2 pr-4">Qué te pedimos</th>
+              <th scope="col" class="py-2">Envío de regreso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let motivo of ayuda.devoluciones.motivos" class="border-b border-olive-20 align-top">
+              <th scope="row" class="py-3 pr-4 font-medium text-main">{{ motivo.label }}</th>
+              <td class="py-3 pr-4 text-gray-700">{{ motivo.plazoTexto }}</td>
+              <td class="py-3 pr-4 text-gray-700">{{ motivo.evidenciaTexto }}</td>
+              <td class="py-3 text-gray-700">
+                <span [class.text-accent]="motivo.responsableEnvio === 'empresa'">
+                  {{ motivo.responsableEnvio === 'empresa' ? 'Lo pagamos nosotros' : 'Lo pagas tú' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Cómo se abre ────────────────────────────────────────────────── -->
+    <section class="mt-12 rounded-2xl border border-olive-30 bg-ivory-80 p-5">
+      <h2 class="text-xl font-semibold text-main">Cómo abro una devolución</h2>
+      <ol class="mt-3 space-y-2 text-sm text-gray-700">
+        <li>1. Abre tu pedido con el enlace de seguimiento que viene en tu correo (funciona sin cuenta).</li>
+        <li>2. Pulsa <strong>Devolver / Llegó dañado</strong>. Si el botón está apagado, ahí mismo dice por qué.</li>
+        <li>3. Elige qué productos devuelves y cuántas piezas de cada uno: no tienes que regresar todo.</li>
+        <li>4. Sube las fotos que pide tu motivo y confirma. Te damos un folio y te llega un correo con estos mismos pasos.</li>
+        <li>5. Manda el paquete con el folio escrito y avísanos; te escribimos al revisarlo.</li>
+      </ol>
+      <p *ngIf="ayuda.devoluciones.direccionDevolucion" class="mt-4 text-sm text-gray-700">
+        <i class="fa-solid fa-location-dot text-gold" aria-hidden="true"></i>
+        <strong>Dirección de devolución:</strong> {{ ayuda.devoluciones.direccionDevolucion }}
+      </p>
+    </section>
+
+    <!-- ── Contacto ────────────────────────────────────────────────────── -->
+    <section class="mt-8 text-sm text-gray-700">
+      <h2 class="text-base font-semibold text-main">¿Tu caso no encaja en ninguno?</h2>
+      <p class="mt-2">
+        Escríbenos con tu número de pedido y lo vemos contigo.
+        <a *ngIf="whatsappUrl" [href]="whatsappUrl" target="_blank" rel="noopener" class="text-accent underline">WhatsApp</a>
+        <span *ngIf="whatsappUrl && correoUrl"> · </span>
+        <a *ngIf="correoUrl" [href]="correoUrl" class="text-accent underline">{{ ayuda.contacto.email }}</a>
+      </p>
+    </section>
+
+  </main>
+
+  <ui-footer />
+</section>
