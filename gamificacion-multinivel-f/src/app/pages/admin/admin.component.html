@@ -120,24 +120,18 @@
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders' && canAccessView('orders')">
-            <ui-button size="sm" class="tabbtn" *ngFor="let tab of [
-                { status: 'pending', label: 'Pendiente' },
-                { status: 'paid', label: 'Pagado' },
-                { status: 'shipped', label: 'Enviado' },
-                { status: 'delivered', label: 'Entregado' },
-                { status: 'cancelled', label: 'Cancelado' },
-                { status: 'refunded', label: 'Reembolsado' },
-                { status: 'en_devolucion', label: 'Por devolver' },
-                { status: 'devuelto_validado', label: 'Devuelto' },
-                { status: 'devolucion_rechazada', label: 'Dev. rechazada' }
-              ]"
-              [variant]="currentOrderStatus === tab.status ? 'primary' : 'ghost'"
-              (pressed)="setOrderStatus($any(tab.status))">
+            <!-- La tira de pestañas vive en el componente (`orderTabs`), no aquí:
+                 escrita como literal se recreaba en cada pasada de detección y el
+                 clic se perdía antes de llegar al botón "Ver" de la fila. -->
+            <ui-button size="sm" class="tabbtn" *ngFor="let tab of orderTabs; trackBy: trackOrderTab"
+              [variant]="currentOrderTab === tab.key ? 'primary' : 'ghost'"
+              [ariaLabel]="'Mostrar los pedidos en ' + tab.label"
+              (pressed)="setOrderTab(tab)">
               {{ tab.label }}
-              <span *ngIf="orderCountByStatus($any(tab.status)) > 0"
+              <span *ngIf="orderTabCount(tab) > 0"
                 class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full px-1.5 py-0.5 text-micro font-bold leading-none"
-                [ngClass]="currentOrderStatus === tab.status ? 'bg-white/40 text-ink' : 'bg-gold-20 text-on-gold'">
-                {{ orderCountByStatus($any(tab.status)) }}
+                [ngClass]="currentOrderTab === tab.key ? 'bg-white/40 text-ink' : 'bg-gold-20 text-on-gold'">
+                {{ orderTabCount(tab) }}
               </span>
             </ui-button>
             <ui-button size="sm" variant="secondary" routerLink="/admin/despacho" title="Despachar varios pedidos pagados a la vez, con la lista de surtido calculada"><i class="fa-solid fa-boxes-packing" aria-hidden="true"></i> Despacho en bloque</ui-button><!-- WP-D -->
@@ -267,7 +261,9 @@
                           </span>
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true"
+                            [ariaLabel]="(expandedOrderDetailId === order.id ? 'Ocultar el pedido de ' : 'Ver el pedido de ') + order.customer"
+                            (pressed)="toggleOrderDetail(order.id)">
                             {{ expandedOrderDetailId === order.id ? 'Ocultar detalle' : 'Ver detalle' }}
                           </ui-button>
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (click)="advanceOrder(order)">
@@ -337,7 +333,9 @@
                         </div>
                         <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
                         <div>
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" (pressed)="toggleOrderDetail(order.id)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open"
+                            [ariaLabel]="(expandedOrderDetailId === order.id ? 'Ocultar el pedido de ' : 'Ver el pedido de ') + order.customer"
+                            (pressed)="toggleOrderDetail(order.id)">
                             {{ expandedOrderDetailId === order.id ? 'Ocultar' : 'Ver' }}
                           </ui-button>
                         </div>

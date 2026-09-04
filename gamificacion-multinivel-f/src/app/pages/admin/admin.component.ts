@@ -355,10 +355,43 @@ export class AdminComponent implements OnInit {
     { value: 'delivered', label: 'Entregado' },
     { value: 'cancelled', label: 'Cancelado' },
     { value: 'refunded', label: 'Reembolsado' },
-    { value: 'en_devolucion', label: 'Por devolver' },
-    { value: 'devuelto_validado', label: 'Devuelto' },
-    { value: 'devolucion_rechazada', label: 'Dev. rechazada' }
+    { value: 'en_devolucion', label: 'Devolución en curso' },
+    { value: 'devuelto_validado', label: 'Devolución validada' },
+    { value: 'devolucion_rechazada', label: 'Devolución rechazada' }
   ];
+
+  /**
+   * Paquete E · ronda 26 · La tira de pestañas de Pedidos, fuera de la plantilla.
+   *
+   * Estaba escrita como literal dentro de un `*ngFor`: la aplicación es zoneless
+   * y cada escucha agenda una pasada de detección, así que el arreglo se creaba
+   * de nuevo y sus nodos se recreaban en cada pasada — el clic salía del botón
+   * antes de llegar a `toggleOrderDetail()`. Ocho reproducciones entre dos
+   * empleados. Ahora es un campo `readonly` con `trackBy` por clave.
+   *
+   * "Factura solicitada" es la bandeja de la propuesta 20: filtra en memoria
+   * sobre los pedidos ya cargados (nunca con el filtro del servidor, que
+   * rompería la lógica de secciones cargadas de `admin-control.service`).
+   */
+  readonly orderTabs: ReadonlyArray<{ key: string; status?: AdminOrder['status']; label: string }> = [
+    { key: 'pending', status: 'pending', label: 'Pendiente de pago' },
+    { key: 'paid', status: 'paid', label: 'Pagado' },
+    { key: 'shipped', status: 'shipped', label: 'Enviado' },
+    { key: 'delivered', status: 'delivered', label: 'Entregado' },
+    { key: 'factura_solicitada', label: 'Factura solicitada' },
+    { key: 'cancelled', status: 'cancelled', label: 'Cancelado' },
+    { key: 'refunded', status: 'refunded', label: 'Reembolsado' },
+    { key: 'en_devolucion', status: 'en_devolucion', label: 'Devolución en curso' },
+    { key: 'devuelto_validado', status: 'devuelto_validado', label: 'Devolución validada' },
+    { key: 'devolucion_rechazada', status: 'devolucion_rechazada', label: 'Devolución rechazada' }
+  ];
+
+  /** Pestaña encendida: una clave de estado o la bandeja de facturas. */
+  currentOrderTab = 'pending';
+
+  trackOrderTab(_index: number, tab: { key: string }): string {
+    return tab.key;
+  }
   readonly rewardCutRuleOptions: Array<ExplainedSelectOption<string>> = [
     {
       value: 'dynamic_compression',
@@ -966,6 +999,7 @@ export class AdminComponent implements OnInit {
       const estado = params.get('estado');
       if (estado) {
         this.currentOrderStatus = estado as AdminOrder['status'];
+        this.currentOrderTab = estado;
         this.orderStatusFijadoPorUrl = true;
       }
       const mes = params.get('mes');
@@ -979,6 +1013,7 @@ export class AdminComponent implements OnInit {
       if (idPedido) {
         this.expandedOrderDetailId = idPedido;
         this.orderDeepLinkId = idPedido;
+        this.abrirPedidoDeUrl();
       }
     });
     // Carga mínima: solo warnings (ya cacheados si se viene de otra pantalla).
@@ -1089,6 +1124,28 @@ export class AdminComponent implements OnInit {
   private syncInitialOrderDeps(): void {
     this.ensureCurrentViewAllowed();
     this.selectPublicGeneralCustomer();
+    this.abrirPedidoDeUrl();
+  }
+
+  /**
+   * `#/admin/pedido/:idPedido`: el pedido se abre solo, en la pestaña de su
+   * estado, sin que nadie tenga que adivinar en cuál de las diez está. Antes el
+   * detalle era un acordeón dentro de una pantalla sin dirección: no había
+   * enlace que mandarle al dueño ni forma de volver a él.
+   */
+  private abrirPedidoDeUrl(): void {
+    if (!this.orderDeepLinkId) {
+      return;
+    }
+    const pedido = this.orders.find((o) => o.id === this.orderDeepLinkId);
+    if (!pedido) {
+      return;
+    }
+    this.currentOrderStatus = pedido.status;
+    this.currentOrderTab = pedido.status;
+    this.orderStatusFijadoPorUrl = true;
+    this.orderSearch = pedido.id;
+    this.orderPage = 0;
   }
 
   get orders(): AdminOrder[] {
@@ -1695,7 +1752,9 @@ export class AdminComponent implements OnInit {
   }
 
   get filteredOrdersStable(): AdminOrder[] {
-    let byStatus = this.orders.filter((o) => o.status === this.currentOrderStatus);
+    let byStatus = this.currentOrderTab === 'factura_solicitada'
+      ? this.orders.filter((o) => o.invoiceStatus === 'solicitada')
+      : this.orders.filter((o) => o.status === this.currentOrderStatus);
     // Stock filter (applies to all statuses when a stock is selected)
     if (this.orderStockFilter) {
       byStatus = byStatus.filter(
@@ -3534,12 +3593,37 @@ export class AdminComponent implements OnInit {
 
   setOrderStatus(status: AdminOrder['status']): void {
     this.currentOrderStatus = status;
+    this.currentOrderTab = status;
     this.orderPage = 0;
-    this.orderSearch = '';
+    // El buscador YA NO se borra al cambiar de pestaña: se escribía "Ximena",
+    // se cambiaba de estado para encontrarla y la búsqueda desaparecía sola.
     // Si no hay carga inicial completa, cargar el status específico
     if (!this.adminControl.hasLoadedOrders()) {
       this.adminControl.loadOrders(status).subscribe();
     }
+  }
+
+  /** Cambia de pestaña en Pedidos: un estado o la bandeja de facturas (propuesta 20). */
+  setOrderTab(tab: { key: string; status?: AdminOrder['status'] }): void {
+    this.orderStatusFijadoPorUrl = true;
+    if (tab.status) {
+      this.setOrderStatus(tab.status);
+      return;
+    }
+    this.currentOrderTab = tab.key;
+    this.orderPage = 0;
+  }
+
+  /**
+   * Contador de cada pestaña. La bandeja de facturas cuenta las solicitadas
+   * sobre los pedidos ya cargados: dos del 4 de marzo con 37 días encima, que
+   * Alma armó abriendo pedido por pedido.
+   */
+  orderTabCount(tab: { key: string; status?: AdminOrder['status'] }): number {
+    if (tab.status) {
+      return this.orderCountByStatus(tab.status);
+    }
+    return this.orders.filter((order) => order.invoiceStatus === 'solicitada').length;
   }
 
   pageRange(totalPages: number, current: number): number[] {
