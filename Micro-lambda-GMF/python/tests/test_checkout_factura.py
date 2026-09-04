@@ -144,3 +144,56 @@ def test_el_rfc_sigue_la_expresion_del_sat(modulos):
         assert ch.validar_datos_fiscales({**DATOS, "rfc": bueno.lower()})[1] == "", bueno
     for malo in ("GOMR85010AB1", "12345678901234", "GOMR-850101-AB1", ""):
         assert ch.validar_datos_fiscales({**DATOS, "rfc": malo})[1], malo
+
+
+# --- Propuesta 20 · la bandeja de facturas (contrato, paquete G) ---------------
+#
+# *"Dos facturas del 4 de marzo con 37 días; Alma las armó abriendo pedido por
+# pedido"*. El dictamen dice que el backend **ya está**: el filtro
+# `GET /orders?invoiceStatus=solicitada` responde, la insignia se pinta en la
+# fila y el bloque para marcarla emitida existe. Lo que falta es la pestaña y su
+# contador, y los pinta E en su región de Pedidos (§4.19).
+#
+# Estas pruebas fijan el contrato del que depende esa pestaña, que es lo único
+# que G pone en la propuesta 20. La regla dura: E filtra **en memoria** sobre
+# los pedidos ya cargados, nunca con el filtro del servidor, porque eso
+# rompería la lógica de `loadedSections` de `admin-control.service.ts`.
+
+def test_el_listado_completo_ya_trae_lo_que_la_pestana_necesita_para_filtrar_en_memoria(modulos, utils):
+    """Sin esto, la pestaña tendría que volver a pedir al servidor."""
+    order_lambda, _ = modulos
+    _producto(utils)
+    _llamar(order_lambda, "POST", "/orders/create", _pedido(invoiceRequested=True, invoiceData=DATOS))
+    _llamar(order_lambda, "POST", "/orders/create", _pedido(invoiceRequested=True, invoiceData=DATOS))
+    _llamar(order_lambda, "POST", "/orders/create", _pedido())
+
+    estado, lista = _llamar(order_lambda, "GET", "/orders/find", headers=ADMIN)
+    assert estado == 200 and len(lista["orders"]) == 3
+    # Cada fila trae su estado de factura: se puede contar sin pedir nada más.
+    solicitadas = [o for o in lista["orders"] if o.get("invoiceStatus") == "solicitada"]
+    assert len(solicitadas) == 2, "el contador de la pestaña sale de aquí"
+    for fila in solicitadas:
+        assert fila["invoiceData"]["rfc"] == DATOS["rfc"]
+        assert fila["invoiceData"]["razonSocial"] == DATOS["razonSocial"]
+        assert fila.get("invoiceRequestedAt"), "sin la fecha no se puede decir «37 días»"
+    # Y ninguna fila se queda sin estado: `no_aplica` también viaja.
+    assert all(o.get("invoiceStatus") for o in lista["orders"])
+
+
+def test_marcar_emitida_saca_el_pedido_de_la_bandeja_sin_recargar_del_servidor(modulos, utils, monkeypatch):
+    """El contador baja de 2 a 1 con lo que la propia respuesta devuelve."""
+    order_lambda, _ = modulos
+    _producto(utils)
+    monkeypatch.setattr(utils, "_send_ses_email", lambda *a, **k: None)
+    estado, d = _llamar(order_lambda, "POST", "/orders/create", _pedido(invoiceRequested=True, invoiceData=DATOS))
+    oid = d["order"]["orderId"]
+    _llamar(order_lambda, "POST", "/orders/create", _pedido(invoiceRequested=True, invoiceData=DATOS))
+
+    estado, emitida = _llamar(order_lambda, "POST", f"/orders/{oid}/factura/emitida",
+                              {"folioFiscal": "A1B2-C3"}, headers=ADMIN)
+    assert estado == 200, emitida
+    assert emitida["invoiceStatus"] == "emitida" and emitida["invoiceFolio"] == "A1B2-C3"
+
+    _, lista = _llamar(order_lambda, "GET", "/orders/find", headers=ADMIN)
+    pendientes = [o for o in lista["orders"] if o.get("invoiceStatus") == "solicitada"]
+    assert len(pendientes) == 1 and pendientes[0]["orderId"] != oid
