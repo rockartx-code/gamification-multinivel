@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject, type Signal } from '@angular/core';
 import { ConciliacionService } from '../../services/conciliacion.service'; // WP-H
-import { ConciliacionCorrida, ConciliacionResultado } from '../../models/suscripcion.model'; // WP-H
+import { ConciliacionCorrida, ConciliacionPayload, ConciliacionResultado } from '../../models/suscripcion.model'; // WP-H
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -2306,6 +2306,49 @@ export class AdminComponent implements OnInit {
   conciliacionUltima: ConciliacionCorrida | null = null;
   conciliacionError = '';
 
+  // ── Paquete G · ronda 26 · propuesta 26: la conciliación con rango ─────────
+  // El endpoint acepta hasta 90 días y la pantalla la dejaba clavada en 72 h:
+  // a Renata le encargaron revisar **todo marzo** y obtuvo "Revisados 0".
+  readonly conciliacionRangos: Array<{ value: string; label: string; hours: number }> = [
+    { value: '72', label: 'Últimas 72 horas', hours: 72 },
+    { value: '168', label: 'Últimos 7 días', hours: 168 },
+    { value: '720', label: 'Últimos 30 días', hours: 720 },
+    { value: '2160', label: 'Últimos 90 días (lo máximo)', hours: 2160 },
+    { value: 'desde', label: 'Desde una fecha…', hours: 0 }
+  ];
+  conciliacionRango = '72';
+  /** Fecha de inicio en AAAA-MM-DD; la traduce a horas **el servidor**. */
+  conciliacionDesde = '';
+  /** Cada pedido revisado dispara una consulta a MercadoPago: se revisa por lotes. */
+  conciliacionTope = 50;
+
+  get conciliacionRangoEsFecha(): boolean {
+    return this.conciliacionRango === 'desde';
+  }
+
+  get conciliacionRangoTexto(): string {
+    const elegido = this.conciliacionRangos.find((r) => r.value === this.conciliacionRango);
+    if (this.conciliacionRangoEsFecha) {
+      return this.conciliacionDesde ? `desde el ${this.conciliacionDesde}` : 'desde la fecha que elijas';
+    }
+    return (elegido?.label ?? 'las últimas 72 horas').toLowerCase();
+  }
+
+  get conciliacionBloqueada(): string {
+    if (this.isConciliando) {
+      return 'Consultando a MercadoPago…';
+    }
+    if (this.conciliacionRangoEsFecha && !this.conciliacionDesde) {
+      return 'Elige desde qué fecha quieres revisar';
+    }
+    return '';
+  }
+
+  cambiarRangoConciliacion(value: string): void {
+    this.conciliacionRango = value || '72';
+    this.requestViewUpdate();
+  }
+
   abrirConciliacion(): void {
     this.conciliacionResultado = null;
     this.conciliacionError = '';
@@ -2321,18 +2364,24 @@ export class AdminComponent implements OnInit {
   }
 
   conciliarPagos(): void {
-    if (this.isConciliando) {
+    if (this.isConciliando || this.conciliacionBloqueada) {
       return;
     }
     this.isConciliando = true;
     this.conciliacionError = '';
-    this.conciliacion.conciliar({}).pipe(
+    const rango = this.conciliacionRangos.find((r) => r.value === this.conciliacionRango);
+    const payload: ConciliacionPayload = this.conciliacionRangoEsFecha
+      ? { since: this.conciliacionDesde, limit: this.conciliacionTope }
+      : { hours: rango?.hours ?? 72, limit: this.conciliacionTope };
+    this.conciliacion.conciliar(payload).pipe(
       finalize(() => { this.isConciliando = false; this.requestViewUpdate(); })
     ).subscribe({
       next: (resultado) => {
-        // Lo que se muestra es lo que el servidor hizo, no lo que se pidió.
+        // Lo que se muestra es lo que el servidor hizo, no lo que se pidió; y la
+        // hora es la suya: escribirle encima `new Date()` dejaba la corrida
+        // fechada en 2026-09 con el mundo en 2027-04.
         this.conciliacionResultado = resultado;
-        this.conciliacionUltima = { ...resultado, finishedAt: new Date().toISOString() };
+        this.conciliacionUltima = { ...resultado };
         if (resultado.credited.length) {
           this.adminControl.loadOrders().subscribe();
         }
@@ -2351,7 +2400,8 @@ export class AdminComponent implements OnInit {
   resumenConciliacion(r: ConciliacionResultado): string {
     const folios = r.credited.map((c) => c.orderId).join(', ');
     const base = `Revisados ${r.checked} · Acreditados ${r.credited.length}${folios ? ` (${folios})` : ''} · Sin pago ${r.unpaid.length}`;
-    return r.errors.length ? `${base} · Sin respuesta ${r.errors.length}` : base;
+    const conErrores = r.errors.length ? `${base} · Sin respuesta ${r.errors.length}` : base;
+    return r.pending ? `${conErrores} · Faltan ${r.pending} por revisar` : conErrores;
   }
 
   downloadCustomersReport(): void {
