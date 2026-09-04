@@ -624,7 +624,7 @@
                       <div>Cliente</div><div>Estatus</div><div>Modo</div><div>Descuento</div><div>Mes anterior</div><div>Última compra</div><div>Acción</div>
                     </div>
                     <div *ngIf="!filteredCustomers.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados para "{{ customerSearch }}".</div>
-                    <div *ngFor="let customer of pagedCustomers"
+                    <div *ngFor="let customer of pagedCustomers; trackBy: trackFila"
                       class="grid grid-cols-2 gap-x-3 gap-y-1 border-b border-olive-20 px-4 py-3 last:border-b-0 transition md:grid-cols-[1.1fr_.8fr_.6fr_.8fr_1fr_1fr_.8fr] md:items-center md:gap-y-0"
                       [class.bg-gold-12]="selectedCustomer?.id === customer.id"
                       [class.shadow-inset-accent]="selectedCustomer?.id === customer.id">
@@ -1153,7 +1153,7 @@
                   </div>
 
                   <div class="divide-y divide-olive-20">
-                    <div *ngFor="let emp of pagedEmployees" class="flex items-center justify-between p-4">
+                    <div *ngFor="let emp of pagedEmployees; trackBy: trackFila" class="flex items-center justify-between p-4">
                       <div>
                         <div class="text-sm font-semibold text-main">{{ emp.name }}</div>
                         <div class="text-xs text-gray-500">{{ emp.email }}</div>
@@ -1296,7 +1296,7 @@
                       <div>Producto</div><div>Precio</div><div>Estado</div><div>Acción</div>
                     </div>
                     <div *ngIf="!filteredProducts.length" class="px-4 py-3 text-xs text-gray-500">Sin resultados.</div>
-                    <div *ngFor="let product of pagedProducts" class="grid grid-cols-2 gap-x-3 gap-y-1 border-b border-olive-20 px-4 py-3 last:border-b-0 md:grid-cols-[1.4fr_.7fr_.7fr_1.6fr] md:items-center md:gap-y-0">
+                    <div *ngFor="let product of pagedProducts; trackBy: trackFila" class="grid grid-cols-2 gap-x-3 gap-y-1 border-b border-olive-20 px-4 py-3 last:border-b-0 md:grid-cols-[1.4fr_.7fr_.7fr_1.6fr] md:items-center md:gap-y-0">
                       <div class="col-span-2 md:col-span-1">
                         <div class="text-sm font-semibold text-main md:font-normal">{{ product.name }}</div>
                         <div class="mt-1 flex flex-wrap gap-1">
@@ -2839,18 +2839,14 @@
 
             <!-- Tabs de reporte -->
             <div class="flex flex-wrap gap-1 rounded-2xl border border-olive-30 bg-ivory-70 p-1">
-              <button *ngFor="let tab of [
-                {id:'resumen',label:'Resumen'},
-                {id:'pedidos',label:'Pedidos'},
-                {id:'clientes',label:'Clientes'},
-                {id:'productos',label:'Productos'},
-                {id:'stocks',label:'Stocks'}
-              ]"
+              <!-- Guarda 14: la lista vive en el componente (`statsReportTabs`); un
+                   literal aquí recreaba los cinco botones en cada ciclo. -->
+              <button *ngFor="let tab of statsReportTabs; trackBy: trackStatsReportTab"
                 class="rounded-xl px-4 py-1.5 text-sm font-medium transition"
                 [ngClass]="statsReportTab === tab.id
                   ? 'bg-main text-ivory-80 shadow-sm'
                   : 'text-gray-600 hover:bg-ivory-80'"
-                (click)="statsReportTab = $any(tab.id)">
+                (click)="statsReportTab = tab.id">
                 {{ tab.label }}
               </button>
             </div>
@@ -2907,7 +2903,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr *ngFor="let row of reportTopCustomersByOrders; let i = index" class="border-b border-olive-10">
+                        <tr *ngFor="let row of reportTopCustomersByOrders; let i = index; trackBy: trackFila" class="border-b border-olive-10">
                           <td class="py-1.5 pr-4 text-gray-400">{{ i + 1 }}</td>
                           <td class="py-1.5 pr-4 font-medium text-main">{{ row.name }}</td>
                           <td class="py-1.5 pr-4 text-right text-gray-600">{{ row.count }}</td>
@@ -2976,7 +2972,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let o of reportOrders" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                      <tr *ngFor="let o of reportOrders; trackBy: trackFila" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-3 font-mono text-mini text-gray-500">{{ o.id }}</td>
                         <td class="py-1.5 pr-3 text-mini text-gray-500">{{ formatDateTime(o.createdAt) }}</td>
                         <td class="py-1.5 pr-3 font-medium text-main">{{ o.customer || 'Público General' }}</td>
@@ -3028,7 +3024,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let c of reportActiveCustomers" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                      <tr *ngFor="let c of reportActiveCustomers; trackBy: trackFila" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-3 font-medium text-main">{{ c.name }}</td>
                         <td class="py-1.5 pr-3 text-mini text-gray-500">{{ c.email }}</td>
                         <td class="py-1.5 pr-3 text-mini">{{ c.level }}</td>
@@ -3081,7 +3077,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let p of reportProductSales; let i = index" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                      <tr *ngFor="let p of reportProductSales; let i = index; trackBy: trackFila" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-3 text-gray-400">{{ i + 1 }}</td>
                         <td class="py-1.5 pr-3 font-medium text-main">{{ p.name }}</td>
                         <td class="py-1.5 pr-3 text-mini text-gray-500">{{ p.sku }}</td>
@@ -3121,7 +3117,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let row of reportStockSummary" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                      <tr *ngFor="let row of reportStockSummary; trackBy: trackFila" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-4 font-medium text-main">{{ row.name }}</td>
                         <td class="py-1.5 pr-4 text-mini text-gray-500">{{ row.location }}</td>
                         <td class="py-1.5 pr-4 text-right text-emerald-600">+{{ row.entries }}</td>
@@ -3148,7 +3144,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let row of reportStockInventoryLines" class="border-b border-olive-10 hover:bg-ivory-70/50">
+                      <tr *ngFor="let row of reportStockInventoryLines; trackBy: trackFila" class="border-b border-olive-10 hover:bg-ivory-70/50">
                         <td class="py-1.5 pr-4 text-mini text-gray-600">{{ row.stock }}</td>
                         <td class="py-1.5 pr-4 font-medium text-main">{{ row.product }}</td>
                         <td class="py-1.5 text-right"
@@ -3219,7 +3215,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let entry of sortedHonorEntries; let i = index"
+                    <tr *ngFor="let entry of sortedHonorEntries; let i = index; trackBy: trackFila"
                       class="border-b border-olive-10 transition hover:bg-ivory-70/60"
                       [class.bg-gold-12]="honorBoardSort !== 'alpha' && i < 3">
                       <td class="px-4 py-3 font-extrabold"
@@ -3386,7 +3382,7 @@
                 </div>
 
                 <div class="mt-4 space-y-3" *ngIf="filteredNotifications.length">
-                  <div *ngFor="let notification of pagedNotifications" class="rounded-2xl border border-olive-30 bg-ivory-70 p-4">
+                  <div *ngFor="let notification of pagedNotifications; trackBy: trackFila" class="rounded-2xl border border-olive-30 bg-ivory-70 p-4">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
@@ -3545,7 +3541,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr *ngFor="let c of coupons" class="border-b border-olive-10 last:border-none">
+                      <tr *ngFor="let c of coupons; trackBy: trackFila" class="border-b border-olive-10 last:border-none">
                         <td class="py-2 font-semibold text-main">{{ c.code }}</td>
                         <td class="py-2">{{ c.type === 'percent' ? (c.value + '%') : formatMoney(c.value) }}</td>
                         <td class="py-2 text-gray-600">{{ c.minSubtotal ? formatMoney(c.minSubtotal) : '—' }}</td>

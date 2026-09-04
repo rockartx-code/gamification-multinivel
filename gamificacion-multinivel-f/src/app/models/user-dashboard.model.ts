@@ -277,7 +277,11 @@ export interface DashboardData {
 
 export interface CommissionRequestPayload {
   customerId: number;
-  clabe: string;
+  /**
+   * Opcional desde la propuesta 1 (guarda 11): la CLABE se captura en un solo
+   * formulario (`ui-clabe-form`) y el depósito va a la que está en la ficha.
+   */
+  clabe?: string;
   monthKey?: string;
 }
 

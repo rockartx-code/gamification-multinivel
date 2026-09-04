@@ -218,7 +218,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private lastActiveGoalKey = '';
   private lastActiveGoalBase = -1;
   private lastActiveGoalCart = -1;
-  commissionClabe = '';
   commissionUploadName = '';
   showCommissionLedger = false;
   showBlockedTooltip = false;
@@ -1906,7 +1905,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   openCommissionModal(): void {
-    this.commissionClabe = '';
     this.isCommissionModalOpen = true;
   }
 
@@ -2050,16 +2048,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isCommissionSubmitting || !this.currentUser?.userId) {
       return;
     }
-    const clabe = this.commissionClabe.trim();
-    if (!clabe && !this.commissionSummary?.clabeOnFile) {
-      this.showToast('Ingresa tu CLABE interbancaria.');
+    // WP-A · propuesta 1 (guarda 11): la CLABE se captura en un solo
+    // formulario (`ui-clabe-form`). Aquí se pide el depósito a la que ya está
+    // registrada; sin ella no hay a dónde depositar y se dice dónde ponerla.
+    if (!this.commissionSummary?.clabeOnFile) {
+      this.showToast('Registra tu CLABE en "CLABE interbancaria" para pedir el depósito.');
       return;
     }
     this.isCommissionSubmitting = true;
     this.api
       .requestCommissionPayout({
-        customerId: Number(this.currentUser.userId),
-        clabe
+        customerId: Number(this.currentUser.userId)
       })
       .pipe(
         finalize(() => {

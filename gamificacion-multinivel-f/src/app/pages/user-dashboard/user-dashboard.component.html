@@ -1575,18 +1575,25 @@
     <div class="flex items-start justify-between">
       <div>
         <div class="text-xs font-semibold text-gray-600">Solicitud de pago</div>
-        <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
-        <p class="mt-2 text-sm text-muted">Usaremos esta CLABE para depositar tus comisiones.</p>
+        <h3 class="mt-2 text-xl font-extrabold">Solicitar el depósito</h3>
+        <p class="mt-2 text-sm text-muted">Depositamos a la CLABE que tienes registrada en tu perfil.</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar solicitud de CLABE"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar solicitud de pago"
         (pressed)="closeCommissionModal()">
       </ui-button>
     </div>
 
     <div class="mt-6 grid gap-3">
-      <ui-form-field kind="input" type="text" name="commissionClabe" [(ngModel)]="commissionClabe"
-        label="CLABE (18 dígitos)" placeholder="000000000000000000" wrapperClass="block"
-        inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong"></ui-form-field>
+      <!-- WP-A · propuesta 1 (guarda 11): la CLABE se captura en un solo sitio,
+           `ui-clabe-form`. Aquí solo se dice a dónde va el depósito. -->
+      <div *ngIf="commissionSummary?.clabeOnFile"
+        class="rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main">
+        Se deposita a tu CLABE registrada, la que termina en {{ commissionSummary?.clabeLast4 }}.
+      </div>
+      <div *ngIf="!commissionSummary?.clabeOnFile"
+        class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Todavía no tienes CLABE registrada. Regístrala arriba, en "CLABE interbancaria", y vuelve a pedir el depósito.
+      </div>
 
       <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
         <ui-button type="button" variant="ghost" size="md" (pressed)="closeCommissionModal()">

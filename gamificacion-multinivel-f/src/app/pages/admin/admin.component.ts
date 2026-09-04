@@ -99,6 +99,9 @@ import { PlanSocioService } from '../../services/plan-socio.service'; // paquete
  * la vista que monta (si vive dentro del caparazón) y el privilegio que exige.
  * Se escribe una sola vez y la reusan la barra lateral y la barra del móvil.
  */
+/** Pestañas del bloque de reportes (guarda 14: la lista vive en el componente). */
+type StatsReportTabId = 'resumen' | 'pedidos' | 'clientes' | 'productos' | 'stocks';
+
 type ConfirmacionAdmin = {
   title: string;
   effect: string;
@@ -874,7 +877,47 @@ export class AdminComponent implements OnInit {
 
   // --- STATS / REPORTES ---
   statsReportMonth = '';
-  statsReportTab: 'resumen' | 'pedidos' | 'clientes' | 'productos' | 'stocks' = 'resumen';
+  statsReportTab: StatsReportTabId = 'resumen';
+  /**
+   * Guarda 14 (informe 27 §4): la tira de pestañas de reportes vive aquí, no
+   * como literal dentro del `*ngFor` de la plantilla. Un literal escrito en la
+   * plantilla se vuelve a crear en **cada** ciclo de detección de cambios, así
+   * que Angular destruía y rehacía los cinco botones sin parar: es el sustrato
+   * del botón que se pulsa y no abre.
+   */
+  readonly statsReportTabs: ReadonlyArray<{ id: StatsReportTabId; label: string }> = [
+    { id: 'resumen', label: 'Resumen' },
+    { id: 'pedidos', label: 'Pedidos' },
+    { id: 'clientes', label: 'Clientes' },
+    { id: 'productos', label: 'Productos' },
+    { id: 'stocks', label: 'Stocks' }
+  ];
+
+  trackStatsReportTab(_index: number, tab: { id: StatsReportTabId }): string {
+    return tab.id;
+  }
+
+  /**
+   * Guarda 14: identidad estable de una fila de tabla. Sin `trackBy`, cambiar
+   * una celda obliga a Angular a rehacer la tabla entera (y con ella el botón
+   * que alguien tenía debajo del dedo). Se compone con los campos que
+   * identifican la fila; si no hay ninguno, la posición, que al menos no
+   * cambia mientras la lista no cambie.
+   */
+  trackFila(index: number, fila: unknown): string {
+    const f = (fila ?? {}) as Record<string, unknown>;
+    for (const campo of ['id', 'customerId', 'orderId', 'productId', 'sku', 'code', 'key', 'email', 'name']) {
+      const valor = f[campo];
+      if (valor) {
+        return `${campo}:${String(valor)}`;
+      }
+    }
+    // Renglones de informe que no traen identidad propia (sucursal + producto).
+    if (f['stock'] && f['product']) {
+      return `${String(f['stock'])}·${String(f['product'])}`;
+    }
+    return `#${index}`;
+  }
   statsData: import('../../models/admin.model').MonthlyStatsResult | null = null;
   isLoadingStats = false;
 
@@ -1328,11 +1371,17 @@ export class AdminComponent implements OnInit {
   /** Filtro "fríos": sin compra en 30+ días o nunca. Antes se cruzaban siete pestañas de Pedidos a mano. */
   customersColdOnly = false;
 
+  /**
+   * Guarda 13 (informe 27 §4): los días se cuentan con el reloj del servidor,
+   * como la antigüedad de los pedidos. Con `Date.now()` el navegador de Alma
+   * (2026-09) restaba contra compras del mundo simulado (2027-04) y toda la
+   * lista salía en "0 días", que se lee como "nadie compra".
+   */
   daysSinceLastPurchase(customer: AdminCustomer): number | null {
     if (!customer.lastPurchaseAt) return null;
     const t = new Date(customer.lastPurchaseAt).getTime();
     if (!Number.isFinite(t)) return null;
-    return Math.max(0, Math.floor((Date.now() - t) / 86400000));
+    return Math.max(0, Math.floor((this.relojDelServidorMs - t) / 86400000));
   }
 
   isColdCustomer(customer: AdminCustomer): boolean {

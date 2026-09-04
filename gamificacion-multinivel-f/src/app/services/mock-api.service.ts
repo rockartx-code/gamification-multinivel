@@ -1023,7 +1023,7 @@ export class MockApiService {
       monthKey: payload.monthKey ?? '2026-02',
       amount: 150,
       status: 'requested',
-      clabeLast4: payload.clabe.slice(-4),
+      clabeLast4: (payload.clabe ?? '').slice(-4),
       createdAt: new Date().toISOString()
     };
     const summary = { monthKey: request.monthKey, pendingTotal: 150, paidTotal: 0, hasPending: true };
