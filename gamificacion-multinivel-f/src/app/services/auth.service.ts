@@ -9,7 +9,16 @@ import {
   ResetPasswordResponse
 } from '../models/auth.model';
 import { RespuestaOk, SesionAbierta } from '../models/checkout.model';
-import { AdminViewId, AppPrivilege, normalizePrivileges, SCREEN_PRIVILEGE_BY_VIEW, UserPrivileges } from '../models/privileges.model';
+import {
+  ADMIN_ROUTE_BY_VIEW,
+  AdminViewId,
+  AppPrivilege,
+  landingRouteFor,
+  normalizePrivileges,
+  privilegeForAdminRoute,
+  SCREEN_PRIVILEGE_BY_VIEW,
+  UserPrivileges
+} from '../models/privileges.model';
 import { ApiService } from './api.service';
 import { CheckoutService } from './checkout.service';
 
@@ -26,6 +35,8 @@ export interface AuthUser {
   discountPercent?: number;
   discountActive?: boolean;
   level?: string;
+  /** Puesto que pinta la insignia del back office: "Caja", "Almacén", "Coach" (paquete E). */
+  jobTitle?: string;
   /** Modo de la cuenta que devuelve el login (paquete B). */
   mode?: 'cliente' | 'socio' | null;
   // paquete C · sesión persistente
@@ -243,6 +254,42 @@ export class AuthService {
       return false;
     }
     return this.hasPrivilege(SCREEN_PRIVILEGE_BY_VIEW[view], user);
+  }
+
+  // ── Paquete E · ronda 26 ──
+
+  /**
+   * La pantalla donde empieza el turno de esta persona: caja → Punto de Venta,
+   * almacén → Despacho, coach → Seguimiento, finanzas → Comisiones y pagos.
+   * Si la ruta calculada no le está permitida, cae a la primera que sí lo esté.
+   */
+  adminLandingRoute(user: AuthUser | null | undefined = this.currentUser): string {
+    if (!user) {
+      return '/login';
+    }
+    const destino = landingRouteFor(user.privileges, this.isSuperUser(user));
+    const privilegio = privilegeForAdminRoute(destino);
+    if (!privilegio || this.hasPrivilege(privilegio, user)) {
+      return destino;
+    }
+    return this.firstAllowedAdminRoute(user);
+  }
+
+  /** Primera pantalla del back office que esta persona sí puede abrir. */
+  firstAllowedAdminRoute(user: AuthUser | null | undefined = this.currentUser): string {
+    const orden: AdminViewId[] = ['orders', 'pos', 'stocks', 'customers', 'employees', 'products',
+                                  'campaigns', 'stats', 'honor_board', 'notifications', 'coupons', 'settings'];
+    const vista = orden.find((v) => this.canAccessAdminView(v, user));
+    return vista ? ADMIN_ROUTE_BY_VIEW[vista] : '/admin/pedidos';
+  }
+
+  /** Puesto para la insignia; nunca el rol técnico ni una clave de configuración. */
+  jobTitleLabel(user: AuthUser | null | undefined = this.currentUser): string {
+    const puesto = (user?.jobTitle ?? '').trim();
+    if (puesto) {
+      return puesto;
+    }
+    return this.isSuperUser(user) ? 'Administración' : 'Personal';
   }
 
   private loadUser(): AuthUser | null {
