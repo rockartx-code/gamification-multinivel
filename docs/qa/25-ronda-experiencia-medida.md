@@ -128,6 +128,17 @@ Agrupado por causa, no por persona. Cada bloque marca el **veredicto de la verif
 
 ### 3.1 El dinero que no se puede cobrar: la CLABE (código · CONFIRMADA · crítica)
 
+> **Corrección posterior ([27](27-regresiones-y-guardas.md) §2).** El síntoma es real y la propuesta 1 sigue
+> siendo la correcta, pero **el diagnóstico de este apartado está equivocado en tres puntos**: (1) sí hay
+> `POST /customers/clabe` en el log (diez, con respuesta 200); ninguno vino del navegador de una socia;
+> (2) el modal no se pinta al final de la página: `ui-modal` usa `fixed inset-0 … items-center`, y la captura
+> lo muestra centrado; (3) "Guardar" sí guarda: lo que no se completó fue el **segundo paso** — el diálogo se
+> abrió y nadie pulsó "Confirmar", porque el rótulo de arriba seguía diciendo "No registrada". El código de la
+> CLABE **no cambió** en la ronda de las 23 propuestas: es idéntico al de la ronda 1, donde una socia sí la
+> guardó. No es una regresión; es un defecto de diseño que llevaba ahí desde el principio y que nadie había
+> vuelto a ejercer.
+
+
 El defecto más caro de la ronda, y el más silencioso.
 
 | Quién | Intentos | Pantallas | Mensaje que recibió |
