@@ -52,6 +52,9 @@ def _entregar(utils, commissions_lambda, oid):
 
 
 ASUNTO = "Registra tu CLABE para cobrar tus comisiones"
+#: Propuesta 2: el aviso del portal ya no promete dinero que no existe.
+TITULO_ACTIVACION = "Registra tu CLABE: ya te activaste"
+TITULO_COMISION = "Registra tu CLABE para cobrar tus comisiones"
 
 
 def test_al_activarse_por_primera_vez_sin_clabe_se_le_pide_una_sola_vez(modulos, utils, correos):
@@ -64,7 +67,9 @@ def test_al_activarse_por_primera_vez_sin_clabe_se_le_pide_una_sola_vez(modulos,
     assert correos == [("bety@test.com", ASUNTO)]
     assert utils._get_by_id("CUSTOMER", bety)["clabeReminderFirstAt"]
     avisos = dashboard_common._active_notifications_for_customer(bety)
-    assert [a["title"] for a in avisos] == [ASUNTO]
+    assert [a["title"] for a in avisos] == [TITULO_ACTIVACION]
+    assert avisos[0]["description"].startswith("Acabas de activarte este mes")
+    assert "comisiones a tu favor" not in avisos[0]["description"], "no se promete dinero que no existe"
     assert "#comisiones" in avisos[0]["linkUrl"]
 
     # Otra compra (sigue activa) o una activación del mes siguiente: no se repite.
@@ -104,7 +109,9 @@ def test_al_confirmarse_la_primera_comision_del_mes_sin_clabe_se_pide_una_vez_po
     _entregar(utils, commissions_lambda, oid)                            # se confirma
     assert correos == [("marcela@test.com", ASUNTO)]
     assert utils._get_ledger_month(marcela, utils._month_key())["clabeReminderAt"]
-    assert [a["title"] for a in dashboard_common._active_notifications_for_customer(marcela)] == [ASUNTO]
+    avisos_marcela = dashboard_common._active_notifications_for_customer(marcela)
+    assert [a["title"] for a in avisos_marcela] == [TITULO_COMISION]
+    assert "$96.00 en comisiones confirmadas" in avisos_marcela[0]["description"]
     assert dashboard_common._active_notifications_for_customer(rodrigo) == [], "dirigido solo a Marcela"
 
     oid2 = _pagar(order_lambda, commissions_lambda, rodrigo, pid, 1)
@@ -119,7 +126,7 @@ def test_no_contactar_bloquea_el_correo_pero_el_panel_si_avisa(modulos, utils, c
     bety = _cliente(utils, 2, "Bety", doNotContact=True)
     _pagar(order_lambda, commissions_lambda, bety, pid, 2)
     assert correos == []
-    assert [a["title"] for a in dashboard_common._active_notifications_for_customer(bety)] == [ASUNTO]
+    assert [a["title"] for a in dashboard_common._active_notifications_for_customer(bety)] == [TITULO_ACTIVACION]
 
 
 def test_un_aviso_dirigido_no_se_mezcla_con_los_generales(modulos, utils):
@@ -130,3 +137,38 @@ def test_un_aviso_dirigido_no_se_mezcla_con_los_generales(modulos, utils):
                                                       "title": "Solo para Bety", "active": True, "targetCustomerId": "2"})
     assert {a["title"] for a in dashboard_common._active_notifications_for_customer(2)} == {"Promoción de octubre", "Solo para Bety"}
     assert {a["title"] for a in dashboard_common._active_notifications_for_customer(1)} == {"Promoción de octubre"}
+
+
+def test_quien_recibio_el_aviso_de_activacion_recibe_despues_el_de_comision(modulos, utils, correos):
+    """Ximena y Fabiola vieron "Ya tienes comisiones a tu favor" con $0.00 y la
+    red vacía: *"Es lo único que me tiró la confianza en todo lo demás"*.
+    Ahora el de activación dice lo que pasó, y el de comisión llega aparte,
+    con su monto, cuando hay un peso confirmado."""
+    order_lambda, commissions_lambda, dashboard_common = modulos
+    pid = _producto(utils)
+    paulina = _cliente(utils, 1, "Paulina")
+    ximena = _cliente(utils, 2, "Ximena", leader=paulina, clabeInterbancaria="002180000000005678")
+    _pagar(order_lambda, commissions_lambda, paulina, pid, 2)          # se activa, sin comisiones
+    avisos = dashboard_common._active_notifications_for_customer(paulina)
+    assert [a["title"] for a in avisos] == [TITULO_ACTIVACION]
+    assert "$0.00" not in avisos[0]["description"]
+
+    oid = _pagar(order_lambda, commissions_lambda, ximena, pid, 2)
+    _entregar(utils, commissions_lambda, oid)                          # su primera comisión confirmada
+    titulos = {a["title"] for a in dashboard_common._active_notifications_for_customer(paulina)}
+    assert titulos == {TITULO_ACTIVACION, TITULO_COMISION}, "el segundo aviso sí llega, con el monto"
+    comision = [a for a in dashboard_common._active_notifications_for_customer(paulina) if a["title"] == TITULO_COMISION][0]
+    assert "$96.00 en comisiones confirmadas" in comision["description"]
+    assert "el día 10" in comision["description"]
+
+
+def test_el_aviso_de_activacion_caduca_a_los_30_dias_y_el_de_comision_a_los_45(utils):
+    import pagos_handlers
+    hoy = utils._now_iso()[:10]
+    nid_a = pagos_handlers._aviso_panel_clabe(7, "2027-03", "activacion")
+    nid_c = pagos_handlers._aviso_panel_clabe(7, "2027-03", "comision")
+    assert nid_a != nid_c and nid_a.endswith("-activacion") and nid_c.endswith("-comision")
+    from datetime import datetime, timedelta
+    esperado = lambda d: (datetime.strptime(hoy, "%Y-%m-%d") + timedelta(days=d)).strftime("%Y-%m-%d")
+    assert utils._get_by_id("NOTIFICATION", nid_a)["endAt"] == esperado(30)
+    assert utils._get_by_id("NOTIFICATION", nid_c)["endAt"] == esperado(45)

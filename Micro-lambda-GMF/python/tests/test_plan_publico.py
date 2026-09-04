@@ -42,7 +42,10 @@ def test_el_plan_es_publico_y_trae_las_ocho_secciones(catalogo, utils):
     assert plan["compresionDinamica"] is True
     assert plan["pago"]["dia"] == 10 and plan["pago"]["bloqueo"] == {"avisos": [20, 27], "graciaDias": 0}
     assert [d["cuando"] for d in plan["datos"]] == ["registro", "modo socio", "primera comisión confirmada", "facturación"]
-    assert plan["datos"][1]["que"] == []
+    # Paquete A · propuesta 2: la CLABE se pide al activarse, no al confirmar
+    # la primera comisión; el plan lo dice para no contradecir el recordatorio.
+    assert plan["datos"][1]["que"] == ["CLABE, cuando te actives en el mes"]
+    assert plan["datos"][2]["que"] == []
     assert plan["datos"][3]["que"] == ["Constancia de situación fiscal", "INE (frente y reverso)", "CURP"]
     assert [r["rank"] for r in plan["rangos"]] == ["BRONCE", "PLATA", "ORO", "PLATINO", "DIAMANTE"]
     assert plan["rangos"][0]["monthlyBonus"] == 500

@@ -284,18 +284,55 @@ def handle_pago_lote(peticion) -> dict:
 # Aviso "registra tu CLABE"
 # ---------------------------------------------------------------------------
 
-def _aviso_panel_clabe(customer_id, month_key: str) -> str:
-    """Aviso en el panel dirigido solo a esa socia (uno por mes)."""
-    nid = f"NTF-CLABE-{utils._customer_id_str(customer_id)}-{month_key}"
+#: Propuesta 2: el aviso del portal dice lo mismo que el correo, que ya
+#: distinguía los dos casos. "Ya tienes comisiones a tu favor" con $0.00 y la
+#: red vacía es lo único que le tiró la confianza a Ximena en todos los
+#: números buenos del sitio. Por motivo: texto, y a los cuántos días caduca.
+_TEXTOS_AVISO_CLABE = {
+    "activacion": (
+        "Acabas de activarte este mes: desde hoy las compras de tu red te generan comisiones. "
+        "Registra tu CLABE para cobrarlas.",
+        30,
+    ),
+    "comision": (
+        "Ya tienes {monto} en comisiones confirmadas. Para depositártelas el día {dia} necesitamos tu CLABE.",
+        45,
+    ),
+}
+
+
+def _motivo_aviso(motivo: str) -> str:
+    """`activacion` o `comision`: el recordatorio manual y el de comisión
+    confirmada cuentan lo mismo (hay dinero), y por eso comparten texto."""
+    return "activacion" if str(motivo or "") == "activacion" else "comision"
+
+
+def _dia_de_pago() -> int:
+    return int(utils._to_decimal((utils._load_app_config().get("rewards") or {}).get("payoutDay") or 10))
+
+
+def _aviso_panel_clabe(customer_id, month_key: str, motivo: str = "comision") -> str:
+    """Aviso en el panel dirigido solo a esa socia, uno por mes **y por motivo**.
+
+    Con el id anterior (`NTF-CLABE-<cliente>-<mes>`), quien recibía el aviso de
+    activación no veía nunca el de comisión de verdad.
+    """
+    clave = _motivo_aviso(motivo)
+    nid = f"NTF-CLABE-{utils._customer_id_str(customer_id)}-{month_key}-{clave}"
     if utils._get_by_id("NOTIFICATION", nid):
         return nid
     hoy = _hoy()
+    plantilla, dias = _TEXTOS_AVISO_CLABE[clave]
+    monto = utils._to_decimal(utils._get_ledger_month(customer_id, month_key).get("totalConfirmed", 0))
+    texto = plantilla.format(monto=_pesos(monto), dia=_dia_de_pago())
+    titulo = ("Registra tu CLABE: ya te activaste" if clave == "activacion"
+              else "Registra tu CLABE para cobrar tus comisiones")
     # Caduca solo: cuando la socia captura la CLABE no hay hook que lo apague.
-    fin_iso = (datetime.strptime(hoy, "%Y-%m-%d") + timedelta(days=45)).strftime("%Y-%m-%d")
+    fin_iso = (datetime.strptime(hoy, "%Y-%m-%d") + timedelta(days=dias)).strftime("%Y-%m-%d")
     utils._put_entity("NOTIFICATION", nid, {
         "entityType": "notification", "notificationId": nid,
-        "title": "Registra tu CLABE para cobrar tus comisiones",
-        "description": "Ya tienes comisiones a tu favor. Para depositártelas el día de pago necesitamos tu CLABE interbancaria: captúrala en Comisiones, toma un minuto.",
+        "title": titulo,
+        "description": texto,
         "linkUrl": ENLACE_COMISIONES, "linkText": "Registrar mi CLABE",
         "startAt": hoy, "endAt": fin_iso, "active": True,
         "targetCustomerId": utils._customer_id_str(customer_id),
@@ -311,7 +348,7 @@ def _correo_clabe(ficha: dict, monto, motivo: str) -> bool:
         return False
     nombre = _nombre_pila(ficha)
     if motivo == "activacion":
-        razon = "Acabas de activarte este mes: desde ahora las compras de tu red te generan comisiones."
+        razon = "Acabas de activarte este mes: desde hoy las compras de tu red te generan comisiones."
     else:
         razon = f"Ya tienes <strong>{_pesos(monto)}</strong> en comisiones confirmadas."
     from core.email import _email_shell
@@ -339,7 +376,7 @@ def avisar_clabe_al_activarse(customer_id) -> bool:
                             "SET clabeReminderFirstAt = :t", {":t": ahora})
     except Exception as e:  # pragma: no cover
         utils._log("clabe_reminder_flag_error", "ERROR", customer=customer_id, err=e)
-    _aviso_panel_clabe(customer_id, utils._month_key())
+    _aviso_panel_clabe(customer_id, utils._month_key(), "activacion")
     _correo_clabe(ficha, 0, "activacion")
     utils._log("clabe_reminder_sent", "INFO", customer=customer_id, reason="activacion")
     return True
@@ -372,7 +409,7 @@ def enviar_recordatorio_clabe(customer_id, month_key: str, motivo: str) -> bool:
         return True
 
     utils._mutate_ledger_month(customer_id, month_key, _marcar)
-    _aviso_panel_clabe(customer_id, month_key)
+    _aviso_panel_clabe(customer_id, month_key, motivo)
     enviado = _correo_clabe(ficha, monto, motivo)
     utils._log("clabe_reminder_sent", "INFO", customer=customer_id, month=month_key, reason=motivo, email=enviado)
     return True
@@ -400,7 +437,7 @@ def handle_pedir_clabe(peticion) -> dict:
         return True
 
     utils._mutate_ledger_month(cid, mes, _marcar)
-    _aviso_panel_clabe(cid, mes)
+    _aviso_panel_clabe(cid, mes, "recordatorio")
     correo = _correo_clabe(ficha, ledger.get("totalConfirmed", 0), "recordatorio")
 
     # Bitácora de contacto de la ficha (la misma que usa Seguimiento).
