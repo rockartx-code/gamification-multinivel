@@ -164,6 +164,8 @@ def _abrir_sesion(auth: dict, profile: dict, entity_type: str, user_id, remember
             "canAccessAdmin": bool(profile.get("canAccessAdmin")),
             "privileges": utils._normalize_privileges(profile.get("privileges")),
             "isEmployee": (entity_type == "EMPLOYEE"),
+            # Paquete E · ronda 26: el puesto que pinta la insignia del back office.
+            "jobTitle": str(profile.get("jobTitle") or "").strip(),
             "mode": modo_handlers.modo_de(profile) if entity_type == "CUSTOMER" else None,  # paquete B
         }
     })
@@ -958,6 +960,22 @@ def handle_get_referrer(referrer_id):
 
 # --- GESTIÓN DE EMPLEADOS ---
 
+def _sembrar_privilegios_de_pantalla(privilegios: dict) -> dict:
+    """Enciende `access_screen_campaigns` a quien administra la configuración.
+
+    Campañas colgaba de `access_screen_stocks`: el encargado de almacén veía el
+    formulario para crear una campaña de publicidad solo por tener inventario.
+    Al estrenar privilegio propio, quien ya administra la configuración
+    (`config_manage`) lo conserva y el resto se queda sin él, salvo que se le
+    encienda a mano. El superadmin y el rol `admin` no pasan por aquí: su acceso
+    lo resuelve `_require_admin`.
+    """
+    privs = dict(privilegios or {})
+    if privs.get("config_manage") and not privs.get("access_screen_campaigns"):
+        privs["access_screen_campaigns"] = True
+    return privs
+
+
 def handle_employees(method, body, employee_id=None, headers=None):
     """GET, POST, PATCH /employees"""
     now = utils._now_iso()
@@ -981,7 +999,12 @@ def handle_employees(method, body, employee_id=None, headers=None):
         emp_item = {
             "entityType": "employee", "employeeId": emp_id, "name": body.get("name"),
             "email": email, "phone": body.get("phone"), "canAccessAdmin": True,
-            "privileges": utils._normalize_privileges(body.get("privileges")), "active": True,
+            # El puesto es solo presentación: la insignia decía ADMIN sobre el
+            # nombre de la cajera, igual que sobre el de la gerente. `role` no
+            # cambia (es la llave de _require_admin y de media docena de guardas).
+            "jobTitle": str(body.get("jobTitle") or "").strip(),
+            "privileges": _sembrar_privilegios_de_pantalla(utils._normalize_privileges(body.get("privileges"))),
+            "active": True,
             "createdAt": now
         }
         utils._put_entity("EMPLOYEE", emp_id, emp_item)
@@ -1006,10 +1029,13 @@ def handle_employees(method, body, employee_id=None, headers=None):
         # El panel mandaba `phone` y aquí se ignoraba: el celular del empleado no se podía corregir.
         if "phone" in body: updates.append("phone = :ph"); eav[":ph"] = str(body.get("phone") or "").strip()
         if "active" in body: updates.append("active = :a"); eav[":a"] = bool(body["active"])
+        # Puesto ("Caja", "Almacén", "Coach"): lo que la insignia pinta en vez de ADMIN.
+        if "jobTitle" in body: updates.append("jobTitle = :jt"); eav[":jt"] = str(body.get("jobTitle") or "").strip()
         # El panel mandaba canAccessAdmin y aquí se ignoraba: no había forma de quitarle el acceso a un empleado.
         if "canAccessAdmin" in body: updates.append("canAccessAdmin = :ca"); eav[":ca"] = bool(body["canAccessAdmin"])
-        if "privileges" in body: 
-            updates.append("privileges = :p"); eav[":p"] = utils._normalize_privileges(body["privileges"])
+        if "privileges" in body:
+            updates.append("privileges = :p")
+            eav[":p"] = _sembrar_privilegios_de_pantalla(utils._normalize_privileges(body["privileges"]))
         
         updated = utils._update_by_id("EMPLOYEE", eid, f"SET {', '.join(updates)}", eav, {"#n": "name"} if "name" in body else None)
         return utils._json_response(200, {"employee": updated})
