@@ -77,7 +77,11 @@ def _default_app_config() -> dict:
             # un "$0.00" de solo lectura (el sobrante falso de $540 de Mireya).
             "requireOpeningCash": True,
         },
-        "stocks": {"requireLinkedUserForTransferReceive": True},
+        # minStockDefault (paquete F · ronda 26): mínimo de piezas por producto y
+        # sucursal cuando el producto no trae el suyo (`PRODUCT.minStock`). Con 0
+        # no se vigila nada; con un número, la tabla lo pinta en rojo y sale en
+        # Acciones urgentes.
+        "stocks": {"requireLinkedUserForTransferReceive": True, "minStockDefault": 0},
         "payments": {
             "mercadoLibre": {
                 "enabled": False, "accessToken": "", "currencyId": "MXN",
@@ -93,6 +97,8 @@ def _default_app_config() -> dict:
         "adminWarnings": {
             "showCommissions": True, "showShipping": True, "showPendingPayments": True,
             "showPendingTransfers": True, "showPosSalesToday": True,
+            # Paquete F · ronda 26: productos por debajo de su mínimo.
+            "showLowStock": True,
         },
         # freeShippingMin: importe a partir del cual el envío es gratis; 0 = sin regla.
         # freeShippingBasis: "gross" mide la regla sobre el subtotal bruto (lo que el

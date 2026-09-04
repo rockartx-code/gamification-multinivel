@@ -227,6 +227,46 @@ def get_admin_orders(query):
     items = items[:limit]
     return utils._json_response(200, {"orders": items, "total": total, "limit": limit})
 
+def _bajo_minimo(stocks: list, productos: list, por_omision: int) -> list:
+    """Pares (producto, sucursal) por debajo de su mínimo, del más urgente al menos.
+
+    Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+    hasta que un cliente pague y no haya". Se resuelve con un solo recorrido de
+    productos y otro de almacenes: ni un `_get_by_id` por producto dentro del
+    bucle (docs/arquitectura/26 §0.1).
+    """
+    minimos = {}
+    nombres = {}
+    for p in productos:
+        pid = str(p.get("productId"))
+        nombres[pid] = str(p.get("name") or f"Producto {pid}")
+        if p.get("minStock") is None:
+            minimo = por_omision
+        else:
+            try:
+                minimo = max(0, int(utils._to_decimal(p.get("minStock"))))
+            except Exception:
+                minimo = por_omision
+        if minimo > 0 and bool(p.get("active", True)):
+            minimos[pid] = minimo
+
+    faltantes = []
+    for stock in stocks:
+        inventario = stock.get("inventory") or {}
+        nombre_stock = str(stock.get("name") or stock.get("stockId") or "")
+        for pid, minimo in minimos.items():
+            try:
+                existencia = int(utils._to_decimal(inventario.get(pid, inventario.get(int(pid) if pid.isdigit() else pid, 0))))
+            except Exception:
+                existencia = 0
+            if existencia < minimo:
+                faltantes.append({"productId": pid, "productName": nombres.get(pid, pid),
+                                  "stockId": str(stock.get("stockId") or ""), "stockName": nombre_stock,
+                                  "qty": existencia, "minStock": minimo})
+    faltantes.sort(key=lambda f: (f["qty"] - f["minStock"], f["productName"]))
+    return faltantes
+
+
 def _es_recoleccion(order: dict) -> bool:
     """Recoge en sucursal: no es un envío pendiente, es un cliente por venir."""
     return str(order.get("deliveryType") or "").strip().lower() == "pickup"
@@ -315,6 +355,14 @@ def get_admin_warnings():
             if now_date >= f"{siguiente}-{max(payout_day - 2, 1):02d}":
                 destino["urgent"] = True
 
+    # Productos bajo su mínimo, por sucursal (paquete F · ronda 26, propuesta 28).
+    stocks_cfg = dict(cfg.get("stocks") or {})
+    try:
+        min_default = max(0, int(utils._to_decimal(stocks_cfg.get("minStockDefault", 0))))
+    except Exception:
+        min_default = 0
+    bajo_minimo = _bajo_minimo(utils._query_bucket("STOCK"), utils._query_bucket("PRODUCT"), min_default)
+
     # Transferencias pendientes
     transfers = utils._query_bucket("STOCK_TRANSFER")
     pending_transfers = sum(1 for t in transfers if (t.get("status") or "").lower() == "pending")
@@ -362,6 +410,16 @@ def get_admin_warnings():
                          "text": f"{len(pagos_tras_cancelar)} pedidos cancelados recibieron el pago: hay que reembolsar",
                          "severity": "high", "count": len(pagos_tras_cancelar),
                          "orderIds": [o.get("orderId") for o in pagos_tras_cancelar]})
+    if warning_cfg.get("showLowStock", True) and bajo_minimo:
+        peor = bajo_minimo[0]
+        plural = "" if len(bajo_minimo) == 1 else "s"
+        warnings.append({
+            "type": "stock_min",
+            "text": (f"{len(bajo_minimo)} producto{plural} bajo su mínimo · "
+                     f"{peor['productName']} en {peor['stockName']}: {peor['qty']} de {peor['minStock']}"),
+            "severity": "high" if peor["qty"] <= 0 else "medium",
+            "count": len(bajo_minimo), "items": bajo_minimo[:20],
+        })
     if warning_cfg.get("showPendingTransfers", True) and pending_transfers:
         warnings.append({"type": "stocks", "text": f"{pending_transfers} transferencias pendientes por recibir", "severity": "medium"})
     if warning_cfg.get("showPosSalesToday", True) and pos_sales_today:

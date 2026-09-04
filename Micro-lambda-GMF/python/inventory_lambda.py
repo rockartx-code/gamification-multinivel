@@ -80,6 +80,67 @@ def _nombre_empleado(user_id) -> str:
     except Exception:
         return ""
 
+# --- MÍNIMOS DE INVENTARIO (paquete F · ronda 26, propuesta 28) ---
+
+def _min_stock_default() -> int:
+    """`stocks.minStockDefault`: el mínimo que aplica a un producto sin el suyo."""
+    stocks_cfg = dict((utils._load_app_config() or {}).get("stocks") or {})
+    try:
+        return max(0, int(utils._to_decimal(stocks_cfg.get("minStockDefault", 0))))
+    except Exception:
+        return 0
+
+
+def minimo_de(product: dict, por_omision: int) -> int:
+    """Mínimo de un producto: el suyo si lo tiene, si no el de la configuración."""
+    if product.get("minStock") is None:
+        return por_omision
+    try:
+        return max(0, int(utils._to_decimal(product.get("minStock"))))
+    except Exception:
+        return por_omision
+
+
+def handle_stock_minimos(method, body, headers):
+    """GET|PUT /stocks/minimos — el mínimo por producto.
+
+    Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+    hasta que un cliente pague y no haya". El mínimo se guarda en el producto
+    y lo vigila Acciones urgentes.
+    """
+    productos = utils._query_bucket("PRODUCT")
+    por_omision = _min_stock_default()
+    if method == "GET":
+        return utils._json_response(200, {
+            "minStockDefault": por_omision,
+            "minimos": {str(p.get("productId")): minimo_de(p, por_omision) for p in productos},
+        })
+
+    crudo = (body or {}).get("minimos")
+    if not isinstance(crudo, dict) or not crudo:
+        return utils._json_response(400, {"message": "Manda los mínimos como {productId: piezas}"})
+    if len(crudo) > 200:
+        return utils._json_response(400, {"message": "Son demasiados productos de una vez (máximo 200)"})
+    conocidos = {str(p.get("productId")): p for p in productos}
+    limpios = {}
+    for pid, valor in crudo.items():
+        if str(pid) not in conocidos:
+            return utils._json_response(400, {"message": f"El producto {pid} no existe"})
+        try:
+            piezas = int(utils._to_decimal(valor))
+        except Exception:
+            return utils._json_response(400, {"message": f"El mínimo de {conocidos[str(pid)].get('name') or pid} tiene que ser un número de piezas"})
+        if piezas < 0:
+            return utils._json_response(400, {"message": "Un mínimo no puede ser negativo"})
+        limpios[str(pid)] = piezas
+    for pid, piezas in limpios.items():
+        producto = conocidos[pid]
+        utils._update_by_id("PRODUCT", producto.get("productId"), "SET minStock = :m",
+                            {":m": utils._to_decimal(piezas)})
+    utils._audit_event("stock.minimos", headers, {}, {"productos": len(limpios)})
+    return utils._json_response(200, {"ok": True, "minStockDefault": por_omision, "minimos": limpios})
+
+
 # --- HANDLERS: GESTIÓN DE ALMACENES ---
 
 def handle_stocks(method, body, stock_id=None):
@@ -872,6 +933,18 @@ def _route_stocks(method: str, segments: list, body: dict, query: dict, headers:
                 err = utils._require_admin(headers, "stock_create_transfer")
                 if err: return err
             return handle_transfers(method, body, query, headers=headers)
+
+        # /stocks/minimos — mínimo por producto (antes de /stocks/{id})
+        if segments[1] == "minimos" and len(segments) == 2:
+            if method == "GET":
+                err = utils._require_admin(headers, "access_screen_stocks")
+                if err: return err
+                return handle_stock_minimos("GET", body, headers)
+            if method == "PUT":
+                err = utils._require_admin(headers, "stock_add_inventory")
+                if err: return err
+                return handle_stock_minimos("PUT", body, headers)
+            return utils._json_response(405, {"message": "Método no permitido"})
 
         # /stocks/movements
         if segments[1] == "movements":

@@ -3242,6 +3242,37 @@ paths:
     options:
       <<: *cors-options
 
+  /inventory/stocks/minimos:
+    get:
+      summary: "Mínimo de piezas por producto"
+      description: "Privilegio: `access_screen_stocks`. Devuelve `{minStockDefault, minimos:{productId: piezas}}`."
+      operationId: stockMinimosLeer
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{minStockDefault, minimos}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    put:
+      summary: "Guardar el mínimo de piezas de uno o varios productos"
+      description: |
+        Privilegio: `stock_add_inventory`. Cuerpo `{minimos: {productId: piezas}}` (máximo 200).
+        Guarda `minStock` en cada producto; por debajo de él la tabla de Stocks lo pinta en rojo
+        y sale en Acciones urgentes con su sucursal.
+      operationId: stockMinimosGuardar
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{ok, minStockDefault, minimos}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:
   - name: Auth
