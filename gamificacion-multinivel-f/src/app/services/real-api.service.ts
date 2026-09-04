@@ -1095,6 +1095,7 @@ export class RealApiService {
         privileges: (e['privileges'] as AdminEmployee['privileges']) ?? {},
         active: e['active'] !== false,
         createdAt: e['createdAt'] != null ? String(e['createdAt']) : undefined,
+        jobTitle: e['jobTitle'] != null ? String(e['jobTitle']) : undefined, // paquete E · ronda 26
       } as AdminEmployee))));
   }
 

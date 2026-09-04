@@ -41,22 +41,22 @@ TODOS = ["access_screen_orders", "access_screen_customers", "access_screen_produ
 
 EMPLEADOS = [
     {"name": "Renata Bustos", "email": "renata@findingu.mx", "phone": "5551100001",
-     "rol": "gerente de operaciones", "privileges": TODOS},
+     "rol": "gerente de operaciones", "puesto": "Gerencia", "privileges": TODOS},
     {"name": "Toño Vera", "email": "tono@findingu.mx", "phone": "5551100002",
-     "rol": "almacén y pedidos",
+     "rol": "almacén y pedidos", "puesto": "Almacén",
      "privileges": ["access_screen_orders", "order_mark_paid", "order_mark_shipped", "order_mark_delivered",
                     "access_screen_stocks", "stock_add_inventory", "stock_create_transfer", "stock_receive_transfer",
                     "stock_mark_damaged"]},
     {"name": "Mireya Solano", "email": "mireya@findingu.mx", "phone": "5551100003",
-     "rol": "cajera de mostrador",
+     "rol": "cajera de mostrador", "puesto": "Caja",
      "privileges": ["access_screen_pos", "pos_register_sale", "access_screen_orders", "order_mark_delivered",
                     "access_screen_stocks", "customer_add"]},
     {"name": "Gaby Ledesma", "email": "gaby@findingu.mx", "phone": "5551100004",
-     "rol": "ejecutiva de cuentas (coach)",
+     "rol": "ejecutiva de cuentas (coach)", "puesto": "Coach",
      "privileges": ["access_screen_customers", "access_screen_orders", "access_screen_stats",
                     "access_screen_honor_board", "customer_add"]},
     {"name": "Alma Rentería", "email": "alma@findingu.mx", "phone": "5551100005",
-     "rol": "administración y finanzas",
+     "rol": "administración y finanzas", "puesto": "Finanzas",
      "privileges": ["access_screen_customers", "access_screen_orders", "access_screen_stats",
                     "commissions_register_payment", "access_screen_settings", "config_manage",
                     "access_screen_honor_board"]},
@@ -115,6 +115,9 @@ def main():
     for e in EMPLEADOS:
         st, r = llamar("POST", "/auth/employees",
                        {"name": e["name"], "email": e["email"], "phone": e["phone"],
+                        # El puesto es lo que pinta la insignia del back office: decía ADMIN
+                        # sobre el nombre de la cajera igual que sobre el de la gerente.
+                        "jobTitle": e["puesto"],
                         "privileges": {p: True for p in e["privileges"]}}, SUPER)
         assert st == 201, (st, r)
         cred["empleados"].append({"nombre": e["name"], "correo": e["email"], "password": r["tempPassword"],

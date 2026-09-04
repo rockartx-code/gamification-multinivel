@@ -78,6 +78,10 @@ _ALL_PRIVILEGES = [
     "access_screen_employees",
     "config_manage",
     "access_screen_honor_board",
+    # ── Paquete E · ronda 26 ──
+    # Campañas dejó de colgar de "access_screen_stocks": el de las cajas veía el
+    # formulario para crear una campaña de publicidad porque tenía inventario.
+    "access_screen_campaigns",
 ]
 
 # El token de superadmin se toma del entorno. Si la variable no está definida,

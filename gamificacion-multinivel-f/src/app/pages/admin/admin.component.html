@@ -7,9 +7,13 @@
             <div class="text-mini text-gray-600">Usuario</div>
             <div class="text-sm font-semibold">{{ currentUser.name }}</div>
           </div>
+          <!-- Paquete E · ronda 26 · propuesta 27c · La insignia decía ADMIN sobre
+               el nombre de la cajera igual que sobre el de la gerente, y es lo
+               primero que ve el cliente que se asoma al mostrador. Ahora dice el
+               puesto ("Caja", "Almacén", "Coach"); `role` no cambia. -->
           <span
-            class="rounded-full border border-gold-35 bg-olive-10 px-3 py-1 text-mini uppercase text-accent">
-            {{ currentUser.role }}
+            class="rounded-full border border-gold-35 bg-olive-10 px-3 py-1 text-mini text-accent">
+            {{ puestoDelUsuario }}
           </span>
         </div>
 
@@ -37,9 +41,9 @@
           <i class="fa-solid fa-key" aria-hidden="true"></i>
           Contraseña
         </ui-button>
-        <ui-button size="sm" variant="ghost" (pressed)="logout()">
+        <ui-button size="sm" variant="ghost" ariaLabel="Cerrar sesión" (pressed)="logout()">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          Logout
+          Cerrar sesión
         </ui-button>
         <ui-button size="sm" variant="primary" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
@@ -57,7 +61,7 @@
           </div>
           <div class="relative">
             <div class="text-xs text-gray-600">Navegación</div>
-            <ui-sidebar-nav [links]="adminNavLinksStable" [activeId]="currentView" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
+            <ui-sidebar-nav [links]="adminNavLinksStable" [activeId]="activeMenuId" (linkSelect)="onAdminNavSelect($event)"></ui-sidebar-nav>
           </div>
         </div>
 
@@ -120,24 +124,18 @@
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2" *ngIf="currentView === 'orders' && canAccessView('orders')">
-            <ui-button size="sm" class="tabbtn" *ngFor="let tab of [
-                { status: 'pending', label: 'Pendiente' },
-                { status: 'paid', label: 'Pagado' },
-                { status: 'shipped', label: 'Enviado' },
-                { status: 'delivered', label: 'Entregado' },
-                { status: 'cancelled', label: 'Cancelado' },
-                { status: 'refunded', label: 'Reembolsado' },
-                { status: 'en_devolucion', label: 'Por devolver' },
-                { status: 'devuelto_validado', label: 'Devuelto' },
-                { status: 'devolucion_rechazada', label: 'Dev. rechazada' }
-              ]"
-              [variant]="currentOrderStatus === tab.status ? 'primary' : 'ghost'"
-              (pressed)="setOrderStatus($any(tab.status))">
+            <!-- La tira de pestañas vive en el componente (`orderTabs`), no aquí:
+                 escrita como literal se recreaba en cada pasada de detección y el
+                 clic se perdía antes de llegar al botón "Ver" de la fila. -->
+            <ui-button size="sm" class="tabbtn" *ngFor="let tab of orderTabs; trackBy: trackOrderTab"
+              [variant]="currentOrderTab === tab.key ? 'primary' : 'ghost'"
+              [ariaLabel]="'Mostrar los pedidos en ' + tab.label"
+              (pressed)="setOrderTab(tab)">
               {{ tab.label }}
-              <span *ngIf="orderCountByStatus($any(tab.status)) > 0"
+              <span *ngIf="orderTabCount(tab) > 0"
                 class="inline-flex min-w-[1.2rem] items-center justify-center rounded-full px-1.5 py-0.5 text-micro font-bold leading-none"
-                [ngClass]="currentOrderStatus === tab.status ? 'bg-white/40 text-ink' : 'bg-gold-20 text-on-gold'">
-                {{ orderCountByStatus($any(tab.status)) }}
+                [ngClass]="currentOrderTab === tab.key ? 'bg-white/40 text-ink' : 'bg-gold-20 text-on-gold'">
+                {{ orderTabCount(tab) }}
               </span>
             </ui-button>
             <ui-button size="sm" variant="secondary" routerLink="/admin/despacho" title="Despachar varios pedidos pagados a la vez, con la lista de surtido calculada"><i class="fa-solid fa-boxes-packing" aria-hidden="true"></i> Despacho en bloque</ui-button><!-- WP-D -->
@@ -199,6 +197,21 @@
         </div>
 
         <div class="relative flex-1 space-y-4 overflow-auto p-5">
+          <!-- Paquete E · ronda 26 · Una pantalla que no te toca no se quita en
+               silencio ni deja el contenedor vacío: se dice cuál era y dónde
+               quedaste. -->
+          <div *ngIf="pantallaSinAcceso"
+            class="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="status">
+            <div>
+              <span class="font-semibold">{{ pantallaSinAcceso }} no está entre tus pantallas.</span>
+              Te dejamos en {{ viewTitle }}. Si necesitas entrar, pídeselo a quien administra los permisos.
+            </div>
+            <ui-button size="sm" variant="ghost" ariaLabel="Cerrar el aviso" (pressed)="pantallaSinAcceso = ''">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </ui-button>
+          </div>
+
           <div class="space-y-4" *ngIf="currentView === 'orders' && canAccessView('orders')">
             <div class="grid gap-3 md:grid-cols-4">
               <ui-kpi-card label="Pendientes" [value]="pendingCount"></ui-kpi-card>
@@ -216,12 +229,16 @@
                   </span>
                   <div class="flex items-center gap-2">
                     <span class="text-xs text-gray-600">{{ filteredOrdersStable.length }} pedidos</span>
+                    <span *ngIf="orderSearch" class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro font-semibold text-gray-600">
+                      buscando en todos los estados
+                    </span>
                     <ui-button variant="primary" size="sm" iconClass="fa-solid fa-plus" *ngIf="hasPermission('order_create')" (pressed)="openNewOrderModal()">
                       Nuevo pedido
                     </ui-button>
                   </div>
                 </div>
-                <ui-form-field leadingIconClass="fa-solid fa-magnifying-glass" placeholder="Buscar por cliente, guía, teléfono, dirección..."
+                <ui-form-field leadingIconClass="fa-solid fa-magnifying-glass"
+                  placeholder="Buscar en todos los estados: cliente, folio, guía, teléfono, dirección…"
                   [ngModel]="orderSearch" (ngModelChange)="onTableSearch('orders', $event)"
                   inputClass="w-full rounded-xl border border-olive-30 bg-white/70 py-2 pr-3 text-sm text-main outline-none focus:border-olive-70 focus:ring-2 focus:ring-olive-20"></ui-form-field>
               </div>
@@ -267,7 +284,9 @@
                           </span>
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true" (pressed)="toggleOrderDetail(order.id)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" [fullWidth]="true"
+                            [ariaLabel]="(expandedOrderDetailId === order.id ? 'Ocultar el pedido de ' : 'Ver el pedido de ') + order.customer"
+                            (pressed)="toggleOrderDetail(order.id)">
                             {{ expandedOrderDetailId === order.id ? 'Ocultar detalle' : 'Ver detalle' }}
                           </ui-button>
                           <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-rotate" *ngIf="canAdvanceOrder(order)" [fullWidth]="true" [disabled]="isUpdatingOrder(order.id)" [disabledReason]="motivoPedidoOcupado(order.id)" (click)="advanceOrder(order)">
@@ -337,7 +356,9 @@
                         </div>
                         <div class="muted text-xs">{{ getShippingLabel(order) }}</div>
                         <div>
-                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open" (pressed)="toggleOrderDetail(order.id)">
+                          <ui-button variant="ghost" size="sm" iconClass="fa-solid fa-box-open"
+                            [ariaLabel]="(expandedOrderDetailId === order.id ? 'Ocultar el pedido de ' : 'Ver el pedido de ') + order.customer"
+                            (pressed)="toggleOrderDetail(order.id)">
                             {{ expandedOrderDetailId === order.id ? 'Ocultar' : 'Ver' }}
                           </ui-button>
                         </div>
@@ -383,6 +404,16 @@
                         </div>
                       </div>
                       <div *ngIf="expandedOrderDetailId === order.id" class="border-t border-olive-20 bg-ivory-80 px-4 py-4">
+                        <!-- Paquete E · ronda 26 · El pedido tiene dirección propia:
+                             "no puedo mandarle un enlace al dueño" (Renata). -->
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                          <span>Este pedido tiene su propia dirección: <span class="font-mono text-main">#/admin/pedido/{{ order.id }}</span></span>
+                          <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-link"
+                            [ariaLabel]="'Copiar el enlace del pedido de ' + order.customer"
+                            (pressed)="copiarEnlaceDePedido(order)">
+                            {{ enlacePedidoCopiadoId === order.id ? 'Enlace copiado' : 'Copiar enlace' }}
+                          </ui-button>
+                        </div>
                         <div class="grid gap-4 sm:grid-cols-2">
                           <div>
                             <div class="text-xs font-semibold text-gray-600">
@@ -497,8 +528,10 @@
                   <div *ngIf="filteredOrdersStable.length === 0"
                     class="px-6 py-10 text-center text-sm text-gray-500">
                     <i class="fa-solid fa-inbox mb-2 block text-2xl text-muted" aria-hidden="true"></i>
-                    <span *ngIf="orderSearch">Sin resultados para "{{ orderSearch }}" en este estado.</span>
-                    <span *ngIf="!orderSearch">No hay pedidos en este estado. Los contadores de las pestañas muestran dónde hay trabajo.</span>
+                    <!-- Paquete E · ronda 26 · propuesta 33 · Ya no dice "en este
+                         estado": el buscador cruza todos los pedidos cargados. -->
+                    <span *ngIf="orderSearch">Sin resultados para "{{ orderSearch }}" en ningún estado. Se buscó por cliente, folio, guía, teléfono y dirección.</span>
+                    <span *ngIf="!orderSearch">Aquí no hay nada por hacer. Los contadores de las pestañas muestran dónde sí lo hay.</span>
                   </div>
                 </div>
               </div>
@@ -1041,6 +1074,12 @@
                     <ui-form-field label="Nombre" placeholder="Nombre completo" [(ngModel)]="employeeForm.name"></ui-form-field>
                     <ui-form-field label="Correo" placeholder="correo@empresa.com" [(ngModel)]="employeeForm.email"></ui-form-field>
                     <ui-form-field label="Telefono" placeholder="+52 55 1234 5678" [(ngModel)]="employeeForm.phone"></ui-form-field>
+                    <!-- Paquete E · ronda 26 · El puesto que verá la persona (y el
+                         cliente del mostrador) en lugar de ADMIN. No cambia su rol
+                         ni sus privilegios: eso se decide abajo, uno por uno. -->
+                    <ui-form-field label="Puesto" placeholder="Caja, Almacén, Coach…"
+                      helpText="Es lo que aparece bajo su nombre en el panel. No le da ni le quita permisos."
+                      [(ngModel)]="employeeForm.jobTitle"></ui-form-field>
                   </div>
 
                   <div class="mt-3 flex justify-end">
@@ -1634,7 +1673,12 @@
             </div>
 
             <div class="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
-              <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+              <!-- Paquete E · ronda 26 · propuesta 27b · El formulario completo se
+                   pintaba para cualquiera y solo el botón estaba condicionado: ver
+                   el formulario es lo que hizo escribir a la cajera de tercer día
+                   "puedo dar de alta una bodega o sucursal nueva; ¿por qué me deja
+                   hacer eso a mí?". Sin `stock_create` ya no se pinta. -->
+              <div class="rounded-2xl border border-olive-30 surface-soft p-4" *ngIf="hasPermission('stock_create')">
                 <div class="text-sm font-semibold text-main">Alta de stock</div>
                 <div class="mt-1 text-xs text-gray-600">Crea bodega/sucursal con nombre y ubicacion.</div>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
@@ -4866,52 +4910,18 @@
     </div>
   </ui-modal>
 
+  <!-- Paquete E · ronda 26 · La barra del móvil lee la MISMA lista que el menú
+       lateral (antes eran dos copias de doce enlaces que ya no coincidían). -->
   <div id="bottomBar" class="fixed bottom-0 left-0 right-0 z-50 border-t border-olive-30 bg-sand-200-90 backdrop-blur lg:hidden">
     <div class="mx-auto max-w-7xl px-4 py-3">
       <div class="grid grid-cols-3 gap-2">
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('orders')" [variant]="currentView === 'orders' ? 'primary' : 'ghost'" (click)="setView('orders')">
-          <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-          Pedidos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('customers')" [variant]="currentView === 'customers' ? 'primary' : 'ghost'" (click)="setView('customers')">
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-          Clientes
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('products')" [variant]="currentView === 'products' ? 'primary' : 'ghost'" (click)="setView('products')">
-          <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-          Productos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stocks')" [variant]="currentView === 'stocks' ? 'primary' : 'ghost'" (click)="setView('stocks')">
-          <i class="fa-solid fa-warehouse" aria-hidden="true"></i>
-          Stocks
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('campaigns')" [variant]="currentView === 'campaigns' ? 'primary' : 'ghost'" (click)="setView('campaigns')">
-          <i class="fa-solid fa-bullhorn" aria-hidden="true"></i>
-          Campañas
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('pos')" [variant]="currentView === 'pos' ? 'primary' : 'ghost'" (click)="setView('pos')">
-          <i class="fa-solid fa-cash-register" aria-hidden="true"></i>
-          PV
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('stats')" [variant]="currentView === 'stats' ? 'primary' : 'ghost'" (click)="setView('stats')">
-          <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-          Stats
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('honor_board')" [variant]="currentView === 'honor_board' ? 'primary' : 'ghost'" (click)="setView('honor_board')">
-          <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
-          Honor
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('notifications')" [variant]="currentView === 'notifications' ? 'primary' : 'ghost'" (click)="setView('notifications')">
-          <i class="fa-solid fa-bell" aria-hidden="true"></i>
-          Avisos
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('coupons')" [variant]="currentView === 'coupons' ? 'primary' : 'ghost'" (click)="setView('coupons')">
-          <i class="fa-solid fa-ticket" aria-hidden="true"></i>
-          Cupones
-        </ui-button>
-        <ui-button size="md" extraClass="mobbtn" *ngIf="canAccessView('settings')" [variant]="currentView === 'settings' ? 'primary' : 'ghost'" (click)="setView('settings')">
-          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-          Config
+        <ui-button size="md" extraClass="mobbtn"
+          *ngFor="let entrada of adminMenuLinksStable; trackBy: trackMenuEntry"
+          [variant]="activeMenuId === entrada.id ? 'primary' : 'ghost'"
+          [ariaLabel]="'Ir a ' + entrada.label"
+          (pressed)="irAEntradaDeMenu(entrada)">
+          <i class="fa-solid" [ngClass]="entrada.icon" aria-hidden="true"></i>
+          {{ entrada.short }}
         </ui-button>
       </div>
     </div>

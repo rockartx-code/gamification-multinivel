@@ -6,7 +6,7 @@ import { ConciliacionCorrida, ConciliacionResultado } from '../../models/suscrip
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Observable, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 
 import { AuthService, AuthUser } from '../../services/auth.service';
@@ -46,7 +46,13 @@ import {
 } from '../../models/admin.model';
 import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
-import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
+import {
+  ADMIN_ROUTE_BY_VIEW,
+  AdminViewId,
+  AppPrivilege,
+  normalizePrivileges,
+  UserPrivileges
+} from '../../models/privileges.model';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
@@ -78,6 +84,22 @@ import { UiConfirmComponent } from '../../components/ui-confirm/ui-confirm.compo
 import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component'; // WP-I1
 
 /** Diálogo de confirmación genérico del back office (I1): un solo `ui-confirm` para todas las acciones. */
+/**
+ * Paquete E · ronda 26 · Una entrada del menú del back office: su URL propia,
+ * la vista que monta (si vive dentro del caparazón) y el privilegio que exige.
+ * Se escribe una sola vez y la reusan la barra lateral y la barra del móvil.
+ */
+type AdminMenuEntry = {
+  id: string;
+  icon: string;
+  label: string;
+  /** Nombre corto para la barra inferior del móvil, donde no cabe el largo. */
+  short: string;
+  route: string;
+  view?: AdminViewId;
+  privilege?: AppPrivilege;
+};
+
 type ConfirmacionAdmin = {
   title: string;
   effect: string;
@@ -285,7 +307,7 @@ const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
 })
 export class AdminComponent implements OnInit {
   private readonly adminData: Signal<AdminData | null>;
-  private adminNavLinksCache: { user: AuthUser | null; links: SidebarLink[] } | null = null;
+  private adminNavLinksCache: { user: AuthUser | null; links: SidebarLink[]; entries: AdminMenuEntry[] } | null = null;
   private customerOptionsCache: { customersRef: AdminCustomer[]; options: Array<SelectOption<number>> } | null = null;
   private employeeOptionsCache: { employeesRef: AdminEmployee[]; options: Array<SelectOption<number>> } | null = null;
   private stockOptionsCache: { stocksRef: AdminStock[]; options: Array<SelectOption<string>> } | null = null;
@@ -333,10 +355,43 @@ export class AdminComponent implements OnInit {
     { value: 'delivered', label: 'Entregado' },
     { value: 'cancelled', label: 'Cancelado' },
     { value: 'refunded', label: 'Reembolsado' },
-    { value: 'en_devolucion', label: 'Por devolver' },
-    { value: 'devuelto_validado', label: 'Devuelto' },
-    { value: 'devolucion_rechazada', label: 'Dev. rechazada' }
+    { value: 'en_devolucion', label: 'Devolución en curso' },
+    { value: 'devuelto_validado', label: 'Devolución validada' },
+    { value: 'devolucion_rechazada', label: 'Devolución rechazada' }
   ];
+
+  /**
+   * Paquete E · ronda 26 · La tira de pestañas de Pedidos, fuera de la plantilla.
+   *
+   * Estaba escrita como literal dentro de un `*ngFor`: la aplicación es zoneless
+   * y cada escucha agenda una pasada de detección, así que el arreglo se creaba
+   * de nuevo y sus nodos se recreaban en cada pasada — el clic salía del botón
+   * antes de llegar a `toggleOrderDetail()`. Ocho reproducciones entre dos
+   * empleados. Ahora es un campo `readonly` con `trackBy` por clave.
+   *
+   * "Factura solicitada" es la bandeja de la propuesta 20: filtra en memoria
+   * sobre los pedidos ya cargados (nunca con el filtro del servidor, que
+   * rompería la lógica de secciones cargadas de `admin-control.service`).
+   */
+  readonly orderTabs: ReadonlyArray<{ key: string; status?: AdminOrder['status']; label: string }> = [
+    { key: 'pending', status: 'pending', label: 'Pendiente de pago' },
+    { key: 'paid', status: 'paid', label: 'Pagado' },
+    { key: 'shipped', status: 'shipped', label: 'Enviado' },
+    { key: 'delivered', status: 'delivered', label: 'Entregado' },
+    { key: 'factura_solicitada', label: 'Factura solicitada' },
+    { key: 'cancelled', status: 'cancelled', label: 'Cancelado' },
+    { key: 'refunded', status: 'refunded', label: 'Reembolsado' },
+    { key: 'en_devolucion', status: 'en_devolucion', label: 'Devolución en curso' },
+    { key: 'devuelto_validado', status: 'devuelto_validado', label: 'Devolución validada' },
+    { key: 'devolucion_rechazada', status: 'devolucion_rechazada', label: 'Devolución rechazada' }
+  ];
+
+  /** Pestaña encendida: una clave de estado o la bandeja de facturas. */
+  currentOrderTab = 'pending';
+
+  trackOrderTab(_index: number, tab: { key: string }): string {
+    return tab.key;
+  }
   readonly rewardCutRuleOptions: Array<ExplainedSelectOption<string>> = [
     {
       value: 'dynamic_compression',
@@ -424,6 +479,8 @@ export class AdminComponent implements OnInit {
     private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
     private readonly router: Router,
+    private readonly route: ActivatedRoute, // paquete E · ronda 26: la vista viene de la URL
+
     private readonly cdr: ChangeDetectorRef,
     private readonly api: ApiService,
     private readonly sanitizer: DomSanitizer,
@@ -923,15 +980,77 @@ export class AdminComponent implements OnInit {
   employeeForm = {
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    jobTitle: '' // paquete E · ronda 26: el puesto que pinta la insignia
   };
 
   ngOnInit(): void {
-    this.currentView = this.getFirstAllowedView();
-    // Carga mínima: solo warnings
-    this.adminControl.load().subscribe();
-    // Cargar la vista inicial bajo demanda
-    this.loadViewData(this.currentView);
+    // Paquete E · ronda 26 · La vista la manda la URL, no un campo interno. El
+    // componente no inyectaba `ActivatedRoute`: por eso recargar `#/admin`
+    // siempre volvía a la vista por omisión y Renata no podía mandar un enlace
+    // ("tendría que contestarle: en Clientes, hasta abajo, después de los
+    // documentos"). `getFirstAllowedView()` es solo el respaldo de `#/admin`.
+    //
+    // El orden importa: los parámetros de la URL se leen ANTES de montar la
+    // vista, para que la pestaña que pidió la URL no la pise el cálculo de
+    // "la primera pestaña con trabajo".
+    this.route.queryParamMap.subscribe((params) => {
+      // `?estado=paid` (la cola de trabajo y las acciones urgentes) y `?mes=`
+      // (Comisiones y pagos) viajan en la URL para sobrevivir a la navegación.
+      const estado = params.get('estado');
+      if (estado) {
+        this.currentOrderStatus = estado as AdminOrder['status'];
+        this.currentOrderTab = estado;
+        this.orderStatusFijadoPorUrl = true;
+      }
+      const mes = params.get('mes');
+      if (mes) {
+        this.pagosMesMonth = mes;
+      }
+      // La guarda de pantalla no quita una pantalla en silencio: dice cuál era.
+      this.pantallaSinAcceso = params.get('sinAcceso') ?? '';
+    });
+    this.route.paramMap.subscribe((params) => {
+      // `#/admin/pedido/:idPedido`: el pedido abre su detalle solo, sin buscarlo.
+      const idPedido = params.get('idPedido');
+      if (idPedido) {
+        this.expandedOrderDetailId = idPedido;
+        this.orderDeepLinkId = idPedido;
+        this.abrirPedidoDeUrl();
+      }
+    });
+    this.route.data.subscribe((data) => {
+      const vista = (data['view'] as AdminViewId | undefined) ?? this.getFirstAllowedView();
+      this.aplicarVistaDeRuta(vista, (data['panel'] as string | undefined) ?? '');
+    });
+    // Carga mínima: solo warnings (ya cacheados si se viene de otra pantalla).
+    if (!this.adminControl.hasLoadedWarnings()) {
+      this.adminControl.load().subscribe();
+    }
+  }
+
+  /** Pedido pedido por URL (`#/admin/pedido/:idPedido`), para abrirlo al llegar. */
+  orderDeepLinkId: string | null = null;
+
+  /** true cuando la pestaña de Pedidos la eligió la URL: no se recalcula sola. */
+  private orderStatusFijadoPorUrl = false;
+
+  /** Pantalla que se quiso abrir sin tener su privilegio; se dice y se puede cerrar. */
+  pantallaSinAcceso = ''; // paquete E · ronda 26
+
+  private aplicarVistaDeRuta(vista: AdminViewId, panel: string): void {
+    this.currentView = vista;
+    this.orderPage = 0;
+    this.customerPage = 0;
+    this.productPage = 0;
+    this.employeePage = 0;
+    this.notificationPage = 0;
+    this.loadViewData(vista);
+    if (panel) {
+      // Comisiones y pagos vive dentro de Clientes; al llegar por su URL la
+      // pantalla baja sola al bloque, en vez de dejarlo "hasta abajo".
+      setTimeout(() => document.getElementById(panel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
   }
 
   private loadViewData(view: AdminViewId): void {
@@ -942,6 +1061,9 @@ export class AdminComponent implements OnInit {
           this.adminControl.loadOrders().subscribe(() => {
             this.syncInitialOrderDeps();
           });
+        } else {
+          this.abrirPrimeraPestanaConTrabajo();
+          this.abrirPedidoDeUrl();
         }
         break;
       case 'customers':
@@ -1011,6 +1133,51 @@ export class AdminComponent implements OnInit {
   private syncInitialOrderDeps(): void {
     this.ensureCurrentViewAllowed();
     this.selectPublicGeneralCustomer();
+    this.abrirPrimeraPestanaConTrabajo();
+    this.abrirPedidoDeUrl();
+  }
+
+  /**
+   * Paquete E · ronda 26 · propuesta 33 · Pedidos abre donde hay trabajo.
+   *
+   * Abría siempre en "Pendiente", vacía, mientras el resumen de al lado decía
+   * "Pagados 3": Toño leyó las dos cosas a la vez y anotó "si yo fuera menos
+   * necio me voy a la bodega a barrer". La cola de trabajo (`nextActions`) ya
+   * calcula cuál es la primera pestaña con algo que hacer; se usa esa. Si la
+   * pestaña la pidió la URL (`?estado=`) o se llegó a un pedido concreto, manda
+   * la URL: nunca se le mueve la pantalla a quien pidió una en particular.
+   */
+  private abrirPrimeraPestanaConTrabajo(): void {
+    if (this.orderStatusFijadoPorUrl || this.orderDeepLinkId) {
+      return;
+    }
+    const primera = this.nextActions.find((accion) => !!accion.status);
+    if (primera?.status) {
+      this.currentOrderStatus = primera.status;
+      this.currentOrderTab = primera.status;
+      this.orderPage = 0;
+    }
+  }
+
+  /**
+   * `#/admin/pedido/:idPedido`: el pedido se abre solo, en la pestaña de su
+   * estado, sin que nadie tenga que adivinar en cuál de las diez está. Antes el
+   * detalle era un acordeón dentro de una pantalla sin dirección: no había
+   * enlace que mandarle al dueño ni forma de volver a él.
+   */
+  private abrirPedidoDeUrl(): void {
+    if (!this.orderDeepLinkId) {
+      return;
+    }
+    const pedido = this.orders.find((o) => o.id === this.orderDeepLinkId);
+    if (!pedido) {
+      return;
+    }
+    this.currentOrderStatus = pedido.status;
+    this.currentOrderTab = pedido.status;
+    this.orderStatusFijadoPorUrl = true;
+    this.orderSearch = pedido.id;
+    this.orderPage = 0;
   }
 
   get orders(): AdminOrder[] {
@@ -1286,63 +1453,119 @@ export class AdminComponent implements OnInit {
     return map[type] ?? 'stats';
   }
 
-  get adminNavLinksStable(): SidebarLink[] {
-    if (this.adminNavLinksCache?.user === this.currentUser) {
-      return this.adminNavLinksCache.links;
-    }
-    // Navegación agrupada por proceso: cada grupo se pinta como encabezado
-    // y desaparece cuando el operador no tiene acceso a ninguna vista suya.
-    const groups: Array<{ label: string; links: Array<SidebarLink & { view: AdminViewId }> }> = [
+  /**
+   * Paquete E · ronda 26 · El menú del back office, escrito UNA sola vez.
+   *
+   * Antes eran dos copias de doce enlaces (la barra lateral y la barra inferior
+   * del móvil), y ninguna de las dos nombraba el trabajo de tres personas:
+   * Comisiones y pagos vivía al fondo de la ficha de un cliente ("Alma buscó
+   * «Comisiones» en el menú siete veces"), Seguimiento de hoy era un botón
+   * encima de una tabla dentro de Clientes y Despacho en bloque estaba entre
+   * las pestañas de estado de Pedidos. Ahora cada entrada lleva su URL.
+   */
+  private get adminMenuGroups(): Array<{ label: string; links: AdminMenuEntry[] }> {
+    return [
       {
         label: 'Operación diaria',
         links: [
-          { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
-          { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
-          { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' }
+          { id: 'orders', view: 'orders', route: ADMIN_ROUTE_BY_VIEW.orders, icon: 'fa-receipt', label: 'Pedidos', short: 'Pedidos' },
+          { id: 'despacho', privilege: 'order_mark_shipped', route: '/admin/despacho', icon: 'fa-boxes-packing', label: 'Despacho en bloque', short: 'Despacho' },
+          { id: 'pos', view: 'pos', route: ADMIN_ROUTE_BY_VIEW.pos, icon: 'fa-cash-register', label: 'Punto de Venta', short: 'PV' },
+          { id: 'stocks', view: 'stocks', route: ADMIN_ROUTE_BY_VIEW.stocks, icon: 'fa-warehouse', label: 'Stocks', short: 'Stocks' },
+          { id: 'resumen-turno', privilege: 'access_screen_stocks', route: '/admin/resumen-turno', icon: 'fa-clipboard-check', label: 'Resumen de turno', short: 'Turno' }
         ]
       },
       {
         label: 'Personas',
         links: [
-          { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
-          { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' }
+          { id: 'customers', view: 'customers', route: ADMIN_ROUTE_BY_VIEW.customers, icon: 'fa-users', label: 'Clientes', short: 'Clientes' },
+          { id: 'seguimiento', privilege: 'access_screen_customers', route: '/admin/seguimiento', icon: 'fa-headset', label: 'Seguimiento de hoy', short: 'Seguimiento' },
+          { id: 'employees', view: 'employees', route: ADMIN_ROUTE_BY_VIEW.employees, icon: 'fa-id-badge', label: 'Empleados', short: 'Empleados' }
+        ]
+      },
+      {
+        label: 'Finanzas',
+        links: [
+          { id: 'comisiones', privilege: 'commissions_register_payment', route: '/admin/comisiones', icon: 'fa-hand-holding-dollar', label: 'Comisiones y pagos', short: 'Comisiones' }
         ]
       },
       {
         label: 'Catálogo y oferta',
         links: [
-          { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-          { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campañas', subtitle: '' },
-          { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' }
+          { id: 'products', view: 'products', route: ADMIN_ROUTE_BY_VIEW.products, icon: 'fa-boxes-stacked', label: 'Productos', short: 'Productos' },
+          { id: 'campaigns', view: 'campaigns', route: ADMIN_ROUTE_BY_VIEW.campaigns, icon: 'fa-bullhorn', label: 'Campañas', short: 'Campañas' },
+          { id: 'coupons', view: 'coupons', route: ADMIN_ROUTE_BY_VIEW.coupons, icon: 'fa-ticket', label: 'Cupones', short: 'Cupones' }
         ]
       },
       {
-        label: 'Seguimiento',
+        label: 'Reportes y avisos',
         links: [
-          { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadísticas', subtitle: '' },
-          { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
-          { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' }
+          { id: 'stats', view: 'stats', route: ADMIN_ROUTE_BY_VIEW.stats, icon: 'fa-chart-line', label: 'Estadísticas', short: 'Estadísticas' },
+          { id: 'honor_board', view: 'honor_board', route: ADMIN_ROUTE_BY_VIEW.honor_board, icon: 'fa-ranking-star', label: 'Cuadro de Honor', short: 'Honor' },
+          { id: 'notifications', view: 'notifications', route: ADMIN_ROUTE_BY_VIEW.notifications, icon: 'fa-bell', label: 'Notificaciones', short: 'Avisos' }
         ]
       },
       {
         label: 'Sistema',
         links: [
-          { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuración', subtitle: '' }
+          { id: 'settings', view: 'settings', route: ADMIN_ROUTE_BY_VIEW.settings, icon: 'fa-sliders', label: 'Configuración', short: 'Configuración' }
         ]
       }
     ];
+  }
 
-    const resolved: SidebarLink[] = [];
-    for (const group of groups) {
-      const visible = group.links
-        .filter((link) => this.canAccessView(link.view))
-        .map(({ view, ...link }) => link);
-      if (visible.length > 0) {
-        resolved.push({ id: `heading-${group.label}`, icon: '', label: group.label, heading: true }, ...visible);
+  private puedeVerEntrada(entrada: AdminMenuEntry): boolean {
+    if (entrada.view) {
+      return this.canAccessView(entrada.view);
+    }
+    return entrada.privilege ? this.hasPermission(entrada.privilege) : true;
+  }
+
+  /** Las entradas visibles, sin encabezados: la barra inferior del móvil las reusa. */
+  get adminMenuLinksStable(): AdminMenuEntry[] {
+    this.buildAdminMenuCache();
+    return this.adminNavLinksCache!.entries;
+  }
+
+  /** Las mismas entradas con sus encabezados de grupo, para la barra lateral. */
+  get adminNavLinksStable(): SidebarLink[] {
+    this.buildAdminMenuCache();
+    return this.adminNavLinksCache!.links;
+  }
+
+  private buildAdminMenuCache(): void {
+    if (this.adminNavLinksCache?.user === this.currentUser) {
+      return;
+    }
+    const links: SidebarLink[] = [];
+    const entries: AdminMenuEntry[] = [];
+    for (const group of this.adminMenuGroups) {
+      const visibles = group.links.filter((entrada) => this.puedeVerEntrada(entrada));
+      if (visibles.length === 0) {
+        continue;
+      }
+      links.push({ id: `heading-${group.label}`, icon: '', label: group.label, heading: true });
+      for (const entrada of visibles) {
+        links.push({ id: entrada.id, icon: entrada.icon, label: entrada.label, subtitle: '' });
+        entries.push(entrada);
       }
     }
-    this.adminNavLinksCache = { user: this.currentUser, links: resolved };
-    return resolved;
+    this.adminNavLinksCache = { user: this.currentUser, links, entries };
+  }
+
+  /** Qué entrada del menú está encendida: se lee de la URL, no de un campo suelto. */
+  get activeMenuId(): string {
+    const url = (this.router.url || '').split('?')[0];
+    if (url.startsWith('/admin/comisiones')) {
+      return 'comisiones';
+    }
+    const porRuta = this.adminMenuLinksStable.find((entrada) => url === entrada.route);
+    return porRuta?.id ?? this.currentView;
+  }
+
+  /** Traza estable de las entradas del menú: evita recrear los nodos en cada pasada. */
+  trackMenuEntry(_index: number, entrada: AdminMenuEntry): string {
+    return entrada.id;
   }
 
   get viewTitle(): string {
@@ -1561,14 +1784,22 @@ export class AdminComponent implements OnInit {
   }
 
   get filteredOrdersStable(): AdminOrder[] {
-    let byStatus = this.orders.filter((o) => o.status === this.currentOrderStatus);
+    const q = this.orderSearch.trim().toLowerCase();
+    // Paquete E · ronda 26 · propuesta 33 · Buscar cruza estados: se busca sobre
+    // todos los pedidos cargados, no solo sobre la pestaña abierta. Cada fila
+    // muestra su estado, así que no hay dónde perderse. Antes había que adivinar
+    // en cuál de las diez pestañas estaba "Ximena" antes de poder encontrarla.
+    let byStatus = q
+      ? this.orders
+      : this.currentOrderTab === 'factura_solicitada'
+        ? this.orders.filter((o) => o.invoiceStatus === 'solicitada')
+        : this.orders.filter((o) => o.status === this.currentOrderStatus);
     // Stock filter (applies to all statuses when a stock is selected)
     if (this.orderStockFilter) {
       byStatus = byStatus.filter(
         (o) => o.stockId === this.orderStockFilter || o.pickupStockId === this.orderStockFilter
       );
     }
-    const q = this.orderSearch.trim().toLowerCase();
     if (!q) return byStatus;
     return byStatus.filter((o) =>
       (o.customer || '').toLowerCase().includes(q) ||
@@ -1940,10 +2171,10 @@ export class AdminComponent implements OnInit {
   }
 
   runNextAction(action: { view: AdminViewId; status?: AdminOrder['status'] }): void {
-    this.onAdminNavSelect(action.view);
-    if (action.status) {
-      this.setOrderStatus(action.status);
-    }
+    // El estado viaja en la URL: al navegar, el caparazón se vuelve a montar y
+    // un campo asignado aquí se perdería por el camino.
+    this.router.navigate([ADMIN_ROUTE_BY_VIEW[action.view]],
+                         action.status ? { queryParams: { estado: action.status } } : {});
   }
 
 
@@ -2524,6 +2755,16 @@ export class AdminComponent implements OnInit {
 
   get currentUser(): AuthUser | null {
     return this.authService.currentUser;
+  }
+
+  /**
+   * Paquete E · ronda 26 · propuesta 27c · El puesto que pinta la insignia.
+   * Decía ADMIN sobre el nombre de la cajera de tercer día, igual que sobre el
+   * de la gerente de operaciones, y es lo primero que ve el cliente que se
+   * asoma al mostrador. `role` sigue siendo `admin`: es la llave de las guardas.
+   */
+  get puestoDelUsuario(): string {
+    return this.authService.jobTitleLabel(this.currentUser);
   }
 
 
@@ -3272,21 +3513,28 @@ export class AdminComponent implements OnInit {
   }
 
 
-  onAdminNavSelect(viewId: string): void {
-    this.setView(viewId as AdminViewId);
+  onAdminNavSelect(entryId: string): void {
+    const entrada = this.adminMenuLinksStable.find((e) => e.id === entryId);
+    if (entrada) {
+      this.irAEntradaDeMenu(entrada);
+    }
   }
 
+  /**
+   * Paquete E · ronda 26 · Cambiar de vista NAVEGA, ya no asigna un campo: así
+   * la URL siempre dice en qué pantalla estás, se puede mandar por correo y
+   * recargar te devuelve al mismo sitio.
+   */
   setView(view: AdminViewId): void {
     if (!this.canAccessView(view)) {
       return;
     }
-    this.currentView = view;
-    this.orderPage = 0; this.orderSearch = '';
-    this.customerPage = 0; this.customerSearch = '';
-    this.productPage = 0; this.productSearch = '';
-    this.employeePage = 0; this.employeeSearch = '';
-    this.notificationPage = 0; this.notificationSearch = '';
-    this.loadViewData(view);
+    this.router.navigateByUrl(ADMIN_ROUTE_BY_VIEW[view]);
+  }
+
+  /** Abre una pantalla del back office por su URL (menú lateral y barra móvil). */
+  irAEntradaDeMenu(entrada: AdminMenuEntry): void {
+    this.router.navigateByUrl(entrada.route);
   }
 
   private loadStocksAndPosState(): void {
@@ -3393,12 +3641,37 @@ export class AdminComponent implements OnInit {
 
   setOrderStatus(status: AdminOrder['status']): void {
     this.currentOrderStatus = status;
+    this.currentOrderTab = status;
     this.orderPage = 0;
-    this.orderSearch = '';
+    // El buscador YA NO se borra al cambiar de pestaña: se escribía "Ximena",
+    // se cambiaba de estado para encontrarla y la búsqueda desaparecía sola.
     // Si no hay carga inicial completa, cargar el status específico
     if (!this.adminControl.hasLoadedOrders()) {
       this.adminControl.loadOrders(status).subscribe();
     }
+  }
+
+  /** Cambia de pestaña en Pedidos: un estado o la bandeja de facturas (propuesta 20). */
+  setOrderTab(tab: { key: string; status?: AdminOrder['status'] }): void {
+    this.orderStatusFijadoPorUrl = true;
+    if (tab.status) {
+      this.setOrderStatus(tab.status);
+      return;
+    }
+    this.currentOrderTab = tab.key;
+    this.orderPage = 0;
+  }
+
+  /**
+   * Contador de cada pestaña. La bandeja de facturas cuenta las solicitadas
+   * sobre los pedidos ya cargados: dos del 4 de marzo con 37 días encima, que
+   * Alma armó abriendo pedido por pedido.
+   */
+  orderTabCount(tab: { key: string; status?: AdminOrder['status'] }): number {
+    if (tab.status) {
+      return this.orderCountByStatus(tab.status);
+    }
+    return this.orders.filter((order) => order.invoiceStatus === 'solicitada').length;
   }
 
   pageRange(totalPages: number, current: number): number[] {
@@ -3430,20 +3703,19 @@ export class AdminComponent implements OnInit {
 
   resolveWarning(warning: { type: string; monthKey?: string }): void {
     this.isActionsModalOpen = false;
-    const target: AdminViewId = this.warningTargetView(warning.type);
-    if (warning.type === 'shipping') {
-      this.currentOrderStatus = 'paid';
-    } else if (warning.type === 'payments') {
-      this.currentOrderStatus = 'pending';
-    } else if (warning.type === 'refunds') {
-      this.currentOrderStatus = 'cancelled';
-    }
-    this.setView(target);
     if (warning.type === 'commissions_ready' || warning.type === 'commissions_no_clabe') { // WP-A
-      // El aviso se calcula con el reloj del servidor: Pagos del mes abre ese mismo mes.
-      this.pagosMesMonth = warning.monthKey || this.pagosMesMonth;
-      setTimeout(() => document.getElementById('pagos-mes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      // Comisiones y pagos ya tiene URL propia: se llega por ella, no bajando
+      // hasta el fondo de la ficha de un cliente sin comisiones.
+      this.router.navigate(['/admin/comisiones'],
+                           warning.monthKey ? { queryParams: { mes: warning.monthKey } } : {});
+      return;
     }
+    const target: AdminViewId = this.warningTargetView(warning.type);
+    const estado = warning.type === 'shipping' ? 'paid'
+      : warning.type === 'payments' ? 'pending'
+      : warning.type === 'refunds' ? 'cancelled'
+      : '';
+    this.router.navigate([ADMIN_ROUTE_BY_VIEW[target]], estado ? { queryParams: { estado } } : {});
   }
 
   openNewOrderModal(): void {
@@ -3592,6 +3864,33 @@ export class AdminComponent implements OnInit {
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  /** Último pedido cuyo enlace se copió; el botón lo dice sin abrir un toast. */
+  enlacePedidoCopiadoId: string | null = null; // paquete E · ronda 26
+
+  /**
+   * Copia la dirección de este pedido. El detalle era un acordeón dentro de una
+   * pantalla sin dirección: "Si alguien me pregunta dónde se pagan las
+   * comisiones tendría que contestarle: en Clientes, hasta abajo" era el mismo
+   * problema una pantalla más allá.
+   */
+  copiarEnlaceDePedido(order: AdminOrder): void {
+    const base = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+    const enlace = `${base}#/admin/pedido/${order.id}`;
+    const portapapeles = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (!portapapeles?.writeText) {
+      this.showSnackbar('Tu navegador no deja copiar solo; selecciona el enlace y cópialo a mano.', 'error');
+      return;
+    }
+    portapapeles.writeText(enlace).then(
+      () => {
+        this.enlacePedidoCopiadoId = order.id;
+        this.showSnackbar('Enlace del pedido copiado. Ya se puede mandar por correo o WhatsApp.');
+        this.cdr.detectChanges();
+      },
+      () => this.showSnackbar('No se pudo copiar; selecciona el enlace y cópialo a mano.', 'error')
+    );
   }
 
   toggleOrderDetail(orderId: string): void {
@@ -5121,6 +5420,7 @@ export class AdminComponent implements OnInit {
         name: this.employeeForm.name.trim(),
         email: this.employeeForm.email.trim(),
         phone: this.employeeForm.phone.trim() || undefined,
+        jobTitle: this.employeeForm.jobTitle.trim() || undefined,
         canAccessAdmin: true,
         privileges: normalizePrivileges(null)
       })
@@ -5131,7 +5431,7 @@ export class AdminComponent implements OnInit {
           this.employeeMessage = `Empleado creado: ${emp.name}.`;
           this.employeeMessageIsError = false;
           this.showSnackbar(`Empleado creado: ${emp.name}.`);
-          this.employeeForm = { name: '', email: '', phone: '' };
+          this.employeeForm = { name: '', email: '', phone: '', jobTitle: '' };
           this.selectedEmployee = emp;
           this.syncSelectedEmployeePrivilegeDraft();
           this.cdr.detectChanges();
