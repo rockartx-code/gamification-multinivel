@@ -246,7 +246,8 @@ export class AdminSeguimientoComponent implements OnInit {
       case 'fria':
         return `Lleva ${this.thresholds.coldDays}+ días sin comprar (o nunca compró y ya pasó la bienvenida).`;
       default:
-        return 'Compró hace poco; no necesita contacto hoy.';
+        // G/11: ya tiene plantilla propia, así que el texto deja de cerrar la puerta.
+        return 'Compró hace poco; no necesita contacto hoy. Si le escribes, es para preguntarle cómo le fue.';
     }
   }
 
@@ -312,7 +313,10 @@ export class AdminSeguimientoComponent implements OnInit {
     this.blockedLink = '';
     this.linkCopied = false;
     this.writeChannel = row.whatsappUrl ? 'whatsapp' : (row.contactPreference === 'email' ? 'email' : 'call');
-    const suggested = row.templateKey && this.templates[row.templateKey] ? row.templateKey : (this.templates['fria'] ? 'fria' : '');
+    // G/11: mientras una situación no tenga plantilla no se propone ninguna. El
+    // respaldo a 'fria' dejó a Gaby a un clic de mandarle "Hace tiempo que no te
+    // vemos por la tienda" a Julio, con el pedido entregado el viernes.
+    const suggested = row.templateKey && this.templates[row.templateKey] ? row.templateKey : '';
     this.writeTemplateKey = suggested;
     this.writeMessage = this.render(suggested, row);
     this.requestViewUpdate();

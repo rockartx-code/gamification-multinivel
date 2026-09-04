@@ -674,7 +674,8 @@
                     <div *ngIf="!(customer?.contactNotes?.length)" class="mt-1 text-micro text-gray-400">Sin notas todavía.</div>
                     <div *ngFor="let n of customer?.contactNotes" class="mt-1 rounded-xl border border-olive-30 bg-ivory-70 px-3 py-2 text-xs">
                       <div class="text-main">{{ n.text }}</div>
-                      <div class="text-micro text-gray-500">{{ n.by }} · {{ n.at | date:'dd/MM/yyyy HH:mm' }}</div>
+                      <!-- G/12: la bitácora firmaba con un id de trece dígitos ("1803978000111") -->
+                      <div class="text-micro text-gray-500">{{ noteAuthor(n) }} · {{ n.at | date:'d \'de\' MMMM \'de\' y, HH:mm' }}</div>
                     </div>
                     <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end" *ngIf="!customer?.deletedAt">
                       <div class="flex-1">

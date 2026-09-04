@@ -678,7 +678,11 @@ def handle_update_customer(customer_id, body, headers):
     if nota:
         actor = utils._extract_actor_from_bearer(headers or {})
         notas = list(existing.get("contactNotes") or [])
-        notas.append({"text": nota[:1000], "by": str(actor.get("user_id") or "admin"), "at": utils._now_iso()})
+        # Propuesta 12: la firma se resuelve al escribir y se guarda junto al id
+        # (aditivo: `by` se conserva). La bitácora decía "1803978000111".
+        notas.append({"text": nota[:1000], "by": str(actor.get("user_id") or "admin"),
+                      "byName": seguimiento_handlers.firmar_nota(headers or {}, actor),
+                      "at": utils._now_iso()})
         updates.append("contactNotes = :notes")
         eav[":notes"] = notas[-200:]
 

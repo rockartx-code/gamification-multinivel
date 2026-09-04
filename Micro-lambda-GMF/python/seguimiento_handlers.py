@@ -46,8 +46,10 @@ PLANTILLAS = {
     },
     "clabe_pendiente": {
         "title": "CLABE pendiente",
+        # La ruta "Mi cuenta → Datos bancarios" no existe en el producto: es
+        # Mi perfil. Gaby mandaba a la gente a un menú inventado.
         "text": ("Hola {nombre}, soy {coach} de Finding'U. Tienes {monto} de comisiones listas para depositar, "
-                 "pero nos falta tu CLABE. Regístrala en tu perfil (Mi cuenta → Datos bancarios) y te lo "
+                 "pero nos falta tu CLABE. Regístrala en Mi perfil (findingu.mx/#/perfil) y te la "
                  "depositamos el día de pago."),
     },
     "pedido_tardio": {
@@ -55,6 +57,16 @@ PLANTILLAS = {
         "text": ("Hola {nombre}, soy {coach} de Finding'U. Vi que tu pedido {folio} sigue en camino; "
                  "ya estoy revisando con almacén y te aviso en cuanto tenga la guía o la fecha de entrega. "
                  "Gracias por la paciencia."),
+    },
+    # Propuesta 11: la situación existía, tenía etiqueta y no tenía plantilla, así
+    # que la pantalla rellenaba con la de cliente fría. Gaby estuvo a un clic de
+    # mandarle "Hace tiempo que no te vemos por la tienda" a Julio, con el pedido
+    # entregado el viernes: *"La plantilla no me ahorró trabajo, me puso una trampa."*
+    "activa": {
+        "title": "Compró hace poco",
+        "text": ("Hola {nombre}, soy {coach} de Finding'U. Vi que ya recibiste {producto}; "
+                 "paso a preguntarte cómo te fue con él y si necesitas algo más. "
+                 "Cualquier duda me escribes por aquí."),
     },
 }
 
@@ -402,6 +414,44 @@ def _nombre_actor(headers: dict, actor: dict, ejecutivas: dict) -> str:
     return str((empleada or {}).get("name") or "tu coach")
 
 
+def firmar_nota(headers: dict, actor: Optional[dict] = None) -> str:
+    """Nombre con el que se firma una nota de bitácora (propuesta 12).
+
+    *"Si mañana Mireya lee «1803978000111», no sabe si fui yo o Alma, y le
+    vuelve a escribir a Julio. Para eso, me sigo yendo con mi libreta."*
+    (`gaby-2027-03-08.md`)
+
+    Se resuelve **al escribir** y se guarda junto al id, nunca al leer: la
+    vista Clientes no carga empleados y la coach no tiene privilegio para
+    verlos, así que resolver al leer serían N nombres por ficha (un N+1) y
+    encima con 403. Si no hay de dónde sacar el nombre devuelve cadena vacía
+    y la pantalla cae al id, que es lo que hay hoy.
+    """
+    h = headers or {}
+    nombre = str(h.get("x-user-name") or h.get("X-User-Name") or "").strip()
+    if nombre:
+        return nombre
+    actor = actor if isinstance(actor, dict) else utils._extract_actor(h)
+    uid = str(actor.get("user_id") or "").strip()
+    if not uid:
+        return ""
+    try:
+        empleada = utils._get_by_id("EMPLOYEE", int(uid))
+    except (TypeError, ValueError):
+        empleada = None
+    except Exception as ex:  # noqa: BLE001 - firmar nunca debe tumbar la nota
+        utils._log_error("nota_firma_error", ex)
+        empleada = None
+    if empleada and empleada.get("name"):
+        return str(empleada["name"]).strip()
+    try:
+        ficha = utils._get_by_id("CUSTOMER", utils._customer_entity_id(uid))
+    except Exception as ex:  # noqa: BLE001
+        utils._log_error("nota_firma_error", ex)
+        ficha = None
+    return str((ficha or {}).get("name") or "").strip()
+
+
 def _es_cartera_por_defecto(actor: dict, cfg: dict) -> bool:
     """La cartera FindingU (sin patrocinadora ni ejecutiva) es de la ejecutiva por
     defecto; si no hay una configurada, de cualquier admin o empleada con la pantalla."""
@@ -535,7 +585,7 @@ def handle_contacto(customer_id, body: dict, headers: dict) -> dict:
     actor = utils._extract_actor(headers)
     ahora = utils._now_iso()
     nota = {"text": _texto_nota(canal, plantilla, mensaje), "by": str(actor.get("user_id") or "admin"),
-            "at": ahora, "channel": canal, "templateKey": plantilla}
+            "byName": firmar_nota(headers, actor), "at": ahora, "channel": canal, "templateKey": plantilla}
 
     if str(customer_id) == "invitado":
         correo = utils._normalize_email(body.get("guestEmail"))
