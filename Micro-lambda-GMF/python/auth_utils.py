@@ -380,12 +380,74 @@ def handle_login_link_redeem(body):
     return _abrir_sesion({**auth, "authId": auth.get("authId") or email}, profile, entity_type, user_id, remember_me)
 
 
+#: Estados en los que el dinero ya entró y el volumen del mes debe contarlo.
+_ESTADOS_ACREDITABLES = ("paid", "shipped", "delivered")
+
+
+def _reacreditar_volumen_del_pedido(order: dict) -> bool:
+    """Paso 1 de `handle_apply_rewards` sobre un pedido recién ligado (propuesta 16).
+
+    Julio, Mariana y Aurora pagaron $5,038 entre los tres como invitados y su
+    mes contable seguía en `vp=0.0, netVolume=0.0` después de tener ficha: la
+    tienda les decía *"Este mes has comprado $0"* encima de *"$1,209 Pagada"*,
+    no salían en el Cuadro de Honor, Alma leía "0 % recompra" y **la mejor
+    clienta del mes aparecía como inactiva**. Y es dinero: quien compra como
+    invitado perdía su tramo de descuento por volumen y su activación del mes.
+
+    Se corre **solo el paso 1** (volumen, VP, tramo, activación y reevaluación
+    de bloqueadas): el paso 2, repartir comisión a la línea ascendente, ya
+    corrió cuando el pedido se pagó y repetirlo pagaría dos veces el mismo
+    pedido. Corre en el camino de ligado, **nunca colgado de `ORDER_PAID`**,
+    que está en 37 de 40 GetItem con 800 clientes (§4.20).
+
+    Idempotente por `rewardsAppliedAt`: ligar dos veces no suma dos veces.
+    """
+    import commissions_lambda  # mismo CodeUri; tardío para no cargar el motor al arrancar
+
+    order_id = order.get("orderId")
+    buyer_id = order.get("customerId")
+    if not order_id or not buyer_id:
+        return False
+    if str(order.get("status") or "").strip().lower() not in _ESTADOS_ACREDITABLES:
+        return False
+    if order.get("rewardsAppliedAt") or order.get("rewardsVoidedAt"):
+        return False
+
+    cfg = utils._load_app_config().get("rewards", {}) or {}
+    mxn_per_vp = utils._mxn_per_vp()
+    activation_vp = utils._activation_vp()
+    month_key = order.get("monthKey") or utils._month_key()
+    neto = commissions_lambda._commissionable_net(order, utils._to_decimal(order.get("netTotal")))
+    vp = commissions_lambda._compute_order_vp(order, mxn_per_vp)
+
+    # La marca se pone **antes** de sumar: si algo revienta a media escritura es
+    # preferible no acreditar a acreditar dos veces el mismo dinero.
+    utils._update_by_id("ORDER", order_id, "SET rewardsAppliedAt = :t", {":t": utils._now_iso()})
+
+    estaba_activo = commissions_lambda._is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+    utils._increment_associate_month_net_volume(buyer_id, month_key, neto)
+    utils._increment_associate_month_net_vp(buyer_id, month_key, vp)
+    commissions_lambda._CACHE["states"].pop(f"{utils._customer_id_str(buyer_id)}#{month_key}", None)
+    ahora_activo = commissions_lambda._is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+    utils._update_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(buyer_id, month_key),
+                        "SET isActive = :a", {":a": bool(ahora_activo)})
+
+    if (not estaba_activo) and ahora_activo and cfg.get("reevaluateBlockedOnActivation", True):
+        cadena = utils._get_customer_upline_ids(buyer_id, commissions_lambda.MAX_COMMISSION_LEVELS)
+        commissions_lambda._reevaluate_blocked_rows([str(buyer_id), *cadena], month_key)
+    utils._log("guest_order_volume_recredited", "INFO", orderId=order_id,
+               customerId=str(buyer_id), monthKey=month_key)
+    return True
+
+
 def _vincular_pedidos_de_invitado(customer_id, email: str) -> list:
     """Liga al nuevo cliente los pedidos hechos como invitado con su mismo correo.
 
-    Solo se toca la referencia del comprador y el historial del panel: el
-    tipo de comprador sigue siendo invitado, así que el motor de comisiones
-    no vuelve a acreditar nada.
+    Además de la referencia del comprador y del historial del panel, se
+    reacredita el **volumen** del pedido (paso 1 de recompensas, propuesta 16):
+    el tipo de comprador sigue siendo invitado y el reparto de comisión no se
+    repite, pero lo que la persona compró antes de tener cuenta ya cuenta para
+    su mes, su tramo de descuento y su activación.
     """
     ligados = []
     try:
@@ -399,7 +461,12 @@ def _vincular_pedidos_de_invitado(customer_id, email: str) -> list:
                 continue
             actualizado = utils._update_by_id("ORDER", oid, "SET customerId = :c, linkedToAccountAt = :t",
                                               {":c": customer_id, ":t": utils._now_iso()})
-            utils._upsert_order_customer_history(actualizado or {**order, "customerId": customer_id})
+            ligado = actualizado or {**order, "customerId": customer_id}
+            utils._upsert_order_customer_history(ligado)
+            try:
+                _reacreditar_volumen_del_pedido(ligado)
+            except Exception as ex:  # noqa: BLE001 - ligar no puede fallar por el motor
+                utils._log_error("guest_order_recredit_failed", ex)
             ligados.append(oid)
     except Exception as ex:
         utils._log_error("guest_orders_link_failed", ex)
