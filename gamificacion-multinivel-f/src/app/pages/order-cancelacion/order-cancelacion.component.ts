@@ -2,22 +2,34 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AdminOrder } from '../../models/admin.model';
+import { AdminOrder, OrderCancelResponse } from '../../models/admin.model';
 import { ApiService } from '../../services/api.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { textoEstadoPedido } from '../../models/vocabulario.model'; // paquete G · ronda 26 (§3.7)
 
 @Component({
   selector: 'app-order-cancelacion',
   standalone: true,
-  imports: [CommonModule, RouterLink, UiButtonComponent],
+  imports: [CommonModule, RouterLink, UiButtonComponent, UiFooterComponent],
   templateUrl: './order-cancelacion.component.html'
 })
 export class OrderCancelacionComponent implements OnInit {
+  /**
+   * Paquete G · propuesta 25 (§3.7), montado en la integración: aquí se leía
+   * "Estado: paid", en inglés y crudo, en la pantalla de cancelar un pedido.
+   */
+  estadoTexto(status: string | null | undefined, deliveryType?: string | null): string {
+    return textoEstadoPedido(status, deliveryType) || '—';
+  }
+
   orderId = '';
   order: AdminOrder | null = null;
   isLoading = true;
   isCancelling = false;
   cancelled = false;
+  /** Lo que el servidor guardó al cancelar (folio, estado nuevo, si queda reembolso pendiente). */
+  cancelResult: OrderCancelResponse | null = null;
   error = '';
 
   constructor(
@@ -50,6 +62,19 @@ export class OrderCancelacionComponent implements OnInit {
     return (this.order?.status ?? '') === 'pending';
   }
 
+  /** Reembolso pendiente según el servidor (pedido que ya estaba pagado). */
+  get refundPending(): boolean {
+    if (this.cancelResult) {
+      return Boolean(this.cancelResult.pendingRefund);
+    }
+    return !this.isPendingOrder;
+  }
+
+  get cancelledStatusLabel(): string {
+    const estado = this.cancelResult?.status || this.order?.status || '';
+    return estado === 'cancelled' || !estado ? 'Cancelada' : estado;
+  }
+
   get blockReason(): string {
     const s = this.order?.status ?? '';
     if (['shipped', 'delivered', 'en_devolucion'].includes(s)) {
@@ -66,7 +91,14 @@ export class OrderCancelacionComponent implements OnInit {
     this.api.cancelOrder(this.orderId, 'customer_request')
       .pipe(finalize(() => { this.isCancelling = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next: () => { this.cancelled = true; },
+        next: (respuesta) => {
+          // La pantalla de éxito muestra el estado que devolvió el servidor, no el que suponía el formulario.
+          this.cancelResult = respuesta;
+          this.cancelled = true;
+          if (this.order && respuesta?.status) {
+            this.order = { ...this.order, status: respuesta.status as AdminOrder['status'] };
+          }
+        },
         error: (err: any) => {
           this.error = err?.error?.message || 'No se pudo cancelar la orden.';
         }

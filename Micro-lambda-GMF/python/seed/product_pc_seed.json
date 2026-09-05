@@ -7,11 +7,11 @@
     { "name": "Boom", "aliases": ["boom!!", "complejo b"], "price": 420, "vpPoints": 8 },
     { "name": "Naplus", "aliases": ["sodio"], "price": 280, "vpPoints": 6 },
     { "name": "Glu-10", "aliases": ["glu10", "acido alfa lipoico", "alfa lipoico"], "price": 630, "vpPoints": 13 },
-    { "name": "BHB Acido", "aliases": ["bhb", "hidroxibutirato"], "price": 630, "vpPoints": 13 },
+    { "name": "BHB Ácido", "aliases": ["bhb", "hidroxibutirato"], "price": 630, "vpPoints": 13 },
     { "name": "Biotina", "aliases": [], "price": 400, "vpPoints": 8 },
     { "name": "Keto Elektrolyte Fusion", "aliases": ["keto", "elektrolyte", "electrolyte"], "price": 750, "vpPoints": 15 },
     { "name": "CRT-1200", "aliases": ["crt1200", "carnitina"], "price": 550, "vpPoints": 10 },
-    { "name": "Colageno Hidrolizado", "aliases": ["colageno", "colágeno"], "price": 700, "vpPoints": 13 },
+    { "name": "Colágeno Hidrolizado", "aliases": ["colageno", "colágeno"], "price": 700, "vpPoints": 13 },
     { "name": "Creatina Monohidratada", "aliases": ["creatina"], "price": 650, "vpPoints": 9 },
     { "name": "Gel Reductivo", "aliases": ["gel"], "price": 400, "vpPoints": 6 }
   ]

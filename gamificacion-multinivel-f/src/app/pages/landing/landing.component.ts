@@ -13,11 +13,12 @@ import { FeatureBadgeComponent } from '../../components/feature-badge/feature-ba
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiHeaderComponent } from '../../components/ui-header/ui-header.component';
 import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { RevealOnScrollDirective } from '../../directives/reveal-on-scroll.directive';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiFormFieldComponent, UiButtonComponent, FeatureBadgeComponent, UiHeaderComponent, UiFooterComponent, RevealOnScrollDirective],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -262,7 +263,7 @@ export class LandingComponent implements OnInit {
     this.fieldErrors = {
       firstName: this.form.firstName.trim() ? '' : 'El nombre es obligatorio.',
       apellidoPaterno: this.form.apellidoPaterno.trim() ? '' : 'El apellido paterno es obligatorio.',
-      apellidoMaterno: this.form.apellidoMaterno.trim() ? '' : 'El apellido materno es obligatorio.',
+      apellidoMaterno: '',   // opcional: no todo el mundo lo tiene y bloqueaba altas reales
       email: this.form.email.trim() ? '' : 'El correo electrónico es obligatorio.',
       password: this.form.password ? '' : 'La contraseña es obligatoria.',
       confirmPassword: ''
@@ -328,7 +329,9 @@ export class LandingComponent implements OnInit {
     const words = all.split(/\s+/).filter(w => w.length > 0);
     if (words.length === 0) return '';
     const initials = words.map(w => w[0].toUpperCase()).join('');
-    return `${words[0]}-${initials}`;
+    // El backend guarda el código sin acentos y en mayúsculas ("TOMAS-TIL");
+    // la vista previa mostraba "Tomás-TIL", que tecleado tal cual no resolvía.
+    return `${words[0]}-${initials}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   }
 
   private setFeedback(message: string, type: 'error' | 'success'): void {

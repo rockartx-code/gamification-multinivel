@@ -1,0 +1,193 @@
+<section class="rounded-3xl border border-olive-30 bg-white/70 p-5 shadow-sm">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h3 class="flex items-center gap-2 text-xl font-semibold text-main">
+        <i class="fa-solid fa-rotate text-accent" aria-hidden="true"></i>
+        Recibe esto cada mes
+      </h3>
+      <p class="mt-1 text-sm text-gray-600">
+        Elige qué quieres recibir y qué día. Ese día creamos tu pedido y te mandamos por correo el enlace para pagarlo;
+        nada se cobra solo. Puedes pausar o cancelar cuando quieras.
+      </p>
+    </div>
+    <ui-button *ngIf="!isFormOpen && !activas.length" size="sm" variant="primary" iconClass="fa-solid fa-plus mr-1"
+      (pressed)="abrirNueva()">Crear mi suscripción</ui-button>
+  </div>
+
+  <div *ngIf="message" class="mt-4 rounded-xl border px-4 py-3 text-sm"
+    [ngClass]="messageTone === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-700'">
+    <i class="fa-solid mr-1" [ngClass]="messageTone === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'" aria-hidden="true"></i>
+    {{ message }}
+  </div>
+
+  <div *ngIf="isLoading" class="mt-4 text-sm text-gray-600">Cargando tu suscripción...</div>
+  <div *ngIf="loadError" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    {{ loadError }}
+    <ui-button size="sm" variant="ghost" extraClass="ml-2" (pressed)="cargar()">Reintentar</ui-button>
+  </div>
+
+  <!-- Suscripciones vigentes -->
+  <div *ngIf="!isLoading && activas.length" class="mt-4 space-y-3">
+    <article *ngFor="let sub of activas; trackBy: trackSub" class="rounded-2xl border border-olive-30 bg-ivory-80 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <ui-badge [tone]="estadoTone(sub)">{{ estadoLabel(sub) }}</ui-badge>
+          <span class="text-xs text-gray-500">{{ sub.subscriptionId }}</span>
+        </div>
+        <div class="text-sm font-semibold text-main">
+          <ng-container *ngIf="sub.status === 'active'">Próximo pedido: {{ fechaLarga(sub.nextRunDate) }}</ng-container>
+          <ng-container *ngIf="sub.status === 'paused'">En pausa hasta el {{ fechaLarga(sub.pausedUntil) }}</ng-container>
+        </div>
+      </div>
+      <ul class="mt-3 space-y-1 text-sm text-main">
+        <li *ngFor="let item of sub.items" class="flex justify-between gap-3">
+          <span>{{ item.quantity }} × {{ item.name }}</span>
+          <span class="text-gray-600">{{ formatMoney(item.price * item.quantity) }}</span>
+        </li>
+      </ul>
+      <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+        <span>Cada día <strong class="text-main">{{ sub.dayOfMonth }}</strong> · {{ entregaDe(sub) }}</span>
+        <span>Precio de lista: <strong class="text-main">{{ formatMoney(totalListaDe(sub)) }}</strong></span>
+      </div>
+      <p class="mt-1 text-xs text-gray-500">{{ notaDescuento }}</p>
+      <p *ngIf="sub.lastOrderId" class="mt-1 text-xs text-gray-500">
+        Último pedido creado: <a class="font-semibold underline" [href]="'#/orden/' + sub.lastOrderId">{{ sub.lastOrderId }}</a> ({{ fechaLarga(sub.lastRunDate) }}).
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <ui-button *ngIf="sub.status === 'active'" size="sm" variant="secondary" iconClass="fa-solid fa-pause mr-1"
+          (pressed)="pedirConfirmacion('pause', sub)">Pausar un mes</ui-button>
+        <ui-button *ngIf="sub.status === 'paused'" size="sm" variant="primary" iconClass="fa-solid fa-play mr-1"
+          (pressed)="pedirConfirmacion('resume', sub)">Reanudar</ui-button>
+        <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-pen mr-1" (pressed)="editar(sub)">Editar</ui-button>
+        <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-ban mr-1" (pressed)="pedirConfirmacion('cancel', sub)">Cancelar</ui-button>
+      </div>
+    </article>
+  </div>
+
+  <!-- Formulario de alta / edición -->
+  <form *ngIf="isFormOpen" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4" (ngSubmit)="guardar()">
+    <div class="text-base font-semibold text-main">{{ editingId ? 'Editar mi suscripción' : 'Arma tu suscripción' }}</div>
+
+    <div class="mt-3">
+      <div class="text-xs font-semibold text-gray-600">1. Productos que quieres recibir</div>
+      <ul *ngIf="lineas.length" class="mt-2 space-y-2">
+        <li *ngFor="let linea of lineas; trackBy: trackLinea" class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/70 px-3 py-2 text-sm">
+          <span class="font-medium text-main">{{ linea.name }} <span class="text-gray-500">· {{ formatMoney(linea.price) }}</span></span>
+          <span class="flex items-center gap-3">
+            <ui-qty-stepper [qty]="linea.quantity" [min]="0" [itemLabel]="linea.name" (qtyChange)="cambiarCantidad(linea, $event)"></ui-qty-stepper>
+            <ui-button size="sm" variant="ghost" [ariaLabel]="'Quitar ' + linea.name" (pressed)="quitarLinea(linea)">
+              <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+            </ui-button>
+          </span>
+        </li>
+      </ul>
+      <div class="mt-2 flex flex-wrap items-end gap-2">
+        <ui-form-field kind="select" label="Agregar producto" placeholder="Elige un producto" wrapperClass="block min-w-[16rem] flex-1"
+          [options]="productOptions" [(ngModel)]="productoParaAgregar" name="productoParaAgregar"
+          helpText="Se agrega con una unidad; ajusta la cantidad con + y −."></ui-form-field>
+        <ui-button size="sm" variant="secondary" [disabled]="!productoParaAgregar" (pressed)="agregarProducto()">Agregar</ui-button>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-xs font-semibold text-gray-600">2. Qué día del mes</div>
+      <ui-form-field kind="select" label="Día en que se crea tu pedido" wrapperClass="block mt-1 max-w-xs"
+        [options]="dayOptions" [(ngModel)]="dayOfMonth" name="dayOfMonth"
+        helpText="Del 1 al 28, para que exista en todos los meses. Ese día te llega el correo con el enlace de pago."></ui-form-field>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-xs font-semibold text-gray-600">3. Dónde lo recibes</div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <ui-button size="sm" [variant]="deliveryType !== 'pickup' ? 'primary' : 'ghost'" iconClass="fa-solid fa-truck mr-1"
+          (pressed)="elegirEntrega('delivery')">Enviar a mi dirección</ui-button>
+        <ui-button size="sm" [variant]="deliveryType === 'pickup' ? 'primary' : 'ghost'" iconClass="fa-solid fa-store mr-1"
+          [disabled]="!pickupStocks.length" (pressed)="elegirEntrega('pickup')">Recoger en sucursal</ui-button>
+        <span *ngIf="!pickupStocks.length" class="self-center text-xs text-gray-500">Por ahora no hay sucursal para recoger.</span>
+      </div>
+      <ng-container *ngIf="deliveryType !== 'pickup'">
+        <ui-form-field *ngIf="addressOptions.length" kind="select" label="Dirección de entrega" wrapperClass="block mt-2"
+          [options]="addressOptions" [(ngModel)]="shippingAddressId" name="shippingAddressId"
+          helpText="El envío se cotiza al crear cada pedido y viene en el correo."></ui-form-field>
+        <p *ngIf="!addressOptions.length && !formularioDireccionAbierto" class="mt-2 text-xs text-amber-800">
+          Aún no tienes direcciones guardadas. Dala de alta aquí mismo y queda en tu ficha para las próximas compras.
+        </p>
+        <div class="mt-2" *ngIf="!formularioDireccionAbierto">
+          <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-plus mr-1" (pressed)="abrirFormularioDireccion()">
+            {{ addressOptions.length ? 'Agregar otra dirección' : 'Agregar una dirección' }}
+          </ui-button>
+        </div>
+
+        <!-- Propuesta 19 · la dirección se captura donde hace falta, no en el carrito -->
+        <div *ngIf="formularioDireccionAbierto" class="mt-3 rounded-xl border border-olive-30 bg-white/70 p-3">
+          <div class="text-xs font-semibold text-gray-600">Dirección de entrega</div>
+          <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <ui-form-field label="Nombre de quien recibe" [(ngModel)]="nuevaDireccion.recipientName" name="dirRecipientName"></ui-form-field>
+            <ui-form-field label="Teléfono de contacto" [(ngModel)]="nuevaDireccion.phone" name="dirPhone"></ui-form-field>
+            <ui-form-field label="Calle" [(ngModel)]="nuevaDireccion.street" name="dirStreet"></ui-form-field>
+            <ui-form-field label="Número" [(ngModel)]="nuevaDireccion.number" name="dirNumber"></ui-form-field>
+            <ui-form-field label="Ciudad" [(ngModel)]="nuevaDireccion.city" name="dirCity"></ui-form-field>
+            <ui-form-field label="Estado" [(ngModel)]="nuevaDireccion.state" name="dirState"></ui-form-field>
+            <ui-form-field label="Código postal" [(ngModel)]="nuevaDireccion.postalCode" name="dirPostalCode"
+              helpText="Con el CP se cotiza el envío al crear cada pedido."></ui-form-field>
+            <ui-form-field label="Alias" [(ngModel)]="nuevaDireccion.label" name="dirLabel"
+              helpText="Cómo la vas a reconocer: Casa, Oficina…"></ui-form-field>
+            <ui-form-field label="Entre calles" [(ngModel)]="nuevaDireccion.betweenStreets" name="dirBetweenStreets"></ui-form-field>
+            <ui-form-field label="Referencias" [(ngModel)]="nuevaDireccion.references" name="dirReferences"></ui-form-field>
+          </div>
+          <div *ngIf="addressError" class="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ addressError }}</div>
+          <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <ui-button size="sm" variant="ghost" (pressed)="cerrarFormularioDireccion()">Cancelar</ui-button>
+            <ui-button size="sm" variant="primary" [disabled]="isSavingAddress" (pressed)="guardarDireccion()">
+              {{ isSavingAddress ? 'Guardando...' : 'Guardar dirección' }}
+            </ui-button>
+          </div>
+        </div>
+      </ng-container>
+      <ui-form-field *ngIf="deliveryType === 'pickup'" kind="select" label="Sucursal" wrapperClass="block mt-2"
+        [options]="pickupOptions" [(ngModel)]="pickupStockId" name="pickupStockId"
+        helpText="Pagas en línea con el enlace del correo y recoges cuando te avisemos."></ui-form-field>
+    </div>
+
+    <div class="mt-4 rounded-xl border border-olive-30 bg-white/70 px-4 py-3 text-sm">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-gray-600">Precio de lista por mes</span>
+        <span class="font-semibold text-main">{{ formatMoney(totalLista) }}</span>
+      </div>
+      <p class="mt-1 text-xs text-gray-500">{{ notaDescuento }} El envío, si aplica, se suma al crear el pedido.</p>
+    </div>
+
+    <div *ngIf="formError" class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ formError }}</div>
+
+    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <ui-button size="sm" variant="ghost" (pressed)="cerrarFormulario()">Cancelar</ui-button>
+      <ui-button size="sm" variant="primary" type="submit" [disabled]="isSaving">
+        <i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i>
+        {{ isSaving ? 'Guardando...' : (editingId ? 'Guardar cambios' : 'Guardar mi suscripción') }}
+      </ui-button>
+    </div>
+  </form>
+
+  <div *ngIf="!isLoading && !isFormOpen && !activas.length && !loadError" class="mt-4 rounded-2xl border border-dashed border-olive-30 px-4 py-5 text-sm text-gray-600">
+    Todavía no tienes una suscripción. Si cada mes compras lo mismo, guárdala una vez y deja que el sistema se acuerde por ti.
+  </div>
+
+  <!-- Confirmación de pausa / reanudación / cancelación -->
+  <ui-modal [isOpen]="!!confirmacion" maxWidthClass="max-w-md" contentClass="p-6" (closed)="cerrarConfirmacion()">
+    <div class="text-lg font-extrabold text-main">{{ tituloConfirmacion }}</div>
+    <div *ngIf="confirmacion" class="mt-1 text-sm text-gray-600">
+      Suscripción <span class="font-semibold text-main">{{ confirmacion.sub.subscriptionId }}</span> · {{ resumenItems(confirmacion.sub) }}
+    </div>
+    <div class="mt-4 rounded-xl border border-olive-30 bg-ivory-80 px-4 py-3 text-sm text-main">
+      <div class="font-semibold">Qué va a pasar</div>
+      <p class="mt-1 text-gray-700">{{ efectoConfirmacion }}</p>
+    </div>
+    <div *ngIf="confirmError" class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ confirmError }}</div>
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <ui-button size="sm" variant="ghost" (pressed)="cerrarConfirmacion()">Volver</ui-button>
+      <ui-button size="sm" [variant]="confirmacion?.accion === 'cancel' ? 'secondary' : 'primary'" [disabled]="isConfirming" (pressed)="confirmar()">
+        {{ isConfirming ? 'Aplicando...' : etiquetaConfirmacion }}
+      </ui-button>
+    </div>
+  </ui-modal>
+</section>

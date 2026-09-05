@@ -1,0 +1,139 @@
+<section class="min-h-screen overflow-x-hidden bg-sand-200 text-charcoal antialiased">
+
+  <ui-header variant="landing"
+    containerClass="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+    <ui-button size="sm" variant="ghost" [routerLink]="['/tienda']">
+      <i class="fa-solid fa-store text-gold" aria-hidden="true"></i>
+      <span class="hidden sm:inline">Tienda</span>
+    </ui-button>
+  </ui-header>
+
+  <main class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+
+    <div *ngIf="rutaDesconocida"
+      class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      Esa página no existe; aquí están todas las formas de contactarnos.
+    </div>
+
+    <header>
+      <p class="eyebrow">Ayuda</p>
+      <h1 class="mt-3 text-3xl font-semibold tracking-tight text-main sm:text-4xl">{{ tituloDeLaSeccion }}</h1>
+      <p class="mt-3 max-w-2xl text-gray-600">
+        No necesitas cuenta ni verificar tu correo para escribirnos. Si ya compraste,
+        ten a la mano el número de tu pedido: empieza con <strong>ORD-</strong> y viene en tu correo de confirmación.
+      </p>
+    </header>
+
+    <nav aria-label="Secciones de ayuda" class="mt-6 flex flex-wrap gap-2 text-xs">
+      <a href="#contacto" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1.5 text-main hover:border-gold">Contacto</a>
+      <a href="#sucursales" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1.5 text-main hover:border-gold">Sucursales</a>
+      <a routerLink="/devoluciones" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1.5 text-main hover:border-gold">Devoluciones</a>
+      <a href="#facturacion" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1.5 text-main hover:border-gold">Facturación</a>
+      <a href="#pedido" class="rounded-full border border-olive-30 bg-ivory-80 px-3 py-1.5 text-main hover:border-gold">Mi pedido</a>
+    </nav>
+
+    <div *ngIf="cargando" class="mt-10 text-sm text-gray-500">
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Cargando…
+    </div>
+
+    <!-- ── Contacto ────────────────────────────────────────────────────── -->
+    <section id="contacto" class="mt-10 scroll-mt-24">
+      <h2 class="text-xl font-semibold text-main">Contáctanos</h2>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <a *ngIf="whatsappUrl" [href]="whatsappUrl" target="_blank" rel="noopener"
+          class="rounded-2xl border border-olive-30 bg-ivory-80 p-4 hover:border-gold">
+          <div class="text-sm font-semibold text-main">
+            <i class="fa-brands fa-whatsapp text-accent" aria-hidden="true"></i> WhatsApp
+          </div>
+          <div class="mt-1 text-sm text-gray-700">{{ ayuda.contacto.whatsapp }}</div>
+          <div class="mt-1 text-xs text-gray-500">Lo más rápido si tu pedido ya salió.</div>
+        </a>
+        <a *ngIf="correoUrl" [href]="correoUrl"
+          class="rounded-2xl border border-olive-30 bg-ivory-80 p-4 hover:border-gold">
+          <div class="text-sm font-semibold text-main">
+            <i class="fa-regular fa-envelope text-accent" aria-hidden="true"></i> Correo
+          </div>
+          <div class="mt-1 text-sm text-gray-700">{{ ayuda.contacto.email }}</div>
+          <div class="mt-1 text-xs text-gray-500">Escríbenos con fotos si algo llegó mal.</div>
+        </a>
+      </div>
+      <p *ngIf="ayuda.contacto.horario" class="mt-4 text-sm text-gray-700">
+        <i class="fa-regular fa-clock text-gold" aria-hidden="true"></i>
+        <strong>Horario de atención:</strong> {{ ayuda.contacto.horario }}
+      </p>
+      <p *ngIf="ayuda.contacto.direccion" class="mt-2 text-sm text-gray-700">
+        <i class="fa-solid fa-location-dot text-gold" aria-hidden="true"></i>
+        <strong>Oficinas:</strong> {{ ayuda.contacto.direccion }}
+      </p>
+      <p class="mt-4 text-xs text-gray-500">
+        Para ejercer tus derechos ARCO (acceso, rectificación, cancelación u oposición sobre tus datos
+        personales) escríbenos por cualquiera de estos dos medios y te contestamos por el mismo.
+      </p>
+    </section>
+
+    <!-- ── Sucursales ──────────────────────────────────────────────────── -->
+    <section id="sucursales" class="mt-12 scroll-mt-24">
+      <h2 class="text-xl font-semibold text-main">Sucursales</h2>
+      <p class="mt-2 text-sm text-gray-600">
+        Estas son las sucursales donde puedes recoger un pedido. El horario de atención es el mismo
+        de arriba; si vas por una entrega, lleva tu número de pedido.
+      </p>
+      <ul *ngIf="ayuda.sucursales.length" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <li *ngFor="let sucursal of ayuda.sucursales"
+          class="rounded-2xl border border-olive-30 bg-ivory-80 p-4">
+          <div class="text-sm font-semibold text-main">{{ sucursal.name }}</div>
+          <div class="mt-1 text-sm text-gray-700">{{ sucursal.location }}</div>
+          <div class="mt-1 text-xs text-gray-500">{{ sucursal.city }}<span *ngIf="sucursal.state">, {{ sucursal.state }}</span></div>
+        </li>
+      </ul>
+      <p *ngIf="!cargando && !ayuda.sucursales.length" class="mt-4 text-sm text-gray-600">
+        Por ahora todos los pedidos se entregan a domicilio. Escríbenos y te decimos cuándo llega el tuyo.
+      </p>
+    </section>
+
+    <!-- ── Facturación ─────────────────────────────────────────────────── -->
+    <section id="facturacion" class="mt-12 scroll-mt-24">
+      <h2 class="text-xl font-semibold text-main">Facturación</h2>
+      <ol class="mt-4 space-y-3 text-sm text-gray-700">
+        <li>
+          <strong>Al comprar.</strong> En el carrito palomea "Quiero factura" y captura RFC, razón social,
+          régimen fiscal, código postal y uso de CFDI. Es el camino más rápido.
+        </li>
+        <li>
+          <strong>Después de comprar.</strong> Abre tu pedido en <em>Mi pedido</em> y usa el bloque de
+          facturación para capturar o corregir tus datos fiscales.
+        </li>
+        <li>
+          <strong>¿Ya pediste factura y no llega?</strong> Escríbenos con tu número de pedido y tu RFC.
+        </li>
+      </ol>
+      <p class="mt-3 text-xs text-gray-500">
+        Los precios de la tienda ya incluyen IVA: la factura desglosa el subtotal sin IVA, el IVA y el total.
+      </p>
+    </section>
+
+    <!-- ── Mi pedido ───────────────────────────────────────────────────── -->
+    <section id="pedido" class="mt-12 scroll-mt-24">
+      <h2 class="text-xl font-semibold text-main">Mi pedido</h2>
+      <ul class="mt-4 space-y-3 text-sm text-gray-700">
+        <li>
+          <strong>Ver en qué va.</strong> El enlace de seguimiento viene en tu correo de confirmación y
+          funciona sin cuenta: es <span class="font-mono text-xs">/#/orden/</span> más tu número de pedido.
+        </li>
+        <li>
+          <strong>Llegó mal o quiero devolverlo.</strong>
+          <a routerLink="/devoluciones" class="text-accent underline">Lee cómo funciona una devolución</a>:
+          plazos, qué fotos pedimos, quién paga el envío de regreso y cuándo te llega el dinero.
+        </li>
+        <li>
+          <strong>Quiero cancelar.</strong> Se puede mientras el pedido no haya salido; si ya salió,
+          lo que aplica es una devolución.
+        </li>
+      </ul>
+    </section>
+
+  </main>
+
+  <ui-footer />
+</section>

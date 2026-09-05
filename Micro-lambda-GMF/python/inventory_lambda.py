@@ -1,7 +1,18 @@
 import json
 import boto3
-import core_utils as utils # Importado desde la Lambda Layer
-from datetime import datetime
+import core_utils as utils
+from core import order_emails # Importado desde la Lambda Layer
+import despacho_handlers  # paquete D
+import caja_handlers  # paquete E: arqueo, comprobante y correo del corte
+import impuestos  # paquete B · ronda 26: el desglose de IVA (§38)
+
+# Extensiones en cascada (docs/arquitectura/23 §0.2): cada módulo atiende sus
+# rutas y devuelve None si no son suyas. D la introduce; E añade la suya.
+_EXTENSIONES = [despacho_handlers, caja_handlers]
+
+# Tareas programables (docs/arquitectura/23 §0.3): el reloj del harness y el
+# programador externo las descubren por este atributo.
+TAREAS_PROGRAMADAS = list(despacho_handlers.TAREAS_PROGRAMADAS)
 
 # Clientes de AWS
 sfn = boto3.client('stepfunctions')
@@ -51,11 +62,85 @@ def _log_movement(stock_id, m_type, product_id, qty, ref_id, user_id, reason="",
         "qty": int(qty),
         "referenceId": ref_id,
         "userId": user_id,
+        "userName": _nombre_empleado(user_id),
         "paymentMethod": payment_method,
         "reason": reason,
         "createdAt": utils._now_iso()
     }
     return utils._put_entity("INVENTORY_MOVEMENT", move_id, item)
+
+def _nombre_empleado(user_id) -> str:
+    """Nombre para la bitácora: almacén veía "Empleado 1788339615539" al no poder listar empleados."""
+    if user_id in (None, ""):
+        return ""
+    try:
+        emp = utils._get_by_id("EMPLOYEE", user_id)
+        if not emp and str(user_id).isdigit():
+            emp = utils._get_by_id("EMPLOYEE", int(user_id))
+        return str((emp or {}).get("name") or "")
+    except Exception:
+        return ""
+
+# --- MÍNIMOS DE INVENTARIO (paquete F · ronda 26, propuesta 28) ---
+
+def _min_stock_default() -> int:
+    """`stocks.minStockDefault`: el mínimo que aplica a un producto sin el suyo."""
+    stocks_cfg = dict((utils._load_app_config() or {}).get("stocks") or {})
+    try:
+        return max(0, int(utils._to_decimal(stocks_cfg.get("minStockDefault", 0))))
+    except Exception:
+        return 0
+
+
+def minimo_de(product: dict, por_omision: int) -> int:
+    """Mínimo de un producto: el suyo si lo tiene, si no el de la configuración."""
+    if product.get("minStock") is None:
+        return por_omision
+    try:
+        return max(0, int(utils._to_decimal(product.get("minStock"))))
+    except Exception:
+        return por_omision
+
+
+def handle_stock_minimos(method, body, headers):
+    """GET|PUT /stocks/minimos — el mínimo por producto.
+
+    Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+    hasta que un cliente pague y no haya". El mínimo se guarda en el producto
+    y lo vigila Acciones urgentes.
+    """
+    productos = utils._query_bucket("PRODUCT")
+    por_omision = _min_stock_default()
+    if method == "GET":
+        return utils._json_response(200, {
+            "minStockDefault": por_omision,
+            "minimos": {str(p.get("productId")): minimo_de(p, por_omision) for p in productos},
+        })
+
+    crudo = (body or {}).get("minimos")
+    if not isinstance(crudo, dict) or not crudo:
+        return utils._json_response(400, {"message": "Manda los mínimos como {productId: piezas}"})
+    if len(crudo) > 200:
+        return utils._json_response(400, {"message": "Son demasiados productos de una vez (máximo 200)"})
+    conocidos = {str(p.get("productId")): p for p in productos}
+    limpios = {}
+    for pid, valor in crudo.items():
+        if str(pid) not in conocidos:
+            return utils._json_response(400, {"message": f"El producto {pid} no existe"})
+        try:
+            piezas = int(utils._to_decimal(valor))
+        except Exception:
+            return utils._json_response(400, {"message": f"El mínimo de {conocidos[str(pid)].get('name') or pid} tiene que ser un número de piezas"})
+        if piezas < 0:
+            return utils._json_response(400, {"message": "Un mínimo no puede ser negativo"})
+        limpios[str(pid)] = piezas
+    for pid, piezas in limpios.items():
+        producto = conocidos[pid]
+        utils._update_by_id("PRODUCT", producto.get("productId"), "SET minStock = :m",
+                            {":m": utils._to_decimal(piezas)})
+    utils._audit_event("stock.minimos", headers, {}, {"productos": len(limpios)})
+    return utils._json_response(200, {"ok": True, "minStockDefault": por_omision, "minimos": limpios})
+
 
 # --- HANDLERS: GESTIÓN DE ALMACENES ---
 
@@ -70,6 +155,7 @@ def handle_stocks(method, body, stock_id=None):
         item = {
             "entityType": "stock", "stockId": sid, "name": body.get("name"),
             "location": body.get("location"),
+            "city": body.get("city"), "state": body.get("state"),  # paquete C: recoger solo si hay sucursal en tu zona
             "allowPickup": bool(body.get("allowPickup", False)),
             "isMainWarehouse": bool(body.get("isMainWarehouse", False)),
             "linkedUserIds": [int(u) for u in (body.get("linkedUserIds") or []) if u is not None],
@@ -81,7 +167,7 @@ def handle_stocks(method, body, stock_id=None):
     if method == "PATCH" and stock_id:
         updates = ["updatedAt = :u"]
         eav = {":u": utils._now_iso()}
-        for f in ["name", "location", "allowPickup", "isMainWarehouse", "inventory"]:
+        for f in ["name", "location", "allowPickup", "isMainWarehouse", "inventory", "city", "state"]:
             if f in body:
                 updates.append(f"{f} = :{f}")
                 eav[f":{f}"] = body[f]
@@ -93,7 +179,7 @@ def handle_stocks(method, body, stock_id=None):
 
 # --- HANDLERS: TRANSFERENCIAS ---
 
-def handle_transfers(method, body, query, transfer_id=None):
+def handle_transfers(method, body, query, transfer_id=None, headers=None):
     """POST /stocks/transfers (Crear), POST /transfers/{id}/receive (Recibir)"""
     if method == "GET":
         items = utils._query_bucket("STOCK_TRANSFER")
@@ -105,34 +191,73 @@ def handle_transfers(method, body, query, transfer_id=None):
             if not trf or trf.get("status") == "received":
                 return utils._json_response(400, {"message": "Transferencia inválida o ya recibida"})
             
-            # Sumar a destino
-            deltas = {str(line['productId']): int(line['qty']) for line in trf['lines']}
-            _apply_stock_delta(trf['destinationStockId'], deltas)
-            
+            # Recepción con cantidades reales: el almacén contó 4 de 5 y solo
+            # podía "confirmar 5" o no confirmar nada. `received` trae lo que
+            # llegó por producto; lo que falte queda como discrepancia y se
+            # registra como merma en el origen (ya había salido de ahí).
+            recibidas = (body or {}).get("received") or {}
+            deltas, discrepancias, lineas_recibidas = {}, [], []
+            for line in trf['lines']:
+                pid = str(line['productId']); enviado = int(line['qty'])
+                real = int(recibidas.get(pid, enviado)) if isinstance(recibidas, dict) else enviado
+                real = max(0, min(real, enviado))
+                deltas[pid] = real
+                lineas_recibidas.append({"productId": pid, "sent": enviado, "received": real})
+                if real < enviado:
+                    discrepancias.append({"productId": pid, "sent": enviado, "received": real, "missing": enviado - real})
+            _, error = _apply_stock_delta(trf['destinationStockId'], {k: v for k, v in deltas.items() if v > 0})
+            if error:
+                return utils._json_response(400, {"message": error})
+            actor = (headers or {}).get("x-user-id") or "system"
+            for d in discrepancias:
+                _log_movement(trf.get("sourceStockId"), "damage", d["productId"], d["missing"], transfer_id, actor,
+                              reason=f"Faltante en transferencia {transfer_id}: enviados {d['sent']}, recibidos {d['received']}")
+
             # Actualizar transferencia
-            updated = utils._update_by_id("STOCK_TRANSFER", transfer_id, 
-                                         "SET #s = :s, receivedAt = :ra", 
-                                         {":s": "received", ":ra": utils._now_iso()}, {"#s": "status"})
-            return utils._json_response(200, {"transfer": updated})
+            updated = utils._update_by_id("STOCK_TRANSFER", transfer_id,
+                                         "SET #s = :s, receivedAt = :ra, receivedBy = :rb, receivedLines = :rl, discrepancies = :d",
+                                         {":s": "received", ":ra": utils._now_iso(), ":rb": str(actor),
+                                          ":rl": lineas_recibidas, ":d": discrepancias}, {"#s": "status"})
+            return utils._json_response(200, {"transfer": updated, "discrepancies": discrepancias})
 
         # Crear transferencia (Salida de origen)
         source_id = body.get("sourceStockId")
-        lines = body.get("lines", [])
+        lines = [l for l in (body.get("lines") or []) if int(l.get("qty") or 0) > 0]
+        if not lines or not source_id or not body.get("destinationStockId") or source_id == body.get("destinationStockId"):
+            return utils._json_response(400, {"message": "La transferencia necesita origen, destino distinto y al menos un producto con cantidad"})
         deltas = {str(line['productId']): -int(line['qty']) for line in lines}
         
         _, error = _apply_stock_delta(source_id, deltas)
         if error: return utils._json_response(400, {"message": error})
 
         tid = f"TRF-{utils.uuid.uuid4().hex[:8].upper()}"
+        # createdBy: el resumen de turno (paquete D) lista las transferencias que
+        # cada persona creó; antes solo se guardaba quién la recibió.
+        creador = utils._extract_actor(headers or {}).get("user_id") or (headers or {}).get("x-user-id") or body.get("createdByUserId")
         item = {
             "entityType": "stockTransfer", "transferId": tid,
             "sourceStockId": source_id, "destinationStockId": body.get("destinationStockId"),
-            "lines": lines, "status": "pending", "createdAt": utils._now_iso()
+            "lines": lines, "status": "pending", "createdAt": utils._now_iso(),
+            "createdBy": str(creador) if creador not in (None, "") else None,
         }
         utils._put_entity("STOCK_TRANSFER", tid, item)
         return utils._json_response(201, {"transfer": item})
 
 # --- HANDLERS: PUNTO DE VENTA (POS) ---
+
+#: Lo que la cajera necesita oír cuando no hay ningún código configurado: no
+#: es que el suyo esté mal, es que nadie ha puesto uno. Mireya escribió 1234
+#: "a ver qué pasaba", la pantalla la dejó pasar y el 403 le llegó al final,
+#: con el dinero contado en la mano y el turno terminado.
+SIN_CODIGO_POS = ("Todavía no hay un código de autorización configurado: nadie puede autorizar "
+                  "un retiro. Deja todo como fondo y avisa a tu gerente para que lo configure.")
+
+
+def _pos_auth_configurado() -> bool:
+    """¿Hay un código de autorización guardado? (sin decir cuál, nunca)."""
+    cfg = utils._get_by_id("CONFIG", "pos-auth-v1")
+    return bool(cfg and str(cfg.get("posAuthCode") or "").strip())
+
 
 def _validate_pos_auth(code: str) -> bool:
     """Validates a POS authorization code against stored config."""
@@ -144,32 +269,71 @@ def _validate_pos_auth(code: str) -> bool:
         return False
     return stored_code == str(code or "").strip()
 
+def _parse_payments(body: dict, payment_method: str):
+    """`payments:[{method, amount}]` del pago mixto. Devuelve (lista, método, error).
+
+    Si viene la lista sustituye a `paymentMethod`; con un solo elemento es una
+    venta normal de ese método, con dos o más es `mixed`.
+    """
+    crudo = body.get("payments")
+    if not isinstance(crudo, list) or not crudo:
+        return [], payment_method, None
+    pagos = []
+    for p in crudo:
+        metodo = str((p or {}).get("method") or "").strip().lower()
+        monto = utils._to_decimal((p or {}).get("amount"))
+        if metodo not in ("cash", "card", "transfer"):
+            return [], payment_method, "Forma de pago inválida en el pago mixto: usa efectivo, tarjeta o transferencia"
+        if monto <= utils.D_ZERO:
+            return [], payment_method, "Cada parte del pago mixto debe ser mayor a cero"
+        pagos.append({"method": metodo, "amount": monto})
+    metodos = {p["method"] for p in pagos}
+    return pagos, (pagos[0]["method"] if len(metodos) == 1 else "mixed"), None
+
+
 def handle_pos_sale(body, headers):
-    """POST /pos/sales"""
+    """POST /pos/sales
+
+    Acepta `payments:[{method, amount}]` para cobrar mitad efectivo, mitad
+    tarjeta (paquete E). Todo se valida ANTES de descontar inventario: antes un
+    código rechazado dejaba el stock descontado y la venta sin registrar.
+    """
     stock_id = body.get("stockId")
     items = body.get("items", [])
     user_id = headers.get("x-user-id", "system")
     payment_method = str(body.get("paymentMethod") or "cash").strip().lower()
-    if payment_method not in ("cash", "card", "transfer"):
+    payments, payment_method, error = _parse_payments(body, payment_method)
+    if error:
+        return utils._json_response(400, {"message": error})
+    if payment_method not in ("cash", "card", "transfer", "mixed"):
         return utils._json_response(400, {"message": "Forma de pago invalida"})
+    if not stock_id or not items:
+        return utils._json_response(400, {"message": "Elige al menos un producto y una sucursal para cobrar"})
 
     payment_type = str(body.get("paymentType") or "full").strip().lower()
     if payment_type not in ("full", "partial", "credit"):
         payment_type = "full"
+    if payment_method == "mixed" and payment_type != "full":
+        return utils._json_response(400, {"message": "El pago mixto solo aplica a ventas con pago completo: para un pago parcial elige una sola forma de pago"})
 
     cashier_discount_mode = body.get("cashierDiscountMode")
     cashier_discount_value = utils._to_decimal(body.get("cashierDiscountValue") or 0)
     auth_code = str(body.get("authCode") or "").strip()
 
-    # 1. Aplicar descuento de stock
-    deltas = {str(it['productId']): -int(it['quantity']) for it in items}
-    _, error = _apply_stock_delta(stock_id, deltas)
-    if error: return utils._json_response(400, {"message": error})
+    # 1. Puntos del catálogo en cada línea, como hace la tienda en línea: sin
+    # vpPoints el motor de comisiones convertía pesos ÷ tarifa y el socio que
+    # compraba en mostrador recibía otros puntos que en la web.
+    for it in items:
+        if it.get("vpPoints") is None:
+            producto = utils._get_by_id("PRODUCT", it.get("productId")) or {}
+            if producto.get("vpPoints") is not None:
+                it["vpPoints"] = producto.get("vpPoints")
+            if producto.get("commissionable") is False:
+                it["commissionable"] = False
 
-    # 2. Calcular totales
+    # 2. Totales
     gross_subtotal = sum([utils._to_decimal(it['price']) * int(it['quantity']) for it in items])
 
-    # Calcular descuento cajero
     cashier_discount_amount = utils.D_ZERO
     if cashier_discount_mode and cashier_discount_value > utils.D_ZERO:
         if not _validate_pos_auth(auth_code):
@@ -179,18 +343,15 @@ def handle_pos_sale(body, headers):
         else:
             cashier_discount_amount = min(cashier_discount_value, gross_subtotal)
 
-    # Validar auth para pago parcial/credito
     if payment_type != "full":
         if not _validate_pos_auth(auth_code):
             return utils._json_response(403, {"message": "Codigo de autorizacion requerido para pagos parciales o credito"})
 
-    # Calcular total neto (descuentos de cliente vienen del cuerpo o se calculan en otro paso)
     customer_discount_amount = utils._to_decimal(body.get("discountAmount") or 0)
     total = gross_subtotal - customer_discount_amount - cashier_discount_amount
     if total < utils.D_ZERO:
         total = utils.D_ZERO
 
-    # Calcular monto pagado ahora
     if payment_type == "full":
         amount_paid = total
     elif payment_type == "credit":
@@ -198,16 +359,40 @@ def handle_pos_sale(body, headers):
     else:
         amount_paid_raw = utils._to_decimal(body.get("amountPaid") or 0)
         amount_paid = min(amount_paid_raw, total)
-
     pending_amount = total - amount_paid
 
-    # Determinar paymentStatus
+    # 3. Pago mixto: las partes deben sumar el total centavo a centavo.
+    if payments:
+        suma = sum((p["amount"] for p in payments), utils.D_ZERO)
+        if suma != total:
+            return utils._json_response(400, {
+                "message": f"Las partes del pago suman ${suma:,.2f} y el total es ${total:,.2f}: ajusta los importes para que coincidan"})
+    if payment_method == "mixed":
+        cash_portion = sum((p["amount"] for p in payments if p["method"] == "cash"), utils.D_ZERO)
+    elif payment_method == "cash":
+        cash_portion = amount_paid
+    else:
+        cash_portion = utils.D_ZERO
+
+    cash_received = utils._to_decimal(body.get("cashReceived")) if body.get("cashReceived") is not None else None
+    change = None
+    if cash_received is not None and cash_portion > utils.D_ZERO:
+        if cash_received < cash_portion:
+            return utils._json_response(400, {
+                "message": f"El efectivo recibido (${cash_received:,.2f}) es menor que la parte en efectivo (${cash_portion:,.2f})"})
+        change = cash_received - cash_portion
+
     if payment_type == "full":
         payment_status = "paid_branch"
     elif payment_type == "partial":
         payment_status = "partial_branch"
     else:
         payment_status = "credit_branch"
+
+    # 4. Descontar inventario (ya con todo validado)
+    deltas = {str(it['productId']): -int(it['quantity']) for it in items}
+    _, error = _apply_stock_delta(stock_id, deltas)
+    if error: return utils._json_response(400, {"message": error})
 
     order_id = f"POS-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
@@ -219,18 +404,26 @@ def handle_pos_sale(body, headers):
         "deliveryType": "pickup", "stockId": stock_id, "attendantUserId": user_id,
         "monthKey": utils._month_key(), "paymentMethod": payment_method, "createdAt": now
     }
+    # ── Paquete B/F · ronda 26 (propuesta 38), montado en la integración ──
+    # La venta de mostrador congela la tasa del día igual que el checkout: si
+    # mañana `taxes.vatRate` cambia, el comprobante de ayer sigue desglosando lo
+    # que se cobró ayer. El total no se mueve un centavo; el IVA es desglose.
+    order_item.update(impuestos.campos_pedido(order_item["total"], envio=order_item.get("shippingCost", 0)))
     utils._put_entity("ORDER", order_id, order_item)
     utils._upsert_order_customer_history(order_item)
 
-    # 3. Crear registro de venta POS
+    # 5. Registro de venta POS
     sale_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
     sale_item = {
         "entityType": "posSale", "saleId": sale_id, "orderId": order_id,
         "stockId": stock_id,
         "total": total,
         "grossSubtotal": gross_subtotal,
-        "discountRate": 0,
+        "discountRate": utils._to_decimal(body.get("discountRate") or 0),
         "discountAmount": customer_discount_amount,
+        "cashReceived": cash_received,
+        "change": change,
+        "cashPortion": cash_portion,
         "cashierDiscountMode": cashier_discount_mode,
         "cashierDiscountAmount": cashier_discount_amount,
         "paymentType": payment_type,
@@ -246,23 +439,164 @@ def handle_pos_sale(body, headers):
         "createdAt": now,
         "updatedAt": now,
     }
+    if payment_method == "mixed":
+        sale_item["payments"] = payments
     utils._put_entity("POS_SALE", sale_id, sale_item)
 
-    # 4. Registrar movimientos
+    # 6. Movimientos
     for it in items:
         _log_movement(stock_id, "pos_sale", it['productId'], it['quantity'], order_id, user_id, payment_method=payment_method)
 
-    # 5. DISPARAR STEP FUNCTION (Motor de Comisiones)
+    # 7. DISPARAR STEP FUNCTION (Motor de Comisiones)
+    # Una venta de mostrador nace pagada y entregada. Antes solo se disparaba
+    # ORDER_DELIVERED, que confirma comisiones "pending" que nunca existieron:
+    # el socio que compraba en tienda física no acumulaba volumen ni VP y su
+    # patrocinador no recibía comisión. ORDER_PAID aplica la activación y las
+    # comisiones (solo cuenta si el comprador es un cliente registrado);
+    # después ORDER_DELIVERED las confirma.
     if ORDER_SFN_ARN:
-        try:
-            sfn.start_execution(
-                stateMachineArn=ORDER_SFN_ARN,
-                input=json.dumps({"orderId": order_id, "action": "ORDER_DELIVERED"})
-            )
-        except Exception as e:
-            print(f"[SFN_ERROR] pos_sale={sale_id} err={e}")
+        acciones = ["ORDER_PAID", "ORDER_DELIVERED"] if body.get("customerId") else ["ORDER_DELIVERED"]
+        for accion in acciones:
+            try:
+                sfn.start_execution(
+                    stateMachineArn=ORDER_SFN_ARN,
+                    input=json.dumps({"orderId": order_id, "action": accion})
+                )
+            except Exception as e:
+                utils._log("sfn_error", "ERROR", pos_sale=sale_id, action=accion, err=e)
 
-    return utils._json_response(201, {"sale": sale_item, "saleId": sale_id, "orderId": order_id})
+    # Aviso al cliente ligado: el cajero puede ligar una venta a cualquier cuenta
+    # buscando por nombre; el titular debe enterarse y poder objetar.
+    if body.get("customerId"):
+        _avisar_pos(order_item, "pos_sale")
+
+    return utils._json_response(201, {
+        "sale": sale_item, "saleId": sale_id, "orderId": order_id,
+        "total": float(total), "amountPaid": float(amount_paid), "pendingAmount": float(pending_amount),
+        "cashPortion": float(cash_portion), "change": float(change) if change is not None else None,
+        "payments": [{"method": p["method"], "amount": float(p["amount"])} for p in payments],
+    })
+
+
+def _avisar_pos(order: dict, evento: str) -> None:
+    order_emails.notificar_pedido(
+        order or {}, evento, {},
+        lambda cid: utils._get_by_id("CUSTOMER", cid),
+        utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx"),
+    )
+
+
+
+def handle_settle_pos_sale(sale_id, body, headers):
+    """POST /pos/sales/{id}/payments — abono al saldo de una venta con pago parcial.
+
+    El saldo pendiente solo se veía al cobrar y después no había forma de
+    liquidarlo. El abono se registra como una venta de caja sin productos
+    (source=settlement) para que entre al efectivo y al corte como cualquier cobro.
+    """
+    sale = utils._get_by_id("POS_SALE", sale_id)
+    if not sale:
+        return utils._json_response(404, {"message": "Venta no encontrada"})
+    if sale.get("status") == "voided":
+        return utils._json_response(409, {"message": "La venta está anulada"})
+    pendiente = utils._to_decimal(sale.get("pendingAmount") or 0)
+    if pendiente <= utils.D_ZERO:
+        return utils._json_response(409, {"message": "Esta venta no tiene saldo pendiente"})
+    monto = utils._to_decimal((body or {}).get("amount") or pendiente)
+    if monto <= utils.D_ZERO or monto > pendiente:
+        return utils._json_response(400, {"message": f"El abono debe ser mayor a 0 y hasta ${pendiente}"})
+    metodo = str((body or {}).get("paymentMethod") or "cash").strip().lower()
+    if metodo not in ("cash", "card", "transfer"):
+        return utils._json_response(400, {"message": "Forma de pago invalida"})
+    actor = utils._extract_actor(headers or {})
+    user_id = actor.get("user_id") or (headers or {}).get("x-user-id")
+    now = utils._now_iso()
+    abono_id = f"SALE-{utils.uuid.uuid4().hex[:8].upper()}"
+    nuevo_pendiente = pendiente - monto
+    abono = {
+        "entityType": "posSale", "saleId": abono_id, "orderId": sale.get("orderId"),
+        "source": "settlement", "settlesSaleId": sale_id,
+        "stockId": sale.get("stockId"), "attendantUserId": user_id,
+        "customerId": sale.get("customerId"), "customerName": sale.get("customerName"),
+        "total": monto, "grossSubtotal": monto, "discountRate": utils.D_ZERO, "discountAmount": utils.D_ZERO,
+        "paymentType": "full", "amountPaid": monto, "pendingAmount": utils.D_ZERO,
+        "paymentStatus": "paid", "deliveryStatus": "delivered_branch", "paymentMethod": metodo,
+        "lines": [], "createdAt": now, "updatedAt": now,
+    }
+    utils._put_entity("POS_SALE", abono_id, abono)
+    pagos = list(sale.get("payments") or []) + [{"saleId": abono_id, "amount": monto, "paymentMethod": metodo, "at": now, "by": str(user_id)}]
+    actualizado = utils._update_by_id(
+        "POS_SALE", sale_id,
+        "SET amountPaid = :p, pendingAmount = :r, paymentStatus = :st, payments = :pg, updatedAt = :u",
+        {":p": utils._to_decimal(sale.get("amountPaid") or 0) + monto, ":r": nuevo_pendiente,
+         ":st": "paid" if nuevo_pendiente <= utils.D_ZERO else "partial", ":pg": pagos, ":u": now},
+    )
+    if sale.get("orderId") and nuevo_pendiente <= utils.D_ZERO:
+        try:
+            utils._update_by_id("ORDER", sale.get("orderId"), "SET paymentStatus = :st, updatedAt = :u", {":st": "paid", ":u": now})
+        except Exception as e:
+            utils._log("settle_order_update_error", "ERROR", saleId=sale_id, err=e)
+    return utils._json_response(200, {"sale": actualizado, "payment": abono, "pendingAmount": float(nuevo_pendiente)})
+
+def handle_void_pos_sale(sale_id: str, body: dict, headers: dict) -> dict:
+    """POST /pos/sales/{id}/void — anula una venta de mostrador.
+
+    Un cliente encontró en su cuenta una venta de tienda que no hizo y no
+    había forma de quitarla: regresa el inventario, marca la venta y el
+    pedido como anulados, dispara la reversión de comisiones y volumen, y
+    avisa al cliente ligado.
+    """
+    sale = utils._get_by_id("POS_SALE", sale_id)
+    if not sale:
+        return utils._json_response(404, {"message": "Venta no encontrada"})
+    if sale.get("status") == "voided":
+        return utils._json_response(409, {"message": "La venta ya está anulada."})
+    now = utils._now_iso()
+    actor = headers.get("x-user-id") or "admin"
+    motivo = str((body or {}).get("reason") or "anulación").strip()[:300]
+    stock_id = sale.get("stockId")
+    order_id = sale.get("orderId")
+
+    # 1. Regresar inventario
+    deltas = {}
+    for it in sale.get("lines") or sale.get("items") or []:
+        pid = str(it.get("productId") or "").strip()
+        qty = int(it.get("quantity") or it.get("qty") or 0)
+        if pid and qty > 0:
+            deltas[pid] = deltas.get(pid, 0) + qty
+    if deltas:
+        _, error = _apply_stock_delta(stock_id, deltas)
+        if error:
+            return utils._json_response(400, {"message": error})
+        for pid, qty in deltas.items():
+            _log_movement(stock_id, "entry", pid, qty, order_id, actor, payment_method=None)
+
+    # 2. Marcar venta y pedido
+    utils._update_by_id("POS_SALE", sale_id, "SET #s = :s, voidedAt = :t, voidedBy = :by, voidReason = :r, updatedAt = :t",
+                        {":s": "voided", ":t": now, ":by": str(actor), ":r": motivo}, {"#s": "status"})
+    order = None
+    if order_id:
+        order = utils._update_by_id("ORDER", order_id, "SET #s = :s, cancelReason = :r, cancelledAt = :t, updatedAt = :t",
+                                    {":s": "cancelled", ":r": f"pos_void: {motivo}", ":t": now}, {"#s": "status"})
+        # Sin esto la lista de pedidos del cliente seguía diciendo "Entregada"
+        # mientras el detalle decía "Cancelado".
+        try:
+            utils._upsert_order_customer_history(order)
+        except Exception as e:
+            utils._log("pos_void_history_error", "ERROR", orderId=order_id, err=e)
+        if ORDER_SFN_ARN:
+            try:
+                sfn.start_execution(stateMachineArn=ORDER_SFN_ARN,
+                                    input=json.dumps({"orderId": order_id, "action": "ORDER_CANCELLED", "payload": {"reason": motivo}}))
+            except Exception as e:
+                utils._log("sfn_error", "ERROR", pos_void=sale_id, err=e)
+
+    # 3. Avisar al cliente ligado
+    if order and order.get("customerId"):
+        _avisar_pos(order, "pos_voided")
+
+    utils._audit_event("pos.sale_voided", headers, body, {"saleId": sale_id, "orderId": order_id, "reason": motivo})
+    return utils._json_response(200, {"ok": True, "saleId": sale_id, "orderId": order_id, "status": "voided"})
 
 def _stock_id_str(value) -> str:
     """Normaliza stockId a string."""
@@ -271,122 +605,148 @@ def _stock_id_str(value) -> str:
     return str(value).strip()
 
 def _last_pos_cash_cut(stock_id: str, attendant_user_id) -> dict:
-    """Devuelve el último corte de caja de un operador en un almacén."""
-    cuts = [
-        item for item in utils._query_bucket("POS_CASH_CUT")
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(attendant_user_id)
-    ]
-    if not cuts:
-        return {}
-    cuts.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
-    return cuts[0]
+    """Último corte de caja de un operador en un almacén (ver `caja_handlers.ultimo_corte`)."""
+    return caja_handlers.ultimo_corte(stock_id, attendant_user_id)
 
 def _build_pos_cash_control(stock_id: str, attendant_user_id) -> dict:
-    """Calcula el estado actual del control de caja."""
-    last_cut = _last_pos_cash_cut(stock_id, attendant_user_id)
-    last_cut_at = str(last_cut.get("createdAt") or "") if last_cut else ""
-    sales = [
-        item for item in utils._query_bucket("POS_SALE")
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(attendant_user_id)
-        and str(item.get("paymentMethod") or "cash").lower() == "cash"
-        and (not last_cut_at or str(item.get("createdAt") or "") > last_cut_at)
-    ]
-    sales.sort(key=lambda x: str(x.get("createdAt") or ""))
-    cash_carry = utils._to_decimal(last_cut.get("cashToKeep")) if last_cut else utils.D_ZERO
+    """Estado actual del control de caja.
 
-    # Usar amountPaid en lugar de total para ventas parciales/credito
-    sales_total = sum(
-        (utils._to_decimal(item.get("amountPaid") if item.get("paymentType") in ("partial", "credit") else item.get("total"))
-         for item in sales),
-        utils.D_ZERO
-    )
-
-    # Restar retiros desde el ultimo corte
-    withdrawals = [
-        item for item in utils._query_bucket("POS_WITHDRAWAL")
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(attendant_user_id)
-        and not item.get("cashCutId")
-    ]
-    withdrawals_total = sum((utils._to_decimal(w.get("amount")) for w in withdrawals), utils.D_ZERO)
-
-    current_total = cash_carry + sales_total - withdrawals_total
+    `currentTotal` es exactamente el efectivo esperado del arqueo: fondo del
+    corte anterior + ventas en efectivo + abonos en efectivo + parte en efectivo
+    de pagos mixtos − retiros sin corte (antes ignoraba las mixtas y sumaba las
+    ventas anuladas).
+    """
+    arqueo = caja_handlers.calcular_arqueo(stock_id, attendant_user_id)
+    last_cut = arqueo["lastCut"]
+    ventas = [v for v in arqueo["ventas"] if v.get("status") != "voided"]
+    current_total = arqueo["expectedCash"]
     return {
         "stockId": stock_id,
         "attendantUserId": attendant_user_id,
         "currentTotal": float(current_total),
-        "salesCount": len(sales),
+        "expectedCash": float(current_total),
+        "openingCash": float(arqueo["openingCash"]),
+        "cashSales": float(arqueo["cashSales"]),
+        "cashSettlements": float(arqueo["cashSettlements"]),
+        "cashFromMixed": float(arqueo["cashFromMixed"]),
+        "nonCashTotal": float(arqueo["nonCashTotal"]),
+        "salesCount": arqueo["salesCount"],
         "cashToKeepSuggested": float(current_total),
-        "withdrawalCount": len(withdrawals),
-        "totalWithdrawn": float(withdrawals_total),
-        "startedAt": sales[0].get("createdAt") if sales else (last_cut.get("createdAt") if last_cut else None),
+        "withdrawalCount": arqueo["withdrawalCount"],
+        "totalWithdrawn": float(arqueo["withdrawals"]),
+        "startedAt": ventas[0].get("createdAt") if ventas else (last_cut.get("createdAt") if last_cut else None),
+        "lastCutId": last_cut.get("cashCutId") if last_cut else None,
         "lastCutAt": last_cut.get("createdAt") if last_cut else None,
         "lastCutTotal": float(utils._to_decimal(last_cut.get("total"))) if last_cut else 0.0,
         "lastCutSalesCount": int(last_cut.get("salesCount") or 0) if last_cut else 0,
         "lastCutCashToKeep": float(utils._to_decimal(last_cut.get("cashToKeep"))) if last_cut else 0.0,
         "lastCutWithdrawnAmount": float(utils._to_decimal(last_cut.get("withdrawnAmount"))) if last_cut else 0.0,
-        "lastSaleAt": sales[-1].get("createdAt") if sales else None,
+        "lastCutDifference": float(utils._to_decimal(last_cut.get("difference"))) if last_cut else 0.0,
+        "lastSaleAt": ventas[-1].get("createdAt") if ventas else None,
     }
 
 def handle_cash_cut(body, headers):
-    """POST /pos/cash-cut"""
+    """POST /pos/cash-cut — corte con arqueo (paquete E).
+
+    Con `cashCounted` la cajera cuenta el cajón: la diferencia contra lo
+    esperado exige motivo (`pos.requireDifferenceReason`), y lo contado se
+    reparte entre el fondo de mañana (`cashToKeep`) y el retiro
+    (`withdrawalAmount`, con código de autorización y quién lo recibe). Sin
+    `cashCounted` (clientes viejos) se conserva el comportamiento anterior:
+    contado = esperado, diferencia 0.
+    """
     stock_id = body.get("stockId")
     user_id = headers.get("x-user-id")
-    cash_to_keep = utils._to_decimal(body.get("cashToKeep") or 0)
+    if not stock_id:
+        return utils._json_response(400, {"message": "Falta la sucursal (stockId) para hacer el corte"})
 
-    all_sales = utils._query_bucket("POS_SALE")
-    pending_sales = [
-        s for s in all_sales
-        if _stock_id_str(s.get("stockId")) == _stock_id_str(stock_id)
-        and str(s.get("attendantUserId")) == str(user_id)
-        and str(s.get("paymentMethod") or "cash").lower() == "cash"
-        and not s.get("cashCutId")
-    ]
-
-    # Retiros pendientes sin corte
-    all_withdrawals = utils._query_bucket("POS_WITHDRAWAL")
-    pending_withdrawals = [
-        w for w in all_withdrawals
-        if _stock_id_str(w.get("stockId")) == _stock_id_str(stock_id)
-        and str(w.get("attendantUserId")) == str(user_id)
-        and not w.get("cashCutId")
-    ]
-
+    arqueo = caja_handlers.calcular_arqueo(stock_id, user_id)
+    pending_sales, pending_withdrawals = arqueo["ventas"], arqueo["retiros"]
     if not pending_sales and not pending_withdrawals:
-        return utils._json_response(400, {"message": "No hay ventas pendientes para corte"})
+        return utils._json_response(400, {"message": "No hay ventas ni retiros desde el último corte: no hay nada que cortar"})
 
-    # Usar amountPaid para ventas parciales/credito
-    total_cash = sum([
-        utils._to_decimal(s.get("amountPaid") if s.get("paymentType") in ("partial", "credit") else s.get("total"))
-        for s in pending_sales
-    ], utils.D_ZERO)
-    withdrawals_total = sum([utils._to_decimal(w.get("amount")) for w in pending_withdrawals], utils.D_ZERO)
-    net_total = total_cash - withdrawals_total
+    expected = utils._to_decimal(arqueo["expectedCash"])
+    withdrawals_total = utils._to_decimal(arqueo["withdrawals"])
+    opening = utils._to_decimal(arqueo["openingCash"])
+    cfg = caja_handlers.config_pos()
 
-    if cash_to_keep < utils.D_ZERO:
-        return utils._json_response(400, {"message": "El monto a dejar en caja no puede ser negativo"})
-
-    last_cut = _last_pos_cash_cut(stock_id, user_id)
-    cash_carry = utils._to_decimal(last_cut.get("cashToKeep")) if last_cut else utils.D_ZERO
-    available = cash_carry + net_total
-    if cash_to_keep > available:
-        return utils._json_response(400, {"message": "El monto a dejar en caja no puede exceder el total disponible"})
+    modo_arqueo = body.get("cashCounted") is not None
+    reason, receiver, denominations = "", "", {}
+    if modo_arqueo:
+        cash_counted = utils._to_decimal(body.get("cashCounted"))
+        if cash_counted < utils.D_ZERO:
+            return utils._json_response(400, {"message": "El efectivo contado no puede ser negativo"})
+        difference = cash_counted - expected
+        reason = str(body.get("differenceReason") or "").strip()[:300]
+        if difference != utils.D_ZERO and bool(cfg.get("requireDifferenceReason", True)) and not reason:
+            signo = "sobran" if difference > utils.D_ZERO else "faltan"
+            return utils._json_response(400, {
+                "message": f"Contaste ${cash_counted:,.2f} y se esperaban ${expected:,.2f}: {signo} ${abs(difference):,.2f}. Escribe el motivo de la diferencia para poder cerrar."})
+        withdrawal_amount = utils._to_decimal(body.get("withdrawalAmount") or 0)
+        cash_to_keep = utils._to_decimal(body.get("cashToKeep")) if body.get("cashToKeep") is not None else cash_counted - withdrawal_amount
+        if withdrawal_amount < utils.D_ZERO or cash_to_keep < utils.D_ZERO:
+            return utils._json_response(400, {"message": "El fondo y el retiro no pueden ser negativos"})
+        if cash_to_keep + withdrawal_amount != cash_counted:
+            return utils._json_response(400, {
+                "message": f"El fondo (${cash_to_keep:,.2f}) más el retiro (${withdrawal_amount:,.2f}) deben sumar exactamente lo contado (${cash_counted:,.2f})"})
+        receiver = str(body.get("withdrawalReceiver") or "").strip()[:120]
+        if withdrawal_amount > utils.D_ZERO:
+            if not _pos_auth_configurado():
+                return utils._json_response(403, {"authCodeConfigured": False, "message": SIN_CODIGO_POS})
+            if not _validate_pos_auth(str(body.get("authCode") or "").strip()):
+                return utils._json_response(403, {"authCodeConfigured": True,
+                                                  "message": "Código de autorización incorrecto: el retiro del corte lo autoriza la gerente con su código"})
+            if not receiver:
+                return utils._json_response(400, {"message": "Indica quién recibe el efectivo retirado"})
+        crudo = body.get("denominations")
+        if isinstance(crudo, dict):
+            denominations = {str(k): int(utils._to_decimal(v)) for k, v in crudo.items() if int(utils._to_decimal(v)) > 0}
+    else:
+        cash_to_keep = utils._to_decimal(body.get("cashToKeep") or 0)
+        if cash_to_keep < utils.D_ZERO:
+            return utils._json_response(400, {"message": "El monto a dejar en caja no puede ser negativo"})
+        if cash_to_keep > expected:
+            return utils._json_response(400, {"message": "El monto a dejar en caja no puede exceder el total disponible"})
+        cash_counted, difference = expected, utils.D_ZERO
+        withdrawal_amount = expected - cash_to_keep
 
     cut_id = f"CUT-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
+    ventas_vivas = [s for s in pending_sales if s.get("status") != "voided"]
 
     cut_item = {
         "entityType": "posCashCut", "cashCutId": cut_id, "stockId": stock_id,
-        "total": float(net_total),
-        "salesCount": len(pending_sales),
-        "cashToKeep": float(cash_to_keep),
-        "withdrawnAmount": float(available - cash_to_keep),
-        "totalWithdrawals": float(withdrawals_total),
+        # DynamoDB rechaza float ("Float types are not supported"): el corte de
+        # caja respondía 500 y el cajero no podía cerrar. Se guardan Decimal.
+        "total": utils._to_decimal(expected - opening),
+        # Ronda 7 · Rubén: el comprobante declaraba "Vendido en el turno $500"
+        # cuando la única venta fue de $980, porque `total` es el movimiento
+        # NETO del cajón (esperado menos fondo), no lo vendido. Lo vendido es la
+        # suma de las ventas vivas, cobren como cobren.
+        "salesTotal": sum((utils._to_decimal(v.get("total")) for v in ventas_vivas), utils.D_ZERO),
+        "salesCount": len(ventas_vivas),
+        "cashToKeep": utils._to_decimal(cash_to_keep),
+        "withdrawnAmount": utils._to_decimal(withdrawal_amount),
+        "totalWithdrawals": utils._to_decimal(withdrawals_total),
         "withdrawalCount": len(pending_withdrawals),
+        # Arqueo (paquete E)
+        "openingCash": utils._to_decimal(opening),
+        # De dónde salió el fondo inicial (paquete F, ronda 26): lo declaró la
+        # cajera al abrir el turno o lo heredó el corte anterior.
+        "openingSource": arqueo.get("openingSource") or "sin_declarar",
+        "openingId": (arqueo.get("opening") or {}).get("openingId"),
+        "cashSales": utils._to_decimal(arqueo["cashSales"]),
+        "cashSettlements": utils._to_decimal(arqueo["cashSettlements"]),
+        "cashFromMixed": utils._to_decimal(arqueo["cashFromMixed"]),
+        "nonCashTotal": utils._to_decimal(arqueo["nonCashTotal"]),
+        "cashExpected": utils._to_decimal(expected),
+        "cashCounted": utils._to_decimal(cash_counted),
+        "difference": utils._to_decimal(difference),
+        "differenceReason": reason,
+        "denominations": denominations,
+        "withdrawalReceiver": receiver,
         "attendantUserId": user_id,
-        "startedAt": pending_sales[0].get("createdAt") if pending_sales else now,
+        "startedAt": ventas_vivas[0].get("createdAt") if ventas_vivas else now,
         "endedAt": now,
         "createdAt": now,
         "sales": pending_sales,
@@ -401,17 +761,47 @@ def handle_cash_cut(body, headers):
         if w_id:
             utils._update_by_id("POS_WITHDRAWAL", w_id, "SET cashCutId = :c", {":c": cut_id})
 
+    # La apertura del turno queda dentro del corte: el siguiente arqueo hereda el
+    # fondo de este corte y no vuelve a sumar el que se declaró al abrir.
+    apertura_id = (arqueo.get("opening") or {}).get("openingId")
+    if apertura_id:
+        utils._update_by_id("POS_SHIFT_OPENING", apertura_id, "SET cashCutId = :c", {":c": cut_id})
+
+    # El retiro del corte queda como un retiro más, ya ligado al corte para que
+    # el siguiente arqueo no lo vuelva a restar.
+    if modo_arqueo and withdrawal_amount > utils.D_ZERO:
+        wdr_id = f"WDR-{utils.uuid.uuid4().hex[:8].upper()}"
+        retiro = {
+            "entityType": "posWithdrawal", "withdrawalId": wdr_id, "stockId": stock_id,
+            "attendantUserId": user_id, "amount": utils._to_decimal(withdrawal_amount),
+            "reason": f"Retiro del corte {cut_id}", "receiver": receiver, "source": "cash_cut",
+            "cashCutId": cut_id, "createdAt": now, "updatedAt": now,
+        }
+        utils._put_entity("POS_WITHDRAWAL", wdr_id, retiro)
+        cut_item["cutWithdrawalId"] = wdr_id
+        utils._update_by_id("POS_CASH_CUT", cut_id, "SET cutWithdrawalId = :w", {":w": wdr_id})
+
+    utils._audit_event("pos.cash_cut", headers, {"stockId": stock_id},
+                       {"cashCutId": cut_id, "cashCounted": str(cash_counted), "difference": str(difference)})
     return utils._json_response(201, {"cut": cut_item, "control": _build_pos_cash_control(stock_id, user_id)})
 
 
 def handle_validate_pos_auth(body, headers):
-    """POST /pos/validate-auth"""
+    """POST /pos/validate-auth — tres estados, no dos (propuesta 6).
+
+    Sin código configurado no se dice "incorrecto": se dice que no hay ninguno
+    y se ofrece la salida honesta (dejar todo como fondo, que no exige código).
+    """
     code = str(body.get("code") or "").strip()
+    if not _pos_auth_configurado():
+        return utils._json_response(409, {"configured": False, "ok": False, "message": SIN_CODIGO_POS})
     if not code:
-        return utils._json_response(400, {"message": "Se requiere el codigo de autorizacion"})
+        return utils._json_response(400, {"configured": True, "ok": False,
+                                          "message": "Escribe el código de autorización de tu gerente"})
     if not _validate_pos_auth(code):
-        return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
-    return utils._json_response(200, {"ok": True})
+        return utils._json_response(403, {"configured": True, "ok": False,
+                                          "message": "Código de autorización incorrecto: pídeselo a tu gerente"})
+    return utils._json_response(200, {"ok": True, "configured": True})
 
 
 def handle_pos_auth_config(method, body, headers):
@@ -439,19 +829,29 @@ def handle_pos_auth_config(method, body, headers):
 
 
 def handle_pos_withdrawal(body, headers):
-    """POST /pos/withdrawal"""
+    """POST /pos/withdrawal — retiro guiado: monto ≤ efectivo disponible, motivo, quién recibe, código."""
     stock_id = body.get("stockId")
     user_id = headers.get("x-user-id")
     amount = utils._to_decimal(body.get("amount"))
     reason = str(body.get("reason") or "").strip()
+    receiver = str(body.get("receiver") or "").strip()[:120]
     auth_code = str(body.get("authCode") or "").strip()
 
+    if not stock_id:
+        return utils._json_response(400, {"message": "Falta la sucursal (stockId) del retiro"})
     if not reason:
         return utils._json_response(400, {"message": "Se requiere el motivo del retiro"})
     if amount <= utils.D_ZERO:
         return utils._json_response(400, {"message": "El monto debe ser mayor a cero"})
+    disponible = utils._to_decimal(caja_handlers.calcular_arqueo(stock_id, user_id)["expectedCash"])
+    if amount > disponible:
+        return utils._json_response(400, {
+            "message": f"Solo hay ${disponible:,.2f} en caja: no puedes retirar ${amount:,.2f}"})
+    if not _pos_auth_configurado():
+        return utils._json_response(403, {"authCodeConfigured": False, "message": SIN_CODIGO_POS})
     if not _validate_pos_auth(auth_code):
-        return utils._json_response(403, {"message": "Codigo de autorizacion incorrecto"})
+        return utils._json_response(403, {"authCodeConfigured": True,
+                                          "message": "Código de autorización incorrecto: pídeselo a tu gerente"})
 
     wdr_id = f"WDR-{utils.uuid.uuid4().hex[:8].upper()}"
     now = utils._now_iso()
@@ -460,191 +860,272 @@ def handle_pos_withdrawal(body, headers):
         "withdrawalId": wdr_id,
         "stockId": stock_id,
         "attendantUserId": user_id,
-        "amount": float(amount),
+        # Decimal: como float, DynamoDB lo rechazaba y el retiro respondía 500.
+        "amount": utils._to_decimal(amount),
         "reason": reason,
+        "receiver": receiver,
         "createdAt": now,
         "updatedAt": now
     }
     utils._put_entity("POS_WITHDRAWAL", wdr_id, item)
 
     control = _build_pos_cash_control(stock_id, user_id)
-    return utils._json_response(201, {"withdrawal": item, "control": control})
+    return utils._json_response(201, {"withdrawal": item, "control": control,
+                                      "remainingCash": control["currentTotal"]})
 
 
-def handle_list_cash_cuts(stock_id, user_id):
-    """GET /pos/cash-cuts"""
-    cuts = [
-        item for item in utils._query_bucket("POS_CASH_CUT")
-        if _stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
-        and str(item.get("attendantUserId")) == str(user_id)
-    ]
-    cuts.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
+MAX_CASH_CUTS_PAGE = 50
 
-    all_sales = utils._query_bucket("POS_SALE")
-    all_withdrawals = utils._query_bucket("POS_WITHDRAWAL")
+
+def handle_list_cash_cuts(stock_id, user_id, limit: int = MAX_CASH_CUTS_PAGE):
+    """GET /pos/cash-cuts — los `limit` cortes más recientes del operador."""
+    # Se piden limit+1 cortes: el extra marca el límite temporal inferior de la
+    # ventana, y las ventas/retiros de los cortes devueltos son todos
+    # posteriores a él. Así el detalle se acota por clave en vez de leer los
+    # históricos completos de POS_SALE y POS_WITHDRAWAL.
+    window = []
+    for item in utils._iter_bucket("POS_CASH_CUT", forward=False):
+        if (_stock_id_str(item.get("stockId")) == _stock_id_str(stock_id)
+                and str(item.get("attendantUserId")) == str(user_id)):
+            window.append(item)
+            if len(window) > limit:
+                break
+
+    boundary_cut = window[limit] if len(window) > limit else None
+    cuts = window[:limit]
+    since = str((boundary_cut or {}).get("createdAt") or "") or None
+
+    if cuts:
+        sales = utils._query_bucket("POS_SALE", sk_from=since)
+        withdrawals = utils._query_bucket("POS_WITHDRAWAL", sk_from=since)
+    else:
+        sales, withdrawals = [], []
+
+    sales_by_cut = {}
+    for sale in sales:
+        sales_by_cut.setdefault(sale.get("cashCutId"), []).append(sale)
+    withdrawals_by_cut = {}
+    for withdrawal in withdrawals:
+        withdrawals_by_cut.setdefault(withdrawal.get("cashCutId"), []).append(withdrawal)
+
     for cut in cuts:
         cut_id = cut.get("cashCutId") or cut.get("cutId")
         if not cut.get("sales"):
-            cut["sales"] = [s for s in all_sales if s.get("cashCutId") == cut_id]
+            cut["sales"] = sales_by_cut.get(cut_id, [])
         if not cut.get("withdrawals"):
-            cut["withdrawals"] = [w for w in all_withdrawals if w.get("cashCutId") == cut_id]
+            cut["withdrawals"] = withdrawals_by_cut.get(cut_id, [])
 
-    return utils._json_response(200, {"cuts": cuts})
+    return utils._json_response(200, {"cuts": cuts, "count": len(cuts),
+                                      "hasMore": boundary_cut is not None})
 
 # --- LAMBDA ROUTER ---
 
+def _route_stocks(method: str, segments: list, body: dict, query: dict, headers: dict):
+    """Sub-rutas de /inventory/stocks. Devuelve None si ninguna coincide."""
+    root = segments[0] if segments else ""
+    if root == "stocks":
+        if len(segments) == 1:
+            if method in ("POST", "PATCH"):
+                err = utils._require_admin(headers, "stock_create")
+                if err: return err
+            return handle_stocks(method, body)
+
+        # /stocks/transfers/{id}/receive — nunca llegaba a handle_transfers con
+        # el id: caía en "crear transferencia" sin origen y respondía "Almacén
+        # no encontrado". Recibir una transferencia estaba roto de raíz.
+        if segments[1] == "transfers" and len(segments) >= 4 and segments[3] == "receive" and method == "POST":
+            err = utils._require_admin(headers, "stock_receive_transfer")
+            if err: return err
+            return handle_transfers(method, body, query, transfer_id=segments[2], headers=headers)
+
+        # /stocks/transfers
+        if segments[1] == "transfers":
+            if method == "POST":
+                err = utils._require_admin(headers, "stock_create_transfer")
+                if err: return err
+            return handle_transfers(method, body, query, headers=headers)
+
+        # /stocks/minimos — mínimo por producto (antes de /stocks/{id})
+        if segments[1] == "minimos" and len(segments) == 2:
+            if method == "GET":
+                err = utils._require_admin(headers, "access_screen_stocks")
+                if err: return err
+                return handle_stock_minimos("GET", body, headers)
+            if method == "PUT":
+                err = utils._require_admin(headers, "stock_add_inventory")
+                if err: return err
+                return handle_stock_minimos("PUT", body, headers)
+            return utils._json_response(405, {"message": "Método no permitido"})
+
+        # /stocks/movements
+        if segments[1] == "movements":
+            err = utils._require_admin(headers, "access_screen_stocks")
+            if err: return err
+
+            moves = utils._query_bucket("INVENTORY_MOVEMENT")
+
+            # Si el actor es employee (no admin completo), filtrar por sus stocks ligados
+            actor = utils._extract_actor(headers)
+            if actor.get("role") == "employee":
+                actor_user_id = actor.get("user_id")
+                if actor_user_id:
+                    # Obtener los stocks donde este usuario está en linkedUserIds
+                    all_stocks = utils._query_bucket("STOCK")
+                    linked_stock_ids = {
+                        _stock_id_str(s.get("stockId") or s.get("id") or s.get("SK"))
+                        for s in all_stocks
+                        if actor_user_id in [str(u) for u in (s.get("linkedUserIds") or [])]
+                    } - {""}
+                    if linked_stock_ids:
+                        moves = [m for m in moves if _stock_id_str(m.get("stockId")) in linked_stock_ids]
+
+            # Filtrar por stockId explícito si viene en query params (aplicado después del scope de permisos)
+            stock_id_filter = query.get("stockId")
+            if stock_id_filter:
+                moves = [m for m in moves if _stock_id_str(m.get("stockId")) == _stock_id_str(stock_id_filter)]
+
+            return utils._json_response(200, {"movements": moves})
+
+        # /stocks/{id}/...
+        sid = segments[1]
+        if len(segments) == 2:
+            if method in ("POST", "PATCH"):
+                err = utils._require_admin(headers, "stock_create")
+                if err: return err
+            return handle_stocks(method, body, sid)
+
+        sub = segments[2]
+        if sub == "entries" and method == "POST":
+            err = utils._require_admin(headers, "stock_add_inventory")
+            if err: return err
+            _, error = _apply_stock_delta(sid, {str(body['productId']): int(body['qty'])})
+            if error: return utils._json_response(400, {"message": error})
+            _log_movement(sid, "entry", body['productId'], body['qty'], "manual", body.get("userId"))
+            return utils._json_response(200, {"ok": True})
+
+        if sub == "damages" and method == "POST":
+            err = utils._require_admin(headers, "stock_mark_damaged")
+            if err: return err
+            _, error = _apply_stock_delta(sid, {str(body['productId']): -int(body['qty'])})
+            if error: return utils._json_response(400, {"message": error})
+            _log_movement(sid, "damage", body['productId'], body['qty'], "manual", body.get("userId"), body.get("reason") or "")
+            return utils._json_response(200, {"ok": True})
+
+    # /pos
+    return None
+
+
+def _route_pos(method: str, segments: list, body: dict, query: dict, headers: dict):
+    """Sub-rutas de /inventory/pos. Devuelve None si ninguna coincide."""
+    root = segments[0] if segments else ""
+    if root == "pos":
+        if len(segments) < 2:
+            return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
+        if segments[1] == "sales" and len(segments) == 4 and segments[3] == "payments" and method == "POST":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            return handle_settle_pos_sale(segments[2], body, headers)
+        if segments[1] == "sales" and len(segments) == 4 and segments[3] == "void" and method == "POST":
+            err = utils._require_admin(headers, "order_mark_paid")
+            if err: return err
+            return handle_void_pos_sale(segments[2], body, headers)
+        if segments[1] == "sales":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            if method == "GET":
+                sid = query.get("stockId")
+                # `from`/`to` (YYYY-MM-DD o YYYY-MM) acotan por clave. Sin
+                # ellos se mantiene el histórico completo: cambiar el rango
+                # por defecto rompería los reportes de meses anteriores.
+                date_from = (query.get("from") or "").strip() or None
+                date_to = (query.get("to") or "").strip() or None
+                sales = utils._query_bucket("POS_SALE", sk_from=date_from,
+                                            sk_to=(date_to + "\uffff") if date_to else None)
+                if sid:
+                    sales = [s for s in sales if str(s.get("stockId") or "") == str(sid)]
+                return utils._json_response(200, {"sales": sales, "from": date_from, "to": date_to})
+            return handle_pos_sale(body, headers)
+        if segments[1] == "cash-cut":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            return handle_cash_cut(body, headers)
+        if segments[1] == "cash-control" and method == "GET":
+            err = utils._require_admin(headers, "access_screen_pos")
+            if err: return err
+            user_id = headers.get("x-user-id")
+            sid = query.get("stockId")
+            if not user_id:
+                return utils._json_response(400, {"message": "Se requiere x-user-id"})
+            if not sid:
+                for stock in utils._query_bucket("STOCK"):
+                    linked = stock.get("linkedUserIds") or []
+                    if str(user_id) in [str(u) for u in linked]:
+                        sid = str(stock.get("stockId"))
+                        break
+            if not sid:
+                return utils._json_response(400, {"message": "El usuario no tiene stock vinculado"})
+            control = _build_pos_cash_control(sid, user_id)
+            return utils._json_response(200, {"control": control})
+        if segments[1] == "validate-auth" and method == "POST":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            return handle_validate_pos_auth(body, headers)
+        if segments[1] == "withdrawal":
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            if method == "POST":
+                return handle_pos_withdrawal(body, headers)
+            if method == "GET":
+                user_id = headers.get("x-user-id")
+                sid = query.get("stockId")
+                withdrawals = utils._query_bucket("POS_WITHDRAWAL")
+                if sid:
+                    withdrawals = [w for w in withdrawals if _stock_id_str(w.get("stockId")) == _stock_id_str(sid)]
+                if user_id:
+                    withdrawals = [w for w in withdrawals if str(w.get("attendantUserId")) == str(user_id)]
+                return utils._json_response(200, {"withdrawals": withdrawals})
+        if segments[1] == "cash-cuts" and len(segments) == 2:
+            err = utils._require_admin(headers, "pos_register_sale")
+            if err: return err
+            if method == "GET":
+                user_id = headers.get("x-user-id")
+                sid = query.get("stockId")
+                return handle_list_cash_cuts(sid, user_id)
+        if segments[1] == "auth-config":
+            err = utils._require_admin(headers, "config_manage")
+            if err: return err
+            return handle_pos_auth_config(method, body, headers)
+
+    # /pickup-stocks
+    return None
+
+
 def lambda_handler(event, context):
-    path = event.get("path", "")
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    query = event.get("queryStringParameters") or {}
-    headers = event.get("headers") or {}
-    raw_segments = [s for s in path.strip("/").split("/") if s]
-    # Strip "inventory" prefix: API Gateway sends /inventory/{proxy+}
-    segments = raw_segments[1:] if raw_segments and raw_segments[0] == "inventory" else raw_segments
+    # API Gateway entrega /inventory/{proxy+}: se quita el prefijo del recurso.
+    request = utils._http_request(event, strip_prefix="inventory")
+    method = request.method
+    body, query, headers = request.body, request.query, request.headers
+    segments = request.segments
 
     try:
+        for extension in _EXTENSIONES:
+            respuesta = extension.atender(request)
+            if respuesta is not None:
+                return respuesta
+
         if not segments: return utils._json_response(200, {"service": "inventory-pos"})
 
         root = segments[0]
 
         # /inventory/stocks  →  root == "stocks"
-        if root == "stocks":
-            if len(segments) == 1:
-                if method in ("POST", "PATCH"):
-                    err = utils._require_admin(headers, "stock_create")
-                    if err: return err
-                return handle_stocks(method, body)
+        for enrutador in (_route_stocks, _route_pos):
+            respuesta = enrutador(method, segments, body, query, headers)
+            if respuesta is not None:
+                return respuesta
 
-            # /stocks/transfers
-            if segments[1] == "transfers":
-                if method == "POST":
-                    err = utils._require_admin(headers, "stock_create_transfer")
-                    if err: return err
-                return handle_transfers(method, body, query)
 
-            # /stocks/movements
-            if segments[1] == "movements":
-                err = utils._require_admin(headers, "access_screen_stocks")
-                if err: return err
-
-                moves = utils._query_bucket("INVENTORY_MOVEMENT")
-
-                # Si el actor es employee (no admin completo), filtrar por sus stocks ligados
-                actor = utils._extract_actor(headers)
-                if actor.get("role") == "employee":
-                    actor_user_id = actor.get("user_id")
-                    if actor_user_id:
-                        # Obtener los stocks donde este usuario está en linkedUserIds
-                        all_stocks = utils._query_bucket("STOCK")
-                        linked_stock_ids = {
-                            _stock_id_str(s.get("stockId") or s.get("id") or s.get("SK"))
-                            for s in all_stocks
-                            if actor_user_id in [str(u) for u in (s.get("linkedUserIds") or [])]
-                        } - {""}
-                        if linked_stock_ids:
-                            moves = [m for m in moves if _stock_id_str(m.get("stockId")) in linked_stock_ids]
-
-                # Filtrar por stockId explícito si viene en query params (aplicado después del scope de permisos)
-                stock_id_filter = query.get("stockId")
-                if stock_id_filter:
-                    moves = [m for m in moves if _stock_id_str(m.get("stockId")) == _stock_id_str(stock_id_filter)]
-
-                return utils._json_response(200, {"movements": moves})
-
-            # /stocks/{id}/...
-            sid = segments[1]
-            if len(segments) == 2:
-                if method in ("POST", "PATCH"):
-                    err = utils._require_admin(headers, "stock_create")
-                    if err: return err
-                return handle_stocks(method, body, sid)
-
-            sub = segments[2]
-            if sub == "entries" and method == "POST":
-                err = utils._require_admin(headers, "stock_add_inventory")
-                if err: return err
-                _, error = _apply_stock_delta(sid, {str(body['productId']): int(body['qty'])})
-                if error: return utils._json_response(400, {"message": error})
-                _log_movement(sid, "entry", body['productId'], body['qty'], "manual", body.get("userId"))
-                return utils._json_response(200, {"ok": True})
-
-            if sub == "damages" and method == "POST":
-                err = utils._require_admin(headers, "stock_mark_damaged")
-                if err: return err
-                _, error = _apply_stock_delta(sid, {str(body['productId']): -int(body['qty'])})
-                if error: return utils._json_response(400, {"message": error})
-                _log_movement(sid, "damage", body['productId'], body['qty'], "manual", body.get("userId"), body.get("reason") or "")
-                return utils._json_response(200, {"ok": True})
-
-        # /pos
-        if root == "pos":
-            if len(segments) < 2:
-                return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
-            if segments[1] == "sales":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                if method == "GET":
-                    sid = query.get("stockId")
-                    sales = utils._query_bucket("POS_SALE")
-                    if sid:
-                        sales = [s for s in sales if str(s.get("stockId") or "") == str(sid)]
-                    return utils._json_response(200, {"sales": sales})
-                return handle_pos_sale(body, headers)
-            if segments[1] == "cash-cut":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                return handle_cash_cut(body, headers)
-            if segments[1] == "cash-control" and method == "GET":
-                err = utils._require_admin(headers, "access_screen_pos")
-                if err: return err
-                user_id = headers.get("x-user-id")
-                sid = query.get("stockId")
-                if not user_id:
-                    return utils._json_response(400, {"message": "Se requiere x-user-id"})
-                if not sid:
-                    for stock in utils._query_bucket("STOCK"):
-                        linked = stock.get("linkedUserIds") or []
-                        if str(user_id) in [str(u) for u in linked]:
-                            sid = str(stock.get("stockId"))
-                            break
-                if not sid:
-                    return utils._json_response(400, {"message": "El usuario no tiene stock vinculado"})
-                control = _build_pos_cash_control(sid, user_id)
-                return utils._json_response(200, {"control": control})
-            if segments[1] == "validate-auth" and method == "POST":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                return handle_validate_pos_auth(body, headers)
-            if segments[1] == "withdrawal":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                if method == "POST":
-                    return handle_pos_withdrawal(body, headers)
-                if method == "GET":
-                    user_id = headers.get("x-user-id")
-                    sid = query.get("stockId")
-                    withdrawals = utils._query_bucket("POS_WITHDRAWAL")
-                    if sid:
-                        withdrawals = [w for w in withdrawals if _stock_id_str(w.get("stockId")) == _stock_id_str(sid)]
-                    if user_id:
-                        withdrawals = [w for w in withdrawals if str(w.get("attendantUserId")) == str(user_id)]
-                    return utils._json_response(200, {"withdrawals": withdrawals})
-            if segments[1] == "cash-cuts":
-                err = utils._require_admin(headers, "pos_register_sale")
-                if err: return err
-                if method == "GET":
-                    user_id = headers.get("x-user-id")
-                    sid = query.get("stockId")
-                    return handle_list_cash_cuts(sid, user_id)
-            if segments[1] == "auth-config":
-                err = utils._require_admin(headers, "config_manage")
-                if err: return err
-                return handle_pos_auth_config(method, body, headers)
-
-        # /pickup-stocks
         if root == "pickup-stocks":
             stocks = [s for s in utils._query_bucket("STOCK") if s.get("allowPickup")]
             return utils._json_response(200, {"stocks": stocks})
@@ -652,5 +1133,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": "Ruta de inventario no encontrada"})
 
     except Exception as e:
-        print(f"[INVENTORY_ERROR] {str(e)}")
+        utils._log_error("inventory_unhandled_error", e)
         return utils._json_response(500, {"message": "Internal Inventory Error", "error": str(e)})

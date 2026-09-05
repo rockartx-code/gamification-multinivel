@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { PlanSocioService } from '../../services/plan-socio.service';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -10,6 +11,8 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
+import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // WP-A · propuesta 1
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
 
 interface OwnDocUploadState {
   file: File | null;
@@ -20,7 +23,7 @@ interface OwnDocUploadState {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiClabeFormComponent, UiFooterComponent],
   templateUrl: './user-profile.component.html'
 })
 export class UserProfileComponent implements OnInit {
@@ -32,12 +35,19 @@ export class UserProfileComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
-    private readonly sanitizer: DomSanitizer
-  ) {}
+    private readonly sanitizer: DomSanitizer,
+    private readonly planSocio: PlanSocioService
+  ) {
+    // Paquete B: en modo cliente el perfil no pide CLABE ni documentos.
+    this.planSocio.modo().subscribe({ next: () => this.cdr.markForCheck(), error: () => this.cdr.markForCheck() });
+  }
+
+  get isClientMode(): boolean {
+    return this.planSocio.modoActual === 'cliente';
+  }
 
   isLoading = true;
   isSavingInfo = false;
-  isSavingClabe = false;
   toastMessage = '';
   isToastVisible = false;
   private toastTimeout?: number;
@@ -45,10 +55,6 @@ export class UserProfileComponent implements OnInit {
   profile: CustomerProfile | null = null;
 
   infoForm = { firstName: '', apellidoPaterno: '', apellidoMaterno: '', phone: '', rfc: '', curp: '' };
-  clabeDraft = '';
-  bankInstitutionDraft = '';
-  clabePending = '';
-  isClabeConfirmOpen = false;
 
   passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
   passwordErrors = { currentPassword: '', newPassword: '', confirmPassword: '' };
@@ -83,8 +89,6 @@ export class UserProfileComponent implements OnInit {
             rfc: profile.rfc || '',
             curp: profile.curp || ''
           };
-          this.clabeDraft = profile.clabeInterbancaria || '';
-          this.bankInstitutionDraft = profile.bankInstitution || '';
           this.cdr.markForCheck();
         },
         error: () => { this.showToast('No se pudo cargar el perfil.'); }
@@ -114,12 +118,6 @@ export class UserProfileComponent implements OnInit {
     return this.authService.currentUser?.userId ?? '';
   }
 
-  get maskedClabe(): string {
-    const clabe = this.profile?.clabeInterbancaria || '';
-    if (!clabe) return '';
-    return '•••• •••• •••• ' + clabe.slice(-4);
-  }
-
   saveInfo(): void {
     if (this.isSavingInfo || !this.userId) return;
     this.isSavingInfo = true;
@@ -133,54 +131,28 @@ export class UserProfileComponent implements OnInit {
       .subscribe({
         next: (updated) => {
           this.profile = { ...this.profile!, ...updated };
-          this.showToast('Información guardada correctamente.');
+          // El toast dice lo que quedó guardado en el servidor, no lo que se tecleó.
+          const partes = [updated?.name ? `nombre ${updated.name}` : '', updated?.phone ? `teléfono ${updated.phone}` : ''].filter(Boolean);
+          this.showToast(partes.length ? `Información guardada: ${partes.join(', ')}.` : 'Información guardada.');
         },
         error: () => { this.showToast('No se pudo guardar la información.'); }
       });
   }
 
-  openClabeConfirm(): void {
-    const clean = this.clabeDraft.replace(/\s/g, '');
-    if (clean.length !== 18) {
-      this.showToast('La CLABE debe tener 18 dígitos.');
-      return;
+  /**
+   * WP-A · propuesta 1: `ui-clabe-form` guarda al primer intento y dice el
+   * resultado en el propio campo. El perfil solo refleja lo que quedó.
+   */
+  onClabeSaved(evento: { clabeLast4: string; bankInstitution: string; removed: boolean }): void {
+    if (this.profile) {
+      this.profile = {
+        ...this.profile,
+        clabeInterbancaria: evento.removed ? '' : this.profile.clabeInterbancaria,
+        clabeLast4: evento.clabeLast4,
+        bankInstitution: evento.bankInstitution
+      };
     }
-    this.clabePending = clean;
-    this.isClabeConfirmOpen = true;
-  }
-
-  cancelClabeConfirm(): void {
-    this.isClabeConfirmOpen = false;
-    this.clabePending = '';
-  }
-
-  confirmSaveClabe(): void {
-    if (this.isSavingClabe || !this.userId) return;
-    this.isClabeConfirmOpen = false;
-    this.isSavingClabe = true;
-    const customerId = Number(this.userId);
-    this.api.saveCustomerClabe({
-      customerId,
-      clabe: this.clabePending,
-      bankInstitution: this.bankInstitutionDraft.trim() || undefined
-    })
-      .pipe(finalize(() => { this.isSavingClabe = false; this.cdr.markForCheck(); }))
-      .subscribe({
-        next: (res) => {
-          if (this.profile) {
-            this.profile = {
-              ...this.profile,
-              clabeInterbancaria: this.clabePending,
-              clabeLast4: res.clabeLast4 ?? this.clabePending.slice(-4),
-              bankInstitution: this.bankInstitutionDraft.trim() || this.profile.bankInstitution
-            };
-          }
-          this.clabeDraft = this.clabePending;
-          this.clabePending = '';
-          this.showToast('CLABE guardada correctamente.');
-        },
-        error: () => { this.showToast('No se pudo guardar la CLABE.'); }
-      });
+    this.cdr.markForCheck();
   }
 
   onOwnDocFileChange(docKey: string, event: Event): void {

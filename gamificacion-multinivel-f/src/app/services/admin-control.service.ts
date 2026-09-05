@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin, map, Observable, of, tap } from 'rxjs';
+import { BehaviorSubject, catchError, forkJoin, map, Observable, of, tap } from 'rxjs';
 
 import {
+  OrderCancelResponse,
   AdminCustomer,
   AdminData,
   AdminCampaign,
@@ -68,8 +69,15 @@ export class AdminControlService {
   /** Carga inicial mínima: solo warnings */
   load(): Observable<AdminData> {
     return this.api.getAdminWarnings().pipe(
-      tap((warnings) => {
-        this.patchData({ warnings: warnings as AdminData['warnings'] });
+      tap((respuesta) => {
+        // Integración de la ronda 26 (propuesta 21): `serverNow` y
+        // `agingRedDays` viajan con los avisos y son de donde sale la
+        // antigüedad de cada pedido en la tabla.
+        this.patchData({
+          warnings: respuesta.warnings as AdminData['warnings'],
+          serverNow: respuesta.serverNow,
+          agingRedDays: respuesta.agingRedDays
+        });
         this.loadedSections.add('warnings');
       }),
       map(() => this.dataSubject.value as AdminData)
@@ -96,6 +104,12 @@ export class AdminControlService {
       }),
       map(({ orders }) => orders)
     );
+  }
+
+  /** Paquete E · ronda 26: con una URL por pantalla, el caparazón se vuelve a
+   *  montar en cada salto de menú; los avisos no se vuelven a pedir por eso. */
+  hasLoadedWarnings(): boolean {
+    return this.loadedSections.has('warnings');
   }
 
   hasLoadedOrders(status?: AdminOrder['status']): boolean {
@@ -239,10 +253,14 @@ export class AdminControlService {
 
   formatMoney(value: number): string {
     const amount = Number.isFinite(value) ? value : 0;
+    // Sin centavos cuando el importe es entero; con dos cuando no lo es
+    // ("$1,376.40", no "$1,376.4" ni "$1,376").
+    const cents = Number.isInteger(Math.round(amount * 100) / 100) ? 0 : 2;
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
-      maximumFractionDigits: 0
+      minimumFractionDigits: cents,
+      maximumFractionDigits: cents
     }).format(amount);
   }
 
@@ -274,6 +292,38 @@ export class AdminControlService {
                 attendantUserId: order.attendantUserId ?? entry.attendantUserId,
                 items: order.items ?? entry.items
               }
+            : entry
+        );
+        this.dataSubject.next({ ...current, orders: updatedOrders });
+      })
+    );
+  }
+
+  /** Nota interna en cualquier pedido, cerrado incluido. */
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    return this.api.addOrderNote(orderId, text).pipe(
+      tap((order) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const orders = current.orders.map((entry) => (entry.id === orderId ? { ...entry, adminNotes: order.adminNotes } : entry));
+        this.dataSubject.next({ ...current, orders });
+      })
+    );
+  }
+
+  /** Cancela un pedido pendiente o pagado desde el back office y lo refleja en la lista. */
+  cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
+    return this.api.cancelOrder(orderId, reason).pipe(
+      tap(() => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const updatedOrders = current.orders.map((entry) =>
+          entry.id === orderId
+            ? { ...entry, status: 'cancelled' as AdminOrder['status'], cancelReason: reason, cancelledAt: new Date().toISOString() }
             : entry
         );
         this.dataSubject.next({ ...current, orders: updatedOrders });
@@ -392,6 +442,13 @@ export class AdminControlService {
     return this.api.getBusinessConfig();
   }
 
+  /** Carga la configuración en `data` si aún no está: el POS lee de ahí la tabla de descuento. */
+  loadBusinessConfig(): Observable<AppBusinessConfig> {
+    return this.api.getBusinessConfig().pipe(
+      tap((config) => this.patchData({ businessConfig: config }))
+    );
+  }
+
   saveBusinessConfig(payload: UpdateBusinessConfigPayload): Observable<AppBusinessConfig> {
     return this.api.saveBusinessConfig(payload).pipe(
       tap((config) => {
@@ -437,7 +494,7 @@ export class AdminControlService {
     return this.api.createStockTransfer(payload);
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     return this.api.receiveStockTransfer(transferId, payload);
   }
 
@@ -448,6 +505,16 @@ export class AdminControlService {
   listPosSales(stockId?: string): Observable<PosSale[]> {
     return this.api.listPosSales(stockId);
   }
+
+  /** Anula una venta de mostrador; el componente refresca su lista. */
+  settlePosSale(saleId: string, payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return this.api.settlePosSale(saleId, payload);
+  }
+
+  voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return this.api.voidPosSale(saleId, reason);
+  }
+
 
   registerPosSale(payload: {
     stockId: string;
@@ -462,6 +529,11 @@ export class AdminControlService {
     paymentType?: 'full' | 'partial' | 'credit';
     amountPaid?: number;
     authCode?: string;
+    /** Descuento por escalón del socio, calculado igual que en la tienda en línea. */
+    discountAmount?: number;
+    discountRate?: number;
+    /** Efectivo recibido en mostrador, solo para calcular el cambio. */
+    cashReceived?: number;
   }): Observable<{ sale: PosSale }> {
     return this.api.registerPosSale(payload);
   }
@@ -523,6 +595,29 @@ export class AdminControlService {
       })
     );
   }
+  /** Cambio ya guardado en el servidor por otra ruta (p. ej. la CLABE): se refleja en la lista sin recargar. */
+  patchCustomer(customerId: number, patch: Partial<AdminCustomer>): void {
+    const current = this.dataSubject.value;
+    if (!current) {
+      return;
+    }
+    const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...patch } : entry));
+    this.dataSubject.next({ ...current, customers });
+  }
+
+  /** Baja de datos (ARCO): la ficha vuelve anonimizada y se refleja en la lista. */
+  deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
+    return this.api.deleteCustomerData(customerId, reason).pipe(
+      tap((customer) => {
+        const current = this.dataSubject.value;
+        if (!current) {
+          return;
+        }
+        const customers = current.customers.map((entry) => (entry.id === customerId ? { ...entry, ...customer } : entry));
+        this.dataSubject.next({ ...current, customers });
+      })
+    );
+  }
 
   createEmployee(payload: CreateEmployeePayload): Observable<AdminEmployee> {
     return this.api.createEmployee(payload).pipe(
@@ -536,7 +631,11 @@ export class AdminControlService {
     );
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  revertCommissionPayment(customerId: number, monthKey: string, reason: string): Observable<{ ok: boolean; status: string }> {
+    return this.api.revertCommissionPayment(customerId, monthKey, reason);
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.api.updateEmployee(employeeId, payload).pipe(
       tap((emp) => {
         const current = this.dataSubject.value;
@@ -570,18 +669,47 @@ export class AdminControlService {
     return this.api.getCommissionsSummary(monthKey);
   }
 
+  /**
+   * Ronda 7 · Rubén (crítica): con el usuario de caja, el Punto de Venta decía
+   * siempre «Sin stock asignado» y Stocks «Todavía no hay ninguna bodega dada
+   * de alta», aunque la gerente tuviera a los cinco empleados palomeados en las
+   * tres bodegas. La causa no era la vinculación: era este `forkJoin`. Bastaba
+   * con que UNA de las cinco peticiones respondiera 403 —el rol de caja no
+   * tiene «Ver Productos»— para que fallara el combinado entero, el `next`
+   * nunca corriera y las bodegas, las ventas y los movimientos se quedaran en
+   * la lista vacía con la que arranca la pantalla. Ningún error en consola.
+   *
+   * Cada petición se resuelve por su cuenta: la que no se puede leer se queda
+   * vacía y **se nombra** en `sinAcceso`, para que la pantalla diga "no tienes
+   * permiso" en vez de "no hay nada".
+   */
   loadStocksAndPosState(): Observable<{
     stocks: AdminStock[];
     transfers: StockTransfer[];
     movements: InventoryMovement[];
     posSales: PosSale[];
+    sinAcceso: string[];
   }> {
+    const negados: string[] = [];
+    const opcional = <T>(fuente: Observable<T>, seccion: string, vacio: T): Observable<T> =>
+      fuente.pipe(
+        catchError((error: unknown) => {
+          const codigo = (error as { status?: number })?.status;
+          // 401 no se apunta: la sesión caducó y de eso se encarga el interceptor.
+          if (codigo === 403) {
+            negados.push(seccion);
+          }
+          return of(vacio);
+        })
+      );
+
     return forkJoin({
-      productsResponse: this.api.listProducts(),
-      stocks: this.api.listStocks(),
-      transfers: this.api.listStockTransfers(),
-      movements: this.api.listInventoryMovements(),
-      posSales: this.api.listPosSales()
+      productsResponse: opcional(this.api.listProducts(), 'Productos',
+        { products: [] as AdminProduct[], productOfMonthId: null as number | null }),
+      stocks: opcional(this.api.listStocks(), 'Stocks', [] as AdminStock[]),
+      transfers: opcional(this.api.listStockTransfers(), 'Traspasos', [] as StockTransfer[]),
+      movements: opcional(this.api.listInventoryMovements(), 'Movimientos de inventario', [] as InventoryMovement[]),
+      posSales: opcional(this.api.listPosSales(), 'Ventas de mostrador', [] as PosSale[])
     }).pipe(
       tap((response) => {
         if (this.loadedSections.has('products')) {
@@ -597,7 +725,8 @@ export class AdminControlService {
         stocks: response.stocks ?? [],
         transfers: response.transfers ?? [],
         movements: response.movements ?? [],
-        posSales: response.posSales ?? []
+        posSales: response.posSales ?? [],
+        sinAcceso: negados
       }))
     );
   }

@@ -25,8 +25,6 @@ export class ResetPasswordComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   isSubmitting = false;
-  showPassword = false;
-  showConfirmPassword = false;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -42,7 +40,17 @@ export class ResetPasswordComponent implements OnInit {
 
   submit(): void {
     if (!this.email || !this.otp || !this.password || !this.confirmPassword) {
-      this.errorMessage = 'Completa correo, codigo, nueva contraseña y confirmacion.';
+      this.errorMessage = 'Completa correo, código, nueva contraseña y confirmación.';
+      this.successMessage = '';
+      return;
+    }
+    if (this.password.length < 8) {
+      this.errorMessage = 'La nueva contraseña debe tener al menos 8 caracteres.';
+      this.successMessage = '';
+      return;
+    }
+    if (this.password !== this.confirmPassword) {
+      this.errorMessage = 'Las contraseñas no coinciden: escríbela igual en los dos campos.';
       this.successMessage = '';
       return;
     }
@@ -58,10 +66,13 @@ export class ResetPasswordComponent implements OnInit {
         password: this.password,
         confirmPassword: this.confirmPassword
       })
-      .pipe(finalize(() => (this.isSubmitting = false)))
+      .pipe(finalize(() => {
+        this.isSubmitting = false;
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: (response) => {
-          this.successMessage = response.message;
+          this.successMessage = `${response.message} Te llevamos al login en un momento.`;
           this.errorMessage = '';
           this.cdr.detectChanges();
           setTimeout(() => {
@@ -75,13 +86,5 @@ export class ResetPasswordComponent implements OnInit {
           this.cdr.detectChanges();
         }
       });
-  }
-
-  togglePasswordVisibility(field: 'password' | 'confirm'): void {
-    if (field === 'password') {
-      this.showPassword = !this.showPassword;
-      return;
-    }
-    this.showConfirmPassword = !this.showConfirmPassword;
   }
 }

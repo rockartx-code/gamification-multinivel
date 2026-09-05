@@ -1,26 +1,38 @@
-<section class="min-h-screen bg-sand-200 text-charcoal antialiased">
+<section class="min-h-screen bg-hero-luxe text-charcoal antialiased">
   <ui-header variant="default" containerClass="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
     <ui-button variant="ghost" size="md" iconClass="fa-solid fa-arrow-left" [routerLink]="['/']">
       Volver
     </ui-button>
   </ui-header>
 
-  <main class="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
-    <div class="grid gap-10 lg:grid-cols-[1.05fr_.95fr]">
-      <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6">
+  <main class="mx-auto flex min-h-[70vh] max-w-5xl flex-col items-center justify-center px-6 py-12">
+    <div class="w-full max-w-md">
+      <div class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 elev-float sm:p-8">
         <div class="pointer-events-none absolute inset-0 bg-olive-10"></div>
 
         <div class="relative space-y-4">
           <div class="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gray-600">
             <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
-            {{ showRecoveryForm ? 'Recuperar contraseña' : 'Login' }}
+            {{ showRecoveryForm ? 'Recuperar contraseña' : (showLinkForm ? 'Entrar con enlace' : 'Login') }}
           </div>
-          <div class="flex items-center gap-2 text-2xl font-extrabold">
+          <h1 class="flex items-center gap-2 text-2xl font-semibold">
             <i class="fa-solid fa-gauge-high text-accent" aria-hidden="true"></i>
-            {{ showRecoveryForm ? 'Recupera el acceso' : 'Accede a tu panel' }}
+            {{ showRecoveryForm ? 'Recupera el acceso' : (showLinkForm ? 'Entra sin contraseña' : 'Accede a tu panel') }}
+          </h1>
+
+          <!-- Ola B · I2: la sesión caducó (401) y volvimos aquí sin perder el carrito -->
+          <div *ngIf="infoMessage" class="flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
+            <i class="fa-solid fa-circle-info mt-0.5" aria-hidden="true"></i>
+            <span>{{ infoMessage }}</span>
           </div>
 
-          <ng-container *ngIf="!showRecoveryForm; else recoveryForm">
+          <!-- Canje del enlace de acceso (/#/login?enlace=TOKEN) -->
+          <div *ngIf="linkRedeemStatus === 'redeeming'" class="flex items-center gap-2 rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-gray-700">
+            <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+            Abriendo tu sesión con el enlace del correo...
+          </div>
+
+          <ng-container *ngIf="panel === 'login' && linkRedeemStatus !== 'redeeming'">
             <ui-form-field
               name="username"
               label="Correo electrónico"
@@ -31,43 +43,33 @@
               inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
             ></ui-form-field>
 
-            <label class="block">
-              <span class="inline-flex items-center gap-2 text-[11px] text-gray-600">contraseña</span>
-              <div class="relative">
-                <i
-                  class="fa-solid fa-key pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-500"
-                  aria-hidden="true"
-                ></i>
-                <input
-                  [type]="showPassword ? 'text' : 'password'"
-                  name="password"
-                  placeholder="Tu contraseña"
-                  [(ngModel)]="password"
-                  class="mt-2 w-full rounded-2xl border bg-white/70 px-4 py-3 pl-10 pr-12 text-sm text-main outline-none focus:ring-2 focus-ring-olive-20"
-                  [class.border-danger]="passwordError"
-                  [class.border-olive-30]="!passwordError"
-                  [class.focus-border-danger]="passwordError"
-                  [class.focus-border-olive-60]="!passwordError"
-                />
-                <button
-                  type="button"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-500 transition hover:bg-olive-10 hover:text-charcoal"
-                  (click)="togglePasswordVisibility()"
-                  [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                  [title]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                >
-                  <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <small *ngIf="passwordError" class="mt-1 block text-xs text-danger">{{ passwordError }}</small>
-            </label>
+            <ui-form-field
+              kind="input"
+              type="password"
+              name="password"
+              label="Contraseña"
+              leadingIconClass="fa-solid fa-key"
+              placeholder="Tu contraseña"
+              [(ngModel)]="password"
+              [errorText]="passwordError"
+              inputClass="mt-2 w-full rounded-2xl border bg-white/70 px-4 py-3 text-sm text-main outline-none focus:ring-2 focus-ring-olive-20"
+            ></ui-form-field>
+
+            <!-- Verónica, Claudia y Rosa volvían a entrar "como tres veces" por sesión. -->
+            <div class="rounded-2xl border border-olive-30 bg-white/60 px-4 py-3">
+              <ui-checkbox
+                label="Recordarme en este dispositivo"
+                [description]="rememberMeDescription"
+                [checked]="rememberMe"
+                (checkedChange)="rememberMe = $event"></ui-checkbox>
+            </div>
 
             <p *ngIf="errorMessage" class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
               {{ errorMessage }}
             </p>
             <div *ngIf="shouldShowResendConfirmation" class="rounded-2xl border border-olive-30 bg-white/70 px-4 py-4">
               <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p class="text-xs text-gray-700">Si no te llego el correo, te lo reenviamos a la misma direccion.</p>
+                <p class="text-xs text-gray-700">Si no te llegó el correo, te lo reenviamos a la misma dirección.</p>
                 <ui-button
                   variant="ghost"
                   size="md"
@@ -75,7 +77,7 @@
                   [disabled]="isResendingConfirmation"
                   (pressed)="resendConfirmationEmail()"
                 >
-                  {{ isResendingConfirmation ? 'Reenviando correo...' : 'Reenviar correo de confirmacion' }}
+                  {{ isResendingConfirmation ? 'Reenviando correo...' : 'Reenviar correo de confirmación' }}
                 </ui-button>
               </div>
               <p *ngIf="resendMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
@@ -87,7 +89,7 @@
             </div>
             <div class="mt-2">
               <ui-button
-                variant="secondary"
+                variant="primary"
                 size="lg"
                 iconClass="fa-solid fa-right-to-bracket"
                 [fullWidth]="true"
@@ -97,7 +99,14 @@
                 {{ isSubmitting ? 'Validando acceso...' : 'Ingresar al panel' }}
               </ui-button>
             </div>
-            <div class="pt-1 text-center">
+            <div class="flex flex-col items-center gap-2 pt-1 text-center sm:flex-row sm:justify-center sm:gap-6">
+              <button
+                type="button"
+                class="text-sm text-accent underline-offset-2 hover:underline"
+                (click)="openLinkForm()"
+              >
+                Entrar con un enlace por correo
+              </button>
               <button
                 type="button"
                 class="text-sm text-accent underline-offset-2 hover:underline"
@@ -106,54 +115,136 @@
                 Recuperar contraseña
               </button>
             </div>
-          </ng-container>
-
-          <ng-template #recoveryForm>
-            <div class="rounded-2xl border border-olive-30 bg-white/60 p-4">
-              <div class="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
-                <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i>
-                Recuperar contraseña
+            <!-- Quien compró sin cuenta no tenía dónde teclear su folio para ver su paquete. -->
+            <div class="mt-4 rounded-2xl border border-olive-30 bg-white/60 p-4">
+              <div class="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
+                <i class="fa-solid fa-box" aria-hidden="true"></i>
+                ¿Compraste sin cuenta? Rastrea tu pedido
               </div>
-              <ui-form-field
-                name="recoveryEmail"
-                type="email"
-                label="Correo electrónico"
-                leadingIconClass="fa-solid fa-envelope"
-                placeholder="tu@correo.com"
-                [(ngModel)]="recoveryEmail"
-                inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
-              ></ui-form-field>
-              <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <ui-button
-                  variant="ghost"
-                  size="md"
-                  iconClass="fa-solid fa-paper-plane"
-                  [disabled]="isRecovering"
-                  (pressed)="requestPasswordRecovery()"
-                >
-                  {{ isRecovering ? 'Enviando correo...' : 'Enviar Correo de recuperación' }}
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div class="flex-1">
+                  <ui-form-field
+                    name="trackingFolio"
+                    label="Número de pedido"
+                    placeholder="ORD-XXXXXXXX"
+                    [(ngModel)]="trackingFolio"
+                  ></ui-form-field>
+                </div>
+                <ui-button variant="ghost" size="md" iconClass="fa-solid fa-magnifying-glass" [disabled]="!trackingFolio.trim()" (pressed)="trackOrder()">
+                  Ver seguimiento
                 </ui-button>
-                <a routerLink="/recuperar-contrasena" class="text-sm text-accent underline-offset-2 hover:underline">
-                  Ya tengo un código
-                </a>
-              </div>
-              <p *ngIf="recoveryMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
-                {{ recoveryMessage }}
-              </p>
-              <p *ngIf="recoveryErrorMessage" class="mt-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
-                {{ recoveryErrorMessage }}
-              </p>
-              <div class="pt-3">
-                <button
-                  type="button"
-                  class="text-sm text-accent underline-offset-2 hover:underline"
-                  (click)="openLoginForm()"
-                >
-                  Volver al login
-                </button>
               </div>
             </div>
-          </ng-template>
+          </ng-container>
+
+          <!-- Enlace de acceso por correo -->
+          <div *ngIf="showLinkForm && linkRedeemStatus !== 'redeeming'" class="rounded-2xl border border-olive-30 bg-white/60 p-4">
+            <div class="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
+              Entrar con un enlace por correo
+            </div>
+            <p class="mb-3 text-xs text-gray-700">
+              Te mandamos un enlace a tu correo. Al abrirlo entras directo, sin contraseña. Sirve una sola vez y caduca en 15 minutos.
+            </p>
+            <ui-form-field
+              name="linkEmail"
+              type="email"
+              label="Correo electrónico"
+              leadingIconClass="fa-solid fa-envelope"
+              placeholder="tu@correo.com"
+              [(ngModel)]="linkEmail"
+              inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
+            ></ui-form-field>
+            <div class="mt-3 rounded-2xl border border-olive-30 bg-white/70 px-3 py-2">
+              <ui-checkbox
+                [compact]="true"
+                label="Recordarme en este dispositivo"
+                [description]="rememberMeDescription"
+                [checked]="rememberMe"
+                (checkedChange)="rememberMe = $event"></ui-checkbox>
+            </div>
+            <div class="mt-3">
+              <ui-button
+                variant="primary"
+                size="md"
+                iconClass="fa-solid fa-paper-plane"
+                [fullWidth]="true"
+                [disabled]="isRequestingLink"
+                (pressed)="requestLoginLink()"
+              >
+                {{ isRequestingLink ? 'Enviando enlace...' : 'Mandarme el enlace' }}
+              </ui-button>
+            </div>
+            <p *ngIf="linkMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
+              {{ linkMessage }}
+            </p>
+            <p *ngIf="linkErrorMessage" class="mt-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
+              {{ linkErrorMessage }}
+            </p>
+            <div class="pt-3">
+              <button
+                type="button"
+                class="text-sm text-accent underline-offset-2 hover:underline"
+                (click)="openLoginForm()"
+              >
+                Volver al login
+              </button>
+            </div>
+          </div>
+
+          <!-- Recuperar contraseña -->
+          <div *ngIf="showRecoveryForm" class="rounded-2xl border border-olive-30 bg-white/60 p-4">
+            <div class="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-gray-600">
+              <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i>
+              Recuperar contraseña
+            </div>
+            <ui-form-field
+              name="recoveryEmail"
+              type="email"
+              label="Correo electrónico"
+              leadingIconClass="fa-solid fa-envelope"
+              placeholder="tu@correo.com"
+              [(ngModel)]="recoveryEmail"
+              helpText="Te mandamos un código de 6 dígitos que vale 15 minutos. Si pides varios, usa el más reciente."
+              inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main outline-none focus-border-olive-60 focus:ring-2 focus-ring-olive-20"
+            ></ui-form-field>
+            <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <ui-button
+                variant="ghost"
+                size="md"
+                iconClass="fa-solid fa-paper-plane"
+                [disabled]="isRecovering"
+                (pressed)="requestPasswordRecovery()"
+              >
+                {{ isRecovering ? 'Enviando correo...' : 'Enviar código por correo' }}
+              </ui-button>
+              <a [routerLink]="['/recuperar-contrasena']" [queryParams]="recoveryEmail.trim() ? { email: recoveryEmail.trim() } : {}" class="text-sm text-accent underline-offset-2 hover:underline">
+                Ya tengo un código
+              </a>
+            </div>
+            <p *ngIf="recoveryMessage" class="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-800">
+              {{ recoveryMessage }}
+            </p>
+            <p *ngIf="recoveryErrorMessage" class="mt-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-danger-deep">
+              {{ recoveryErrorMessage }}
+            </p>
+            <div class="flex flex-col gap-2 pt-3 sm:flex-row sm:gap-6">
+              <button
+                type="button"
+                class="text-sm text-accent underline-offset-2 hover:underline"
+                (click)="openLoginForm()"
+              >
+                Volver al login
+              </button>
+              <button
+                type="button"
+                class="text-sm text-accent underline-offset-2 hover:underline"
+                (click)="openLinkForm()"
+              >
+                Mejor mándame un enlace para entrar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -92,6 +92,12 @@ export interface SponsorContact {
   email: string;
   phone: string;
   isDefault?: boolean;
+  /** Sin patrocinadora: la ejecutiva asignada o la de la cartera por defecto. */ // paquete F
+  isCoach?: boolean; // paquete F
+  /** "Tu coach en Finding'U" */ // paquete F
+  coachTitle?: string; // paquete F
+  /** Enlace wa.me listo para abrir. */ // paquete F
+  whatsapp?: string; // paquete F
 }
 
 export interface FeaturedItem {
@@ -127,13 +133,24 @@ export interface DashboardCampaign {
 
 export interface DashboardSettings {
   cutoffDay: number;
+  /** Neto a partir del cual el envío es gratis; 0 o ausente = sin regla. */
+  freeShippingMin?: number;
   cutoffHour: number;
   cutoffMinute: number;
   userCode: string;
   networkGoal: number;
+  // ── Paquete G · ronda 26 · propuesta 29 ──
+  /** Instante absoluto del próximo corte, del servidor. Manda sobre cutoffDay. */
+  cutoffAt?: string;
+  /** Reloj del servidor al responder; con él se corrige la deriva del navegador. */
+  serverNow?: string;
+  /** De qué es el corte, con todas sus letras. */
+  cutoffLabel?: string;
 }
 
 export interface UserDashboardData {
+  /** Consumo propio del mes en pesos (nodo raíz de la red). */
+  myNetSpend?: number;
   settings: DashboardSettings;
   goals: DashboardGoal[];
   products: DashboardProduct[];
@@ -190,6 +207,15 @@ export interface UserDashboardData {
       buyerType?: string;
       rowId?: string;
       status?: string;
+      // ── Paquete A · ronda 26 ──
+      /** Fecha del pedido que generó la comisión: la que la socia reconoce (32). */
+      orderCreatedAt?: string;
+      recalculatedAt?: string;
+      recalculatedReason?: string;
+      /** Base y tasa con las que se calculó el importe, para poder explicarlo (37). */
+      commissionRate?: number;
+      commissionBaseNet?: number;
+      voidReason?: string;
     }>;
     hasPending: boolean;
     hasConfirmed?: boolean;
@@ -199,7 +225,14 @@ export interface UserDashboardData {
     prevReceiptUrl?: string;
     prevStatus?: 'no_moves' | 'pending' | 'paid';
     payoutDay?: number;
+    // ── Paquete A · ronda 26 ──
+    /** Banco de la CLABE registrada, para reconocer la cuenta (1). */
+    bankInstitution?: string;
   } | null;
+  /** Modo de la cuenta e indicadores del cliente (paquete B). */
+  mode?: 'cliente' | 'socio';
+  modeActivatedAt?: string | null; // paquete B
+  clientIndicators?: import('./plan-socio.model').IndicadoresCliente | null; // paquete B
 }
 
 /** Respuesta de GET /catalog */
@@ -218,6 +251,8 @@ export interface CatalogData {
 
 /** Respuesta de GET /dashboard (sin datos de catálogo) */
 export interface DashboardData {
+  /** Consumo propio del mes en pesos, tal como lo devuelve la API. */
+  myNetSpend?: number;
   isGuest?: boolean;
   settings: DashboardSettings;
   customer?: DashboardCustomerProfile | null;
@@ -234,11 +269,19 @@ export interface DashboardData {
   vg?: number;
   rank?: string;
   bonuses?: BonusAward[];
+  /** Modo de la cuenta e indicadores del cliente (paquete B). */
+  mode?: 'cliente' | 'socio';
+  modeActivatedAt?: string | null; // paquete B
+  clientIndicators?: import('./plan-socio.model').IndicadoresCliente | null; // paquete B
 }
 
 export interface CommissionRequestPayload {
   customerId: number;
-  clabe: string;
+  /**
+   * Opcional desde la propuesta 1 (guarda 11): la CLABE se captura en un solo
+   * formulario (`ui-clabe-form`) y el depósito va a la que está en la ficha.
+   */
+  clabe?: string;
   monthKey?: string;
 }
 

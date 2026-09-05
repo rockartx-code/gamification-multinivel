@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 
 import {
   CreateAccountCustomer,
@@ -8,8 +8,19 @@ import {
   ResetPasswordPayload,
   ResetPasswordResponse
 } from '../models/auth.model';
-import { AdminViewId, AppPrivilege, normalizePrivileges, SCREEN_PRIVILEGE_BY_VIEW, UserPrivileges } from '../models/privileges.model';
+import { RespuestaOk, SesionAbierta } from '../models/checkout.model';
+import {
+  ADMIN_ROUTE_BY_VIEW,
+  AdminViewId,
+  AppPrivilege,
+  landingRouteFor,
+  normalizePrivileges,
+  privilegeForAdminRoute,
+  SCREEN_PRIVILEGE_BY_VIEW,
+  UserPrivileges
+} from '../models/privileges.model';
 import { ApiService } from './api.service';
+import { CheckoutService } from './checkout.service';
 
 export type UserRole = 'admin' | 'cliente' | 'employee';
 
@@ -24,6 +35,14 @@ export interface AuthUser {
   discountPercent?: number;
   discountActive?: boolean;
   level?: string;
+  /** Puesto que pinta la insignia del back office: "Caja", "Almacén", "Coach" (paquete E). */
+  jobTitle?: string;
+  /** Modo de la cuenta que devuelve el login (paquete B). */
+  mode?: 'cliente' | 'socio' | null;
+  // paquete C · sesión persistente
+  /** true → 30 días en localStorage; false → 24 h en sessionStorage (se cierra con el navegador). */
+  rememberMe?: boolean;
+  expiresAt?: string;
 }
 
 @Injectable({
@@ -35,7 +54,10 @@ export class AuthService {
 
   readonly user$ = this.userSubject.asObservable();
 
-  constructor(private readonly api: ApiService) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly checkout: CheckoutService
+  ) {}
 
   get currentUser(): AuthUser | null {
     return this.userSubject.value;
@@ -49,8 +71,29 @@ export class AuthService {
     return this.hasValidSession(this.userSubject.value);
   }
 
-  login(username: string, password: string): Observable<AuthUser> {
-    return this.api.login(username, password).pipe(tap((user) => this.setUser(user)));
+  /**
+   * Inicia sesión. Con "Recordarme" (por omisión) la sesión dura 30 días y vive en
+   * localStorage; sin marcarlo dura 24 horas y vive en sessionStorage, así que se
+   * cierra al cerrar el navegador (computadoras compartidas).
+   */
+  login(username: string, password: string, rememberMe = true): Observable<AuthUser> {
+    return this.checkout.iniciarSesion(username, password, rememberMe).pipe(
+      map((sesion) => this.usuarioDesdeSesion(sesion, rememberMe)),
+      tap((user) => this.setUser(user))
+    );
+  }
+
+  /** Enlace de acceso por correo: pide el enlace (nunca revela si el correo existe). */
+  requestLoginLink(email: string, rememberMe = true): Observable<RespuestaOk> {
+    return this.checkout.pedirEnlaceAcceso(email, rememberMe);
+  }
+
+  /** Canjea el enlace `/#/login?enlace=TOKEN` y abre la sesión. */
+  loginWithLink(token: string, rememberMe = true): Observable<AuthUser> {
+    return this.checkout.canjearEnlaceAcceso(token, rememberMe).pipe(
+      map((sesion) => this.usuarioDesdeSesion(sesion, rememberMe)),
+      tap((user) => this.setUser(user))
+    );
   }
 
   requestPasswordRecovery(email: string): Observable<PasswordRecoveryRequestResponse> {
@@ -90,7 +133,7 @@ export class AuthService {
 
   logout(): void {
     this.userSubject.next(null);
-    localStorage.removeItem(this.storageKey);
+    this.borrarAlmacenado();
   }
 
   setUserFromCreateAccount(customer: CreateAccountCustomer): void {
@@ -105,15 +148,57 @@ export class AuthService {
     this.setUser(user);
   }
 
+  private usuarioDesdeSesion(sesion: SesionAbierta, rememberMe: boolean): AuthUser {
+    if (!sesion?.token) {
+      throw new Error('La respuesta de acceso no incluyó la sesión.');
+    }
+    const user = sesion.user;
+    return {
+      ...user,
+      userId: user?.userId != null ? String(user.userId) : undefined,
+      name: user?.name || '',
+      role: user?.role || 'cliente',
+      token: sesion.token,
+      rememberMe: sesion.rememberMe ?? rememberMe,
+      expiresAt: sesion.expiresAt
+    };
+  }
+
   private setUser(user: AuthUser): void {
     const normalized: AuthUser = {
       ...user,
       token: typeof user.token === 'string' && user.token.trim().length > 0 ? user.token.trim() : undefined,
       canAccessAdmin: Boolean(user.canAccessAdmin),
-      privileges: normalizePrivileges(user.privileges)
+      privileges: normalizePrivileges(user.privileges),
+      rememberMe: user.rememberMe !== false
     };
     this.userSubject.next(normalized);
-    localStorage.setItem(this.storageKey, JSON.stringify(normalized));
+    this.guardar(normalized);
+  }
+
+  /** Persiste la sesión donde toca y limpia el otro almacén para no dejar dos copias. */
+  private guardar(user: AuthUser): void {
+    const serializado = JSON.stringify(user);
+    try {
+      if (user.rememberMe === false) {
+        sessionStorage.setItem(this.storageKey, serializado);
+        localStorage.removeItem(this.storageKey);
+      } else {
+        localStorage.setItem(this.storageKey, serializado);
+        sessionStorage.removeItem(this.storageKey);
+      }
+    } catch {
+      // Almacenamiento bloqueado (modo privado): la sesión vive solo en memoria.
+    }
+  }
+
+  private borrarAlmacenado(): void {
+    try {
+      localStorage.removeItem(this.storageKey);
+      sessionStorage.removeItem(this.storageKey);
+    } catch {
+      // nada que limpiar
+    }
   }
 
   isSuperUser(user: AuthUser | null | undefined = this.currentUser): boolean {
@@ -149,7 +234,9 @@ export class AuthService {
 
   defaultRoute(user: AuthUser | null | undefined = this.currentUser): string {
     if (this.hasAdminPanelAccess(user)) {
-      return '/admin';
+      // Paquete E · ronda 26 · Al entrar se abre la pantalla de esta persona,
+      // no una lista de pedidos que no es de nadie (propuesta 33).
+      return this.adminLandingRoute(user);
     }
     return '/dashboard';
   }
@@ -171,23 +258,78 @@ export class AuthService {
     return this.hasPrivilege(SCREEN_PRIVILEGE_BY_VIEW[view], user);
   }
 
+  // ── Paquete E · ronda 26 ──
+
+  /**
+   * La pantalla donde empieza el turno de esta persona: caja → Punto de Venta,
+   * almacén → Despacho, coach → Seguimiento, finanzas → Comisiones y pagos.
+   * Si la ruta calculada no le está permitida, cae a la primera que sí lo esté.
+   */
+  adminLandingRoute(user: AuthUser | null | undefined = this.currentUser): string {
+    if (!user) {
+      return '/login';
+    }
+    const destino = landingRouteFor(user.privileges, this.isSuperUser(user));
+    const privilegio = privilegeForAdminRoute(destino);
+    if (!privilegio || this.hasPrivilege(privilegio, user)) {
+      return destino;
+    }
+    return this.firstAllowedAdminRoute(user);
+  }
+
+  /** Primera pantalla del back office que esta persona sí puede abrir. */
+  firstAllowedAdminRoute(user: AuthUser | null | undefined = this.currentUser): string {
+    const orden: AdminViewId[] = ['orders', 'pos', 'stocks', 'customers', 'employees', 'products',
+                                  'campaigns', 'stats', 'honor_board', 'notifications', 'coupons', 'settings'];
+    const vista = orden.find((v) => this.canAccessAdminView(v, user));
+    return vista ? ADMIN_ROUTE_BY_VIEW[vista] : '/admin/pedidos';
+  }
+
+  /** Puesto para la insignia; nunca el rol técnico ni una clave de configuración. */
+  jobTitleLabel(user: AuthUser | null | undefined = this.currentUser): string {
+    const puesto = (user?.jobTitle ?? '').trim();
+    if (puesto) {
+      return puesto;
+    }
+    return this.isSuperUser(user) ? 'Administración' : 'Personal';
+  }
+
   private loadUser(): AuthUser | null {
-    const raw = localStorage.getItem(this.storageKey);
+    // La sesión corta (sin "Recordarme") manda sobre la larga si conviven.
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(this.storageKey) ?? localStorage.getItem(this.storageKey);
+    } catch {
+      raw = null;
+    }
     if (!raw) {
       return null;
     }
 
     try {
       const parsed = JSON.parse(raw) as AuthUser;
+      if (this.sesionVencida(parsed)) {
+        this.borrarAlmacenado();
+        return null;
+      }
       return {
         ...parsed,
         canAccessAdmin: Boolean(parsed.canAccessAdmin),
         privileges: normalizePrivileges(parsed.privileges)
       };
     } catch {
-      localStorage.removeItem(this.storageKey);
+      this.borrarAlmacenado();
       return null;
     }
+  }
+
+  /** `expiresAt` es informativo (el TTL de la sesión manda en el servidor), pero evita mostrar un panel muerto. */
+  private sesionVencida(user: AuthUser): boolean {
+    if (!user?.expiresAt) {
+      return false;
+    }
+    const vence = Date.parse(user.expiresAt);
+    return Number.isFinite(vence) && vence <= Date.now();
   }
 
   private hasValidSession(user: AuthUser | null | undefined): boolean {

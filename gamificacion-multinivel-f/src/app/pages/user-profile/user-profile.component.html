@@ -59,7 +59,7 @@
             <div class="flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2.5 text-sm text-main">
               <i class="fa-solid fa-envelope text-xs text-gray-400" aria-hidden="true"></i>
               <span>{{ profile?.email || '—' }}</span>
-              <span class="ml-auto rounded-full bg-olive-10 px-2 py-0.5 text-[10px] font-semibold text-gray-500">Solo lectura</span>
+              <span class="ml-auto rounded-full bg-olive-10 px-2 py-0.5 text-micro font-semibold text-gray-500">Solo lectura</span>
             </div>
           </div>
 
@@ -94,54 +94,39 @@
         </div>
       </div>
 
+      <!-- Paquete B: en modo cliente no se piden datos bancarios ni fiscales -->
+      <div *ngIf="isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+        <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">CLABE y documentos</h2>
+        <p class="text-xs text-gray-600">Tu cuenta está en modo cliente: no necesitamos tu CLABE ni documentos fiscales. Solo se piden si activas el modo socio y tienes comisiones que cobrar.</p>
+        <a class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline" [routerLink]="['/modo-socio']">Conoce el modo socio <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+      </div>
+
       <!-- ── CLABE INTERBANCARIA ─────────────────────────────────────── -->
-      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">CLABE interbancaria</h2>
         <p class="mb-5 text-xs text-gray-500">Se utiliza para recibir el depósito de tus comisiones.</p>
 
-        <!-- Current masked CLABE + bank -->
-        <div *ngIf="maskedClabe" class="mb-4 flex items-center gap-3 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3">
-          <i class="fa-solid fa-building-columns text-sm text-gray-400" aria-hidden="true"></i>
-          <div class="min-w-0 flex-1">
-            <p class="font-mono text-sm tracking-widest text-main">{{ maskedClabe }}</p>
-            <p *ngIf="profile?.bankInstitution" class="mt-0.5 text-xs text-gray-500">{{ profile!.bankInstitution }}</p>
-          </div>
-          <span class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Registrada</span>
-        </div>
-        <div *ngIf="!maskedClabe" class="mb-4 rounded-xl border border-dashed border-olive-30 bg-sand-200-90 px-4 py-3 text-xs text-gray-400">
-          No tienes una CLABE registrada todavía.
-        </div>
-
-        <div class="grid gap-3 sm:grid-cols-2">
-          <ui-form-field
-            label="Nueva CLABE (18 dígitos)"
-            placeholder="123456789012345678"
-            name="clabeDraft"
-            [(ngModel)]="clabeDraft"
-            wrapperClass="block">
-          </ui-form-field>
-
-          <ui-form-field
-            label="Institución bancaria"
-            placeholder="Ej: BBVA, Banorte, HSBC…"
-            name="bankInstitutionDraft"
-            [(ngModel)]="bankInstitutionDraft"
-            wrapperClass="block">
-          </ui-form-field>
-        </div>
-
-        <div class="mt-4 flex justify-end">
-          <ui-button variant="primary" size="md" (pressed)="openClabeConfirm()" [disabled]="isSavingClabe">
-            <i class="fa-solid fa-shield-check" aria-hidden="true"></i>
-            {{ isSavingClabe ? 'Guardando…' : 'Actualizar CLABE' }}
-          </ui-button>
-        </div>
+        <!-- WP-A · propuesta 1: el mismo formulario que en el panel; guarda
+             al primer intento y dice el resultado en el propio campo. -->
+        <ui-clabe-form [customerId]="userId || ''"
+          [clabeLast4]="profile?.clabeInterbancaria ? profile!.clabeInterbancaria!.slice(-4) : ''"
+          [bankInstitution]="profile?.bankInstitution || ''"
+          modo="propio" (saved)="onClabeSaved($event)"></ui-clabe-form>
       </div>
 
       <!-- ── CARGA DE DOCUMENTACIÓN ─────────────────────────────────── -->
-      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Carga de documentación</h2>
-        <p class="mb-5 text-xs text-gray-500">Sube los documentos requeridos para completar tu registro.</p>
+        <!-- Ronda 7 · Gerardo: la página del plan promete «es gratis, no te pide
+             datos extra» y «nada por adelantado: cada dato se pide cuando hace
+             falta», y aquí los tres salían marcados «Requerido» como si el
+             registro estuviera incompleto. Tu registro ya está completo: estos
+             papeles se piden el día que haya comisiones que facturarte. -->
+        <p class="mb-5 text-xs text-gray-500">
+          Tu registro ya está completo: no necesitas subir nada para comprar ni para invitar.
+          Estos documentos se piden el día que tengamos que facturarte y depositarte comisiones,
+          y los puedes dejar listos desde ahora si prefieres.
+        </p>
 
         <div class="flex flex-col gap-4">
           <div *ngFor="let docType of requiredDocTypes"
@@ -165,7 +150,7 @@
                 <ng-container *ngIf="getOwnDocForType(docType.key) as existing">
                   <p class="text-xs text-green-600">Subido el {{ formatDate(existing.uploadedAt) }}</p>
                 </ng-container>
-                <p *ngIf="docType.required && !getOwnDocForType(docType.key)" class="text-xs text-amber-600">Requerido</p>
+                <p *ngIf="docType.required && !getOwnDocForType(docType.key)" class="text-xs text-gray-500">Se pide al cobrar comisiones</p>
               </div>
             </div>
 
@@ -226,65 +211,47 @@
 
         <div class="grid gap-4">
           <!-- Contraseña actual -->
-          <div class="block">
-            <label class="mb-1 block text-xs font-semibold text-gray-600">Contraseña actual</label>
-            <div class="relative">
-              <input
-                [type]="showCurrentPassword ? 'text' : 'password'"
-                name="currentPassword"
-                [(ngModel)]="passwordForm.currentPassword"
-                (ngModelChange)="passwordErrors.currentPassword = ''"
-                placeholder="Tu contraseña actual"
-                class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
-                [ngClass]="passwordErrors.currentPassword ? 'border-red-400' : 'border-olive-30'" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                (click)="showCurrentPassword = !showCurrentPassword">
-                <i class="fa-solid" [ngClass]="showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-              </button>
-            </div>
-            <p *ngIf="passwordErrors.currentPassword" class="mt-1 text-xs text-red-500">{{ passwordErrors.currentPassword }}</p>
-          </div>
+          <ui-form-field
+            kind="input"
+            type="password"
+            name="currentPassword"
+            label="Contraseña actual"
+            placeholder="Tu contraseña actual"
+            wrapperClass="block"
+            inputClass="mt-1 w-full rounded-xl border bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
+            [(ngModel)]="passwordForm.currentPassword"
+            (ngModelChange)="passwordErrors.currentPassword = ''"
+            [errorText]="passwordErrors.currentPassword">
+          </ui-form-field>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <!-- Nueva contraseña -->
-            <div class="block">
-              <label class="mb-1 block text-xs font-semibold text-gray-600">Nueva contraseña</label>
-              <div class="relative">
-                <input
-                  [type]="showNewPassword ? 'text' : 'password'"
-                  name="newPassword"
-                  [(ngModel)]="passwordForm.newPassword"
-                  (ngModelChange)="passwordErrors.newPassword = ''"
-                  placeholder="Mínimo 8 caracteres"
-                  class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
-                  [ngClass]="passwordErrors.newPassword ? 'border-red-400' : 'border-olive-30'" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                  (click)="showNewPassword = !showNewPassword">
-                  <i class="fa-solid" [ngClass]="showNewPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <p *ngIf="passwordErrors.newPassword" class="mt-1 text-xs text-red-500">{{ passwordErrors.newPassword }}</p>
-            </div>
+            <ui-form-field
+              kind="input"
+              type="password"
+              name="newPassword"
+              label="Nueva contraseña"
+              placeholder="Mínimo 8 caracteres"
+              wrapperClass="block"
+              inputClass="mt-1 w-full rounded-xl border bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
+              [(ngModel)]="passwordForm.newPassword"
+              (ngModelChange)="passwordErrors.newPassword = ''"
+              [errorText]="passwordErrors.newPassword">
+            </ui-form-field>
 
             <!-- Confirmar nueva contraseña -->
-            <div class="block">
-              <label class="mb-1 block text-xs font-semibold text-gray-600">Confirmar nueva contraseña</label>
-              <div class="relative">
-                <input
-                  [type]="showConfirmPassword ? 'text' : 'password'"
-                  name="confirmPassword"
-                  [(ngModel)]="passwordForm.confirmPassword"
-                  (ngModelChange)="passwordErrors.confirmPassword = ''"
-                  placeholder="Repite la nueva contraseña"
-                  class="w-full rounded-xl border bg-white/70 px-4 py-2.5 pr-10 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
-                  [ngClass]="passwordErrors.confirmPassword ? 'border-red-400' : 'border-olive-30'" />
-                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-main"
-                  (click)="showConfirmPassword = !showConfirmPassword">
-                  <i class="fa-solid" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <p *ngIf="passwordErrors.confirmPassword" class="mt-1 text-xs text-red-500">{{ passwordErrors.confirmPassword }}</p>
-            </div>
+            <ui-form-field
+              kind="input"
+              type="password"
+              name="confirmPassword"
+              label="Confirmar nueva contraseña"
+              placeholder="Repite la nueva contraseña"
+              wrapperClass="block"
+              inputClass="mt-1 w-full rounded-xl border bg-white/70 px-4 py-2.5 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20"
+              [(ngModel)]="passwordForm.confirmPassword"
+              (ngModelChange)="passwordErrors.confirmPassword = ''"
+              [errorText]="passwordErrors.confirmPassword">
+            </ui-form-field>
           </div>
         </div>
 
@@ -297,9 +264,9 @@
       </div>
 
       <!-- ── DOCUMENTOS DE TU ADMINISTRADOR ────────────────────────── -->
-      <div class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
+      <div *ngIf="!isClientMode" class="grain rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-sm">
         <h2 class="mb-1 text-sm font-bold tracking-wide text-main uppercase">Documentos de tu administrador</h2>
-        <p class="mb-5 text-xs text-gray-500">Acá podés ver y descargar los documentos que tu administrador ligó a tu cuenta.</p>
+        <p class="mb-5 text-xs text-gray-500">Aquí puedes ver y descargar los documentos que tu administrador ligó a tu cuenta.</p>
 
         <!-- Documents list -->
         <div *ngIf="profile?.documents && profile!.documents!.length > 0" class="mb-5 flex flex-col gap-2">
@@ -366,40 +333,6 @@
     </div>
   </div>
 
-  <!-- ── CLABE CONFIRM DIALOG ───────────────────────────────────────── -->
-  <div *ngIf="isClabeConfirmOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-    <div class="grain w-full max-w-sm rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-2xl">
-      <div class="mb-4 flex items-center gap-3">
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100">
-          <i class="fa-solid fa-triangle-exclamation text-amber-600" aria-hidden="true"></i>
-        </span>
-        <h3 class="text-base font-bold text-main">Confirmar CLABE</h3>
-      </div>
-      <p class="mb-2 text-sm text-gray-600">
-        Estás a punto de registrar la siguiente CLABE interbancaria:
-      </p>
-      <p class="mb-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-3 font-mono text-sm tracking-widest text-main">
-        {{ clabePending }}
-      </p>
-      <div *ngIf="bankInstitutionDraft.trim()" class="mb-4 flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2 text-sm text-main">
-        <i class="fa-solid fa-building-columns text-xs text-gray-400" aria-hidden="true"></i>
-        <span>{{ bankInstitutionDraft.trim() }}</span>
-      </div>
-      <p class="mb-5 text-xs text-gray-400">
-        Verifica que los 18 dígitos sean correctos. Esta cuenta se usará para depósitos de comisiones.
-      </p>
-      <div class="flex gap-3">
-        <ui-button variant="ghost" size="md" class="flex-1" (pressed)="cancelClabeConfirm()">
-          Cancelar
-        </ui-button>
-        <ui-button variant="primary" size="md" class="flex-1" (pressed)="confirmSaveClabe()" [disabled]="isSavingClabe">
-          Confirmar
-        </ui-button>
-      </div>
-    </div>
-  </div>
-
   <!-- ── TOAST ──────────────────────────────────────────────────────── -->
   <div
     class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transition-all duration-300"
@@ -412,3 +345,6 @@
     </div>
   </div>
 </section>
+
+<!-- Paquete D · ronda 26: el pie con contacto, horario y los enlaces de ayuda. -->
+<ui-footer />

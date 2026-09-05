@@ -1,51 +1,15 @@
-import json
-import boto3
 import random
+import secrets
 import core_utils as utils # Importado desde la Lambda Layer
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
+from typing import Optional
+import modo_handlers  # paquete B
 
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
 
-_EMAIL_BASE_CSS = """
-body { margin:0; padding:0; background-color:#F9F7F2; font-family:'Segoe UI',Arial,sans-serif; }
-.wrap { width:100%; max-width:600px; margin:0 auto; padding:24px 16px; }
-.card { background:#ffffff; border-radius:24px; padding:40px 36px; text-align:center; border:1px solid #e8e3d8; }
-.logo { margin-bottom:24px; }
-.icon { font-size:48px; margin-bottom:8px; }
-.title { color:#2D3436; font-family:Georgia,serif; font-size:26px; font-weight:bold; margin:0 0 16px; }
-.lead { color:#636e72; line-height:1.7; font-size:15px; margin:0 0 20px; }
-.benefit-item { text-align:left; margin-bottom:14px; padding:14px 16px; background:#FFFDF5; border-radius:14px; display:flex; align-items:flex-start; gap:12px; }
-.benefit-icon { font-size:20px; flex-shrink:0; margin-top:2px; }
-.benefit-body strong { display:block; color:#2D3436; font-size:14px; }
-.benefit-body span { color:#636e72; font-size:13px; }
-.info-box { background:#f9f9f9; border-radius:14px; padding:18px 20px; margin:20px 0; text-align:left; }
-.info-box p { margin:0 0 6px; color:#333; font-size:14px; }
-.info-box p:last-child { margin-bottom:0; }
-.btn { background:#D4AF37; color:#333 !important; padding:14px 32px; border-radius:50px; text-decoration:none; font-weight:bold; display:inline-block; margin-top:20px; font-size:15px; }
-.otp-box { display:inline-block; background:#FFFDF5; border:2px solid #D4AF37; border-radius:16px; padding:16px 40px; margin:20px 0; font-size:36px; font-weight:bold; letter-spacing:10px; color:#2D3436; }
-.divider { border:none; border-top:1px solid #eee; margin:28px 0; }
-.footer { font-size:12px; color:#aaa; margin-top:24px; }
-"""
+from core.email import _EMAIL_BASE_CSS, _email_shell  # plantilla compartida con los correos del pedido
 
-
-def _email_shell(body_html: str) -> str:
-    return f"""<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>{_EMAIL_BASE_CSS}</style></head>
-<body>
-<div class="wrap">
-  <div class="logo" style="text-align:center">
-    <img src="https://www.findingu.com.mx/Logo-colores.svg" alt="Finding'u" width="140">
-  </div>
-  <div class="card">
-    {body_html}
-    <hr class="divider">
-    <div class="footer">&copy; 2026 Finding&rsquo;U &nbsp;&bull;&nbsp; Nutrici&oacute;n que te impulsa</div>
-  </div>
-</div>
-</body></html>"""
 
 
 def _build_activation_email(name: str, confirmation_url: str) -> tuple:
@@ -105,7 +69,7 @@ def _create_email_confirmation(email: str, customer_id) -> str:
     return token
 
 
-def _build_password_recovery_email(otp: str) -> tuple:
+def _build_password_recovery_email(otp: str, minutos: int = 15) -> tuple:
     body = f"""
     <div class="icon">🔑</div>
     <h1 class="title">¿Olvidaste tu contraseña?</h1>
@@ -114,14 +78,105 @@ def _build_password_recovery_email(otp: str) -> tuple:
 
     <div class="otp-box">{otp}</div>
 
-    <p style="font-size:13px;color:#999;margin-top:8px;">El código expira en 15 minutos.</p>
+    <p style="font-size:13px;color:#999;margin-top:8px;">El código expira en {minutos} minutos.</p>
+    <p style="font-size:13px;color:#636e72;margin-top:12px;">
+      Si pediste varios códigos, usa el más reciente; los anteriores dejan de valer en cuanto uses uno o pasen {minutos} minutos.
+    </p>
     <p style="font-size:13px;color:#999;margin-top:12px;">
       Si no solicitaste este cambio puedes ignorar este correo.
     </p>
     """
     html = _email_shell(body)
-    text = f"Tu código de recuperación Finding'U es: {otp}. Expira en 15 minutos."
+    text = (f"Tu código de recuperación Finding'U es: {otp}. Expira en {minutos} minutos. "
+            "Si pediste varios códigos, usa el más reciente; los anteriores dejan de valer en cuanto uses uno "
+            f"o pasen {minutos} minutos.")
     return "Recupera tu contraseña — Finding'U", text, html
+
+
+def _build_login_link_email(name: str, url: str, minutos: int) -> tuple:
+    """Enlace de acceso de un solo uso: quien no recuerda su contraseña entra desde el correo."""
+    body = f"""
+    <div class="icon">🔗</div>
+    <h1 class="title">Tu enlace para entrar</h1>
+    <p class="lead">Hola <strong>{name}</strong>, toca el botón y entras a tu panel sin escribir contraseña.</p>
+    <a href="{url}" class="btn">Entrar a Finding&rsquo;U &rarr;</a>
+    <p style="font-size:13px;color:#999;margin-top:16px;">El enlace sirve una sola vez y caduca en {minutos} minutos.</p>
+    <p style="font-size:13px;color:#999;margin-top:12px;">Si no lo pediste, ignora este correo: nadie puede entrar sin él.</p>
+    """
+    html = _email_shell(body)
+    text = f"Hola {name}, entra a Finding'U con este enlace (sirve una vez, caduca en {minutos} minutos): {url}"
+    return "Tu enlace para entrar a Finding'U", text, html
+
+
+def _cfg_auth() -> dict:
+    return utils._load_app_config().get("auth") or {}
+
+
+def _minutos_codigo() -> int:
+    return int(utils._to_decimal(_cfg_auth().get("loginLinkMinutes") or 15))
+
+
+def _ttl_sesion(remember_me: bool) -> int:
+    """30 días con "Recordarme"; sin marcarlo, la sesión corta de config (24 h)."""
+    if remember_me:
+        return int(utils.SESSION_TTL_SECONDS)
+    corta = int(utils._to_decimal(_cfg_auth().get("sessionShortSeconds") or 86400))
+    return min(corta, int(utils.SESSION_TTL_SECONDS))
+
+
+def _remember_me(body: dict) -> bool:
+    """La casilla viene marcada por omisión: solo un `false` explícito la apaga."""
+    valor = body.get("rememberMe", True)
+    if isinstance(valor, str):
+        return valor.strip().lower() not in ("false", "0", "no", "")
+    return bool(valor)
+
+
+def _abrir_sesion(auth: dict, profile: dict, entity_type: str, user_id, remember_me: bool) -> dict:
+    """Crea la sesión y arma la respuesta de login (la usan login y el enlace de acceso)."""
+    token = "session-token-" + utils.uuid.uuid4().hex[:16]
+    ttl = _ttl_sesion(remember_me)
+    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=ttl)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # Clave directa: validar el Bearer cuesta 1 GetItem en vez de 2, y no deja
+    # un puntero REF por sesión. El TTL (epoch) hace que DynamoDB las purgue;
+    # `expiresAt` es informativo para el frontend.
+    # Una ficha de empleado entra como `employee`, aunque su credencial venga
+    # marcada `admin` de antes de esta ronda: con `admin`, `_require_admin` daba
+    # acceso total y los privilegios de su ficha no restringían nada.
+    rol = "employee" if entity_type == "EMPLOYEE" else auth.get("role")
+    privilegios = _sembrar_privilegios_de_pantalla(profile.get("privileges"))
+    utils._put_session(token, {
+        "sessionId": token,
+        "userId": str(user_id),
+        "role": rol,
+        # El nombre viaja en la sesión: la bitácora se firma con él y así no hay
+        # que creerle el nombre a un encabezado que escribe quien llama.
+        "name": str(profile.get("name") or "").strip(),
+        "authId": auth.get("authId") or auth.get("email"),
+        "privileges": privilegios,
+        # Una socia con acceso al back office entra con rol cliente: el backend
+        # necesita saberlo para aplicar sus privilegios.
+        "canAccessAdmin": bool(profile.get("canAccessAdmin")),
+        "rememberMe": bool(remember_me),
+        "expiresAt": expires_at,
+    }, ttl_epoch=utils._ttl_epoch(ttl))
+
+    return utils._json_response(200, {
+        "token": token,
+        "expiresAt": expires_at,
+        "rememberMe": bool(remember_me),
+        "user": {
+            "userId": str(user_id),
+            "name": profile.get("name"),
+            "role": rol,
+            "canAccessAdmin": bool(profile.get("canAccessAdmin")),
+            "privileges": privilegios,
+            "isEmployee": (entity_type == "EMPLOYEE"),
+            # Paquete E · ronda 26: el puesto que pinta la insignia del back office.
+            "jobTitle": str(profile.get("jobTitle") or "").strip(),
+            "mode": modo_handlers.modo_de(profile) if entity_type == "CUSTOMER" else None,  # paquete B
+        }
+    })
 
 
 def _build_new_network_member_email(
@@ -162,54 +217,99 @@ def _build_new_network_member_email(
 
 # --- LÓGICA DE NEGOCIO ---
 
+DEMO_LOGIN_ENABLED = str(utils.os.getenv("DEMO_LOGIN_ENABLED", "")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _demo_users() -> list:
+    """Cuentas de demostración, deshabilitadas salvo configuración explícita.
+
+    Requiere `DEMO_LOGIN_ENABLED` **y** que las contraseñas vengan del entorno:
+    antes estaban escritas en el código, de modo que cualquiera con acceso al
+    repositorio conocía unas credenciales de admin válidas en producción.
+    """
+    if not DEMO_LOGIN_ENABLED:
+        return []
+    cuentas = [
+        {"u": "admin", "p": utils.os.getenv("DEMO_ADMIN_PASSWORD", ""),
+         "role": "admin", "id": "admin-001", "name": "Admin"},
+        {"u": "cliente", "p": utils.os.getenv("DEMO_CLIENTE_PASSWORD", ""),
+         "role": "cliente", "id": "client-001", "name": "Valeria Torres"},
+    ]
+    return [c for c in cuentas if c["p"]]
+
+
+def _rehash_password_if_legacy(auth_id: str, auth: dict, password: str) -> None:
+    """Migra al vuelo un hash viejo (SHA-256 sin sal) tras un login correcto.
+
+    El login es el único momento en que se tiene la contraseña en claro, así
+    que la migración es transparente: nadie tiene que cambiar su contraseña.
+    Un fallo aquí no debe impedir el acceso.
+    """
+    if not utils._is_legacy_password_hash(auth.get("passwordHash")):
+        return
+    try:
+        utils._update_by_id(
+            "AUTH", auth_id,
+            "SET passwordHash = :p, updatedAt = :u",
+            {":p": utils._hash_password(str(password)), ":u": utils._now_iso()},
+        )
+    except Exception as ex:
+        utils._log("password_rehash_error", "ERROR", authId=auth_id, error=ex)
+
+
 def handle_login(body):
     """POST /auth/login"""
     identifier = (body.get("email") or body.get("username", "")).strip().lower()
     password = body.get("password")
+    remember_me = _remember_me(body)
 
     if not identifier or not password:
         return utils._json_response(401, {"message": "Credenciales incompletas"})
 
-    # 1. Usuarios Demo (Compatibilidad)
-    demo_users = [
-        {"u": "admin", "p": "admin123", "role": "admin", "id": "admin-001", "name": "Admin"},
-        {"u": "cliente", "p": "cliente123", "role": "cliente", "id": "client-001", "name": "Valeria Torres"}
-    ]
-    for d in demo_users:
+    # 1. Usuarios demo (solo si se habilitan explícitamente por entorno).
+    # Sus contraseñas están en el código, así que en producción DEMO_LOGIN_ENABLED
+    # debe quedar sin definir: de lo contrario cualquiera con acceso al repo
+    # entra como admin.
+    for d in _demo_users():
         if (identifier == d["u"] or identifier == f"{d['u']}@demo.local") and password == d["p"]:
             token = "demo-token-" + utils.uuid.uuid4().hex[:16]
-            utils._put_entity("SESSION", token, {
-                "entityType": "session",
+            utils._put_session(token, {
                 "sessionId": token,
                 "userId": str(d["id"]),
                 "role": d["role"],
                 "privileges": {},
-            })
-            return utils._json_response(200, {"token": token, "user": {
+                "rememberMe": remember_me,
+            }, ttl_epoch=utils._ttl_epoch(_ttl_sesion(remember_me)))
+            return utils._json_response(200, {"token": token, "rememberMe": remember_me, "user": {
                 "userId": d["id"], "name": d["name"], "role": d["role"], "canAccessAdmin": (d["role"] == "admin")
             }})
 
     # 2. Buscar en tabla AUTH
     auth = utils._get_by_id("AUTH", identifier)
-    pass_hash = utils._hash_password(str(password))
 
     if not auth:
-        # Fallback: Buscar cliente por email para crear registro AUTH si existe passHash antiguo
-        customer = next((c for c in utils._query_bucket("CUSTOMER") 
-                        if utils._normalize_email(c.get("email")) == identifier), None)
-        if customer and customer.get("passwordHash") == pass_hash:
+        # Fallback: cliente con passwordHash antiguo pero sin registro AUTH
+        matched_customer_id = utils._find_customer_id_by_email(identifier)
+        customer = (utils._get_by_id("CUSTOMER", utils._customer_entity_id(matched_customer_id))
+                    if matched_customer_id else None)
+        if customer and utils._verify_password(password, customer.get("passwordHash")):
             auth = utils._put_entity("AUTH", identifier, {
                 "entityType": "auth", "authId": identifier, "email": identifier,
-                "customerId": customer.get("customerId"), "passwordHash": pass_hash, "role": "cliente"
+                "customerId": customer.get("customerId"),
+                "passwordHash": utils._hash_password(str(password)), "role": "cliente",
             })
         else:
             return utils._json_response(401, {"message": "Credenciales invalidas"})
 
-    if auth.get("passwordHash") != pass_hash:
+    elif not utils._verify_password(password, auth.get("passwordHash")):
         return utils._json_response(401, {"message": "Credenciales invalidas"})
 
+    else:
+        _rehash_password_if_legacy(identifier, auth, password)
+
     if auth.get("emailVerified") is False:
-        return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electrónico para iniciar sesión."})
+        # El código permite al frontend ofrecer "Reenviar confirmación" sin comparar textos.
+        return utils._json_response(403, {"message": "Confirma tu cuenta desde tu correo electrónico para iniciar sesión.", "code": "EMAIL_NOT_VERIFIED"})
 
     # 3. Determinar Perfil
     user_id = auth.get("employeeId") or auth.get("customerId")
@@ -219,27 +319,168 @@ def handle_login(body):
     if not profile:
         return utils._json_response(401, {"message": "Perfil no encontrado"})
 
-    token = "session-token-" + utils.uuid.uuid4().hex[:16]
-    utils._put_entity("SESSION", token, {
-        "entityType": "session",
-        "sessionId": token,
-        "userId": str(user_id),
-        "role": auth.get("role"),
-        "authId": auth.get("authId") or identifier,
-        "privileges": utils._normalize_privileges(profile.get("privileges")),
-    })
+    return _abrir_sesion({**auth, "authId": auth.get("authId") or identifier}, profile, entity_type, user_id, remember_me)
 
-    return utils._json_response(200, {
-        "token": token,
-        "user": {
-            "userId": str(user_id),
-            "name": profile.get("name"),
-            "role": auth.get("role"),
-            "canAccessAdmin": bool(profile.get("canAccessAdmin")),
-            "privileges": utils._normalize_privileges(profile.get("privileges")),
-            "isEmployee": (entity_type == "EMPLOYEE")
-        }
+
+# --- ENLACE DE ACCESO POR CORREO (paquete C) ---
+
+def _respuesta_enlace_generica() -> dict:
+    """Nunca revela si el correo existe."""
+    return utils._json_response(200, {"ok": True, "message": "Si el correo existe, enviamos un enlace para entrar. Revisa tu bandeja (y la de no deseados)."})
+
+
+def handle_login_link_request(body):
+    """POST /auth/enlace-acceso — manda un enlace de un solo uso (config auth.loginLinkMinutes)."""
+    email = utils._normalize_email(body.get("email"))
+    if not email or "@" not in email:
+        return utils._json_response(400, {"message": "Escribe tu correo electrónico para mandarte el enlace."})
+    auth = utils._get_by_id("AUTH", email)
+    # Solo cuentas verificadas: el enlace equivale a una contraseña.
+    if not auth or auth.get("emailVerified") is False:
+        return _respuesta_enlace_generica()
+
+    token = secrets.token_urlsafe(32)
+    minutos = _minutos_codigo()
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=minutos)).isoformat()
+    utils._put_entity("LOGIN_LINK", utils._hash_token(token), {
+        "entityType": "loginLink", "tokenHash": utils._hash_token(token), "email": email,
+        "expiresAt": expires, "used": False, "rememberMe": _remember_me(body),
     })
+    user_id = auth.get("employeeId") or auth.get("customerId")
+    profile = utils._get_by_id("EMPLOYEE" if auth.get("employeeId") else "CUSTOMER", user_id) or {}
+    url = f"{FRONTEND_URL.rstrip('/')}/#/login?enlace={quote(token)}"
+    subj, txt, html = _build_login_link_email(profile.get("name") or "hola", url, minutos)
+    utils._send_ses_email(email, subj, txt, html)
+    return _respuesta_enlace_generica()
+
+
+def handle_login_link_redeem(body):
+    """POST /auth/enlace-acceso/canjear — abre la sesión con un enlace vigente y no usado."""
+    token = str(body.get("token") or "").strip()
+    rechazo = utils._json_response(401, {"message": "El enlace ya no sirve (se usó o caducó). Pide uno nuevo desde el login.",
+                                          "code": "LOGIN_LINK_INVALID"})
+    if not token:
+        return rechazo
+    registro = utils._get_by_id("LOGIN_LINK", utils._hash_token(token))
+    if not registro or registro.get("used"):
+        return rechazo
+    try:
+        expira = datetime.fromisoformat(str(registro.get("expiresAt") or "").replace("Z", "+00:00"))
+    except ValueError:
+        return rechazo
+    if expira.tzinfo is None:
+        expira = expira.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expira:
+        return rechazo
+
+    email = registro.get("email")
+    auth = utils._get_by_id("AUTH", email)
+    if not auth:
+        return rechazo
+    user_id = auth.get("employeeId") or auth.get("customerId")
+    entity_type = "EMPLOYEE" if auth.get("employeeId") else "CUSTOMER"
+    profile = utils._get_by_id(entity_type, user_id)
+    if not profile:
+        return utils._json_response(401, {"message": "Perfil no encontrado"})
+
+    # Un solo uso: se marca antes de abrir la sesión.
+    utils._update_by_id("LOGIN_LINK", registro.get("tokenHash"), "SET used = :t, usedAt = :u",
+                        {":t": True, ":u": utils._now_iso()})
+    remember_me = _remember_me(body) if "rememberMe" in body else bool(registro.get("rememberMe", True))
+    return _abrir_sesion({**auth, "authId": auth.get("authId") or email}, profile, entity_type, user_id, remember_me)
+
+
+#: Estados en los que el dinero ya entró y el volumen del mes debe contarlo.
+_ESTADOS_ACREDITABLES = ("paid", "shipped", "delivered")
+
+
+def _reacreditar_volumen_del_pedido(order: dict) -> bool:
+    """Paso 1 de `handle_apply_rewards` sobre un pedido recién ligado (propuesta 16).
+
+    Julio, Mariana y Aurora pagaron $5,038 entre los tres como invitados y su
+    mes contable seguía en `vp=0.0, netVolume=0.0` después de tener ficha: la
+    tienda les decía *"Este mes has comprado $0"* encima de *"$1,209 Pagada"*,
+    no salían en el Cuadro de Honor, Alma leía "0 % recompra" y **la mejor
+    clienta del mes aparecía como inactiva**. Y es dinero: quien compra como
+    invitado perdía su tramo de descuento por volumen y su activación del mes.
+
+    Se corre **solo el paso 1** (volumen, VP, tramo, activación y reevaluación
+    de bloqueadas): el paso 2, repartir comisión a la línea ascendente, ya
+    corrió cuando el pedido se pagó y repetirlo pagaría dos veces el mismo
+    pedido. Corre en el camino de ligado, **nunca colgado de `ORDER_PAID`**,
+    que está en 37 de 40 GetItem con 800 clientes (§4.20).
+
+    Idempotente por `rewardsAppliedAt`: ligar dos veces no suma dos veces.
+    """
+    import commissions_lambda  # mismo CodeUri; tardío para no cargar el motor al arrancar
+
+    order_id = order.get("orderId")
+    buyer_id = order.get("customerId")
+    if not order_id or not buyer_id:
+        return False
+    if str(order.get("status") or "").strip().lower() not in _ESTADOS_ACREDITABLES:
+        return False
+    if order.get("rewardsAppliedAt") or order.get("rewardsVoidedAt"):
+        return False
+
+    cfg = utils._load_app_config().get("rewards", {}) or {}
+    mxn_per_vp = utils._mxn_per_vp()
+    activation_vp = utils._activation_vp()
+    month_key = order.get("monthKey") or utils._month_key()
+    neto = commissions_lambda._commissionable_net(order, utils._to_decimal(order.get("netTotal")))
+    vp = commissions_lambda._compute_order_vp(order, mxn_per_vp)
+
+    # La marca se pone **antes** de sumar: si algo revienta a media escritura es
+    # preferible no acreditar a acreditar dos veces el mismo dinero.
+    utils._update_by_id("ORDER", order_id, "SET rewardsAppliedAt = :t", {":t": utils._now_iso()})
+
+    estaba_activo = commissions_lambda._is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+    utils._increment_associate_month_net_volume(buyer_id, month_key, neto)
+    utils._increment_associate_month_net_vp(buyer_id, month_key, vp)
+    commissions_lambda._CACHE["states"].pop(f"{utils._customer_id_str(buyer_id)}#{month_key}", None)
+    ahora_activo = commissions_lambda._is_active(buyer_id, month_key, mxn_per_vp, activation_vp)
+    utils._update_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(buyer_id, month_key),
+                        "SET isActive = :a", {":a": bool(ahora_activo)})
+
+    if (not estaba_activo) and ahora_activo and cfg.get("reevaluateBlockedOnActivation", True):
+        cadena = utils._get_customer_upline_ids(buyer_id, commissions_lambda.MAX_COMMISSION_LEVELS)
+        commissions_lambda._reevaluate_blocked_rows([str(buyer_id), *cadena], month_key)
+    utils._log("guest_order_volume_recredited", "INFO", orderId=order_id,
+               customerId=str(buyer_id), monthKey=month_key)
+    return True
+
+
+def _vincular_pedidos_de_invitado(customer_id, email: str) -> list:
+    """Liga al nuevo cliente los pedidos hechos como invitado con su mismo correo.
+
+    Además de la referencia del comprador y del historial del panel, se
+    reacredita el **volumen** del pedido (paso 1 de recompensas, propuesta 16):
+    el tipo de comprador sigue siendo invitado y el reparto de comisión no se
+    repite, pero lo que la persona compró antes de tener cuenta ya cuenta para
+    su mes, su tramo de descuento y su activación.
+    """
+    ligados = []
+    try:
+        for order in utils._query_bucket("ORDER") or []:
+            if order.get("customerId") not in (None, "", 0, "0"):
+                continue
+            if utils._normalize_email(order.get("email")) != email:
+                continue
+            oid = order.get("orderId")
+            if not oid:
+                continue
+            actualizado = utils._update_by_id("ORDER", oid, "SET customerId = :c, linkedToAccountAt = :t",
+                                              {":c": customer_id, ":t": utils._now_iso()})
+            ligado = actualizado or {**order, "customerId": customer_id}
+            utils._upsert_order_customer_history(ligado)
+            try:
+                _reacreditar_volumen_del_pedido(ligado)
+            except Exception as ex:  # noqa: BLE001 - ligar no puede fallar por el motor
+                utils._log_error("guest_order_recredit_failed", ex)
+            ligados.append(oid)
+    except Exception as ex:
+        utils._log_error("guest_orders_link_failed", ex)
+    return ligados
 
 def handle_create_account(body):
     """POST /crearcuenta"""
@@ -263,36 +504,32 @@ def handle_create_account(body):
     raw_referral = body.get("referralToken") or body.get("referralCodeInput")
     leader_id = _resolve_leader_from_referral_code(raw_referral) or body.get("leaderId") or None
     if raw_referral and not leader_id:
-        print(f"[REFERRAL_CODE_UNRESOLVED] referralToken={raw_referral} — se registra sin líder")
+        utils._log("referral_code_unresolved", "INFO", referralToken=raw_referral, detail='se registra sin líder')
+    modo_handlers.asegurar_socio(leader_id, "referido")  # paquete B: quien ya tiene red es socio
     
     customer_item = {
         "entityType": "customer", "customerId": customer_id, "name": name,
         "email": email, "phone": body.get("phone"), "leaderId": leader_id,
-        "isAssociate": True, "canAccessAdmin": False, "createdAt": now
+        "isAssociate": True, "canAccessAdmin": False, "createdAt": now,
+        "mode": "cliente", "modeSince": now, "modeReason": "registro",  # paquete B: todo registro nace cliente
     }
     utils._put_entity("CUSTOMER", customer_id, customer_item)
 
     # Referencia propia: REFERRAL_CODE#{customerId} → leaderId={customerId}
     _upsert_referral_code_self(customer_id, name)
 
-    # Índice por nombre para búsqueda rápida paginada: PK="REF#NOMBRE#{letra}" SK="{createdAt}#{customerId}"
-    try:
-        name_letter = (name[0] if name else "?").upper()
-        utils._table.put_item(Item={
-            "PK": f"REF#NOMBRE#{name_letter}",
-            "SK": f"{now}#{customer_id}",
-            "customerId": customer_id,
-            "nameLower": name.lower(),
-            "email": email,
-            "createdAt": now,
-        })
-    except Exception as ex:
-        print(f"[CUSTOMER_NAME_INDEX_ERROR] customerId={customer_id} error={ex}")
+    # Índices de búsqueda (nombre y email). El helper compartido garantiza que
+    # se escriban igual desde el auto-registro y desde el alta por admin.
+    utils._upsert_customer_name_index(customer_id, name, email, created_at_iso=now)
+    utils._upsert_customer_email_index(customer_id, email)
+    # Quien compró como invitado y luego crea su cuenta con el mismo correo
+    # debe ver ese historial en su panel (antes desaparecía).
+    _vincular_pedidos_de_invitado(customer_id, email)
 
     try:
         utils._sync_customer_network_metadata()
     except Exception as ex:
-        print(f"[CUSTOMER_NETWORK_SYNC_ERROR] action=create_account customerId={customer_id} error={ex}")
+        utils._log("customer_network_sync_error", "ERROR", customerId=customer_id, error=ex, detail='action=create_account')
 
     utils._put_entity("AUTH", email, {
         "entityType": "auth", "authId": email, "email": email,
@@ -323,7 +560,7 @@ def handle_create_account(body):
                 )
                 utils._send_ses_email(leader.get("email"), l_subj, l_txt, l_html)
         except Exception as ex:
-            print(f"[EMAIL_LEADER_ERROR] {ex}")
+            utils._log_error("email_leader_failed", ex)
 
     return utils._json_response(201, {"customerId": customer_id, "ok": True})
 
@@ -412,21 +649,59 @@ def handle_password_recovery(body):
     """POST /auth/password/recovery"""
     email = utils._normalize_email(body.get("email"))
     auth = utils._get_by_id("AUTH", email)
-    
+
     if not auth:
         return utils._json_response(200, {"message": "Si el correo existe, enviamos un código"})
 
     otp = "".join(random.choices("0123456789", k=6))
-    expires = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
-    
+    minutos = _minutos_codigo()
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=minutos)).isoformat()
+
+    # Se conservan los últimos N códigos vigentes (config auth.recoveryCodesKept):
+    # Memo, Lupita, Claudia y Patricia pedían dos códigos porque el primero se
+    # invalidaba en cuanto llegaba el segundo. `otpHash` se conserva por compatibilidad.
+    previo = utils._get_by_id("PASSWORD_RESET", email) or {}
+    vigentes = [] if previo.get("used") else [c for c in (previo.get("otpHashes") or []) if isinstance(c, dict)]
+    if previo.get("otpHash") and not previo.get("used") and not any(c.get("hash") == previo.get("otpHash") for c in vigentes):
+        vigentes.append({"hash": previo.get("otpHash"), "expiresAt": previo.get("expiresAt"), "used": False})
+    vigentes.append({"hash": utils._hash_token(otp), "expiresAt": expires, "used": False})
+    conservar = max(1, int(utils._to_decimal(_cfg_auth().get("recoveryCodesKept") or 3)))
     utils._put_entity("PASSWORD_RESET", email, {
-        "entityType": "passwordReset", "email": email, 
-        "otpHash": utils._hash_password(otp), "expiresAt": expires, "used": False
+        "entityType": "passwordReset", "email": email,
+        "otpHash": utils._hash_token(otp), "expiresAt": expires, "used": False,
+        "otpHashes": vigentes[-conservar:],
     })
 
-    subj, txt, html = _build_password_recovery_email(otp)
+    subj, txt, html = _build_password_recovery_email(otp, minutos)
     utils._send_ses_email(email, subj, txt, html)
-    return utils._json_response(200, {"ok": True, "message": "Código enviado"})
+    return utils._json_response(200, {
+        "ok": True,
+        "message": f"Te mandamos un código de 6 dígitos. Vale {minutos} minutos; si pediste varios, usa el más reciente.",
+    })
+
+
+def _codigo_vigente(reset_rec: dict, otp: str) -> bool:
+    """True si `otp` coincide con alguno de los últimos códigos emitidos, no usado y dentro de su vigencia."""
+    if not reset_rec or reset_rec.get("used") or not otp:
+        return False
+    candidatos = [c for c in (reset_rec.get("otpHashes") or []) if isinstance(c, dict)]
+    if reset_rec.get("otpHash") and not any(c.get("hash") == reset_rec.get("otpHash") for c in candidatos):
+        candidatos.append({"hash": reset_rec.get("otpHash"), "expiresAt": reset_rec.get("expiresAt"), "used": False})
+    ahora = datetime.now(timezone.utc)
+    digest = utils._hash_token(otp)
+    for c in candidatos:
+        if c.get("used") or not utils.hmac.compare_digest(digest, str(c.get("hash") or "")):
+            continue
+        # Antes no se comprobaba `expiresAt`: un código de hace días seguía valiendo.
+        try:
+            expira = datetime.fromisoformat(str(c.get("expiresAt") or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if expira.tzinfo is None:
+            expira = expira.replace(tzinfo=timezone.utc)
+        if ahora <= expira:
+            return True
+    return False
 
 def handle_password_reset(body):
     """POST /auth/password/reset"""
@@ -434,18 +709,45 @@ def handle_password_reset(body):
     otp = body.get("otp", "").strip()
     new_password = body.get("password")
 
+    if not new_password or len(str(new_password)) < 8:
+        return utils._json_response(400, {"message": "La nueva contraseña debe tener al menos 8 caracteres."})
     reset_rec = utils._get_by_id("PASSWORD_RESET", email)
-    if not reset_rec or reset_rec.get("used") or utils._hash_password(otp) != reset_rec.get("otpHash"):
-        return utils._json_response(401, {"message": "Código inválido o expirado"})
+    if not _codigo_vigente(reset_rec, otp):
+        return utils._json_response(401, {"message": "Código inválido o caducado: pide uno nuevo", "code": "OTP_INVALID"})
 
     # Actualizar password en AUTH
     pass_hash = utils._hash_password(str(new_password))
     utils._update_by_id("AUTH", email, "SET passwordHash = :p, updatedAt = :u", {":p": pass_hash, ":u": utils._now_iso()})
     
-    # Marcar OTP como usado
-    utils._update_by_id("PASSWORD_RESET", email, "SET used = :t", {":t": True})
+    # Marcar el registro como usado: al usar un código dejan de valer todos los anteriores.
+    utils._update_by_id("PASSWORD_RESET", email, "SET used = :t, usedAt = :u", {":t": True, ":u": utils._now_iso()})
 
-    return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
+    return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada. Ya puedes entrar con ella."})
+
+def _find_auth_for_customer(customer_id) -> Optional[dict]:
+    """Registro AUTH de un cliente/empleado, sin barrer la colección.
+
+    AUTH está indexado por email (`authId`), así que basta con leer el perfil
+    para conocerlo. Solo si el perfil no tiene email —o el AUTH está bajo otro
+    identificador— se recurre al barrido, que además ya no es el camino normal.
+    """
+    cid = str(customer_id or "").strip()
+    if not cid:
+        return None
+
+    profile = utils._get_by_id("CUSTOMER", utils._customer_entity_id(cid)) or utils._get_by_id("EMPLOYEE", cid)
+    email = utils._normalize_email((profile or {}).get("email"))
+    if email:
+        auth = utils._get_by_id("AUTH", email)
+        if auth and str(auth.get("customerId") or auth.get("employeeId") or "") == cid:
+            return auth
+
+    return next(
+        (r for r in utils._query_bucket("AUTH")
+         if str(r.get("customerId") or r.get("employeeId") or "") == cid),
+        None,
+    )
+
 
 def handle_change_password(body, headers):
     """POST /auth/changepassword — Requiere Bearer token; obtiene customerId desde la sesión."""
@@ -462,14 +764,14 @@ def handle_change_password(body, headers):
     if len(str(new_password)) < 8:
         return utils._json_response(400, {"message": "La nueva contraseña debe tener al menos 8 caracteres"})
 
-    # Buscar registro AUTH por customerId
-    auth_records = utils._query_bucket("AUTH")
-    auth = next((r for r in auth_records if str(r.get("customerId")) == customer_id), None)
+    # El registro AUTH está indexado por email, así que se resuelve desde el
+    # perfil del cliente (1-2 GetItem) en vez de leer la colección AUTH entera.
+    auth = _find_auth_for_customer(customer_id)
     if not auth:
         return utils._json_response(404, {"message": "Cuenta no encontrada"})
 
     # Validar contraseña actual
-    if auth.get("passwordHash") != utils._hash_password(str(current_password)):
+    if not utils._verify_password(current_password, auth.get("passwordHash")):
         return utils._json_response(401, {"message": "La contraseña actual es incorrecta"})
 
     # Actualizar contraseña
@@ -479,16 +781,32 @@ def handle_change_password(body, headers):
         ":u": utils._now_iso()
     })
 
+    # Aviso de seguridad: "cambié mi contraseña y no me llegó ningún correo;
+    # si alguien más me la cambiara, nunca me entero" (docs/qa/19).
+    try:
+        from core.email import _email_shell
+        cuerpo = """
+    <div class="icon">🔒</div>
+    <h1 class="title">Tu contraseña cambió</h1>
+    <p class="lead">Acabamos de actualizar la contraseña de tu cuenta Finding&rsquo;U. Si fuiste tú, no tienes que hacer nada.</p>
+    <p class="lead">Si <strong>no</strong> fuiste tú, recupera tu acceso desde "¿Olvidaste tu contraseña?" y escríbenos de inmediato.</p>"""
+        utils._send_ses_email(email, "Tu contraseña de Finding'U cambió",
+                              "Acabamos de actualizar la contraseña de tu cuenta. Si no fuiste tú, recupera tu acceso desde '¿Olvidaste tu contraseña?' y escríbenos.",
+                              _email_shell(cuerpo))
+    except Exception as ex:
+        utils._log("change_password_email_error", "ERROR", error=ex)
     return utils._json_response(200, {"ok": True, "message": "Contraseña actualizada"})
 
 
-def _referral_code_pk(code: str) -> str:
-    return f"REFERRAL_CODE#{code.strip().upper()}"
 
 def _build_user_referral_code(name: str) -> str:
     """Genera el código de referido a partir del nombre completo.
     Ej: 'Maria Garcia Lopez' → 'Maria-MGL'
     Idéntico a buildReferralCode() en el frontend."""
+    # Sin acentos ni ñ: "TOMÁS-TIL" solo resolvía escrito con acento; quien lo
+    # teclea como "TOMAS-TIL" (lo normal en un código) se registraba sin líder.
+    import unicodedata
+    name = "".join(c for c in unicodedata.normalize("NFD", str(name or "")) if unicodedata.category(c) != "Mn")
     n = (name or "").strip()
     if not n:
         return ""
@@ -502,7 +820,7 @@ def _resolve_unique_referral_code(base_code: str, customer_id) -> str:
     candidate = base_code
     suffix = 2
     while True:
-        resp = utils._table.get_item(Key={"PK": _referral_code_pk(candidate), "SK": "REFCodeInput"})
+        resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(candidate), "SK": "REFCodeInput"})
         item = resp.get("Item")
         if not item:
             # Libre — usar este
@@ -524,12 +842,12 @@ def _upsert_referral_code_self(customer_id, name: str = "") -> str | None:
     El código se genera desde el nombre; si hay colisión agrega consecutivo (-2, -3…)."""
     base_code = _build_user_referral_code(name)
     if not base_code:
-        print(f"[REFERRAL_CODE_SELF_SKIP] customerId={customer_id} sin nombre — omitido")
+        utils._log("referral_code_self_skip", "INFO", customerId=customer_id, detail='sin nombre — omitido')
         return None
     try:
         code = _resolve_unique_referral_code(base_code, customer_id)
         utils._table.put_item(Item={
-            "PK": _referral_code_pk(code),
+            "PK": utils._referral_code_pk(code),
             "SK": "REFCodeInput",
             "code": code.upper(),
             "leaderId": customer_id,
@@ -537,30 +855,55 @@ def _upsert_referral_code_self(customer_id, name: str = "") -> str | None:
             "createdAt": utils._now_iso(),
         })
         if code != base_code:
-            print(f"[REFERRAL_CODE_COLLISION] customerId={customer_id} base={base_code} asignado={code}")
+            utils._log("referral_code_collision", "INFO", customerId=customer_id, base=base_code, asignado=code)
+        # El código también tiene que vivir en la ficha del cliente: es lo que
+        # el frontend usa para armar el link que el socio comparte. Sin esto,
+        # el perfil devolvía referralCode vacío y el link se construía con el
+        # ID numérico, que no resolvía como código.
+        utils._update_by_id(
+            "CUSTOMER", customer_id,
+            "SET referralCode = :referralCode, updatedAt = :updatedAt",
+            {":referralCode": code.upper(), ":updatedAt": utils._now_iso()},
+        )
         return code
     except Exception as ex:
-        print(f"[REFERRAL_CODE_SELF_INSERT_ERROR] customerId={customer_id} error={ex}")
+        utils._log("referral_code_self_insert_error", "ERROR", customerId=customer_id, error=ex)
         return None
 
 def _resolve_leader_from_referral_code(raw_code) -> str | None:
     """Dada una referralCode, devuelve el leaderId asociado o None si no existe."""
     if not raw_code:
         return None
-    code = str(raw_code).strip().upper()
+    import unicodedata
+    code = "".join(c for c in unicodedata.normalize("NFD", str(raw_code).strip()) if unicodedata.category(c) != "Mn").upper()
     try:
-        resp = utils._table.get_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         item = resp.get("Item")
         if item:
             return str(item["leaderId"])
     except Exception as ex:
-        print(f"[REFERRAL_CODE_LOOKUP_ERROR] code={code} error={ex}")
+        utils._log("referral_code_lookup_error", "ERROR", code=code, error=ex)
+    # El link que la propia plataforma genera para el socio lleva su ID numérico
+    # (el frontend cae a settings.userCode porque referralCode no viaja en el
+    # perfil). Sin esta rama, TODOS esos links registraban al invitado sin
+    # líder y el patrocinador se quedaba sin su referido.
+    if code.isdigit():
+        try:
+            if utils._get_by_id("CUSTOMER", int(code)):
+                return code
+        except Exception as ex:
+            utils._log("referral_id_lookup_error", "ERROR", code=code, error=ex)
     return None
 
-def migrate():
-    inserted = 0
-    skipped = 0
-    errors = 0
+def _migrate_referral_codes(headers, body) -> dict:
+    """Asigna su código de referido propio a todos los clientes que no lo tengan.
+
+    Corrida masiva idempotente. Antes existía dos veces: como función suelta
+    `migrate()` —que además referenciaba `headers`/`body` inexistentes y
+    reventaba con NameError si alguien la llamaba— y como bloque en línea
+    dentro de la ruta.
+    """
+    inserted = skipped = errors = 0
     for customer in utils._query_bucket("CUSTOMER"):
         cid = customer.get("customerId")
         if not cid:
@@ -579,13 +922,14 @@ def migrate():
             )
             inserted += 1
         except Exception as ex:
-            print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
+            utils._log("migrate_referral_code_error", "ERROR", customerId=cid, error=ex)
             errors += 1
+
     utils._audit_event("referral_code.migrate", headers, body, {
-        "inserted": inserted, "skipped": skipped, "errors": errors
+        "inserted": inserted, "skipped": skipped, "errors": errors,
     })
     return utils._json_response(200, {
-        "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors
+        "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors,
     })
 
 def handle_referral_code(method, body, code_segment, headers):
@@ -599,42 +943,14 @@ def handle_referral_code(method, body, code_segment, headers):
     if code_segment == "migrate" and method == "POST":
         err = utils._require_admin(headers, "config_manage")
         if err: return err
-        inserted = 0
-        skipped = 0
-        errors = 0
-        for customer in utils._query_bucket("CUSTOMER"):
-            cid = customer.get("customerId")
-            if not cid:
-                skipped += 1
-                continue
-            try:
-                referral_code = _upsert_referral_code_self(cid, str(customer.get("name") or ""))
-                if not referral_code:
-                    skipped += 1
-                    continue
-                utils._update_by_id(
-                    "CUSTOMER",
-                    cid,
-                    "SET referralCode = :referralCode, updatedAt = :updatedAt",
-                    {":referralCode": referral_code, ":updatedAt": utils._now_iso()},
-                )
-                inserted += 1
-            except Exception as ex:
-                print(f"[MIGRATE_REFERRAL_CODE_ERROR] customerId={cid} error={ex}")
-                errors += 1
-        utils._audit_event("referral_code.migrate", headers, body, {
-            "inserted": inserted, "skipped": skipped, "errors": errors
-        })
-        return utils._json_response(200, {
-            "ok": True, "inserted": inserted, "skipped": skipped, "errors": errors
-        })
+        return _migrate_referral_codes(headers, body)
 
     # ── GET (lookup público para validar código en registro) ─────────────────
     if method == "GET":
         if not code_segment:
             return utils._json_response(400, {"message": "Se requiere el código en la URL."})
         code = code_segment.strip().upper()
-        resp = utils._table.get_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        resp = utils._table.get_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         item = resp.get("Item")
         if not item:
             return utils._json_response(404, {"message": "Código de referido no encontrado."})
@@ -661,6 +977,7 @@ def handle_referral_code(method, body, code_segment, headers):
         try:
             leader_id = int(leader_id)
         except (TypeError, ValueError):
+            # leaderId no numérico: se conserva tal cual (IDs legados en texto).
             pass
         # Verificar que el líder existe
         try:
@@ -671,7 +988,7 @@ def handle_referral_code(method, body, code_segment, headers):
         if not leader:
             return utils._json_response(404, {"message": "Líder no encontrado."})
         utils._table.put_item(Item={
-            "PK": _referral_code_pk(code),
+            "PK": utils._referral_code_pk(code),
             "SK": "REFCodeInput",
             "code": code,
             "leaderId": leader_id,
@@ -688,7 +1005,7 @@ def handle_referral_code(method, body, code_segment, headers):
         if not code_segment:
             return utils._json_response(400, {"message": "Se requiere el código en la URL."})
         code = code_segment.strip().upper()
-        utils._table.delete_item(Key={"PK": _referral_code_pk(code), "SK": "REFCodeInput"})
+        utils._table.delete_item(Key={"PK": utils._referral_code_pk(code), "SK": "REFCodeInput"})
         utils._audit_event("referral_code.delete", headers, body, {"code": code})
         return utils._json_response(200, {"ok": True, "code": code})
 
@@ -699,7 +1016,7 @@ def handle_get_referrer(referrer_id):
     # Intentar lookup por ID numérico o string
     try:
         rid = int(referrer_id)
-    except:
+    except (TypeError, ValueError):
         rid = referrer_id
 
     customer = utils._get_by_id("CUSTOMER", rid)
@@ -718,6 +1035,37 @@ def handle_get_referrer(referrer_id):
 
 # --- GESTIÓN DE EMPLEADOS ---
 
+def _sembrar_privilegios_de_pantalla(privilegios) -> dict:
+    """Normaliza el mapa y siembra `access_screen_campaigns` **solo si la llave
+    no viene**.
+
+    Campañas colgaba de `access_screen_stocks`: el encargado de almacén veía el
+    formulario para crear una campaña de publicidad solo por tener inventario.
+    Al estrenar privilegio propio, quien ya administra la configuración
+    (`config_manage`) lo conserva.
+
+    Que la siembra mire la **ausencia** de la llave, y no su valor, es lo que
+    distingue "ficha guardada antes de la ronda" de "la gerente apagó la
+    casilla": con la llave presente en `false` se respeta el `false` (antes el
+    PATCH la volvía a encender y la casilla quedaba clavada), y con la llave
+    ausente se migra al leer la ficha vieja (antes se quedaba sin Campañas
+    hasta que alguien volviera a guardar cada empleado a mano). El superadmin y
+    el rol `admin` no pasan por aquí: su acceso lo resuelve `_require_admin`.
+    """
+    crudos = privilegios if isinstance(privilegios, dict) else {}
+    privs = utils._normalize_privileges(crudos)
+    if "access_screen_campaigns" not in crudos and crudos.get("config_manage"):
+        privs["access_screen_campaigns"] = True
+    return privs
+
+
+def _ficha_de_empleado(item: dict) -> dict:
+    """La ficha como se publica: con la migración de privilegios ya aplicada."""
+    ficha = dict(item or {})
+    ficha["privileges"] = _sembrar_privilegios_de_pantalla(ficha.get("privileges"))
+    return ficha
+
+
 def handle_employees(method, body, employee_id=None, headers=None):
     """GET, POST, PATCH /employees"""
     now = utils._now_iso()
@@ -725,7 +1073,7 @@ def handle_employees(method, body, employee_id=None, headers=None):
     if method == "GET":
         err = utils._require_admin(headers, "access_screen_employees")
         if err: return err
-        items = utils._query_bucket("EMPLOYEE")
+        items = [_ficha_de_empleado(e) for e in utils._query_bucket("EMPLOYEE")]
         return utils._json_response(200, {"employees": items})
 
     if method == "POST":
@@ -741,14 +1089,23 @@ def handle_employees(method, body, employee_id=None, headers=None):
         emp_item = {
             "entityType": "employee", "employeeId": emp_id, "name": body.get("name"),
             "email": email, "phone": body.get("phone"), "canAccessAdmin": True,
-            "privileges": utils._normalize_privileges(body.get("privileges")), "active": True,
+            # El puesto es solo presentación: la insignia decía ADMIN sobre el
+            # nombre de la cajera, igual que sobre el de la gerente.
+            "jobTitle": str(body.get("jobTitle") or "").strip(),
+            "privileges": _sembrar_privilegios_de_pantalla(body.get("privileges")),
+            "active": True,
             "createdAt": now
         }
         utils._put_entity("EMPLOYEE", emp_id, emp_item)
         
         utils._put_entity("AUTH", email, {
             "entityType": "auth", "authId": email, "email": email, "employeeId": emp_id,
-            "passwordHash": utils._hash_password(temp_pass), "role": "admin"
+            # El rol de una ficha de empleado es `employee`, nunca `admin`: con
+            # `admin` _require_admin daba acceso total y ningún privilegio de
+            # los que se le configuran restringía nada (la cajera pasaba las
+            # guardas de comisiones). Quien necesita todo, lo tiene todo
+            # palomeado en sus privilegios.
+            "passwordHash": utils._hash_password(temp_pass), "role": "employee"
         })
 
         return utils._json_response(201, {"employee": emp_item, "tempPassword": temp_pass})
@@ -762,30 +1119,31 @@ def handle_employees(method, body, employee_id=None, headers=None):
         updates = ["updatedAt = :u"]
         eav = {":u": now}
         
-        if "name" in body: updates.append("#n = :n"); eav[":n"] = body["name"]
+        if "name" in body: updates.append("#n = :n"); eav[":n"] = str(body["name"]).strip()
+        # El panel mandaba `phone` y aquí se ignoraba: el celular del empleado no se podía corregir.
+        if "phone" in body: updates.append("phone = :ph"); eav[":ph"] = str(body.get("phone") or "").strip()
         if "active" in body: updates.append("active = :a"); eav[":a"] = bool(body["active"])
-        if "privileges" in body: 
-            updates.append("privileges = :p"); eav[":p"] = utils._normalize_privileges(body["privileges"])
+        # Puesto ("Caja", "Almacén", "Coach"): lo que la insignia pinta en vez de ADMIN.
+        if "jobTitle" in body: updates.append("jobTitle = :jt"); eav[":jt"] = str(body.get("jobTitle") or "").strip()
+        # El panel mandaba canAccessAdmin y aquí se ignoraba: no había forma de quitarle el acceso a un empleado.
+        if "canAccessAdmin" in body: updates.append("canAccessAdmin = :ca"); eav[":ca"] = bool(body["canAccessAdmin"])
+        if "privileges" in body:
+            updates.append("privileges = :p")
+            eav[":p"] = _sembrar_privilegios_de_pantalla(body["privileges"])
         
         updated = utils._update_by_id("EMPLOYEE", eid, f"SET {', '.join(updates)}", eav, {"#n": "name"} if "name" in body else None)
-        return utils._json_response(200, {"employee": updated})
+        return utils._json_response(200, {"employee": _ficha_de_empleado(updated)})
 
 # --- LAMBDA HANDLER PRINCIPAL ---
 
 def lambda_handler(event, context):
-    path = event.get("path", "")
-    #if path == "":
-    #    return migrate()
-    method = event.get("httpMethod", "")
-    if method == "OPTIONS":
+    if (event.get("httpMethod") or "").upper() == "OPTIONS":
         return utils._cors_preflight_response()
-    body = utils._parse_body(event)
-    headers = event.get("headers") or {}
-    segments = [s for s in path.strip("/").split("/") if s]
+    request = utils._http_request(event, strip_prefix="auth")
+    path, method = request.path, request.method
+    body, headers, segments = request.body, request.headers, request.segments
 
     try:
-        if segments and segments[0] == "auth":
-            segments = segments[1:]
 
         # Enrutamiento Manual (Dispatcher)
         if not segments: return utils._json_response(200, {"service": "auth-identity"})
@@ -811,6 +1169,11 @@ def lambda_handler(event, context):
             sub = segments[1] if len(segments) > 1 else ""
             if sub == "recovery": return handle_password_recovery(body)
             if sub == "reset": return handle_password_reset(body)
+
+        if root == "enlace-acceso" and method == "POST":
+            sub = segments[1] if len(segments) > 1 else ""
+            if not sub: return handle_login_link_request(body)
+            if sub == "canjear": return handle_login_link_redeem(body)
 
         if root == "referrer" and len(segments) > 1:
             return handle_get_referrer(segments[1])
@@ -844,5 +1207,5 @@ def lambda_handler(event, context):
         return utils._json_response(404, {"message": f"Ruta {path} no encontrada"})
 
     except Exception as e:
-        print(f"[FATAL_ERROR] {str(e)}")
+        utils._log_error("auth_unhandled_error", e, path=path, method=method)
         return utils._json_response(500, {"message": "Error interno del servidor", "error": str(e)})

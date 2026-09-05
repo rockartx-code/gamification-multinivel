@@ -1,0 +1,217 @@
+"""El simulador del plan (paquete B, propuesta 36).
+
+Ximena Paredes hizo 16 tareas y **10 de ellas sin un solo clic**: se pasó la
+sesión con lápiz y papel calculando si el negocio le convenía, porque la
+plataforma publica el plan pero no publica ganancias. Sacó a mano que
+*"para recuperar los ~$1,350 que tengo que gastar cada mes necesito diez
+personas comprando $1,350 cada una, todos los meses"*, y cerró con
+*"Ese número contesta solo. No voy a poner a mis amigas ahí."*
+(`ximena-paredes-2027-03-02.md`).
+
+`POST /catalog/plan/simular` hace esa cuenta con los porcentajes, los
+requisitos y la escalera reales de la configuración, y enseña **siempre** la
+ganancia neta, también cuando sale en rojo.
+"""
+import json
+from decimal import Decimal
+
+import pytest
+
+
+@pytest.fixture
+def catalogo(utils):
+    import catalog_lambda
+    return catalog_lambda
+
+
+def _simular(catalog_lambda, cuerpo: dict):
+    r = catalog_lambda.lambda_handler({"httpMethod": "POST", "path": "/catalog/plan/simular",
+                                       "headers": {}, "body": json.dumps(cuerpo)}, None)
+    return r["statusCode"], json.loads(r["body"])
+
+
+def test_el_simulador_es_publico_y_declara_su_ruta(catalogo, utils):
+    """Se contesta sin sesión: quien viene a decidir si esto es un negocio
+    todavía no tiene cuenta."""
+    tabla = {f["patron"]: f for f in utils.routing.describir(catalogo.RUTAS)}
+    assert tabla["/catalog/plan/simular"]["privilegio"] == "público"
+    assert tabla["/catalog/plan/simular"]["metodo"] == "POST"
+    codigo, _ = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": 0})
+    assert codigo == 200
+
+
+def test_el_caso_honesto_de_ximena_sale_en_rojo_y_lo_dice(catalogo, utils):
+    """2 directas × $1,000 y $1,120 de compra propia: comisión $200, gasto
+    $1,008 (el neto tras el 10 %) y el resultado del mes en negativo."""
+    codigo, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 1000,
+                                         "compraPropia": 1120, "nivelesProfundidad": 1})
+    assert codigo == 200
+    s = cuerpo["simulacion"]
+    assert s["comisionTotal"] == 200
+    assert s["tuCompra"] == {"bruto": 1120, "tramo": 0.10, "descuento": 112, "netoPagado": 1008,
+                             "vp": 20.16, "activa": True, "vpParaActivar": 20,
+                             "iva": {"base": 868.97, "iva": 139.03, "tasa": 0.16, "etiqueta": "IVA"}}
+    assert s["gastoPropio"] == 1008 and s["gananciaNeta"] == -808
+    assert s["explicacion"][0] == "Con 2 directas que compran $1,000.00 ganas $200.00 al mes."
+    assert s["explicacion"][1] == "Tú pagaste $1,008.00 para activarte: tu resultado del mes es -$808.00."
+
+
+def test_la_ganancia_neta_se_muestra_tambien_cuando_es_negativa(catalogo, utils):
+    """§4.10: el simulador nunca esconde el número feo."""
+    _, cuerpo = _simular(catalogo, {"directos": 1, "compraPorDirecto": 500, "compraPropia": 3000})
+    s = cuerpo["simulacion"]
+    assert s["gananciaNeta"] < 0
+    assert "-$" in s["explicacion"][1]
+
+
+def test_todo_sale_de_la_configuracion_y_nada_esta_escrito_a_mano(catalogo, utils):
+    """Si la gerente cambia la generación 1 al 12 %, el simulador cambia solo."""
+    cfg = {"rewards": {"commissionLevels": [
+        {"gen": 1, "rate": Decimal("0.12"), "reqActiveDirects": 0, "reqPersonalPC": 0,
+         "reqLines": 0, "reqPCPerLine": 0}]}}
+    utils._put_entity("CONFIG", "app-v1", {"entityType": "config", "configId": "app-v1", "config": cfg})
+    utils._invalidate_app_config_cache()
+    _, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 1000, "compraPropia": 1120})
+    assert cuerpo["simulacion"]["generaciones"][0]["rate"] == 0.12
+    assert cuerpo["simulacion"]["comisionTotal"] == 240
+
+
+def test_sin_activarse_las_comisiones_quedan_bloqueadas_y_se_explica_por_que(catalogo, utils):
+    """La misma regla que aplica el motor: sin activación no se cobra."""
+    _, cuerpo = _simular(catalogo, {"directos": 3, "compraPorDirecto": 1000, "compraPropia": 500})
+    s = cuerpo["simulacion"]
+    assert s["tuCompra"]["activa"] is False and s["tuCompra"]["vp"] == 10
+    assert s["comisionTotal"] == 0
+    gen1 = s["generaciones"][0]
+    assert gen1["cumple"] is False
+    assert gen1["porQue"] == "no activas el mes: llevas 10 VP netos de los 20 que pide la activación"
+    assert "quedan bloqueadas" in s["explicacion"][-1]
+
+
+def test_cada_generacion_dice_si_cumple_su_requisito_y_por_que_no(catalogo, utils):
+    """La generación 2 pide 2 directas activas: con una sola, se dice cuántas faltan."""
+    _, cuerpo = _simular(catalogo, {"directos": 1, "compraPorDirecto": 1000,
+                                    "compraPropia": 1200, "nivelesProfundidad": 3})
+    gens = {g["gen"]: g for g in cuerpo["simulacion"]["generaciones"]}
+    assert gens[1]["cumple"] is True and gens[1]["comision"] == 100
+    assert gens[2]["cumple"] is False and gens[2]["comision"] == 0
+    assert gens[2]["porQue"] == "te faltan 1 directas activas de las 2 que pide"
+    # Ronda 7 · Gerardo: el requisito se mide con VP NETOS (lo pagado ÷ el precio
+    # por punto), no con los PC de lista del carrito. Decía "llevas 72 PC
+    # personales" teniendo 120 PC de lista: la etiqueta mentía sobre la unidad.
+    assert gens[3]["cumple"] is False and "VP netos" in gens[3]["porQue"]
+    assert "PC personales" not in gens[3]["porQue"]
+    assert cuerpo["simulacion"]["comisionTotal"] == 100
+
+
+def test_cada_fila_dice_sobre_que_base_se_paga(catalogo, utils):
+    """Propuesta 37, con la frase única de `impuestos.texto_base_comision`."""
+    _, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 675, "compraPropia": 1200})
+    gen1 = cuerpo["simulacion"]["generaciones"][0]
+    assert gen1["textoBase"] == "10 % de $1,350.00 netos, sin envío = $135.00"
+    assert cuerpo["simulacion"]["baseComision"] == "neto pagado por producto, sin envío"
+    assert "sin contar el envío" in cuerpo["simulacion"]["fraseBaseComision"]
+
+
+def test_el_simulador_desglosa_el_iva_de_tu_propia_compra(catalogo, utils):
+    """Propuesta 38: ningún número del simulador queda sin explicación."""
+    _, cuerpo = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": 1350})
+    iva = cuerpo["simulacion"]["tuCompra"]["iva"]
+    assert iva["base"] + iva["iva"] == cuerpo["simulacion"]["tuCompra"]["netoPagado"]
+
+
+def test_el_simulador_no_promete_y_marca_las_generaciones_supuestas(catalogo, utils):
+    """§4.10 + ronda 7 · Gerardo.
+
+    El pie decía "no suponemos que tu red crezca sola" mientras la tabla cobraba
+    dos veces a las mismas personas capturadas: con 8 directas, la generación 2
+    sumaba $480 de gente que nadie capturó y −$75 se volvía +$405. Las personas
+    de la generación 2 en adelante son supuestas, y ahora la salida lo dice.
+    """
+    _, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 1000,
+                                    "compraPropia": 1120, "nivelesProfundidad": 3})
+    s = cuerpo["simulacion"]
+    assert s["aviso"] == "Esto es una calculadora con las reglas del plan, no una promesa de ingresos."
+    assert not any("no suponemos que tu red crezca sola" in t for t in s["supuestos"])
+    assert any("todavía no existen" in t.lower() for t in s["supuestos"])
+    assert [g["supuesta"] for g in s["generaciones"]] == [False, True, True]
+    # El número de personas por fila no cambió: lo que cambió es que se dice
+    # que de la 2 en adelante son gente que el usuario no capturó.
+    assert [g["personas"] for g in s["generaciones"]] == [2, 2, 2]
+
+
+def test_con_una_sola_generacion_no_se_supone_a_nadie(catalogo, utils):
+    _, cuerpo = _simular(catalogo, {"directos": 8, "compraPorDirecto": 1200,
+                                    "compraPropia": 1120, "nivelesProfundidad": 1})
+    s = cuerpo["simulacion"]
+    assert [g["supuesta"] for g in s["generaciones"]] == [False]
+    assert not any("todavía no existen" in t.lower() for t in s["supuestos"])
+
+
+def test_los_topes_se_dicen_con_su_numero_en_vez_de_recortar_en_silencio(catalogo, utils):
+    codigo, cuerpo = _simular(catalogo, {"directos": 500, "compraPorDirecto": 1000, "compraPropia": 0})
+    assert codigo == 400 and cuerpo["message"] == "El número de personas directas tiene que estar entre 0 y 100."
+
+    codigo, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 250000, "compraPropia": 0})
+    assert codigo == 400 and cuerpo["message"] == "Lo que compra cada persona tiene que estar entre $0 y $100,000.00."
+
+    codigo, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 100, "compraPropia": -5})
+    assert codigo == 400 and cuerpo["message"] == "Tu propia compra tiene que estar entre $0 y $100,000.00."
+
+    codigo, cuerpo = _simular(catalogo, {"directos": 2, "compraPorDirecto": 100,
+                                         "compraPropia": 100, "nivelesProfundidad": 9})
+    assert codigo == 400 and cuerpo["message"] == "Los niveles de profundidad tiene que estar entre 1 y 5."
+
+
+def test_la_simulacion_en_ceros_no_revienta_ni_promete(catalogo, utils):
+    codigo, cuerpo = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": 0})
+    s = cuerpo["simulacion"]
+    assert codigo == 200 and s["comisionTotal"] == 0 and s["gananciaNeta"] == 0
+    assert s["explicacion"][0] == "Sin nadie en tu red comprando este mes, tu comisión es de $0.00."
+
+
+def test_el_simulador_usa_la_misma_escalera_que_cobra_el_pedido(catalogo, utils):
+    """Si el simulador y el carrito no dan lo mismo, vuelve la desconfianza."""
+    import order_lambda
+    tiers = utils._load_app_config()["rewards"]["discountTiers"]
+    for bruto in (500, 1200, 2500, 6500):
+        _, cuerpo = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": bruto})
+        esperado = order_lambda._resolve_discount_rate(tiers, Decimal(str(bruto)))
+        assert Decimal(str(cuerpo["simulacion"]["tuCompra"]["tramo"])) == esperado
+
+
+def test_el_acantilado_del_tramo_se_advierte_antes_de_comprar(catalogo, utils):
+    """Ronda 7 · Gerardo: «comprar un peso más ($6,000 en vez de $5,999) me
+    quita $1,200.70 al mes».
+
+    Al saltar de tramo el descuento sube y los VP netos BAJAN, porque los puntos
+    se cuentan sobre lo que pagas. La página vendía el tramo como el premio
+    ("entre más compras, menos pagas") sin una sola advertencia.
+    """
+    _, justo_encima = _simular(catalogo, {"directos": 3, "compraPorDirecto": 15000,
+                                          "compraPropia": 6000, "nivelesProfundidad": 3})
+    _, justo_debajo = _simular(catalogo, {"directos": 3, "compraPorDirecto": 15000,
+                                          "compraPropia": 5999, "nivelesProfundidad": 3})
+
+    # El hecho que Gerardo midió: un peso más deja menos puntos.
+    assert justo_encima["simulacion"]["tuCompra"]["vp"] < justo_debajo["simulacion"]["tuCompra"]["vp"]
+
+    aviso = justo_encima["simulacion"]["advertenciaTramo"]
+    assert aviso and "menos puntos" in aviso.lower()
+    assert "$5,999.00" in aviso and "$6,000.00" in aviso
+    # Dentro de un tramo no hay acantilado y no se asusta a nadie.
+    assert justo_debajo["simulacion"]["advertenciaTramo"] == ""
+
+
+def test_el_verde_de_activacion_dice_que_depende_del_producto(catalogo, utils):
+    """Ronda 7 · Gerardo: «"Con eso activas el mes" usando $50/PC fijos cuando
+    el catálogo va de $46.67 a $72.22 por PC»."""
+    utils._put_entity("PRODUCT", 1, {"entityType": "product", "productId": 1, "name": "Naplus",
+                                     "price": Decimal("280"), "vpPoints": 6, "active": True})
+    utils._put_entity("PRODUCT", 2, {"entityType": "product", "productId": 2, "name": "Creatina Monohidratada",
+                                     "price": Decimal("650"), "vpPoints": 9, "active": True})
+
+    _, cuerpo = _simular(catalogo, {"directos": 0, "compraPorDirecto": 0, "compraPropia": 1150})
+    texto = " ".join(cuerpo["simulacion"]["explicacion"])
+    assert "Depende de qué compres" in texto
+    assert "revisa los PC del producto" in texto

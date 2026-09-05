@@ -1,0 +1,829 @@
+{
+ "persona": "Gerardo Lomelí, 38",
+ "rol": "cliente",
+ "dispositivo": "celular",
+ "inicio": "2026-09-04T20:11:50.254Z",
+ "tareas": [
+  {
+   "quiero": "ver qué es esto que me mandó Paulina y cuánto se gana de verdad",
+   "esperaba": null,
+   "t": 18,
+   "segundos": 173,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 5,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Paulina me pasó un link por WhatsApp. Ya me quemé una vez con una red, así que hoy vengo a hacer números: cuánto me pagan, por qué venta y qué me exigen.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 18
+    },
+    {
+     "texto": "Lo primero que busco son porcentajes y no hay ni uno: \"Descuentos en cada compra\", \"Bonos por compartir\", \"Acumulas recompensas de toda tu red\". Puras promesas sin número. Eso es exactamente como empezó la otra red.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 44
+    },
+    {
+     "texto": "Antes de dar mis datos quiero leer \"Ver cómo funciona\". Si ahí no hay números, no me registro.",
+     "segundosDesdeLoAnterior": 8,
+     "t": 51
+    },
+    {
+     "texto": "Esto sí es otra cosa: hay tabla de descuentos, porcentajes por generación, requisitos y hasta una calculadora. Lo primero que me late: la calculadora abre en NEGATIVO, -$933.00. Una red tramposa nunca te abre en rojo.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 73
+    },
+    {
+     "texto": "Mis números reales: tengo 180 socios en el gym. Siendo honesto conmigo, meto 8 (dos coaches y seis clientes fieles). Cada uno gastaría unos $1,200 al mes. Yo compraría $6,000 de lista para caer en el 40%. Voy a teclearlo.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 86
+    },
+    {
+     "texto": "Alto. Yo puse 8 directas. ¿De dónde salieron las 8 de la generación 2 con los mismos $1,200? Yo no dije que mis 8 fueran a invitar a nadie. Y abajo dice \"no suponemos que tu red crezca sola\" mientras me está sumando $480 de gente que no existe.",
+     "segundosDesdeLoAnterior": 42,
+     "t": 129
+    },
+    {
+     "texto": "Segunda cosa con lápiz: pago $3,600 y dice \"llevas 72 PC personales de los 80 que pide\". Pero arriba la propia página define \"PC son los puntos de LISTA\". $6,000 de lista son 120 PC, no 72. Me está midiendo el requisito con VP y llamándole PC.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 129
+    },
+    {
+     "texto": "Tercera: yo no necesito comprar $6,000 para activarme, con 20 VP basta. Voy a bajar mi compra al mínimo y ver si el resultado se pone en verde.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 129
+    },
+    {
+     "texto": "El campo dice 1150 pero el resultado sigue diciendo $6,000. O no se enteró, o hay que picarle a algo. Lo voy a teclear a mano como cualquier cristiano.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 152
+    },
+    {
+     "texto": "Ahora sí: $405 al mes. Pero de esos $480 son de una generación 2 que yo no capturé. Voy a poner \"cuento 1 generación\" para ver mi número honesto del primer mes.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 170
+    },
+    {
+     "texto": "Ya tengo mi número con lápiz: 8 gentes reales gastando $1,200 = $960 de comisión, menos $1,035 que tengo que comprar yo para activarme = MENOS $75 el primer mes. Y eso sin contar envíos. Ese es el número honesto, y la propia página me lo dio.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 191
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿cuánto es el descuento y cuánto es el bono? La página no da un solo porcentaje",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 44
+    },
+    {
+     "texto": "la generación 2 aparece con \"8 × $1,200\" sin que yo capture nada: copia mis directas hacia abajo",
+     "pantalla": "#/modo-socio",
+     "t": 129
+    },
+    {
+     "texto": "el requisito dice \"80 PC personales\" pero me mide 72, que son mis VP netos, no mis PC de lista (120)",
+     "pantalla": "#/modo-socio",
+     "t": 129
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: cambié mi compra a $1,150 y el resultado siguió diciendo $6,000",
+     "t": 140
+    },
+    {
+     "texto": "escribí $1,150 y el resultado se quedó en -$2,160 hasta que salí del campo; en el celular uno teclea y mira, no sale del campo",
+     "pantalla": "#/modo-socio",
+     "t": 170
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "la calculadora me dio mi número (-$75 el primer mes con 8 gentes), pero infla la generación 2 con gente que yo no capturé y no se actualiza mientras tecleas"
+  },
+  {
+   "quiero": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones",
+   "esperaba": null,
+   "t": 191,
+   "segundos": 218,
+   "logrado": true,
+   "clicsBase": 5,
+   "teclasBase": 5,
+   "clics": 13,
+   "teclas": 81,
+   "pantallasBase": 1,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Como dueño de negocio lo que me quema no es el porcentaje, es la letra chica: ¿me retienen ISR? ¿tengo que facturarles yo? ¿si mi cliente devuelve el bote, me quitan la comisión? Voy al Centro de ayuda.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 191
+    },
+    {
+     "texto": "Si mi cliente devuelve el bote, ¿me quitan la comisión que ya me pagaron? En la otra red me la descontaron del mes siguiente sin avisar. Voy a Devoluciones.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 204
+    },
+    {
+     "texto": "Ninguna sucursal en Monterrey: bodega en CDMX, tienda en Del Valle y una en Guadalajara. Todo me llega por paquetería. Eso es costo mío.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 218
+    },
+    {
+     "texto": "Ahora quiero ver la tienda: si 1 PC son $50, quiero comprobarlo con productos de verdad y ver cuánto me cobran de envío a Monterrey, porque el envío no paga comisión pero sí lo pago yo.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 241
+    },
+    {
+     "texto": "Saqué la calculadora del celular y dividí precio entre PC: Naplus $280/6 = $46.67 por PC; Creatina $650/9 = $72.22 por PC; Gel Reductivo $400/6 = $66.67. O sea que \"1 PC ≈ $50\" no es cierto para todos.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 270
+    },
+    {
+     "texto": "Y aquí está el problema gordo: la calculadora me dijo \"Pagas $1,035, que son 20.7 VP netos. Con eso activas el mes\". Eso solo es cierto si compro barato por PC. Si compro Creatina, $1,035 son 14.3 VP y NO activo. Y la misma página, más arriba, dice que activarte cuesta HASTA $1,604.94 con Creatina. Se contradice sola.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 270
+    },
+    {
+     "texto": "Falta un número para mi cuenta: el envío a Monterrey. No hay sucursal en mi ciudad, todo viene de CDMX o Guadalajara. Voy a echar 3 botes al carrito y ver qué me cobran.",
+     "segundosDesdeLoAnterior": 7,
+     "t": 278
+    },
+    {
+     "texto": "Ojo con la portada: los cuatro cuadros de \"Lo que obtienes al unirte\" son descuentos, bonos, red y pagos... y abajo, en letra chica, dice \"Te registras como cliente: compras a precio de lista, sin compromiso\". Entonces al unirme NO obtengo nada de esos cuatro: los obtengo si activo el modo socio.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 306
+    },
+    {
+     "texto": "¡Aguas! El reloj del carrito dice \"Corte de mes 21d 5h — Cierre del mes de comisiones y de tu descuento por volumen: martes 25 de mayo de 2027, 23:59\". O sea el mes cierra el 25, no el 31. Pero la página del modo socio dice \"Te avisamos por correo los días 20 y 27\" para que te actives antes del cierre. El aviso del 27 llega DOS DÍAS DESPUÉS de que se me perdió la comisión.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 365
+    },
+    {
+     "texto": "Los estados vienen sin acentos: \"Ciudad de Mexico\", \"Nuevo Leon\", \"Queretaro\", y la etiqueta dice \"Pais\". Detalle, pero se nota.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 365
+    },
+    {
+     "texto": "Pongo mi dirección del gym en Monterrey para ver el envío real. El placeholder hasta dice \"Monterrey\", qué curioso.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 374
+    },
+    {
+     "texto": "Envío a Monterrey: Estafeta $129 o DHL $219. Nada gratis. Entonces mi cuenta real del primer mes es: $960 de comisión menos $1,035 de compra menos $129 de envío = -$204. Y el envío no genera ni un peso de comisión, la propia página lo dice.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 389
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el Centro de ayuda no tiene ni una línea sobre comisiones, socios o impuestos: es todo de comprador",
+     "pantalla": "#/ayuda",
+     "t": 204
+    },
+    {
+     "texto": "la política de devoluciones es clarísima para el comprador, pero no dice qué pasa con MI comisión si mi referido devuelve",
+     "pantalla": "#/devoluciones",
+     "t": 218
+    },
+    {
+     "texto": "\"Facturación\" me lleva a la misma página de ayuda; nada dice si la comisión me la pagan bruta, si me retienen ISR o si yo tengo que facturarles",
+     "pantalla": "#/facturacion",
+     "t": 241
+    },
+    {
+     "texto": "la calculadora no pregunta QUÉ producto compro, y de eso depende si activo o no",
+     "pantalla": "#/modo-socio",
+     "t": 270
+    },
+    {
+     "texto": "la portada promete \"Descuentos en cada compra\" al unirme, pero la letra chica dice que como cliente pago precio de lista",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 306
+    },
+    {
+     "texto": "el corte es el 25 pero los avisos de comisión bloqueada son el 20 y el 27: el segundo aviso llega tarde",
+     "pantalla": "#/carrito",
+     "t": 365
+    },
+    {
+     "texto": "en el resumen dice \"Te faltan $0 para Meta de beneficios\": ni sé qué es esa meta ni por qué me faltan cero",
+     "pantalla": "#/carrito",
+     "t": 409
+    },
+    {
+     "texto": "\"Nivel de descuento: Inactivo\" — ¿inactivo yo, o inactivo el descuento?",
+     "pantalla": "#/carrito",
+     "t": 409
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué al nombre del producto \"Creatina Monohidratada\" y no pasó nada; hay que buscar el \"Ver detalle\"",
+     "pantalla": "#/dashboard",
+     "t": 292
+    },
+    {
+     "texto": "reintento: el botón \"Ver carrito\" no respondió a la primera",
+     "t": 341
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "¿Las comisiones se depositan brutas o con retención de ISR/IVA? ¿Tengo que emitirles factura yo (persona física con actividad empresarial)? En la página no lo encuentro.",
+     "t": 241,
+     "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+    },
+    {
+     "aQuien": "soporte",
+     "texto": "Si una persona de mi red devuelve su pedido, ¿me quitan la comisión de ese pedido? ¿Me la descuentan del mes siguiente?",
+     "t": 241,
+     "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+    },
+    {
+     "aQuien": "patrocinadora",
+     "texto": "Paulina: en la calculadora capturé 8 directas y solita me puso 8 personas en la generación 2 que yo nunca capturé, y me sumó $480. ¿Eso es real o es la calculadora?",
+     "t": 241,
+     "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+    },
+    {
+     "aQuien": "soporte",
+     "texto": "La calculadora me dice que con $1,150 de lista activo el mes (20.7 VP), pero arriba la misma página dice que activarse cuesta entre $933.33 y $1,604.94 según el producto. Si compro Creatina, ¿activo o no activo con $1,150?",
+     "t": 270,
+     "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 3,
+   "comentario": "saqué lo que me exigen (20 VP al mes, corte el 25, pago el 10) y sobre qué se calcula la comisión (neto por producto, con IVA, sin envío), pero de impuestos y retenciones no dice NADA en ningún lado"
+  },
+  {
+   "quiero": "abrir mi cuenta con el código de Paulina y ver qué me piden para el modo socio",
+   "esperaba": null,
+   "t": 409,
+   "segundos": 445,
+   "logrado": false,
+   "clicsBase": 18,
+   "teclasBase": 86,
+   "clics": 36,
+   "teclas": 115,
+   "pantallasBase": 3,
+   "pantallas": 9,
+   "pensamientos": [
+    {
+     "texto": "Es gratis y dicen que no piden datos bancarios hasta activar. Abro cuenta para ver la letra chica de adentro. Si me piden CLABE antes de tiempo, me salgo.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 409
+    },
+    {
+     "texto": "Me pide confirmar por correo. Vamos a ver qué me llegó.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 428
+    },
+    {
+     "texto": "Ya estoy adentro. Dice \"Te faltan 20 VP para lograrlo\" — otra vez VP sin decirme cuántos pesos son. Voy a abrir el menú a ver qué hay y dónde se activa el modo socio.",
+     "segundosDesdeLoAnterior": 43,
+     "t": 471
+    },
+    {
+     "texto": "Hay un botón \"Activar modo socio\". Le pico para ver exactamente qué me exigen antes de decir que sí.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 481
+    },
+    {
+     "texto": "Le voy a picar a \"Activar modo socio\" para ver qué me pide de verdad. Si me pide CLABE de una, la letra chica miente.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 503
+    },
+    {
+     "texto": "Se activó al instante y NO me pidió CLABE. Bien. Pero entonces entendí mal: \"activar el modo socio\" y \"activarte en el mes\" son dos cosas distintas con la misma palabra. Eso confunde a cualquiera.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 531
+    },
+    {
+     "texto": "Buscaré mi código de invitación en \"Mi cuenta\", porque en la tienda no aparece.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 546
+    },
+    {
+     "texto": "Ahora el menú cambió: Tienda, Red, Links, Órdenes, Comisiones, Cuadro de Honor, Mi perfil. \"Links\" en inglés, en una app mexicana. Ahí debe estar mi código.",
+     "segundosDesdeLoAnterior": 76,
+     "t": 622
+    },
+    {
+     "texto": "No hay error en pantalla ni nada; simplemente no pasa nada. Voy a recargar por si la página no se enteró de que ya soy socio.",
+     "segundosDesdeLoAnterior": 45,
+     "t": 666
+    },
+    {
+     "texto": "Me puse necio y escribí la dirección a mano, como cuando busco una factura. Voy a probar #/red y #/comisiones.",
+     "segundosDesdeLoAnterior": 142,
+     "t": 808
+    },
+    {
+     "texto": "Adiviné mal las direcciones: \"Esa página no existe\". Mejor busco mi código en el correo que dijeron que me mandaron y en Mi perfil.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 826
+    },
+    {
+     "texto": "En Mi perfil dice \"CARGA DE DOCUMENTACIÓN — Sube los documentos requeridos para completar tu registro\" y los tres dicen \"Requerido\": constancia de situación fiscal, INE frente y reverso, y CURP. Pero la página del plan me juró \"Nada por adelantado\" y que eso solo era \"Al facturar comisiones (si aplica)\".",
+     "segundosDesdeLoAnterior": 28,
+     "t": 854
+    },
+    {
+     "texto": "Y lo más importante: en todo el perfil no aparece por ningún lado mi código de invitación. Sin código no puedo meter a nadie del gym. Se acabó mi cuenta de hoy.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 854
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "dice \"Es gratis, no te pide datos extra\" y dos renglones arriba su propia tabla dice \"Al activar el modo socio: CLABE\". ¿Entonces sí me pide la CLABE o no?",
+     "pantalla": "#/modo-socio",
+     "t": 503
+    },
+    {
+     "texto": "la palabra \"activar\" significa dos cosas: activar el modo socio (gratis, un botón) y activarte el mes (comprar 20 VP)",
+     "pantalla": "#/modo-socio",
+     "t": 531
+    },
+    {
+     "texto": "el menú dice \"Links\", en inglés; el resto está en español",
+     "pantalla": "#/dashboard",
+     "t": 622
+    },
+    {
+     "texto": "el correo dice \"tienes tu propio código\" pero no lo trae, y el enlace del panel me lleva otra vez a la tienda",
+     "pantalla": "correo",
+     "t": 834
+    },
+    {
+     "texto": "¿los documentos son requeridos para completar mi registro o solo si facturo? Las dos pantallas dicen cosas distintas",
+     "pantalla": "#/perfil",
+     "t": 854
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: le di Enter en la contraseña y no entró; hay que picar el botón",
+     "t": 456
+    },
+    {
+     "texto": "\"Ir a mi panel\" prometía \"tu red, tus VP, tus comisiones y tu código\" y me dejó en la lista de productos: no veo ningún panel",
+     "pantalla": "#/dashboard",
+     "t": 546
+    },
+    {
+     "texto": "reintento: el menú se cerró; hay que volver a abrir el hamburguesa",
+     "t": 583
+    },
+    {
+     "texto": "le piqué a \"Links\" en el menú y me dejó en la misma pantalla de la tienda",
+     "pantalla": "#/dashboard",
+     "t": 636
+    },
+    {
+     "texto": "reintento: probé \"Links\" tres veces, incluso picando exacto sobre el texto, y no me mueve de la tienda",
+     "t": 659
+    },
+    {
+     "texto": "ya soy socio y del menú NO funcionan \"Red\", \"Links\", \"Órdenes\", \"Comisiones\" ni \"Cuadro de Honor\": le pico y me quedo en la tienda. El único que sirve es \"Mi perfil\"",
+     "pantalla": "#/dashboard",
+     "t": 808
+    },
+    {
+     "texto": "reintento: probé con el dedo, con el menú abierto, con el menú recargado y hasta recargando la página",
+     "t": 808
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 4,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "activé el modo socio pero no hay manera de ver mi código, mi red ni mis comisiones: los botones del menú no abren nada"
+  },
+  {
+   "quiero": "comprobar con lápiz si el requisito de \"80 PC personales\" se mide con PC o con VP",
+   "esperaba": null,
+   "t": 871,
+   "segundos": 46,
+   "logrado": true,
+   "clicsBase": 54,
+   "teclasBase": 201,
+   "clics": 12,
+   "teclas": 18,
+   "pantallasBase": 12,
+   "pantallas": 8,
+   "pensamientos": [
+    {
+     "texto": "Quiero cerrar la duda del requisito. Pongo 3 directas comprando $15,000 cada una (300 PC por línea, que es lo que pide) y yo comprando $6,000 de lista, que son 120 PC de lista y 72 VP netos. Si me deja pasar la generación 3, mide PC de lista; si no, mide VP y la etiqueta está mal.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 871
+    },
+    {
+     "texto": "Confirmado: la única traba es \"llevas 72 PC personales de los 80 que pide\". Y 72 son mis VP netos, no mis PC. De lista compré 120 PC. O la etiqueta está mal o la cuenta está mal, pero me cuesta $1,800 al mes.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 894
+    },
+    {
+     "texto": "Y ahora la peor: si al pasar de tramo bajan los VP... ¿qué pasa si compro $5,999 en vez de $6,000? 30% de descuento, pago $4,199, son 84 VP. ¡Más que con $6,000! Voy a probarlo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 894
+    },
+    {
+     "texto": "¡Ahí está! Con $5,999 de compra gano $4,350.70. Con $6,000 gano $3,150.00. Un peso más de compra me quita $1,200.70. Porque el 40% de descuento me tira los VP de 84 a 72 y me saca de la generación 3. Y la página me vende ese 40% como el premio gordo: \"Entre más compras en el mes, menos pagas\".",
+     "segundosDesdeLoAnterior": 23,
+     "t": 917
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Con $5,999 de compra el simulador me da $4,350.70 y con $6,000 me da $3,150.00: gastar un peso MÁS me quita $1,200.70 porque el 40% de descuento me baja los VP de 84 a 72 y me saca de la generación 3. ¿Es así de verdad o es un error del simulador?",
+     "t": 917,
+     "tarea": "comprobar con lápiz si el requisito de \"80 PC personales\" se mide con PC o con VP"
+    },
+    {
+     "aQuien": "soporte",
+     "texto": "El requisito dice \"80 PC personales\" pero me mide 72, que son mis VP netos. Mis PC de lista son 120 ($6,000 ÷ $50). ¿El requisito es en PC de lista o en VP netos?",
+     "t": 917,
+     "tarea": "comprobar con lápiz si el requisito de \"80 PC personales\" se mide con PC o con VP"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "comprobado en pantalla: comprar $6,000 en vez de $5,999 me deja $1,200.70 peor, y el requisito llamado \"PC personales\" se mide con VP netos"
+  },
+  {
+   "quiero": "decidir si le entro con la gente de mi gimnasio",
+   "esperaba": null,
+   "t": 938,
+   "segundos": 0,
+   "logrado": true,
+   "clicsBase": 66,
+   "teclasBase": 219,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 20,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Cuenta final con lápiz, mes 1, con 8 gentes de verdad de mi gym: comisión $960. Yo tengo que comprar $1,150 de lista para activarme, pago $1,035, más $129 de Estafeta a Monterrey = $1,164 que salen de mi bolsa. Resultado: -$204. Y eso ya con los 8 dentro y comprando, que es lo optimista.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 938
+    },
+    {
+     "texto": "Para que me salga en cero necesito que los 8 gasten $1,455 al mes cada uno, o meter 10 personas. Se puede en un gym de 180 socios, pero no es \"$1,440 al mes\" como me pintó la primera pantalla.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 938
+    },
+    {
+     "texto": "Y falta lo que nadie me dijo: si me retienen ISR, si tengo que facturarles, y si me quitan la comisión cuando alguien devuelve. Sin eso no firmo nada. Hoy me quedo como socio pero no compro.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 938
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "patrocinadora",
+     "texto": "Paulina: ya me activé el modo socio pero no encuentro mi código por ningún lado. En el menú \"Red\", \"Links\" y \"Comisiones\" no abren nada. ¿A ti sí te funcionan? ¿Cómo le paso mi liga a la gente del gym?",
+     "t": 938,
+     "tarea": "decidir si le entro con la gente de mi gimnasio"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "decidido: me quedo de socio pero no compro hasta que me contesten lo de impuestos y lo del tramo de 40%"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "sorpresa",
+   "intensidad": 3,
+   "porque": "la página abre con un resultado negativo y me dice a la cara que sin activarme gano $0",
+   "t": 73,
+   "tarea": "ver qué es esto que me mandó Paulina y cuánto se gana de verdad"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "me infló $480 al mes con una generación 2 que yo nunca capturé",
+   "t": 129,
+   "tarea": "ver qué es esto que me mandó Paulina y cuánto se gana de verdad"
+  },
+  {
+   "emocion": "respeto",
+   "intensidad": 4,
+   "porque": "es la primera red que me pone el resultado en rojo en vez de esconderlo",
+   "t": 191,
+   "tarea": "ver qué es esto que me mandó Paulina y cuánto se gana de verdad"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "la calculadora me dio un \"sí activas\" que puede ser mentira según lo que compre; eso es justo lo que me costó dinero en la otra red",
+   "t": 270,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "emocion": "alerta",
+   "intensidad": 4,
+   "porque": "un aviso que llega después del cierre es exactamente como perdí dinero la vez pasada",
+   "t": 365,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "emocion": "claridad",
+   "intensidad": 4,
+   "porque": "ya tengo mi número con lápiz: pierdo $204 el primer mes con 8 gentes reales",
+   "t": 389,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "no me pidieron datos bancarios ni pago de inscripción para ser socio",
+   "t": 531,
+   "tarea": "abrir mi cuenta con el código de Paulina y ver qué me piden para el modo socio"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "me prometieron \"en tu panel ya aparecen tu red, tus VP, tus comisiones y tu código\" y no puedo abrir ninguna de esas pantallas",
+   "t": 808,
+   "tarea": "abrir mi cuenta con el código de Paulina y ver qué me piden para el modo socio"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "me dijeron \"no te pide datos extra\" y en mi perfil el INE y la CURP salen como \"Requerido\"",
+   "t": 854,
+   "tarea": "abrir mi cuenta con el código de Paulina y ver qué me piden para el modo socio"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 5,
+   "porque": "gastar un peso más me cuesta $1,200: eso es una trampa, aunque sea sin querer",
+   "t": 917,
+   "tarea": "comprobar con lápiz si el requisito de \"80 PC personales\" se mide con PC o con VP"
+  },
+  {
+   "emocion": "cautela",
+   "intensidad": 4,
+   "porque": "la plataforma es la más honesta que he visto de este giro, pero el simulador tiene dos números que no cuadran y me faltan las reglas de impuestos",
+   "t": 938,
+   "tarea": "decidir si le entro con la gente de mi gimnasio"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "¿Las comisiones se depositan brutas o con retención de ISR/IVA? ¿Tengo que emitirles factura yo (persona física con actividad empresarial)? En la página no lo encuentro.",
+   "t": 241,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Si una persona de mi red devuelve su pedido, ¿me quitan la comisión de ese pedido? ¿Me la descuentan del mes siguiente?",
+   "t": 241,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Paulina: en la calculadora capturé 8 directas y solita me puso 8 personas en la generación 2 que yo nunca capturé, y me sumó $480. ¿Eso es real o es la calculadora?",
+   "t": 241,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "La calculadora me dice que con $1,150 de lista activo el mes (20.7 VP), pero arriba la misma página dice que activarse cuesta entre $933.33 y $1,604.94 según el producto. Si compro Creatina, ¿activo o no activo con $1,150?",
+   "t": 270,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Con $5,999 de compra el simulador me da $4,350.70 y con $6,000 me da $3,150.00: gastar un peso MÁS me quita $1,200.70 porque el 40% de descuento me baja los VP de 84 a 72 y me saca de la generación 3. ¿Es así de verdad o es un error del simulador?",
+   "t": 917,
+   "tarea": "comprobar con lápiz si el requisito de \"80 PC personales\" se mide con PC o con VP"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "El requisito dice \"80 PC personales\" pero me mide 72, que son mis VP netos. Mis PC de lista son 120 ($6,000 ÷ $50). ¿El requisito es en PC de lista o en VP netos?",
+   "t": 917,
+   "tarea": "comprobar con lápiz si el requisito de \"80 PC personales\" se mide con PC o con VP"
+  },
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Paulina: ya me activé el modo socio pero no encuentro mi código por ningún lado. En el menú \"Red\", \"Links\" y \"Comisiones\" no abren nada. ¿A ti sí te funcionan? ¿Cómo le paso mi liga a la gente del gym?",
+   "t": 938,
+   "tarea": "decidir si le entro con la gente de mi gimnasio"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 7,
+  "confianzaQueTransmite": 7,
+  "legibilidad": 8,
+  "coherencia": 5,
+  "sensacionMovil": 6,
+  "tresAdjetivos": [
+   "honesta",
+   "cargada",
+   "contradictoria"
+  ],
+  "mejorPantalla": "la de \"Cómo funciona el modo socio\" con la calculadora",
+  "peorPantalla": "el menú de socio, donde ningún botón abre",
+  "seParece": "a un contrato bien redactado que alguien todavía no termina de programar",
+  "recomendarias": 6,
+  "volverias": "sí, pero con mi libreta y sin comprar hasta que me aclaren lo del 40 % y los impuestos",
+  "comentario": "Es la primera de estas redes que me pone el resultado en rojo y me da los porcentajes de frente; eso vale mucho. Pero la calculadora me inventa una generación 2 que yo no capturé, me dice que activo el mes cuando depende del producto, y comprar $6,000 en vez de $5,999 me deja $1,200 peor. Y no hay una sola línea sobre impuestos."
+ },
+ "totales": {
+  "clics": 66,
+  "teclas": 219,
+  "envios": 0,
+  "campos": 19,
+  "pantallas": 20,
+  "recargas": 0,
+  "atrases": 11
+ },
+ "pantallas": [
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788552728626,
+   "primerClicMs": 32921,
+   "clics": 5,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788552951672,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788553051755,
+   "primerClicMs": 32427,
+   "clics": 16,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788553119188,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-3f28a756e319455c9103b98f404bdfbd",
+   "desde": 1788553143982,
+   "primerClicMs": 10562,
+   "clics": 12,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788553376333,
+   "primerClicMs": 16207,
+   "clics": 16,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/red",
+   "desde": 1788553517906,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/comisiones",
+   "desde": 1788553519716,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/links",
+   "desde": 1788553521528,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/ordenes",
+   "desde": 1788553523339,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/cuadro-de-honor",
+   "desde": 1788553525151,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788553544415,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788553051756,
+   "primerClicMs": 32427,
+   "clics": 8,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-3f28a756e319455c9103b98f404bdfbd",
+   "desde": 1788553143983,
+   "primerClicMs": 10562,
+   "clics": 12,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/red",
+   "desde": 1788553517907,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/comisiones",
+   "desde": 1788553519717,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/ordenes",
+   "desde": 1788553523340,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/cuadro-de-honor",
+   "desde": 1788553525152,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788553544416,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/modo-socio",
+   "desde": 1788553580985,
+   "primerClicMs": 2543,
+   "clics": 36,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Todos los campos son obligatorios",
+   "t": 409,
+   "tarea": "averiguar qué me exigen y qué me descuentan: impuestos, facturas, devoluciones"
+  },
+  {
+   "texto": "Sube los documentos requeridos para completar tu registro.",
+   "t": 854,
+   "tarea": "abrir mi cuenta con el código de Paulina y ver qué me piden para el modo socio"
+  },
+  {
+   "texto": "Requerido",
+   "t": 854,
+   "tarea": "abrir mi cuenta con el código de Paulina y ver qué me piden para el modo socio"
+  }
+ ],
+ "consola": [
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app"
+ ],
+ "notas": [],
+ "fin": "2026-09-04T20:28:53.912Z",
+ "duracionMin": 17
+}

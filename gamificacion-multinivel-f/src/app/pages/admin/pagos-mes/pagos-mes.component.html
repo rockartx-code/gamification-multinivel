@@ -1,0 +1,259 @@
+<!-- Paquete A · Pagos del mes: el día de pago en una sola pantalla. -->
+<div class="rounded-2xl border border-olive-30 surface-soft overflow-hidden">
+  <div class="flex flex-col gap-3 bg-ivory-80 px-4 py-3 md:flex-row md:items-start md:justify-between">
+    <div>
+      <div class="text-sm font-semibold text-main">Pagos del mes · comisiones por depositar</div>
+      <div class="mt-0.5 text-xs text-gray-600">
+        Quién cobra cuánto, con su CLABE. Exporta el archivo para el banco, sube un comprobante por lote y marca pagadas en bloque.
+      </div>
+    </div>
+    <div class="w-full md:w-56">
+      <!-- WP-A · propuesta 17: los meses los manda el servidor, con datos. -->
+      <ui-form-field kind="select" label="Mes de las comisiones" [options]="monthOptions"
+        [helpText]="'Se paga el mes anterior el día ' + payoutDay + '. Solo se listan los meses con comisiones.'"
+        [ngModel]="monthKey" (ngModelChange)="onMonthChange($event)"></ui-form-field>
+    </div>
+  </div>
+
+  <div *ngIf="avisoMesSinDatos" class="mx-4 mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ avisoMesSinDatos }}
+  </div>
+  <div *ngIf="periodosError" class="mx-4 mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ periodosError }}
+  </div>
+
+  <!-- WP-A · propuesta 18: las tres cifras del mismo dinero, con su total. -->
+  <div class="mx-4 mt-3 rounded-2xl border border-olive-30 bg-ivory-70 px-4 py-3 text-xs text-main">
+    <div class="font-semibold">
+      Comisión reconocida de {{ monthLabel }}: {{ formatMoney(data?.totals?.reconocido ?? 0) }}
+    </div>
+    <div class="mt-1 text-gray-600">
+      {{ formatMoney(data?.totals?.confirmado ?? 0) }} confirmadas ·
+      {{ formatMoney(data?.totals?.porConfirmar ?? 0) }} por confirmar (esperan la entrega del pedido) ·
+      {{ formatMoney(data?.totals?.bloqueado ?? 0) }} bloqueadas (la socia no se activó en el mes).
+      El día {{ payoutDay }} solo se depositan las confirmadas.
+    </div>
+    <div class="mt-1 text-gray-600" *ngIf="data?.baseComisionTexto">{{ data?.baseComisionTexto }}</div>
+  </div>
+
+  <div class="grid gap-3 p-4 md:grid-cols-3">
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+      <div class="text-mini text-emerald-800">Listas para depositar</div>
+      <div class="mt-1 text-2xl font-extrabold text-emerald-900">{{ data?.totals?.listo?.count ?? 0 }} · {{ formatMoney(data?.totals?.listo?.amount ?? 0) }}</div>
+      <div class="mt-1 text-xs text-emerald-800">Tienen CLABE y comisión confirmada.</div>
+    </div>
+    <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+      <div class="text-mini text-amber-800">Sin CLABE</div>
+      <div class="mt-1 text-2xl font-extrabold text-amber-900">{{ data?.totals?.sinClabe?.count ?? 0 }} · {{ formatMoney(data?.totals?.sinClabe?.amount ?? 0) }}</div>
+      <div class="mt-1 text-xs text-amber-800">No se puede depositar hasta que la registren.</div>
+    </div>
+    <div class="rounded-2xl border border-olive-30 bg-white/70 p-4">
+      <div class="text-mini text-gray-600">Pagadas</div>
+      <div class="mt-1 text-2xl font-extrabold text-main">{{ data?.totals?.pagado?.count ?? 0 }} · {{ formatMoney(data?.totals?.pagado?.amount ?? 0) }}</div>
+      <div class="mt-1 text-xs text-gray-600">Con comprobante ligado; se puede deshacer por fila.</div>
+    </div>
+  </div>
+
+  <div *ngIf="confirmation" class="mx-4 mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+    <div class="flex items-start gap-2">
+      <i class="fa-solid fa-circle-check mt-0.5" aria-hidden="true"></i>
+      <div class="min-w-0 flex-1">
+        <div class="font-semibold">{{ confirmation }}</div>
+        <ul *ngIf="confirmationDetails.length" class="mt-2 space-y-1 text-xs">
+          <li *ngFor="let detalle of confirmationDetails">{{ detalle }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="actionError" class="mx-4 mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ actionError }}
+  </div>
+  <div *ngIf="loadError" class="mx-4 mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ loadError }}
+    <ui-button size="sm" variant="ghost" class="ml-2" (pressed)="load()">Reintentar</ui-button>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2 px-4 pb-3" *ngIf="canRegister">
+    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-file-csv" [disabled]="!readyRows.length || isSaving" [disabledReason]="motivoExportacionApagada" (pressed)="exportCsv()"
+      title="Descarga las listas para depositar en el formato que se sube al banco">
+      Exportar archivo de dispersión (CSV)
+    </ui-button>
+    <!-- WP-A · propuesta 35: el anexo de las que faltan, aparte del archivo del banco. -->
+    <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-list-check" [disabled]="!hayPendientes || isSaving"
+      [disabledReason]="isSaving ? 'Guardando…' : (!hayPendientes ? 'Este mes no hay comisiones pendientes: todas están listas o pagadas.' : '')"
+      (pressed)="exportPendientesCsv()"
+      title="Lista aparte de quién falta y por qué; no se sube al banco">
+      Descargar pendientes ({{ (data?.totals?.sinClabe?.count ?? 0) + (data?.totals?.porConfirmarFilas?.count ?? 0) }})
+    </ui-button>
+    <ui-button size="sm" variant="primary" iconClass="fa-solid fa-coins" [disabled]="!selectedRows.length || isSaving" [disabledReason]="isSaving ? 'Guardando…' : (!selectedRows.length ? 'Marca las filas que vas a pagar.' : '')" (pressed)="openLote()">
+      Registrar pago por lote{{ selectedRows.length ? ' (' + selectedRows.length + ' · ' + formatMoney(selectedTotal) + ')' : '' }}
+    </ui-button>
+    <span class="text-xs text-gray-600" *ngIf="readyRows.length && !selectedRows.length">
+      Marca las casillas de las socias a las que ya transferiste y registra el comprobante en un solo paso.
+    </span>
+    <span class="text-xs text-gray-600" *ngIf="!readyRows.length && !isLoading">
+      No hay comisiones listas para depositar en {{ monthLabel }}.
+    </span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-ivory-80 text-mini uppercase tracking-[0.12em] text-gray-500">
+        <tr>
+          <th class="px-4 py-2" *ngIf="canRegister">
+            <ui-checkbox compact ariaLabel="Seleccionar todas las listas" [checked]="allReadySelected" [disabled]="!readyRows.length"
+              (checkedChange)="toggleAll($event)"></ui-checkbox>
+          </th>
+          <th class="px-4 py-2">Socia</th>
+          <th class="px-4 py-2 text-right">Confirmado</th>
+          <th class="px-4 py-2 text-right">Por confirmar</th>
+          <th class="px-4 py-2 text-right">Bloqueado</th>
+          <th class="px-4 py-2">CLABE · banco</th>
+          <th class="px-4 py-2">Estado</th>
+          <th class="px-4 py-2" *ngIf="canRegister">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-olive-20">
+        <tr *ngIf="isLoading && !rows.length">
+          <td class="px-4 py-6 text-center text-xs text-gray-600" colspan="8">Cargando pagos de {{ monthLabel }}…</td>
+        </tr>
+        <tr *ngIf="!isLoading && !rows.length && !loadError">
+          <td class="px-4 py-6 text-center text-xs text-gray-600" colspan="8">
+            Nadie tiene comisiones en {{ monthLabel }}: ni confirmadas, ni por confirmar, ni bloqueadas.
+          </td>
+        </tr>
+        <tr *ngFor="let row of rows; trackBy: trackByCustomer" [class.bg-emerald-50]="isSelected(row)">
+          <td class="px-4 py-3 align-top" *ngIf="canRegister">
+            <ui-checkbox *ngIf="row.status === 'listo'" compact [ariaLabel]="'Seleccionar a ' + row.name"
+              [checked]="isSelected(row)" (checkedChange)="toggleRow(row, $event)"></ui-checkbox>
+          </td>
+          <td class="px-4 py-3 align-top">
+            <div class="font-semibold text-main">{{ row.name }}</div>
+            <div class="text-xs text-gray-600">{{ row.email }}<span *ngIf="row.phone"> · {{ row.phone }}</span></div>
+          </td>
+          <td class="px-4 py-3 align-top text-right font-semibold text-main whitespace-nowrap">{{ formatMoney(row.confirmado) }}</td>
+          <td class="px-4 py-3 align-top text-right whitespace-nowrap"
+            [class.text-gray-400]="!row.porConfirmar" [class.text-main]="row.porConfirmar">
+            {{ formatMoney(row.porConfirmar) }}
+            <div class="mt-1 whitespace-normal text-left text-xs text-gray-600" *ngIf="row.frenoPorConfirmar">
+              {{ frenoTexto(row.frenoPorConfirmar) }}
+            </div>
+          </td>
+          <td class="px-4 py-3 align-top text-right whitespace-nowrap"
+            [class.text-gray-400]="!row.bloqueado" [class.text-amber-800]="row.bloqueado">
+            {{ formatMoney(row.bloqueado) }}
+            <div class="mt-1 whitespace-normal text-left text-xs text-gray-600" *ngIf="row.frenoBloqueado">
+              {{ frenoTexto(row.frenoBloqueado) }}
+            </div>
+          </td>
+          <td class="px-4 py-3 align-top">
+            <div class="font-mono text-xs text-main" *ngIf="row.clabeMasked; else sinClabe">{{ row.clabeMasked }}</div>
+            <div class="text-xs text-gray-600" *ngIf="row.bankInstitution">{{ row.bankInstitution }}</div>
+            <ng-template #sinClabe><span class="text-xs text-amber-800">No registrada</span></ng-template>
+          </td>
+          <td class="px-4 py-3 align-top">
+            <span [class]="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+            <div class="mt-1 text-xs text-gray-600" *ngIf="row.status === 'pagado'">
+              <span *ngIf="row.paidAt">{{ formatDate(row.paidAt) }}</span>
+              <span *ngIf="row.batchId"> · lote {{ row.batchId }}</span>
+              <a *ngIf="row.receiptUrl" class="ml-1 font-semibold text-gold underline" [href]="row.receiptUrl" target="_blank" rel="noopener">Ver comprobante</a>
+            </div>
+            <div class="mt-1 text-xs text-amber-800" *ngIf="row.status === 'sin_clabe' && row.clabeReminderAt">
+              Recordatorio enviado el {{ formatDate(row.clabeReminderAt) }}
+            </div>
+            <div class="mt-1 text-xs text-gray-600" *ngIf="row.status === 'por_confirmar'">
+              Reconocidas {{ formatMoney(row.reconocido) }} este mes; todavía no hay nada que depositar.
+            </div>
+          </td>
+          <td class="px-4 py-3 align-top" *ngIf="canRegister">
+            <ui-button *ngIf="row.status === 'sin_clabe'" size="sm" variant="ghost" iconClass="fa-solid fa-envelope" (pressed)="openPedirClabe(row)"
+              title="Le manda un correo y un aviso en su panel pidiendo la CLABE">
+              Pedir CLABE
+            </ui-button>
+            <ui-button *ngIf="row.status === 'pagado'" size="sm" variant="ghost" iconClass="fa-solid fa-rotate-left" (pressed)="openUndo(row)"
+              title="Si el pago se registró por error: el mes vuelve a pendiente y el comprobante queda anulado">
+              Deshacer pago
+            </ui-button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Registrar pago por lote -->
+<ui-modal [isOpen]="modal === 'lote'" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeModal()">
+  <div class="text-lg font-extrabold text-main">Registrar pago por lote</div>
+  <div class="mt-1 text-sm text-gray-600">Un solo comprobante de la transferencia para todas las seleccionadas.</div>
+
+  <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-70 p-3 text-xs text-main">
+    <div class="font-semibold">Se marcarán como pagadas {{ selectedRows.length }} {{ selectedRows.length === 1 ? 'comisión' : 'comisiones' }} por {{ formatMoney(selectedTotal) }}.</div>
+    <div class="mt-1 text-gray-600">El comprobante queda ligado a cada una. Se avisará por correo a cada socia.</div>
+    <ul class="mt-2 max-h-40 space-y-1 overflow-y-auto">
+      <li *ngFor="let row of selectedRows" class="flex justify-between gap-3">
+        <span>{{ row.name }} · {{ row.clabeMasked }}</span>
+        <span class="font-semibold">{{ formatMoney(row.amount) }}</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="mt-4 space-y-3">
+    <ui-form-field type="file" label="Comprobante de la transferencia (PDF o imagen)" iconClass="fa-solid fa-file-arrow-up" accept=".pdf,image/*"
+      helpText="El mismo archivo se guarda en cada comisión del lote."
+      (change)="updateLoteFile($event)"></ui-form-field>
+    <div class="text-xs text-gray-600" *ngIf="loteFile">Archivo: {{ loteFile.name }}</div>
+    <ui-form-field label="Referencia bancaria (opcional)" placeholder="Folio o referencia del banco"
+      helpText="Sirve para encontrar la transferencia después." [(ngModel)]="loteReference"></ui-form-field>
+    <div *ngIf="modalError" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{{ modalError }}</div>
+  </div>
+
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" [disabled]="isSaving" (pressed)="closeModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" iconClass="fa-solid fa-coins" [disabled]="isSaving" (pressed)="confirmLote()">
+      {{ isSaving ? 'Registrando...' : 'Marcar como pagadas' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- Deshacer pago -->
+<ui-modal [isOpen]="modal === 'deshacer'" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeModal()">
+  <div class="text-lg font-extrabold text-main">Deshacer pago</div>
+  <div class="mt-1 text-sm text-gray-600" *ngIf="targetRow">
+    {{ targetRow.name }} · {{ formatMoney(targetRow.amount) }} · {{ monthLabel }}
+  </div>
+  <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+    El mes vuelve a pendiente y el comprobante queda anulado (no se borra: se guarda con el motivo).
+    <span *ngIf="targetRow?.batchId">Solo se deshace esta fila; las demás del lote {{ targetRow?.batchId }} no cambian.</span>
+  </div>
+  <div class="mt-4">
+    <ui-form-field kind="textarea" label="Motivo" [rows]="3" placeholder="Por ejemplo: se transfirió a otra cuenta"
+      helpText="Queda guardado junto al comprobante anulado." [(ngModel)]="undoReason"></ui-form-field>
+    <div *ngIf="modalError" class="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{{ modalError }}</div>
+  </div>
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" [disabled]="isSaving" (pressed)="closeModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" iconClass="fa-solid fa-rotate-left" [disabled]="isSaving" (pressed)="confirmUndo()">
+      {{ isSaving ? 'Deshaciendo...' : 'Deshacer pago' }}
+    </ui-button>
+  </div>
+</ui-modal>
+
+<!-- Pedir CLABE -->
+<ui-modal [isOpen]="modal === 'pedir-clabe'" maxWidthClass="max-w-md" contentClass="p-6" (closed)="closeModal()">
+  <div class="text-lg font-extrabold text-main">Pedir CLABE</div>
+  <div class="mt-1 text-sm text-gray-600" *ngIf="targetRow">
+    {{ targetRow.name }} tiene {{ formatMoney(targetRow.amount) }} confirmados de {{ monthLabel }} y no ha registrado su CLABE.
+  </div>
+  <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2 text-xs text-main">
+    Se le manda un correo con el enlace para capturarla y un aviso en su panel. Queda anotado en su ficha.
+    <span *ngIf="targetRow?.doNotContact" class="block mt-1 text-amber-800">Tiene "no contactar": solo se mostrará el aviso en su panel.</span>
+    <span *ngIf="targetRow?.clabeReminderAt" class="block mt-1 text-gray-600">Ya se le pidió el {{ formatDate(targetRow?.clabeReminderAt) }}.</span>
+  </div>
+  <div *ngIf="modalError" class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{{ modalError }}</div>
+  <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+    <ui-button size="sm" variant="ghost" [disabled]="isSaving" (pressed)="closeModal()">Cancelar</ui-button>
+    <ui-button size="sm" variant="primary" iconClass="fa-solid fa-envelope" [disabled]="isSaving" (pressed)="confirmPedirClabe()">
+      {{ isSaving ? 'Enviando...' : 'Enviar recordatorio' }}
+    </ui-button>
+  </div>
+</ui-modal>

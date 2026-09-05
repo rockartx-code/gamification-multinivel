@@ -4,6 +4,7 @@ import { delay, Observable, of, throwError } from 'rxjs';
 import {
   AdminCustomer,
   AdminData,
+  AdminWarningsRespuesta,
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
@@ -113,7 +114,7 @@ export class MockApiService {
       requireDispatchLinesOnShipped: true
     },
     pos: {
-      defaultCustomerName: 'Publico en General',
+      defaultCustomerName: 'Público en general',
       defaultPaymentStatus: 'paid_branch',
       defaultDeliveryStatus: 'delivered_branch',
       orderStatusByDeliveryStatus: {
@@ -406,7 +407,7 @@ export class MockApiService {
   private products: AdminProduct[] = [
     {
       id: 1,
-      name: 'COL?GENO',
+      name: 'COLÁGENO',
       price: 35,
       active: true,
       sku: 'COL-001',
@@ -524,69 +525,74 @@ export class MockApiService {
     }).pipe(delay(160));
   }
 
+  /** Pedidos del back office. Mutable a propósito: getAdminOrders y
+   *  updateOrderStatus operan sobre este mismo estado, así que un cambio
+   *  de estatus hecho desde la UI se refleja al recargar la vista. */
+  private adminOrders: AdminOrder[] = [
+      {
+        id: '#1001',
+        createdAt: '2026-01-16T09:35:00.000Z',
+        customer: 'Ana Lopez',
+        total: 120,
+        status: 'pending',
+        recipientName: 'Ana Lopez',
+        phone: '5512345678',
+        address: 'Av. Insurgentes Sur 1234, Col. Del Valle',
+        postalCode: '03100',
+        state: 'CDMX',
+        betweenStreets: 'Entre Mier y Pesado y Gabriel Mancera',
+        references: 'Edificio azul, departamento 302',
+        items: [
+          { productId: 1, name: 'Producto Alpha', price: 80, quantity: 1 },
+          { productId: 2, name: 'Producto Beta', price: 40, quantity: 1 }
+        ]
+      },
+      {
+        id: '#1002',
+        createdAt: '2026-01-16T11:20:00.000Z',
+        customer: 'Carlos Ruiz',
+        total: 89,
+        status: 'paid',
+        recipientName: 'Carlos Ruiz',
+        address: 'Calle Morelos 45, Col. Centro',
+        postalCode: '06010',
+        state: 'CDMX',
+        items: [
+          { productId: 3, name: 'Producto Gamma', price: 89, quantity: 1 }
+        ]
+      },
+      {
+        id: '#1003',
+        createdAt: '2026-01-15T17:05:00.000Z',
+        customer: 'Maria Perez',
+        total: 210,
+        status: 'paid',
+        recipientName: 'Maria Perez',
+        address: 'Blvd. Adolfo Lopez Mateos 800, Col. San Pedro',
+        postalCode: '72150',
+        state: 'Puebla',
+        betweenStreets: 'Entre Calle 5 de Mayo y Calle 16 de Septiembre',
+        items: [
+          { productId: 1, name: 'Producto Alpha', price: 80, quantity: 2 },
+          { productId: 4, name: 'Producto Delta', price: 50, quantity: 1 }
+        ]
+      },
+      {
+        id: '#1004',
+        createdAt: '2026-01-14T14:50:00.000Z',
+        customer: 'Luis Gomez',
+        total: 60,
+        status: 'delivered',
+        items: [
+          { productId: 2, name: 'Producto Beta', price: 60, quantity: 1 }
+        ]
+      }
+    ];
+
   getAdminData(): Observable<AdminData> {
     const payload: AdminData = {
       productOfMonthId: this.productOfMonthId,
-      orders: [
-        {
-          id: '#1001',
-          createdAt: '2026-01-16T09:35:00.000Z',
-          customer: 'Ana Lopez',
-          total: 120,
-          status: 'pending',
-          recipientName: 'Ana Lopez',
-          phone: '5512345678',
-          address: 'Av. Insurgentes Sur 1234, Col. Del Valle',
-          postalCode: '03100',
-          state: 'CDMX',
-          betweenStreets: 'Entre Mier y Pesado y Gabriel Mancera',
-          references: 'Edificio azul, departamento 302',
-          items: [
-            { productId: 1, name: 'Producto Alpha', price: 80, quantity: 1 },
-            { productId: 2, name: 'Producto Beta', price: 40, quantity: 1 }
-          ]
-        },
-        {
-          id: '#1002',
-          createdAt: '2026-01-16T11:20:00.000Z',
-          customer: 'Carlos Ruiz',
-          total: 89,
-          status: 'paid',
-          recipientName: 'Carlos Ruiz',
-          address: 'Calle Morelos 45, Col. Centro',
-          postalCode: '06010',
-          state: 'CDMX',
-          items: [
-            { productId: 3, name: 'Producto Gamma', price: 89, quantity: 1 }
-          ]
-        },
-        {
-          id: '#1003',
-          createdAt: '2026-01-15T17:05:00.000Z',
-          customer: 'Maria Perez',
-          total: 210,
-          status: 'paid',
-          recipientName: 'Maria Perez',
-          address: 'Blvd. Adolfo Lopez Mateos 800, Col. San Pedro',
-          postalCode: '72150',
-          state: 'Puebla',
-          betweenStreets: 'Entre Calle 5 de Mayo y Calle 16 de Septiembre',
-          items: [
-            { productId: 1, name: 'Producto Alpha', price: 80, quantity: 2 },
-            { productId: 4, name: 'Producto Delta', price: 50, quantity: 1 }
-          ]
-        },
-        {
-          id: '#1004',
-          createdAt: '2026-01-14T14:50:00.000Z',
-          customer: 'Luis Gomez',
-          total: 60,
-          status: 'delivered',
-          items: [
-            { productId: 2, name: 'Producto Beta', price: 60, quantity: 1 }
-          ]
-        }
-      ],
+      orders: this.adminOrders,
       customers: [...this.customers],
       employees: [...this.employees],
       products: [...this.products],
@@ -649,17 +655,22 @@ export class MockApiService {
   }
 
   updateOrderStatus(orderId: string, payload: UpdateOrderStatusPayload): Observable<AdminOrder> {
-    const order: AdminOrder = {
-      id: orderId,
-      customer: 'Actualizado',
-      total: 0,
+    const indice = this.adminOrders.findIndex((order) => order.id === orderId);
+    if (indice === -1) {
+      return throwError(() => new Error(`Pedido ${orderId} no encontrado`));
+    }
+    // Conserva el resto del pedido: antes se fabricaba uno nuevo y se perdían
+    // cliente, total y dirección en cuanto se cambiaba el estatus.
+    const actualizado: AdminOrder = {
+      ...this.adminOrders[indice],
       status: payload.status,
-      shippingType: payload.shippingType,
-      trackingNumber: payload.trackingNumber,
-      deliveryPlace: payload.deliveryPlace,
-      deliveryDate: payload.deliveryDate
+      shippingType: payload.shippingType ?? this.adminOrders[indice].shippingType,
+      trackingNumber: payload.trackingNumber ?? this.adminOrders[indice].trackingNumber,
+      deliveryPlace: payload.deliveryPlace ?? this.adminOrders[indice].deliveryPlace,
+      deliveryDate: payload.deliveryDate ?? this.adminOrders[indice].deliveryDate
     };
-    return of(order).pipe(delay(120));
+    this.adminOrders[indice] = actualizado;
+    return of({ ...actualizado }).pipe(delay(120));
   }
 
   getCatalogData(): Observable<CatalogData> {
@@ -1012,7 +1023,7 @@ export class MockApiService {
       monthKey: payload.monthKey ?? '2026-02',
       amount: 150,
       status: 'requested',
-      clabeLast4: payload.clabe.slice(-4),
+      clabeLast4: (payload.clabe ?? '').slice(-4),
       createdAt: new Date().toISOString()
     };
     const summary = { monthKey: request.monthKey, pendingTotal: 150, paidTotal: 0, hasPending: true };
@@ -1222,6 +1233,10 @@ export class MockApiService {
     return of(payload).pipe(delay(120));
   }
 
+  getCommissionsLedgerMonth(_associateId: string, monthKey: string): Observable<Record<string, unknown>> {
+    return of({ monthKey, ledger: [], totalPending: 0, totalConfirmed: 0, totalBlocked: 0 }).pipe(delay(80));
+  }
+
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
     return of(
       structuredClone(
@@ -1236,11 +1251,25 @@ export class MockApiService {
   }
 
   getAdminOrders(params: { status?: AdminOrder['status']; limit?: number } = {}): Observable<{ orders: AdminOrder[]; total: number }> {
-    return of({ orders: [], total: 0 }).pipe(delay(80));
+    const filtrados = params.status
+      ? this.adminOrders.filter((order) => order.status === params.status)
+      : this.adminOrders;
+    const pagina = filtrados.slice(0, params.limit ?? filtrados.length);
+    return of({ orders: pagina.map((order) => ({ ...order })), total: filtrados.length }).pipe(delay(80));
   }
 
-  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
-    return of([]).pipe(delay(80));
+  getAdminWarnings(): Observable<AdminWarningsRespuesta> {
+    // El modo mock no tiene reloj de servidor: la antigüedad se mide con el del
+    // navegador, que es lo único que hay aquí (§2.1: el mock queda sin lo nuevo).
+    return of({
+      warnings: [
+        { type: 'stock', text: 'Producto Beta por debajo del mínimo en Bodega Central', severity: 'high' },
+        { type: 'shipping', text: '2 pedidos pagados sin número de guía', severity: 'high' },
+        { type: 'assets', text: 'Producto Gamma sin imagen para redes', severity: 'medium' }
+      ] as AdminWarningsRespuesta['warnings'],
+      serverNow: '',
+      agingRedDays: 7
+    }).pipe(delay(80));
   }
 
   listCustomers(): Observable<AdminCustomer[]> {
@@ -1509,7 +1538,7 @@ export class MockApiService {
     return of({ transfer }).pipe(delay(120));
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     const transfer = this.stockTransfers.find((item) => item.id === transferId);
     if (!transfer) {
       throw new Error('Transferencia no encontrada');
@@ -1527,6 +1556,14 @@ export class MockApiService {
   listInventoryMovements(stockId?: string): Observable<InventoryMovement[]> {
     const rows = stockId ? this.inventoryMovements.filter((movement) => movement.stockId === stockId) : this.inventoryMovements;
     return of([...rows]).pipe(delay(120));
+  }
+
+  settlePosSale(_saleId: string, _payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return of({ pendingAmount: 0 }).pipe(delay(80));
+  }
+
+  voidPosSale(saleId: string, _reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return of({ ok: true, saleId }).pipe(delay(80));
   }
 
   listPosSales(stockId?: string): Observable<PosSale[]> {
@@ -1547,6 +1584,11 @@ export class MockApiService {
     paymentType?: 'full' | 'partial' | 'credit';
     amountPaid?: number;
     authCode?: string;
+    /** Descuento por escalón del socio, calculado igual que en la tienda en línea. */
+    discountAmount?: number;
+    discountRate?: number;
+    /** Efectivo recibido en mostrador, solo para calcular el cambio. */
+    cashReceived?: number;
   }): Observable<{ sale: PosSale }> {
     const actorId = this.currentActorId();
     if (!actorId) {
@@ -1613,7 +1655,7 @@ export class MockApiService {
       stockId: payload.stockId,
       attendantUserId: actorId,
       customerId: customer?.id ?? null,
-      customerName: customer?.name || payload.customerName || 'Publico en General',
+      customerName: customer?.name || payload.customerName || 'Público en general',
       paymentStatus,
       deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
       paymentMethod: payload.paymentMethod ?? 'cash',
@@ -1810,7 +1852,11 @@ export class MockApiService {
     return of({ ...emp }).pipe(delay(120));
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  revertCommissionPayment(_customerId: number, _monthKey: string, _reason: string): Observable<{ ok: boolean; status: string }> {
+    return of({ ok: true, status: 'pending' }).pipe(delay(80));
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     const emp = this.employees.find((e) => e.id === employeeId);
     if (!emp) {
       return throwError(() => new Error('Empleado no encontrado'));
@@ -1874,7 +1920,29 @@ export class MockApiService {
     const updated: AdminCustomer = {
       ...customer,
       leaderId: payload.leaderId !== undefined ? payload.leaderId : customer.leaderId,
-      level: payload.level !== undefined ? payload.level : customer.level
+      level: payload.level !== undefined ? payload.level : customer.level,
+      doNotContact: payload.doNotContact !== undefined ? payload.doNotContact : customer.doNotContact,
+      origin: payload.origin !== undefined ? payload.origin : customer.origin,
+      contactNotes: payload.note
+        ? [...(customer.contactNotes ?? []), { text: payload.note, by: 'admin', at: new Date().toISOString() }]
+        : customer.contactNotes
+    };
+    this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
+    return of(updated).pipe(delay(120));
+  }
+
+  deleteCustomerData(customerId: number, _reason: string): Observable<AdminCustomer> {
+    const customer = this.customers.find((entry) => entry.id === customerId);
+    if (!customer) {
+      return throwError(() => new Error('Cliente no encontrado'));
+    }
+    const updated: AdminCustomer = {
+      ...customer,
+      name: 'Cliente eliminado',
+      email: `eliminado+${customerId}@anonimizado.local`,
+      phone: undefined,
+      doNotContact: true,
+      deletedAt: new Date().toISOString()
     };
     this.customers = this.customers.map((entry) => (entry.id === customerId ? updated : entry));
     return of(updated).pipe(delay(120));
@@ -2170,12 +2238,23 @@ export class MockApiService {
   }
 
   listCoupons(): Observable<Coupon[]> {
-    return of([]);
+    return of([...this.coupons]).pipe(delay(90));
   }
 
   saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
-    return of({ ...payload, redemptions: 0, code: payload.code.toUpperCase() });
+    const code = payload.code.toUpperCase();
+    const indice = this.coupons.findIndex((coupon) => coupon.code === code);
+    const guardado: Coupon = { ...payload, code, redemptions: this.coupons[indice]?.redemptions ?? 0 };
+    if (indice === -1) this.coupons.push(guardado);
+    else this.coupons[indice] = guardado;
+    return of({ ...guardado }).pipe(delay(120));
   }
+
+  private coupons: Coupon[] = [
+    { code: 'BIENVENIDA10', type: 'percent', value: 10, active: true, redemptions: 34, minSubtotal: 0, description: 'Primera compra' },
+    { code: 'ENVIOGRATIS', type: 'fixed', value: 150, active: true, redemptions: 12, minSubtotal: 1000, description: 'Compensa el envío' },
+    { code: 'VERANO25', type: 'percent', value: 25, active: false, redemptions: 87, minSubtotal: 500, maxRedemptions: 100, description: 'Campaña de temporada' }
+  ];
 
   deleteCoupon(code: string): Observable<{ message: string; code: string }> {
     return of({ message: 'Cupón desactivado', code: String(code || '').toUpperCase() });
@@ -2217,6 +2296,16 @@ export class MockApiService {
     return Math.ceil((price * 1.15) / 50) * 50;
   }
 
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    const order = this.adminOrders.find((o) => o.id === orderId);
+    if (!order) {
+      return throwError(() => new Error('Pedido no encontrado'));
+    }
+    const updated: AdminOrder = { ...order, adminNotes: [...(order.adminNotes ?? []), { text, by: 'admin', at: new Date().toISOString() }] };
+    this.adminOrders = this.adminOrders.map((o) => (o.id === orderId ? updated : o));
+    return of(updated).pipe(delay(80));
+  }
+
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
     return of({ ok: true, orderId, status: 'cancelled', pendingRefund: true }).pipe(delay(200));
   }
@@ -2248,7 +2337,7 @@ export class MockApiService {
     }).pipe(delay(300));
   }
 
-  getHonorBoard(): Observable<HonorBoard> {
+  getHonorBoard(_month?: string): Observable<HonorBoard> {
     return of(this.getMockHonorBoard()).pipe(delay(120));
   }
 

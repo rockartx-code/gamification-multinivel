@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   AdminCustomer,
   AdminData,
+  AdminWarningsRespuesta,
   AdminCampaign,
   AppBusinessConfig,
   AdminOrder,
@@ -126,7 +127,7 @@ export class ApiService {
     return this.resolveApi().getAdminOrders(params);
   }
 
-  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
+  getAdminWarnings(): Observable<AdminWarningsRespuesta> {
     return this.resolveApi().getAdminWarnings();
   }
 
@@ -166,8 +167,8 @@ export class ApiService {
     return this.resolveApi().getUserDashboardData(userId);
   }
 
-  getHonorBoard(): Observable<import('../models/user-dashboard.model').HonorBoard> {
-    return this.resolveApi().getHonorBoard();
+  getHonorBoard(month?: string): Observable<import('../models/user-dashboard.model').HonorBoard> {
+    return this.resolveApi().getHonorBoard(month);
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -218,6 +219,10 @@ export class ApiService {
 
   getOrderStatus(orderOrPaymentId: string): Observable<OrderStatusLookup> {
     return this.resolveApi().getOrderStatus(orderOrPaymentId);
+  }
+
+  getCommissionsLedgerMonth(associateId: string, monthKey: string): Observable<Record<string, unknown>> {
+    return this.resolveApi().getCommissionsLedgerMonth(associateId, monthKey);
   }
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
@@ -346,7 +351,7 @@ export class ApiService {
     return this.resolveApi().createStockTransfer(payload);
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     return this.resolveApi().receiveStockTransfer(transferId, payload);
   }
 
@@ -356,6 +361,14 @@ export class ApiService {
 
   listPosSales(stockId?: string): Observable<PosSale[]> {
     return this.resolveApi().listPosSales(stockId);
+  }
+
+  settlePosSale(saleId: string, payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return this.resolveApi().settlePosSale(saleId, payload);
+  }
+
+  voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return this.resolveApi().voidPosSale(saleId, reason);
   }
 
   registerPosSale(payload: {
@@ -371,6 +384,11 @@ export class ApiService {
     paymentType?: 'full' | 'partial' | 'credit';
     amountPaid?: number;
     authCode?: string;
+    /** Descuento por escalón del socio, calculado igual que en la tienda en línea. */
+    discountAmount?: number;
+    discountRate?: number;
+    /** Efectivo recibido en mostrador, solo para calcular el cambio. */
+    cashReceived?: number;
   }): Observable<{ sale: PosSale }> {
     return this.resolveApi().registerPosSale(payload);
   }
@@ -409,6 +427,10 @@ export class ApiService {
 
   updateCustomer(customerId: number, payload: UpdateCustomerPayload): Observable<AdminCustomer> {
     return this.resolveApi().updateCustomer(customerId, payload);
+  }
+
+  deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
+    return this.resolveApi().deleteCustomerData(customerId, reason);
   }
 
   changePassword(userId: string, payload: { currentPassword: string; newPassword: string }): Observable<void> {
@@ -451,7 +473,11 @@ export class ApiService {
     return this.resolveApi().createEmployee(payload);
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  revertCommissionPayment(customerId: number, monthKey: string, reason: string): Observable<{ ok: boolean; status: string }> {
+    return this.resolveApi().revertCommissionPayment(customerId, monthKey, reason);
+  }
+
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.resolveApi().updateEmployee(employeeId, payload);
   }
 
@@ -485,6 +511,10 @@ export class ApiService {
 
   deleteCoupon(code: string): Observable<{ message: string; code: string }> {
     return this.resolveApi().deleteCoupon(code);
+  }
+
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    return this.resolveApi().addOrderNote(orderId, text);
   }
 
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {

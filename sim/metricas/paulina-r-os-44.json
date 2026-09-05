@@ -1,0 +1,930 @@
+{
+ "persona": "Paulina Ríos, 44",
+ "rol": "cliente",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T07:36:22.783Z",
+ "tareas": [
+  {
+   "quiero": "entrar a mi panel de socia a ver cómo va mi mes",
+   "esperaba": null,
+   "t": 20,
+   "segundos": 117,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Son las nueve, ya terminé la clase de la mañana. No he comprado nada en marzo y quiero ver si tengo algo por cobrar. Primero reviso mi correo, porque me suena que me llegó algo del sistema.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 20
+    },
+    {
+     "texto": "Tengo cinco correos. El de hoy dice textual: \"Tienes $259.20 en comisiones bloqueadas que se pierden el 31 de marzo. Te faltan 20.0 VP para activarte; lo más barato que lo cierra: 2 Klinhart ($960.00)\". O sea que para cobrar 259 pesos tengo que gastar 960. Eso me suena raro, pero primero quiero ver el panel con mis ojos.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 34
+    },
+    {
+     "texto": "Los correos de \"alguien se unió a tu red\" traen el enlace http://localhost:4321/dashboard, sin el gato. Voy a probar el enlace tal cual viene, como haría cualquiera.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 34
+    },
+    {
+     "texto": "Bueno, me toca entrar a mano. Veo arriba \"Iniciar sesión\". Le doy ahí.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 61
+    },
+    {
+     "texto": "Le piqué a \"Iniciar sesión\" y no pasó nada; el botón está ahí pero no responde. Veo abajo un \"Entendido y acepto\" que ha de ser el aviso de cookies tapando todo. Primero acepto eso.",
+     "segundosDesdeLoAnterior": 44,
+     "t": 106
+    },
+    {
+     "texto": "Ya estoy adentro. Arriba dice \"Corte de mes 21d 16h 21m 37s\", pero mi correo dice que se cierra el 31 de marzo. Hoy es 20 de marzo: del 20 al 31 son 11 días, no 21. Ese reloj me está contando otro corte, y eso me confunde justo en lo que más me urge.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 137
+    },
+    {
+     "texto": "En el panel principal dice \"Objetivo principal del mes: Alcanzar VP mínimo (usuario activo). Meta mensual: 20 VP. Te faltan 20 VP\". No dice ni una palabra de mis $259.20 bloqueados. Si no hubiera abierto el correo, no me entero de que estoy por perder dinero.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 137
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿por qué me dice \"Regístrate para obtener beneficios\" si yo ya tengo cuenta y hasta tengo gente en mi red?",
+     "pantalla": "#/",
+     "t": 61
+    },
+    {
+     "texto": "el contador dice \"Corte de mes 21d 16h\" pero el correo dice que pierdo la comisión el 31 de marzo (11 días). ¿Cuál es el bueno?",
+     "pantalla": "#/dashboard",
+     "t": 137
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el enlace \"Ve tu red\" del correo (http://localhost:4321/dashboard) no me llevó a mi red: acabé en la tienda como si fuera visitante, con un letrero de \"Regístrate para obtener beneficios\" cuando yo ya soy socia desde el año pasado",
+     "pantalla": null,
+     "t": 61
+    },
+    {
+     "texto": "reintento: el botón de Iniciar sesión no respondía hasta cerrar el aviso de \"Entendido y acepto\"",
+     "t": 106
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "Entré, pero me costó: el enlace del correo no lleva al panel y el botón de Iniciar sesión no responde hasta cerrar el aviso de cookies."
+  },
+  {
+   "quiero": "ver cuánto tengo por cobrar y por qué está bloqueado",
+   "esperaba": null,
+   "t": 143,
+   "segundos": 233,
+   "logrado": true,
+   "clicsBase": 3,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En el menú de la izquierda hay \"Comisiones\". Ahí debe estar el dinero.",
+     "segundosDesdeLoAnterior": 6,
+     "t": 143
+    },
+    {
+     "texto": "El menú de arriba tiene Tienda, Red, Links, Órdenes, Comisiones, Cuadro de Honor, Mi perfil. Le doy a Comisiones.",
+     "segundosDesdeLoAnterior": 47,
+     "t": 191
+    },
+    {
+     "texto": "Se me abrió solo un cuadro que dice \"¡Estás en el Cuadro de Honor! Red (VG): #1, Personal (VP): #4\" y una tabla donde salgo primera con 50 y en personal salgo última con 0. Me felicita por ser la número uno de la red el mismo día que me avisan que voy a perder mi comisión. Se siente burlón.",
+     "segundosDesdeLoAnterior": 59,
+     "t": 250
+    },
+    {
+     "texto": "La de enfrente dice \"Metas cumplidas del mes — ¡Buen trabajo! Invita a 1 persona y actívala / Meta por miembro: 20 VP / Directos: 2\" y abajo \"1 / 2\". Me está felicitando por tres cosas que no sabía que existían. Yo lo que quiero es mi dinero. Le doy a \"Listo\".",
+     "segundosDesdeLoAnterior": 51,
+     "t": 300
+    },
+    {
+     "texto": "Aquí está: \"Bloqueadas $259.20\", \"Confirmadas $0\", \"Por confirmar $0\", \"Total del mes $0\". Y abajo \"CLABE registrada: No registrada\". O sea que aunque desbloqueara el dinero, no tengo dónde me lo depositen. Nadie me lo había dicho nunca. Voy a picarle a \"Ver detalles\" para entender lo de bloqueadas.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 333
+    },
+    {
+     "texto": "Le di a \"Ver detalles\" y me salió una tablita: ORD-7C55FDBD L1 $135 Bloqueada 04 mar 2027, y ORD-9CD8BD3D L1 $124.20 Bloqueada 04 mar 2027. Son las compras de Ximena y Fabiola. Pero en NINGÚN lado de esta pantalla dice por qué están bloqueadas ni qué tengo que hacer. La palabra \"Bloqueada\" está pelona.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 350
+    },
+    {
+     "texto": "Encontré un botoncito de \"Info comisiones bloqueadas\". No lo había visto, es chiquito. Le doy.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 360
+    },
+    {
+     "texto": "Ahí está la explicación, escondida detrás de un iconito: \"Comisiones de tus referidos generadas mientras no estabas activa/o (20 VP en el mes). Si te activas dentro del mismo mes, se recalculan.\" Me tardé como diez minutos entre el correo, la tabla y encontrar el iconito. Y ojo: no dice la fecha límite. Eso sólo viene en el correo.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 376
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿qué es VG y qué es VP? En la tienda dice \"PC\" en cada producto y en el correo me hablan de VP. Son tres siglas para lo mismo, creo.",
+     "pantalla": "#/dashboard",
+     "t": 250
+    },
+    {
+     "texto": "¿por qué está bloqueada mi comisión? La pantalla no lo dice; sólo lo sé porque abrí el correo",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 350
+    },
+    {
+     "texto": "el letrero de mi propio nodo en la red dice \"Paulina Ríos, nivel root, estado Activa, consumo $0\" — ¿entonces estoy activa o no? Porque las comisiones dicen que no lo estaba",
+     "pantalla": "#/dashboard (Red)",
+     "t": 376
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "al entrar se me abrieron DOS ventanas encima, una sobre otra: \"Cuadro de Honor\" y \"Metas cumplidas del mes\". La de atrás no se dejaba cerrar porque la de enfrente la tapaba; tuve que cerrar primero la de arriba.",
+     "pantalla": null,
+     "t": 300
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 3,
+   "comentario": "Entendí por qué está bloqueado, pero sólo después de abrir el correo, bajar hasta Comisiones, abrir \"Ver detalles\" y encontrar un iconito de info del tamaño de un chícharo. La palabra \"Bloqueada\" sale sola en la tabla, sin explicación ni fecha límite."
+  },
+  {
+   "quiero": "registrar mi CLABE para que me puedan depositar",
+   "esperaba": null,
+   "t": 385,
+   "segundos": 244,
+   "logrado": false,
+   "clicsBase": 8,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 36,
+   "pantallasBase": 1,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Dice \"CLABE registrada: No registrada\". Si no la pongo, el 10 de abril no me llega nada. Nadie me avisó de esto: ni en el correo de bienvenida ni en el aviso de hoy. La escribo: 002180700123456781.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 385
+    },
+    {
+     "texto": "El campo no dice \"CLABE\" adentro, sólo un montón de ceros: 000000000000000000. Está debajo del letrero \"CLABE interbancaria\". Ahí va la mía.",
+     "segundosDesdeLoAnterior": 45,
+     "t": 430
+    },
+    {
+     "texto": "Le di a Guardar y no pasó nada: no salió ni \"guardado\" ni un error, y arriba sigue diciendo \"CLABE registrada: No registrada\". El número sí sigue escrito en el campo. Voy a recargar para ver si de verdad se guardó o no.",
+     "segundosDesdeLoAnterior": 64,
+     "t": 494
+    },
+    {
+     "texto": "Recargué y el campo quedó vacío y sigue \"No registrada\". O sea que NO se guardó y nadie me avisó. Lo vuelvo a intentar despacio, con calma, y esta vez le doy Enter además del botón.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 522
+    },
+    {
+     "texto": "A lo mejor la CLABE va en \"Mi perfil\" y ese campito de Comisiones está de adorno. Voy a buscar ahí.",
+     "segundosDesdeLoAnterior": 37,
+     "t": 559
+    },
+    {
+     "texto": "¡Aquí sí hay una sección de verdad! \"CLABE INTERBANCARIA — Se utiliza para recibir el depósito de tus comisiones. No tienes una CLABE registrada todavía.\" con dos campos y un botón \"Actualizar CLABE\". Entonces el campito de la pantalla de Comisiones no sirve para nada, o sirve a medias. Perdí como quince minutos ahí.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 572
+    },
+    {
+     "texto": "Ya van tres veces: dos en Comisiones y una en Mi perfil. Ninguna me dio error, ninguna me dio confirmación, y ninguna guardó. Yo no puedo hacer más desde mi lado. Le escribo a soporte, al WhatsApp que sale en la pantalla.",
+     "segundosDesdeLoAnterior": 57,
+     "t": 629
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "reintento: el botón Guardar de la CLABE no dio ninguna respuesta visible",
+     "t": 494
+    },
+    {
+     "texto": "reintento: segundo intento de guardar la CLABE, ahora escribiendo despacio y dando Enter",
+     "t": 522
+    },
+    {
+     "texto": "escribí mi CLABE dos veces y le di Guardar dos veces; no salió ni confirmación ni error, y al recargar el campo aparece vacío y sigue diciendo \"No registrada\"",
+     "pantalla": null,
+     "t": 559
+    },
+    {
+     "texto": "reintento: tercer intento: puse la CLABE y el banco en \"Mi perfil\" y le di \"Actualizar CLABE\"; recargué y sigue diciendo \"No tienes una CLABE registrada todavía\"",
+     "t": 629
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Hola, soy Paulina Ríos (código PAULINA-PR). Intenté registrar mi CLABE tres veces, dos veces desde la pantalla de Comisiones y una desde Mi perfil, y las tres veces le doy Guardar / Actualizar CLABE, no me sale ningún mensaje, y cuando recargo sigue diciendo \"No tienes una CLABE registrada todavía\". El 10 de abril me deben depositar mis comisiones de marzo, ¿me las van a poder pagar así? ¿Hay otro lugar donde ponerla?",
+     "t": 629,
+     "tarea": "registrar mi CLABE para que me puedan depositar"
+    }
+   ],
+   "reintentos": 3,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no logré registrar mi CLABE en ningún lado: ni en Comisiones ni en Mi perfil; el botón no responde ni con error ni con confirmación"
+  },
+  {
+   "quiero": "comprar lo necesario para activarme y no perder los $259.20",
+   "esperaba": null,
+   "t": 650,
+   "segundos": 246,
+   "logrado": true,
+   "clicsBase": 14,
+   "teclasBase": 36,
+   "clics": 13,
+   "teclas": 3,
+   "pantallasBase": 4,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "El correo me dice \"lo más barato que lo cierra: 2 Klinhart ($960.00)\". Pero en la pantalla vi un aviso raro: \"Tus VP se cuentan sobre el precio ya con descuento: 20 PC con 10 % = 18 VP\". O sea que si compro MÁS de mil pesos me dan descuento y me QUITAN puntos. Estuve haciendo cuentas: el CRT-1200 son $550 con 10 PC, dos me dan 20 puntos pero cuestan $1,100, y con el 10% se me caen a 18 y NO me activo. Eso es una trampa fea. Me voy con los 2 Klinhart de $480.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 650
+    },
+    {
+     "texto": "Puse cantidad 2 y el carrito me marcó $1,440, que son TRES Klinhart, no dos. Y justo eso me pasa del límite de los mil pesos, que es lo que me quita puntos. Voy a abrir el carrito a ver qué metió.",
+     "segundosDesdeLoAnterior": 66,
+     "t": 717
+    },
+    {
+     "texto": "El carrito dice \"Cantidad 3\", \"Parcial: $1,296\", \"Descuento: -$144 • Dto 10%\" y abajo \"Activación: 20 VP netos · llevas 0 · este pedido suma 27. Con esta compra queda activo el mes.\" Ese renglón sí me sirve, es lo primero claro que veo hoy. Pero yo quería dos, no tres. Voy a bajarle a 2 y ver si me sigue diciendo que quedo activa.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 735
+    },
+    {
+     "texto": "Con 2 me dice \"Total $960 · Sin descuento · Puntos de este pedido (VP) 20 VP · Con esta compra queda activo el mes\". Perfecto. Pero fíjate lo que dice arriba: \"Siguiente tramo: 10 %, te faltan $40\". O sea, la pantalla me está invitando a gastar $40 más para que me den descuento… y si le hago caso mis 20 puntos se vuelven 18 y NO me activo. Eso no es un consejo, es un empujón al precipicio.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 766
+    },
+    {
+     "texto": "Ya voy a pagar $960 para recuperar $259. Al menos me ahorro el envío: soy de la Ciudad de México y dice \"Recoger en sucursal · Disponible en: Ciudad de México, Guadalajara\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 766
+    },
+    {
+     "texto": "Me late \"Tienda Del Valle, Av. Coyoacán 1200\" que me queda cerca del estudio. Y voy a pagar en línea, porque si pago hasta que recoja capaz y no me cuenta para el mes y ese es todo el chiste.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 780
+    },
+    {
+     "texto": "Se creó la orden ORD-0F7B6112, $960, \"Pago pendiente\". Ahora tengo que pagar con MercadoPago. Le doy.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 838
+    },
+    {
+     "texto": "Ya pagué: \"Pago registrado\". Ahora la pregunta de los $259.20: ¿ya se desbloquearon? Voy al panel a verlo con mis ojos, porque nadie me dijo que se hubiera arreglado nada.",
+     "segundosDesdeLoAnterior": 35,
+     "t": 872
+    },
+    {
+     "texto": "¡Sí funcionó! Ahora dice \"Bloqueadas $0\", \"Total del mes $259.20\", \"Confirmadas (se depositan el día de pago) $135\", \"Por confirmar (pedidos aún no entregados) $124.20\" y arriba \"Activación: 20 VP netos · llevas 20 · Este mes ya está activo.\" Eso sí lo entiendo y me da gusto. Pero nadie me lo avisó: tuve que venir a buscarlo yo. Un correo diciendo \"listo, ya recuperaste tus $259.20\" me habría ahorrado el nudo en la panza.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 896
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿por qué comprar más me da MENOS puntos? Si gasto $1,100 no me activo y si gasto $960 sí. Nadie normal va a entender eso.",
+     "pantalla": "#/dashboard (Tienda)",
+     "t": 650
+    },
+    {
+     "texto": "la pantalla me anima a gastar $40 más para el 10% de descuento, pero ese descuento me tumbaría los puntos y perdería la activación. ¿De verdad nadie lo revisó?",
+     "pantalla": "#/carrito",
+     "t": 766
+    },
+    {
+     "texto": "sigo sin entender por qué $135 ya está \"confirmada\" y $124.20 sigue \"por confirmar\" si las dos son del mismo día, 4 de marzo",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 896
+    },
+    {
+     "texto": "dice \"RANGO ACTUAL: Sin rango aún · Cada compra te acerca al primero\" pero en el Cuadro de Honor salgo en el lugar #1 de toda la red. ¿Entonces soy la primera o no soy nadie?",
+     "pantalla": "#/dashboard",
+     "t": 896
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "escribí \"2\" en la cantidad del Klinhart y el carrito me metió 3",
+     "pantalla": null,
+     "t": 735
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 5,
+   "comentario": "Compré 2 Klinhart por $960 y se desbloquearon mis $259.20; lo verifiqué recargando. Lo difícil no fue comprar, fue entender que tenía que gastar $960 para recuperar $259 y que gastar $40 MÁS me habría dejado sin activar."
+  },
+  {
+   "quiero": "volver a intentar la CLABE ahora que ya estoy activa",
+   "esperaba": null,
+   "t": 905,
+   "segundos": 37,
+   "logrado": false,
+   "clicsBase": 27,
+   "teclasBase": 39,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 7,
+   "pantallas": 4,
+   "pensamientos": [
+    {
+     "texto": "Se me ocurre que a lo mejor no me dejaba guardar la CLABE porque no estaba activa. Ahora ya lo estoy. Lo intento una cuarta vez, desde Mi perfil.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 905
+    },
+    {
+     "texto": "Además veo \"CARGA DE DOCUMENTACIÓN — Constancia de situación fiscal: Requerido, INE: Requerido, CURP: Requerido\". Nadie me dijo nunca que esto era requisito. ¿Y si por eso no me pagan? Le escribo otra vez a soporte porque esto ya es dinero mío.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 942
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "reintento: cuarto intento de la CLABE, ya estando activa: mismo resultado, \"No tienes una CLABE registrada todavía\"",
+     "t": 942
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Vuelvo a molestar. Ya me activé (compré 2 Klinhart, orden ORD-0F7B6112) y mis $259.20 se desbloquearon, gracias. Pero la CLABE sigue sin guardarse a la cuarta vez y en Mi perfil veo tres documentos marcados como \"Requerido\" (constancia fiscal, INE y CURP) de los que nadie me había avisado. ¿Necesito subirlos para que me depositen el 10 de abril? ¿Y cómo registro mi CLABE si el botón no hace nada?",
+     "t": 942,
+     "tarea": "volver a intentar la CLABE ahora que ya estoy activa"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "cuatro intentos, dos pantallas distintas, ningún mensaje de error y la CLABE sigue sin registrarse"
+  },
+  {
+   "quiero": "confirmar que me llegó comprobante de mi compra y aviso de que ya me desbloquearon",
+   "esperaba": null,
+   "t": 948,
+   "segundos": 22,
+   "logrado": true,
+   "clicsBase": 28,
+   "teclasBase": 39,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 11,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Me llegaron cuatro correos de golpe. Dos dicen \"Ximena Paredes Cordero compró: comisión de $135.00 en camino\" y \"Fabiola Cantú Robledo compró...\" como si hubieran comprado AHORITA, y compraron el 4 de marzo. Me confundió: pensé que habían vuelto a comprar y que iba a tener más comisión.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 970
+    },
+    {
+     "texto": "El correo de \"Recibimos tu pago\" dice \"Estamos preparando tu paquete y te avisaremos por este medio cuando salga\", pero yo elegí RECOGER EN SUCURSAL, en la Tienda Del Valle. No me dice ni la dirección ni cuándo puedo pasar por él. Voy a tener que adivinar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 970
+    },
+    {
+     "texto": "Y el cuarto correo se llama \"Registra tu CLABE para cobrar tus comisiones\" y me manda justo al campo de Comisiones que ya probé dos veces y no guarda. O sea que el sistema sabe que me falta la CLABE, me manda al lugar donde no se puede poner, y ahí se acaba su ayuda.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 970
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Ximena y Fabiola acaban de comprar otra vez o el correo me está avisando de las compras del 4 de marzo con 16 días de retraso?",
+     "pantalla": "correo",
+     "t": 970
+    },
+    {
+     "texto": "elegí recoger en sucursal y el correo me habla de que me van a mandar el paquete. ¿Entonces me lo mandan o paso por él?",
+     "pantalla": "correo",
+     "t": 970
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Sí me llegaron los comprobantes, pero mal redactados: me avisan de compras de hace 16 días en presente, me hablan de paquete cuando pedí recoger en tienda, y me mandan a un campo de CLABE que no guarda."
+  },
+  {
+   "quiero": "ver si ya me depositaron mis comisiones de marzo (10 de abril)",
+   "esperaba": null,
+   "t": 991,
+   "segundos": 98,
+   "logrado": false,
+   "clicsBase": 28,
+   "teclasBase": 39,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 11,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Hoy es 10 de abril, el día que dicen que pagan. Primero mi correo: quiero ver si me avisaron del depósito o si me dijeron algo de la CLABE, que quedó pendiente.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 991
+    },
+    {
+     "texto": "Nada. Mi último correo es del 20 de marzo. Hoy es 10 de abril, el día de pago, y ni un \"te depositamos\" ni un \"no te pudimos depositar porque falta tu CLABE\". Silencio.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 1001
+    },
+    {
+     "texto": "Ahora sí me salió una ventana: \"Aviso del portal — Registra tu CLABE para cobrar tus comisiones. Recordatorio importante. Ya tienes comisiones a tu favor...\". Me lo dice HOY, el día que me tenían que pagar. Se lo agradezco, pero llega tarde: llevo desde el 20 de marzo intentando ponerla.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 1023
+    },
+    {
+     "texto": "Y otra cosa: el contador dice \"Corte de mes 21d 16h 6m\". El 20 de marzo decía 21d 16h 21m. Es prácticamente el mismo número tres semanas después. Ese reloj no sirve.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1023
+    },
+    {
+     "texto": "Aquí está lo que vine a ver: \"Mes anterior · Total $135 · Estatus: Pendiente de pago\". No me depositaron. Y además: en marzo yo tenía $259.20 en total. Ahora el mes anterior dice $135. Faltan $124.20, los de Fabiola. ¿Se perdieron? Nadie me dijo nada. Voy a cambiar el selector a \"marzo de 2027\" a ver qué dice.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 1038
+    },
+    {
+     "texto": "En marzo sigue diciendo \"$259.20 · Confirmadas $135 · Por confirmar (pedidos aún no entregados) $124.20\". O sea que lo de Fabiola sigue esperando a que le entreguen su pedido... desde el 4 de marzo. Van 37 días. Y a mí sólo me van a pagar $135, sin que nadie me lo explique.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 1057
+    },
+    {
+     "texto": "Ojo con un detalle: en marzo la tablita decía \"ORD-7C55FDBD ... 04 mar 2027\" y ahora dice \"20 mar 2027\". Le cambiaron la fecha a mis comisiones. Yo sé que Ximena compró el 4, no el 20.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 1072
+    },
+    {
+     "texto": "Y mi propio pedido: pagué el 20 de marzo para recoger en la Tienda Del Valle y nunca me llegó un \"ya está listo, pásale\". Van 21 días. Voy a abrirlo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1072
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el contador \"Corte de mes\" marca 21 días tanto el 20 de marzo como el 10 de abril. ¿Qué está contando?",
+     "pantalla": "#/dashboard",
+     "t": 1023
+    },
+    {
+     "texto": "la comisión de Fabiola lleva 37 días \"por confirmar\" porque su pedido no se ha entregado. ¿Eso lo puedo empujar yo? ¿A quién le reclamo?",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 1057
+    },
+    {
+     "texto": "¿por qué la fecha de mis comisiones cambió de 04 de marzo a 20 de marzo?",
+     "pantalla": "#/dashboard (Comisiones)",
+     "t": 1072
+    },
+    {
+     "texto": "pedí recoger en sucursal y el seguimiento me habla de \"Envío · Ruta de entrega\". ¿Me lo van a llevar o voy por él?",
+     "pantalla": "#/orden/ORD-0F7B6112",
+     "t": 1089
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "mi pedido lleva 21 días en \"Pago registrado\" y la pantalla no me dice en qué sucursal lo recojo ni si ya está listo; ni siquiera aparece el nombre de la Tienda Del Valle que yo elegí",
+     "pantalla": null,
+     "t": 1089
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "intentar la CLABE por quinta vez, ahora que el portal me lo pide en una ventana",
+   "esperaba": null,
+   "t": 1089,
+   "segundos": 37,
+   "logrado": false,
+   "clicsBase": 28,
+   "teclasBase": 39,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 11,
+   "pantallas": 4,
+   "pensamientos": [
+    {
+     "texto": "La ventana de hoy me insiste en la CLABE. Voy a intentarlo una quinta vez, la última. Si no jala, me rindo y llamo por teléfono.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 1089
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "reintento: quinto intento de la CLABE el 10 de abril: sigue sin guardarse",
+     "t": 1126
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Es 10 de abril y no me depositaron. Mi panel dice \"Mes anterior: Total $135 · Estatus: Pendiente de pago\" y sigue \"No tienes una CLABE registrada todavía\" después de CINCO intentos. Además: en marzo mi panel decía $259.20 y ahora sólo me van a pagar $135, porque $124.20 siguen \"por confirmar\" desde el 4 de marzo. ¿Ese dinero lo voy a cobrar algún día? Y de paso, mi pedido ORD-0F7B6112 lleva 21 días en \"Pago registrado\" y pedí recogerlo en la Tienda Del Valle: ¿ya puedo pasar por él?",
+     "t": 1126,
+     "tarea": "intentar la CLABE por quinta vez, ahora que el portal me lo pide en una ventana"
+    }
+   ],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "quinto intento de la CLABE y sigue sin guardar; ya no hay nada que yo pueda hacer desde la pantalla"
+  },
+  {
+   "quiero": "buscar en algún lado la explicación de cuándo y cómo me pagan",
+   "esperaba": null,
+   "t": 1135,
+   "segundos": 27,
+   "logrado": true,
+   "clicsBase": 32,
+   "teclasBase": 39,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 15,
+   "pantallas": 3,
+   "pensamientos": [
+    {
+     "texto": "Vi un enlace que dice \"Cómo se calculan: porcentajes por nivel y requisitos\". Ojalá ahí diga por qué me pagan $135 y no $259.20.",
+     "segundosDesdeLoAnterior": 45,
+     "t": 1135
+    },
+    {
+     "texto": "¡Aquí estaba todo! \"Confirmada — cuando ese pedido se entrega\", \"Bloqueada — si ese mes tú no estás activa... Te avisamos por correo los días 20 y 27\", \"Pagada — el depósito a tu CLABE se hace el día 10 del mes siguiente\" y hasta \"Al tener tu primera comisión confirmada: CLABE\". Esta página está clarísima, es la mejor cosa que he visto en dos días. El problema es que nadie me la enseñó: sólo se llega por un renglón chiquito y gris que dice \"Cómo se calculan: porcentajes por nivel y requisitos\", enterrado en Comisiones. Yo llevaba un año de socia y no sabía que existía.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 1162
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "si esta página explica todo tan bien, ¿por qué no me la mandaron cuando me hice socia, o cuando me llegó el aviso de la comisión bloqueada?",
+     "pantalla": "#/modo-socio",
+     "t": 1162
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 5,
+   "comentario": "La página \"MODO SOCIO\" explica todo con ejemplos y números; es lo mejor de la plataforma. Está escondida detrás de un enlace gris chiquito en Comisiones. Debería ser lo primero que te dan."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "el aviso me pide gastar 960 pesos para desbloquear 259; parece que el que gana es la empresa",
+   "t": 34,
+   "tarea": "entrar a mi panel de socia a ver cómo va mi mes"
+  },
+  {
+   "emocion": "inquietud",
+   "intensidad": 3,
+   "porque": "la pantalla principal no menciona el dinero que estoy a punto de perder",
+   "t": 137,
+   "tarea": "entrar a mi panel de socia a ver cómo va mi mes"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "un pop-up me felicita por ser #1 de la red mientras estoy a punto de perder $259.20",
+   "t": 250,
+   "tarea": "ver cuánto tengo por cobrar y por qué está bloqueado"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "la pantalla del dinero no explica por qué el dinero está bloqueado",
+   "t": 350,
+   "tarea": "ver cuánto tengo por cobrar y por qué está bloqueado"
+  },
+  {
+   "emocion": "confusión",
+   "intensidad": 4,
+   "porque": "la red me marca \"Activa\" y las comisiones dicen que estaban bloqueadas por no estar activa",
+   "t": 376,
+   "tarea": "ver cuánto tengo por cobrar y por qué está bloqueado"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "si ni siquiera puedo guardar mi cuenta de banco, no sé cómo me van a pagar el 10 de abril",
+   "t": 559,
+   "tarea": "registrar mi CLABE para que me puedan depositar"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "hay dos lugares para poner la CLABE y el primero que encontré simplemente no guarda",
+   "t": 572,
+   "tarea": "registrar mi CLABE para que me puedan depositar"
+  },
+  {
+   "emocion": "impotencia",
+   "intensidad": 5,
+   "porque": "tres intentos, cero mensajes de error y cero resultado: no hay nada más que yo pueda hacer",
+   "t": 629,
+   "tarea": "registrar mi CLABE para que me puedan depositar"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "las reglas de puntos castigan comprar más; parece hecho para que te equivoques",
+   "t": 650,
+   "tarea": "comprar lo necesario para activarme y no perder los $259.20"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "el consejo de la pantalla y la regla de puntos se contradicen entre sí",
+   "t": 766,
+   "tarea": "comprar lo necesario para activarme y no perder los $259.20"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "la comisión se desbloqueó de verdad, lo verifiqué en pantalla",
+   "t": 896,
+   "tarea": "comprar lo necesario para activarme y no perder los $259.20"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "cuatro intentos de guardar mi cuenta de banco y ni un solo mensaje del sistema",
+   "t": 942,
+   "tarea": "volver a intentar la CLABE ahora que ya estoy activa"
+  },
+  {
+   "emocion": "resignación",
+   "intensidad": 4,
+   "porque": "el sistema me pide la CLABE y me manda al botón que no funciona",
+   "t": 970,
+   "tarea": "confirmar que me llegó comprobante de mi compra y aviso de que ya me desbloquearon"
+  },
+  {
+   "emocion": "inquietud",
+   "intensidad": 4,
+   "porque": "es el día de pago y no recibí ningún aviso, ni bueno ni malo",
+   "t": 1001,
+   "tarea": "ver si ya me depositaron mis comisiones de marzo (10 de abril)"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 5,
+   "porque": "faltan $124.20 de los $259.20 que la pantalla me prometió en marzo y nadie me explicó nada",
+   "t": 1038,
+   "tarea": "ver si ya me depositaron mis comisiones de marzo (10 de abril)"
+  },
+  {
+   "emocion": "desconcierto",
+   "intensidad": 4,
+   "porque": "pagué $960 hace tres semanas y no sé dónde está mi producto",
+   "t": 1089,
+   "tarea": "ver si ya me depositaron mis comisiones de marzo (10 de abril)"
+  },
+  {
+   "emocion": "resignación",
+   "intensidad": 5,
+   "porque": "cinco intentos en dos días distintos; ya no es que yo no sepa, es que no funciona",
+   "t": 1126,
+   "tarea": "intentar la CLABE por quinta vez, ahora que el portal me lo pide en una ventana"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "por fin encontré la página que explica todo, pero después de dos días de dar vueltas",
+   "t": 1162,
+   "tarea": "buscar en algún lado la explicación de cuándo y cómo me pagan"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Hola, soy Paulina Ríos (código PAULINA-PR). Intenté registrar mi CLABE tres veces, dos veces desde la pantalla de Comisiones y una desde Mi perfil, y las tres veces le doy Guardar / Actualizar CLABE, no me sale ningún mensaje, y cuando recargo sigue diciendo \"No tienes una CLABE registrada todavía\". El 10 de abril me deben depositar mis comisiones de marzo, ¿me las van a poder pagar así? ¿Hay otro lugar donde ponerla?",
+   "t": 629,
+   "tarea": "registrar mi CLABE para que me puedan depositar"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Vuelvo a molestar. Ya me activé (compré 2 Klinhart, orden ORD-0F7B6112) y mis $259.20 se desbloquearon, gracias. Pero la CLABE sigue sin guardarse a la cuarta vez y en Mi perfil veo tres documentos marcados como \"Requerido\" (constancia fiscal, INE y CURP) de los que nadie me había avisado. ¿Necesito subirlos para que me depositen el 10 de abril? ¿Y cómo registro mi CLABE si el botón no hace nada?",
+   "t": 942,
+   "tarea": "volver a intentar la CLABE ahora que ya estoy activa"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Es 10 de abril y no me depositaron. Mi panel dice \"Mes anterior: Total $135 · Estatus: Pendiente de pago\" y sigue \"No tienes una CLABE registrada todavía\" después de CINCO intentos. Además: en marzo mi panel decía $259.20 y ahora sólo me van a pagar $135, porque $124.20 siguen \"por confirmar\" desde el 4 de marzo. ¿Ese dinero lo voy a cobrar algún día? Y de paso, mi pedido ORD-0F7B6112 lleva 21 días en \"Pago registrado\" y pedí recogerlo en la Tienda Del Valle: ¿ya puedo pasar por él?",
+   "t": 1126,
+   "tarea": "intentar la CLABE por quinta vez, ahora que el portal me lo pide en una ventana"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 5,
+  "confianzaQueTransmite": 3,
+  "legibilidad": 6,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "abarrotada",
+   "ruidosa",
+   "desconfiada"
+  ],
+  "mejorPantalla": "la página \"MODO SOCIO\", la que explica el plan con ejemplos y tablas",
+  "peorPantalla": "el panel principal: todo en una sola página larguísima donde la tienda, mi red, mis comisiones y el cuadro de honor están apilados y hay que raspar la rueda del ratón como diez veces para llegar al dinero",
+  "seParece": "a un tianguis con confeti: bonito de lejos, pero con tres letreros distintos para la misma cosa (PC, VP, VG, PV, PG) y felicitaciones que brincan encima cuando lo que quiero es una cifra",
+  "recomendarias": 4,
+  "volverias": "sí, porque ahí está mi dinero y mi red, no porque me guste entrar",
+  "comentario": "Se ve moderna y los colores están bonitos, pero no me habla como me hablaría una persona. Me festeja lo que no le pedí (dos ventanas de premios encima una de otra al entrar) y me esconde lo que sí necesito (por qué está bloqueado mi dinero, dónde recojo mi pedido, por qué no me pagaron). Y lo peor: no me deja guardar mi CLABE, que es literalmente el renglón donde cae mi dinero. Cinco intentos, cero mensajes."
+ },
+ "totales": {
+  "clics": 32,
+  "teclas": 39,
+  "envios": 0,
+  "campos": 5,
+  "pantallas": 18,
+  "recargas": 2,
+  "atrases": 7
+ },
+ "pantallas": [
+  {
+   "ruta": "/dashboard",
+   "desde": 1788507416904,
+   "primerClicMs": 71596,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788507876964,
+   "primerClicMs": 27651,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788507915372,
+   "primerClicMs": 26451,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788507982240,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788508072201,
+   "primerClicMs": 14232,
+   "clics": 9,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-0F7B6112",
+   "desde": 1788508232877,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788508255275,
+   "primerClicMs": 5005,
+   "clics": 4,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788508072202,
+   "primerClicMs": 14232,
+   "clics": 9,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788508255276,
+   "primerClicMs": 5005,
+   "clics": 4,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788508288017,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788508295518,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788508383672,
+   "primerClicMs": 5010,
+   "clics": 3,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-0F7B6112",
+   "desde": 1788508454674,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788508472275,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/perfil",
+   "desde": 1788508479861,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788508383673,
+   "primerClicMs": 5010,
+   "clics": 3,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/orden/ORD-0F7B6112",
+   "desde": 1788508454676,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/modo-socio",
+   "desde": 1788508517730,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Sube los documentos requeridos para completar tu registro.",
+   "t": 585,
+   "tarea": "registrar mi CLABE para que me puedan depositar"
+  },
+  {
+   "texto": "Requerido",
+   "t": 585,
+   "tarea": "registrar mi CLABE para que me puedan depositar"
+  }
+ ],
+ "consola": [
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app",
+  "HTTP 403 GET /commissions/config/app"
+ ],
+ "notas": [],
+ "fin": "2026-09-04T07:56:04.773Z",
+ "duracionMin": 20
+}

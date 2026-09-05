@@ -1,3 +1,5 @@
+import { EstadoDevolucionPedido } from './ayuda.model'; // paquete D · ronda 26
+
 import { UserPrivileges } from './privileges.model';
 import { AdminEmployee } from './employee.model';
 import { PortalNotification, SavePortalNotificationPayload } from './portal-notification.model';
@@ -52,24 +54,105 @@ export interface AdminOrder {
   pickupPaymentMethod?: 'online' | 'at_store';
   cancelReason?: string;
   cancelledAt?: string;
+  /** Ahorro que habría tenido como socia (solo en modo cliente e invitado). */ // paquete B
+  partnerMode?: 'cliente' | 'socio' | 'invitado';
+  partnerSavings?: number; // paquete B
+  partnerSavingsRate?: number; // paquete B
+  partnerSavingsNextRate?: number; // paquete B
+  partnerSavingsNextMissing?: number; // paquete B
+  /** Envío cobrado al cliente y paquetería cotizada. */
+  shippingCost?: number;
+  shippingCarrier?: string;
+  /** Envío de regreso que el cliente declaró en su devolución. */
+  returnShippingCost?: number;
+  refundAmount?: number;
+  refundReason?: string;
+  /** Notas internas del back office; solo se añaden. */
+  adminNotes?: Array<{ text: string; by: string; byName?: string; at: string }>;
   returnRequestId?: string;
+  returnInspection?: {
+    requestId: string;
+    status?: string;
+    motivo?: string;
+    descripcion?: string;
+    evidence?: string[];
+    inspectedAt?: string;
+    inspectedBy?: string;
+    notes?: string;
+    packageImageUrls?: string[];
+    checklist?: Record<string, boolean>;
+    // paquete G: líneas devueltas y reembolso sugerido por líneas
+    motivoLabel?: string;
+    lines?: Array<{ productId: number | string; name: string; quantity: number; purchasedQuantity?: number; unitPrice?: number; unitNet?: number }>;
+    partial?: boolean;
+    shippingResponsibility?: 'empresa' | 'cliente';
+    returnShippingCost?: number;
+    refundSuggested?: number | null;
+    refundBreakdown?: { products: number | null; returnShipping: number | null; originalShipping: number | null } | null;
+    refundPolicy?: { method: string; businessDays: string } | null;
+    linesReceived?: Array<{ productId: number | string; quantity: number; matches: boolean }>;
+    courtesyCoupon?: string | null;
+  };
   rejectionReason?: string;
   rejectedAt?: string;
   refundReceiptUrl?: string;
   refundedAt?: string;
+  // paquete C · factura ("Quiero factura" en el checkout; sin timbrado)
+  invoiceRequested?: boolean;
+  invoiceStatus?: 'no_aplica' | 'solicitada' | 'emitida';
+  invoiceData?: { rfc: string; razonSocial: string; regimenFiscal: string; cpFiscal: string; usoCfdi: string; email: string };
+  invoiceRequestedAt?: string;
+  invoiceIssuedAt?: string;
+  invoiceFolio?: string;
+  invoiceFileUrl?: string;
+  // paquete D · despacho y paquetería
+  shippedAt?: string;
+  shippedBy?: string;
+  deliveredBy?: string;
+  deliverySignedBy?: string;
+  // paquete G
+  returnedLines?: Array<{ productId: number | string; name: string; quantity: number; unitNet?: number }>;
+  refundSuggested?: number;
+  refundAdjustmentReason?: string;
+  /** Pago que acreditó el pedido y por qué camino llegó. */ // paquete H
+  paymentId?: string;
+  paidVia?: 'mercadopago' | 'branch' | 'admin' | 'reconciliation';
+  subscriptionId?: string;
+  // ── Paquete C · ronda 26 ── desglose de IVA que el pedido guarda al crearse (§38).
+  /** Tasa con la que se desglosó el IVA de este pedido (0.16 = 16 %). */
+  vatRate?: number;
+  /** Importe sin IVA; `taxBase + taxAmount === total`, al centavo. */
+  taxBase?: number;
+  taxAmount?: number;
+  // ── Paquete D · ronda 26 ── propuesta 24: si se puede pedir la devolución y,
+  // si no, por qué. Lo calcula el servidor con la misma regla que valida la
+  // solicitud; la pantalla no vuelve a decidirlo.
+  devolucion?: EstadoDevolucionPedido;
 }
 
 export interface AdminRefundPayload {
   reason?: string;
+  /** Importe reembolsado; por omisión el total más el envío de regreso declarado. */
+  amount?: number;
   receiptBase64?: string;
   receiptName?: string;
   receiptContentType?: string;
+  /** paquete G: obligatorio cuando `amount` difiere del reembolso sugerido por líneas. */
+  adjustmentReason?: string;
 }
 
 export interface AdminRefundResponse {
   orderId: string;
   status: string;
   refundReceiptUrl?: string;
+  // paquete G
+  refundAmount?: number;
+  refundSuggested?: number;
+  breakdown?: { products: number | null; returnShipping: number | null; originalShipping: number | null };
+  refundAdjustmentReason?: string | null;
+  refundPolicy?: { method: string; businessDays: string };
+  refundedAt?: string;
+  message?: string;
 }
 
 export interface AdminReturnInspectPayload {
@@ -84,6 +167,10 @@ export interface AdminReturnInspectPayload {
   };
   packageImages?: Array<{ contentBase64: string; fileName: string; contentType: string }>;
   rejectionReason?: string;
+  notes?: string;
+  courtesyPercent?: number;
+  /** paquete G: por línea devuelta, si lo recibido coincide con lo declarado. */
+  lines?: Array<{ productId: number | string; quantity: number; matches: boolean }>;
 }
 
 export interface AdminReturnInspectResponse {
@@ -92,6 +179,11 @@ export interface AdminReturnInspectResponse {
   returnStatus: string;
   orderStatus: string;
   approved: boolean;
+  // paquete G
+  refundSuggested?: number | null;
+  refundBreakdown?: { products: number | null; returnShipping: number | null; originalShipping: number | null } | null;
+  linesReceived?: Array<{ productId: number | string; quantity: number; matches: boolean }>;
+  message?: string;
 }
 
 export interface CustomerOrdersPage {
@@ -199,12 +291,16 @@ export interface UpdateOrderStatusPayload {
   status: AdminOrder['status'];
   shippingType?: AdminOrder['shippingType'];
   trackingNumber?: string;
+  shippingCarrier?: string;
   deliveryPlace?: string;
   deliveryDate?: string;
   stockId?: string;
   paymentMethod?: 'cash' | 'card' | 'transfer';
+  cashReceived?: number;
   attendantUserId?: number | null;
   dispatchLines?: Array<{ productId: number; quantity: number }>;
+  /** Folio del depósito o de la terminal con el que la gerencia da por cobrado el pedido. */
+  paymentReference?: string;
 }
 
 export interface CustomerDocument {
@@ -252,6 +348,12 @@ export interface UpdateProfilePayload {
   phone?: string;
   rfc?: string;
   curp?: string;
+  /**
+   * Dirección nueva para la ficha (propuesta 19). El backend la guarda con la
+   * misma dedupe (calle + número + CP) que la casilla del carrito, así que dar
+   * de alta una dirección desde la suscripción no duplica la que ya estaba.
+   */
+  newAddress?: Omit<CustomerShippingAddress, 'id'>;
 }
 
 export interface CreateStructureCustomerPayload {
@@ -351,6 +453,9 @@ export interface AdminCustomer {
   id: number;
   name: string;
   email: string;
+  /** Teléfono de contacto: el backend lo guarda desde el alta, pero el
+   *  back office no lo mostraba y nadie podía escribirle al cliente. */
+  phone?: string;
   isSuperUser?: boolean;
   leaderId?: number | null;
   level: string;
@@ -360,11 +465,44 @@ export interface AdminCustomer {
   commissionsPrevMonthKey?: string;
   commissionsCurrentPending?: number;
   commissionsCurrentConfirmed?: number;
-  commissionsPrevStatus?: 'no_moves' | 'pending' | 'paid';
+  commissionsPrevStatus?: 'no_moves' | 'pending' | 'paid' | 'sin_clabe'; // paquete A
   commissionsPrevReceiptUrl?: string;
   clabeInterbancaria?: string;
   bankInstitution?: string;
+  /** Terminación de la CLABE guardada; la ficha nunca enseña los 18 dígitos. */
+  clabeLast4?: string; // paquete A · ronda 26 (montado en la integración)
+  canAccessAdmin?: boolean;
+  privileges?: UserPrivileges;
+  lastPurchaseAt?: string;
   documents?: CustomerDocument[];
+  /** Seguimiento: el cliente pidió no ser contactado (o fue dado de baja). */
+  doNotContact?: boolean;
+  /** Bitácora de contactos; solo se añade. */
+  contactNotes?: CustomerContactNote[];
+  /** De dónde llegó: anuncio, red social, referido, orgánico… */
+  origin?: string;
+  /** Fecha de baja de datos (ARCO); la ficha queda anonimizada. */
+  deletedAt?: string;
+  /** Modo de la cuenta: cliente (precio de lista, sin red) o socio. */ // paquete B
+  mode?: 'cliente' | 'socio';
+  modeActivatedAt?: string; // paquete B
+  /** Por dónde prefiere que le escriban: whatsapp | email | none. */ // paquete F
+  contactPreference?: string; // paquete F
+  /** Empleada que la atiende (EMPLOYEE); vacío = cartera FindingU. */ // paquete F
+  executiveId?: string; // paquete F
+  /** Última nota de contacto registrada. */ // paquete F
+  lastContactAt?: string; // paquete F
+}
+
+export interface CustomerContactNote {
+  text: string;
+  by: string;
+  at: string;
+  /** whatsapp | email | call, cuando la nota la dejó "Seguimiento de hoy". */ // paquete F
+  channel?: string; // paquete F
+  templateKey?: string; // paquete F
+  /** Nombre de quien la escribió, resuelto al guardar; `by` se conserva. */ // paquete G · ronda 26
+  byName?: string; // paquete G · ronda 26
 }
 
 export interface CustomerDocumentTypeConfig {
@@ -458,6 +596,21 @@ export interface AdminWarning {
   type: string;
   text: string;
   severity: 'high' | 'medium' | 'low';
+  /** Mes (reloj del servidor) al que lleva "Ir a resolver" en los avisos de comisiones. */
+  monthKey?: string;
+}
+
+/**
+ * Lo que devuelve `GET /dashboard/admin/warnings` completo (integración de la
+ * ronda 26, propuesta 21): además de los avisos, el reloj del servidor y el
+ * umbral en días a partir del cual la antigüedad se pinta en rojo.
+ */
+export interface AdminWarningsRespuesta {
+  warnings: AdminWarning[];
+  /** Hora del servidor, para medir la antigüedad sin el reloj del navegador. */
+  serverNow: string;
+  /** `orders.agingRedDays` de la configuración; 7 por omisión. */
+  agingRedDays: number;
 }
 
 export interface Coupon {
@@ -553,6 +706,17 @@ export interface AppBusinessConfig {
   };
   customerDocumentTypes?: CustomerDocumentTypeConfig[];
   bonuses?: BonusConfig;
+  // ── Corte de mes (propuesta 29) ──
+  // `GET /catalog/config/public` los publica para que quien no tiene sesión
+  // cuente los días con el reloj del servidor y no con el de su navegador.
+  cutoffDay?: number;
+  cutoffHour?: number;
+  cutoffMinute?: number;
+  cutoffLabel?: string;
+  cutoffAt?: string;
+  serverNow?: string;
+  /** IVA vigente, para desglosar sin volver a pedirlo. */
+  taxes?: { vatRate: number; label: string; pricesIncludeVat: boolean; appliesToShipping: boolean };
 }
 
 export interface AdminAssetSlot {
@@ -572,6 +736,10 @@ export interface AdminData {
   assetSlots: AdminAssetSlot[];
   productOfMonthId?: number | null;
   categories?: ProductCategory[];
+  /** Reloj del servidor que acompaña a los avisos (§3.6). */
+  serverNow?: string;
+  /** Días a partir de los cuales la antigüedad de un pedido va en rojo. */
+  agingRedDays?: number;
 }
 
 export interface UpdateCustomerPrivilegesPayload {
@@ -582,6 +750,14 @@ export interface UpdateCustomerPrivilegesPayload {
 export interface UpdateCustomerPayload {
   leaderId?: number | null;
   level?: string;
+  /** Correo de acceso; si la ficha no tenía, el backend crea el acceso y avisa. */
+  email?: string;
+  doNotContact?: boolean;
+  /** Nota nueva para la bitácora de contactos. */
+  note?: string;
+  origin?: string;
+  contactPreference?: 'whatsapp' | 'email' | 'none'; // paquete F
+  executiveId?: string; // paquete F
 }
 
 export interface SaveAdminCampaignPayload {
@@ -616,6 +792,9 @@ export interface AdminStock {
   inventory: Record<number, number> | Record<string, number>;
   createdAt?: string;
   updatedAt?: string;
+  // paquete C · recoger en sucursal solo si hay sucursal en tu ciudad/estado
+  city?: string;
+  state?: string;
 }
 
 export interface StockTransferLine {
@@ -642,6 +821,8 @@ export interface InventoryMovement {
   productId: number;
   qty: number;
   userId?: number | null;
+  /** Nombre del empleado guardado con el movimiento (almacén no puede listar empleados). */
+  userName?: string;
   paymentMethod?: 'cash' | 'card' | 'transfer';
   reason?: string;
   referenceId?: string;
@@ -670,6 +851,14 @@ export interface PosSale {
   pendingAmount?: number;
   cashierDiscountMode?: 'percent' | 'amount';
   cashierDiscountAmount?: number;
+  /** 'voided' cuando la venta fue anulada (inventario devuelto, pedido cancelado). */
+  status?: string;
+  voidReason?: string;
+  voidedAt?: string;
+  // paquete E: pago mixto
+  payments?: Array<{ method: 'cash' | 'card' | 'transfer'; amount: number }>;
+  cashPortion?: number;
+  change?: number | null;
 }
 
 export interface PosCashControl {
@@ -703,6 +892,13 @@ export interface PosCashCut {
   sales?: PosSale[];
   withdrawals?: PosWithdrawal[];
   totalWithdrawals?: number;
+  // paquete E: arqueo
+  cashExpected?: number;
+  cashCounted?: number;
+  difference?: number;
+  differenceReason?: string;
+  withdrawalReceiver?: string;
+  openingCash?: number;
 }
 
 export interface PosWithdrawal {
@@ -712,6 +908,8 @@ export interface PosWithdrawal {
   amount: number;
   reason: string;
   createdAt?: string;
+  // paquete E
+  receiver?: string;
 }
 
 export interface UpdateBusinessConfigPayload {
@@ -788,6 +986,10 @@ export interface OrderReturnRequestPayload {
   motivo: OrderReturnMotivo;
   descripcion?: string;
   evidence: OrderReturnEvidencePayload;
+  /** Lo que el cliente pagó por regresar el paquete; se suma al reembolso. */
+  returnShippingCost?: number;
+  /** paquete G: líneas que se devuelven; sin el campo, todo el pedido. */
+  lines?: Array<{ productId: number | string; quantity: number }>;
 }
 
 export interface OrderReturnRequestResponse {

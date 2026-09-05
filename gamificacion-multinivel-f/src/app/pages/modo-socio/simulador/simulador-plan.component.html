@@ -1,0 +1,166 @@
+<section class="rounded-3xl border border-olive-30 bg-ivory-80 p-6 sm:p-8">
+  <h2 class="text-2xl font-semibold tracking-tight text-main">Haz la cuenta con tus números</h2>
+  <p class="mt-1 text-sm text-gray-600">
+    Escribe cuántas personas tienes invitadas, cuánto paga cada una al mes y cuánto compras tú.
+    Calculamos con los porcentajes, los requisitos y la escalera de descuento que están vigentes hoy:
+    no hay ejemplos inventados.
+  </p>
+
+  <!-- Entradas -->
+  <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <label class="block">
+      <span class="text-xs font-semibold text-gray-700">¿Cuántas personas directas tienes?</span>
+      <input type="number" min="0" max="100" step="1" [(ngModel)]="directos" (ngModelChange)="alEscribir()" (change)="calcular()"
+        name="simDirectos" inputmode="numeric"
+        class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70" />
+      <span class="mt-1 block text-xs text-gray-500">Las que invitaste tú (generación 1).</span>
+    </label>
+    <label class="block">
+      <span class="text-xs font-semibold text-gray-700">¿Cuánto paga cada una al mes?</span>
+      <input type="number" min="0" max="100000" step="10" [(ngModel)]="compraPorDirecto" (ngModelChange)="alEscribir()" (change)="calcular()"
+        name="simCompraDirecto" inputmode="decimal"
+        class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70" />
+      <span class="mt-1 block text-xs text-gray-500">Lo que pagan, ya con su descuento y sin envío.</span>
+    </label>
+    <label class="block">
+      <span class="text-xs font-semibold text-gray-700">¿Cuánto compras tú al mes?</span>
+      <input type="number" min="0" max="100000" step="10" [(ngModel)]="compraPropia" (ngModelChange)="alEscribir()" (change)="calcular()"
+        name="simCompraPropia" inputmode="decimal"
+        class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70" />
+      <span class="mt-1 block text-xs text-gray-500">A precio de lista; abajo te decimos qué pagas de verdad.</span>
+    </label>
+    <label class="block">
+      <span class="text-xs font-semibold text-gray-700">¿Cuántas generaciones cuento?</span>
+      <select [(ngModel)]="niveles" (ngModelChange)="alEscribir()" (change)="calcular()" name="simNiveles"
+        class="mt-1 w-full rounded-2xl border border-olive-30 bg-white/70 px-3 py-2.5 text-sm text-main focus:border-olive-70">
+        <option *ngFor="let n of nivelesDisponibles" [ngValue]="n">{{ n }}</option>
+      </select>
+      <span class="mt-1 block text-xs text-gray-500">Hasta {{ maxNiveles }}, que es lo que paga el plan.</span>
+    </label>
+  </div>
+
+  <div *ngIf="errorMensaje" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    {{ errorMensaje }}
+  </div>
+  <div *ngIf="isLoading" class="mt-4 text-sm text-gray-500">
+    <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Haciendo la cuenta…
+  </div>
+
+  <ng-container *ngIf="resultado as r">
+    <!-- El resultado en una frase, primero -->
+    <div class="mt-6 rounded-2xl border p-4 sm:p-5"
+      [ngClass]="ganaODebe === 'gana' ? 'border-emerald-400/50 bg-emerald-400/10' : ganaODebe === 'pierde' ? 'border-amber-400/50 bg-amber-400/10' : 'border-olive-30 surface-soft'">
+      <div class="text-xs font-semibold uppercase tracking-widest text-gray-600">Tu resultado del mes</div>
+      <div class="mt-1 text-3xl font-bold tracking-tight"
+        [ngClass]="ganaODebe === 'gana' ? 'text-emerald-700' : ganaODebe === 'pierde' ? 'text-amber-800' : 'text-main'">
+        {{ pesos(r.gananciaNeta) }}
+      </div>
+      <p class="mt-2 text-sm text-main" *ngFor="let linea of r.explicacion">{{ linea }}</p>
+      <!-- Ronda 7 · Gerardo: comprar un peso más saltaba de tramo, bajaba los VP
+           netos y le costaba $1,200.70 al mes, sin una sola advertencia. -->
+      <p *ngIf="r.advertenciaTramo"
+        class="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ r.advertenciaTramo }}
+      </p>
+      <div class="mt-3 grid gap-2 text-sm text-main sm:grid-cols-3">
+        <div class="rounded-xl border border-olive-20 bg-white/50 px-3 py-2">
+          <div class="text-xs text-gray-600">Comisiones</div>
+          <div class="font-semibold">{{ pesos(r.comisionTotal) }}</div>
+        </div>
+        <div class="rounded-xl border border-olive-20 bg-white/50 px-3 py-2">
+          <div class="text-xs text-gray-600">Lo que pagas tú</div>
+          <div class="font-semibold">{{ pesos(r.gastoPropio) }}</div>
+        </div>
+        <div class="rounded-xl border border-olive-20 bg-white/50 px-3 py-2">
+          <div class="text-xs text-gray-600">Comisiones menos tu compra</div>
+          <div class="font-semibold">{{ pesos(r.gananciaNeta) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tu compra: tramo, VP y si activa -->
+    <div class="mt-5 grid gap-4 md:grid-cols-2">
+      <div class="rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-main">
+        <div class="font-semibold"><i class="fa-solid fa-basket-shopping text-gold" aria-hidden="true"></i> Tu compra del mes</div>
+        <ul class="mt-2 space-y-1">
+          <li>Compras {{ pesos(r.tuCompra.bruto) }} de lista.</li>
+          <li>Tu tramo de descuento es {{ porcentaje(r.tuCompra.tramo) }}: te descuentan {{ pesos(r.tuCompra.descuento) }}.</li>
+          <li>Pagas <strong>{{ pesos(r.tuCompra.netoPagado) }}</strong>, que son {{ puntos(r.tuCompra.vp) }} VP netos.</li>
+          <li class="font-semibold" [ngClass]="r.tuCompra.activa ? 'text-emerald-700' : 'text-amber-800'">
+            <i class="fa-solid" [ngClass]="r.tuCompra.activa ? 'fa-circle-check' : 'fa-circle-exclamation'" aria-hidden="true"></i>
+            {{ r.tuCompra.activa
+              ? 'Con eso activas el mes y puedes cobrar comisiones.'
+              : 'Con eso no activas el mes: necesitas ' + puntos(r.tuCompra.vpParaActivar) + ' VP netos.' }}
+          </li>
+        </ul>
+      </div>
+      <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+        <div class="text-sm font-semibold text-main">
+          <i class="fa-solid fa-receipt text-gold" aria-hidden="true"></i>
+          Lo que pagas, desglosado
+        </div>
+        <ui-desglose-iva class="mt-2 block"
+          [total]="r.tuCompra.netoPagado"
+          [shipping]="0"
+          [rate]="r.tuCompra.iva.tasa"
+          [label]="r.tuCompra.iva.etiqueta"></ui-desglose-iva>
+      </div>
+    </div>
+
+    <!-- Generación por generación, con su requisito -->
+    <div class="mt-5 overflow-x-auto rounded-2xl border border-olive-30 surface-soft">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-gray-500">
+            <th class="px-4 py-2 font-semibold">Generación</th>
+            <th class="px-4 py-2 font-semibold">Personas</th>
+            <th class="px-4 py-2 font-semibold">Requisito</th>
+            <th class="px-4 py-2 font-semibold">Ganas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let g of r.generaciones" class="border-t border-olive-20 align-top text-main">
+            <td class="px-4 py-2 font-semibold">{{ g.gen }}</td>
+            <td class="px-4 py-2">
+              {{ g.personas }} × {{ pesos(g.compraNetaPorPersona) }}
+              <!-- Ronda 7 · Gerardo: la tabla cobraba dos veces a las mismas
+                   personas capturadas y el pie juraba lo contrario. -->
+              <div *ngIf="g.supuesta" class="text-xs font-semibold text-amber-800">
+                Personas supuestas: todavía no las tienes
+              </div>
+            </td>
+            <td class="px-4 py-2">
+              <div>{{ g.requisitoTexto }}</div>
+              <div class="text-xs" [ngClass]="g.cumple ? 'text-emerald-700' : 'text-amber-800'">
+                <i class="fa-solid" [ngClass]="g.cumple ? 'fa-circle-check' : 'fa-circle-exclamation'" aria-hidden="true"></i>
+                {{ g.porQue }}
+              </div>
+            </td>
+            <td class="px-4 py-2">
+              <div class="font-semibold">{{ pesos(g.comision) }}</div>
+              <div class="text-xs text-gray-600">{{ g.textoBase }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sobre qué base se paga, los supuestos y el aviso -->
+    <div class="mt-4 space-y-2 text-xs text-gray-600">
+      <p>{{ r.fraseBaseComision }}</p>
+      <p *ngFor="let supuesto of r.supuestos">{{ supuesto }}</p>
+      <p class="rounded-2xl border border-olive-30 bg-sand-200 px-4 py-3 text-sm font-semibold text-main">
+        <i class="fa-solid fa-triangle-exclamation text-gold" aria-hidden="true"></i>
+        {{ r.aviso }}
+      </p>
+    </div>
+
+    <div class="mt-5">
+      <ui-button size="md" variant="ghost" (pressed)="activar()">
+        <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+        Con estos números, quiero activar el modo socio
+      </ui-button>
+    </div>
+  </ng-container>
+</section>

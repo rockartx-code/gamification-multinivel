@@ -1,0 +1,1101 @@
+{
+ "persona": "Ximena Paredes, 34",
+ "rol": "cliente",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T05:07:03.043Z",
+ "tareas": [
+  {
+   "quiero": "entender qué es esto que me mandó Paulina antes de dar un peso",
+   "esperaba": null,
+   "t": 12,
+   "segundos": 31,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Paulina me mandó un link y nada más: \"échale un ojo\". Ya estuve en una red hace años y salí debiendo, o sea que voy a leer todo antes de tocar nada. Lo primero que quiero ver es si esto es una tienda o un negocio.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 12
+    },
+    {
+     "texto": "Leí la landing entera. Me dice CUATRO cosas bonitas — \"Descuentos en cada compra\", \"Bonos por compartir\", \"Red de niveles que crece contigo\", \"Pagos puntuales y transparentes\" — y CERO números. Ni un porcentaje. Eso es exactamente lo que me pasó hace años: puras promesas. Lo único concreto es \"Te registras como cliente: compras a precio de lista, sin compromiso y sin datos bancarios\", eso sí me tranquiliza. Y abajo hay un \"Ver cómo funciona\" chiquito. Ahí debe estar la letra chica.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 43
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la landing no trae ni un solo porcentaje ni cuánto cuesta ser socio",
+     "pantalla": "#/landing/PAULINA-PR",
+     "t": 43
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "encontrar la aritmética: cuánto gano por persona y qué me exigen",
+   "esperaba": null,
+   "t": 43,
+   "segundos": 98,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ah, es el Aviso de Privacidad. Tapa la pantalla completa y el único botón es \"Entendido y acepto\". No hay \"cerrar\" ni \"no acepto\". O acepto o no veo nada. Lo acepto porque quiero leer, pero anoto que me obligaron.",
+     "segundosDesdeLoAnterior": 41,
+     "t": 84
+    },
+    {
+     "texto": "Esta página sí es lo que yo pedía. Se llama \"Cómo funciona, con los números reales\" y trae tabla de descuentos, tabla de generaciones con porcentajes y requisitos, cuándo se paga y qué datos me piden. En mi red anterior esto NO existía; me lo dijeron de boca. Aquí está escrito. Eso me sube la confianza de golpe.",
+     "segundosDesdeLoAnterior": 56,
+     "t": 141
+    },
+    {
+     "texto": "Pero le veo tres cosas raras antes de creerle. Uno: dice \"Todos los números salen de la configuración vigente (plan abril-2026)\" y hoy es 2 de marzo de 2027. ¿El plan tiene casi un año sin actualizarse o es que la página está vieja? Y abajo dice \"© 2026 finding U\". Si me equivoco de plan me equivoco de cuentas.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 141
+    },
+    {
+     "texto": "Dos, y esta es la gorda: arriba dice \"necesitas 20 VP netos en ese mes (más o menos $1,000 de compra a precio de lista)\". Y tres renglones abajo, en el recuadro de Ojo, dice \"20 PC de lista con 10 % de descuento = 18 VP: no activa\". 20 PC de lista son $1,000 de lista. O sea que la misma página me dice que $1,000 activa y que $1,000 NO activa. Ese \"más o menos\" me va a costar dinero.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 141
+    },
+    {
+     "texto": "Tres: los dos ejemplos no cuadran con \"1 PC ≈ $50\". Naplus: $280 y 6 PC = $46.67 por PC. Longevit: $390 y 7 PC = $55.71 por PC. Entonces el PC NO vale lo mismo en cada producto. Por eso $1,120 de Naplus SÍ activa y $1,170 de Longevit NO activa: gasté MÁS y me contó MENOS. Esto es justo lo que me tumbó hace años y aquí está, escrito, y nadie lo dice con todas sus letras.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 141
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "dice \"plan abril-2026\" y estamos en marzo de 2027: no sé si esos números siguen vigentes",
+     "pantalla": "#/modo-socio",
+     "t": 141
+    },
+    {
+     "texto": "\"20 VP ≈ $1,000 de lista\" contra \"20 PC de lista con 10% = 18 VP: no activa\". Se contradicen en la misma pantalla",
+     "pantalla": "#/modo-socio",
+     "t": 141
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Ver cómo funciona\" y no pasó nada: hay un aviso de privacidad encima que tapa toda la página y no me di cuenta",
+     "pantalla": null,
+     "t": 84
+    },
+    {
+     "texto": "reintento: acepto el aviso de privacidad y vuelvo a picarle a \"Ver cómo funciona\"",
+     "t": 84
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "sacar mis propios números con los precios reales de la tienda",
+   "esperaba": null,
+   "t": 141,
+   "segundos": 67,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Voy a la Tienda a ver los precios y los PC de cada producto con mis ojos. Sin eso no puedo calcular cuánto tengo que comprar de verdad.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 150
+    },
+    {
+     "texto": "La tienda sí me da lo que necesitaba: cada producto trae su precio, sus PC y el \"$/PC\". Eso está muy bien pensado. Pero míralo de cerca: Naplus $46.67/PC, BHB y Glu-10 $48.46, Klinhart $48, Keto y Biotina $50, Boom $52.50, Finding Pro $53.33, Colágeno $53.85, CRT-1200 $55, Longevit $55.71, Gel Reductivo $66.67 y Creatina $72.22. El PC más caro cuesta 55% más que el más barato. O sea que \"1 PC ≈ $50\" es un promedio que no existe en ningún producto real.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 208
+    },
+    {
+     "texto": "Saco mi cuenta de servilleta. Para activar necesito 20 VP netos. VP = PC x (1 - descuento). Si compro entre $1,000 y $1,999 de lista me dan 10%, entonces necesito 22.23 PC. Con Naplus, el más barato en puntos: 22.23 PC = $1,037 de lista, pago $933. Con Creatina, el más caro: 22.23 PC = $1,605 de lista, pago $1,445. O sea que el \"más o menos $1,000\" que promete la página va de $933 a $1,605 según lo que se me antoje comprar. 72% de diferencia. Yo no le llamo a eso \"más o menos\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 208
+    },
+    {
+     "texto": "Y hay un hoyo peor. Si compro $980 de Naplus (21 PC) no me dan descuento, VP = 21 y ACTIVO, pagando $980. Si compro $1,000 de Naplus (21.43 PC) me dan 10%, VP = 19.29 y NO ACTIVO, pagando $900. Comprar más caro me deja sin comisiones. Existe una franja entre $1,000 y $1,037 de lista donde el descuento me castiga. Nadie me avisó de esa franja.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 208
+    },
+    {
+     "texto": "Lo mismo pasa en cada escalón. Con producto de ~$53/PC: $1,999 de lista con 10% son 33.9 VP; $2,000 de lista con 20% son 30.2 VP. Un peso más de compra y pierdo 3.7 VP. Para activarme no importa, pero para los rangos (piden VP 60, 90, 140, 200, 280) sí importa muchísimo: el descuento y el rango pelean entre ellos y en ningún lado dice eso.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 208
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "hay una franja de compra (arriba de $1,000 y abajo de ~$1,040 de lista) donde el descuento del 10% me tumba abajo de los 20 VP y pierdo las comisiones del mes",
+     "pantalla": "#/modo-socio",
+     "t": 208
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "averiguar cuánto cuesta el envío antes de sacar mi número mensual",
+   "esperaba": null,
+   "t": 208,
+   "segundos": 38,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Antes del carrito quiero ver la ficha de un producto completo, a ver si ahí dice el envío o algo del programa. Abro Colágeno Hidrolizado, que es lo que yo de verdad tomo.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 221
+    },
+    {
+     "texto": "O sea que no hay ficha de producto: hay un encabezado que se reemplaza. Y el encabezado del Colágeno dice nomás \"Presentación y modo de uso en la etiqueta del producto.\" Ni gramos, ni porciones, ni tipo de colágeno. El de Finding Pro sí traía todo el detalle. Compro para una empresa todo el día: una ficha vacía me hace dudar del producto, no del sitio.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 246
+    },
+    {
+     "texto": "Otra cosa: arriba, en el encabezado, dice \"$700\" y ya. Los PC solo aparecen en las tarjetas del catálogo. Si yo estoy comprando para juntar puntos, el dato de puntos debería estar donde le pico a comprar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 246
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el encabezado del producto no dice cuántos PC da; solo el precio",
+     "pantalla": "#/tienda",
+     "t": 246
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Ver producto\" del Colágeno y la dirección siguió siendo #/tienda; no me llevó a ninguna ficha, solo me cambió el encabezado allá arriba, donde yo no estaba viendo",
+     "pantalla": null,
+     "t": 246
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "armar un carrito de lo que yo sí consumiría y ver el total con envío",
+   "esperaba": null,
+   "t": 246,
+   "segundos": 48,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "El carrito me da dos datos que sí valen: \"Como socia habrias ahorrado $150 en esta compra\" (mi $1,500 x 10%, cuadra) y \"Recoger en sucursal - Disponible en: Ciudad de Mexico, Guadalajara\". Yo soy de Guadalajara, o sea que puedo ahorrarme el envio. Bien.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 283
+    },
+    {
+     "texto": "Pero aqui esta el hoyo mas grande del dia y me tarde en verlo. Mi carrito trae Colageno (13 PC) y Finding Pro (15 PC) = 28 PC. EL CARRITO NO ME DICE ESO. En los renglones de mi compra solo dice \"$700 / Sin descuento\" y \"$800 / Sin descuento\". Los PC solo aparecen en los productos SUGERIDOS, los que NO compre. Yo necesito saber cuantos VP voy a juntar ANTES de pagar, porque de eso depende si cobro comisiones ese mes. Tuve que sacarlo con lapiz de la pagina anterior.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 283
+    },
+    {
+     "texto": "Tambien dice \"Nivel de descuento: Inactivo\". ¿Inactivo yo, o inactivo el descuento porque no llego al tramo? Con $1,500 de lista yo deberia estar en el tramo del 10%, pero me dice \"Sin descuento\" y \"-$0\". Supongo que es porque soy invitada y no socia. Lo supongo; nadie me lo dice con esas palabras.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 283
+    },
+    {
+     "texto": "Y arriba dice \"Corte en 26d 18h\". ¿Corte de que? ¿Es el cierre del mes de comisiones? Hoy es 2 de marzo; 26 dias y 18 horas caen el 29 de marzo al mediodia, que no es fin de mes. No entiendo ese reloj y me esta contando algo importante.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 283
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el carrito no muestra los PC de lo que llevo ni los VP que voy a acumular; solo muestra PC de los productos sugeridos que no compre",
+     "pantalla": "#/carrito",
+     "t": 283
+    },
+    {
+     "texto": "\"Nivel de descuento: Inactivo\" y \"Descuento -$0\" con $1,500 en el carrito: no se si es porque no tengo cuenta o porque no soy socia",
+     "pantalla": "#/carrito",
+     "t": 283
+    },
+    {
+     "texto": "\"Corte en 26d 18h\" no dice corte de que, y la cuenta no cae a fin de mes",
+     "pantalla": "#/carrito",
+     "t": 283
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "saber cuanto me cuesta el envio real a Guadalajara antes de decidir",
+   "esperaba": null,
+   "t": 294,
+   "segundos": 26,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Dice \"Envio desde $129 - se calcula con tu CP\". Voy a poner mi CP de Guadalajara, 44100, a ver que numero sale de verdad.",
+     "segundosDesdeLoAnterior": 11,
+     "t": 294
+    },
+    {
+     "texto": "Entonces no se cuanto voy a pagar. \"Desde $129\" puede ser $129 o $400. Para decidir si me conviene el negocio necesito el costo real, porque el envio se come la comision de una directa entera: si gano $135 por una amiga y pago $129 de envio, gane $6.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 320
+    },
+    {
+     "texto": "Lo bueno: al llenar la direccion, \"Recoger en sucursal\" cambio a \"Sin costo de envio\". Yo vivo en Guadalajara y hay sucursal aqui. Ese si es mi camino: recoger y no pagar envio.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 320
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el envio nunca se calcula aunque llene CP, ciudad y estado; se queda en \"Desde $129\"",
+     "pantalla": "#/carrito",
+     "t": 320
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "escribi mi CP 44100 y la ciudad y el renglon de Envio sigue diciendo \"Desde $129 - se calcula con tu CP\". Nunca me dio el numero. El Total sigue en $1,500, sin envio sumado.",
+     "pantalla": null,
+     "t": 320
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "probar si el codigo de Paulina, PAULINA-PR, sirve como codigo de descuento en el carrito",
+   "esperaba": null,
+   "t": 320,
+   "segundos": 23,
+   "logrado": false,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 9,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Paulina me mando un link con su codigo. Aqui hay una caja que dice \"Codigo de descuento\". Lo logico para mi es meter el codigo de Paulina ahi. A ver.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 320
+    },
+    {
+     "texto": "Me dijo \"Cupon no encontrado\". Ni modo. Pero ojo: Paulina me mando \"su codigo\" y el carrito me pide un \"codigo de descuento\". Son dos cosas distintas que se llaman igual en el habla de la gente. Yo perdi dos minutos y me senti tonta. Que digan \"codigo de invitacion\" y \"cupon de promocion\" y no me pasa.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 343
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": null,
+   "comentario": "el codigo de Paulina no es un cupon; el carrito solo acepta cupones y no lo explica"
+  },
+  {
+   "quiero": "crear mi cuenta con el link de Paulina para ver los numeros por dentro",
+   "esperaba": null,
+   "t": 343,
+   "segundos": 185,
+   "logrado": true,
+   "clicsBase": 9,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Ya lei todo lo que se ve por fuera. Para saber si esto me sirve necesito ver mi tablero: si me dice cuantos VP llevo, cuanto me falta para activar y cuanto he ganado. Registrarme es gratis, no piden datos bancarios y dice \"sin compromiso\". Ese riesgo si lo tomo. Vuelvo al link de Paulina para que quede su codigo pegado a mi cuenta y no me registre suelta.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 343
+    },
+    {
+     "texto": "Me dice \"Solo falta un paso, confirma tu cuenta desde tu correo electronico\". Voy a mi correo.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 368
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "en la pantalla de entrar le piqué a lo que decía \"Entrar\" y me mandó a \"Entrar con un enlace por correo\". El botón de siempre se llama \"Ingresar al panel\", que no es como le dice la gente a entrar.",
+     "pantalla": null,
+     "t": 438
+    },
+    {
+     "texto": "reintento: regreso al login y le pico al botón que dice \"Ingresar al panel\"",
+     "t": 438
+    },
+    {
+     "texto": "reintento: vuelvo a escribir mi correo y mi contraseña y le pico a \"Ingresar al panel\"",
+     "t": 487
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "me registre con el link de Paulina, me llego el correo de activacion, lo abri y entre. Lo unico que me costo fue que el boton de entrar se llama \"Ingresar al panel\" y le pique al de enlace por correo."
+  },
+  {
+   "quiero": "ver si el panel me dice cuantos VP llevo y cuanto me falta",
+   "esperaba": null,
+   "t": 528,
+   "segundos": 44,
+   "logrado": true,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "El panel si me habla con numeros y esto es lo mejor que he visto hoy: \"Activacion: 20 VP netos - llevas 0 - este pedido suma 28 - Los VP se acumulan aunque estes en modo cliente\". Y la tabla de descuentos me marca \"estarias aqui\" y \"con esta compra\". Esto es lo que yo queria desde la primera pantalla y esta escondido detras de registrarme.",
+     "segundosDesdeLoAnterior": 161,
+     "t": 528
+    },
+    {
+     "texto": "Pero cuidado con ese 28. Dice \"este pedido suma 28\" y abajo, en el mismo recuadro, dice \"Tus VP se cuentan sobre el precio ya con descuento: 20 PC con 10% = 18 VP\". Mi carrito son 28 PC. Como cliente pago lista, entonces 28 VP. Pero si activo el modo socio me dan 10% y los mismos productos me valen 25.2 VP. O sea: ACTIVAR EL MODO SOCIO ME BAJA LOS PUNTOS. Es la misma canasta y el mismo mes, y el numero cambia segun mi modo. En ningun lado dice eso.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 528
+    },
+    {
+     "texto": "Y otra: aqui arriba dice \"Corte de mes 21d 18h 44m\". Hace un rato, en el carrito, decia \"Corte en 26d 18h\". Cinco dias de diferencia entre dos pantallas del mismo sitio en el mismo rato. Voy a comprobarlo antes de decir nada.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 528
+    },
+    {
+     "texto": "Comprobado: ahorita el carrito y el panel dicen los dos \"21d 18h 43m\". Hace un rato, cuando yo todavia no tenia cuenta, el mismo carrito decia \"Corte en 26d 18h\". Cinco dias de diferencia por estar o no estar dentro. A una persona que esta decidiendo si le da tiempo de juntar sus puntos, cinco dias le cambian la decision.",
+     "segundosDesdeLoAnterior": 43,
+     "t": 572
+    },
+    {
+     "texto": "Y me corrijo en algo: ya con sesion, el carrito SI me muestra \"Puntos de este pedido (VP) 28 VP\" y la tabla de tramos con \"estarias aqui / con esta compra\". Eso no aparecia cuando yo era visitante. O sea que la informacion existe, pero se la esconden justo a la persona que todavia esta decidiendo si entra o no. A mi, hace media hora.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 572
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el panel dice \"este pedido suma 28 VP\" pero como socia serian 25.2 por el descuento; el mismo carrito vale distinto segun mi modo y nadie lo advierte",
+     "pantalla": "#/dashboard",
+     "t": 528
+    },
+    {
+     "texto": "el reloj de \"Corte\" marcaba 26d 18h sin cuenta y 21d 18h con cuenta, el mismo dia y el mismo carrito",
+     "pantalla": "#/carrito",
+     "t": 572
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: abro el carrito otra vez para comparar el reloj de \"Corte\" con el del panel en el mismo minuto",
+     "t": 539
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "el panel si me da VP, meta y tramo; me costo llegar porque hay que registrarse primero"
+  },
+  {
+   "quiero": "ver las metas secundarias y lo que falta de mi cuenta",
+   "esperaba": null,
+   "t": 572,
+   "segundos": 36,
+   "logrado": false,
+   "clicsBase": 14,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 2,
+   "pensamientos": [],
+   "dudas": [
+    {
+     "texto": "junto a mi nombre hay un \"0%\" solo, sin decir 0% de que",
+     "pantalla": "#/dashboard",
+     "t": 607
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le pique a \"Mostrar metas secundarias\", el boton cambio a \"Ocultar metas secundarias\" y no aparecio ninguna meta secundaria. Nada mas cambio el letrero.",
+     "pantalla": null,
+     "t": 607
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "las metas secundarias no existen o no se ven; solo cambia el texto del boton"
+  },
+  {
+   "quiero": "decidir si activo el modo socio y comprobar que el descuento si se aplica",
+   "esperaba": null,
+   "t": 608,
+   "segundos": 105,
+   "logrado": true,
+   "clicsBase": 15,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 7,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Antes de activar hago mi cuenta final, en limpio, con lo que ya se. Si activo: pago $1,350 en vez de $1,500 por lo mismo que ya consumo, recojo en sucursal de Guadalajara y no pago envio, y junto 25.2 VP, arriba de los 20 que piden. Eso solo, sin invitar a nadie, ya me conviene: son $150 al mes de ahorro por hacer nada distinto.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 608
+    },
+    {
+     "texto": "Ahora la parte del negocio, que es la que me interesaba de verdad. Para cobrar comisiones tengo que gastar mis ~$1,350 cada mes. Una directa que compre como yo me deja 10%, o sea $135 o $150 segun si el 10% es sobre lista o sobre lo pagado, y eso la pagina NUNCA lo dice. Para recuperar mis $1,350 necesito DIEZ directas comprando $1,350 cada mes, todos los meses. Con dos directas, que es lo realista, gano $270 y pongo $1,350: sigo perdiendo $1,080 al mes.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 608
+    },
+    {
+     "texto": "Y los rangos son peor. BRONCE pide VG 4500 y VP 60 y 3 lineas para dar $500 al mes. VP 60 mios son como $4,500 de lista cada mes de mi bolsa. Y VG 4500 son los VP de toda mi red: si cada persona activa junta 20 a 25 VP, necesito entre 180 y 225 personas activas para ganar $500 pesos al mes. Ese numero es el que me contesta todo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 608
+    },
+    {
+     "texto": "Quedo. Dice \"Tu cuenta ya esta en modo socio - modo guardado: socio desde el 02/03/2027 18:11\". Y no me pidio ni un dato mas, ni CLABE ni INE. Eso cumple lo que prometio. Voy a mi panel a comprobarlo con mis ojos, que es lo que yo haria en el trabajo.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 647
+    },
+    {
+     "texto": "Ahora el panel dice \"Activacion: 20 VP netos - llevas 0 - este pedido suma 25.2 - Con esta compra queda activo el mes\". Hace veinte minutos, cuando yo era cliente, el MISMO carrito decia 28. Ya quedo comprobado en pantalla: activarme como socia me baja 2.8 VP. A mi no me tumba porque traigo margen, pero a quien vaya justo en 20 si lo tumba, y nadie se lo dice.",
+     "segundosDesdeLoAnterior": 66,
+     "t": 713
+    },
+    {
+     "texto": "Tambien me gusto mucho el bloque \"Tramo actual: 0% (hasta $999). Con esta compra: 10% (llegas a $1,500). Siguiente tramo: 20%, te faltan $500.\" Eso es honesto y util. Es la mejor caja de toda la plataforma.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 713
+    },
+    {
+     "texto": "Dos cosas me hacen ruido en el panel. Una: \"Meta de red (este mes) $0 / $300 - Te faltan $300 para cumplir la meta de red\". ¿$300 de que y para que? No hay ningun $300 en la pagina de como funciona. Dos: en Cuadro de Honor aparece \"Ernesto V. 10 VG\". Es una persona con nombre y apellido a medias, publicado. Yo no autorice aparecer en ninguna lista publica y el aviso de privacidad no dice nada de eso.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 713
+    },
+    {
+     "texto": "Y una contradiccion chiquita: la pagina de modo socio promete \"la CLABE se pide solo cuando ya tengas una comision que cobrar\", y en mi panel ya hay una caja de \"CLABE interbancaria\" con su boton Guardar desde el minuto uno. No me obliga, pero no es lo que me dijeron.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 713
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Meta de red $0 / $300\": no se de que es ese $300 ni que pasa si la cumplo",
+     "pantalla": "#/dashboard",
+     "t": 713
+    },
+    {
+     "texto": "el Cuadro de Honor publica nombres de otros socios; no me preguntaron si quiero aparecer ahi",
+     "pantalla": "#/dashboard",
+     "t": 713
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "en mi panel le pique al boton \"Activar modo socio\" y no activo nada: me regreso a la pagina de explicacion, donde hay OTRO boton que se llama igual. Dos botones con el mismo nombre y solo uno activa.",
+     "pantalla": null,
+     "t": 624
+    },
+    {
+     "texto": "reintento: le pico al \"Activar modo socio\" de abajo de la pagina de explicacion",
+     "t": 624
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "active el modo socio, no me pidio ningun dato extra y quedo guardado con fecha y hora; lo comprobe recargando"
+  },
+  {
+   "quiero": "comprar mi pedido con descuento de socia y recoger en Guadalajara para no pagar envio",
+   "esperaba": null,
+   "t": 713,
+   "segundos": 125,
+   "logrado": true,
+   "clicsBase": 18,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 8,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "El descuento si se aplico: Colageno $700 -> $630, Finding Pro $800 -> $720, Total $1,350 y \"Puntos de este pedido (VP) 25.2 VP\". Cuadra con mi cuenta al centavo. Ahora escojo recoger en sucursal para no pagar el envio que nunca me quisieron cotizar.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 729
+    },
+    {
+     "texto": "Ya dice \"Envio Gratis (recoger en sucursal)\". Pero fijate en el letrero: \"Escribe tu ciudad y estado en la direccion para ver solo las sucursales de tu zona\" y al escoger recoger DESAPARECIO el formulario de direccion. Me piden llenar algo que ya no esta. Igual me lista las tres sucursales, escojo la de Guadalajara, que ademas dice \"Tiene todo tu pedido\". Eso ultimo si me gusto: saber que hay existencia antes de pagar.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 747
+    },
+    {
+     "texto": "Se creo la orden ORD-7C55FDBD por $1,350 con \"Descuento -$150 - 10%\". Pero leo el detalle completo y NO dice en ninguna parte que la voy a recoger, ni en que sucursal. El PROGRESO dice \"Envio - Ruta de entrega\". Yo escogi recoger en Av. Chapultepec 480 y el papel de mi pedido no lo menciona. Si mañana me preguntan a donde voy, no tengo donde comprobarlo.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 783
+    },
+    {
+     "texto": "Ya dice \"Pago registrado\". Y me gusto la nota: \"Si cancelas un pedido ya pagado, administracion te reembolsa $1,350 y te avisa por correo\". Eso es claro. Voy a comprobar en mi panel que los 25.2 VP si se me abonaron, porque de eso depende que yo cobre comisiones este mes. En mi red anterior esto era justo lo que nunca cuadraba.",
+     "segundosDesdeLoAnterior": 55,
+     "t": 838
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "escogi la Sucursal Guadalajara y \"Pagar en linea\" y la pantalla no me muestra en ningun lado cual quedo seleccionada; me la juego",
+     "pantalla": "#/carrito",
+     "t": 763
+    },
+    {
+     "texto": "la orden no dice que es \"recoger en sucursal\" ni cual sucursal; el progreso habla de \"Envio - Ruta de entrega\"",
+     "pantalla": "#/orden/ORD-7C55FDBD",
+     "t": 783
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "justo despues de picarle a \"Pagar $1,350.00\" la pantalla del pedido se quedo completamente en blanco unos segundos, sin ni un letrero de \"procesando\". Con mi dinero adentro, esos segundos se sienten larguisimos.",
+     "pantalla": null,
+     "t": 838
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "compre $1,500 de lista, pague $1,350 con 10% de socia, sin envio por recoger en sucursal. Lo unico feo: la pantalla en blanco al pagar y que la orden no dice que la voy a recoger ni donde."
+  },
+  {
+   "quiero": "comprobar que mis VP y mi activacion quedaron registrados de verdad",
+   "esperaba": null,
+   "t": 838,
+   "segundos": 33,
+   "logrado": true,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 10,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Comprobado con mis ojos y despues de recargar: \"VP (Volumen Personal) 25.2\", \"Activacion: 20 VP netos - llevas 25.2 - Este mes ya esta activo\", \"Tramo actual: 10%\" y la orden ORD-7C55FDBD en $1,350 \"Pagada\". Todo cuadra con mi cuenta de papel. Eso es lo mejor que puedo decir de esta plataforma: los numeros que enseña son los numeros que cobra.",
+     "segundosDesdeLoAnterior": 33,
+     "t": 871
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "recargue el panel y ahi estan mis 25.2 VP y mi mes activo; no tuve que pedirle nada a nadie"
+  },
+  {
+   "quiero": "averiguar si el 10 % de comision se calcula sobre el precio de lista o sobre lo que la persona realmente paga",
+   "esperaba": null,
+   "t": 871,
+   "segundos": 218,
+   "logrado": false,
+   "clicsBase": 23,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 12,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "La felicitacion esta bien, pero no me estaba felicitando: me estaba tapando. Y me la echaron encima justo cuando yo queria leer como se calculan las comisiones. Prefiero un avisito de lado que una ventana que me secuestra la pantalla.",
+     "segundosDesdeLoAnterior": 63,
+     "t": 934
+    },
+    {
+     "texto": "Y esta segunda me paro el corazon. Dice, con letras: \"Recordatorio importante. YA TIENES COMISIONES A TU FAVOR. Para depositartelas el dia de pago necesitamos tu CLABE interbancaria: capturala en Comisiones, toma un minuto.\"",
+     "segundosDesdeLoAnterior": 65,
+     "t": 999
+    },
+    {
+     "texto": "Yo me registre hace veinte minutos. Mi red dice \"Aun no tienes miembros en tu red\", \"Nivel 1: 0\", \"Nivel 2: 0\", \"Activos: 0\". Y mi propio panel de Comisiones dice \"Total del mes $0, Confirmadas $0, Por confirmar $0, Bloqueadas $0\". NO TENGO NI UN PESO DE COMISION. Y el sitio me esta diciendo que si, para que le de mi cuenta bancaria.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 999
+    },
+    {
+     "texto": "Esto es exactamente lo que me paso hace años. No es un error de diseño, es la frase que hace que una le crea al negocio antes de que el negocio le haya dado nada. Yo compro para una empresa: si un proveedor me manda una factura de algo que no me entrego, se acabo la relacion. Aqui es igual.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 999
+    },
+    {
+     "texto": "Comprobado y recargado: \"Total del mes $0. Confirmadas $0. Por confirmar $0. Bloqueadas $0. CLABE registrada: No registrada.\" Y en Red: \"Nivel 1: 0, Nivel 2: 0, Activos: 0\". La ventana que me dijo \"Ya tienes comisiones a tu favor\" me mintio. Con eso yo ya no le doy mi CLABE a nadie hoy.",
+     "segundosDesdeLoAnterior": 90,
+     "t": 1089
+    },
+    {
+     "texto": "Me falta una sola respuesta y llevo tres pantallas buscandola: cuando dicen \"Si compra $1,000, ganas $100\", ¿ese $1,000 es el precio de lista o lo que la persona pago con su descuento? Lo busque en la pagina de modo socio, en el bloque de Comisiones del panel y en el enlace \"Como se calculan: porcentajes por nivel y requisitos\", que lleva a la MISMA pagina de modo socio que ya lei dos veces. En ningun lado lo dicen. Con una directa comprando lo que yo compre, la diferencia es entre ganar $150 y ganar $135 al mes: 10% de mi comision.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1089
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la ventana dice \"Ya tienes comisiones a tu favor\" y mi panel dice $0 en las cuatro casillas de comisiones, con cero personas en mi red",
+     "pantalla": "#/dashboard",
+     "t": 999
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "me salio una ventana encima de todo el panel, \"Metas cumplidas del mes - ¡Buen trabajo!\", con \"Alcanzar VP minimo (usuario activo)\" y \"Alcanzar nivel 1 de descuento (10%)\". No la pedi, tapa la pantalla completa y mientras esta abierta no puedo picarle a nada de atras. Yo andaba buscando otra cosa y me la topé de frente.",
+     "pantalla": null,
+     "t": 934
+    },
+    {
+     "texto": "reintento: cierro la ventana de felicitacion y vuelvo a buscar \"Como se calculan\"",
+     "t": 934
+    },
+    {
+     "texto": "cerre la ventana de felicitacion y atras habia OTRA ventana encima: \"Aviso del portal - Registra tu CLABE para cobrar tus comisiones\". Dos ventanas modales encimadas, una tapando a la otra.",
+     "pantalla": null,
+     "t": 999
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "nadie dice si la comision del 10% se calcula sobre el precio de lista o sobre lo que la persona realmente paga; el enlace \"Como se calculan\" me regresa a la misma pagina que ya lei"
+  },
+  {
+   "quiero": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto",
+   "esperaba": null,
+   "t": 1089,
+   "segundos": 29,
+   "logrado": false,
+   "clicsBase": 25,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 13,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Y ojo con la pagina de \"Como se calculan\": es un enlace que promete detalle y me deja en la misma pagina general. Tres viajes para nada.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1089
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "soporte",
+     "texto": "Buenas tardes. Me acabo de registrar y me salio una ventana que dice \"Ya tienes comisiones a tu favor\" para pedirme mi CLABE, pero mi panel dice $0 en todo y no tengo a nadie en mi red. ¿Por que me dice eso? No pienso dar mi cuenta bancaria hasta que me lo expliquen.",
+     "t": 1089,
+     "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+    },
+    {
+     "aQuien": "soporte",
+     "texto": "Otras tres dudas concretas: 1) El 10% de comision de generacion 1, ¿se calcula sobre el precio de lista o sobre lo que mi referida realmente paga con su descuento? 2) ¿Cuanto cuesta exactamente el envio a Guadalajara, CP 44100? Puse mi CP y el carrito siguio diciendo \"desde $129\" y nunca me dio el numero. 3) ¿Me retienen impuestos de las comisiones y hay monto minimo para que me depositen?",
+     "t": 1089,
+     "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+    },
+    {
+     "aQuien": "patrocinadora",
+     "texto": "Hola Pau. Ya me registre con tu link, active el modo socio y compre colageno y proteina: $1,350 con el 10%. Te pregunto derecho porque ya me quemé una vez: ¿tu cuanto llevas ganado de comisiones al mes y con cuantas personas? Saque mis cuentas y para recuperar los ~$1,350 que tengo que gastar cada mes necesito diez personas comprando lo mismo que yo, todos los meses. ¿Asi es o me falta algo?",
+     "t": 1089,
+     "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "cerrar el dia con mi decision tomada",
+   "esperaba": null,
+   "t": 1118,
+   "segundos": 10,
+   "logrado": true,
+   "clicsBase": 25,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 13,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Mi decision, en limpio. SI compro: los productos son los que ya consumo, el 10% me ahorra $150 al mes, recojo en Guadalajara y no pago envio, y la plataforma me enseña los puntos antes y despues de pagar, cosa que mi red anterior nunca hizo. NO voy a reclutar a nadie: para recuperar mis $1,350 mensuales necesito diez personas comprando igual que yo todos los meses, y el rango BRONCE, que paga $500, pide VG 4500, que son como 180 personas activas. Ese numero contesta solo.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 1118
+    },
+    {
+     "texto": "Y no doy mi CLABE. No por el negocio, por la ventana que me dijo que ya tenia comisiones que no tengo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1118
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "cerre el dia con decision: compro para mi consumo con el descuento de socia, no recluto y no doy mi CLABE hasta que me expliquen lo de \"ya tienes comisiones a tu favor\""
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "cuatro beneficios sin un solo número; ya vi esta película",
+   "t": 43,
+   "tarea": "entender qué es esto que me mandó Paulina antes de dar un peso"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "por fin una página con porcentajes, tablas y requisitos escritos, no puras promesas",
+   "t": 141,
+   "tarea": "encontrar la aritmética: cuánto gano por persona y qué me exigen"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "el número que más me importa — cuánto tengo que comprar para cobrar — está mal en la misma página que dice traer los números reales",
+   "t": 141,
+   "tarea": "encontrar la aritmética: cuánto gano por persona y qué me exigen"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 3,
+   "porque": "la mecánica premia y castiga con la misma palanca y la página lo presenta como si solo fuera premio",
+   "t": 208,
+   "tarea": "sacar mis propios números con los precios reales de la tienda"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "la unica pantalla donde el numero de puntos decide mi dinero es la unica donde no aparece",
+   "t": 283,
+   "tarea": "armar un carrito de lo que yo sí consumiría y ver el total con envío"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "puse mi codigo postal y el sitio no me da el precio del envio; me pide pagar para saber cuanto pago",
+   "t": 320,
+   "tarea": "saber cuanto me cuesta el envio real a Guadalajara antes de decidir"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "el panel me dice llevo 0, necesito 20 y este pedido suma 28: por fin un numero contra otro numero",
+   "t": 528,
+   "tarea": "ver si el panel me dice cuantos VP llevo y cuanto me falta"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "saque los numeros y el negocio no da; lo que si da es el descuento para mi propio consumo",
+   "t": 608,
+   "tarea": "decidir si activo el modo socio y comprobar que el descuento si se aplica"
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "mi cuenta de servilleta coincidio con el numero que acaba de salir en pantalla: 25.2",
+   "t": 713,
+   "tarea": "decidir si activo el modo socio y comprobar que el descuento si se aplica"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "pantalla en blanco despues de pagar $1,350, sin ningun aviso de que estaba trabajando",
+   "t": 838,
+   "tarea": "comprar mi pedido con descuento de socia y recoger en Guadalajara para no pagar envio"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "los VP se abonaron solos y el panel lo dice con todas sus letras: \"Este mes ya esta activo\"",
+   "t": 871,
+   "tarea": "comprobar que mis VP y mi activacion quedaron registrados de verdad"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "en cuanto pague, la plataforma me cambio la meta de comprar a reclutar sin preguntarme",
+   "t": 871,
+   "tarea": null
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 5,
+   "porque": "me dijeron \"ya tienes comisiones a tu favor\" con cero pesos y cero personas en mi red, para pedirme mi CLABE",
+   "t": 999,
+   "tarea": "averiguar si el 10 % de comision se calcula sobre el precio de lista o sobre lo que la persona realmente paga"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 2,
+   "porque": "me da pena preguntarle a Paulina cuanto gana, pero es la unica pregunta que importa y la pagina no me la contesta",
+   "t": 1089,
+   "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "soporte",
+   "texto": "Buenas tardes. Me acabo de registrar y me salio una ventana que dice \"Ya tienes comisiones a tu favor\" para pedirme mi CLABE, pero mi panel dice $0 en todo y no tengo a nadie en mi red. ¿Por que me dice eso? No pienso dar mi cuenta bancaria hasta que me lo expliquen.",
+   "t": 1089,
+   "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+  },
+  {
+   "aQuien": "soporte",
+   "texto": "Otras tres dudas concretas: 1) El 10% de comision de generacion 1, ¿se calcula sobre el precio de lista o sobre lo que mi referida realmente paga con su descuento? 2) ¿Cuanto cuesta exactamente el envio a Guadalajara, CP 44100? Puse mi CP y el carrito siguio diciendo \"desde $129\" y nunca me dio el numero. 3) ¿Me retienen impuestos de las comisiones y hay monto minimo para que me depositen?",
+   "t": 1089,
+   "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+  },
+  {
+   "aQuien": "patrocinadora",
+   "texto": "Hola Pau. Ya me registre con tu link, active el modo socio y compre colageno y proteina: $1,350 con el 10%. Te pregunto derecho porque ya me quemé una vez: ¿tu cuanto llevas ganado de comisiones al mes y con cuantas personas? Saque mis cuentas y para recuperar los ~$1,350 que tengo que gastar cada mes necesito diez personas comprando lo mismo que yo, todos los meses. ¿Asi es o me falta algo?",
+   "t": 1089,
+   "tarea": "preguntarle a soporte y a Paulina lo que la pantalla no me contesto"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 5,
+  "legibilidad": 8,
+  "coherencia": 4,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "clara",
+   "insistente",
+   "contradictoria"
+  ],
+  "mejorPantalla": "la caja de \"Tu descuento este mes\" del carrito: \"Tramo actual 0% - Con esta compra 10% (llegas a $1,500) - Siguiente tramo 20%, te faltan $500\" junto a \"Activacion: 20 VP netos, llevas 0, este pedido suma 25.2\"",
+  "peorPantalla": "la ventana \"Aviso del portal: Ya tienes comisiones a tu favor\" encima del panel, con $0 en las cuatro casillas de comisiones y cero personas en mi red",
+  "seParece": "a un catalogo de farmacia bien hecho al que le injertaron encima el discurso de una junta de red de ventas de las de antes",
+  "recomendarias": 5,
+  "volverias": "si, cada mes, pero solo a comprar mi colageno y mi proteina con el 10%; a invitar gente no",
+  "comentario": "Es la primera vez que una red me enseña la aritmetica antes de cobrarme: la pagina \"Como funciona, con los numeros reales\", los PC y el $/PC en cada producto, y el contador de VP en el carrito valen oro y le creo. Lo que la tumba es que la misma plataforma se contradice donde mas duele: dice que 20 VP son \"mas o menos $1,000 de lista\" y tres renglones abajo se desmiente sola; el reloj del corte marcaba 26 dias sin cuenta y 21 con cuenta; me prometio pedir la CLABE solo cuando tuviera una comision y me la pidio el mismo dia por correo y por ventana, diciendome que ya tengo comisiones a mi favor cuando tengo cero. Un numero inventado en la pantalla del dinero le tira toda la credibilidad a los numeros buenos, que son muchos."
+ },
+ "totales": {
+  "clics": 25,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 12,
+  "pantallas": 14,
+  "recargas": 0,
+  "atrases": 6
+ },
+ "pantallas": [
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788498434991,
+   "primerClicMs": 72433,
+   "clics": 9,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/landing/PAULINA-PR",
+   "desde": 1788498765577,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/verificar-email?token=email-confirm-973191d837a845d58eb040ed21f241b0",
+   "desde": 1788498797775,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788498962037,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788498965133,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788498962038,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788498965134,
+   "primerClicMs": 29672,
+   "clics": 1,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788499074559,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788499136372,
+   "primerClicMs": 15760,
+   "clics": 5,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/orden/ORD-7C55FDBD",
+   "desde": 1788499217565,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/carrito",
+   "desde": 1788499136373,
+   "primerClicMs": 15760,
+   "clics": 5,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788499261066,
+   "primerClicMs": 96489,
+   "clics": 2,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788499456285,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/dashboard",
+   "desde": 1788499261067,
+   "primerClicMs": 96489,
+   "clics": 2,
+   "comoLlego": "navegación"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Mínimo requerido",
+   "t": 322,
+   "tarea": "probar si el codigo de Paulina, PAULINA-PR, sirve como codigo de descuento en el carrito"
+  },
+  {
+   "texto": "Cupón no encontrado",
+   "t": 322,
+   "tarea": "probar si el codigo de Paulina, PAULINA-PR, sirve como codigo de descuento en el carrito"
+  }
+ ],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "Pero mira lo que paso en cuanto pague. Mi \"Objetivo principal del mes\" cambio solito de \"Alcanzar VP minimo\" a \"Agregar un nuevo miembro a la red este mes - Invita a 1 persona y activala - Te faltan 1 para lograrlo\". No lo pedi. Pague mi proteina y la pantalla ya me esta empujando a reclutar. Asi empieza exactamente lo que me paso hace años: el sistema te mueve la meta de comprar a traer gente.",
+   "segundosDesdeLoAnterior": 0,
+   "t": 871
+  },
+  {
+   "texto": "Y en el correo: me llego \"Registra tu CLABE para cobrar tus comisiones\" el mismo minuto del pago, cuando tengo $0 de comisiones. La pagina de modo socio me prometio \"la CLABE se pide solo cuando ya tengas una comision que cobrar\". No cumplieron ni un dia.",
+   "segundosDesdeLoAnterior": 0,
+   "t": 871
+  },
+  {
+   "texto": "me piden la CLABE por correo el dia uno, con $0 de comisiones, cuando la pagina prometio pedirla solo al tener una comision",
+   "pantalla": "correo",
+   "t": 871
+  },
+  {
+   "texto": "Y el correo del pago dice \"Estamos preparando tu paquete y te avisaremos cuando salga\". No va a salir a ningun lado: yo la voy a recoger en Chapultepec 480. Nadie registro eso.",
+   "segundosDesdeLoAnterior": 0,
+   "t": 871
+  }
+ ],
+ "fin": "2026-09-04T05:25:51.626Z",
+ "duracionMin": 19
+}

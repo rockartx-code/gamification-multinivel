@@ -1,0 +1,40 @@
+{
+ "persona": "rev7",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T19:11:14.065Z",
+ "tareas": [],
+ "emociones": [],
+ "preguntas": [],
+ "estetica": null,
+ "totales": {
+  "clics": 0,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 0,
+  "pantallas": 2,
+  "recargas": 0,
+  "atrases": 1
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788549074088,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/despacho",
+   "desde": 1788549089479,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T19:11:32.575Z",
+ "duracionMin": 0
+}

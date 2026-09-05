@@ -5,12 +5,15 @@ import { finalize, Subscription } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 
 import { ESTADOS_MX_CODES, ESTADOS_MX_OPTIONS } from '../../constants/states-mx';
+import { PLAZO_ENTREGA_ESTANDAR } from '../../constants/envio';
 import { CartItem } from '../../models/cart.model';
 import { DashboardGoal, DashboardProduct } from '../../models/user-dashboard.model';
 import { AdminOrderItem, CustomerShippingAddress, ShippingRate, ShippingQuoteItem, CouponValidation } from '../../models/admin.model';
+import { DatosFiscales, EnvioInfo, SucursalRecoger, SugerenciaActivacion } from '../../models/checkout.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartControlService } from '../../services/cart-control.service';
+import { CheckoutService } from '../../services/checkout.service';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { GoalControlService } from '../../services/goal-control.service';
@@ -18,15 +21,28 @@ import { UserDashboardControlService } from '../../services/user-dashboard-contr
 import { UiProductCardComponent } from '../../components/ui-product-card/ui-product-card.component';
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
+import { UiChoiceCardComponent } from '../../components/ui-choice-card/ui-choice-card.component';
+import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
+import { UiQtyStepperComponent } from '../../components/ui-qty-stepper/ui-qty-stepper.component';
+// Ola B · I2: tabla única de descuento (B) y "Como socia habrías ahorrado" (B) en el carrito.
+import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
+import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
+import { PlanSocio } from '../../models/plan-socio.model';
+import { ModoVisible, PlanSocioService } from '../../services/plan-socio.service';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent],
+  imports: [CommonModule, RouterLink, FormsModule, UiButtonComponent, UiFormFieldComponent, UiProductCardComponent, UiGoalProgressComponent, UiModalComponent, UiChoiceCardComponent, UiQtyStepperComponent, UiCheckboxComponent, UiTablaDescuentoComponent, UiAhorroSocioComponent, UiFooterComponent, UiDesgloseIvaComponent],
   templateUrl: './carrito.component.html',
   styleUrl: './carrito.component.css'
 })
 export class CarritoComponent implements OnInit, OnDestroy {
+  /** El plazo que se promete en el resumen; la orden pagada repite el mismo. */
+  readonly plazoEntrega = PLAZO_ENTREGA_ESTANDAR;
+
   readonly dashboardLink = ['/dashboard'];
   readonly stateOptions = ESTADOS_MX_OPTIONS;
   readonly countryOptions = [{ value: 'MX', label: 'Mexico' }];
@@ -38,8 +54,30 @@ export class CarritoComponent implements OnInit, OnDestroy {
     private readonly dashboardControl: UserDashboardControlService,
     private readonly api: ApiService,
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly checkout: CheckoutService,
+    private readonly planSocio: PlanSocioService
   ) {}
+
+  // ── Ola B · I2: tabla única de descuento y ahorro como socia ──
+  /** Plan publicado (tramos, activación); la tabla del carrito usa los mismos números que el panel. */
+  plan: PlanSocio | null = null;
+  private planSub?: Subscription;
+
+  // ── Paquete C · envío visible, completa tu activación, sucursales y factura ──
+  envioInfo: EnvioInfo | null = null;
+  sugerencia: SugerenciaActivacion | null = null;
+  isLoadingSugerencia = false;
+  /** Sucursales devueltas por el servidor para la ciudad/estado capturados y el carrito actual. */
+  pickupOptions: SucursalRecoger[] = [];
+  pickupAvailable = false;
+  pickupCities: string[] = [];
+  pickupLocationGiven = false;
+  invoiceRequested = false;
+  invoiceForm: DatosFiscales = { rfc: '', razonSocial: '', regimenFiscal: '', cpFiscal: '', usoCfdi: '', email: '' };
+  invoiceErrors: Partial<Record<keyof DatosFiscales, string>> = {};
+  private checkoutRefreshTimeout?: number;
+  private lastPickupQueryKey = '';
 
   isToastVisible = false;
   toastMessage = 'Actualizado.';
@@ -61,6 +99,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
   shippingQuoteError = '';
   deliveryName = '';
   deliveryPhone = '';
+  /** Correo del comprador sin cuenta: sin él, ningún invitado recibía aviso de pago, envío ni entrega. */
+  deliveryEmail = '';
   deliveryStreet = '';
   deliveryNumber = '';
   deliveryAddress = '';
@@ -82,6 +122,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
     deliveryPostalCode: false,
     deliveryState: false,
     deliveryCountry: false
+  };
+  // ── Paquete C · ronda 26 · propuesta 3 ──
+  /** Nombre, teléfono y correo son datos de contacto del pedido: se piden siempre y el error se pinta en el campo.
+   *  Antes vivían dentro del bloque de envío a domicilio: quien elegía "Recoger en sucursal" no tenía dónde
+   *  escribir su correo y el botón de pagar se lo exigía igual (dos pedidos de mostrador sin nombre ni teléfono). */
+  contactFieldErrors: Record<'deliveryName' | 'deliveryPhone' | 'deliveryEmail', string> = {
+    deliveryName: '',
+    deliveryPhone: '',
+    deliveryEmail: ''
   };
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
@@ -105,6 +154,8 @@ export class CarritoComponent implements OnInit, OnDestroy {
   private goalsSub?: Subscription;
   private dashboardSub?: Subscription;
   private shippingQuoteSub?: Subscription;
+  /** Espera antes de cotizar mientras se teclea el CP (propuesta 31). */
+  private shippingQuoteTimeout?: number;
   private addFadeTimeout?: number;
   private addFadeRestartTimeout?: number;
   private hasPrefilledDashboardAddress = false;
@@ -112,12 +163,20 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restoreDeliveryState();
+    this.planSub = this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.plan = plan;
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
     this.cartControl.load().subscribe(() => {
       this.cdr.detectChanges();
     });
     this.refreshSuggestedProducts();
     this.dataSub = this.cartControl.data$.subscribe(() => {
       this.refreshSuggestedProducts();
+      this.scheduleCheckoutRefresh();
       this.cdr.markForCheck();
     });
     this.goalControl.load().subscribe();
@@ -132,6 +191,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.updateCountdown();
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 60000);
     this.loadPickupStocks();
+    this.scheduleCheckoutRefresh();
   }
 
   private restoreDeliveryState(): void {
@@ -146,6 +206,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (saved.shippingAddressLabel) { this.shippingAddressLabel = saved.shippingAddressLabel; }
     if (saved.deliveryName) { this.deliveryName = saved.deliveryName; }
     if (saved.deliveryPhone) { this.deliveryPhone = saved.deliveryPhone; }
+    if (saved.deliveryEmail) { this.deliveryEmail = saved.deliveryEmail; }
     if (saved.deliveryStreet) { this.deliveryStreet = saved.deliveryStreet; }
     if (saved.deliveryNumber) { this.deliveryNumber = saved.deliveryNumber; }
     if (saved.deliveryCity) { this.deliveryCity = saved.deliveryCity; }
@@ -156,7 +217,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (saved.deliveryReferences) { this.deliveryReferences = saved.deliveryReferences; }
     if (saved.deliveryNotes) { this.deliveryNotes = saved.deliveryNotes; }
 
-    if (this.deliveryType === 'delivery' && this.hasValidShippingQuoteFormData()) {
+    if (this.deliveryType === 'delivery' && this.cpParaCotizar) {
       this.fetchShippingRates();
     }
   }
@@ -176,8 +237,15 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.addFadeRestartTimeout) {
       window.clearTimeout(this.addFadeRestartTimeout);
     }
+    if (this.checkoutRefreshTimeout) {
+      window.clearTimeout(this.checkoutRefreshTimeout);
+    }
+    if (this.shippingQuoteTimeout) {
+      window.clearTimeout(this.shippingQuoteTimeout);
+    }
     this.dashboardSub?.unsubscribe();
     this.shippingQuoteSub?.unsubscribe();
+    this.planSub?.unsubscribe();
     this.cartControl.saveDeliveryState({
       deliveryType: this.deliveryType,
       selectedShippingAddressId: this.selectedShippingAddressId,
@@ -186,6 +254,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       selectedShippingRateId: this.selectedShippingRate?.service ?? '',
       deliveryName: this.deliveryName,
       deliveryPhone: this.deliveryPhone,
+      deliveryEmail: this.deliveryEmail,
       deliveryStreet: this.deliveryStreet,
       deliveryNumber: this.deliveryNumber,
       deliveryCity: this.deliveryCity,
@@ -256,12 +325,75 @@ export class CarritoComponent implements OnInit, OnDestroy {
     return !this.authService.currentUser;
   }
 
+  /** Modo con el que se pinta el carrito: invitado sin sesión; cliente o socio según el panel (paquete B). */
+  get modoCuenta(): ModoVisible {
+    if (this.isGuest) {
+      return 'invitado';
+    }
+    const delPanel = this.dashboardControl.data?.mode;
+    if (delPanel === 'cliente' || delPanel === 'socio') {
+      return delPanel;
+    }
+    const delServicio = this.planSocio.modoActual;
+    return delServicio === 'cliente' ? 'cliente' : 'socio';
+  }
+
+  /** Neto acumulado del mes (MPN): en modo cliente el indicador del panel, si no el consumo propio. */
+  get monthNetSocio(): number {
+    const data = this.dashboardControl.data;
+    const indicador = data?.clientIndicators?.monthSpend;
+    if (this.modoCuenta === 'cliente' && indicador != null) {
+      return Number(indicador) || 0;
+    }
+    return Number(data?.myNetSpend ?? 0) || 0;
+  }
+
+  /** VP netos acumulados del mes según el panel (en modo cliente el panel vacía `vp`: se usa el indicador). */
+  get monthVpSocio(): number {
+    const data = this.dashboardControl.data;
+    const indicador = data?.clientIndicators?.monthVp;
+    if (this.modoCuenta === 'cliente' && indicador != null) {
+      return Number(indicador) || 0;
+    }
+    return Number(data?.vp ?? 0) || 0;
+  }
+
+  /** PC de lista del carrito (sin descuento): la tabla los convierte a VP netos con la tasa del tramo. */
+  get cartPc(): number {
+    const products = this.dashboardControl.products ?? [];
+    return this.cartItems.reduce((sum, item) => {
+      const product = products.find((p) => p.id === this.extractProductId(item.id));
+      return sum + Number(product?.vpPoints ?? 0) * item.qty;
+    }, 0);
+  }
+
+  /** La tabla única se muestra con sesión y plan cargado (socio o cliente); los invitados ven solo el ahorro. */
+  get tablaDescuentoVisible(): boolean {
+    return !this.isGuest && this.plan != null && this.cartItems.length > 0;
+  }
+
+  get modoTabla(): 'cliente' | 'socio' {
+    return this.modoCuenta === 'cliente' ? 'cliente' : 'socio';
+  }
+
+  /** "Activar modo socio" desde la tabla (solo en modo cliente): lleva a la landing del plan. */
+  goToModoSocio(): void {
+    void this.router.navigate(['/modo-socio'], { queryParams: { desde: 'carrito' } });
+  }
+
   get hasSavedShippingAddresses(): boolean {
     return this.shippingAddresses.length > 0;
   }
 
+  // ── Paquete C · ronda 26 · propuesta 31 ──
+  /** CP de cinco dígitos: es lo único que el cotizador necesita. */
+  get cpParaCotizar(): string {
+    const cp = this.deliveryPostalCode.trim();
+    return /^\d{5}$/.test(cp) ? cp : '';
+  }
+
   get isShippingQuoteReady(): boolean {
-    return this.hasValidShippingQuoteFormData();
+    return Boolean(this.cpParaCotizar);
   }
 
   get goalTitle(): string {
@@ -323,22 +455,28 @@ export class CarritoComponent implements OnInit, OnDestroy {
 
   get discountLevelLabel(): string {
     if (!this.discountActiveValue) {
-      return 'Inactivo';
+      // Ronda 7 · Valeria: «"Inactivo" suena a que algo mío está apagado y no sé
+      // cómo prenderlo». No está apagado: todavía no se alcanza el primer tramo.
+      return 'Todavía no alcanzas ningún tramo';
     }
     const pct = this.discountPercentValue;
     if (!pct) {
       return 'Sin descuento';
     }
-    if (pct >= 50) {
-      return 'Nivel 3';
-    }
+    // Los niveles van con los tramos del plan (10/20/30/40%); antes el 20% se llamaba "Nivel base".
     if (pct >= 40) {
-      return 'Nivel 2';
+      return 'Nivel 4';
     }
     if (pct >= 30) {
+      return 'Nivel 3';
+    }
+    if (pct >= 20) {
+      return 'Nivel 2';
+    }
+    if (pct >= 10) {
       return 'Nivel 1';
     }
-    return 'Nivel base';
+    return 'Sin descuento';
   }
 
   get hasDiscount(): boolean {
@@ -411,6 +549,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
         this.couponChecking = false;
         this.appliedCoupon = res;
         this.couponMessage = res.message;
+        this.scheduleCheckoutRefresh();
         this.cdr.markForCheck();
       },
       error: () => {
@@ -426,24 +565,310 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.appliedCoupon = null;
     this.couponCode = '';
     this.couponMessage = '';
+    this.scheduleCheckoutRefresh();
   }
 
   get total(): number {
     if (this.deliveryType === 'pickup') {
       return Math.max(0, this.subtotal - this.discount - this.couponDiscount);
     }
-    const shippingCost = this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping;
+    const shippingCost = this.isShippingFree ? 0 : (this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping);
     return Math.max(0, this.subtotal + shippingCost - this.discount - this.couponDiscount);
+  }
+
+  /** Regla de envío gratis por importe (misma que aplica el backend al crear el pedido). */
+  get freeShippingMin(): number {
+    if (this.envioInfo) {
+      return Number(this.envioInfo.freeShippingMin) || 0;
+    }
+    return Number(this.dashboardControl.data?.settings?.freeShippingMin ?? 0) || 0;
+  }
+
+  get isShippingFree(): boolean {
+    if (this.deliveryType === 'pickup' || !this.freeShippingMin) {
+      return false;
+    }
+    // El servidor mide la regla sobre el subtotal bruto (config shipping.freeShippingBasis);
+    // "Envío gratis" dejaba de serlo al poner el CP porque aquí se medía sobre el neto.
+    if (this.envioInfo) {
+      return this.envioInfo.freeNow;
+    }
+    return Math.max(0, this.subtotal - this.discount - this.couponDiscount) >= this.freeShippingMin;
+  }
+
+  /** Tarifa base de envío anunciada antes de cotizar. */
+  get baseShippingRate(): number {
+    return Number(this.envioInfo?.baseRateMxn ?? 0) || 0;
+  }
+
+  /** "Envío desde $129 · Gratis en compras de $1,000 o más" (números de config). */
+  get envioAnuncio(): string {
+    const partes: string[] = [];
+    if (this.baseShippingRate > 0) {
+      partes.push(`Envío desde ${this.formatMoney(this.baseShippingRate)}`);
+    }
+    if (this.freeShippingMin > 0) {
+      partes.push(`Gratis en compras de ${this.formatMoney(this.freeShippingMin)} o más`);
+    }
+    return partes.length ? partes.join(' · ') : 'Recibe en tu dirección';
+  }
+
+  /** Cuánto falta de compra (bruto) para el envío gratis; 0 si ya aplica o no hay regla. */
+  get faltanteEnvioGratis(): number {
+    if (this.deliveryType === 'pickup' || !this.envioInfo || this.envioInfo.freeNow) {
+      return 0;
+    }
+    return Math.max(0, Number(this.envioInfo.missingForFree) || 0);
   }
 
   get shippingLabel(): string {
     if (this.deliveryType === 'pickup') {
       return 'Gratis (recoger en sucursal)';
     }
+    if (this.isShippingFree) {
+      return `Gratis (compra de ${this.formatMoney(this.freeShippingMin)} o más)`;
+    }
     if (this.selectedShippingRate) {
       return this.formatMoney(this.selectedShippingRate.displayPrice);
     }
-    return this.shipping === 0 ? 'Gratis' : this.formatMoney(this.shipping);
+    if (this.isLoadingShippingRates) {
+      return 'Calculando con tu CP...';
+    }
+    // "Envío desde $129 · se calcula con tu CP" era mentira: la cotización solo salía con la
+    // dirección completa. Ahora basta el CP, y el rótulo dice exactamente qué hay que escribir.
+    if (this.baseShippingRate > 0) {
+      return `Desde ${this.formatMoney(this.baseShippingRate)} · escribe tu CP y lo calculamos`;
+    }
+    return this.shipping === 0 ? 'Escribe tu CP y lo calculamos' : this.formatMoney(this.shipping);
+  }
+
+  /** El rótulo del resumen se llama "Subtotal" mientras falte el envío, y "Total" cuando ya está todo.
+   *  Mariana leyó "$700" arriba y pagó "$829": el número no mentía, el nombre sí. */
+  get totalLabel(): string {
+    // Ronda 7 · Valeria: se llamaba «Subtotal», igual que el renglón de los
+    // productos, y así el resumen decía dos veces «Subtotal» y ninguna «Total».
+    return this.deliveryType === 'delivery' && !this.selectedShippingRate && !this.isShippingFree
+      ? 'Total sin envío'
+      : 'Total';
+  }
+
+  /** Aclaración de una línea junto al rótulo, para que el total parcial no quede sin explicación. */
+  get totalNote(): string {
+    return this.totalLabel === 'Total sin envío' ? 'Falta el envío: escribe tu CP para verlo completo.' : '';
+  }
+
+  // ── Completa tu activación ──
+  get activationSuggestionVisible(): boolean {
+    return Boolean(!this.isGuest && this.sugerencia?.applies && this.sugerencia?.suggestion);
+  }
+
+  /** "Agrega 1 Naplus ($280, +5.4 VP) y llegas a 24.3 VP". */
+  get activationSuggestionText(): string {
+    const s = this.sugerencia?.suggestion;
+    if (!s) {
+      return '';
+    }
+    const piezas = s.units === 1 ? `1 ${s.name}` : `${s.units} ${s.name}`;
+    const vp = Math.round(s.netVpPerUnit * s.units * 10) / 10;
+    return `Agrega ${piezas} (${this.formatMoney(s.cost)}, +${vp} VP) y llegas a ${s.vpAfter} VP.`;
+  }
+
+  addSuggestedActivation(): void {
+    const s = this.sugerencia?.suggestion;
+    if (!s) {
+      return;
+    }
+    const id = String(s.productId);
+    const product = (this.dashboardControl.products ?? []).find((p) => String(p.id) === id);
+    const item: CartItem = product
+      ? this.buildCartItem(product)
+      : { id, name: s.name, price: s.price, qty: 1, note: '', img: '' };
+    this.cartControl.addItem(item, s.units);
+    this.cdr.markForCheck();
+    const vp = Math.round(s.netVpPerUnit * s.units * 10) / 10;
+    this.showToast(`Agregado: ${s.units} ${s.name} (+${vp} VP). Con esto llegas a ${s.vpAfter} VP.`);
+    this.triggerAddedFade(id);
+  }
+
+  // ── Recoger en sucursal ──
+  /** La opción solo se ofrece si hay sucursal en la zona con existencia, o si aún no sabemos la zona. */
+  get pickupChoiceVisible(): boolean {
+    if (this.pickupAvailable) {
+      return true;
+    }
+    return !this.pickupLocationGiven && this.pickupOptions.length > 0;
+  }
+
+  get pickupCitiesLabel(): string {
+    return this.pickupCities.join(', ');
+  }
+
+  /** Motivo por el que no se ofrece recoger en sucursal (vacío si sí se ofrece). */
+  get pickupUnavailableNote(): string {
+    if (this.isLoadingPickupStocks || this.pickupChoiceVisible) {
+      return '';
+    }
+    if (!this.pickupOptions.length) {
+      return 'Por ahora no hay sucursales para recoger: te lo enviamos a domicilio.';
+    }
+    const enZona = this.pickupOptions.filter((s) => s.inArea);
+    if (!enZona.length) {
+      // Sin ciudad en el almacén se nombra la sucursal, no su dirección.
+      const donde = this.pickupCitiesLabel || this.pickupOptions.map((s) => s.name).filter(Boolean).join(', ');
+      return `Recoger en sucursal no está disponible en tu zona. Hay sucursal en: ${donde}. Te lo enviamos a domicilio.`;
+    }
+    const faltantes = new Set<string>();
+    enZona.forEach((s) => s.missing.forEach((m) => faltantes.add(m)));
+    return `La sucursal de tu zona no tiene ${[...faltantes].join(', ')} en existencia: te lo enviamos a domicilio.`;
+  }
+
+  pickupReason(branch: SucursalRecoger): string {
+    if (branch.canPickup) {
+      return 'Tiene todo tu pedido';
+    }
+    if (!branch.inArea) {
+      return 'Fuera de tu ciudad/estado';
+    }
+    return branch.missing.length ? `No tiene ${branch.missing.join(', ')}` : 'No disponible';
+  }
+
+  selectPickupStock(branch: SucursalRecoger): void {
+    if (!branch.canPickup) {
+      this.showToast(`${branch.name}: ${this.pickupReason(branch)}.`);
+      return;
+    }
+    this.selectedPickupStockId = branch.id;
+  }
+
+  // ── Quiero factura ──
+  get invoiceEnabled(): boolean {
+    return Boolean(this.envioInfo?.checkout?.invoiceEnabled);
+  }
+
+  get regimenOptions(): Array<{ value: string; label: string }> {
+    return (this.envioInfo?.checkout?.regimenesFiscales ?? []).map((o) => ({ value: o.key, label: o.label }));
+  }
+
+  get usoCfdiOptions(): Array<{ value: string; label: string }> {
+    return (this.envioInfo?.checkout?.usosCfdi ?? []).map((o) => ({ value: o.key, label: o.label }));
+  }
+
+  toggleInvoice(checked: boolean): void {
+    this.invoiceRequested = checked;
+    this.invoiceErrors = {};
+    if (checked) {
+      // Prellenado desde el perfil: a Rodrigo le recapturaron los datos fiscales cuatro veces.
+      const customer = this.dashboardControl.customer;
+      this.invoiceForm.razonSocial = this.invoiceForm.razonSocial || customer?.name || this.authService.currentUser?.name || '';
+      this.invoiceForm.email = this.invoiceForm.email || this.deliveryEmail.trim();
+      if (!this.invoiceForm.usoCfdi && this.usoCfdiOptions.length) {
+        const general = this.usoCfdiOptions.find((o) => o.value === 'G03');
+        this.invoiceForm.usoCfdi = (general ?? this.usoCfdiOptions[0]).value;
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onInvoiceField(field: keyof DatosFiscales, value: string): void {
+    let limpio = String(value ?? '');
+    if (field === 'rfc') {
+      limpio = limpio.toUpperCase().replace(/[^A-ZÑ&0-9]/g, '').slice(0, 13);
+    }
+    if (field === 'cpFiscal') {
+      limpio = limpio.replace(/\D/g, '').slice(0, 5);
+    }
+    this.invoiceForm = { ...this.invoiceForm, [field]: limpio };
+    if (this.invoiceErrors[field]) {
+      this.validateInvoiceForm();
+    }
+  }
+
+  validateInvoiceForm(): boolean {
+    const f = this.invoiceForm;
+    const errores: Partial<Record<keyof DatosFiscales, string>> = {};
+    if (!/^([A-ZÑ&]{3}|[A-ZÑ&]{4})\d{6}[A-Z0-9]{3}$/.test(f.rfc.trim().toUpperCase())) {
+      errores.rfc = 'Escribe el RFC como aparece en tu constancia (12 o 13 caracteres).';
+    }
+    if (!f.razonSocial.trim()) {
+      errores.razonSocial = 'Nombre o razón social tal como está en el SAT.';
+    }
+    if (!f.regimenFiscal) {
+      errores.regimenFiscal = 'Elige tu régimen fiscal.';
+    }
+    if (!/^\d{5}$/.test(f.cpFiscal.trim())) {
+      errores.cpFiscal = 'Cinco dígitos.';
+    }
+    if (!f.usoCfdi) {
+      errores.usoCfdi = 'Elige el uso del CFDI.';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) {
+      errores.email = 'Correo al que te mandaremos la factura.';
+    }
+    this.invoiceErrors = errores;
+    return Object.keys(errores).length === 0;
+  }
+
+  private invoicePayload(): DatosFiscales {
+    const f = this.invoiceForm;
+    return {
+      rfc: f.rfc.trim().toUpperCase(),
+      razonSocial: f.razonSocial.trim(),
+      regimenFiscal: f.regimenFiscal,
+      cpFiscal: f.cpFiscal.trim(),
+      usoCfdi: f.usoCfdi,
+      email: f.email.trim().toLowerCase()
+    };
+  }
+
+  // ── Consultas al servidor (con pequeña espera para no disparar una por tecla) ──
+  private scheduleCheckoutRefresh(): void {
+    if (this.checkoutRefreshTimeout) {
+      window.clearTimeout(this.checkoutRefreshTimeout);
+    }
+    this.checkoutRefreshTimeout = window.setTimeout(() => this.refreshCheckoutInfo(), 250);
+  }
+
+  private refreshCheckoutInfo(): void {
+    this.checkout.envioInfo(this.subtotal).subscribe({
+      next: (info) => {
+        this.envioInfo = info;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cdr.markForCheck();
+      }
+    });
+    this.refreshActivationSuggestion();
+    this.loadPickupStocks();
+  }
+
+  private refreshActivationSuggestion(): void {
+    const user = this.authService.currentUser;
+    if (!user?.userId || user.role !== 'cliente' || !this.cartItems.length && !this.activeGoal) {
+      this.sugerencia = null;
+      return;
+    }
+    this.isLoadingSugerencia = true;
+    this.checkout
+      .sugerenciaActivacion({
+        customerId: this.resolveOrderCustomerId(),
+        items: this.cartItems.map((item) => ({ productId: this.extractProductId(item.id), quantity: item.qty, price: item.price })),
+        couponCode: this.appliedCoupon?.valid ? this.couponCode.trim().toUpperCase() : undefined
+      })
+      .pipe(finalize(() => {
+        this.isLoadingSugerencia = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (respuesta) => {
+          this.sugerencia = respuesta;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.sugerencia = null;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   get itemsCount(): number {
@@ -462,7 +887,40 @@ export class CarritoComponent implements OnInit, OnDestroy {
     const target = Number(goal.target ?? 0);
     const base = Number(goal.base ?? 0);
     const remaining = Math.max(0, target - base);
-    return Math.max(0, remaining - this.subtotal);
+    // Una meta en VP se descuenta con los puntos del carrito, no con los pesos:
+    // antes "Te faltan $0" con $280 en el carrito y 20 VP de meta.
+    const progress = goal.unit === 'vp' ? this.cartVp : this.subtotal;
+    return Math.max(0, remaining - progress);
+  }
+
+  /** Puntos (PC) que suma el carrito según el catálogo. */
+  get cartVp(): number {
+    const products = this.dashboardControl.products ?? [];
+    const bruto = this.cartItems.reduce((sum, item) => {
+      const product = products.find((p) => p.id === this.extractProductId(item.id));
+      return sum + (Number(product?.vpPoints ?? 0) * item.qty);
+    }, 0);
+    // El motor acredita VP netos: PC × (neto ÷ bruto), y "neto" incluye el
+    // cupón. El carrito decía "Te faltan 0 VP" con 21 PC y el tablero "18.9 de
+    // 20" tras pagar; con cupón la diferencia es mayor y nadie la veía.
+    const bruto$ = this.subtotal || 0;
+    const neto$ = Math.max(0, bruto$ - (this.discount || 0) - (this.couponDiscount || 0));
+    const factor = bruto$ > 0 ? neto$ / bruto$ : 1 - (this.discountPercent || 0) / 100;
+    return Math.round(bruto * factor * 10) / 10;
+  }
+
+  /** Solo hay algo que decir cuando existe una meta y todavía falta algo ("Te faltan $0" contradecía "Inactivo"). */
+  get hasGoalGap(): boolean {
+    return !!this.activeGoal && this.gapToGoal > 0;
+  }
+
+  /** "Te faltan …" con la unidad de la meta activa. */
+  get gapToGoalLabel(): string {
+    if (this.activeGoal?.unit === 'vp') {
+      const gap = this.gapToGoal;
+      return `${Number.isInteger(gap) ? gap : gap.toFixed(1)} VP`;
+    }
+    return this.formatMoney(this.gapToGoal);
   }
 
   get benefitPercent(): number {
@@ -476,7 +934,52 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (remaining === 0) {
       return 100;
     }
-    return Math.min(100, (this.subtotal / remaining) * 100);
+    const progress = goal.unit === 'vp' ? this.cartVp : this.subtotal;
+    return Math.min(100, (progress / remaining) * 100);
+  }
+
+  /** Meta de activación en VP (si la hay): objetivo y hueco con el carrito actual. */
+  get vpGoalTarget(): number {
+    const goal = this.activeGoal;
+    return goal && goal.unit === 'vp' ? Number(goal.target || 0) : 0;
+  }
+
+  get vpGoalGap(): number {
+    const goal = this.activeGoal;
+    if (!goal || goal.unit !== 'vp') {
+      return 0;
+    }
+    return Math.max(0, Math.round((Number(goal.target || 0) - Number(goal.base || 0) - this.cartVp) * 10) / 10);
+  }
+
+  /** El cupón recorta VP: avisa cuando con cupón no se llega a la meta y sin cupón sí. */
+  /** Sin cupón también: Bety compró "20 PC" y quedó en 18 VP netos por el descuento, dos abajo de la activación. */
+  get orderLeavesBelowVpGoal(): boolean {
+    const goal = this.activeGoal;
+    if (this.isGuest || !goal || goal.unit !== 'vp' || this.cartVp <= 0) {
+      return false;
+    }
+    const base = Number(goal.base || 0);
+    return base + this.cartVp < Number(goal.target || 0) && !this.couponLeavesBelowVpGoal;
+  }
+
+  get vpAfterOrder(): number {
+    const goal = this.activeGoal;
+    return Math.round((Number(goal?.base || 0) + this.cartVp) * 10) / 10;
+  }
+
+  get couponLeavesBelowVpGoal(): boolean {
+    if (!(this.couponDiscount > 0) || !this.vpGoalTarget) {
+      return false;
+    }
+    const goal = this.activeGoal;
+    const base = Number(goal?.base || 0);
+    const bruto$ = this.subtotal || 0;
+    const sinCupon = bruto$ > 0 ? (bruto$ - (this.discount || 0)) / bruto$ : 1;
+    const products = this.dashboardControl.products ?? [];
+    const pcBrutos = this.cartItems.reduce((sum, item) => sum + Number(products.find((p) => p.id === this.extractProductId(item.id))?.vpPoints ?? 0) * item.qty, 0);
+    const vpSinCupon = Math.round(pcBrutos * sinCupon * 10) / 10;
+    return base + this.cartVp < this.vpGoalTarget && base + vpSinCupon >= this.vpGoalTarget;
   }
 
   private get activeGoal(): DashboardGoal | null {
@@ -558,16 +1061,33 @@ export class CarritoComponent implements OnInit, OnDestroy {
       return;
     }
     const pickupStockId = this.resolveSelectedPickupStockId(this.pickupStocks, this.selectedPickupStockId);
+    // El contacto del pedido se pide siempre, y lo que falte se marca en su propio campo.
+    if (!this.validarContacto()) {
+      this.scrollToSection('contacto-pedido');
+      this.focusFirstMissingContactField();
+      this.showToast('Revisa tus datos de contacto: hay un campo marcado en rojo.');
+      return;
+    }
     if (this.deliveryType === 'pickup') {
       if (!pickupStockId) {
         this.selectedPickupStockId = '';
         this.showToast('Selecciona una sucursal para recoger tu pedido.');
         return;
       }
+      const sucursal = this.pickupOptions.find((branch) => branch.id === pickupStockId);
+      if (sucursal && !sucursal.canPickup) {
+        this.showToast(`${sucursal.name}: ${this.pickupReason(sucursal)}. Elige otra sucursal o envío a domicilio.`);
+        return;
+      }
       if (!this.pickupPaymentMethod) {
         this.showToast('Selecciona un método de pago para continuar.');
         return;
       }
+    }
+    if (this.invoiceRequested && !this.validateInvoiceForm()) {
+      this.showToast('Revisa los datos de tu factura: hay un campo marcado en rojo.');
+      this.scrollToSection('factura-checkout');
+      return;
     }
     const user = this.authService.currentUser;
     const items: AdminOrderItem[] = this.cartItems.map((item) => ({
@@ -578,11 +1098,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
     }));
     let payload: Record<string, unknown>;
     if (this.deliveryType === 'pickup') {
+      // El backend acepta recipientName y phone en cualquier modo de entrega; el carrito no se los
+      // mandaba y los pedidos de mostrador quedaban sin nombre ni teléfono de quien los va a recoger.
       payload = {
         customerId: this.resolveOrderCustomerId(),
-        customerName: user?.name || this.deliveryName.trim() || 'Cliente',
+        customerName: user?.name || this.resolveDeliveryName() || 'Cliente',
+        email: this.isGuest ? this.deliveryEmail.trim() || undefined : undefined,
         status: 'pending' as const,
         items,
+        recipientName: this.resolveDeliveryName() || user?.name,
+        phone: this.resolveDeliveryPhone() || undefined,
         deliveryType: 'pickup',
         pickupStockId,
         pickupPaymentMethod: this.pickupPaymentMethod
@@ -631,6 +1156,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       payload = {
         customerId: this.resolveOrderCustomerId(),
         customerName: user?.name || recipientName || 'Cliente',
+        email: this.isGuest ? this.deliveryEmail.trim() || undefined : undefined,
         status: 'pending' as const,
         items,
         shippingAddress,
@@ -651,12 +1177,16 @@ export class CarritoComponent implements OnInit, OnDestroy {
         saveShippingAddress: Boolean(user?.userId && this.saveShippingAddress),
         shippingCarrier: this.selectedShippingRate?.carrier || undefined,
         shippingService: this.selectedShippingRate?.service || undefined,
-        shippingCost: this.selectedShippingRate?.displayPrice ?? undefined,
+        shippingCost: this.isShippingFree ? 0 : (this.selectedShippingRate?.displayPrice ?? undefined),
         deliveryType: 'delivery'
       };
     }
     if (this.appliedCoupon?.valid) {
       payload['couponCode'] = this.couponCode.trim().toUpperCase();
+    }
+    if (this.invoiceRequested) {
+      payload['invoiceRequested'] = true;
+      payload['invoiceData'] = this.invoicePayload();
     }
     this.isPlacingOrder = true;
     this.api
@@ -678,40 +1208,59 @@ export class CarritoComponent implements OnInit, OnDestroy {
           }
           const orderId = String(resolvedId);
           this.cartControl.clearCart();
-          this.showToast('Orden creada. Redirigiendo...');
+          // La confirmación dice lo que el servidor guardó (folio, total, entrega y factura), no lo que se tecleó.
+          const guardado = order as {
+            total?: number; shippingCost?: number; deliveryType?: string; pickupPaymentMethod?: string;
+            invoiceStatus?: string; invoiceData?: { rfc?: string };
+          } | null;
+          const totalGuardado = Number(guardado?.total ?? 0);
+          const totalTexto = Number.isFinite(totalGuardado) && totalGuardado > 0 ? ` por ${this.formatMoney(totalGuardado)}` : '';
+          const entregaTexto = guardado?.deliveryType === 'pickup'
+            ? (guardado?.pickupPaymentMethod === 'at_store' ? ', para recoger y pagar en sucursal' : ', para recoger en sucursal')
+            : (Number(guardado?.shippingCost ?? 0) > 0 ? ` (envío ${this.formatMoney(Number(guardado?.shippingCost))} incluido)` : ', con envío gratis');
+          const facturaTexto = guardado?.invoiceStatus === 'solicitada'
+            ? ` Factura solicitada para el RFC ${guardado?.invoiceData?.rfc ?? ''}: te llegará por correo en los próximos días hábiles.`
+            : '';
+          const siguiente = guardado?.deliveryType === 'pickup' && guardado?.pickupPaymentMethod === 'at_store'
+            ? 'Te mostramos tu pedido...'
+            : 'Te llevamos al pago...';
+          this.showToast(`Pedido ${orderId} creado${totalTexto}${entregaTexto}.${facturaTexto} ${siguiente}`);
           this.router.navigate(['/orden', orderId]);
         },
-        error: () => {
-          this.showToast('No se pudo crear la orden.');
+        error: (err: { error?: { message?: string }; message?: string }) => {
+          // El backend explica por qué (p. ej. la sucursal no tiene existencia); el toast lo tapaba.
+          const motivo = err?.error?.message;
+          this.showToast(motivo ? `No se pudo crear la orden: ${motivo}` : 'No se pudo crear la orden.');
         }
       });
   }
 
+  /** Cotiza tras una pequeña espera, para no lanzar una consulta por cada tecla del CP. */
+  private scheduleShippingQuote(): void {
+    if (this.shippingQuoteTimeout) {
+      window.clearTimeout(this.shippingQuoteTimeout);
+    }
+    this.shippingQuoteTimeout = window.setTimeout(() => this.fetchShippingRates(), 600);
+  }
+
   fetchShippingRates(): void {
-    if (!this.hasValidShippingQuoteFormData()) {
+    const zipTo = this.cpParaCotizar;
+    if (!zipTo) {
       this.shippingRates = [];
       this.selectedShippingRate = null;
       this.shippingQuoteError = '';
       return;
     }
-    const zipTo = this.deliveryPostalCode.trim();
     const items = this.buildShippingItems();
     this.isLoadingShippingRates = true;
     this.shippingQuoteError = '';
     this.shippingQuoteSub?.unsubscribe();
+    // Solo CP y bultos: el cotizador exige *todos* los campos de dirección o ninguno, así que
+    // mandarle el estado a medias devolvía 400 y el precio "aparecía al elegir el estado".
     this.shippingQuoteSub = this.api
       .getShippingQuote({
         zipTo,
         postalCode: zipTo,
-        name: this.resolveDeliveryName(),
-        recipientName: this.resolveDeliveryName(),
-        phone: this.resolveDeliveryPhone(),
-        street: this.deliveryStreet.trim(),
-        number: this.deliveryNumber.trim(),
-        address: this.buildDeliveryAddressLine(),
-        city: this.deliveryCity.trim(),
-        state: this.deliveryState.trim(),
-        country: this.deliveryCountry.trim().toUpperCase(),
         items
       })
       .pipe(finalize(() => {
@@ -720,8 +1269,14 @@ export class CarritoComponent implements OnInit, OnDestroy {
       }))
       .subscribe({
         next: (rates) => {
-          console.log('Shipping rates received:', rates);
-          this.shippingRates = rates;
+          // La cotización podía traer la misma paquetería dos veces ("Estafeta" duplicada).
+          const vistas = new Set<string>();
+          this.shippingRates = rates.filter((r) => {
+            const clave = `${r.carrier}|${r.service}|${r.displayPrice}`;
+            if (vistas.has(clave)) { return false; }
+            vistas.add(clave); return true;
+          });
+          rates = this.shippingRates;
           this.selectedShippingRate = rates.length > 0 ? rates[0] : null;
           this.cdr.markForCheck();
         },
@@ -767,13 +1322,59 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private updateCountdown(): void {
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    lastDay.setHours(23, 59, 59, 999);
-    const diff = Math.max(0, lastDay.getTime() - Date.now());
-    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    this.cartControl.updateCountdown(`${d}d ${h}h`);
+    // Paquete G · ronda 26 (propuesta 29), montado en la integración.
+    // Un solo origen del corte: el del servidor. El respaldo local caía al
+    // último día del mes y por eso el carrito decía 26 días donde el panel
+    // decía 21, en el mismo minuto. `getCountdownLabel()` nunca devuelve
+    // cadena vacía: sin sesión usa los mismos ajustes publicados.
+    this.cartControl.updateCountdown(this.dashboardControl.getCountdownLabel());
+  }
+
+  /** "Corte del mes para comisiones y descuento": Ernesto preguntó de qué era. */
+  /**
+   * ¿Se le enseña el reloj del corte a quien está pagando?
+   *
+   * Ronda 7 · Valeria y Nayeli: lo primero del carrito, antes de su producto,
+   * era «Corte de mes — 21d 3h 27m 12s — Cierre del mes de comisiones y de tu
+   * descuento por volumen». Una invitada no tiene comisiones ni descuento por
+   * volumen: es una cuenta regresiva que la apura con algo que no es suyo, y
+   * hace dudar de si esto es una tienda o una pirámide. El corte solo se enseña
+   * a quien de verdad tiene un mes que se le cierra.
+   */
+  get relojCorteVisible(): boolean {
+    return this.modoCuenta === 'socio';
+  }
+
+  get cutoffLabel(): string {
+    return this.dashboardControl.getCutoffLabel();
+  }
+
+  /** La fecha en letras junto al reloj: "lunes 25 de marzo de 2027, 23:59". */
+  get cutoffDateText(): string {
+    return this.dashboardControl.getCutoffDateText();
+  }
+
+  /** Tasa vigente para el desglose de IVA del resumen (§3.1). */
+  get vatRate(): number {
+    return this.plan?.iva?.tasa ?? 0.16;
+  }
+
+  get vatLabel(): string {
+    return this.plan?.iva?.etiqueta || 'IVA';
+  }
+
+  /** El envío que ya está dentro del total; 0 mientras no se haya elegido.
+   *
+   *  Tiene que ser **el mismo** que suma `total`: con la tarifa de la cotización
+   *  elegida, `this.shipping` vale 0 y el desglose recibía envío 0, así que la
+   *  nota decía "Los precios ya incluyen IVA." y se callaba que el envío va
+   *  dentro de la base, justo lo contrario de lo que dice el recibo del pedido. */
+  get shippingInTotal(): number {
+    if (this.deliveryType === 'pickup' || this.isShippingFree || this.totalLabel !== 'Total') {
+      return 0;
+    }
+    const cotizado = this.selectedShippingRate !== null ? this.selectedShippingRate.displayPrice : this.shipping;
+    return Number(cotizado) || 0;
   }
 
   private get projectedDiscountPercentValue(): number {
@@ -781,16 +1382,20 @@ export class CarritoComponent implements OnInit, OnDestroy {
   }
 
   private discountLevelLabelByPercent(pct: number): string {
-    if (pct >= 50) {
-      return 'Nivel 3';
-    }
+    // Los niveles van con los tramos del plan (10/20/30/40%); antes el 20% se llamaba "Nivel base".
     if (pct >= 40) {
-      return 'Nivel 2';
+      return 'Nivel 4';
     }
     if (pct >= 30) {
+      return 'Nivel 3';
+    }
+    if (pct >= 20) {
+      return 'Nivel 2';
+    }
+    if (pct >= 10) {
       return 'Nivel 1';
     }
-    return 'Nivel base';
+    return 'Sin descuento';
   }
 
   private showToast(message: string): void {
@@ -888,7 +1493,66 @@ export class CarritoComponent implements OnInit, OnDestroy {
     } else {
       this.deliveryFieldErrors[field] = !normalizedValue;
     }
-    this.fetchShippingRates();
+    // El envío se cotiza solo con el CP (propuesta 31): los demás campos ya no disparan consultas.
+    if (field === 'deliveryPostalCode') {
+      this.scheduleShippingQuote();
+    }
+    if (field === 'deliveryCity' || field === 'deliveryState') {
+      this.scheduleCheckoutRefresh();
+    }
+  }
+
+  // ── Paquete C · ronda 26 · propuesta 3: contacto del pedido ──
+  onContactFieldChange(field: 'deliveryName' | 'deliveryPhone' | 'deliveryEmail', value: string): void {
+    const limpio = String(value ?? '');
+    if (field === 'deliveryName') {
+      this.deliveryName = limpio;
+    } else if (field === 'deliveryPhone') {
+      this.deliveryPhone = limpio;
+    } else {
+      this.deliveryEmail = limpio;
+    }
+    if (this.contactFieldErrors[field]) {
+      this.validarContacto();
+    }
+  }
+
+  /** Marca en cada campo lo que falta y devuelve si el contacto del pedido está completo. */
+  private validarContacto(): boolean {
+    const errores: Record<'deliveryName' | 'deliveryPhone' | 'deliveryEmail', string> = {
+      deliveryName: '',
+      deliveryPhone: '',
+      deliveryEmail: ''
+    };
+    if (!this.resolveDeliveryName()) {
+      errores.deliveryName = 'Escribe el nombre de quien recibe el pedido.';
+    }
+    const telefono = this.resolveDeliveryPhone().replace(/[^\d]/g, '');
+    if (telefono.length < 10) {
+      errores.deliveryPhone = 'Escribe un teléfono de 10 dígitos: ahí te avisamos si algo pasa con tu pedido.';
+    }
+    if (this.isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.deliveryEmail.trim())) {
+      errores.deliveryEmail = 'Escribe tu correo: ahí te avisamos del pago, el envío y la entrega.';
+    }
+    this.contactFieldErrors = errores;
+    return !errores.deliveryName && !errores.deliveryPhone && !errores.deliveryEmail;
+  }
+
+  /** Lleva el foco al primer campo de contacto con error (el aviso al fondo de la página no se veía). */
+  private focusFirstMissingContactField(): void {
+    const orden: Array<'deliveryName' | 'deliveryPhone' | 'deliveryEmail'> = ['deliveryName', 'deliveryPhone', 'deliveryEmail'];
+    const pendiente = orden.find((campo) => this.contactFieldErrors[campo]);
+    if (!pendiente) {
+      return;
+    }
+    window.setTimeout(() => {
+      const campo = document.querySelector<HTMLInputElement>(`[name="${pendiente}"]`);
+      if (!campo) {
+        return;
+      }
+      campo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      campo.focus();
+    }, 180);
   }
 
   private assignDeliveryFieldValue(
@@ -1004,25 +1668,51 @@ export class CarritoComponent implements OnInit, OnDestroy {
     this.deliveryType = type;
     if (type === 'delivery') {
       this.fetchShippingRates();
+    } else {
+      this.loadPickupStocks();
     }
     this.cdr.markForCheck();
   }
 
+  /**
+   * Sucursales para recoger: solo las de la ciudad/estado capturados y con existencia
+   * de todo el carrito (Patricia veía "Recoger en sucursal" desde Mérida cuando la única
+   * sucursal está en CDMX; Claudia pagó y el mostrador no tenía el producto).
+   */
   private loadPickupStocks(): void {
+    const city = this.deliveryCity.trim();
+    const state = this.deliveryState.trim();
+    const items = this.cartItems.map((item) => ({ productId: this.extractProductId(item.id), quantity: item.qty }));
+    const key = JSON.stringify({ city, state, items });
+    if (key === this.lastPickupQueryKey && !this.isLoadingPickupStocks) {
+      return;
+    }
+    this.lastPickupQueryKey = key;
     this.isLoadingPickupStocks = true;
-    this.api.listPickupStocks().subscribe({
-      next: (stocks) => {
-        const normalizedStocks = this.normalizePickupStocks(stocks);
-        this.pickupStocks = normalizedStocks;
-        this.selectedPickupStockId = this.resolveSelectedPickupStockId(normalizedStocks, this.selectedPickupStockId);
-        if (!this.selectedPickupStockId && normalizedStocks.length === 1) {
-          this.selectedPickupStockId = normalizedStocks[0].id;
+    this.checkout.sucursalesRecoger({ city: city || undefined, state: state || undefined, items }).subscribe({
+      next: (respuesta) => {
+        this.pickupOptions = respuesta.stocks ?? [];
+        this.pickupAvailable = Boolean(respuesta.available);
+        this.pickupCities = respuesta.cities ?? [];
+        this.pickupLocationGiven = Boolean(respuesta.locationGiven);
+        this.pickupStocks = this.normalizePickupStocks(
+          this.pickupOptions.filter((s) => s.canPickup).map((s) => ({ id: s.id, name: s.name, location: s.location || s.city || '' }))
+        );
+        this.selectedPickupStockId = this.resolveSelectedPickupStockId(this.pickupStocks, this.selectedPickupStockId);
+        if (!this.selectedPickupStockId && this.pickupStocks.length === 1) {
+          this.selectedPickupStockId = this.pickupStocks[0].id;
+        }
+        if (this.deliveryType === 'pickup' && !this.pickupChoiceVisible) {
+          // La opción dejó de aplicar (cambió la ciudad o el carrito): se vuelve a envío sin perder nada.
+          this.deliveryType = 'delivery';
+          this.showToast(this.pickupUnavailableNote || 'Recoger en sucursal ya no está disponible: te lo enviamos a domicilio.');
         }
         this.isLoadingPickupStocks = false;
         this.cdr.markForCheck();
       },
       error: () => {
         this.isLoadingPickupStocks = false;
+        this.lastPickupQueryKey = '';
         this.cdr.markForCheck();
       }
     });
@@ -1094,14 +1784,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
       this.deliveryPostalCode = this.deliveryPostalCode || customer.postalCode || '';
       this.deliveryCountry = this.deliveryCountry || 'MX';
       this.saveShippingAddress = true;
-      this.setDeliveryFieldErrors({
-        deliveryStreet: this.deliveryStreet,
-        deliveryNumber: this.deliveryNumber,
-        deliveryCity: this.deliveryCity,
-        deliveryPostalCode: this.deliveryPostalCode,
-        deliveryState: this.deliveryState,
-        deliveryCountry: this.deliveryCountry
-      });
+      // Los errores se marcan al escribir o al pagar; antes salían en rojo sin tocar nada.
     }
 
     this.hasPrefilledDashboardAddress = true;
@@ -1124,7 +1807,7 @@ export class CarritoComponent implements OnInit, OnDestroy {
     if (this.isGuestRegisterSubmitting) {
       return;
     }
-    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.apellidoMaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
       this.guestRegisterFeedback = 'Completa los campos obligatorios.';
       this.guestRegisterFeedbackType = 'error';
       return;
@@ -1217,23 +1900,11 @@ export class CarritoComponent implements OnInit, OnDestroy {
       deliveryCountry: this.deliveryCountry
     });
     this.fetchShippingRates();
+    this.scheduleCheckoutRefresh();
   }
 
   private buildDeliveryAddressLine(): string {
     return [this.deliveryStreet.trim(), this.deliveryNumber.trim(), this.deliveryCity.trim()].filter(Boolean).join(', ');
-  }
-
-  private hasValidShippingQuoteFormData(): boolean {
-    return Boolean(
-      this.resolveDeliveryName() &&
-      this.resolveDeliveryPhone() &&
-      this.deliveryStreet.trim() &&
-      this.deliveryNumber.trim() &&
-      this.deliveryCity.trim() &&
-      /^\d{5}$/.test(this.deliveryPostalCode.trim()) &&
-      ESTADOS_MX_CODES.has(this.deliveryState.trim()) &&
-      this.deliveryCountry.trim()
-    );
   }
 
   private resolveDeliveryName(): string {

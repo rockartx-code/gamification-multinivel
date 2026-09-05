@@ -1,0 +1,1024 @@
+{
+ "persona": "Rubén Ávila, 24",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T21:09:08.569Z",
+ "tareas": [
+  {
+   "quiero": "entrar al sistema de la tienda para abrir mi caja",
+   "esperaba": null,
+   "t": 17,
+   "segundos": 123,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Es mi tercer día. Renata me dijo \"entra al sistema y abre tu turno con $500 de fondo\". No sé ni cuál es la dirección; me pasó una liga.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 17
+    },
+    {
+     "texto": "Lo primero que veo es una tienda para clientes, con productos y carrito. Yo soy el cajero, no un cliente. El único botón que se parece a lo mío es \"Iniciar sesión\".",
+     "segundosDesdeLoAnterior": 49,
+     "t": 66
+    },
+    {
+     "texto": "El título dice \"LOGIN\" en inglés arriba de \"Accede a tu panel\". Me da un poco de cosa, pero es la única puerta. Uso el correo y la contraseña que me pasó Renata en un papelito: mireya@findingu.mx. Ni siquiera es mi nombre, es el de la cajera anterior; me dijeron \"usa el de Mireya\".",
+     "segundosDesdeLoAnterior": 21,
+     "t": 87
+    },
+    {
+     "texto": "El título dice \"LOGIN\" en inglés arriba de \"Accede a tu panel\". Uso el correo y la contraseña que me pasó Renata en un papelito: el usuario de Mireya, la cajera. Ni siquiera es mi nombre.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 106
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la pantalla de entrada es la tienda del cliente; no hay nada que diga \"empleados\" o \"caja\"",
+     "pantalla": "#/",
+     "t": 66
+    },
+    {
+     "texto": "la pantalla dice \"LOGIN\" en inglés; todo lo demás está en español",
+     "pantalla": "#/login",
+     "t": 87
+    },
+    {
+     "texto": "la pantalla dice \"LOGIN\" en inglés; todo lo demás está en español",
+     "pantalla": "#/login",
+     "t": 106
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "entrar fue lo más fácil del día; el correo y la contraseña estaban en el papelito"
+  },
+  {
+   "quiero": "abrir mi turno de caja con $500 de fondo",
+   "esperaba": null,
+   "t": 140,
+   "segundos": 97,
+   "logrado": false,
+   "clicsBase": 3,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En el Punto de Venta veo \"Caja actual $0\" y \"Stock actual: Sin stock asignado\". Abajo, en rojo: \"No tienes un almacén ligado a tu usuario, así que no puedes cobrar todavía.\" Yo estoy parado en el mostrador de Tienda Del Valle, con la caja abierta y clientes esperando.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 140
+    },
+    {
+     "texto": "Los dos botones apagados no dicen por qué al pasar el mouse... bueno, abajo sí hay un renglón que explica. Voy a ver \"Ir a Stocks\", a ver si yo mismo me puedo ligar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 140
+    },
+    {
+     "texto": "En Stocks leo \"Todavía no hay ninguna bodega dada de alta. Créala en Alta de stock y aquí verás sus existencias.\" Pero yo estoy PARADO adentro de Tienda Del Valle, y en la pared hay un letrero con el nombre. ¿Cómo que no hay ninguna bodega?",
+     "segundosDesdeLoAnterior": 37,
+     "t": 177
+    },
+    {
+     "texto": "En el menú de la izquierda tengo cinco cosas: Pedidos, Despacho en bloque, Punto de Venta, Stocks, Resumen de turno. La pantalla roja me mandó a \"Almacenes → tu sucursal → Usuarios ligados\", pero en mi menú NO existe ningún \"Almacenes\". Me manda a un lugar al que no puedo llegar.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 205
+    },
+    {
+     "texto": "Antes de rendirme, pruebo \"Resumen de turno\": quizá ahí se abre el turno con el fondo de $500.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 205
+    },
+    {
+     "texto": "El \"Resumen de turno\" se abrió con la fecha 2026-09-04 y dice \"No hay movimientos de Mireya Solano el 4 sep 2026\". Hoy es 5 de mayo de 2027. La pantalla se puso sola una fecha de hace ocho meses.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 237
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la pantalla dice que no existe ninguna bodega, pero la tienda donde trabajo es una bodega del sistema",
+     "pantalla": "#/admin/stocks",
+     "t": 177
+    },
+    {
+     "texto": "el subtítulo dice \"recepciones y danos\", sin la ñ de daños",
+     "pantalla": "#/admin/stocks",
+     "t": 177
+    },
+    {
+     "texto": "el resumen de turno se abre en \"4 sep 2026\" y no en el día de hoy; si no me fijo, juraría que no vendí nada",
+     "pantalla": "#/admin/resumen-turno",
+     "t": 237
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "el Punto de Venta me dice que no puedo cobrar porque no tengo almacén ligado; \"Retirar efectivo\" y \"Hacer corte de caja\" están apagados",
+     "pantalla": "#/admin/pos",
+     "t": 140
+    },
+    {
+     "texto": "el mensaje de error me manda a la pantalla \"Almacenes\", que no está en mi menú",
+     "pantalla": "#/admin/pos",
+     "t": 205
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata, buenos días. Soy Rubén, el de mostrador. Entré con el usuario de Mireya al Punto de Venta y me sale en rojo: \"No tienes un almacén ligado a tu usuario, así que no puedes cobrar todavía. Pide a tu gerente que te agregue en Almacenes → tu sucursal → Usuarios ligados\". En mi menú no hay ningún \"Almacenes\" (solo Pedidos, Despacho en bloque, Punto de Venta, Stocks y Resumen de turno) y en Stocks me dice \"Todavía no hay ninguna bodega dada de alta\". Tengo dos clientes esperando y la caja física ya abierta. ¿Me puedes ligar a Tienda Del Valle?",
+     "t": 237,
+     "tarea": "abrir mi turno de caja con $500 de fondo"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "sin almacén ligado el Punto de Venta no me deja ni abrir la caja; tuve que hablarle a la gerente"
+  },
+  {
+   "quiero": "que la gerente me ligue a Tienda Del Valle (lo hace ella, en mi misma computadora)",
+   "esperaba": null,
+   "t": 255,
+   "segundos": 205,
+   "logrado": false,
+   "clicsBase": 5,
+   "teclasBase": 0,
+   "clics": 8,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Renata contestó el WhatsApp y me dijo \"no cuelgues, entro yo\". Vino al mostrador, cerró mi sesión y entró con la suya. Yo miro por encima del hombro y anoto lo que ella tarda, porque a mí me lo van a pedir otro día.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 255
+    },
+    {
+     "texto": "En el menú de Renata tampoco existe \"Almacenes\": se llama \"Stocks\". O sea que el mensaje rojo del Punto de Venta manda a una pantalla con un nombre que no existe en ningún menú.",
+     "segundosDesdeLoAnterior": 68,
+     "t": 322
+    },
+    {
+     "texto": "Renata abre \"Empleados vinculados\" en Tienda Del Valle y los cinco aparecen palomeados, yo incluido a través del usuario de Mireya. Se queda callada un rato: \"¿pues no que no estabas ligada?\". Las tres bodegas salen con todo el personal palomeado.",
+     "segundosDesdeLoAnterior": 59,
+     "t": 382
+    },
+    {
+     "texto": "Renata palomeó, guardó, yo volví a entrar y la pantalla dice exactamente lo mismo: \"Sin stock asignado\" y \"No tienes un almacén ligado a tu usuario\". Recargué. Igual.",
+     "segundosDesdeLoAnterior": 78,
+     "t": 460
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en \"Resumen de turno\" desaparece el menú y el botón de cerrar sesión; sólo hay \"Volver al panel\"",
+     "pantalla": "#/admin/resumen-turno",
+     "t": 302
+    },
+    {
+     "texto": "el error dice \"Almacenes\" pero el menú dice \"Stocks\": dos nombres para lo mismo",
+     "pantalla": "#/admin/pos",
+     "t": 322
+    },
+    {
+     "texto": "la lista de estados dice \"Ciudad de Mexico\", \"Michoacan\", \"Queretaro\", \"Nuevo Leon\": sin acentos",
+     "pantalla": "#/admin/stocks",
+     "t": 337
+    },
+    {
+     "texto": "los botones dicen \"Guardar vinculacion\" y \"Marcar danado\", sin acento y sin ñ",
+     "pantalla": "#/admin/stocks",
+     "t": 337
+    },
+    {
+     "texto": "apreté \"Guardar vinculacion\" y no salió ningún aviso de que se guardó",
+     "pantalla": "#/admin/stocks",
+     "t": 396
+    },
+    {
+     "texto": "en \"Ciudad y estado de la sucursal\" de Tienda Del Valle la ciudad está vacía y el estado dice \"Selecciona un estado\", aunque la tienda está en la Ciudad de México",
+     "pantalla": "#/admin/stocks",
+     "t": 396
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "la pantalla de la gerente dice que Mireya SÍ está vinculada a las tres bodegas, y el Punto de Venta de Mireya dice que no tiene ninguna",
+     "pantalla": "#/admin/stocks",
+     "t": 382
+    },
+    {
+     "texto": "reintento: volver a entrar con mi usuario después de que la gerente guardó la vinculación",
+     "t": 460
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "la gerente me vinculó y el Punto de Venta sigue diciendo que no tengo almacén"
+  },
+  {
+   "quiero": "que la gerente revise mi usuario en Empleados, a ver si es cosa del permiso",
+   "esperaba": null,
+   "t": 460,
+   "segundos": 164,
+   "logrado": false,
+   "clicsBase": 13,
+   "teclasBase": 0,
+   "clics": 14,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Renata dice: \"a lo mejor es el permiso, no la bodega\". Vuelve a entrar con su usuario y abre Empleados.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 460
+    },
+    {
+     "texto": "Aquí está la lista de permisos de Mireya: \"Ver Punto de Venta\" palomeado, \"Cobrar en el mostrador\" palomeado, \"Ver Stocks\" palomeado. O sea que sí tengo permiso de cobrar… y aun así la caja me dice que no tengo bodega. Lo único apagado que se me hace raro es \"Ver Productos\": si no puedo ver el catálogo, ¿qué le cobro a la gente?",
+     "segundosDesdeLoAnterior": 78,
+     "t": 538
+    },
+    {
+     "texto": "Renata dice \"pues le pongo Ver Productos y Ver Clientes, a ver\". Nadie en la pantalla dice qué permisos hacen falta para que la caja funcione; es adivinar.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 538
+    },
+    {
+     "texto": "Ya no hay errores escondidos, ahora sí me aparecen \"Clientes\" y \"Productos\" en el menú… pero la caja sigue diciendo \"Sin stock asignado\". El permiso no era.",
+     "segundosDesdeLoAnterior": 34,
+     "t": 573
+    },
+    {
+     "texto": "Ya no hay errores escondidos y ahora sí me aparecen \"Clientes\" y \"Productos\" en el menú… pero la caja sigue diciendo \"Sin stock asignado\". El permiso no era.",
+     "segundosDesdeLoAnterior": 9,
+     "t": 582
+    },
+    {
+     "texto": "En Stocks, con mi usuario, sigue diciendo \"Todavía no hay ninguna bodega dada de alta\" y el menú de \"Stock\" está vacío. Con el usuario de Renata había tres bodegas y 1,064 piezas. La misma pantalla, la misma hora, dos verdades.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 603
+    },
+    {
+     "texto": "Abro \"Productos\" y dice \"Catálogo · 0 productos · Sin resultados\", cuando en la tienda de la calle hay trece productos en el aparador y el sitio público los enseña todos. Me acaban de dar el permiso \"Ver Productos\" y sigue vacío.",
+     "segundosDesdeLoAnterior": 21,
+     "t": 624
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el formulario de alta dice \"Telefono\", sin acento",
+     "pantalla": "#/admin/empleados",
+     "t": 484
+    },
+    {
+     "texto": "el sistema deja \"Cobrar en el mostrador\" encendido y \"Ver Productos\" apagado, una combinación que no sirve para nada y que nadie avisa",
+     "pantalla": "#/admin/empleados",
+     "t": 538
+    },
+    {
+     "texto": "la pantalla de Productos me dice \"0 productos\" aunque el catálogo tiene trece",
+     "pantalla": "#/admin/productos",
+     "t": 624
+    },
+    {
+     "texto": "en esa pantalla leo \"CTA\", \"Assets faltantes\", \"Copy WhatsApp\", \"Copy Instagram\": palabras en inglés que no sé qué quieren decir",
+     "pantalla": "#/admin/productos",
+     "t": 624
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "le piqué al nombre \"Mireya Solano\" en la lista y no pasó nada: el panel siguió mostrando a Alma Rentería",
+     "pantalla": "#/admin/empleados",
+     "t": 497
+    },
+    {
+     "texto": "apreté el \"Ver\" del renglón de Mireya y se abrió el de Gaby Ledesma: el botón abre a otra persona",
+     "pantalla": "#/admin/empleados",
+     "t": 515
+    },
+    {
+     "texto": "reintento: tercer intento de abrir la caja, ahora con permisos nuevos",
+     "t": 573
+    },
+    {
+     "texto": "reintento: tercer intento de abrir la caja, ahora con permisos nuevos",
+     "t": 582
+    },
+    {
+     "texto": "con mi usuario la pantalla de Stocks aparece completamente vacía, como si la empresa no tuviera bodegas",
+     "pantalla": "#/admin/stocks",
+     "t": 603
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "ni con permisos nuevos: la caja sigue sin bodega y el catálogo sale en cero"
+  },
+  {
+   "quiero": "entregar en el mostrador un pedido que llegó por internet",
+   "esperaba": null,
+   "t": 624,
+   "segundos": 243,
+   "logrado": false,
+   "clicsBase": 27,
+   "teclasBase": 0,
+   "clics": 10,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 2,
+   "pensamientos": [
+    {
+     "texto": "Doña Lupe viene por un pedido que hizo por internet. Si no puedo cobrar, cuando menos quiero entregarle su caja. En mi menú hay \"Pedidos\" y en la lista de permisos vi \"Marcar pedido como Entregado\" palomeado.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 624
+    },
+    {
+     "texto": "Los pedidos sí los veo. Cinco pendientes de pago; cuatro dicen que el cliente se llama \"Cliente\", sin nombre. Uno, el de Aurora Vega, dice \"$0\" y en la columna de entrega dice \"Sucursal\": ese debe ser el que viene a recoger. Pero está en \"Pendiente De Pago\" (así, con D grande).",
+     "segundosDesdeLoAnterior": 21,
+     "t": 644
+    },
+    {
+     "texto": "En \"Pagado\" hay dos. Uno es de Valeria Núñez Andrade, $829, de ayer. Ese debe ser el que viene a recoger. El otro vuelve a decir \"Cliente\". Abro el de Valeria con \"Ver\".",
+     "segundosDesdeLoAnterior": 57,
+     "t": 701
+    },
+    {
+     "texto": "Aquí está el pedido de recoger: \"Dirección de envío — Sucursal: STK-264DE0\". Un código. Yo no sé si STK-264DE0 es mi tienda o la de Guadalajara; en la pared no dice ningún código. Y el producto, un Naplus, aparece en \"$0\".",
+     "segundosDesdeLoAnterior": 46,
+     "t": 748
+    },
+    {
+     "texto": "Pruebo \"Despacho en bloque\", que suena a mover paquetes; a lo mejor ahí se marca la entrega.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 765
+    },
+    {
+     "texto": "Aquí arriba, en rojo, dice: \"Acceso denegado: privilegio 'order_mark_shipped' requerido\". No sé qué es \"order_mark_shipped\" ni por qué me lo dicen en inglés a media pantalla. Y más abajo: \"Los pedidos para recoger en sucursal se entregan desde Caja\". O sea que la entrega de doña Aurora también depende de la caja que no puedo abrir.",
+     "segundosDesdeLoAnterior": 45,
+     "t": 809
+    },
+    {
+     "texto": "Pero mira: aquí, en \"Bodega de salida\", SÍ salen las tres bodegas, incluida Tienda Del Valle. En Stocks me decía que no había ninguna. Voy a elegir Tienda Del Valle, quizá así quede como mi bodega por defecto y la caja despierte.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 809
+    },
+    {
+     "texto": "¡Salió un botón: \"Usar Tienda Del Valle como mi bodega por defecto\"! Nadie me dijo que la caja se prendía desde la pantalla de Despacho, que es la de almacén. Le pico.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 823
+    },
+    {
+     "texto": "Guardé \"Mi bodega por defecto: Tienda Del Valle — Es la que tienes guardada\" y la caja sigue diciendo \"Sin stock asignado\". Recargo por si acaso.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 850
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "cuatro pedidos aparecen a nombre de \"Cliente\", sin nombre de persona",
+     "pantalla": "#/admin/pedidos",
+     "t": 644
+    },
+    {
+     "texto": "un pedido para recoger en sucursal aparece con total $0",
+     "pantalla": "#/admin/pedidos",
+     "t": 644
+    },
+    {
+     "texto": "el pedido de Valeria va a Querétaro por Estafeta: no es el que se recoge aquí, y en su ficha no hay ningún botón para marcarlo entregado aunque mi permiso dice que puedo",
+     "pantalla": "#/admin/pedidos",
+     "t": 726
+    },
+    {
+     "texto": "el recuadro de notas dice: Agregar nota (ej. transferí \\$165 el 3-oct) — con una diagonal antes del signo de pesos",
+     "pantalla": "#/admin/pedidos",
+     "t": 726
+    },
+    {
+     "texto": "el pedido de recoger dice \"Sucursal: STK-264DE0\" en vez del nombre de la tienda",
+     "pantalla": "#/admin/pedidos",
+     "t": 748
+    },
+    {
+     "texto": "el Naplus vale $280 en la tienda y en el pedido aparece en $0, total $0.00",
+     "pantalla": "#/admin/pedidos",
+     "t": 748
+    },
+    {
+     "texto": "me sale en pantalla \"Acceso denegado: privilegio 'order_mark_shipped' requerido\": una clave del sistema, en inglés",
+     "pantalla": "#/admin/despacho",
+     "t": 809
+    },
+    {
+     "texto": "en Despacho sí aparecen las tres bodegas y en Stocks ninguna, con el mismo usuario y a la misma hora",
+     "pantalla": "#/admin/despacho",
+     "t": 809
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "en toda la pantalla de Pedidos no hay ningún botón para marcar un pedido como entregado, aunque mi usuario tiene ese permiso",
+     "pantalla": "#/admin/pedidos",
+     "t": 748
+    },
+    {
+     "texto": "la entrega de un pedido para recoger sólo se puede hacer \"desde Caja\", y la caja no abre",
+     "pantalla": "#/admin/despacho",
+     "t": 809
+    },
+    {
+     "texto": "reintento: elegir la bodega a mano en Despacho para ver si así se liga a mi caja",
+     "t": 809
+    },
+    {
+     "texto": "reintento: recargar el Punto de Venta con la bodega por defecto ya guardada",
+     "t": 850
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 1,
+   "confianza": null,
+   "comentario": "no pude entregar el pedido de recoger: la entrega se hace \"desde Caja\" y la caja no abre"
+  },
+  {
+   "quiero": "ver si la caja funciona con el usuario de la gerente (para saber si es cosa mía)",
+   "esperaba": null,
+   "t": 867,
+   "segundos": 31,
+   "logrado": true,
+   "clicsBase": 37,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 4,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Con el usuario de Renata la MISMA pantalla se ve completa: trece productos con existencias, formas de pago, \"Abrir turno con este fondo\". Con el mío decía \"Sin stock asignado\". No era yo: es que la caja no le funciona a la cajera.",
+     "segundosDesdeLoAnterior": 48,
+     "t": 898
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 5,
+   "comentario": "comprobado: la caja sirve con el usuario de la gerente y no con el de caja"
+  },
+  {
+   "quiero": "abrir el turno con $500 de fondo (a la fuerza, con la sesión de la gerente)",
+   "esperaba": null,
+   "t": 917,
+   "segundos": 23,
+   "logrado": true,
+   "clicsBase": 40,
+   "teclasBase": 0,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Renata me dijo: \"cobra con mi usuario y luego vemos\". No me gusta: todo lo que yo venda va a quedar a nombre de ella. Pero ya son las once y hay gente.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 917
+    },
+    {
+     "texto": "Primero cambio el \"Stock ligado\" a Tienda Del Valle, porque viene puesto \"Bodega Central\" y yo estoy en Del Valle. Si no me fijo, le descuento la mercancía a la bodega equivocada.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 917
+    },
+    {
+     "texto": "Dice \"Turno abierto con $500.00 de fondo\" y \"Efectivo que debería haber en el cajón $500.00\". Pero tres renglones abajo, en el recuadro grande, dice \"Caja actual $0\" y \"En caja: $0\". Los dos números son de mi cajón y no coinciden.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 940
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "cobrar con la sesión de otra persona significa que ninguna venta mía va a quedar a mi nombre",
+     "pantalla": "#/admin/pos",
+     "t": 917
+    },
+    {
+     "texto": "la caja arranca apuntando a \"Bodega Central\" y no a la tienda donde estoy parado",
+     "pantalla": "#/admin/pos",
+     "t": 917
+    },
+    {
+     "texto": "arriba dice que en el cajón debe haber $500.00 y abajo dice \"Caja actual $0\" y \"En caja: $0\"",
+     "pantalla": "#/admin/pos",
+     "t": 940
+    },
+    {
+     "texto": "el renglón dice \"Ultimo corte\", sin acento",
+     "pantalla": "#/admin/pos",
+     "t": 940
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 3,
+   "comentario": "el fondo se captura fácil, pero quedó a nombre de Renata y el resumen de abajo sigue en $0"
+  },
+  {
+   "quiero": "cobrar una venta mixta: parte en efectivo y parte con tarjeta",
+   "esperaba": null,
+   "t": 940,
+   "segundos": 89,
+   "logrado": true,
+   "clicsBase": 41,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Doña Chelo lleva un Colágeno Hidrolizado de $700 y un Naplus de $280. Son $980. Trae $500 en efectivo y el resto con tarjeta. En la lista de formas de pago hay una que dice \"Efectivo + tarjeta/transferencia\": esa es.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 940
+    },
+    {
+     "texto": "Aparecen dos casillas de dinero: \"Paga en efectivo\" y más abajo \"Efectivo recibido\". Al principio pensé que era la misma dos veces. La de arriba es cuánto de los $980 se cubre con billetes; la de abajo es cuánto billete me está dando en la mano para calcular el cambio. Tuve que leerlo tres veces.",
+     "segundosDesdeLoAnterior": 31,
+     "t": 971
+    },
+    {
+     "texto": "Ya cuadra: \"Se cobra con tarjeta $480 · Total $980 − efectivo $500\". Paso la tarjeta en la terminal, sale aprobada, y le pico a \"Cobrar $980\".",
+     "segundosDesdeLoAnterior": 14,
+     "t": 985
+    },
+    {
+     "texto": "Abajo apareció \"Venta POS-C04B073D registrada por $980\" y el cajón subió a $1,000. La venta quedó bajo \"Efectivo + tarjeta/transferencia\", con $500 al cajón y $480 de tarjeta aparte. Eso sí está bien explicado.",
+     "segundosDesdeLoAnterior": 44,
+     "t": 1029
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la pantalla dice \"Autocomplete por nombre o correo\", \"Publico en General\", \"SELECCION ACTUAL\" y \"Maximo disponible\": una palabra en inglés y tres sin acento",
+     "pantalla": "#/admin/pos",
+     "t": 954
+    },
+    {
+     "texto": "dos casillas de efectivo casi iguales: \"Paga en efectivo\" y \"Efectivo recibido\"",
+     "pantalla": "#/admin/pos",
+     "t": 971
+    },
+    {
+     "texto": "el renglón de la venta dice \"Tienda Del Valle / Usuario 1809421204348\": un número largo en lugar del nombre de quien cobró",
+     "pantalla": "#/admin/pos",
+     "t": 1029
+    },
+    {
+     "texto": "no encuentro por ningún lado cómo imprimir o mandar el ticket de la clienta",
+     "pantalla": "#/admin/pos",
+     "t": 1029
+    },
+    {
+     "texto": "el recuadro \"Ultimo corte\" sigue diciendo \"Ventas: 0\" y \"En caja: $0\" con la venta ya hecha",
+     "pantalla": "#/admin/pos",
+     "t": 1029
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "la venta mixta fue lo mejor de la pantalla: la parte de tarjeta se separa sola y lo dice con todas sus letras"
+  },
+  {
+   "quiero": "entregar desde caja el pedido que Aurora Vega hizo por internet para recoger",
+   "esperaba": null,
+   "t": 1029,
+   "segundos": 187,
+   "logrado": true,
+   "clicsBase": 44,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 5,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "El aviso de Despacho decía \"Los pedidos para recoger en sucursal se entregan desde Caja\". Estoy en Caja y no veo ninguna lista de pedidos por recoger. Busco la palabra \"recoger\" en toda la pantalla.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1029
+    },
+    {
+     "texto": "Pruebo lo último que se me ocurre: abrir el pedido desde Pedidos con la sesión de la gerente, que sí tiene el botón de \"Marcar como pagado\".",
+     "segundosDesdeLoAnterior": 20,
+     "t": 1049
+    },
+    {
+     "texto": "Con la sesión de la gerente el MISMO pedido ya no dice \"Sucursal: STK-264DE0\", dice \"Sucursal: Sucursal Guadalajara\". O sea que el código raro que yo veía era porque a mi usuario no le dejan leer las bodegas. A mí me enseñan la clave; a ella, el nombre.",
+     "segundosDesdeLoAnterior": 26,
+     "t": 1075
+    },
+    {
+     "texto": "Y ahí está el problema de fondo: el único pedido para recoger de todo el sistema es de Guadalajara, y yo estoy en Del Valle. Aun así el sistema me deja tocarlo desde aquí sin decirme nada.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1075
+    },
+    {
+     "texto": "El botón que me queda para un pedido que se recoge en el mostrador se llama \"Registrar envío\". No voy a enviar nada: la señora está enfrente. Le pico con miedo.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 1102
+    },
+    {
+     "texto": "Se abrió una ventanita: \"Enviar pedido — Ingresa la gu?a o los datos de entrega personal.\" Así, con un signo de interrogación en medio de la palabra \"guía\". Ya de plano.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 1124
+    },
+    {
+     "texto": "Elijo \"Entrega personal\", pongo mi tienda como stock origen y escribo el lugar. La fecha la tengo que poner a mano.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 1138
+    },
+    {
+     "texto": "Quedó \"Enviado\" con la nota \"Mostrador de Tienda Del Valle · 2027-05-05 · Tienda Del Valle\", aunque arriba sigue diciendo \"Sucursal: Sucursal Guadalajara\". Nadie me preguntó nada, ni me avisó que estaba entregando un pedido de otra sucursal.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 1196
+    },
+    {
+     "texto": "Ya dice \"Entregado En Sucursal\". Pero fíjate: en la columna de entrega antes decía \"…· Tienda Del Valle\" y ahora, después de entregar, dice \"…· Sucursal Guadalajara\". Cambió solo.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 1216
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Despacho promete que los pedidos de recoger \"se entregan desde Caja\" y en Caja no hay nada de eso",
+     "pantalla": "#/admin/pos",
+     "t": 1047
+    },
+    {
+     "texto": "el mismo pedido dice \"STK-264DE0\" con mi usuario y \"Sucursal Guadalajara\" con el de la gerente",
+     "pantalla": "#/admin/pedido/ORD-23CD73FD",
+     "t": 1075
+    },
+    {
+     "texto": "el avisito dice \"el servidor lo dejó Pagado\" y el renglón del pedido dice \"Listo Para Recoger\": no sé cuál creer, y \"el servidor\" no me dice nada",
+     "pantalla": "#/admin/pedidos",
+     "t": 1102
+    },
+    {
+     "texto": "el estado se escribe \"Listo Para Recoger\" y \"Pendiente De Pago\", con mayúsculas en medio",
+     "pantalla": "#/admin/pedidos",
+     "t": 1102
+    },
+    {
+     "texto": "para entregar en mano el botón dice \"Registrar envío\"",
+     "pantalla": "#/admin/pedidos",
+     "t": 1102
+    },
+    {
+     "texto": "la ventana dice \"Ingresa la gu?a o los datos de entrega personal\": la palabra guía sale con un signo de interrogación",
+     "pantalla": "#/admin/pedidos",
+     "t": 1124
+    },
+    {
+     "texto": "el campo se llama \"Guia de paqueteria\", sin acentos",
+     "pantalla": "#/admin/pedidos",
+     "t": 1124
+    },
+    {
+     "texto": "entregué desde Del Valle un pedido cuya sucursal es Guadalajara y el sistema no me dijo ni pío",
+     "pantalla": "#/admin/pedidos",
+     "t": 1196
+    },
+    {
+     "texto": "después de marcar entregado, la columna de entrega cambió de \"Tienda Del Valle\" a \"Sucursal Guadalajara\"",
+     "pantalla": "#/admin/pedidos",
+     "t": 1216
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "en la pantalla de Caja no existe la palabra \"recoger\" ni ningún pedido por entregar, ni con un stock ni con otro",
+     "pantalla": "#/admin/pos",
+     "t": 1047
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 3,
+   "comentario": "la entrega necesitó tres pasos (pagado → registrar envío → entregado) y ninguno se llama \"entregar en el mostrador\""
+  },
+  {
+   "quiero": "hacer el corte de caja con $40 de más en el cajón",
+   "esperaba": null,
+   "t": 1216,
+   "segundos": 185,
+   "logrado": true,
+   "clicsBase": 49,
+   "teclasBase": 0,
+   "clics": 9,
+   "teclas": 0,
+   "pantallasBase": 6,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Son las dos. Cuento el cajón: hay $1,040 y el sistema espera $1,000. Me sobran $40 y no sé de dónde salieron. Voy a Caja y busco \"Hacer corte de caja\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 1216
+    },
+    {
+     "texto": "Ah: el selector de \"Stock ligado\" se volvió a poner solo en \"Bodega Central\". El turno y el dinero están amarrados a la bodega, y la pantalla se le olvida cuál elegí en cuanto salgo y regreso.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 1234
+    },
+    {
+     "texto": "Volvió a aparecer: \"Efectivo que debería haber en el cajón $1,000.00\". El dinero nunca se fue, se fue el renglón. Ahora sí: \"Hacer corte de caja\".",
+     "segundosDesdeLoAnterior": 12,
+     "t": 1247
+    },
+    {
+     "texto": "El corte viene en cuatro pasos. El primero desglosa: fondo $500, ventas en efectivo $0, parte en efectivo de mixtos $500, retiros $0, esperado $1,000. Eso está clarísimo, es lo mejor que he visto hoy.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 1263
+    },
+    {
+     "texto": "El paso 2 dice \"Cuenta el efectivo del cajón y escribe cuánto hay. Si no cuadra, explica por qué\" y abajo \"No es una falta: es lo que pasó\". Eso me quitó un peso de encima. Voy a contar por billetes, que es como cuento yo.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 1281
+    },
+    {
+     "texto": "Están las diez denominaciones, de $1000 a $1. Yo tengo dos billetes de $500 y dos de $20: $1,040.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 1295
+    },
+    {
+     "texto": "\"Diferencia $40.00 (sobra)\" y me pide el motivo para poder seguir. Escribo la verdad: no sé de dónde salieron.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 1309
+    },
+    {
+     "texto": "Dejo todo como fondo de mañana, porque retirar no se puede.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 1325
+    },
+    {
+     "texto": "El paso 4 me lee de corrido lo que va a pasar, con mi motivo entre comillas. Eso me da confianza. Le doy a \"Cerrar el corte\".",
+     "segundosDesdeLoAnterior": 15,
+     "t": 1340
+    },
+    {
+     "texto": "Salió el comprobante \"Corte cerrado · CUT-2B3D81B9\". Leo el desglose y me detengo en un renglón: \"Vendido en el turno · Total $500.00\". Pero yo vendí $980: $500 en efectivo y $480 con tarjeta. Arriba, en el mismo papel, dice \"1 venta(s)\" y \"Tarjeta y transferencia $480.00\". El total de lo vendido está mal.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 1365
+    },
+    {
+     "texto": "Abro el correo que le llegó a Renata y me quedo frío: \"Sucursal: STK-46603B · Operador: 1809421204348\" y \"Periodo: 2027-05-05T10:16:55Z a 2027-05-05T10:22:50Z\". Ni el nombre de la tienda, ni el nombre de quien cortó, ni una hora que se lea. Y en todo el correo no aparece por ningún lado que la venta fue de $980.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 1401
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "en el paso 3 dice \"Todavía no hay un código de autorización configurado: nadie puede autorizar un retiro\": administración no puede llevarse el dinero",
+     "pantalla": "#/admin/pos",
+     "t": 1325
+    },
+    {
+     "texto": "el comprobante dice \"Vendido en el turno · Total $500.00\" cuando la única venta del turno fue de $980",
+     "pantalla": "#/admin/pos",
+     "t": 1365
+    },
+    {
+     "texto": "el correo del corte identifica la tienda y a la persona con claves (STK-46603B, 1809421204348) y pone las horas en formato de máquina",
+     "pantalla": "correo",
+     "t": 1401
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "volví a Caja y el cajón aparece en $0 y \"Esta caja nunca ha cerrado un corte\": se me perdió el turno con los $500",
+     "pantalla": "#/admin/pos",
+     "t": 1234
+    }
+   ],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata: ya cerré el corte, folio CUT-2B3D81B9. Dos cosas. 1) El comprobante dice \"Vendido en el turno · Total $500.00\" y yo vendí $980 (fueron $500 en efectivo y $480 con tarjeta); el correo que te llegó ni siquiera menciona los $980. ¿Así se lee o está mal? 2) Todo el turno quedó a tu nombre porque mi usuario nunca pudo abrir la caja. Necesito que alguien arregle eso antes de mañana, porque si aparece un faltante no hay manera de saber quién cobró.",
+     "t": 1401,
+     "tarea": "hacer el corte de caja con $40 de más en el cajón"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 4,
+   "comentario": "el corte en cuatro pasos es lo mejor hecho de todo el sistema; lo malo es lo que dice el comprobante al final"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconcierto",
+   "intensidad": 4,
+   "porque": "es mi tercer día y la pantalla me manda con la gerente antes de poder hacer lo único que me pidieron",
+   "t": 140,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "una pantalla que se equivoca de año no me da ganas de creerle el corte de caja",
+   "t": 237,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 3,
+   "porque": "tener que llamar a la gerente antes de cobrar el primer producto, con la señora del mostrador mirándome",
+   "t": 237,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "emocion": "confusión",
+   "intensidad": 4,
+   "porque": "dos pantallas del mismo sistema me dicen lo contrario y ninguna de las dos me deja cobrar",
+   "t": 382,
+   "tarea": "que la gerente me ligue a Tienda Del Valle (lo hace ella, en mi misma computadora)"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "llevo media hora y todavía no cobro el primer producto; la señora del mostrador ya se fue",
+   "t": 460,
+   "tarea": "que la gerente me ligue a Tienda Del Valle (lo hace ella, en mi misma computadora)"
+  },
+  {
+   "emocion": "rendición",
+   "intensidad": 4,
+   "porque": "ya entendí que con mi usuario el sistema me enseña una tienda vacía",
+   "t": 624,
+   "tarea": "que la gerente revise mi usuario en Empleados, a ver si es cosa del permiso"
+  },
+  {
+   "emocion": "coraje",
+   "intensidad": 4,
+   "porque": "lo que no me deja hacer a mí como cajero, se lo deja hacer a la gerente en la misma computadora",
+   "t": 898,
+   "tarea": "ver si la caja funciona con el usuario de la gerente (para saber si es cosa mía)"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "al menos una cosa del día sí se pudo cerrar, aunque haya sido con el usuario de otra persona y con un pedido de otra tienda",
+   "t": 1216,
+   "tarea": "entregar desde caja el pedido que Aurora Vega hizo por internet para recoger"
+  },
+  {
+   "emocion": "susto",
+   "intensidad": 5,
+   "porque": "por un momento pensé que había perdido el dinero del turno",
+   "t": 1234,
+   "tarea": "hacer el corte de caja con $40 de más en el cajón"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "la pantalla del corte me dice que un descuadre no es una falta, sino algo que se explica",
+   "t": 1281,
+   "tarea": "hacer el corte de caja con $40 de más en el cajón"
+  },
+  {
+   "emocion": "inquietud",
+   "intensidad": 4,
+   "porque": "si el comprobante que le llega a la gerente dice que vendí $500, va a pensar que me quedé con la diferencia",
+   "t": 1365,
+   "tarea": "hacer el corte de caja con $40 de más en el cajón"
+  },
+  {
+   "emocion": "cansancio",
+   "intensidad": 4,
+   "porque": "terminé el turno, pero ninguna de las ventas dice que las hice yo",
+   "t": 1401,
+   "tarea": "hacer el corte de caja con $40 de más en el cajón"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Renata, buenos días. Soy Rubén, el de mostrador. Entré con el usuario de Mireya al Punto de Venta y me sale en rojo: \"No tienes un almacén ligado a tu usuario, así que no puedes cobrar todavía. Pide a tu gerente que te agregue en Almacenes → tu sucursal → Usuarios ligados\". En mi menú no hay ningún \"Almacenes\" (solo Pedidos, Despacho en bloque, Punto de Venta, Stocks y Resumen de turno) y en Stocks me dice \"Todavía no hay ninguna bodega dada de alta\". Tengo dos clientes esperando y la caja física ya abierta. ¿Me puedes ligar a Tienda Del Valle?",
+   "t": 237,
+   "tarea": "abrir mi turno de caja con $500 de fondo"
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Renata: ya cerré el corte, folio CUT-2B3D81B9. Dos cosas. 1) El comprobante dice \"Vendido en el turno · Total $500.00\" y yo vendí $980 (fueron $500 en efectivo y $480 con tarjeta); el correo que te llegó ni siquiera menciona los $980. ¿Así se lee o está mal? 2) Todo el turno quedó a tu nombre porque mi usuario nunca pudo abrir la caja. Necesito que alguien arregle eso antes de mañana, porque si aparece un faltante no hay manera de saber quién cobró.",
+   "t": 1401,
+   "tarea": "hacer el corte de caja con $40 de más en el cajón"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada",
+   "contradictoria",
+   "desconfiada"
+  ],
+  "mejorPantalla": "el corte de caja en cuatro pasos, sobre todo el renglón \"No es una falta: es lo que pasó\"",
+  "peorPantalla": "el Punto de Venta con el usuario de caja: todo apagado y la culpa echada a la gerente",
+  "seParece": "a un sistema hecho para la dueña, al que luego le abrieron una ventanita para los que estamos en el mostrador",
+  "recomendarias": 5,
+  "volverias": "sí, es mi trabajo, pero mañana llego con el papelito de la contraseña de Renata y eso no está bien",
+  "comentario": "Cuando la pantalla me habla como persona (\"cuenta el dinero que hay ahora en el cajón\", \"no es una falta\") es buenísima. Cuando me habla como máquina (\"privilegio order_mark_shipped requerido\", \"STK-46603B\", \"el servidor lo dejó Pagado\") me deja parado sin saber qué hacer. Y lo más grave: el mismo dato me sale distinto según con qué usuario entre."
+ },
+ "totales": {
+  "clics": 58,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 7,
+  "pantallas": 6,
+  "recargas": 1,
+  "atrases": 2
+ },
+ "pantallas": [
+  {
+   "ruta": "/",
+   "desde": 1788556165454,
+   "primerClicMs": 48807,
+   "clics": 3,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/pos",
+   "desde": 1788556569463,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/pedido/ORD-23CD73FD",
+   "desde": 1788556896215,
+   "primerClicMs": 16979,
+   "clics": 3,
+   "comoLlego": "atrás"
+  },
+  {
+   "ruta": "#/admin/pos",
+   "desde": 1788556998554,
+   "primerClicMs": null,
+   "clics": 0,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/pedido/ORD-23CD73FD",
+   "desde": 1788556896218,
+   "primerClicMs": 16979,
+   "clics": 3,
+   "comoLlego": "navegación"
+  },
+  {
+   "ruta": "#/admin/pedido/ORD-23CD73FD",
+   "desde": 1788557197162,
+   "primerClicMs": 26064,
+   "clics": 33,
+   "comoLlego": "atrás"
+  }
+ ],
+ "erroresEnPantalla": [
+  {
+   "texto": "Incluye todas las imágenes requeridas para marketing.",
+   "t": 606,
+   "tarea": "que la gerente revise mi usuario en Empleados, a ver si es cosa del permiso"
+  }
+ ],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T21:32:38.395Z",
+ "duracionMin": 23
+}

@@ -1,0 +1,12 @@
+# Datos de ejecución de la simulación: no son código.
+estado.pkl
+estado.pkl.tmp
+servidor.log
+buzon/
+s3/
+capturas/
+perfiles/
+credenciales.json
+node_modules
+node_modules/
+metricas/*.json

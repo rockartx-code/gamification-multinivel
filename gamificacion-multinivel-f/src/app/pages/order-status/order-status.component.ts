@@ -2,21 +2,37 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
-import { AdminOrder } from '../../models/admin.model';
+import { AdminOrder, AdminOrderItem } from '../../models/admin.model';
+import { ESTADOS_MX_OPTIONS } from '../../constants/states-mx';
+import { PLAZO_ENTREGA_ESTANDAR } from '../../constants/envio';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
 import { UiOrderTimelineComponent } from '../../components/ui-order-timeline/ui-order-timeline.component';
+import { UiAhorroSocioComponent } from '../../components/ui-ahorro-socio/ui-ahorro-socio.component';
 import { ApiService } from '../../services/api.service';
+import { CheckoutService } from '../../services/checkout.service';
+import { UiFooterComponent } from '../../components/ui-footer/ui-footer.component';
+import { UiDevolucionBotonComponent } from '../../components/ui-devolucion-boton/ui-devolucion-boton.component';
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component';
+import { EstadoDevolucionPedido } from '../../models/ayuda.model';
+import { fechaEnLetras, textoEstadoPedido } from '../../models/vocabulario.model'; // paquete G · ronda 26
 
 @Component({
   selector: 'app-order-status',
   standalone: true,
-  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent],
+  imports: [CommonModule, RouterModule, UiButtonComponent, UiOrderTimelineComponent, UiAhorroSocioComponent, UiFooterComponent, UiDevolucionBotonComponent, UiDesgloseIvaComponent],
   templateUrl: './order-status.component.html',
   styleUrl: './order-status.component.css'
 })
 export class OrderStatusComponent implements OnInit, OnDestroy {
-  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as const;
-  private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly allowedStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'] as const;
+  private pollingTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Paquete C · ronda 26 · propuesta 13 ──
+  /** Se pregunta pronto y luego cada vez menos: 5 s, 10 s, 20 s y 30 s. Antes era un minuto fijo,
+   *  y Ernesto y Mariana se quedaron mirando una pantalla en blanco con $609 y $829 en juego. */
+  private readonly pollingDelaysMs = [5000, 10000, 20000, 30000];
+  private pollingIndex = 0;
+  /** Se agotaron los reintentos y el pago sigue sin confirmarse: se dice qué hacer. */
+  paymentConfirmTimedOut = false;
   orderId = '';
   orderReference = '';
   paymentId = '';
@@ -27,15 +43,35 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
   isCheckoutLoading = false;
   isLoading = false;
   order: AdminOrder | null = null;
+  // ── Paquete C · ronda 26 · propuesta 7 ──
+  /** Sucursal donde se recoge el pedido, con su dirección: "Sucursal Guadalajara, Av. Chapultepec 480". */
+  pickupBranchName = '';
+  pickupBranchLocation = '';
+  private pickupBranchAskedFor = '';
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly api: ApiService,
+    private readonly checkout: CheckoutService,
     private readonly cdr: ChangeDetectorRef
   ) { }
 
   copyToClipboard(txt?: string) { if (txt) navigator.clipboard.writeText(txt); }
+
+  // ── Paquete B: ahorro como socia guardado en el pedido ───────────────────
+  get partnerSavingsVisible(): boolean {
+    const modo = this.order?.partnerMode;
+    return modo === 'cliente' || modo === 'invitado';
+  }
+
+  get partnerSavingsMode(): 'cliente' | 'invitado' {
+    return this.order?.partnerMode === 'invitado' ? 'invitado' : 'cliente';
+  }
+
+  goToModoSocio(): void {
+    void this.router.navigate(['/modo-socio'], { queryParams: { desde: 'orden', id: this.order?.id ?? this.orderId } });
+  }
 
   ngOnInit(): void {
     const routeOrderId = this.normalizeLookupValue(this.route.snapshot.paramMap.get('idOrden'));
@@ -54,9 +90,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     );
 
     if (this.redirectStatus === 'failure') {
-      this.redirectMessage = 'Tu operacion fue rechazada.';
+      this.redirectMessage = 'Tu operación fue rechazada. No se te cobró nada: puedes volver a intentarlo.';
     } else if (this.redirectStatus === 'pending' || this.redirectStatus === 'success') {
-      this.redirectMessage = 'Tu operacion esta siendo procesada y validando por tu banco.';
+      this.redirectMessage = 'Tu operación está siendo procesada y validándose con tu banco.';
     }
 
     this.orderId = this.orderReference || routeOrderId || this.paymentId;
@@ -71,13 +107,46 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
       this.loadOrder(this.orderReference || this.paymentId || this.orderId);
     }
 
-    if (this.redirectStatus === 'success') {
+    if (this.redirectStatus === 'success' || this.redirectStatus === 'pending') {
       this.startSuccessPolling();
+    }
+
+    // Ronda 7 · Nayeli (alta): con el correo «tu pedido fue entregado» ya en el
+    // buzón y el pedido entregado en el servidor, esta pantalla seguía diciendo
+    // «Estatus: Pagado» y el botón de devolución apagado; solo cambiaba
+    // recargando a mano. Los datos se leían una vez, en `ngOnInit`, y volver a
+    // la misma ruta dentro de la aplicación no la vuelve a montar. Como el
+    // motivo «llegó dañado» solo dura 48 horas, quedarse con la pantalla vieja
+    // le vence el plazo a quien no se le ocurra recargar.
+    this.route.paramMap.subscribe((params) => {
+      const id = this.normalizeLookupValue(params.get('idOrden'));
+      if (id && !this.orderReference && !this.paymentId) {
+        this.loadOrder(id);
+      }
+    });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.refrescarAlVolver);
+      window.addEventListener('focus', this.refrescarAlVolver);
     }
   }
 
+  /** Al volver a la pestaña se relee el pedido: el estado pudo cambiar mientras tanto. */
+  private readonly refrescarAlVolver = (): void => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+    const id = this.orderReference || this.paymentId || this.orderId;
+    if (id && !this.isLoading) {
+      this.loadOrder(id);
+    }
+  };
+
   ngOnDestroy(): void {
     this.stopSuccessPolling();
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.refrescarAlVolver);
+      window.removeEventListener('focus', this.refrescarAlVolver);
+    }
   }
 
   private loadOrder(id: string): void {
@@ -88,6 +157,7 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         if (order?.id) {
           this.orderId = order.id;
         }
+        this.loadPickupBranch(order);
         this.syncOrderStatusState(order);
         this.isLoading = false;
         this.cdr.markForCheck();
@@ -104,22 +174,59 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     if (!lookupId) {
       return;
     }
-    this.pollingTimer = setInterval(() => this.loadOrder(lookupId), 60000);
+    this.pollingIndex = 0;
+    this.paymentConfirmTimedOut = false;
+    this.scheduleNextPoll(lookupId);
+  }
+
+  private scheduleNextPoll(lookupId: string): void {
+    const espera = this.pollingDelaysMs[this.pollingIndex];
+    if (espera === undefined) {
+      // Se acabaron los reintentos: en vez de callar, se dice qué hacer.
+      this.paymentConfirmTimedOut = true;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.pollingIndex += 1;
+    this.pollingTimer = setTimeout(() => {
+      this.pollingTimer = null;
+      this.loadOrder(lookupId);
+      if (this.isConfirmingPayment) {
+        this.scheduleNextPoll(lookupId);
+      }
+    }, espera);
   }
 
   private stopSuccessPolling(): void {
     if (this.pollingTimer) {
-      clearInterval(this.pollingTimer);
+      clearTimeout(this.pollingTimer);
       this.pollingTimer = null;
     }
+  }
+
+  /** Volvimos de la pasarela y el pedido todavía no está pagado: no hay nada que cobrar otra vez. */
+  get isConfirmingPayment(): boolean {
+    if (this.redirectStatus !== 'success' && this.redirectStatus !== 'pending') {
+      return false;
+    }
+    if (this.order?.markedByWebhook) {
+      return false;
+    }
+    return this.normalizeStatus(this.order?.status) === 'pending';
+  }
+
+  /** Mientras se confirma no se pinta el resumen: un total en $0 al volver de pagar asusta. */
+  get isSummaryVisible(): boolean {
+    return Boolean(this.order) && !this.isLoading;
   }
 
   private syncOrderStatusState(order: AdminOrder | null | undefined): void {
     const backendStatus = this.normalizeStatus(order?.status);
     const markedByWebhook = Boolean(order?.markedByWebhook);
     const shouldStop = markedByWebhook || ['paid', 'shipped', 'delivered'].includes(backendStatus);
-    if (markedByWebhook) {
+    if (shouldStop) {
       this.redirectMessage = '';
+      this.paymentConfirmTimedOut = false;
     }
 
     const cutoffWindow = Boolean(order?.discountCutoffWindow);
@@ -137,34 +244,18 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
   get statusLabel(): string {
     if (this.redirectStatus === 'failure') {
-      return 'Operacion rechazada';
+      return 'Operación rechazada';
     }
-    if ((this.redirectStatus === 'success' || this.redirectStatus === 'pending') && this.normalizeStatus(this.order?.status) === 'pending') {
-      return 'Operacion en validacion';
+    if (this.isConfirmingPayment) {
+      return 'Estamos confirmando tu pago';
     }
+    // El vocabulario único (§3.7): el mismo pedido se llama igual en el recibo
+    // del cliente y en el back office. Esta pantalla tenía su propia tabla
+    // ("Pago registrado" donde la insignia del panel decía "Pagado"), que es lo
+    // que hizo a Julio contar cuatro nombres del mismo estado. El matiz de
+    // recolección también vive ahí: `paid` + `pickup` es "Listo para recoger".
     const status = this.normalizeStatus(this.order?.status);
-    if (status === 'paid') {
-      return 'Pago registrado';
-    }
-    if (status === 'shipped') {
-      return 'Pedido enviado';
-    }
-    if (status === 'delivered') {
-      return 'Pedido entregado';
-    }
-    if (status === 'cancelled') {
-      return 'Cancelado';
-    }
-    if (status === 'en_devolucion') {
-      return 'En devolución';
-    }
-    if (status === 'devuelto_validado') {
-      return 'Devolución aprobada';
-    }
-    if (status === 'devolucion_rechazada') {
-      return 'Devolución rechazada';
-    }
-    return 'Pago pendiente';
+    return textoEstadoPedido(status, this.isPickup ? 'pickup' : 'delivery') || 'Pendiente de pago';
   }
 
   get statusClass(): string {
@@ -192,6 +283,9 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     }
     if (status === 'devolucion_rechazada') {
       return 'border-red-400/30 bg-red-500/10 text-main';
+    }
+    if (status === 'refunded') {
+      return 'border-emerald-400/30 bg-emerald-400/10 text-main';
     }
     return 'border-yellow-400/30 bg-yellow-400/10 text-main';
   }
@@ -239,23 +333,180 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return Math.round((this.orderDiscount / subtotal) * 100);
   }
 
+  /** Costo de envío cobrado en el pedido (0 si no aplica). */
+  get orderShipping(): number {
+    const raw = Number((this.order as { shippingCost?: number } | null)?.shippingCost ?? 0);
+    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+  }
+
+  get orderShippingCarrier(): string {
+    return String((this.order as { shippingCarrier?: string } | null)?.shippingCarrier ?? '');
+  }
+
   get orderTotal(): number {
     if (!this.order) {
       return 0;
     }
+    // La lista decía "$829" y este detalle "$700": aquí faltaba sumar el envío.
+    const total = Number(this.order.total ?? 0);
+    if (Number.isFinite(total) && total > 0) {
+      return total;
+    }
     const net = Number(this.order.netTotal ?? 0);
     if (Number.isFinite(net) && net > 0) {
-      return net;
+      return net + this.orderShipping;
     }
-    return Number(this.order.total ?? 0);
+    return 0;
+  }
+
+  // ── Paquete C · ronda 26 · propuesta 7: el recibo repite lo que se eligió ──
+
+  /** La dirección de la sucursal ya la publica el checkout; el recibo solo la vuelve a leer. */
+  private loadPickupBranch(order: AdminOrder | null | undefined): void {
+    const stockId = String(order?.pickupStockId ?? '').trim();
+    if (order?.deliveryType !== 'pickup' || !stockId || this.pickupBranchAskedFor === stockId) {
+      return;
+    }
+    this.pickupBranchAskedFor = stockId;
+    this.checkout.sucursalesRecoger({ items: [] }).subscribe({
+      next: (respuesta) => {
+        const sucursal = (respuesta?.stocks ?? []).find((s) => String(s.id) === stockId);
+        this.pickupBranchName = sucursal?.name ?? '';
+        this.pickupBranchLocation = sucursal?.location ?? '';
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
+  }
+
+  get isPickup(): boolean {
+    return this.order?.deliveryType === 'pickup';
+  }
+
+  /** "Recoges en Sucursal Guadalajara, Av. Chapultepec 480". */
+  get pickupText(): string {
+    if (!this.isPickup) {
+      return '';
+    }
+    const donde = [this.pickupBranchName, this.pickupBranchLocation].filter(Boolean).join(', ');
+    return donde ? `Recoges en ${donde}` : 'Recoges en la sucursal que elegiste';
+  }
+
+  get paysAtStore(): boolean {
+    return this.isPickup && this.order?.pickupPaymentMethod === 'at_store';
+  }
+
+  get orderItems(): AdminOrderItem[] {
+    return this.order?.items ?? [];
+  }
+
+  /** La dirección de entrega depende del tipo de entrega, no de `shippingType`, que solo se
+   *  escribe al despachar: por eso la tarjeta no aparecía hasta que alguien mandaba el paquete. */
+  get hasShippingAddress(): boolean {
+    if (this.isPickup) {
+      return false;
+    }
+    return Boolean(this.order?.address || this.order?.street || this.order?.city || this.order?.postalCode);
+  }
+
+  get shippingAddressLine(): string {
+    const o = this.order;
+    if (!o) {
+      return '';
+    }
+    const calle = o.address || [o.street, o.number].filter(Boolean).join(' ');
+    // Ronda 7 · Valeria: salía «Ezequiel Montes, 148, Querétaro, Querétaro,
+    // QUE, 76000». «QUE» es la clave interna del estado, no algo que ella
+    // escribiera, y la ciudad venía repetida desde la calle.
+    const partes = [calle, o.city, this.nombreDeEstado(o.state), o.postalCode];
+    const vistas = new Set<string>();
+    return partes
+      .map((parte) => String(parte ?? '').trim())
+      .filter((parte) => {
+        if (!parte) {
+          return false;
+        }
+        const clave = parte
+          .toLocaleLowerCase('es-MX')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        if (vistas.has(clave)) {
+          return false;
+        }
+        vistas.add(clave);
+        return true;
+      })
+      .join(', ');
+  }
+
+  /** «QUE» → «Querétaro». Si no es una clave conocida, se deja tal cual. */
+  private nombreDeEstado(valor: string | null | undefined): string {
+    const bruto = String(valor ?? '').trim();
+    if (!bruto) {
+      return '';
+    }
+    return ESTADOS_MX_OPTIONS.find((opcion) => opcion.value === bruto.toUpperCase())?.label ?? bruto;
+  }
+
+  /**
+   * El plazo que el carrito prometió, repetido donde de verdad hace falta.
+   *
+   * Ronda 7 · Valeria: «el carrito sí dice "Estafeta · Terrestre · 3 a 5 días
+   * hábiles"; al pagar, la pantalla de la orden no repite ese plazo ni pone una
+   * fecha, y el correo tampoco. La pregunta más obvia después de pagar no tiene
+   * respuesta en ningún lado.»
+   */
+  get plazoDeEntrega(): string {
+    if (this.isPickup || !this.hasShippingAddress) {
+      return '';
+    }
+    const paqueteria = String(this.order?.shippingCarrier ?? '').trim();
+    return paqueteria ? `${paqueteria} · ${PLAZO_ENTREGA_ESTANDAR}` : PLAZO_ENTREGA_ESTANDAR;
+  }
+
+  get invoiceVisible(): boolean {
+    return Boolean(this.order?.invoiceRequested);
+  }
+
+  /** "Factura solicitada a nombre de Aurora Vega · RFC VEAA850101AB1". */
+  get invoiceText(): string {
+    const datos = this.order?.invoiceData;
+    if (!datos) {
+      return this.order?.invoiceStatus === 'emitida' ? 'Factura emitida' : 'Factura solicitada';
+    }
+    const cabecera = this.order?.invoiceStatus === 'emitida' ? 'Factura emitida' : 'Factura solicitada';
+    const nombre = datos.razonSocial ? ` a nombre de ${datos.razonSocial}` : '';
+    const rfc = datos.rfc ? ` · RFC ${datos.rfc}` : '';
+    return `${cabecera}${nombre}${rfc}`;
+  }
+
+  /** Desglose del IVA guardado en el pedido (§38): el total no cambia, se explica. */
+  get hasVatBreakdown(): boolean {
+    return this.order?.taxBase != null && this.order?.taxAmount != null;
+  }
+
+  /** La tasa con la que se cobró ESTE pedido, no la de hoy. */
+  get orderVatRate(): number {
+    return Number(this.order?.vatRate ?? 0);
+  }
+
+  /** Fecha en las palabras de la gente: "2 de marzo de 2027, 11:18", no "2027-03-02T11:18:04Z". */
+  formatDate(value?: string): string {
+    // El formato único de §3.7 ("4 de mayo de 2027, 09:11"), no un quinto
+    // formato propio: el `Intl` de esta pantalla rendía "09:11 a. m." en es-MX.
+    return fechaEnLetras(value) || String(value ?? '');
   }
 
   formatMoney(value: number): string {
     const amount = Number.isFinite(value) ? value : 0;
+    // Sin centavos cuando el importe es entero; con dos cuando no lo es
+    // ("$1,376.40", no "$1,376.4" ni "$1,376").
+    const cents = Number.isInteger(Math.round(amount * 100) / 100) ? 0 : 2;
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
-      maximumFractionDigits: 0
+      minimumFractionDigits: cents,
+      maximumFractionDigits: cents
     }).format(amount);
   }
 
@@ -268,13 +519,43 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
     return s === 'paid' || s === 'pending';
   }
 
+  /** Ya hay una devolución en curso o resuelta: no tiene sentido pedir "solicita una devolución". */
+  get inReturnFlow(): boolean {
+    const s = this.order?.status;
+    return ['en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded'].includes(s as string);
+  }
+
   get cancelBlocked(): boolean {
     const s = this.normalizeStatus(this.order?.status);
-    return ['shipped', 'delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'cancelled'].includes(s as string);
+    return ['shipped', 'delivered', 'en_devolucion', 'devuelto_validado', 'devolucion_rechazada', 'refunded', 'cancelled'].includes(s as string);
   }
 
   get canRequestReturn(): boolean {
     return this.normalizeStatus(this.order?.status) === 'delivered';
+  }
+
+  /**
+   * Paquete D · propuesta 24. El motivo y el plazo del botón los manda el
+   * servidor en `GET /orders/{id}`; aquí no se recalcula la regla. Con un
+   * pedido viejo (o si la respuesta aún no llega) se arma un estado apagado con
+   * el motivo genérico, para que el botón nunca desaparezca sin explicación.
+   */
+  get estadoDevolucion(): EstadoDevolucionPedido | null {
+    if (!this.order) {
+      return null;
+    }
+    if (this.order.devolucion) {
+      return this.order.devolucion;
+    }
+    return {
+      puedeSolicitar: this.canRequestReturn && !this.inReturnFlow,
+      motivo: this.canRequestReturn
+        ? ''
+        : 'Podrás pedir la devolución en cuanto marquemos el pedido como entregado.',
+      horasRestantes: null,
+      plazoTexto: '',
+      motivos: []
+    };
   }
 
   navigateToCancel(): void {
@@ -297,7 +578,15 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
 
     this.checkoutError = '';
     this.isCheckoutLoading = true;
-    this.api.createOrderCheckout(targetOrderId).subscribe({
+    // Sin `successUrl` la pasarela no sabía a dónde regresar y el mensaje "estamos confirmando tu
+    // pago", que ya estaba escrito, no se encendía nunca. El cuerpo manda mano sobre la
+    // configuración del servidor, así que aquí se le dice a dónde volver.
+    const regreso = this.buildReturnUrl(targetOrderId);
+    this.api.createOrderCheckout(targetOrderId, regreso ? {
+      successUrl: regreso,
+      pendingUrl: regreso,
+      failureUrl: regreso
+    } : {}).subscribe({
       next: (response) => {
         const checkout = response?.checkout;
         const initPoint = String(checkout?.initPoint || checkout?.sandboxInitPoint || '').trim();
@@ -315,6 +604,18 @@ export class OrderStatusComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /** URL de esta misma pantalla, para que la pasarela devuelva a la persona a su pedido. */
+  private buildReturnUrl(orderId: string): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    const { origin, pathname } = window.location;
+    if (!origin) {
+      return '';
+    }
+    return `${origin}${pathname}#/orden/${encodeURIComponent(orderId)}`;
   }
 
   private normalizeRedirectStatusFromList(...candidates: Array<string | null>): 'success' | 'failure' | 'pending' | '' {

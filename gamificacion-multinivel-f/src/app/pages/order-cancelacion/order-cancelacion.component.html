@@ -23,10 +23,12 @@
         <i class="fa-solid fa-check text-2xl text-green-600" aria-hidden="true"></i>
       </span>
       <h1 class="mt-4 text-xl font-extrabold text-main">Orden cancelada</h1>
-      <p class="mt-2 text-sm text-gray-600">Tu orden <span class="font-semibold text-main">{{ orderId }}</span> fue cancelada exitosamente.
-        <ng-container *ngIf="isPendingOrder"> El pago no había sido confirmado, por lo que no se generará ningún cargo.</ng-container>
-        <ng-container *ngIf="!isPendingOrder"> El reembolso está siendo procesado por nuestro equipo.</ng-container>
+      <p class="mt-2 text-sm text-gray-600">Tu orden <span class="font-semibold text-main">{{ cancelResult?.orderId || orderId }}</span> quedó con estado
+        <span class="font-semibold text-main">{{ cancelledStatusLabel }}</span> en el sistema.
+        <ng-container *ngIf="!refundPending"> El pago no había sido confirmado, por lo que no se generará ningún cargo.</ng-container>
+        <ng-container *ngIf="refundPending"> Queda un reembolso pendiente: nuestro equipo lo procesa y te avisamos por correo.</ng-container>
       </p>
+      <p *ngIf="order?.total" class="mt-1 text-xs text-gray-500">Importe del pedido: {{ formatMoney(order?.total) }}.</p>
       <div class="mt-6">
         <ui-button variant="primary" size="md" [routerLink]="['/dashboard']">Ir al inicio</ui-button>
       </div>
@@ -54,7 +56,7 @@
         <div class="mt-3 flex items-center gap-2">
           <span class="inline-flex items-center gap-1.5 rounded-full border border-olive-20 bg-ivory-80 px-3 py-1 text-xs font-semibold text-main">
             <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
-            Estado: {{ order.status }}
+            Estado: {{ estadoTexto(order.status, order.deliveryType) }}
           </span>
         </div>
       </div>
@@ -66,11 +68,17 @@
         <div>
           <p class="text-sm font-semibold text-amber-800">Cancelación no disponible</p>
           <p class="mt-1 text-xs text-amber-700">{{ blockReason }}</p>
-          <div class="mt-3">
+          <p class="mt-2 text-xs text-amber-700">
+            Puedes devolver el pedido completo o solo algunas líneas, con la cantidad que elijas.
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
             <ui-button variant="ghost" size="sm" [routerLink]="['/orden', orderId, 'devolucion']">
               <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
               Solicitar devolución
             </ui-button>
+            <a routerLink="/devoluciones" class="self-center text-xs text-amber-800 underline">
+              Plazos, fotos y quién paga el envío
+            </a>
           </div>
         </div>
       </div>
@@ -83,6 +91,32 @@
             <p class="font-semibold">¿Confirmar cancelación?</p>
             <p *ngIf="isPendingOrder" class="mt-1 text-xs">Esta acción no se puede deshacer. La orden será cancelada. Como el pago aún no fue confirmado, no se generará ningún cargo.</p>
             <p *ngIf="!isPendingOrder" class="mt-1 text-xs">Esta acción no se puede deshacer. La orden será marcada como cancelada y se gestionará el reembolso correspondiente.</p>
+          </div>
+        </div>
+
+        <!-- Paquete D · propuesta 24: la devolución parcial se menciona también
+             cuando la cancelación SÍ se puede. Julio canceló el pedido entero
+             para deshacerse de un bote de $800 y perdió los $1,209 y otro envío,
+             porque la salida parcial solo se ofrecía cuando cancelar ya estaba
+             bloqueado. -->
+        <div class="flex items-start gap-3 rounded-2xl border border-olive-20 bg-ivory-80 p-4">
+          <i class="fa-solid fa-rotate-left mt-0.5 text-accent" aria-hidden="true"></i>
+          <div class="text-sm text-main">
+            <p class="font-semibold">¿Solo te falló una cosa del pedido?</p>
+            <p class="mt-1 text-xs text-gray-600">
+              Cancelar deshace el pedido completo. Si lo que quieres es regresar únicamente un producto
+              —o algunas piezas de uno—, la devolución te reembolsa esa parte y te deja el resto,
+              sin volver a pagar envío.
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <ui-button variant="ghost" size="sm" [routerLink]="['/orden', orderId, 'devolucion']">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                Devolver solo una parte
+              </ui-button>
+              <a routerLink="/devoluciones" class="self-center text-xs text-gray-500 underline hover:text-accent">
+                Cómo funciona una devolución
+              </a>
+            </div>
           </div>
         </div>
 
@@ -104,3 +138,6 @@
 
   </main>
 </section>
+
+<!-- Paquete D · ronda 26: el pie con contacto, horario y los enlaces de ayuda. -->
+<ui-footer />

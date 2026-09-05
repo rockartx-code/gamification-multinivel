@@ -1,14 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #d3b350;
-  --rgb-primary: 211, 179, 80;
+  /* Oro refinado: ancla de marca y gamificación */
+  --color-primary: #c8a24a;
+  --rgb-primary: 200, 162, 74;
 
-  --color-text: #2a2a2a;
-  --color-text-muted: #6b6b6b;
-  --color-text-inverse: #f4f4f4;
-  --color-success: #5f7f6a;
+  /* Verde bosque: salud, calma y acompañamiento */
+  --color-forest: #1f3d31;
+  --rgb-forest: 31, 61, 49;
+  --color-sage: #7c8c72;
+  --rgb-sage: 124, 140, 114;
+
+  --color-text: #26312b;
+  --color-text-muted: #66706a;
+  --color-text-inverse: #f6f4ee;
+  --color-success: #51705f;
   --color-danger: #b4533c;
+
+  /* Escala de elevación: una sola voz para todas las sombras */
+  --shadow-rest: 0 1px 2px rgba(31, 61, 49, 0.05), 0 4px 12px rgba(31, 61, 49, 0.05);
+  --shadow-lift: 0 8px 20px rgba(31, 61, 49, 0.09), 0 2px 6px rgba(31, 61, 49, 0.05);
+  --shadow-float: 0 24px 48px rgba(31, 61, 49, 0.12), 0 6px 16px rgba(31, 61, 49, 0.06);
+
+  /* Escala de radios */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
 
   --color-surface-1: #fdfbf7;
   --color-surface-2: #f6f3ee;
@@ -16,14 +33,22 @@
   --color-bg-primary: var(--color-surface-1);
   --color-bg-secondary: #f2ede3;
 
-  --rgb-text: 42, 42, 42;
+  --rgb-text: 38, 49, 43;
   --rgb-surface-1: 253, 251, 247;
   --rgb-surface-2: 246, 243, 238;
   --rgb-surface-3: 239, 232, 220;
 
-  --text-on-primary: #6f5622;
+  --text-on-primary: #6b5320;
   --text-soft-light: var(--color-surface-2);
   --input-border: rgba(var(--rgb-primary), 0.35);
+
+  /* Sistema de movimiento: curvas bezier y duraciones */
+  --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-swift: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 200ms;
+  --dur-base: 400ms;
+  --dur-slow: 700ms;
 }
 
 * {
@@ -63,8 +88,18 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: "Libre Baskerville", "Playfair Display", Georgia, serif;
+  font-family: "Fraunces", "Libre Baskerville", Georgia, serif;
+  font-optical-sizing: auto;
   letter-spacing: -0.015em;
+}
+
+.font-display {
+  font-family: "Fraunces", "Libre Baskerville", Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+.font-body {
+  font-family: "Inter", "SF Pro Text", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 .bg-ambient {
@@ -77,7 +112,7 @@ h4 {
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
   mix-blend-mode: soft-light;
-  opacity: 0.18;
+  opacity: 0.12;
   pointer-events: none;
   border-radius: inherit;
 }
@@ -102,7 +137,29 @@ h4 {
   position: absolute;
   inset-block: 0;
   left: 0;
+  overflow: hidden;
   background: rgba(var(--rgb-primary), 0.95);
+  transition: width var(--dur-slow) var(--ease-luxe), left var(--dur-slow) var(--ease-luxe);
+}
+
+/* Brillo que recorre la barra: el progreso se siente vivo, no estático */
+.progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: progressShine 2.6s var(--ease-swift) infinite;
+}
+
+@keyframes progressShine {
+  0% { transform: translateX(-100%); }
+  55%, 100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill { transition: none; }
+  .progress-fill::after { animation: none; opacity: 0; }
 }
 
 .progress-fill-secondary {
@@ -155,14 +212,29 @@ select:focus {
   z-index: 1000;
   background: rgba(27, 27, 27, 0.55);
   backdrop-filter: blur(6px);
+  animation: backdropIn var(--dur-fast) var(--ease-swift);
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-backdrop .modal-card {
+  animation: modalPop var(--dur-base) var(--ease-spring);
+}
+
+@keyframes modalPop {
+  0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .modal-card {
   background: var(--color-surface-1);
   color: var(--color-text);
   border: 1px solid rgba(var(--rgb-primary), 0.3);
-  border-radius: 28px;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
   backdrop-filter: none;
 }
 
@@ -204,6 +276,19 @@ select:focus {
   border-top: 1px solid rgba(var(--rgb-primary), 0.2);
 }
 
+/* Estado positivo fuera del modal: hasta ahora .text-success solo existía
+   anidado en .modal-card, así que las plantillas caían en emerald-*. */
+.text-success { color: var(--color-success); }
+
+/* Salvia informativa: estado "en curso", distinto del bosque (completado). */
+.text-sage { color: var(--color-sage); }
+.bg-sage-10 { background-color: rgba(var(--rgb-sage), 0.1); }
+.border-sage-30 { border-color: rgba(var(--rgb-sage), 0.3); }
+
+/* Oro vivo: reservado al primer puesto del podio, donde el oro plano
+   compite con los chips ámbar de alrededor. */
+.text-gold-vivo { color: #b8860b; }
+
 .text-main { color: var(--color-text); }
 .text-muted { color: var(--color-text-muted); }
 .text-accent { color: var(--text-on-primary); }
@@ -228,13 +313,67 @@ select:focus {
   border-radius: 9999px;
   font-weight: 600;
   line-height: 1.2;
-  transition: box-shadow 0.2s ease;
+  transition:
+    box-shadow var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-fast) var(--ease-swift),
+    border-color var(--dur-fast) var(--ease-swift);
+}
+
+.btn:hover:not(.btn-disabled):not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(.btn-disabled):not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-primary {
-  background: var(--color-primary);
-  color: #1b1b1b;
-  border: 1px solid rgba(var(--rgb-primary), 0.35);
+  background: linear-gradient(135deg, #d9bc6d 0%, var(--color-primary) 55%, #b18c3a 115%);
+  color: #241d0d;
+  border: 1px solid rgba(var(--rgb-primary), 0.4);
+  box-shadow: 0 6px 18px rgba(var(--rgb-primary), 0.24);
+}
+
+.btn-primary:hover:not(.btn-disabled):not(:disabled) {
+  box-shadow: 0 10px 26px rgba(var(--rgb-primary), 0.38);
+}
+
+.btn-forest {
+  background: linear-gradient(160deg, #2a4d3e 0%, var(--color-forest) 70%);
+  color: var(--color-text-inverse);
+  border: 1px solid rgba(var(--rgb-forest), 0.5);
+  box-shadow: 0 6px 18px rgba(var(--rgb-forest), 0.28);
+}
+
+.btn-forest:hover:not(.btn-disabled):not(:disabled) {
+  box-shadow: 0 10px 26px rgba(var(--rgb-forest), 0.36);
+}
+
+/* Brillo que barre el botón primario al pasar el cursor (lujo discreto) */
+.btn-primary,
+.btn-forest {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after,
+.btn-forest::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.btn-primary:hover:not(.btn-disabled):not(:disabled)::after,
+.btn-forest:hover:not(.btn-disabled):not(:disabled)::after {
+  animation: btnShine 0.9s var(--ease-luxe);
+}
+
+@keyframes btnShine {
+  to { transform: translateX(120%); }
 }
 
 .btn-secondary {
@@ -249,14 +388,22 @@ select:focus {
   border: 1px solid rgba(var(--rgb-primary), 0.3);
 }
 
+/* Linkish: acción terciaria con aspecto de enlace (antes gemelo de ghost) */
 .btn-linkish {
-  background: rgba(var(--rgb-surface-1), 0.9);
-  border: 1px solid rgba(var(--rgb-primary), 0.3);
-  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-on-primary);
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-fast) var(--ease-swift), color var(--dur-fast) var(--ease-swift);
 }
 
-.btn-linkish:hover {
-  background: rgba(var(--rgb-surface-3), 0.9);
+.btn-linkish:hover:not(.btn-disabled):not(:disabled) {
+  color: var(--color-text);
+  text-decoration-color: rgba(var(--rgb-primary), 0.7);
+  box-shadow: none;
+  transform: none;
 }
 
 .btn:hover:not(.btn-disabled):not(:disabled) {
@@ -272,8 +419,8 @@ select:focus {
 .kpi-mini {
   background: rgba(var(--rgb-surface-1), 0.88);
   border: 1px solid rgba(var(--rgb-primary), 0.3);
-  border-radius: 18px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-rest);
 }
 
 .kpi-mini .label {
@@ -299,7 +446,7 @@ select:focus {
 .progress-card {
   background: rgba(var(--rgb-surface-1), 0.88);
   border: 1px solid rgba(var(--rgb-primary), 0.28);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
 }
 
 .progress-card .title {
@@ -323,7 +470,7 @@ select:focus {
 
 .table-soft {
   border: 1px solid rgba(var(--rgb-primary), 0.3);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -378,6 +525,12 @@ select:focus {
   background: rgba(var(--rgb-primary), 0.16);
   border-color: rgba(var(--rgb-primary), 0.32);
   color: var(--text-on-primary);
+}
+
+.badge-danger {
+  background: rgba(180, 83, 60, 0.1);
+  border-color: rgba(180, 83, 60, 0.3);
+  color: #8c3f2c;
 }
 
 .badge.status-active {
@@ -457,10 +610,10 @@ select:focus {
 }
 
 .ring-status-active {
-  border-color: rgba(95, 127, 106, 0.45);
+  border-color: rgba(81, 112, 95, 0.45);
   box-shadow:
-    0 0 0 2px rgba(95, 127, 106, 0.2),
-    0 12px 28px rgba(95, 127, 106, 0.12);
+    0 0 0 2px rgba(81, 112, 95, 0.2),
+    0 12px 28px rgba(81, 112, 95, 0.12);
 }
 
 .ring-status-inactive {
@@ -471,6 +624,12 @@ select:focus {
 .bg-olive { background-color: var(--color-primary); }
 .bg-olive-10 { background-color: rgba(var(--rgb-primary), 0.1); }
 .bg-gold-12 { background-color: rgba(var(--rgb-primary), 0.12); }
+
+/* Marca de "esta es la fila abierta en el panel de detalle": una barra dorada
+   en el borde izquierdo. Va como sombra interior para no descuadrar la rejilla. */
+@utility shadow-inset-accent {
+  box-shadow: inset 3px 0 0 0 var(--color-primary);
+}
 .bg-gold-20 { background-color: rgba(var(--rgb-primary), 0.2); }
 .bg-sand-100 { background-color: #f6f1e8; }
 .bg-sand-200 { background-color: var(--color-surface-2); }
@@ -479,6 +638,8 @@ select:focus {
 .bg-ivory-70 { background-color: rgba(var(--rgb-surface-1), 0.7); }
 .bg-ivory-80 { background-color: rgba(var(--rgb-surface-1), 0.8); }
 
+.border-gold { border-color: var(--color-primary); }
+.bg-gold { background-color: var(--color-primary); }
 .border-olive-20 { border-color: rgba(var(--rgb-primary), 0.2); }
 .border-olive-30 { border-color: rgba(var(--rgb-primary), 0.3); }
 .border-olive-70 { border-color: rgba(var(--rgb-primary), 0.7); }
@@ -490,17 +651,393 @@ select:focus {
 .focus-border-olive-60:focus { border-color: rgba(var(--rgb-primary), 0.6); }
 .focus-ring-olive-20:focus { --tw-ring-color: rgba(var(--rgb-primary), 0.2); }
 
+/* Utilidades de elevación para plantillas: hasta ahora los tokens
+   --shadow-* solo eran usables desde CSS de componente.
+   Se declaran con @utility (Tailwind v4) y no como CSS plano: así entran en
+   la capa de utilidades, admiten variantes (sm:, hover:) y NO ganan por
+   accidente a una utilidad nativa que venga después en la clase. */
+@utility elev-rest { box-shadow: var(--shadow-rest); }
+@utility elev-lift { box-shadow: var(--shadow-lift); }
+@utility elev-float { box-shadow: var(--shadow-float); }
+
+/* Sombra hacia arriba: barras fijas al borde inferior, donde la elevación
+   tiene que leerse por encima del contenido que se desliza debajo. */
+@utility elev-up {
+  box-shadow: 0 -8px 24px rgba(var(--rgb-forest), 0.10), 0 -2px 6px rgba(var(--rgb-forest), 0.05);
+}
+
+/* Halo dorado para el punto de estado del hero: una sombra de tarjeta
+   (elev-rest) es invisible en un punto de 8px; un halo sí se lee. */
+@utility glow-gold {
+  box-shadow: 0 0 0 3px rgba(var(--rgb-primary), 0.22);
+}
+
+/* Escala de micro-tipografía: absorbe los text-[11px]/text-[10px] arbitrarios.
+   Solo declara font-size (igual que el valor arbitrario de Tailwind), así que
+   el renderizado no cambia; lo que cambia es tener un único sitio donde ajustar. */
+@utility text-mini { font-size: 11px; }
+@utility text-micro { font-size: 10px; }
+
+/* Casilla del sistema (ui-checkbox): el nativo se pintaba con el azul del navegador */
+.ui-check-host,
+ui-form-field {
+  display: block;
+}
+
+.ui-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ui-check-row {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+.ui-check-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.check-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 1.15rem;
+  width: 1.15rem;
+  margin-top: 0.05rem;
+  border-radius: 7px;
+  border: 1px solid rgba(var(--rgb-primary), 0.45);
+  background: rgba(255, 255, 255, 0.75);
+  color: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-swift),
+    border-color var(--dur-fast) var(--ease-swift),
+    color var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.ui-check:hover .check-box {
+  border-color: rgba(var(--rgb-primary), 0.75);
+}
+
+.check-input:checked + .check-box {
+  background: linear-gradient(135deg, #d9bc6d 0%, var(--color-primary) 100%);
+  border-color: rgba(var(--rgb-primary), 0.7);
+  color: #241d0d;
+  animation: checkPop var(--dur-base) var(--ease-spring);
+}
+
+.check-input:focus-visible + .check-box {
+  outline: 2px solid rgba(var(--rgb-primary), 0.85);
+  outline-offset: 2px;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0.86); }
+  60% { transform: scale(1.09); }
+  100% { transform: scale(1); }
+}
+
+/* Botones de paginación (ui-pagination) */
+.pg-btn {
+  border: 1px solid rgba(var(--rgb-primary), 0.3);
+  border-radius: 10px;
+  padding: 0.25rem 0.625rem;
+  transition:
+    background-color var(--dur-fast) var(--ease-swift),
+    border-color var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.pg-btn:hover:not(:disabled):not(.pg-btn-active) {
+  background-color: rgba(var(--rgb-primary), 0.1);
+  transform: translateY(-1px);
+}
+
+.pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pg-btn-active {
+  background-color: var(--color-primary);
+  border-color: rgba(var(--rgb-primary), 0.5);
+  color: #241d0d;
+  font-weight: 700;
+}
+
+/* Stepper de cantidad (ui-qty-stepper) */
+.qty-btn {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(var(--rgb-primary), 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  color: #57615a;
+  transition:
+    background-color var(--dur-fast) var(--ease-swift),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: rgba(var(--rgb-primary), 0.12);
+  transform: scale(1.08);
+}
+
+.qty-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Tarjeta seleccionable (ui-choice-card) */
+.choice-card {
+  transition:
+    border-color var(--dur-fast) var(--ease-swift),
+    background-color var(--dur-fast) var(--ease-swift),
+    box-shadow var(--dur-base) var(--ease-luxe),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.choice-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.choice-card-selected {
+  box-shadow: var(--shadow-lift);
+  animation: choicePop var(--dur-base) var(--ease-spring);
+}
+
+@keyframes choicePop {
+  0% { transform: scale(0.985); }
+  60% { transform: scale(1.01); }
+  100% { transform: scale(1); }
+}
+
+/* Estado de error de campos: borde y foco visibles (antes clases inexistentes) */
+.border-danger { border-color: rgba(180, 83, 60, 0.7); }
+.focus-border-danger:focus { border-color: var(--color-danger); }
+.input-error { border-color: rgba(180, 83, 60, 0.65) !important; }
+.input-error:focus {
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 0 0 2px rgba(180, 83, 60, 0.15);
+}
+
 .hover-bg-cream-90:hover { background-color: rgba(var(--rgb-surface-3), 0.9); }
 
 .placeholder-text-muted-strong::placeholder { color: var(--color-text-muted); }
-.placeholder-text-muted-light::placeholder { color: #b4aea3; }
+/* Antes #b4aea3 (2.1:1 sobre marfil): ilegible como pista de campo */
+.placeholder-text-muted-light::placeholder { color: #7c766c; }
 
 .text-ink { color: #1b1b1b; }
+/* Tailwind gray-400 (#9ca3af) da 2.5:1 sobre crema: se colapsa al muted del sistema */
+.text-gray-400 { color: var(--color-text-muted); }
+.text-gold-70 { color: rgba(107, 83, 32, 0.85); }
+.text-forest { color: var(--color-forest); }
+.bg-forest { background-color: var(--color-forest); }
+.bg-forest-05 { background-color: rgba(var(--rgb-forest), 0.05); }
+.bg-forest-10 { background-color: rgba(var(--rgb-forest), 0.1); }
+.border-forest-20 { border-color: rgba(var(--rgb-forest), 0.2); }
 .text-charcoal { color: var(--color-text); }
-.text-gray-700 { color: #4e4e4e; }
-.text-gray-600 { color: #5a5a5a; }
+/* Grises entonados al verde del sistema (antes neutros fríos que desentonaban) */
+.text-gray-700 { color: #47514b; }
+.text-gray-600 { color: #57615a; }
 .text-gray-500 { color: var(--color-text-muted); }
 .text-danger-deep { color: #7a2e2e; }
-.text-stone { color: #8f8673; }
+.text-stone { color: #746b5a; }
 .text-alert-soft { color: #9a5a4a; }
 .text-sand-200 { color: var(--color-surface-2); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Sistema de movimiento y primitivas de la capa pública
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Aparición al hacer scroll (directiva revealOnScroll) */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity var(--dur-slow) var(--ease-luxe),
+    transform var(--dur-slow) var(--ease-luxe);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Etiqueta pequeña sobre los títulos de sección */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-on-primary);
+}
+
+.eyebrow::before,
+.eyebrow::after {
+  content: "";
+  height: 1px;
+  width: 2rem;
+  background: linear-gradient(90deg, transparent, rgba(var(--rgb-primary), 0.7));
+}
+
+.eyebrow::after {
+  background: linear-gradient(90deg, rgba(var(--rgb-primary), 0.7), transparent);
+}
+
+.eyebrow-plain::before,
+.eyebrow-plain::after {
+  display: none;
+}
+
+/* Tarjetas que se elevan suavemente al pasar el cursor */
+.card-lift {
+  transition:
+    transform var(--dur-base) var(--ease-luxe),
+    box-shadow var(--dur-base) var(--ease-luxe),
+    border-color var(--dur-base) var(--ease-swift);
+}
+
+.card-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 48px rgba(var(--rgb-forest), 0.12);
+}
+
+/* Medallón dorado para iconos de logro y rango */
+.medallion {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, 0.85), rgba(var(--rgb-surface-1), 0.4)),
+    linear-gradient(135deg, rgba(var(--rgb-primary), 0.28), rgba(var(--rgb-primary), 0.1));
+  border: 1px solid rgba(var(--rgb-primary), 0.45);
+  box-shadow:
+    0 10px 26px rgba(var(--rgb-primary), 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Icono de sección en círculo sereno (verde salvia) */
+.icon-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(150deg, rgba(var(--rgb-sage), 0.2), rgba(var(--rgb-forest), 0.1));
+  border: 1px solid rgba(var(--rgb-sage), 0.35);
+  color: var(--color-forest);
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.card-lift:hover .icon-orb,
+.group:hover .icon-orb {
+  transform: scale(1.08) rotate(-3deg);
+}
+
+/* Fondo de hero con luces suaves oro/bosque */
+.bg-hero-luxe {
+  background:
+    radial-gradient(52% 48% at 82% 8%, rgba(var(--rgb-primary), 0.16) 0%, rgba(var(--rgb-surface-2), 0) 60%),
+    radial-gradient(46% 52% at 8% 88%, rgba(var(--rgb-sage), 0.14) 0%, rgba(var(--rgb-surface-2), 0) 62%),
+    var(--color-surface-2);
+}
+
+/* Zoom sutil para imágenes de producto dentro de .group */
+.img-zoom {
+  transition: transform var(--dur-slow) var(--ease-luxe);
+}
+
+.group:hover .img-zoom {
+  transform: scale(1.05);
+}
+
+/* Esqueleto de carga con barrido (estados "Cargando…") */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--rgb-text), 0.07);
+  color: transparent !important;
+  user-select: none;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: skeletonSweep 1.4s var(--ease-swift) infinite;
+}
+
+@keyframes skeletonSweep {
+  to { transform: translateX(100%); }
+}
+
+/* Movimiento reducido: todo visible, sin desplazamientos */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .btn,
+  .card-lift,
+  .icon-orb,
+  .img-zoom,
+  .choice-card,
+  .qty-btn,
+  .pg-btn {
+    transition: none;
+  }
+
+  .modal-backdrop,
+  .modal-backdrop .modal-card,
+  .choice-card-selected,
+  .check-input:checked + .check-box {
+    animation: none;
+  }
+
+  .skeleton::after,
+  .btn-primary:hover:not(.btn-disabled):not(:disabled)::after,
+  .btn-forest:hover:not(.btn-disabled):not(:disabled)::after {
+    animation: none;
+  }
+
+  .card-lift:hover,
+  .btn:hover:not(.btn-disabled):not(:disabled),
+  .group:hover .img-zoom {
+    transform: none;
+  }
+}

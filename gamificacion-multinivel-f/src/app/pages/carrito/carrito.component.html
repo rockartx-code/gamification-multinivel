@@ -40,41 +40,48 @@
             </div>
 
             <div class="shrink-0 text-right">
-              <div class="flex items-center justify-end gap-2 text-[11px] text-gray-600">
+              <div class="flex items-center justify-end gap-2 text-mini text-gray-600">
                 <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-                Total
+                {{ totalLabel }}
               </div>
               <div class="text-lg font-extrabold sm:text-xl">{{ formatMoney(total) }}</div>
-              <div class="text-[11px]" [ngClass]="totalDiscount > 0 ? 'text-accent' : 'text-gray-500'">
+              <div class="text-mini" [ngClass]="totalDiscount > 0 ? 'text-accent' : 'text-gray-500'">
                 {{ totalDiscount > 0 ? ('Descuento: -' + formatMoney(totalDiscount) + ' • ' + discountLabel) : 'Sin descuento' }}
               </div>
-              <div class="text-[11px] text-gray-500">
+              <div class="text-mini text-gray-500">
                 {{ itemsCount }} artículo{{ itemsCount === 1 ? '' : 's' }}
               </div>
             </div>
           </div>
 
-          <div class="mt-3 grid grid-cols-3 gap-2">
-            <div class="rounded-2xl border border-olive-30 surface-soft p-3">
-              <div class="flex items-center gap-2 text-[11px] text-gray-600">
+          <div class="mt-3 grid gap-2" [ngClass]="relojCorteVisible ? 'grid-cols-3' : 'grid-cols-2'">
+            <!-- G/29 · "¿se me vence el carrito? ¿se acaba una oferta?": el
+                 rótulo dice de qué es el corte y la fecha va en letras, con la
+                 hora del servidor, igual que en el panel.
+                 Ronda 7 · Valeria y Nayeli: solo para quien tiene un mes que se
+                 le cierra; a una invitada la apuraba con algo que no es suyo. -->
+            <div *ngIf="relojCorteVisible" class="rounded-2xl border border-olive-30 surface-soft p-3" [attr.title]="cutoffLabel + ' · ' + cutoffDateText">
+              <div class="flex items-center gap-2 text-mini text-gray-600">
                 <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                Corte en
+                Corte de mes
               </div>
               <div class="text-sm font-extrabold">{{ countdownLabel }}</div>
+              <div class="mt-1 text-micro leading-snug text-gray-600">{{ cutoffLabel }}</div>
+              <div class="text-micro text-gray-500">{{ cutoffDateText }}</div>
             </div>
             <div class="rounded-2xl border border-olive-30 surface-soft p-3">
-              <div class="flex items-center gap-2 text-[11px] text-gray-600">
+              <div class="flex items-center gap-2 text-mini text-gray-600">
                 <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
                 Pago
               </div>
               <div class="text-sm font-extrabold">Seguro</div>
             </div>
             <div class="rounded-2xl border border-olive-30 surface-soft p-3">
-              <div class="flex items-center gap-2 text-[11px] text-gray-600">
+              <div class="flex items-center gap-2 text-mini text-gray-600">
                 <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                 Entrega
               </div>
-              <div class="text-sm font-extrabold">{{ deliveryType === 'pickup' ? 'Sucursal' : '24–72h' }}</div>
+              <div class="text-sm font-extrabold">{{ deliveryType === 'pickup' ? 'Sucursal' : plazoEntrega }}</div>
             </div>
           </div>
         </div>
@@ -112,7 +119,7 @@
               <div class="font-extrabold tracking-tight sm:truncate">
                 {{ item.name }}
               </div>
-              <div *ngIf="!item.id.includes('::') && item.note" class="mt-1 text-[11px] text-gray-500 sm:truncate">
+              <div *ngIf="!item.id.includes('::') && item.note" class="mt-1 text-mini text-gray-500 sm:truncate">
                 {{ item.note }}
               </div>
             </div>
@@ -123,7 +130,7 @@
           </div>
 
           <!-- Discount row -->
-          <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+          <div class="mt-1 flex flex-wrap items-center gap-2 text-mini">
             <span *ngIf="hasDiscount" class="text-gray-500 line-through">
               {{ formatMoney(item.price) }}
             </span>
@@ -137,17 +144,11 @@
           <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <!-- Qty -->
             <div
-              class="flex items-center justify-between gap-2 rounded-2xl border border-olive-30 surface-soft px-3 py-2 sm:justify-start"
+              class="flex items-center justify-between gap-3 rounded-2xl border border-olive-30 surface-soft px-3 py-2 sm:justify-start"
             >
-              <span class="text-[11px] text-gray-600">Qty</span>
-              <ui-form-field
-                type="number"
-                [min]="0"
-                wrapperClass="w-20"
-                [ngModel]="item.qty"
-                (ngModelChange)="setQty(item.id, $event)"
-                inputClass="w-20 rounded-xl border border-olive-30 bg-white/60 px-2 py-1 text-sm text-main"
-              ></ui-form-field>
+              <span class="text-mini text-gray-600">Cantidad</span>
+              <ui-qty-stepper [qty]="item.qty" [itemLabel]="item.name"
+                (qtyChange)="setQty(item.id, $event)"></ui-qty-stepper>
             </div>
 
             <!-- Parcial -->
@@ -188,62 +189,107 @@
 
   </div>
 
+  <!-- CONTACTO DEL PEDIDO (paquete C · propuesta 3): se pide siempre, elijas envío o recolección -->
+  <div id="contacto-pedido" class="rounded-2xl border border-olive-30 surface-soft p-4">
+    <div class="flex items-center gap-2 text-sm font-semibold text-main">
+      <i class="fa-solid fa-address-card" aria-hidden="true"></i>
+      Datos de contacto
+    </div>
+    <p class="mt-1 text-mini text-gray-500">
+      Con esto sabemos a nombre de quién va el pedido y por dónde avisarte. Los pedimos tanto si eliges envío a domicilio como si prefieres recoger en sucursal.
+    </p>
+
+    <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ui-form-field
+        label="Nombre de quien recibe"
+        placeholder="Tu nombre"
+        name="deliveryName"
+        [ngModel]="deliveryName"
+        (ngModelChange)="onContactFieldChange('deliveryName', $event)"
+        [errorText]="contactFieldErrors.deliveryName"
+      ></ui-form-field>
+
+      <ui-form-field
+        label="Teléfono"
+        placeholder="10 dígitos"
+        name="deliveryPhone"
+        [ngModel]="deliveryPhone"
+        (ngModelChange)="onContactFieldChange('deliveryPhone', $event)"
+        [errorText]="contactFieldErrors.deliveryPhone"
+      ></ui-form-field>
+
+      <ui-form-field
+        *ngIf="isGuest"
+        type="email"
+        label="Correo"
+        helpText="Ahí te avisamos del pago, el envío y la entrega."
+        placeholder="tucorreo@ejemplo.com"
+        name="deliveryEmail"
+        wrapperClass="block sm:col-span-2"
+        [ngModel]="deliveryEmail"
+        (ngModelChange)="onContactFieldChange('deliveryEmail', $event)"
+        [errorText]="contactFieldErrors.deliveryEmail"
+      ></ui-form-field>
+    </div>
+  </div>
+
   <!-- TIPO DE ENTREGA -->
   <div class="rounded-2xl border border-olive-30 surface-soft p-4">
     <div class="flex items-center gap-2 text-sm font-semibold text-main">
       <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
       Tipo de entrega
     </div>
-    <div class="mt-3 grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        class="flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition"
-        [ngClass]="deliveryType === 'delivery' ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-        (click)="setDeliveryType('delivery')">
+    <div class="mt-3 grid gap-2" [ngClass]="pickupChoiceVisible ? 'grid-cols-2' : 'grid-cols-1'">
+      <ui-choice-card layout="stack" [selected]="deliveryType === 'delivery'" (pressed)="setDeliveryType('delivery')">
         <i class="fa-solid fa-truck text-xl" [ngClass]="deliveryType === 'delivery' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
         <div class="text-sm font-semibold text-main">Envío a domicilio</div>
-        <div class="text-[11px] text-gray-500">Recibe en tu dirección</div>
-        <i class="fa-solid text-sm" [ngClass]="deliveryType === 'delivery' ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'" aria-hidden="true"></i>
-      </button>
-      <button
-        type="button"
-        class="flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition"
-        [ngClass]="deliveryType === 'pickup' ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-        (click)="setDeliveryType('pickup')">
+        <!-- Costo y umbral de envío gratis visibles desde el carrito (números de configuración). -->
+        <div class="text-mini text-gray-500">{{ envioAnuncio }}</div>
+      </ui-choice-card>
+      <!-- Solo se ofrece si hay sucursal en tu ciudad/estado con existencia (o aún no sabemos tu zona). -->
+      <ui-choice-card *ngIf="pickupChoiceVisible" layout="stack" [selected]="deliveryType === 'pickup'" (pressed)="setDeliveryType('pickup')">
         <i class="fa-solid fa-store text-xl" [ngClass]="deliveryType === 'pickup' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
         <div class="text-sm font-semibold text-main">Recoger en sucursal</div>
-        <div class="text-[11px] text-gray-500">Sin costo de envío</div>
-        <i class="fa-solid text-sm" [ngClass]="deliveryType === 'pickup' ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'" aria-hidden="true"></i>
-      </button>
+        <div class="text-mini text-gray-500">{{ pickupLocationGiven ? 'Sin costo de envío' : (pickupCities.length ? 'Disponible en: ' + pickupCitiesLabel : 'Sin costo de envío') }}</div>
+      </ui-choice-card>
+    </div>
+    <div *ngIf="pickupUnavailableNote" class="mt-2 flex items-start gap-2 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-gray-600">
+      <i class="fa-solid fa-store-slash mt-0.5 shrink-0 text-gray-400" aria-hidden="true"></i>
+      <span>{{ pickupUnavailableNote }}</span>
+    </div>
+    <div *ngIf="deliveryType === 'delivery' && faltanteEnvioGratis > 0" class="mt-2 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <i class="fa-solid fa-truck-fast mt-0.5 shrink-0" aria-hidden="true"></i>
+      <span>Te faltan <span class="font-semibold">{{ formatMoney(faltanteEnvioGratis) }}</span> de compra para envío gratis (se cuenta sobre el subtotal, antes de descuentos).</span>
     </div>
 
     <!-- Selector de sucursal -->
     <div *ngIf="deliveryType === 'pickup'" class="mt-3">
       <div *ngIf="isLoadingPickupStocks" class="flex items-center gap-2 text-xs text-gray-500">
         <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
-        Cargando sucursales...
+        Buscando sucursales en tu zona...
       </div>
-      <div *ngIf="!isLoadingPickupStocks && pickupStocks.length === 0" class="rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-500">
+      <div *ngIf="!isLoadingPickupStocks && pickupOptions.length === 0" class="rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-500">
         No hay sucursales disponibles para recoger en este momento.
       </div>
-      <div *ngIf="!isLoadingPickupStocks && pickupStocks.length > 0" class="space-y-2">
+      <div *ngIf="!isLoadingPickupStocks && pickupOptions.length > 0" class="space-y-2">
         <div class="text-xs font-semibold text-main">Selecciona sucursal</div>
-        <button
-          *ngFor="let branch of pickupStocks"
-          type="button"
-          class="w-full rounded-2xl border p-3 text-left transition"
-          [ngClass]="selectedPickupStockId === branch.id ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-          (click)="selectedPickupStockId = branch.id">
+        <div *ngIf="!pickupLocationGiven" class="text-mini text-gray-500">Escribe tu ciudad y estado en la dirección para ver solo las sucursales de tu zona.</div>
+        <ui-choice-card *ngFor="let branch of pickupOptions" layout="row"
+          [selected]="selectedPickupStockId === branch.id"
+          [attr.aria-disabled]="!branch.canPickup"
+          [ngClass]="branch.canPickup ? '' : 'opacity-60'"
+          (pressed)="selectPickupStock(branch)">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
               <div class="text-sm font-semibold text-main">{{ branch.name }}</div>
-              <div class="text-xs text-gray-500">{{ branch.location }}</div>
+              <div class="text-xs text-gray-500">{{ branch.location }}<span *ngIf="branch.city"> · {{ branch.city }}</span></div>
+              <div class="text-mini" [ngClass]="branch.canPickup ? 'text-success' : 'text-amber-800'">{{ pickupReason(branch) }}</div>
             </div>
             <i class="fa-solid shrink-0"
-              [ngClass]="selectedPickupStockId === branch.id ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'"
+              [ngClass]="selectedPickupStockId === branch.id ? 'fa-circle-check text-gold' : (branch.canPickup ? 'fa-circle text-gray-400' : 'fa-ban text-gray-400')"
               aria-hidden="true"></i>
           </div>
-        </button>
+        </ui-choice-card>
       </div>
     </div>
 
@@ -254,26 +300,16 @@
         Método de pago
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          class="flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition"
-          [ngClass]="pickupPaymentMethod === 'online' ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-          (click)="pickupPaymentMethod = 'online'">
+        <ui-choice-card layout="stack" [selected]="pickupPaymentMethod === 'online'" (pressed)="pickupPaymentMethod = 'online'">
           <i class="fa-solid fa-lock text-xl" [ngClass]="pickupPaymentMethod === 'online' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
           <div class="text-sm font-semibold text-main">Pagar en línea</div>
-          <div class="text-[11px] text-gray-500">Tarjeta / transferencia</div>
-          <i class="fa-solid text-sm" [ngClass]="pickupPaymentMethod === 'online' ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'" aria-hidden="true"></i>
-        </button>
-        <button
-          type="button"
-          class="flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition"
-          [ngClass]="pickupPaymentMethod === 'at_store' ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-          (click)="pickupPaymentMethod = 'at_store'">
+          <div class="text-mini text-gray-500">Tarjeta / transferencia</div>
+        </ui-choice-card>
+        <ui-choice-card layout="stack" [selected]="pickupPaymentMethod === 'at_store'" (pressed)="pickupPaymentMethod = 'at_store'">
           <i class="fa-solid fa-store text-xl" [ngClass]="pickupPaymentMethod === 'at_store' ? 'text-gold' : 'text-gray-400'" aria-hidden="true"></i>
           <div class="text-sm font-semibold text-main">Pagar en sucursal</div>
-          <div class="text-[11px] text-gray-500">Al recoger tu pedido</div>
-          <i class="fa-solid text-sm" [ngClass]="pickupPaymentMethod === 'at_store' ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'" aria-hidden="true"></i>
-        </button>
+          <div class="text-mini text-gray-500">Al recoger tu pedido</div>
+        </ui-choice-card>
       </div>
       <div *ngIf="pickupPaymentMethod === 'at_store'" class="mt-2 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
         <i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0" aria-hidden="true"></i>
@@ -289,7 +325,10 @@
         <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
         Entrega
       </div>
-      <div class="text-[11px] text-gray-500">Mínimo requerido</div>
+      <!-- G/25 · "¿mínimo de qué?" lo preguntaron tres personas: el rótulo no
+           decía ni el sujeto ni el número. Son los campos obligatorios de la
+           dirección, no un importe mínimo de compra. -->
+      <div class="text-mini text-gray-500">Todos los campos son obligatorios</div>
     </div>
 
     <!-- Mobile: 1 col, sm+: 2 cols -->
@@ -297,33 +336,28 @@
       <div *ngIf="!isGuest && hasSavedShippingAddresses" class="space-y-2 sm:col-span-2">
         <div class="flex items-center justify-between gap-2">
           <div class="text-xs font-semibold text-main">Direcciones guardadas</div>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-xl border border-dashed border-olive-30 px-3 py-2 text-xs font-semibold text-main transition hover:bg-ivory-80"
-            (click)="startNewShippingAddress()">
-            <i class="fa-solid fa-plus" aria-hidden="true"></i>
-            Usar otra direccion
-          </button>
+          <ui-button size="sm" variant="ghost" iconClass="fa-solid fa-plus" (pressed)="startNewShippingAddress()">
+            Usar otra dirección
+          </ui-button>
         </div>
 
         <div class="grid gap-2">
-          <button
+          <ui-choice-card
             *ngFor="let savedAddress of shippingAddresses"
-            type="button"
-            class="rounded-2xl border p-3 text-left transition"
-            [ngClass]="savedAddress.id === selectedShippingAddressId ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-            (click)="selectShippingAddress(savedAddress.id)">
+            layout="row"
+            [selected]="savedAddress.id === selectedShippingAddressId"
+            (pressed)="selectShippingAddress(savedAddress.id)">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="flex items-center gap-2 text-sm font-semibold text-main">
                   <span>{{ savedAddress.label || 'Direccion guardada' }}</span>
-                  <span *ngIf="savedAddress.isDefault" class="rounded-full border border-olive-30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                  <span *ngIf="savedAddress.isDefault" class="rounded-full border border-olive-30 px-2 py-0.5 text-micro font-semibold uppercase tracking-wide text-gray-600">
                     Default
                   </span>
                 </div>
                 <div class="mt-1 text-xs text-gray-600">{{ savedAddress.address }}</div>
-                <div class="text-[11px] text-gray-500">{{ savedAddress.postalCode }} - {{ savedAddress.state }}</div>
-                <div *ngIf="savedAddress.recipientName || savedAddress.phone" class="mt-1 text-[11px] text-gray-500">
+                <div class="text-mini text-gray-500">{{ savedAddress.postalCode }} - {{ savedAddress.state }}</div>
+                <div *ngIf="savedAddress.recipientName || savedAddress.phone" class="mt-1 text-mini text-gray-500">
                   {{ savedAddress.recipientName || deliveryName || 'Contacto' }}<span *ngIf="savedAddress.phone"> · {{ savedAddress.phone }}</span>
                 </div>
               </div>
@@ -333,23 +367,9 @@
                 [ngClass]="savedAddress.id === selectedShippingAddressId ? 'fa-circle-check text-gold' : 'fa-location-dot text-gray-400'"
                 aria-hidden="true"></i>
             </div>
-          </button>
+          </ui-choice-card>
         </div>
       </div>
-
-      <ui-form-field
-        label="Nombre"
-        placeholder="Tu nombre"
-        name="deliveryName"
-        [(ngModel)]="deliveryName"
-      ></ui-form-field>
-
-      <ui-form-field
-        label="Teléfono"
-        placeholder="+52..."
-        name="deliveryPhone"
-        [(ngModel)]="deliveryPhone"
-      ></ui-form-field>
 
       <ui-form-field
         label="Calle"
@@ -382,9 +402,10 @@
         label="CP"
         placeholder="00000"
         name="deliveryPostalCode"
+        helpText="Con tu código postal ya calculamos el envío: no hace falta nada más."
         [(ngModel)]="deliveryPostalCode"
         (ngModelChange)="onDeliveryFieldChange('deliveryPostalCode', $event)"
-        [errorText]="deliveryFieldErrors.deliveryPostalCode ? 'Debe tener 5 digitos.' : ''"
+        [errorText]="deliveryFieldErrors.deliveryPostalCode ? 'Debe tener 5 dígitos.' : ''"
       ></ui-form-field>
 
       <ui-form-field
@@ -399,7 +420,7 @@
       ></ui-form-field>
 
       <ui-form-field
-        label="Pais"
+        label="País"
         kind="select"
         placeholder="Selecciona un pais"
         name="deliveryCountry"
@@ -425,28 +446,24 @@
         wrapperClass="block sm:col-span-2"
       ></ui-form-field>
 
-      <div class="block sm:col-span-2">
-        <label class="mb-1 block text-xs font-semibold text-gray-600">Detalles en la entrega</label>
-        <textarea
-          name="deliveryNotes"
-          [(ngModel)]="deliveryNotes"
-          rows="3"
-          placeholder="Ej: Entregar en caseta, dejar con un vecino, tocar la campana de la entrada..."
-          class="w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-main/20 resize-none"
-        ></textarea>
-      </div>
+      <ui-form-field
+        kind="textarea"
+        [rows]="3"
+        label="Detalles en la entrega"
+        name="deliveryNotes"
+        [(ngModel)]="deliveryNotes"
+        placeholder="Ej: Entregar en caseta, dejar con un vecino, tocar la campana de la entrada..."
+        wrapperClass="block sm:col-span-2"
+        inputClass="w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main resize-none"
+      ></ui-form-field>
 
       <div *ngIf="!isGuest" class="space-y-2 sm:col-span-2">
-        <label class="flex items-start gap-3 rounded-2xl border border-olive-30 surface-soft px-3 py-3 text-sm text-main">
-          <input
-            type="checkbox"
-            name="saveShippingAddress"
-            [(ngModel)]="saveShippingAddress"
-            class="mt-0.5 h-4 w-4 rounded border border-olive-30 bg-white/80 text-gold">
-          <span>
-            {{ selectedShippingAddressId ? 'Guardar cambios en esta direccion' : 'Guardar esta direccion para futuras compras' }}
-          </span>
-        </label>
+        <div class="rounded-2xl border border-olive-30 surface-soft px-3 py-3 text-sm text-main">
+          <ui-checkbox
+            [checked]="saveShippingAddress"
+            (checkedChange)="saveShippingAddress = $event"
+            [label]="selectedShippingAddressId ? 'Guardar cambios en esta dirección' : 'Guardar esta dirección para futuras compras'"></ui-checkbox>
+        </div>
 
         <ui-form-field
           *ngIf="saveShippingAddress"
@@ -457,6 +474,78 @@
           wrapperClass="block"
         ></ui-form-field>
       </div>
+    </div>
+  </div>
+
+  <!-- QUIERO FACTURA (paquete C): datos fiscales mínimos; el pedido queda como "factura solicitada" -->
+  <div *ngIf="invoiceEnabled" id="factura-checkout" class="rounded-2xl border border-olive-30 surface-soft p-4">
+    <div class="flex items-center gap-2 text-sm font-semibold text-main">
+      <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+      Factura
+    </div>
+    <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-3">
+      <ui-checkbox
+        label="Quiero factura de esta compra"
+        description="Te pedimos tus datos fiscales una sola vez. La factura te llega por correo en los siguientes días hábiles después del pago."
+        [checked]="invoiceRequested"
+        (checkedChange)="toggleInvoice($event)"></ui-checkbox>
+    </div>
+    <div *ngIf="invoiceRequested" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ui-form-field
+        label="RFC"
+        placeholder="GOMR850101AB1"
+        name="invoiceRfc"
+        helpText="12 caracteres si es empresa, 13 si es persona."
+        [ngModel]="invoiceForm.rfc"
+        (ngModelChange)="onInvoiceField('rfc', $event)"
+        [errorText]="invoiceErrors.rfc || ''"
+        inputClass="w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm uppercase text-main"
+      ></ui-form-field>
+      <ui-form-field
+        label="Nombre o razón social"
+        placeholder="Como aparece en tu constancia fiscal"
+        name="invoiceRazonSocial"
+        [ngModel]="invoiceForm.razonSocial"
+        (ngModelChange)="onInvoiceField('razonSocial', $event)"
+        [errorText]="invoiceErrors.razonSocial || ''"
+      ></ui-form-field>
+      <ui-form-field
+        label="Régimen fiscal"
+        kind="select"
+        placeholder="Elige tu régimen"
+        name="invoiceRegimen"
+        [options]="regimenOptions"
+        [ngModel]="invoiceForm.regimenFiscal"
+        (ngModelChange)="onInvoiceField('regimenFiscal', $event)"
+        [errorText]="invoiceErrors.regimenFiscal || ''"
+      ></ui-form-field>
+      <ui-form-field
+        label="Código postal fiscal"
+        placeholder="00000"
+        name="invoiceCp"
+        [ngModel]="invoiceForm.cpFiscal"
+        (ngModelChange)="onInvoiceField('cpFiscal', $event)"
+        [errorText]="invoiceErrors.cpFiscal || ''"
+      ></ui-form-field>
+      <ui-form-field
+        label="Uso del CFDI"
+        kind="select"
+        placeholder="Elige el uso"
+        name="invoiceUso"
+        [options]="usoCfdiOptions"
+        [ngModel]="invoiceForm.usoCfdi"
+        (ngModelChange)="onInvoiceField('usoCfdi', $event)"
+        [errorText]="invoiceErrors.usoCfdi || ''"
+      ></ui-form-field>
+      <ui-form-field
+        type="email"
+        label="Correo para la factura"
+        placeholder="tucorreo@ejemplo.com"
+        name="invoiceEmail"
+        [ngModel]="invoiceForm.email"
+        (ngModelChange)="onInvoiceField('email', $event)"
+        [errorText]="invoiceErrors.email || ''"
+      ></ui-form-field>
     </div>
   </div>
 
@@ -477,30 +566,29 @@
     </div>
 
     <div *ngIf="!isLoadingShippingRates && shippingRates.length > 0" class="mt-3 space-y-2">
-      <button
+      <ui-choice-card
         *ngFor="let rate of shippingRates"
-        type="button"
-        class="w-full rounded-2xl border p-3 text-left transition"
-        [ngClass]="selectedShippingRate === rate ? 'border-gold bg-ivory-80 shadow-[0_14px_30px_rgba(0,0,0,0.08)]' : 'border-olive-30 surface-soft hover:bg-ivory-80'"
-        (click)="selectedShippingRate = rate">
+        layout="row"
+        [selected]="selectedShippingRate === rate"
+        (pressed)="selectedShippingRate = rate">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0 flex-1">
             <div class="text-sm font-semibold text-main">{{ rate.carrier }}</div>
             <div class="text-xs text-gray-600">{{ rate.service }}</div>
-            <div *ngIf="rate.deliveryEstimate" class="mt-1 text-[11px] text-gray-500">{{ rate.deliveryEstimate }}</div>
-            <div *ngIf="!rate.deliveryEstimate && rate.transitDays" class="mt-1 text-[11px] text-gray-500">
+            <div *ngIf="rate.deliveryEstimate" class="mt-1 text-mini text-gray-500">{{ rate.deliveryEstimate }}</div>
+            <div *ngIf="!rate.deliveryEstimate && rate.transitDays" class="mt-1 text-mini text-gray-500">
               {{ rate.transitDays }} día{{ rate.transitDays === 1 ? '' : 's' }}
             </div>
           </div>
           <div class="shrink-0 text-right">
-            <div class="text-sm font-extrabold text-main">{{ formatMoney(rate.displayPrice) }}</div>
-            <div class="text-[11px] text-gray-500">{{ rate.currency }}</div>
+            <div class="text-sm font-extrabold text-main" [class.line-through]="isShippingFree" [class.text-gray-400]="isShippingFree">{{ formatMoney(rate.displayPrice) }}</div>
+            <div class="text-mini" [class.text-gray-500]="!isShippingFree" [class.text-success]="isShippingFree">{{ isShippingFree ? 'Gratis por promoción' : rate.currency }}</div>
           </div>
           <i class="fa-solid shrink-0 text-base"
-            [ngClass]="selectedShippingRate === rate ? 'fa-circle-check text-gold' : 'fa-circle text-gray-300'"
+            [ngClass]="selectedShippingRate === rate ? 'fa-circle-check text-gold' : 'fa-circle text-gray-400'"
             aria-hidden="true"></i>
         </div>
-      </button>
+      </ui-choice-card>
     </div>
 
     <div *ngIf="!isLoadingShippingRates && !shippingQuoteError && shippingRates.length === 0" class="mt-3 text-xs text-gray-500">
@@ -528,69 +616,126 @@
               <div class="text-right">
                 <div class="flex items-center justify-end gap-2 text-xs text-muted">
                   <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-                  Total
+                  {{ totalLabel }}
                 </div>
                 <div class="text-2xl font-extrabold">{{ formatMoney(total) }}</div>
+                <div *ngIf="totalNote" class="mt-1 max-w-[15rem] text-mini text-amber-800">{{ totalNote }}</div>
               </div>
             </div>
 
             <div class="mt-5 space-y-3 text-sm">
               <div class="flex items-center justify-between text-muted">
-                <span>Subtotal</span>
+                <!-- Ronda 7 · Valeria: este renglón y el de abajo se llamaban los
+                     dos «Subtotal» y ninguno «Total». -->
+                <span>Subtotal de productos</span>
                 <span>{{ formatMoney(subtotal) }}</span>
               </div>
               <div class="flex items-center justify-between text-muted">
                 <span>Envío</span>
                 <span>{{ shippingLabel }}</span>
               </div>
-              <div *ngIf="selectedShippingRate" class="text-[11px] text-gray-500 text-right -mt-2">
+              <div *ngIf="selectedShippingRate" class="text-mini text-gray-500 text-right -mt-2">
                 {{ selectedShippingRate.carrier }} · {{ selectedShippingRate.service }}
+              </div>
+              <div *ngIf="deliveryType === 'delivery' && faltanteEnvioGratis > 0" class="text-mini text-amber-800 text-right -mt-2">
+                Te faltan {{ formatMoney(faltanteEnvioGratis) }} de compra para envío gratis
               </div>
               <div class="flex items-center justify-between text-muted">
                 <span>Descuento</span>
                 <span class="text-gold">-{{ formatMoney(discount) }}</span>
               </div>
-              <div class="flex items-center justify-between text-muted">
-                <span>Nivel de descuento</span>
-                <span class="text-main">{{ discountLevelLabel }}</span>
-              </div>
-              <div class="flex items-center justify-between text-muted">
-                <span>Descuento aplicado</span>
-                <span class="text-gold">{{ discountLabel }}</span>
-              </div>
-              <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
-                {{ discountUpgradeMessage }}
-              </div>
+              <!-- Con la tabla única montada, el bloque viejo de "Nivel" decía otra cosa con los mismos nombres -->
+              <ng-container *ngIf="!tablaDescuentoVisible">
+                <div class="flex items-center justify-between text-muted">
+                  <span>Nivel de descuento</span>
+                  <span class="text-main">{{ discountLevelLabel }}</span>
+                </div>
+                <div class="flex items-center justify-between text-muted">
+                  <span>Descuento aplicado</span>
+                  <span class="text-gold">{{ discountLabel }}</span>
+                </div>
+                <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+                  {{ discountUpgradeMessage }}
+                </div>
+              </ng-container>
+              <!-- Ola B · I2: la misma tabla de descuento y VP que el panel (paquete B) -->
+              <ui-tabla-descuento *ngIf="tablaDescuentoVisible && plan"
+                [tiers]="plan.descuento.tramos"
+                [mxnPerVp]="plan.unidades.mxnPerVp"
+                [activationVp]="plan.activacion.vpNetos"
+                [monthNet]="monthNetSocio"
+                [monthVp]="monthVpSocio"
+                [cartGross]="subtotal"
+                [cartPc]="cartPc"
+                [mode]="modoTabla"
+                context="carrito"
+                [compact]="true"
+                (activateRequested)="goToModoSocio()"></ui-tabla-descuento>
 
               <!-- Cupón / código de descuento (H7) -->
               <div class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
                 <div class="flex items-center gap-2">
-                  <input type="text" placeholder="Código de descuento"
-                    class="flex-1 rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
+                  <ui-form-field placeholder="Código de descuento"
+                    wrapperClass="flex-1"
+                    inputClass="w-full rounded-lg border border-olive-30 bg-white px-2 py-1 text-sm uppercase"
                     [ngModel]="couponCode" (ngModelChange)="couponCode = $event"
-                    [disabled]="!!appliedCoupon?.valid" />
-                  <button *ngIf="!appliedCoupon?.valid" type="button"
-                    class="rounded-lg bg-accent px-3 py-1 text-xs font-bold text-white disabled:opacity-50"
-                    [disabled]="couponChecking" (click)="applyCoupon()">
+                    [disabled]="!!appliedCoupon?.valid"></ui-form-field>
+                  <ui-button *ngIf="!appliedCoupon?.valid" size="sm" variant="primary"
+                    [disabled]="couponChecking" (pressed)="applyCoupon()">
                     {{ couponChecking ? '...' : 'Aplicar' }}
-                  </button>
-                  <button *ngIf="appliedCoupon?.valid" type="button"
-                    class="rounded-lg border border-olive-30 px-3 py-1 text-xs font-semibold text-gray-600"
-                    (click)="removeCoupon()">Quitar</button>
+                  </ui-button>
+                  <ui-button *ngIf="appliedCoupon?.valid" size="sm" variant="ghost" (pressed)="removeCoupon()">
+                    Quitar
+                  </ui-button>
                 </div>
-                <p *ngIf="couponMessage" class="mt-1 text-[11px]"
+                <p *ngIf="couponMessage" class="mt-1 text-mini"
                   [ngClass]="appliedCoupon?.valid ? 'text-green-600' : 'text-red-500'">{{ couponMessage }}</p>
               </div>
               <div *ngIf="couponDiscount > 0" class="flex items-center justify-between text-muted">
                 <span>Cupón {{ appliedCoupon?.code }}</span>
                 <span class="text-gold">-{{ formatMoney(couponDiscount) }}</span>
               </div>
+              <!-- Los VP se calculan sobre el neto (descuento y cupón incluidos); nadie los veía hasta pagar -->
+              <div *ngIf="!isGuest" class="flex items-center justify-between text-muted">
+                <span>Puntos de este pedido (VP)</span>
+                <span class="font-semibold text-main">{{ cartVp }} VP</span>
+              </div>
+              <div *ngIf="orderLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Con este pedido llegas a {{ vpAfterOrder }} de {{ vpGoalTarget }} VP del mes: te faltarían {{ vpGoalGap }} VP para activarte. Los VP se cuentan sobre el precio ya con descuento; agrega algo más si quieres activarte con esta compra.
+              </div>
+              <!-- Completa tu activación: el producto más barato que cierra los VP que faltan -->
+              <div *ngIf="activationSuggestionVisible" class="rounded-xl border border-gold bg-ivory-80 px-3 py-3 text-xs text-main">
+                <div class="flex items-center gap-2 font-semibold text-gold">
+                  <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                  Completa tu activación
+                </div>
+                <p class="mt-1">{{ activationSuggestionText }}</p>
+                <ui-button size="sm" variant="primary" class="mt-2" iconClass="fa-solid fa-cart-plus" (pressed)="addSuggestedActivation()">
+                  Agregar {{ sugerencia?.suggestion?.units }} {{ sugerencia?.suggestion?.name }}
+                </ui-button>
+              </div>
+              <div *ngIf="couponLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Con el cupón, este pedido te deja en {{ cartVp }} VP y tu meta de activación es {{ vpGoalTarget }} VP: te faltarían {{ vpGoalGap }} VP. Sin cupón llegarías; o agrega algo más.
+              </div>
 
               <div class="my-2 border-t border-olive-20"></div>
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-main">Total</span>
-                <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
-              </div>
+              <!-- Paquete B · propuesta 38, montado en la integración: los precios ya
+                   incluyen IVA; el desglose explica un total que no cambia. Mientras
+                   falte el envío el importe todavía no es el final, así que se sigue
+                   llamando "Subtotal" y no se desglosa nada. -->
+              <ng-container *ngIf="totalLabel === 'Total'; else resumenCajonSinEnvio">
+                <ui-desglose-iva [total]="total" [shipping]="shippingInTotal"
+                  [rate]="vatRate" [label]="vatLabel"></ui-desglose-iva>
+              </ng-container>
+              <ng-template #resumenCajonSinEnvio>
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-main">{{ totalLabel }}</span>
+                  <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
+                </div>
+                <div *ngIf="totalNote" class="text-mini text-amber-800">{{ totalNote }}</div>
+              </ng-template>
+              <!-- Ola B · I2: "Como socia habrías ahorrado" bajo el total (paquete B); en modo socio no pinta nada -->
+              <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
             </div>
 
             <div class="mt-5 mb-5 rounded-2xl border border-olive-30 bg-ivory-80 p-4">
@@ -599,12 +744,12 @@
                   Meta para invitados
                 </div>
                 <div class="mt-2 text-lg font-extrabold tracking-tight">
-                  Registrate para obtener descuentos y beneficios
+                  Regístrate para obtener descuentos y beneficios
                 </div>
                 <div class="mt-1 text-xs text-muted">Crea tu cuenta para desbloquear promociones y seguimiento.</div>
                 <ui-button size="sm" variant="primary" type="button" class="mt-3" (pressed)="openGuestRegisterModal()">
                   <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-                  Registrate
+                  Regístrate
                 </ui-button>
               </ng-container>
               <ng-template #goalProgress>
@@ -614,8 +759,8 @@
                   [currentValue]="basePercent"
                   [cartValue]="cartPercent"
                   [targetValue]="100">
-                  <div class="mt-2 text-xs text-gray-500">
-                    Te faltan <span class="font-semibold text-gold">{{ formatMoney(gapToGoal) }}</span> para
+                  <div *ngIf="hasGoalGap" class="mt-2 text-xs text-gray-500">
+                    Te faltan <span class="font-semibold text-gold">{{ gapToGoalLabel }}</span> para
                     {{ goalTitle }}
                   </div>
                 </ui-goal-progress>
@@ -643,7 +788,7 @@
         </ui-button>
 
         <div class="text-right">
-          <div class="text-[11px] text-gray-600">Total</div>
+          <div class="text-mini text-gray-600">{{ totalLabel }}</div>
           <div class="text-lg font-extrabold leading-none">{{ formatMoney(total) }}</div>
         </div>
 
@@ -657,7 +802,7 @@
 
   <div class="fixed bottom-[104px] left-1/2 z-[60] -translate-x-1/2" [class.hidden]="!isToastVisible">
     <div
-      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main elev-lift">
       {{ toastMessage }}
     </div>
   </div>
@@ -666,7 +811,7 @@
     [isOpen]="isSummaryOpen"
     maxWidthClass="max-w-lg"
     containerClass="fixed inset-0 z-[70] flex items-end justify-center modal-backdrop px-4 pb-6 overflow-y-auto lg:hidden"
-    panelClass="w-full max-h-[85vh] overflow-y-auto rounded-3xl border border-olive-30 bg-sand-200 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+    panelClass="w-full max-h-[85vh] overflow-y-auto rounded-3xl border border-olive-30 bg-sand-200 elev-float"
     contentClass="p-5"
     (closed)="closeSummary()">
       <div class="flex items-start justify-between gap-3">
@@ -685,40 +830,112 @@
 
       <div class="mt-4 space-y-3 text-sm">
         <div class="flex items-center justify-between text-muted">
-          <span>Subtotal</span>
+          <span>Subtotal de productos</span>
           <span>{{ formatMoney(subtotal) }}</span>
         </div>
         <div class="flex items-center justify-between text-muted">
           <span>Envío</span>
           <span>{{ shippingLabel }}</span>
         </div>
-        <div *ngIf="selectedShippingRate" class="text-[11px] text-gray-500 text-right -mt-2">
+        <div *ngIf="selectedShippingRate" class="text-mini text-gray-500 text-right -mt-2">
           {{ selectedShippingRate.carrier }} · {{ selectedShippingRate.service }}
+        </div>
+        <div *ngIf="deliveryType === 'delivery' && faltanteEnvioGratis > 0" class="text-mini text-amber-800 text-right -mt-2">
+          Te faltan {{ formatMoney(faltanteEnvioGratis) }} de compra para envío gratis
         </div>
         <div class="flex items-center justify-between text-muted">
           <span>Descuento</span>
           <span class="text-gold">-{{ formatMoney(discount) }}</span>
         </div>
-        <div class="flex items-center justify-between text-muted">
-          <span>Nivel de descuento</span>
-          <span class="text-main">{{ discountLevelLabel }}</span>
+        <!-- Con la tabla única montada, el bloque viejo de "Nivel" decía otra cosa con los mismos nombres -->
+        <ng-container *ngIf="!tablaDescuentoVisible">
+          <div class="flex items-center justify-between text-muted">
+            <span>Nivel de descuento</span>
+            <span class="text-main">{{ discountLevelLabel }}</span>
+          </div>
+          <div class="flex items-center justify-between text-muted">
+            <span>Descuento aplicado</span>
+            <span class="text-gold">{{ discountLabel }}</span>
+          </div>
+          <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
+            {{ discountUpgradeMessage }}
+          </div>
+        </ng-container>
+        <!-- Ola B · I2: la misma tabla de descuento y VP que el panel (paquete B) -->
+        <ui-tabla-descuento *ngIf="tablaDescuentoVisible && plan"
+          [tiers]="plan.descuento.tramos"
+          [mxnPerVp]="plan.unidades.mxnPerVp"
+          [activationVp]="plan.activacion.vpNetos"
+          [monthNet]="monthNetSocio"
+          [monthVp]="monthVpSocio"
+          [cartGross]="subtotal"
+          [cartPc]="cartPc"
+          [mode]="modoTabla"
+          context="carrito"
+          [compact]="true"
+          (activateRequested)="goToModoSocio()"></ui-tabla-descuento>
+        <!-- El cupón solo existía en el resumen de escritorio: desde el celular no había dónde escribirlo. -->
+        <div *ngIf="!isGuest" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2">
+          <div class="flex items-center gap-2">
+            <ui-form-field placeholder="Código de descuento" wrapperClass="flex-1"
+              [ngModel]="couponCode" (ngModelChange)="couponCode = $event"
+              [disabled]="!!appliedCoupon?.valid"></ui-form-field>
+            <ui-button *ngIf="!appliedCoupon?.valid" size="sm" variant="primary" [disabled]="couponChecking" (pressed)="applyCoupon()">Aplicar</ui-button>
+            <ui-button *ngIf="appliedCoupon?.valid" size="sm" variant="ghost" (pressed)="removeCoupon()">Quitar</ui-button>
+          </div>
+          <p *ngIf="couponMessage" class="mt-1 text-xs" [ngClass]="appliedCoupon?.valid ? 'text-green-600' : 'text-red-500'">{{ couponMessage }}</p>
         </div>
-        <div class="flex items-center justify-between text-muted">
-          <span>Descuento aplicado</span>
-          <span class="text-gold">{{ discountLabel }}</span>
+        <div *ngIf="couponDiscount > 0" class="flex items-center justify-between text-muted">
+          <span>Cupón {{ appliedCoupon?.code }}</span>
+          <span class="text-gold">-{{ formatMoney(couponDiscount) }}</span>
         </div>
-        <div *ngIf="discountUpgradeMessage" class="rounded-xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-main">
-          {{ discountUpgradeMessage }}
+        <div *ngIf="!isGuest" class="flex items-center justify-between text-muted">
+          <span>Puntos de este pedido (VP)</span>
+          <span class="font-semibold text-main">{{ cartVp }} VP</span>
+        </div>
+        <div *ngIf="orderLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Con este pedido llegas a {{ vpAfterOrder }} de {{ vpGoalTarget }} VP del mes: te faltarían {{ vpGoalGap }} VP para activarte.
+        </div>
+        <div *ngIf="activationSuggestionVisible" class="rounded-xl border border-gold bg-ivory-80 px-3 py-3 text-xs text-main">
+          <div class="flex items-center gap-2 font-semibold text-gold">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+            Completa tu activación
+          </div>
+          <p class="mt-1">{{ activationSuggestionText }}</p>
+          <ui-button size="sm" variant="primary" class="mt-2" iconClass="fa-solid fa-cart-plus" (pressed)="addSuggestedActivation()">
+            Agregar {{ sugerencia?.suggestion?.units }} {{ sugerencia?.suggestion?.name }}
+          </ui-button>
+        </div>
+        <div *ngIf="couponLeavesBelowVpGoal" class="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Con el cupón, este pedido te deja en {{ cartVp }} VP y tu meta de activación es {{ vpGoalTarget }} VP: te faltarían {{ vpGoalGap }} VP.
         </div>
         <div class="my-2 border-t border-olive-20"></div>
-        <div class="flex items-center justify-between">
-          <span class="font-semibold text-main">Total</span>
-          <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
-        </div>
+        <!-- Paquete B · propuesta 38, montado en la integración: los precios ya
+             incluyen IVA; el desglose explica un total que no cambia. Mientras
+             falte el envío el importe todavía no es el final, así que se sigue
+             llamando "Subtotal" y no se desglosa nada. -->
+        <ng-container *ngIf="totalLabel === 'Total'; else resumenAsideSinEnvio">
+          <ui-desglose-iva [total]="total" [shipping]="shippingInTotal"
+            [rate]="vatRate" [label]="vatLabel"></ui-desglose-iva>
+        </ng-container>
+        <ng-template #resumenAsideSinEnvio>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-main">{{ totalLabel }}</span>
+            <span class="font-extrabold text-main">{{ formatMoney(total) }}</span>
+          </div>
+          <div *ngIf="totalNote" class="text-mini text-amber-800">{{ totalNote }}</div>
+        </ng-template>
+        <!-- Ola B · I2: "Como socia habrías ahorrado" bajo el total (paquete B) -->
+        <ui-ahorro-socio *ngIf="!tablaDescuentoVisible" [gross]="subtotal" [monthNet]="monthNetSocio" [mode]="modoCuenta" variant="inline"></ui-ahorro-socio>
       </div>
 
-      <div class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-600">
-        Te faltan <span class="font-semibold text-gold">{{ formatMoney(gapToGoal) }}</span> para {{ goalTitle }}.
+      <!-- Ronda 7 · Valeria y Gerardo: sin este guardia salía «Te faltan $0 para
+           Meta de beneficios» junto a «Nivel de descuento: Inactivo». Si faltan
+           cero, ¿ya la tengo? ¿Y qué gano? Ahora solo se dice cuando falta algo,
+           y se dice para qué sirve llegar. -->
+      <div *ngIf="hasGoalGap" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-3 text-xs text-gray-600">
+        Te faltan <span class="font-semibold text-gold">{{ gapToGoalLabel }}</span> para {{ goalTitle }}.
+        <div class="mt-1 text-gray-500">Al llegar, el descuento por volumen del mes sube y se aplica solo en tu siguiente pedido.</div>
       </div>
   </ui-modal>
 
@@ -730,11 +947,11 @@
     (closed)="closeGuestRegisterModal()">
       <div class="flex items-start justify-between">
         <div>
-          <div class="text-xs font-semibold text-gray-600">Registro rapido</div>
+          <div class="text-xs font-semibold text-gray-600">Registro rápido</div>
           <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
           <p class="mt-2 text-sm text-muted">Completa tus datos para activar descuentos y red.</p>
         </div>
-        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" (pressed)="closeGuestRegisterModal()">
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar registro de cuenta" (pressed)="closeGuestRegisterModal()">
         </ui-button>
       </div>
 
@@ -759,7 +976,7 @@
           <ui-form-field
             name="guestApellidoMaterno"
             [(ngModel)]="guestRegisterForm.apellidoMaterno"
-            label="Apellido materno *"
+            label="Apellido materno (opcional)"
             placeholder="Apellido materno"
             wrapperClass="block"
             inputClass="mt-2 w-full rounded-2xl border border-olive-30 bg-white/70 px-4 py-3 text-sm text-main placeholder:text-muted"
@@ -835,7 +1052,7 @@
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
           <p class="mt-1 text-sm text-gray-600">{{ product.badge }}</p>
         </div>
-        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" (pressed)="closeProductDetails()">
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar detalle del producto" (pressed)="closeProductDetails()">
         </ui-button>
       </div>
 
@@ -861,7 +1078,7 @@
       </div>
 
       <div *ngIf="product.description" class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4">
-        <div class="text-xs font-semibold text-gray-600">Descripcion</div>
+        <div class="text-xs font-semibold text-gray-600">Descripción</div>
         <p class="mt-2 whitespace-pre-line text-sm text-main">{{ product.description }}</p>
       </div>
 
@@ -869,12 +1086,14 @@
         <ui-button type="button" variant="ghost" size="md" (pressed)="closeProductDetails()">
           Cerrar
         </ui-button>
+        <!-- "Cantidad actual: 1" + "Agregar" se leía como fijar la cantidad, no como sumar una: dos comadres acabaron con 2 frascos. -->
         <ui-button type="button" variant="primary" size="lg" iconClass="fa-solid fa-cart-plus" (pressed)="addSuggestedProduct(product)">
-          Agregar a carrito
+          {{ getCartQty(product.id) > 0 ? 'Agregar otra pieza (+1)' : 'Agregar a carrito' }}
         </ui-button>
       </div>
     </ng-container>
   </ui-modal>
 </section>
 
-
+<!-- Paquete D · ronda 26: el pie con contacto, horario y los enlaces de ayuda. -->
+<ui-footer />

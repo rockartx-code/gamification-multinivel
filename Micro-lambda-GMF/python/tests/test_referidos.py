@@ -1,0 +1,99 @@
+"""Patrocinio por link de referido: el mecanismo del que vive la red."""
+import pytest
+
+
+@pytest.fixture
+def auth(utils):
+    import auth_utils
+    return auth_utils
+
+
+def _alta(auth, nombre, correo, referido=None):
+    cuerpo = {"name": nombre, "email": correo, "password": "Secreta123!", "confirmPassword": "Secreta123!"}
+    if referido:
+        cuerpo["referralToken"] = referido
+    r = auth.handle_create_account(cuerpo)
+    assert r["statusCode"] in (200, 201), r["body"]
+    import json
+    return json.loads(r["body"])["customerId"]
+
+
+def _cliente(utils, cid):
+    return utils._get_by_id("CUSTOMER", cid)
+
+
+def test_el_alta_deja_el_codigo_en_la_ficha_del_cliente(auth, utils):
+    """Regresión: el código se creaba como entidad aparte pero la ficha quedaba
+    con referralCode vacío, y el frontend armaba el link de invitación con el
+    ID numérico, que no resolvía."""
+    cid = _alta(auth, "Marcela Ortiz", "marcela@test.com")
+    assert _cliente(utils, cid)["referralCode"], "la ficha debe llevar el código que se comparte"
+
+
+def test_el_link_con_codigo_asigna_patrocinador(auth, utils):
+    lider = _alta(auth, "Marcela Ortiz", "marcela@test.com")
+    codigo = _cliente(utils, lider)["referralCode"]
+    invitado = _alta(auth, "Rodrigo Aguilar", "rodrigo@test.com", referido=codigo)
+    assert str(_cliente(utils, invitado)["leaderId"]) == str(lider)
+
+
+def test_el_link_con_id_numerico_tambien_asigna_patrocinador(auth, utils):
+    """Regresión: los links que la plataforma ya generó llevan el ID del socio.
+    Registrarse con uno de esos links dejaba al invitado sin líder."""
+    lider = _alta(auth, "Marcela Ortiz", "marcela@test.com")
+    invitado = _alta(auth, "Rodrigo Aguilar", "rodrigo@test.com", referido=str(lider))
+    assert str(_cliente(utils, invitado)["leaderId"]) == str(lider)
+
+
+def test_un_referido_inexistente_no_inventa_lider(auth, utils):
+    invitado = _alta(auth, "Karla Méndez", "karla@test.com", referido="999999999")
+    assert not _cliente(utils, invitado).get("leaderId")
+
+
+def test_el_codigo_no_lleva_acentos_y_resuelve_tecleado_sin_ellos(auth, utils):
+    """Regresión: "Tomás Ibarra" generaba TOMÁS-TIL; escrito TOMAS-TIL no resolvía."""
+    lider = _alta(auth, "Tomás Ibarra López", "tomas@test.com")
+    codigo = _cliente(utils, lider)["referralCode"]
+    assert codigo == codigo.encode("ascii", "ignore").decode(), codigo
+    invitado = _alta(auth, "Patricia Solís", "pat@test.com", referido=codigo.lower())
+    assert str(_cliente(utils, invitado)["leaderId"]) == str(lider)
+
+
+def test_crear_cuenta_liga_los_pedidos_hechos_como_invitado(auth, utils):
+    """Regresión: una clienta con dos compras sin cuenta creaba su cuenta con el
+    mismo correo y su panel salía vacío; el historial de invitado se perdía."""
+    from decimal import Decimal
+    utils._put_entity("ORDER", "ORD-INV1", {"entityType": "order", "orderId": "ORD-INV1", "customerId": None, "buyerType": "guest",
+                                             "email": "Rosa.Elena@Test.com", "status": "shipped", "total": Decimal("829"), "netTotal": Decimal("829"),
+                                             "items": [], "createdAt": "2026-10-02T10:00:00Z"})
+    utils._put_entity("ORDER", "ORD-OTRO", {"entityType": "order", "orderId": "ORD-OTRO", "customerId": None, "buyerType": "guest",
+                                             "email": "otra@test.com", "status": "paid", "total": Decimal("100"), "items": [], "createdAt": "2026-10-03T10:00:00Z"})
+    cid = _alta(auth, "Rosa Elena", "rosa.elena@test.com")
+    ligado = utils._get_by_id("ORDER", "ORD-INV1")
+    assert str(ligado.get("customerId")) == str(cid) and ligado.get("linkedToAccountAt")
+    assert ligado.get("buyerType") == "guest"  # el motor no vuelve a acreditar
+    assert utils._get_by_id("ORDER", "ORD-OTRO").get("customerId") in (None, "")
+    historial = [v for (pk, sk), v in utils._table.store.items() if pk == f"ORDER_BY_CUSTOMER#{cid}"]
+    assert [h["orderId"] for h in historial] == ["ORD-INV1"]
+
+
+def test_una_socia_con_acceso_al_back_office_pasa_los_privilegios(auth, utils):
+    """Regresión: Verónica tenía canAccessAdmin y 'Ver Clientes' y recibía 403 en
+    /customers/getall porque _require_admin solo aceptaba admin/empleado."""
+    import json
+    cid = _alta(auth, "Verónica Sandoval", "vero@test.com")
+    utils._update_by_id("AUTH", "vero@test.com", "SET emailVerified = :v", {":v": True})
+    utils._update_by_id("CUSTOMER", cid, "SET canAccessAdmin = :a, privileges = :p",
+                        {":a": True, ":p": utils._normalize_privileges({"access_screen_customers": True})})
+    r = auth.handle_login({"email": "vero@test.com", "password": "Secreta123!"})
+    assert r["statusCode"] == 200, r["body"]
+    token = json.loads(r["body"])["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert utils._require_admin(headers, "access_screen_customers") is None
+    assert utils._require_admin(headers, "customer_add") is not None  # sin ese privilegio sigue negado
+    # Un cliente sin la marca sigue fuera del back office.
+    cid2 = _alta(auth, "Otro Cliente", "otro@test.com")
+    utils._update_by_id("AUTH", "otro@test.com", "SET emailVerified = :v", {":v": True})
+    r2 = auth.handle_login({"email": "otro@test.com", "password": "Secreta123!"})
+    token2 = json.loads(r2["body"])["token"]
+    assert utils._require_admin({"Authorization": f"Bearer {token2}"}) is not None

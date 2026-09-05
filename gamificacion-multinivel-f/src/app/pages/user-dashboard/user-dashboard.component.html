@@ -3,12 +3,12 @@
     containerClass="mx-auto max-w-6xl flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
     <!-- IZQUIERDA (hijo directo) -->
     <div header-left class="relative lg:hidden shrink-0">
-      <ui-button size="lg" variant="ghost" type="button" (pressed)="toggleMobileNav()">
+      <ui-button size="lg" variant="ghost" type="button" ariaLabel="Abrir o cerrar el menú de navegación" (pressed)="toggleMobileNav()">
         <i class="fa-solid" [ngClass]="isMobileNavOpen ? 'fa-xmark' : 'fa-bars'" aria-hidden="true"></i>
       </ui-button>
 
       <div
-        class="absolute left-0 mt-2 w-56 rounded-2xl border border-olive-30 bg-sand-200-90 p-2 shadow-xl backdrop-blur"
+        class="absolute left-0 z-50 mt-2 w-56 rounded-2xl border border-olive-30 bg-sand-200-90 p-2 shadow-xl backdrop-blur"
         [class.hidden]="!isMobileNavOpen">
         <ui-sidebar-nav [links]="dashboardNavLinks" [compact]="true" (linkSelect)="handleDashboardNavSelect($event)">
         </ui-sidebar-nav>
@@ -17,7 +17,12 @@
     </div>
 
     <ui-button size="sm" id="cart-button" variant="ghost" type="button" [routerLink]="['/carrito']">
-      <span class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80 ring ring-status-inactive">
+      <span class="relative grid h-9 w-9 place-items-center rounded-full bg-ivory-80 ring ring-status-inactive"
+        [class.cart-bump]="isCartBumping">
+        <span *ngFor="let burst of cartBursts" class="cart-burst" aria-hidden="true">
+          <span class="cb cb-1"></span><span class="cb cb-2"></span><span class="cb cb-3"></span>
+          <span class="cb cb-4"></span><span class="cb cb-5"></span><span class="cb cb-6"></span>
+        </span>
         <i aria-hidden="true" class="fa-solid fa-cart-shopping text-[13px]"></i>
         <span *ngIf="cartControl.itemsCount > 0"
           class="absolute -right-1 -top-1 inline-flex items-center justify-center rounded-full border border-olive-30 bg-sand-200-90 px-1.5 py-0.5 text-[9px] font-semibold leading-none shadow-sm">
@@ -34,7 +39,7 @@
     <div class="flex shrink-0  items-center gap-2 sm:gap-3">
       <ui-button *ngIf="isGuest" size="sm" variant="ghost" class="lg:hidden" [routerLink]="['/login']">
         <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        Iniciar sesion
+        Iniciar sesión
       </ui-button>
 
       <!-- Medal icon — visible only if user is in top 10 -->
@@ -42,7 +47,7 @@
         (pressed)="scrollToSection('honor')" aria-label="Cuadro de Honor">
         <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
           <i class="fa-solid fa-medal text-[15px]" [ngClass]="honorMedalClass" aria-hidden="true"></i>
-          <span class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-[10px] font-bold leading-none text-main">
+          <span class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-micro font-bold leading-none text-main">
             {{ bestHonorPosition }}
           </span>
         </span>
@@ -54,7 +59,7 @@
         <span class="relative grid h-9 w-9 place-items-center rounded-full border border-olive-30 bg-ivory-80">
           <i class="fa-solid fa-bell text-[13px] text-main" aria-hidden="true"></i>
           <span *ngIf="unreadNotificationsCount > 0"
-            class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-[10px] font-bold leading-none text-main">
+            class="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 py-0.5 text-micro font-bold leading-none text-main">
             {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
           </span>
         </span>
@@ -100,13 +105,19 @@
           </div>
 
           <div *ngIf="isClient" class="meta mt-2 flex items-center justify-between text-xs">
-            <span>Descuento</span>
-            <span class="text-main">{{ discountPercent }}%</span>
+            <span>{{ isClientMode ? 'Modo' : 'Descuento' }}</span>
+            <span class="text-main">{{ isClientMode ? 'Cliente (precio de lista)' : discountPercent + '%' }}</span>
           </div>
 
+          <!-- Sin ningún canal de soporte en el panel, la gente le escribía a su patrocinadora -->
+          <div class="mt-3 rounded-2xl border border-olive-30 bg-ivory-80 px-3 py-2 text-xs text-gray-600">
+            <div class="font-semibold text-main">¿Necesitas ayuda?</div>
+            <a class="block hover:underline" href="https://wa.me/5215514982351" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp text-success" aria-hidden="true"></i> WhatsApp de soporte</a>
+            <a class="block hover:underline" href="mailto:contacto@findingu.com.mx"><i class="fa-solid fa-envelope text-accent" aria-hidden="true"></i> contacto@findingu.com.mx</a>
+          </div>
           <ui-button size="sm" variant="ghost" *ngIf="!isGuest" type="button" class="mt-3 w-full" (pressed)="logout()">
             <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            Cerrar sesion
+            Cerrar sesión
           </ui-button>
         </div>
       </div>
@@ -120,7 +131,7 @@
 
         <ui-button size="sm" variant="ghost" *ngIf="isGuest" [routerLink]="['/login']">
           <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-          Iniciar sesion
+          Iniciar sesión
         </ui-button>
       </nav>
     </div>
@@ -145,8 +156,11 @@
           </div>
 
           <!-- Corte de mes: en móvil va en flujo; en md+ se fija arriba derecha -->
-          <div class="kpi-mini relative mb-4 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6"
-            [ngClass]="getCountdownColor()" title="Cada dia sin accion reduce tu margen.">
+          <!-- G/29: siete de doce personas lo vieron y ninguna entendió qué se
+               acababa ("¿se me vence el carrito? ¿se acaba una oferta?"). El
+               rótulo dice de qué es el corte y la fecha va en letras junto al reloj. -->
+          <div class="kpi-mini relative mb-4 px-4 py-3 md:mb-0 md:absolute md:right-6 md:top-6 md:max-w-[15rem]"
+            [ngClass]="getCountdownColor()" [attr.title]="cutoffLabel + ' · ' + cutoffDateText">
             <div class="label flex items-center gap-2">
               <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
               Corte de mes
@@ -154,13 +168,27 @@
             <div class="value text-lg tracking-tight">
               {{ countdownLabel() }}
             </div>
+            <div class="mt-1 text-micro font-normal normal-case leading-snug opacity-90">
+              {{ cutoffLabel }}
+            </div>
+            <div class="text-micro font-normal normal-case opacity-80">
+              {{ cutoffDateText }}
+            </div>
           </div>
 
           <div class="relative flex flex-col gap-5">
             <!-- Reservar espacio SOLO en md+ para el badge -->
             <div class="md:pr-56">
-              <div class="text-sm font-semibold text-gold">Objetivo principal del mes</div>
-              <h3 class="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="text-sm font-semibold text-gold">Objetivo principal del mes</div>
+                <span *ngIf="hasDiscount"
+                  class="inline-flex items-center gap-1.5 rounded-full border border-gold-35 bg-ivory-80 px-3 py-1 text-xs font-bold text-on-gold"
+                  title="Tu descuento vigente se aplica automáticamente en cada compra">
+                  <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                  {{ discountPercent }}% activo en tus compras
+                </span>
+              </div>
+              <h3 class="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
                 {{ activeGoal.title }}
               </h3>
               <p class="mt-2 text-sm text-muted">{{ activeGoal.subtitle }}</p>
@@ -172,6 +200,13 @@
                   Te faltan {{ remainingForGoal(activeGoal) }} para lograrlo
                 </div>
               </ui-goal-progress>
+              <!-- Paquete B · ronda 26 (propuesta 23): la duda nace aquí, en la
+                   meta del mes; el plan estaba a un renglón gris del pie. -->
+              <a [routerLink]="['/modo-socio']" [fragment]="activeGoal.key === 'active' ? 'activacion' : 'generaciones'"
+                class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent underline">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                De dónde sale esta meta y cuánto ganas al cumplirla
+              </a>
             </div>
 
             <!-- CTA: móvil en flujo y full-width; md+ absoluto -->
@@ -207,7 +242,7 @@
             </div>
             <ui-button size="lg" variant="primary" type="button" [routerLink]="['/landing']">
               <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-              Registrate
+              Regístrate
             </ui-button>
           </div>
         </div>
@@ -238,7 +273,7 @@
     <section id="merchant" class="scroll-mt-10">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
             <i class="fa-solid fa-store hidden text-gold md:inline" aria-hidden="true"></i>
             Tienda
           </h2>
@@ -251,8 +286,14 @@
               Carrito
             </div>
             <div class="text-lg font-extrabold">{{ formatMoney(cartTotal) }}</div>
-            <div class="mt-1 text-[11px]" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-gray-500'">
-              {{ cartDiscount > 0 ? ('-' + formatMoney(cartDiscount) + ' • ' + cartDiscountLabel) : 'Sin descuento' }}
+            <div class="mt-1 text-mini" [ngClass]="cartDiscount > 0 ? 'text-accent' : 'text-gray-500'">
+              <ng-container *ngIf="cartDiscount > 0">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Ahorras {{ formatMoney(cartDiscount) }} • {{ cartDiscountLabel }}
+              </ng-container>
+              <ng-container *ngIf="cartDiscount === 0">
+                {{ hasDiscount ? ('Tu ' + discountPercent + '% te espera') : 'Agrega tus básicos' }}
+              </ng-container>
             </div>
           </div>
           <ui-button size="lg" variant="primary" type="button" (pressed)="goToCart()">
@@ -267,7 +308,7 @@
         </div>
         <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="productOfMonth as pom">
           <div class="order-2 md:order-2">
-            <h3 class="text-3xl font-extrabold tracking-tight md:text-4xl">{{ pom.name }}</h3>
+            <h3 class="text-3xl font-semibold tracking-tight md:text-4xl">{{ pom.name }}</h3>
             <p *ngIf="heroGoalHint" class="mt-2 text-sm text-gold">{{ heroGoalHint }}</p>
             <p class="mt-1 max-w-xl text-muted">
               {{ pom.hook || 'Producto recomendado para avanzar en tus metas.' }}
@@ -282,14 +323,14 @@
             <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div class="flex items-center gap-3 rounded-2xl border border-olive-30 surface-soft p-3">
                 <span class="text-sm text-gray-600">Cantidad</span>
-                <ui-form-field type="number" [ngModel]="heroQty" (ngModelChange)="setHeroQty($event)"
+                <ui-form-field type="number" [ngModel]="heroQtyDraft" (ngModelChange)="setHeroQty($event)"
                   inputClass="w-20 rounded-xl border border-olive-30 bg-white/70 px-3 py-2 text-sm text-main"></ui-form-field>
                 <span class="flex items-center gap-2 text-sm text-gray-600">
                   <span class="font-semibold text-main">{{ formatMoney(discountedPrice(heroProductPrice)) }}</span>
                   <span *ngIf="hasDiscount" class="text-xs text-gray-500 line-through">
                     {{ formatMoney(heroProductPrice) }}
                   </span>
-                  <span *ngIf="hasDiscount" class="text-[11px] text-accent">{{ discountAppliedLabel() }}</span>
+                  <span *ngIf="hasDiscount" class="text-mini text-accent">{{ discountAppliedLabel() }}</span>
                 </span>
               </div>
 
@@ -310,18 +351,23 @@
 
           </div>
         </div>
-        <div class="relative grid items-center gap-8 p-6 md:grid-cols-2 md:p-10" *ngIf="!productOfMonth">
-          <div>
-            <span
-              class="inline-flex items-center gap-2 rounded-full border border-gold-35 bg-gold-20 px-4 py-2 text-xs font-semibold text-gold">
-              <i class="fa-solid fa-star" aria-hidden="true"></i>
-              Producto del mes
+        <div class="relative flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
+          *ngIf="!productOfMonth">
+          <div class="flex items-center gap-4">
+            <span class="medallion h-12 w-12 text-lg">
+              <i class="fa-solid fa-star text-gold" aria-hidden="true"></i>
             </span>
-            <h3 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">Producto destacado</h3>
-            <p class="mt-3 max-w-xl text-muted">
-              Aún no hay un producto del mes configurado.
-            </p>
+            <div>
+              <h3 class="text-xl font-semibold tracking-tight">Explora el catálogo</h3>
+              <p class="mt-1 text-sm text-muted">
+                Cada producto suma PC a tus metas{{ hasDiscount ? (' y tu ' + discountPercent + '% de descuento ya está activo') : '' }}.
+              </p>
+            </div>
           </div>
+          <ui-button size="lg" variant="primary" type="button" (pressed)="scrollToSection('productos')">
+            <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+            Ver productos
+          </ui-button>
         </div>
       </div>
 
@@ -344,13 +390,13 @@
             [discountRate]="discountPercent / 100"
             [variantQtys]="getVariantQtys(product.id)"
             (variantQtyChange)="onVariantQtyChange(product.id, $event)"
-            (qtyChange)="updateCart(product.id, $event)" (viewDetails)="openProductDetails(product)"
-            (add)="addQuick(product.id, 1)"></ui-product-card>
+            (viewDetails)="openProductDetails(product)"
+            (add)="addQuick(product.id, $event)"></ui-product-card>
         </div>
       </div>
 
 
-      <div class="mt-12">
+      <div id="productos" class="mt-12 scroll-mt-10">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="flex items-center gap-2 text-xl font-bold">
             <i class="fa-solid fa-layer-group text-accent" aria-hidden="true"></i>
@@ -367,17 +413,95 @@
             [discountRate]="discountPercent / 100"
             [variantQtys]="getVariantQtys(product.id)"
             (variantQtyChange)="onVariantQtyChange(product.id, $event)"
-            (qtyChange)="updateCart(product.id, $event)" (viewDetails)="openProductDetails(product)"
-            (add)="addQuick(product.id, 1)"></ui-product-card>
+            (viewDetails)="openProductDetails(product)"
+            (add)="addQuick(product.id, $event)"></ui-product-card>
         </div>
       </div>
 
     </section>
 
-    <section id="red" class="scroll-mt-10" *ngIf="!isGuest">
+    <!-- Paquete B: la cuenta en modo cliente (sin red, VP ni comisiones) -->
+    <section id="modo-cliente" class="scroll-mt-10" *ngIf="isClientMode">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
+            <i class="fa-solid fa-bag-shopping hidden text-gold md:inline" aria-hidden="true"></i>
+            Tu cuenta en modo cliente
+          </h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Compras a precio de lista, sin compromiso y sin que te pidamos datos bancarios ni fiscales.
+            Aquí ves lo que cambiaría si un día activas el modo socio.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-3">
+        <ui-kpi-card label="Este mes has comprado" iconClass="fa-solid fa-cart-shopping text-accent"
+          [value]="formatMoney(clientIndicators?.monthSpend ?? 0)"></ui-kpi-card>
+        <ui-kpi-card label="En modo socio habrías ahorrado este mes" iconClass="fa-solid fa-piggy-bank text-gold"
+          [value]="formatMoney(clientIndicators?.monthSavingsIfPartner ?? 0)"></ui-kpi-card>
+        <div class="rounded-2xl border border-olive-30 surface-soft p-4">
+          <div class="flex items-center gap-2 text-mini text-gray-600">
+            <i class="fa-solid fa-users text-forest" aria-hidden="true"></i>
+            <span>Qué ganarías</span>
+          </div>
+          <div class="mt-1 text-sm font-semibold text-main">{{ queGanarias || 'En modo socio, las compras de las personas que invites te generan comisión.' }}</div>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-2">
+        <ui-tabla-descuento *ngIf="plan"
+          [tiers]="plan.descuento.tramos"
+          [mxnPerVp]="plan.unidades.mxnPerVp"
+          [activationVp]="plan.activacion.vpNetos"
+          [monthNet]="clientIndicators?.monthSpend ?? myNetSpend"
+          [monthVp]="clientIndicators?.monthVp ?? vpPoints"
+          [cartGross]="cartTotal"
+          [cartPc]="cartPc"
+          mode="cliente"
+          context="panel"
+          (activateRequested)="goToModoSocio()"></ui-tabla-descuento>
+
+        <div class="flex flex-col gap-4">
+          <div *ngIf="sponsor as sponsorContact" class="rounded-2xl border border-olive-30 surface-soft p-4">
+            <div class="text-xs text-gray-600">{{ sponsorContact.isCoach ? (sponsorContact.coachTitle || 'Tu coach') : 'Tu contacto para pedidos' }}</div>
+            <div class="mt-1 text-lg font-extrabold text-main">{{ sponsorContact.name }}</div>
+            <div class="mt-1 text-xs text-gray-500">Si algo de tu pedido no sale como esperabas, escríbele o usa el WhatsApp de soporte.</div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2 text-xs text-main transition hover:border-gold-35 hover:bg-gold-12" [href]="sponsorEmailHref">
+                <div class="text-mini text-gray-600">Correo</div>
+                <div class="mt-0.5 font-semibold break-all">{{ sponsorContact.email }}</div>
+              </a>
+              <a class="rounded-2xl border border-olive-30 bg-ivory-70 px-3 py-2 text-xs text-main transition hover:border-gold-35 hover:bg-gold-12" [href]="sponsorContact.whatsapp || sponsorWhatsappHref" target="_blank" rel="noopener">
+                <div class="text-mini text-gray-600">WhatsApp</div>
+                <div class="mt-0.5 font-semibold">{{ sponsorContact.phone }}</div>
+              </a>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-gold-35 bg-gold-12 p-4">
+            <div class="text-sm font-semibold text-main">¿Y si activo el modo socio?</div>
+            <ul class="mt-2 space-y-1 text-xs text-main">
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Descuento por lo que compras en el mes, sobre toda la compra.</li>
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Tu propio código: quien se registre con él queda en tu red.</li>
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Comisión cuando alguien de tu red compra.</li>
+              <li><i class="fa-solid fa-check text-success" aria-hidden="true"></i> Es gratis; la CLABE te la pedimos cuando te actives en el mes, para poder depositarte el día de pago.</li>
+            </ul>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <ui-button size="md" variant="primary" type="button" (pressed)="goToModoSocio()">
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                Conoce el modo socio
+              </ui-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="red" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-users hidden text-accent md:inline" aria-hidden="true"></i>
             Red
@@ -408,8 +532,9 @@
 
           <div *ngIf="hasInactiveIntermediate" class="callout mt-4 rounded-2xl px-4 py-3 text-xs">
             <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i>
-            <strong>Apoya a tu red:</strong> cuando hay inactivos en niveles L1, los beneficios de sus L2 no llegan
-            hasta ti.
+            <strong>Apoya a tu red:</strong> tienes directos inactivos este mes. Sus compras y las de su gente no cuentan
+            para ellos; la generación que dejan libre sube al siguiente activo de la línea (compresión dinámica). Si se activan
+            dentro del mes, se recalcula.
           </div>
 
           <ui-button size="sm" variant="ghost" *ngIf="levelOneCount === 0 && levelTwoCount === 0" type="button"
@@ -487,6 +612,12 @@
                   <div class="mt-1 font-semibold">{{ sponsorContact.phone }}</div>
                 </a>
               </div>
+              <!-- Quien tiene patrocinadora solo veía el WhatsApp "de red"; para pedidos y pagos no encontraba a quién escribir. -->
+              <div *ngIf="!sponsorContact.isDefault" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                <span>Pedidos, pagos y devoluciones:</span>
+                <a class="font-semibold text-accent hover:underline" href="https://wa.me/5215514982351" target="_blank" rel="noopener">WhatsApp Soporte Finding'U</a>
+                <a class="font-semibold text-accent hover:underline" href="mailto:contacto@findingu.com.mx">contacto@findingu.com.mx</a>
+              </div>
             </div>
 
             <div *ngIf="networkMembers.length === 0"
@@ -559,8 +690,8 @@
     </section>
 
     <!-- ─── VP / VG / RANGO / BONOS ──────────────────────────────────────── -->
-    <section id="volumen" class="scroll-mt-10" *ngIf="!isGuest && (vpPoints > 0 || vgPoints > 0 || hasBonuses)">
-      <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+    <section id="volumen" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode && (vpPoints > 0 || vgPoints > 0 || hasBonuses || plan)">
+      <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
         <i class="fa-solid fa-trophy hidden text-gold md:inline" aria-hidden="true"></i>
         Volumen &amp; Rangos
       </h2>
@@ -569,11 +700,32 @@
       <div class="mt-6 grid gap-4 sm:grid-cols-3">
         <ui-kpi-card label="VP (Volumen Personal)" [value]="(vpPoints | number:'1.0-1') ?? ''"></ui-kpi-card>
         <ui-kpi-card label="VG (Volumen de Grupo)" [value]="(vgPoints | number:'1.0-1') ?? ''"></ui-kpi-card>
-        <div class="flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold-35 bg-gold-12 px-5 py-4">
+        <div class="card-lift flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold-35 bg-gold-12 px-5 py-4">
           <div class="text-xs font-semibold uppercase tracking-widest text-gold-70">Rango actual</div>
-          <div *ngIf="currentRank" class="mt-1 text-2xl font-extrabold text-main tracking-wide">{{ currentRank }}</div>
+          <div *ngIf="currentRank" class="mt-1 flex items-center gap-3">
+            <span class="medallion h-11 w-11 text-lg">
+              <i class="fa-solid fa-trophy text-gold" aria-hidden="true"></i>
+            </span>
+            <span class="text-2xl font-extrabold text-main tracking-wide">{{ currentRank }}</span>
+          </div>
+          <div *ngIf="currentRank" class="text-mini text-gray-600">Lo lograste con tu constancia</div>
           <div *ngIf="!currentRank" class="mt-1 text-sm text-gray-400 italic">Sin rango aún</div>
+          <div *ngIf="!currentRank" class="text-mini text-gray-500">Cada compra te acerca al primero</div>
         </div>
+      </div>
+
+      <!-- Paquete B: la tabla única de descuento y VP -->
+      <div class="mt-6" *ngIf="plan">
+        <ui-tabla-descuento
+          [tiers]="plan.descuento.tramos"
+          [mxnPerVp]="plan.unidades.mxnPerVp"
+          [activationVp]="plan.activacion.vpNetos"
+          [monthNet]="myNetSpend"
+          [monthVp]="vpPoints"
+          [cartGross]="cartTotal"
+          [cartPc]="cartPc"
+          mode="socio"
+          context="panel"></ui-tabla-descuento>
       </div>
 
       <!-- Bonos -->
@@ -583,9 +735,14 @@
           <span class="text-lg font-bold text-main">Bonos del mes</span>
         </div>
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div *ngFor="let award of bonusAwards" class="rounded-2xl border border-olive-30 bg-ivory-80 p-4">
+          <div *ngFor="let award of bonusAwards" class="card-lift rounded-2xl border border-olive-30 bg-ivory-80 p-4">
             <div class="flex items-start justify-between gap-2">
-              <div class="text-sm font-semibold text-main leading-tight">{{ award.ruleName }}</div>
+              <div class="flex items-center gap-2 text-sm font-semibold text-main leading-tight">
+                <span class="medallion h-7 w-7 shrink-0 text-mini">
+                  <i class="fa-solid fa-gift text-gold" aria-hidden="true"></i>
+                </span>
+                {{ award.ruleName }}
+              </div>
               <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/70 border border-olive-20" [class]="bonusStatusClass(award.status)">{{ bonusStatusLabel(award.status) }}</span>
             </div>
             <div class="mt-2 text-xl font-extrabold text-main">{{ bonusRewardLabel(award) }}</div>
@@ -595,32 +752,51 @@
       </div>
     </section>
 
-    <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && commissionSummary as commissions">
+    <section id="comisiones" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode && commissionSummary as commissions">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-coins hidden text-gold md:inline" aria-hidden="true"></i>
             Comisiones
           </h2>
           <p class="mt-2 text-sm text-gray-600">Resumen del mes {{ commissions.monthKey }}.</p>
+          <!-- Paquete B · ronda 26 (propuesta 23): el enlace caía en la portada
+               de la misma página; ahora cae en la sección de generaciones. -->
+          <a [routerLink]="['/modo-socio']" fragment="generaciones"
+            class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-accent underline">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            Cómo se calculan: porcentajes por nivel y requisitos
+          </a>
+        </div>
+        <div class="w-full sm:w-64">
+          <ui-form-field
+            kind="select"
+            label="Ver mes"
+            [options]="commissionMonthOptions"
+            [ngModel]="selectedCommissionMonth || commissions.monthKey"
+            (ngModelChange)="selectCommissionMonth($event)">
+          </ui-form-field>
+          <p *ngIf="isLoadingCommissionMonth" class="mt-1 text-xs text-gray-500">Cargando…</p>
         </div>
       </div>
 
       <div class="mt-6 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
         <div class="rounded-3xl border border-olive-30 bg-ivory-80 p-6">
           <div class="grid gap-3 sm:grid-cols-3">
-            <ui-kpi-card label="Comisiones del mes" [value]="formatMoney(commissions.monthTotal || 0)"></ui-kpi-card>
-            <ui-kpi-card label="Por confirmar" [value]="formatMoney(commissions.pendingTotal || 0)"></ui-kpi-card>
+            <!-- "Comisiones del mes: $126" enseñaba solo lo confirmado; el mes eran $250.74 -->
+            <ui-kpi-card label="Total del mes" [value]="formatMoney((commissions.monthTotal || 0) + (commissions.pendingTotal || 0))"></ui-kpi-card>
+            <ui-kpi-card label="Confirmadas (se depositan el día de pago)" [value]="formatMoney(commissions.monthTotal || 0)"></ui-kpi-card>
+            <ui-kpi-card label="Por confirmar (pedidos aún no entregados)" [value]="formatMoney(commissions.pendingTotal || 0)"></ui-kpi-card>
             <ui-kpi-card label="Bloqueadas" [value]="formatMoney(commissions.blockedTotal || 0)">
               <span kpi-label-extra class="relative inline-flex" (mouseleave)="showBlockedTooltip = false">
                 <ui-button size="md" variant="ghost" type="button" class="text-main"
-                  aria-label="Info comisiones bloqueadas" (pressed)="toggleBlockedTooltip()">
-                  <i class="fa-solid fa-circle-info text-[11px]" aria-hidden="true"></i>
+                  ariaLabel="Info comisiones bloqueadas" (pressed)="toggleBlockedTooltip()">
+                  <i class="fa-solid fa-circle-info text-mini" aria-hidden="true"></i>
                 </ui-button>
                 <span *ngIf="showBlockedTooltip"
-                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-olive-30 bg-black/90 p-2 text-[11px] text-sand-200 shadow-lg">
-                  Las comisiones que pasan por referidos inactivos no llegan a ti.
+                  class="absolute left-0 top-full z-10 mt-2 w-52 rounded-lg border border-olive-30 bg-black/90 p-2 text-mini text-sand-200 shadow-lg">
+                  Comisiones de tus referidos generadas mientras no estabas activa/o (20 VP en el mes). Si te activas dentro del mismo mes, se recalculan.
                 </span>
               </span>
             </ui-kpi-card>
@@ -640,13 +816,15 @@
                   <div class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="text-sm font-semibold text-main">{{ row.orderId || '-' }}</div>
-                      <span [class]="commissionLedgerStatusClass(row.status)">{{
-                        row.status || '-' }}</span>
+                      <span [class]="commissionLedgerStatusClass(row.status)" [title]="row.voidReason || ''">{{
+                        commissionLedgerStatusLabel(row.status) }}</span>
                     </div>
                     <div class="mt-2 grid gap-1 text-xs text-gray-600">
                       <div>Nivel: <span class="text-main">L{{ row.level || '-' }}</span></div>
                       <div>Monto: <span class="text-main">{{ formatMoney(row.amount || 0) }}</span></div>
-                      <div>Fecha: <span class="text-main">{{ formatLedgerDate(row.createdAt) }}</span></div>
+                      <div>Fecha del pedido: <span class="text-main">{{ ledgerRowDate(row) }}</span></div>
+                      <div *ngIf="ledgerRowBase(row)">{{ ledgerRowBase(row) }}</div>
+                      <div *ngIf="ledgerRowRecalculo(row)" class="text-amber-800">{{ ledgerRowRecalculo(row) }}</div>
                     </div>
                   </div>
                 </ng-template>
@@ -657,7 +835,7 @@
                     <div class="px-4 py-3">Nivel</div>
                     <div class="px-4 py-3">Monto</div>
                     <div class="px-4 py-3">Estado</div>
-                    <div class="px-4 py-3">Fecha</div>
+                    <div class="px-4 py-3">Fecha del pedido</div>
                   </div>
                 </ng-template>
 
@@ -665,10 +843,18 @@
                   <div class="grid grid-cols-5 text-sm">
                     <div class="px-4 py-3">{{ row.orderId || '-' }}</div>
                     <div class="muted px-4 py-3">L{{ row.level || '-' }}</div>
-                    <div class="px-4 py-3">{{ formatMoney(row.amount || 0) }}</div>
-                    <div class="px-4 py-3"><span [class]="commissionLedgerStatusClass(row.status)">{{
-                        row.status || '-' }}</span></div>
-                    <div class="px-4 py-3 text-gray-600">{{ formatLedgerDate(row.createdAt) }}</div>
+                    <div class="px-4 py-3">
+                      {{ formatMoney(row.amount || 0) }}
+                      <!-- WP-A · propuesta 37: ningún número queda sin explicación. -->
+                      <div class="text-xs text-gray-600" *ngIf="ledgerRowBase(row)">{{ ledgerRowBase(row) }}</div>
+                    </div>
+                    <div class="px-4 py-3"><span [class]="commissionLedgerStatusClass(row.status)" [title]="row.voidReason || ''">{{
+                        commissionLedgerStatusLabel(row.status) }}</span></div>
+                    <div class="px-4 py-3 text-gray-600">
+                      {{ ledgerRowDate(row) }}
+                      <!-- WP-A · propuesta 32: si hubo recálculo, se dice por qué. -->
+                      <div class="text-xs text-amber-800" *ngIf="ledgerRowRecalculo(row)">{{ ledgerRowRecalculo(row) }}</div>
+                    </div>
                   </div>
                 </ng-template>
               </ui-data-table>
@@ -678,24 +864,14 @@
             </div>
           </ui-table>
 
-          <div class="mt-4 rounded-2xl border border-olive-30 surface-soft p-4 text-sm text-muted">
-            <div class="flex items-center justify-between">
-              <span>CLABE registrada</span>
-              <span class="text-main">
-                {{ commissions.clabeOnFile ? ('**** ' + (commissions.clabeLast4 || '')) : 'No registrada' }}
-              </span>
-            </div>
-            <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-              <ui-form-field label="CLABE interbancaria" name="clabeDraft" placeholder="000000000000000000"
-                [(ngModel)]="clabeDraft" wrapperClass="block text-xs"
-                inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-2 text-sm text-main placeholder-text-muted-strong"></ui-form-field>
-              <ui-button type="button" variant="primary" size="md" iconClass="fa-solid fa-floppy-disk"
-                extraClass="self-end" (pressed)="openClabeConfirm()">
-                Guardar
-              </ui-button>
-            </div>
+          <!-- WP-A · propuesta 1: un solo formulario, guarda al primer intento. -->
+          <div class="mt-4">
+            <ui-clabe-form [customerId]="currentUser?.userId || ''"
+              [clabeLast4]="commissions.clabeOnFile ? (commissions.clabeLast4 || '') : ''"
+              [bankInstitution]="commissions.bankInstitution || ''"
+              modo="propio" (saved)="onClabeSaved($event)"></ui-clabe-form>
             <div class="mt-2 text-xs text-gray-500">
-              Depositos programados para el dia {{ commissions.payoutDay || 10 }} de cada mes.
+              Las comisiones confirmadas de un mes se depositan el día {{ commissions.payoutDay || 10 }} del mes siguiente (las de {{ commissions.monthKey }} se depositan el {{ commissions.payoutDay || 10 }} del mes que viene).
             </div>
           </div>
         </div>
@@ -719,7 +895,7 @@
             </div>
             <ui-button *ngIf="commissions.prevStatus === 'paid' && commissions.prevReceiptUrl" variant="linkish"
               size="sm" iconClass="fa-solid fa-file-invoice" [fullWidth]="true" extraClass="mt-3"
-              (click)="openCommissionReceipt(commissions.prevReceiptUrl)">
+              (pressed)="openCommissionReceipt(commissions.prevReceiptUrl)">
               Ver comprobante
             </ui-button>
           </div>
@@ -730,10 +906,10 @@
     <section id="ordenes" class="scroll-mt-10" *ngIf="!isGuest">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-receipt hidden text-accent md:inline" aria-hidden="true"></i>
-            Ordenes
+            Órdenes
             <span class="relative inline-flex">
               <button type="button"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-olive-30 bg-ivory-80 text-sm text-gray-600 transition hover:bg-olive-10 hover:text-main"
@@ -741,12 +917,12 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
               </button>
               <div *ngIf="showOrdersHelp"
-                class="absolute left-0 top-full z-20 mt-3 w-80 rounded-2xl border border-olive-30 bg-white/95 p-4 text-sm text-gray-700 shadow-xl backdrop-blur">
+                class="absolute left-0 top-full z-20 mt-3 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-olive-30 bg-white/95 p-4 text-sm text-gray-700 shadow-xl backdrop-blur">
                 <div class="font-semibold text-main">Estados posibles de una orden</div>
                 <div class="mt-3 space-y-3">
                   <div class="flex items-start gap-3">
                     <ui-status-badge status="pending"></ui-status-badge>
-                    <div>La orden fue creada y el pago aun no se confirma.</div>
+                    <div>La orden fue creada y el pago aún no se confirma.</div>
                   </div>
                   <div class="flex items-start gap-3">
                     <ui-status-badge status="paid"></ui-status-badge>
@@ -769,9 +945,9 @@
       </div>
 
       <div class="mt-6 rounded-3xl border border-olive-30 bg-ivory-80 p-6">
-        <div *ngIf="isOrdersLoading" class="text-sm text-gray-600">Cargando ordenes...</div>
+        <div *ngIf="isOrdersLoading" class="text-sm text-gray-600">Cargando órdenes...</div>
         <div *ngIf="!isOrdersLoading && orders.length === 0" class="text-sm text-gray-600">
-          Aun no tienes ordenes registradas.
+          Aún no tienes órdenes registradas.
         </div>
         <ui-table *ngIf="!isOrdersLoading && orders.length > 0">
           <div class="table-soft">
@@ -856,23 +1032,19 @@
             </ui-data-table>
           </div>
         </ui-table>
-        <div *ngIf="ordersTotalPages > 1"
-          class="flex items-center justify-between border-t border-olive-20 bg-ivory-80 px-4 py-2 text-xs text-gray-600">
-          <span>Pág. {{ ordersPage + 1 }}</span>
-          <div class="flex gap-1">
-            <button [disabled]="ordersPage === 0 || isOrdersLoading" (click)="loadOrdersPage(ordersPage - 1)"
-              class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">‹</button>
-            <button [disabled]="isOrdersLoading || !canNextOrdersPage" (click)="loadOrdersPage(ordersPage + 1)"
-              class="rounded-lg border border-olive-30 px-2.5 py-1 disabled:opacity-40 hover:bg-olive-10">›</button>
-          </div>
-        </div>
+        <ui-pagination [page]="ordersPage" [totalPages]="ordersTotalPages" [disabled]="isOrdersLoading" (pageChange)="loadOrdersPage($event)"></ui-pagination>
+      </div>
+
+      <!-- WP-I2: suscripción mensual "Recibe esto cada mes" (paquete H) -->
+      <div class="mt-6" *ngIf="currentUser?.userId">
+        <app-suscripcion [customerId]="currentUser?.userId ?? ''" [products]="products" [addresses]="shippingAddresses" [defaultAddressId]="defaultShippingAddressId" [pickupStocks]="pickupStocks" [mode]="accountMode" (changed)="onSuscripcionCambiada()"></app-suscripcion>
       </div>
     </section>
 
-    <section id="links" class="scroll-mt-10" *ngIf="!isGuest">
+    <section id="links" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode">
       <div class="flex items-end justify-between gap-6">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
 
             <i class="fa-solid fa-link hidden text-gold md:inline" aria-hidden="true"></i>
             Links de referencia
@@ -895,7 +1067,7 @@
             <div class="mt-3 space-y-3 text-sm">
               <!--div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="activeFeaturedId ? 'border-olive-30 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
+                  [ngClass]="activeFeaturedId ? 'border-olive-30 bg-forest-10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
                   <i *ngIf="activeFeaturedId" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!activeFeaturedId">1</span>
                 </div>
@@ -906,18 +1078,18 @@
               </div-->
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="hasCopiedLink ? 'border-olive-30 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
+                  [ngClass]="hasCopiedLink ? 'border-olive-30 bg-forest-10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
                   <i *ngIf="hasCopiedLink" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!hasCopiedLink">*</span>
                 </div>
                 <div>
                   <div class="font-semibold text-main">Copia tu link</div>
-                  <div class="text-xs text-gray-500">Pegalo en tu bio o chat.</div>
+                  <div class="text-xs text-gray-500">Pégalo en tu bio o en un chat.</div>
                 </div>
               </div>
               <!--div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold"
-                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-olive-30 bg-emerald-500/10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
+                  [ngClass]="(hasCopiedCopy || hasCopiedAsset) ? 'border-olive-30 bg-forest-10 text-accent' : 'border-olive-30 bg-ivory-80 text-muted'">
                   <i *ngIf="hasCopiedCopy || hasCopiedAsset" class="fa-solid fa-check" aria-hidden="true"></i>
                   <span *ngIf="!(hasCopiedCopy || hasCopiedAsset)">3</span>
                 </div>
@@ -1100,10 +1272,10 @@
     </section>
 
     <!-- ══════════════════════════════════════════════════════ CUADRO DE HONOR -->
-    <section id="honor" class="scroll-mt-10" *ngIf="!isGuest && honorBoard">
+    <section id="honor" class="scroll-mt-10" *ngIf="!isGuest && !isClientMode && honorBoard">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 class="flex items-center gap-3 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 class="flex items-center gap-3 text-3xl font-semibold tracking-tight md:text-4xl">
             <i class="fa-solid fa-ranking-star hidden text-gold md:inline" aria-hidden="true"></i>
             Cuadro de Honor
           </h2>
@@ -1131,7 +1303,7 @@
               [class.border-gold-35]="honorEntryIsMe(entry)">
               <!-- Position -->
               <span class="w-6 text-center text-sm font-extrabold"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 [class.text-gray-500]="entry.position > 3">
@@ -1139,24 +1311,24 @@
               </span>
               <!-- Medal for top 3 -->
               <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 aria-hidden="true"></i>
               <span *ngIf="entry.position > 3" class="w-4"></span>
               <!-- Name -->
               <span class="flex-1 truncate text-sm font-semibold text-main">
-                {{ entry.name }}
-                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span>
+                {{ honorDisplayName(entry) }}
+                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span>
               </span>
               <!-- Rank badge -->
-              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-main sm:inline">
+              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-micro font-semibold text-main sm:inline">
                 {{ entry.rank }}
               </span>
               <!-- VG value -->
               <span class="text-xs font-bold text-gray-700">{{ entry.vg | number:'1.0-0' }} VG</span>
               <!-- Delta -->
-              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-[11px] font-bold" [class]="positionDeltaClass(entry)">
+              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-mini font-bold" [class]="positionDeltaClass(entry)">
                 {{ positionDeltaLabel(entry) }}
               </span>
             </div>
@@ -1176,27 +1348,27 @@
               [class.border]="honorEntryIsMe(entry)"
               [class.border-gold-35]="honorEntryIsMe(entry)">
               <span class="w-6 text-center text-sm font-extrabold"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 [class.text-gray-500]="entry.position > 3">
                 {{ entry.position }}
               </span>
               <i *ngIf="entry.position <= 3" class="fa-solid fa-medal text-xs"
-                [class.text-yellow-500]="entry.position === 1"
+                [class.text-gold-vivo]="entry.position === 1"
                 [class.text-gray-400]="entry.position === 2"
                 [class.text-amber-700]="entry.position === 3"
                 aria-hidden="true"></i>
               <span *ngIf="entry.position > 3" class="w-4"></span>
               <span class="flex-1 truncate text-sm font-semibold text-main">
-                {{ entry.name }}
-                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span>
+                {{ honorDisplayName(entry) }}
+                <span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span>
               </span>
-              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-main sm:inline">
+              <span *ngIf="entry.rank" class="hidden rounded-full border border-olive-20 bg-white/60 px-2 py-0.5 text-micro font-semibold text-main sm:inline">
                 {{ entry.rank }}
               </span>
               <span class="text-xs font-bold text-gray-700">{{ entry.vp | number:'1.0-0' }} VP</span>
-              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-[11px] font-bold" [class]="positionDeltaClass(entry)">
+              <span *ngIf="positionDeltaLabel(entry)" class="w-8 text-right text-mini font-bold" [class]="positionDeltaClass(entry)">
                 {{ positionDeltaLabel(entry) }}
               </span>
             </div>
@@ -1217,8 +1389,8 @@
         <p class="text-sm font-bold text-red-700">Bajaste en el ranking</p>
         <p class="text-xs text-red-500">Tu posición en VP descendió. ¡Sigue comprando para recuperarla!</p>
       </div>
-      <ui-button size="sm" variant="ghost" (pressed)="showRankDownAnim = false">
-        <i class="fa-solid fa-xmark text-red-400" aria-hidden="true"></i>
+      <ui-button size="sm" variant="ghost" ariaLabel="Cerrar aviso de cambio de ranking" (pressed)="showRankDownAnim = false">
+        <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i>
       </ui-button>
     </div>
   </div>
@@ -1234,7 +1406,7 @@
         </div>
         <p class="mt-1 text-sm text-gray-500">{{ honorBoard?.monthKey }} · Top 10 de la red</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" (pressed)="closeHonorBoardModal()">
+      <ui-button type="button" variant="ghost" size="sm" ariaLabel="Cerrar cuadro de honor" (pressed)="closeHonorBoardModal()">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </ui-button>
     </div>
@@ -1261,12 +1433,12 @@
             [class.bg-gold-20]="honorEntryIsMe(entry)"
             [class.font-bold]="honorEntryIsMe(entry)">
             <span class="w-5 text-center font-extrabold text-xs"
-              [class.text-yellow-500]="entry.position === 1"
+              [class.text-gold-vivo]="entry.position === 1"
               [class.text-gray-400]="entry.position === 2"
               [class.text-amber-700]="entry.position === 3">{{ entry.position }}</span>
-            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span></span>
+            <span class="flex-1 truncate">{{ honorDisplayName(entry) }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span></span>
             <span class="text-xs text-gray-500">{{ entry.vg | number:'1.0-0' }}</span>
-            <span *ngIf="positionDeltaLabel(entry)" class="text-[11px] font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
+            <span *ngIf="positionDeltaLabel(entry)" class="text-mini font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
           </div>
         </div>
       </div>
@@ -1279,12 +1451,12 @@
             [class.bg-gold-20]="honorEntryIsMe(entry)"
             [class.font-bold]="honorEntryIsMe(entry)">
             <span class="w-5 text-center font-extrabold text-xs"
-              [class.text-yellow-500]="entry.position === 1"
+              [class.text-gold-vivo]="entry.position === 1"
               [class.text-gray-400]="entry.position === 2"
               [class.text-amber-700]="entry.position === 3">{{ entry.position }}</span>
-            <span class="flex-1 truncate">{{ entry.name }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-[10px] text-gold-70">(tú)</span></span>
+            <span class="flex-1 truncate">{{ honorDisplayName(entry) }}<span *ngIf="honorEntryIsMe(entry)" class="ml-1 text-micro text-gold-70">(tú)</span></span>
             <span class="text-xs text-gray-500">{{ entry.vp | number:'1.0-0' }}</span>
-            <span *ngIf="positionDeltaLabel(entry)" class="text-[11px] font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
+            <span *ngIf="positionDeltaLabel(entry)" class="text-mini font-bold" [class]="positionDeltaClass(entry)">{{ positionDeltaLabel(entry) }}</span>
           </div>
         </div>
       </div>
@@ -1298,7 +1470,7 @@
         <div class="text-xs font-semibold text-gray-600">Centro de avisos</div>
         <h3 class="mt-2 text-xl font-extrabold text-main">Notificaciones vigentes</h3>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar centro de avisos"
         (pressed)="closeNotificationsCenter()">
       </ui-button>
     </div>
@@ -1353,7 +1525,7 @@
           <div class="text-xs font-semibold text-gray-600">Aviso del portal</div>
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ notification.title }}</h3>
         </div>
-        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar aviso del portal"
           (pressed)="closeNotificationModal()">
         </ui-button>
       </div>
@@ -1382,9 +1554,19 @@
   </ui-modal>
 
   <div class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2" [class.hidden]="!isToastVisible">
-    <div
-      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+    <div *ngIf="toastKind === 'info'"
+      class="rounded-full border border-olive-30 surface-soft px-5 py-3 text-sm text-main elev-lift">
       {{ toastMessage }}
+    </div>
+    <div *ngIf="toastKind === 'logro'"
+      class="toast-logro flex items-center gap-3 rounded-full border border-gold-35 px-5 py-3 elev-float">
+      <span class="medallion h-9 w-9 shrink-0 text-sm">
+        <i class="fa-solid fa-star text-gold" aria-hidden="true"></i>
+      </span>
+      <span class="min-w-0">
+        <span class="block text-sm font-bold text-main leading-tight">{{ toastMessage }}</span>
+        <span *ngIf="toastDetail" class="block text-xs font-semibold text-on-gold">{{ toastDetail }}</span>
+      </span>
     </div>
   </div>
 
@@ -1393,18 +1575,25 @@
     <div class="flex items-start justify-between">
       <div>
         <div class="text-xs font-semibold text-gray-600">Solicitud de pago</div>
-        <h3 class="mt-2 text-xl font-extrabold">CLABE interbancaria</h3>
-        <p class="mt-2 text-sm text-muted">Usaremos esta CLABE para depositar tus comisiones.</p>
+        <h3 class="mt-2 text-xl font-extrabold">Solicitar el depósito</h3>
+        <p class="mt-2 text-sm text-muted">Depositamos a la CLABE que tienes registrada en tu perfil.</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar solicitud de pago"
         (pressed)="closeCommissionModal()">
       </ui-button>
     </div>
 
     <div class="mt-6 grid gap-3">
-      <ui-form-field kind="input" type="text" name="commissionClabe" [(ngModel)]="commissionClabe"
-        label="CLABE (18 dígitos)" placeholder="000000000000000000" wrapperClass="block"
-        inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong"></ui-form-field>
+      <!-- WP-A · propuesta 1 (guarda 11): la CLABE se captura en un solo sitio,
+           `ui-clabe-form`. Aquí solo se dice a dónde va el depósito. -->
+      <div *ngIf="commissionSummary?.clabeOnFile"
+        class="rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main">
+        Se deposita a tu CLABE registrada, la que termina en {{ commissionSummary?.clabeLast4 }}.
+      </div>
+      <div *ngIf="!commissionSummary?.clabeOnFile"
+        class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Todavía no tienes CLABE registrada. Regístrala arriba, en "CLABE interbancaria", y vuelve a pedir el depósito.
+      </div>
 
       <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
         <ui-button type="button" variant="ghost" size="md" (pressed)="closeCommissionModal()">
@@ -1418,40 +1607,16 @@
     </div>
   </ui-modal>
 
-  <ui-modal [isOpen]="isClabeConfirmOpen" maxWidthClass="max-w-lg" contentClass="p-6" (closed)="closeClabeConfirm()">
-    <div class="flex items-start justify-between">
-      <div>
-        <div class="text-xs font-semibold text-gray-600">Confirmacion</div>
-        <h3 class="mt-2 text-xl font-extrabold">Actualizar CLABE interbancaria</h3>
-        <p class="mt-2 text-sm text-muted">
-          Estas a punto de guardar la CLABE:
-          <span class="text-main">{{ clabePending }}</span>
-        </p>
-      </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" (pressed)="closeClabeConfirm()">
-      </ui-button>
-    </div>
-
-    <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-      <ui-button type="button" variant="ghost" size="md" (pressed)="closeClabeConfirm()">
-        Cancelar
-      </ui-button>
-      <ui-button type="button" [disabled]="isClabeSaving" variant="primary" size="md" iconClass="fa-solid fa-check"
-        (pressed)="saveCustomerClabe()">
-        {{ isClabeSaving ? 'Guardando...' : 'Confirmar' }}
-      </ui-button>
-    </div>
-  </ui-modal>
 
   <ui-modal [isOpen]="showGuestRegisterModal" maxWidthClass="max-w-lg" contentClass="p-6"
     (closed)="closeGuestRegisterModal()">
     <div class="flex items-start justify-between">
       <div>
-        <div class="text-xs font-semibold text-gray-600">Registro rapido</div>
+        <div class="text-xs font-semibold text-gray-600">Registro rápido</div>
         <h3 class="mt-2 text-xl font-extrabold">Crea tu cuenta y desbloquea beneficios</h3>
         <p class="mt-2 text-sm text-muted">Completa tus datos para activar descuentos y red.</p>
       </div>
-      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+      <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar registro rápido"
         (pressed)="closeGuestRegisterModal()">
       </ui-button>
     </div>
@@ -1466,7 +1631,7 @@
           placeholder="Apellido paterno" wrapperClass="block"
           inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong">
         </ui-form-field>
-        <ui-form-field name="guestApellidoMaterno" [(ngModel)]="guestRegisterForm.apellidoMaterno" label="Apellido materno *"
+        <ui-form-field name="guestApellidoMaterno" [(ngModel)]="guestRegisterForm.apellidoMaterno" label="Apellido materno (opcional)"
           placeholder="Apellido materno" wrapperClass="block"
           inputClass="mt-2 w-full rounded-2xl border border-olive-30 surface-soft px-4 py-3 text-sm text-main placeholder-text-muted-strong">
         </ui-form-field>
@@ -1515,7 +1680,7 @@
           <h3 class="mt-2 text-xl font-extrabold text-main">{{ product.name }}</h3>
           <p class="muted mt-1 text-sm">{{ product.badge }}</p>
         </div>
-        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark"
+        <ui-button type="button" variant="ghost" size="sm" iconClass="fa-solid fa-xmark" ariaLabel="Cerrar detalle del producto"
           (click)="closeProductDetails()">
         </ui-button>
       </div>
@@ -1537,7 +1702,7 @@
               {{ discountAppliedLabel() }}
             </div>
           </div>
-          <div class="mt-3 text-xs text-gray-600">Cantidad actual: {{ getCartQty(product.id) }}</div>
+          <div class="mt-3 text-xs text-gray-600">Llevas {{ getCartQty(product.id) }} en el carrito</div>
         </div>
       </div>
 
@@ -1563,7 +1728,7 @@
     <!-- Header -->
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <div class="text-[11px] font-semibold text-gray-600">
+        <div class="text-mini font-semibold text-gray-600">
           Metas cumplidas del mes
         </div>
         <h3 class="mt-1 text-lg sm:text-xl font-extrabold leading-tight">
@@ -1574,7 +1739,7 @@
         </p>
       </div>
 
-      <ui-button size="sm" variant="ghost" type="button" class="shrink-0" (pressed)="closeGoalsModal()">
+      <ui-button size="sm" variant="ghost" type="button" class="shrink-0" ariaLabel="Cerrar metas cumplidas" (pressed)="closeGoalsModal()">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </ui-button>
     </div>
@@ -1592,7 +1757,7 @@
 
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <div class="text-[11px] sm:text-xs text-gray-600 leading-snug">
+            <div class="text-mini sm:text-xs text-gray-600 leading-snug">
               {{ goal.subtitle }}
             </div>
             <div class="mt-0.5 text-xs sm:text-sm font-semibold text-main
@@ -1604,20 +1769,20 @@
           <!-- Badges compactos + wrap -->
           <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <span *ngIf="isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-gold-35
-                     bg-gold-12 px-2 py-0.5 text-[11px] text-gold">
-              <i class="fa-solid fa-star text-[11px]" aria-hidden="true"></i>
+                     bg-gold-12 px-2 py-0.5 text-mini text-gold">
+              <i class="fa-solid fa-star text-mini" aria-hidden="true"></i>
               Nueva
             </span>
 
             <span *ngIf="!isNewAchievedGoal(goal)" class="inline-flex items-center gap-1 rounded-full border border-olive-30
-                     bg-sand-100 px-2 py-0.5 text-[11px] text-main">
-              <i class="fa-solid fa-eye text-[11px]" aria-hidden="true"></i>
+                     bg-sand-100 px-2 py-0.5 text-mini text-main">
+              <i class="fa-solid fa-eye text-mini" aria-hidden="true"></i>
               Leída
             </span>
 
-            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30
-                     bg-emerald-400/10 px-2 py-0.5 text-[11px] text-accent">
-              <i class="fa-solid fa-check text-[11px]" aria-hidden="true"></i>
+            <span class="inline-flex items-center gap-1 rounded-full border border-forest-20
+                     bg-forest-05 px-2 py-0.5 text-mini text-accent">
+              <i class="fa-solid fa-check text-mini" aria-hidden="true"></i>
               OK
             </span>
           </div>
@@ -1634,7 +1799,7 @@
           Anterior
         </ui-button>
 
-        <div class="text-[11px] text-gray-600">
+        <div class="text-mini text-gray-600">
           {{ achievedGoalsPage + 1 }} / {{ achievedGoalsTotalPages }}
         </div>
 
@@ -1651,7 +1816,11 @@
     </div>
   </ui-modal>
 
-  <div *ngIf="cartTotal > 0" class="fixed bottom-6 right-6 z-40 md:hidden">
+  <!-- Ronda 7 · Valeria: con el detalle del producto abierto, este botón se
+       seguía viendo encendido sobre el fondo oscuro del modal (z-40 contra el
+       z-50 del fondo) y el toque se lo tragaba el fondo. Se veía una app
+       trabada. Un botón que no se puede tocar no se pinta. -->
+  <div *ngIf="cartTotal > 0 && !hayModalAbierto" class="fixed bottom-6 right-6 z-40 md:hidden">
     <ui-button size="lg" variant="primary" type="button" (pressed)="goToCart()">
       <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
       Ver carrito

@@ -1,0 +1,778 @@
+{
+ "persona": "Gaby Ledesma, 33",
+ "rol": "empleada",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T07:16:23.677Z",
+ "tareas": [
+  {
+   "quiero": "entrar a mi cuenta de trabajo para ver a quién le toca que le escriba hoy",
+   "esperaba": null,
+   "t": 27,
+   "segundos": 44,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Nadie me enseñó el sistema. Renata me dio un correo y una contraseña y me dijo \"entra por login\". Espero que adentro haya algo tipo lista de clientes nuevos.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 27
+    },
+    {
+     "texto": "Me sale un aviso de privacidad encima antes de poder escribir. Le doy \"Entendido y acepto\" para quitármelo. Ya vi de paso que dice \"© 2026\" y hoy es marzo de 2027.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 52
+    },
+    {
+     "texto": "Entré a la primera. Pero el panel me abre en \"Pedidos\" y mi trabajo no son los pedidos, es la gente. En el menú de la izquierda solo veo: Pedidos, Clientes, Estadísticas y Cuadro de Honor. No hay nada que se llame \"Seguimiento\", \"Mi cartera\" ni \"Contactos\". Arriba dice ADMIN debajo de mi nombre, o sea que a mí me tratan igual que a la gerente.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 71
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el pie dice \"© 2026 finding U\" pero estamos en 2027",
+     "pantalla": "#/login",
+     "t": 52
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "entrar fue fácil, el correo y la contraseña funcionaron a la primera; lo raro es dónde me deja parada"
+  },
+  {
+   "quiero": "ver qué es eso de \"Acciones · 1 urgentes\", por si ahí me dicen a quién atender",
+   "esperaba": null,
+   "t": 71,
+   "segundos": 15,
+   "logrado": false,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Un botón que dice \"1 urgentes\" en rojo arriba a la izquierda me llama más que nada. Si el sistema sabe qué es urgente, quizá ahí está mi lista del día.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 71
+    },
+    {
+     "texto": "\"Acciones urgentes\" me dice \"3 pedidos pagados sin envío · Importante\". Eso es del muchacho de almacén, no mío. O sea que lo urgente del sistema no incluye a las personas: nadie está marcado como \"urgente de llamar\". Cierro.",
+     "segundosDesdeLoAnterior": 14,
+     "t": 85
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "el único aviso urgente del panel es de almacén; ¿el sistema nunca considera urgente a un cliente?",
+     "pantalla": "#/admin",
+     "t": 85
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": null,
+   "comentario": "lo urgente del panel es de almacén, no me sirve para saber a quién escribirle"
+  },
+  {
+   "quiero": "armar mi lista del día: los compradores que llegaron solos, sin patrocinador",
+   "esperaba": null,
+   "t": 86,
+   "segundos": 75,
+   "logrado": true,
+   "clicsBase": 4,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Si mi cartera son \"los que compraron sin que nadie los invitara\", el lugar obvio es Clientes. Ojalá haya un filtro por \"sin patrocinador\" y por fecha, para no leer uno por uno.",
+     "segundosDesdeLoAnterior": 1,
+     "t": 86
+    },
+    {
+     "texto": "Esto se ve mucho mejor de lo que esperaba: hay un botón \"Seguimiento de hoy\", otro \"Solo fríos (30+ días sin compra)\" y abajo, en la ficha, una \"Bitácora de contactos\" con notas. Y el teléfono es un enlace de WhatsApp. Casi parece hecho para mí. Voy a picarle a \"Seguimiento de hoy\" a ver si me da la lista hecha.",
+     "segundosDesdeLoAnterior": 19,
+     "t": 105
+    },
+    {
+     "texto": "Aquí sí. La pantalla se llama \"Seguimiento de hoy · Gaby Ledesma\" y dice literal \"A quién escribirle hoy, con qué mensaje, y la nota queda sola\". Trae mi nombre. Tiene columna PATROCINADORA y EJECUTIVA, y separa \"Mi cartera\" de \"Todas\": \"las personas asignadas a ti y las que nadie tiene asignadas\". Eso es exactamente mi cartera.",
+     "segundosDesdeLoAnterior": 29,
+     "t": 134
+    },
+    {
+     "texto": "El problema: solo me sale 1 persona, Paulina Ríos, \"Bienvenida\". Los cuatro que compraron esta semana no aparecen. En el filtro veo \"Activas (compraron hace poco; solo para consultar)\". O sea, para el sistema quien acaba de comprar no necesita que le escriban. Yo pienso al revés: al que acaba de recibir su producto es al que hay que escribirle, si no se enfría. Voy a ver esa lista de \"Activas\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 134
+    },
+    {
+     "texto": "Ya tengo mi lista y me costó 4 clics desde que entré: Acciones (que no servía), Clientes, Seguimiento de hoy y el filtro. Seis personas. Las que dicen PATROCINADORA \"FindingU\" son las que llegaron solas: Ernesto Vidal, Julio Herrera, Mariana Robles y Aurora Vega. Ximena y Fabiola las trajo Paulina Ríos, esas no me tocan a mí.",
+     "segundosDesdeLoAnterior": 27,
+     "t": 161
+    },
+    {
+     "texto": "Pero acabo de ver algo que no me cuadra: al cambiar el filtro a \"Activas\", los números de arriba cambiaron solos. \"Bienvenida\" pasó de 1 a 0 y \"Invitados sin ficha\" de 0 a 2. Esos recuadros parecen el resumen del día, no del filtro. Si me fío de ellos me voy a perder gente.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 161
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la tabla dice \"Última compra 02/03/2027 · 0 días\" y hoy es 08/03/2027; ¿0 días de qué?",
+     "pantalla": "#/admin clientes",
+     "t": 105
+    },
+    {
+     "texto": "todos los 5 clientes salen \"Inactiva\" aunque compraron hace menos de una semana",
+     "pantalla": "#/admin clientes",
+     "t": 105
+    },
+    {
+     "texto": "¿por qué \"Activas\" dice \"solo para consultar\"? el recién comprado es justo al que hay que llamarle",
+     "pantalla": "#/admin/seguimiento",
+     "t": 134
+    },
+    {
+     "texto": "los contadores de arriba (Bienvenida, Frías, Invitados sin ficha) cambian según el filtro; ¿son del día o de la lista?",
+     "pantalla": "#/admin/seguimiento",
+     "t": 161
+    },
+    {
+     "texto": "en Clientes decía \"última compra 02/03/2027 · 0 días\" y aquí la misma compra dice \"5 días\"",
+     "pantalla": "#/admin/seguimiento",
+     "t": 161
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "la lista existe y trae columna de patrocinadora, pero está escondida detrás de Clientes y hay que cambiar el filtro a \"Activas\" para ver a los que acaban de comprar"
+  },
+  {
+   "quiero": "escribirle por WhatsApp a Julio Herrera, que ya recibió su pedido, sin sonar a acoso",
+   "esperaba": null,
+   "t": 161,
+   "segundos": 179,
+   "logrado": true,
+   "clicsBase": 6,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 223,
+   "pantallasBase": 1,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Hay un botón \"Escribir\" por persona. Espero que me arme el mensaje y que la nota quede sola, como promete el encabezado. Empiezo con Julio Herrera: compró $1,209, entregado, nadie lo ha contactado nunca.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 161
+    },
+    {
+     "texto": "Aquí me paré en seco. El recuadro dice \"Compró hace poco; no necesita contacto hoy\" y aun así me prellenó el mensaje con la plantilla \"Cliente fría\": «Hola Julio, soy Gaby Ledesma de Finding'U. Hace tiempo que no te vemos por la tienda». A Julio le entregaron su pedido antier. Si le mando eso queda como que ni sabemos quién es. Eso es justo lo que me pidieron evitar: que suene a acoso o a copia y pega.",
+     "segundosDesdeLoAnterior": 78,
+     "t": 239
+    },
+    {
+     "texto": "Voy a poner \"Sin plantilla (escribo yo)\" y escribir algo mío, de seguimiento post-entrega. A ver si al cambiar la plantilla me borra el texto o me lo deja.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 239
+    },
+    {
+     "texto": "Al elegir \"Sin plantilla\" me vació la caja, bien. Y el pie de abajo ya dice que anotará solo \"WhatsApp\" en vez de \"plantilla cliente fría\". Le doy a \"Abrir WhatsApp y anotar\" y ojalá se abra el chat y quede la nota.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 255
+    },
+    {
+     "texto": "Se abrió una pestaña que no cargó nada (aquí en la oficina el WhatsApp Web no jala), pero en mi lista Julio ya cambió de \"nunca\" a \"hoy\" en la columna SIN CONTACTO. Eso es justo lo que necesitaba para que mañana nadie le vuelva a escribir lo mismo. Ahora recargo, porque no me fío hasta verlo después de refrescar.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 271
+    },
+    {
+     "texto": "Bien: tras recargar Julio sigue con \"hoy\" y además se me fue hasta abajo de la lista, o sea que los ya contactados se hunden solos. Eso me sirve. Ahora quiero ver la nota en su ficha, porque el aviso decía que se anota el texto con la hora. Le doy a \"Ficha\".",
+     "segundosDesdeLoAnterior": 37,
+     "t": 308
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿por qué la plantilla por defecto es \"Cliente fría\" si su situación dice \"Activa\"?",
+     "pantalla": "modal Escribir",
+     "t": 239
+    },
+    {
+     "texto": "la pantalla no recuerda el filtro al recargar: pierdo mi lista cada vez",
+     "pantalla": "#/admin/seguimiento",
+     "t": 295
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: al recargar, el filtro se me borró y volvió a \"Todas las que necesitan contacto\"; tuve que elegir \"Activas\" otra vez",
+     "t": 295
+    },
+    {
+     "texto": "reintento: quise abrir la ficha de Julio y se me abrió la de Ernesto Vidal; las filas son largas y el botón \"Ficha\" queda lejísimos del nombre",
+     "t": 322
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 2,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "sí le escribí a Julio con un mensaje mío; lo malo es que el mensaje que me propuso el sistema era el de cliente fría y no pega con alguien que acaba de recibir su pedido"
+  },
+  {
+   "quiero": "dejar apuntado que Ernesto Vidal es mío, para que nadie más le escriba lo mismo mañana",
+   "esperaba": null,
+   "t": 340,
+   "segundos": 62,
+   "logrado": true,
+   "clicsBase": 9,
+   "teclasBase": 223,
+   "clics": 1,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Me equivoqué de fila y abrí la ficha de Ernesto, pero me sirve: aquí hay \"Ejecutiva asignada\" con mi nombre en la lista, y explica \"Sin asignar, queda en la cartera FindingU y la ve la coach\". Justo lo que quería. Me asigno a Ernesto.",
+     "segundosDesdeLoAnterior": 32,
+     "t": 340
+    },
+    {
+     "texto": "Salió el mensaje \"Ficha guardada: contacto por sin registrar, ejecutiva Gaby Ledesma\" — está mal redactado pero funcionó: en la columna EJECUTIVA ya sale mi nombre junto a Ernesto. Ojo con algo importante: a Julio le escribí y su columna EJECUTIVA sigue en \"—\". O sea que escribirle NO lo pone a mi nombre; son dos cosas distintas y nadie me lo dijo.",
+     "segundosDesdeLoAnterior": 62,
+     "t": 402
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "escribirle a alguien no lo asigna a mi cartera; tengo que abrir la ficha aparte y asignarme",
+     "pantalla": "#/admin/seguimiento",
+     "t": 402
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "asignarme como ejecutiva funciona y se ve en la tabla; el aviso de confirmación está mal escrito"
+  },
+  {
+   "quiero": "escribirle a Ernesto Vidal, que también llegó solo y ya recibió su pedido",
+   "esperaba": null,
+   "t": 402,
+   "segundos": 38,
+   "logrado": true,
+   "clicsBase": 10,
+   "teclasBase": 223,
+   "clics": 2,
+   "teclas": 171,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Otra vez lo mismo: \"Hace tiempo que no te vemos por la tienda\" para Ernesto, que compró el 2 y ya le entregaron. Al menos acierta el producto (Klinhart). No es casualidad, es cómo está hecho: si la situación es \"Activa\" no tiene plantilla propia y agarra la de fría. Lo escribo yo otra vez.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 418
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "quedó \"hoy\" en su renglón; me costó reescribir el mensaje entero otra vez"
+  },
+  {
+   "quiero": "meter a Mariana Robles al sistema: compró como invitada y no tiene ficha",
+   "esperaba": null,
+   "t": 440,
+   "segundos": 134,
+   "logrado": true,
+   "clicsBase": 12,
+   "teclasBase": 394,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Mariana compró $829 el 2 de marzo como invitada, sin cuenta. Si no tiene ficha no le puedo dejar notas ni asignarme. Hay un botón \"Crear ficha\" en su renglón. Le pico a ver qué me pide.",
+     "segundosDesdeLoAnterior": 22,
+     "t": 440
+    },
+    {
+     "texto": "Ya entendí: el cuadro no se cerró porque me estaba avisando \"El navegador no dejó abrir WhatsApp. La nota ya quedó guardada; abre este enlace a mano\" con un botón \"Copiar enlace\". Eso está bien pensado. Lo malo es que detrás se ve la lista completa y yo estaba picándole a los botones de abajo sin que pasara nada. El aviso quedó al fondo del cuadro, no lo vi.",
+     "segundosDesdeLoAnterior": 61,
+     "t": 501
+    },
+    {
+     "texto": "El cuadro me explica todo antes de hacer nada: \"Se crea su ficha de cliente… No se le crea acceso ni se le manda ningún correo… Las notas que ya le tomaste como invitado pasan a la ficha\". Así sí sé qué va a pasar. Le doy.",
+     "segundosDesdeLoAnterior": 15,
+     "t": 516
+    },
+    {
+     "texto": "\"Ficha creada para Mariana Robles con 1 pedido ligado. Ya aparece como cliente.\" Y ahora en su renglón dice \"Prefiere: WhatsApp\", cosa que yo no puse. Alguien ya sabía cómo prefiere que le hablen y esa información estaba escondida hasta ahora.",
+     "segundosDesdeLoAnterior": 58,
+     "t": 574
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "le piqué a \"Crear ficha\" de Mariana y no pasaba nada; el cuadro de \"Escribir a Ernesto\" se quedó abierto encima aunque ya había mandado el mensaje",
+     "pantalla": "#/admin/seguimiento",
+     "t": 483
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "el cuadro explicaba paso por paso qué iba a pasar y se cumplió; lo mejor del día"
+  },
+  {
+   "quiero": "escribirle a Aurora Vega, que gastó $1,500 y sigue esperando su pedido",
+   "esperaba": null,
+   "t": 574,
+   "segundos": 45,
+   "logrado": true,
+   "clicsBase": 15,
+   "teclasBase": 394,
+   "clics": 3,
+   "teclas": 232,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Aurora es la que más gastó, $1,500 el 4 de marzo, y su pedido sigue en \"Pagada\", o sea que todavía no sale de almacén. Es a la que más urge hablarle. Pero su renglón dice \"Sin teléfono\" y abajo \"Sin teléfono en la ficha\". A ver qué me deja hacer el botón Escribir.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 574
+    },
+    {
+     "texto": "Ya que estoy en el de Mariana lo aprovecho, también es de mi cartera. Y otra vez lo mismo: \"Hace tiempo que no te vemos por la tienda\" para alguien que recibió su colágeno el viernes.",
+     "segundosDesdeLoAnterior": 25,
+     "t": 599
+    }
+   ],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "reintento: otra vez le di al \"Escribir\" equivocado: se me abrió el de Mariana en vez del de Aurora. Los botones de acción están hasta la orilla derecha y las filas son altas",
+     "t": 599
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 4,
+   "comentario": "le escribí a Mariana pero me equivoqué de botón dos veces antes; la columna de acciones queda lejísimos del nombre"
+  },
+  {
+   "quiero": "escribirle a Aurora Vega, la que más gastó y no tiene teléfono en el sistema",
+   "esperaba": null,
+   "t": 619,
+   "segundos": 55,
+   "logrado": true,
+   "clicsBase": 18,
+   "teclasBase": 626,
+   "clics": 2,
+   "teclas": 193,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Aurora es el tercer renglón. Cuento los botones \"Escribir\" de arriba abajo: Mariana, Ximena, Aurora. El tercero.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 619
+    },
+    {
+     "texto": "Esto sí me gustó: como Aurora no tiene teléfono, el sistema solo me puso \"Llamada (solo se anota)\" y el botón cambió de \"Abrir WhatsApp y anotar\" a \"Guardar la nota\". No me deja hacer algo imposible. Pero me sigue ofreciendo \"WhatsApp\" en la lista; a ver qué pasa si lo escojo por error.",
+     "segundosDesdeLoAnterior": 16,
+     "t": 635
+    },
+    {
+     "texto": "Me avisa bien: \"Sin teléfono en la ficha. Elige Llamada o Correo para dejar la nota, o corrige el teléfono en la ficha de Clientes\", y deshabilita el botón. Aquí sí me explica el porqué. Voy a poner \"Correo\" y anotar que le escribí desde mi correo; aunque me molesta que \"Correo\" solo anote y no mande nada: el sistema le manda correos de pedidos, pero a mí no me deja mandarle uno.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 652
+    },
+    {
+     "texto": "\"Nota guardada a las 10:11 a.m.: 'Correo' para Aurora Vega.\" y su renglón ya dice \"hoy\". Bien.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 674
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "\"Correo (solo se anota)\": ¿por qué el sistema sí le manda correos de pedidos y a mí no me deja mandarle uno desde aquí?",
+     "pantalla": "modal Escribir",
+     "t": 652
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "me dejó anotar el contacto aunque no hubiera teléfono, y me explicó por qué no podía usar WhatsApp"
+  },
+  {
+   "quiero": "darle la bienvenida a Paulina Ríos, que se registró y todavía no compra",
+   "esperaba": null,
+   "t": 674,
+   "segundos": 34,
+   "logrado": true,
+   "clicsBase": 20,
+   "teclasBase": 819,
+   "clics": 3,
+   "teclas": 174,
+   "pantallasBase": 2,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Paulina es la única que el sistema sí me marcó sola como \"necesita contacto\", con situación \"Bienvenida\". Quiero ver si para ella la plantilla sí pega. Regreso el filtro a \"Todas las que necesitan contacto\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 674
+    },
+    {
+     "texto": "Con Paulina sí acertó: \"Se registró hace menos de 7 días y aún no compra\" y el mensaje dice \"Vi que ya tienes tu cuenta; si quieres te ayudo a armar tu primer pedido\". Ese sí lo mando tal cual, solo le quito mi apellido para que suene más de persona.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 691
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "para la de bienvenida el mensaje propuesto sí servía; solo le quité el apellido"
+  },
+  {
+   "quiero": "comprobar que de verdad quedó escrito en la ficha a quién contacté y qué le dije",
+   "esperaba": null,
+   "t": 708,
+   "segundos": 78,
+   "logrado": true,
+   "clicsBase": 23,
+   "teclasBase": 993,
+   "clics": 4,
+   "teclas": 0,
+   "pantallasBase": 2,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Todo esto no sirve de nada si mañana otra persona no ve lo que escribí. En Clientes había una \"Bitácora de contactos\". Voy a ver si mis mensajes de hoy están ahí, con el texto completo.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 708
+    },
+    {
+     "texto": "Ahí está mi mensaje completo: «WhatsApp: Hola Julio, soy Gaby de Finding'U…» con fecha 08/03/2027 10:04. Se guardó tal cual. Pero abajo del texto, donde debería decir quién lo escribió, dice \"1803978000111 · 08/03/2027 10:04\". Un número. Yo no sé de quién es ese número y la que entre mañana tampoco.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 732
+    },
+    {
+     "texto": "Aprovecho para dejar una nota escrita por mí, para que quede el \"qué sigue\" y no solo el mensaje que mandé.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 732
+    },
+    {
+     "texto": "Salió \"Nota agregada.\" Recargo para creérmelo.",
+     "segundosDesdeLoAnterior": 17,
+     "t": 749
+    },
+    {
+     "texto": "Las dos notas siguen ahí después de recargar. Eso sí me da confianza. Lo que no me cuadra: en esta tabla de Clientes dice \"Última compra 02/03/2027 · 0 días\" y en Seguimiento la misma compra dice \"5 días\". Dos pantallas del mismo sistema me dan números distintos, y ninguna es hoy 08/03. Además todos salen \"Inactiva\" aunque compraron esta semana.",
+     "segundosDesdeLoAnterior": 37,
+     "t": 786
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la bitácora firma las notas con un número largo en vez del nombre de quien contactó",
+     "pantalla": "#/admin clientes",
+     "t": 732
+    },
+    {
+     "texto": "\"Estatus: Inactiva\" para gente que compró hace 5 días; ¿inactiva de qué?",
+     "pantalla": "#/admin clientes",
+     "t": 786
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 5,
+   "comentario": "la nota y el mensaje quedaron guardados y aguantan la recarga; lo malo es que la firma es un número, no mi nombre"
+  },
+  {
+   "quiero": "poner a mi nombre a Julio y a Mariana para que mañana nadie les repita el mismo mensaje",
+   "esperaba": null,
+   "t": 786,
+   "segundos": 90,
+   "logrado": true,
+   "clicsBase": 27,
+   "teclasBase": 993,
+   "clics": 10,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "En Clientes no hay dónde decir \"esta persona es mía\": aquí solo hay patrocinador, no ejecutiva. Lo de la ejecutiva estaba en el cuadro \"Ficha\" de la pantalla de Seguimiento. Tengo que volver allá.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 786
+    },
+    {
+     "texto": "Ya tengo a Ernesto, Julio y Mariana a mi nombre. Falta Aurora, la de $1,500, pero a ella no le sale \"Ficha\" sino \"Crear ficha\": sin ficha no puedo ponerla en mi cartera. Se la creo.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 824
+    },
+    {
+     "texto": "\"Ficha creada para Aurora Vega con 2 pedidos ligados.\" ¡Dos! La lista solo me enseñaba uno, el último. O sea que la señora que más ha gastado compró dos veces y en mi pantalla parecía una compra sola. Y ahora aparece \"Prefiere: Correo\", que tampoco lo puse yo.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 842
+    },
+    {
+     "texto": "Ya tengo a los cuatro que llegaron solos a mi nombre: Ernesto, Julio, Mariana y Aurora. Pero le pico a \"Mi cartera\" y me siguen saliendo 6, con Ximena y Fabiola, que son de Paulina. El texto dice que \"Mi cartera\" también trae \"las que nadie tiene asignadas\", así que ahí seguirán hasta que alguien las tome. Para mí eso no es \"mi cartera\", es \"mi cartera más las huérfanas\".",
+     "segundosDesdeLoAnterior": 34,
+     "t": 876
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la ficha de Clientes y la \"Ficha\" de Seguimiento son distintas y no traen lo mismo; ¿cuál es la ficha de verdad?",
+     "pantalla": "#/admin",
+     "t": 786
+    },
+    {
+     "texto": "el mensaje de guardado dice \"contacto por sin registrar\" y \"contacto por whatsapp\", en minúsculas y sin sentido",
+     "pantalla": "#/admin/seguimiento",
+     "t": 824
+    },
+    {
+     "texto": "\"Mi cartera\" incluye a gente que no es mía; no hay forma de ver solo lo mío",
+     "pantalla": "#/admin/seguimiento",
+     "t": 876
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 5,
+   "comentario": "sí se puede marcar quién es mío, pero está escondido en un cuadro aparte y hay que hacerlo de uno en uno"
+  },
+  {
+   "quiero": "preguntarle a Renata si los clientes de Paulina también me tocan a mí",
+   "esperaba": null,
+   "t": 876,
+   "segundos": 0,
+   "logrado": false,
+   "clicsBase": 37,
+   "teclasBase": 993,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ximena y Fabiola tienen patrocinadora (Paulina Ríos) y llevan 5 y 3 días sin que nadie las contacte. Si les escribo yo, quizá me meto donde no me toca y Paulina se enoja. Si no les escribo, se enfrían. La pantalla no me lo dice en ningún lado: dice quién es la patrocinadora, pero no de quién es la responsabilidad de hablarles. Busqué en el texto de ayuda de la pantalla (\"Mi cartera\": las personas asignadas a ti y las que nadie tiene asignadas) y no lo aclara.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 876
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [
+    {
+     "aQuien": "superior",
+     "texto": "Renata, buen día. En Seguimiento me aparecen Ximena Paredes y Fabiola Cantú, las dos con Paulina Ríos de patrocinadora y sin contacto de nadie (5 y 3 días). ¿Les escribo yo o eso le toca a Paulina? La pantalla me las pone en \"Mi cartera\" pero no dice de quién son.",
+     "t": 876,
+     "tarea": "preguntarle a Renata si los clientes de Paulina también me tocan a mí"
+    }
+   ],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "no puedo decidirlo yo sola; dejé a Ximena y Fabiola sin contactar hasta que me contesten"
+  },
+  {
+   "quiero": "ver si el Cuadro de Honor me sirve para motivar a mi gente",
+   "esperaba": null,
+   "t": 876,
+   "segundos": 38,
+   "logrado": false,
+   "clicsBase": 37,
+   "teclasBase": 993,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 3,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "El Cuadro de Honor solo trae 4 nombres y son los socios; mis clientes (Julio, Mariana, Aurora) no salen. Como material para motivar no me sirve: no le puedo mandar a Julio una lista donde él no existe. Y los números no me cuadran: a Paulina le ponen VG 50, pero sus dos socias suman 25 y 24, o sea 49. Y la columna \"FALTA\", que dice ser \"cuánto necesita para alcanzar al de arriba\", me sale en negativo: \"−24\", \"−1\", \"−14\". Uno lee \"−1\" y entiende que va abajo, no que le falta 1.",
+     "segundosDesdeLoAnterior": 38,
+     "t": 914
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "la columna FALTA sale en negativo y el VG de Paulina (50) no cuadra con la suma de su red (49)",
+     "pantalla": "#/admin cuadro de honor",
+     "t": 914
+    },
+    {
+     "texto": "el Cuadro de Honor solo lista socios; mis clientes no aparecen y \"RANGO\" está vacío para todos",
+     "pantalla": "#/admin cuadro de honor",
+     "t": 914
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": null,
+   "comentario": "el cuadro de honor no me sirve para mi gente: solo salen socios y los números no cuadran"
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "desconcierto",
+   "intensidad": 3,
+   "porque": "entro y lo primero que veo son pedidos y guías de envío, que no es mi trabajo",
+   "t": 71,
+   "tarea": "entrar a mi cuenta de trabajo para ver a quién le toca que le escriba hoy"
+  },
+  {
+   "emocion": "alivio",
+   "intensidad": 4,
+   "porque": "creí que iba a tener que armar la lista a mano y el sistema me la da hecha, con mi nombre en el título",
+   "t": 134,
+   "tarea": "armar mi lista del día: los compradores que llegaron solos, sin patrocinador"
+  },
+  {
+   "emocion": "vergüenza ajena",
+   "intensidad": 4,
+   "porque": "el mensaje automático le dice \"hace tiempo que no te vemos\" a alguien que recibió su pedido hace dos días",
+   "t": 239,
+   "tarea": "escribirle por WhatsApp a Julio Herrera, que ya recibió su pedido, sin sonar a acoso"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 3,
+   "porque": "tengo que reescribir el mensaje a mano en cada persona porque la plantilla que propone es la equivocada",
+   "t": 418,
+   "tarea": "escribirle a Ernesto Vidal, que también llegó solo y ya recibió su pedido"
+  },
+  {
+   "emocion": "confianza",
+   "intensidad": 4,
+   "porque": "es la primera pantalla del día que me dice exactamente qué va a pasar antes de que yo apriete",
+   "t": 516,
+   "tarea": "meter a Mariana Robles al sistema: compró como invitada y no tiene ficha"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 3,
+   "porque": "si mañana entra otra compañera va a ver un número, no mi nombre; para eso mejor lo anoto en mi libreta",
+   "t": 732,
+   "tarea": "comprobar que de verdad quedó escrito en la ficha a quién contacté y qué le dije"
+  },
+  {
+   "emocion": "sorpresa",
+   "intensidad": 3,
+   "porque": "la clienta más importante tenía dos pedidos y la lista solo me enseñaba el último",
+   "t": 842,
+   "tarea": "poner a mi nombre a Julio y a Mariana para que mañana nadie les repita el mismo mensaje"
+  },
+  {
+   "emocion": "inseguridad",
+   "intensidad": 3,
+   "porque": "no sé si escribirle a las clientas de otra socia es ayudar o meterme donde no me llaman",
+   "t": 876,
+   "tarea": "preguntarle a Renata si los clientes de Paulina también me tocan a mí"
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Renata, buen día. En Seguimiento me aparecen Ximena Paredes y Fabiola Cantú, las dos con Paulina Ríos de patrocinadora y sin contacto de nadie (5 y 3 días). ¿Les escribo yo o eso le toca a Paulina? La pantalla me las pone en \"Mi cartera\" pero no dice de quién son.",
+   "t": 876,
+   "tarea": "preguntarle a Renata si los clientes de Paulina también me tocan a mí"
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 7,
+  "legibilidad": 6,
+  "coherencia": 4,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada",
+   "apretada",
+   "de contadora"
+  ],
+  "mejorPantalla": "Seguimiento de hoy: es la única que está escrita pensando en mi trabajo, con mi nombre en el título y diciéndome a quién escribirle",
+  "peorPantalla": "la tabla de Clientes: dice \"Inactiva\" y \"0 días\" de gente que compró esta semana, y la ficha de abajo es un chorizo larguísimo de comisiones, documentos y red que a mí no me sirve para nada",
+  "seParece": "a un sistema de cobranza de una financiera, con un pedacito bien hecho (Seguimiento) que parece de otra app más nueva",
+  "recomendarias": 7,
+  "volverias": "sí, todos los días, porque Seguimiento me ahorra hacer la lista a mano; pero voy a seguir con mi libreta para saber quién dijo qué",
+  "comentario": "Lo que más me chocó del día: la pantalla me dice \"compró hace poco, no necesita contacto hoy\" y al mismo tiempo me pone en la boca \"hace tiempo que no te vemos\". Son dos cabezas distintas en el mismo cuadro. Y que mis notas las firme un número de 13 dígitos en vez de mi nombre."
+ },
+ "totales": {
+  "clics": 39,
+  "teclas": 993,
+  "envios": 0,
+  "campos": 4,
+  "pantallas": 3,
+  "recargas": 0,
+  "atrases": 0
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788506210760,
+   "primerClicMs": 25009,
+   "clics": 2,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin/seguimiento",
+   "desde": 1788506454657,
+   "primerClicMs": 36814,
+   "clics": 1,
+   "comoLlego": "carga"
+  },
+  {
+   "ruta": "#/admin",
+   "desde": 1788506932320,
+   "primerClicMs": 16549,
+   "clics": 1,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [],
+ "fin": "2026-09-04T07:31:47.019Z",
+ "duracionMin": 15
+}

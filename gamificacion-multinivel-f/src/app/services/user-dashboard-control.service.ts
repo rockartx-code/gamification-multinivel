@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, finalize, forkJoin, Observable, of, shareReplay, tap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, forkJoin, Observable, of, shareReplay, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import {
@@ -10,12 +10,32 @@ import {
   FeaturedItem,
   DashboardCampaign,
   NetworkMember,
+  DashboardSettings,
   UserDashboardData
 } from '../models/user-dashboard.model';
 import { CustomerShippingAddress } from '../models/admin.model';
+import { fechaEnLetras } from '../models/vocabulario.model'; // paquete G · ronda 26
 import { NotificationReadResponse, PortalNotification } from '../models/portal-notification.model';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
+import { PlanSocioService } from './plan-socio.service';
+
+/**
+ * Ajustes de quien todavía no tiene sesión (paquete G · ronda 26, propuesta 29).
+ *
+ * Escritos **una sola vez**: eran dos copias dentro de este mismo archivo, más
+ * una tercera dentro del componente del panel y un respaldo distinto en el
+ * carrito, que caía al último día del mes. Ximena leyó 26 d sin cuenta y 21 d
+ * con cuenta en el mismo minuto.
+ */
+const AJUSTES_SIN_SESION: DashboardSettings = {
+  cutoffDay: 25,
+  cutoffHour: 23,
+  cutoffMinute: 59,
+  userCode: '',
+  networkGoal: 300,
+  cutoffLabel: 'Cierre del mes de comisiones y de tu descuento por volumen'
+};
 
 @Injectable({
   providedIn: 'root'
@@ -35,10 +55,13 @@ export class UserDashboardControlService {
   private networkMembersCache: NetworkMember[] = [];
   private buyAgainIdsCache = new Set<string>();
   private loadRequest?: Observable<UserDashboardData>;
+  /** Instante del navegador en el que llegó el payload, para corregir la deriva del reloj. */
+  private dashboardLoadedAt = Date.now(); // paquete G · ronda 26
 
   constructor(
     private readonly api: ApiService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly planSocio: PlanSocioService
   ) {}
 
   reset(): void {
@@ -49,6 +72,7 @@ export class UserDashboardControlService {
     this.cart = {};
     this.heroQty = 0;
     this.heroProductId = '';
+    this.dashboardLoadedAt = Date.now();
   }
 
   load(options: { force?: boolean } = {}): Observable<UserDashboardData> {
@@ -67,32 +91,47 @@ export class UserDashboardControlService {
       return this.loadRequest;
     }
 
+    // Si el panel falla, la tienda no debe quedarse en blanco: se cae al
+    // mismo esqueleto que ve un invitado (catálogo completo, sin red ni
+    // comisiones) en vez de tumbar la carga conjunta.
+    const esqueleto: DashboardData = {
+      isGuest: true,
+      settings: { ...AJUSTES_SIN_SESION },
+      goals: [], featured: [], campaigns: [], networkMembers: [], buyAgainIds: [], commissions: null, notifications: [], customer: null
+    };
+    // Sin sesión el corte también sale del servidor (propuesta 29): la
+    // configuración pública ya publica `cutoffAt` y `serverNow`, y sin pedirlos
+    // el carrito del invitado contaba los días con `new Date()` del navegador
+    // —26 d sin cuenta y 21 d con cuenta en el mismo minuto, y dos fechas en
+    // letras separadas por ocho meses—. `AJUSTES_SIN_SESION` queda solo como
+    // último recurso si la petición falla.
     const dashboardRequest = this.authService.hasSession
-      ? this.api.getDashboardData()
-      : of<DashboardData>({
-          isGuest: true,
-          settings: {
-            cutoffDay: 25,
-            cutoffHour: 23,
-            cutoffMinute: 59,
-            userCode: '',
-            networkGoal: 300
-          },
-          goals: [],
-          featured: [],
-          campaigns: [],
-          networkMembers: [],
-          buyAgainIds: [],
-          commissions: null,
-          notifications: [],
-          customer: null
-        });
+      ? this.api.getDashboardData().pipe(catchError(() => of<DashboardData>({ ...esqueleto, isGuest: false })))
+      : this.api.getPublicBusinessConfig().pipe(
+          map((config) => ({
+            ...esqueleto,
+            settings: {
+              ...esqueleto.settings,
+              cutoffDay: Number(config?.cutoffDay ?? esqueleto.settings.cutoffDay),
+              cutoffHour: Number(config?.cutoffHour ?? esqueleto.settings.cutoffHour),
+              cutoffMinute: Number(config?.cutoffMinute ?? esqueleto.settings.cutoffMinute),
+              cutoffLabel: String(config?.cutoffLabel ?? esqueleto.settings.cutoffLabel),
+              cutoffAt: config?.cutoffAt,
+              serverNow: config?.serverNow
+            }
+          } satisfies DashboardData)),
+          catchError(() => of<DashboardData>({ ...esqueleto }))
+        );
 
     const request = forkJoin([
       this.api.getCatalogData(),
-      dashboardRequest
+      dashboardRequest,
+      // El Cuadro de Honor del panel leía `data.honorBoard`, que el payload del
+      // panel nunca trae: la sección salía vacía para todos los clientes.
+      this.api.getHonorBoard().pipe(catchError(() => of(null)))
     ]).pipe(
-      map(([catalog, dashboard]) => ({
+      map(([catalog, dashboard, honorBoard]) => ({
+        honorBoard: honorBoard ?? undefined,
         // Datos de catálogo (GET /catalog)
         products: catalog.products ?? [],
         productOfMonth: catalog.productOfMonth ?? null,
@@ -112,8 +151,13 @@ export class UserDashboardControlService {
         isGuest: dashboard.isGuest,
         vp: dashboard.vp,
         vg: dashboard.vg,
+        myNetSpend: dashboard.myNetSpend,
         rank: dashboard.rank,
         bonuses: dashboard.bonuses ?? [],
+        // Paquete B: modo de la cuenta e indicadores del cliente
+        mode: dashboard.mode,
+        modeActivatedAt: dashboard.modeActivatedAt,
+        clientIndicators: dashboard.clientIndicators ?? null,
       } satisfies UserDashboardData)),
       tap((data) => {
         const safeNetworkMembers = Array.isArray(data.networkMembers) ? data.networkMembers : [];
@@ -150,6 +194,11 @@ export class UserDashboardControlService {
         };
         this.networkMembersCache = safeNetworkMembers;
         this.buyAgainIdsCache = new Set(safeBuyAgainIds);
+        // Marca del navegador en la que llegó `serverNow`: con ella el reloj de
+        // la cuenta regresiva corre con la hora del servidor, no con la del equipo.
+        this.dashboardLoadedAt = Date.now();
+        // El panel es la fuente de verdad del modo: tienda, perfil y aviso de privacidad lo leen de aquí.
+        this.planSocio.fijarModo(data.isGuest ? 'invitado' : data.mode === 'cliente' ? 'cliente' : 'socio');
         const clonedData = this.cloneDashboardData(mappedData);
         this.dataSubject.next(clonedData);
         this.heroProductId =
@@ -278,10 +327,14 @@ export class UserDashboardControlService {
 
   formatMoney(value: number): string {
     const amount = Number.isFinite(value) ? value : 0;
+    // Sin centavos cuando el importe es entero; con dos cuando no lo es
+    // ("$1,376.40", no "$1,376.4" ni "$1,376").
+    const cents = Number.isInteger(Math.round(amount * 100) / 100) ? 0 : 2;
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
-      maximumFractionDigits: 0
+      minimumFractionDigits: cents,
+      maximumFractionDigits: cents
     }).format(amount);
   }
 
@@ -355,12 +408,74 @@ export class UserDashboardControlService {
     this.heroQty = this.cart[this.heroProductId] ?? 0;
   }
 
-  getCountdownLabel(): string {
-    const settings = this.data?.settings;
-    if (!settings) {
-      return '';
+  // ── Paquete G · ronda 26 · propuesta 29: un solo origen del corte ──────────
+  // Había cuatro orígenes del mismo número y Ximena midió 26 d sin cuenta y
+  // 21 d con cuenta **en el mismo minuto**. Este servicio es el único; el
+  // carrito y el panel leen de aquí y ninguno vuelve a calcularlo.
+
+  /** Diferencia entre el reloj del servidor y el del navegador, en ms. */
+  private get serverSkewMs(): number {
+    const serverNow = this.data?.settings?.serverNow;
+    if (!serverNow) {
+      return 0;
     }
-    const diff = Math.max(0, this.getNextCutoffDate(settings).getTime() - Date.now());
+    const marca = Date.parse(serverNow);
+    return Number.isNaN(marca) ? 0 : marca - this.dashboardLoadedAt;
+  }
+
+  /** "Ahora" según el servidor: su reloj más lo transcurrido en el navegador. */
+  private serverNowMs(): number {
+    return Date.now() + this.serverSkewMs;
+  }
+
+  /**
+   * Instante del próximo corte. Si el servidor lo publicó (`cutoffAt`), manda
+   * ese; si no, se calcula con el día del corte, que es lo que ya se hacía.
+   */
+  getCutoffDate(): Date {
+    // Sin payload todavía se usan los mismos ajustes que ve quien no tiene
+    // sesión: el corte nunca se queda sin respuesta, y así el carrito no tiene
+    // por qué calcular el suyo (que caía al último día del mes).
+    const settings = this.data?.settings ?? AJUSTES_SIN_SESION;
+    if (settings.cutoffAt) {
+      const marca = Date.parse(settings.cutoffAt);
+      if (!Number.isNaN(marca)) {
+        return new Date(marca);
+      }
+    }
+    return this.getNextCutoffDate(settings);
+  }
+
+  /** Segundos que faltan para el corte, medidos con el reloj del servidor. */
+  getCutoffRemainingSeconds(): number {
+    return Math.max(0, Math.floor((this.getCutoffDate().getTime() - this.serverNowMs()) / 1000));
+  }
+
+  /** Segundos del periodo completo, para pintar la barra de avance. */
+  getCutoffTotalSeconds(): number {
+    const corte = this.getCutoffDate();
+    const anterior = new Date(corte);
+    anterior.setMonth(anterior.getMonth() - 1);
+    return Math.max(1, Math.floor((corte.getTime() - anterior.getTime()) / 1000));
+  }
+
+  /**
+   * De qué es el corte, dicho con todas sus letras: ninguna de las siete
+   * personas que vieron el reloj entendió qué se acababa ("¿se me vence el
+   * carrito? ¿se acaba una oferta?").
+   */
+  getCutoffLabel(): string {
+    return this.data?.settings?.cutoffLabel
+      || 'Cierre del mes de comisiones y de tu descuento por volumen';
+  }
+
+  /** La fecha en letras junto al reloj: "lunes 25 de marzo de 2027, 23:59". */
+  getCutoffDateText(): string {
+    return fechaEnLetras(this.getCutoffDate(), true);
+  }
+
+  getCountdownLabel(): string {
+    const diff = Math.max(0, this.getCutoffDate().getTime() - this.serverNowMs());
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const m = Math.floor((diff / (1000 * 60)) % 60);

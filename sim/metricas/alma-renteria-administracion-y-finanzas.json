@@ -1,0 +1,753 @@
+{
+ "persona": "Alma Renteria, administracion y finanzas",
+ "rol": "empleado",
+ "dispositivo": "escritorio",
+ "inicio": "2026-09-04T08:34:25.522Z",
+ "tareas": [
+  {
+   "quiero": "entrar al sistema para hacer el cierre de marzo",
+   "esperaba": null,
+   "t": 23,
+   "segundos": 47,
+   "logrado": true,
+   "clicsBase": 0,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 0,
+   "pantallas": 1,
+   "pensamientos": [
+    {
+     "texto": "Es mi primer cierre. Me dieron un correo y una contrasena y me dijeron que entre por la pagina. No se que voy a encontrar.",
+     "segundosDesdeLoAnterior": 23,
+     "t": 23
+    },
+    {
+     "texto": "Hay un aviso de privacidad tapando. Le doy \"Entendido y acepto\" y luego pongo mi correo. Ojo: dice \"© 2026 finding U\" y estamos en abril de 2027.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 47
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 6,
+   "confianza": 5,
+   "comentario": "Entré a la primera. Lo único raro: el pie dice \"© 2026 finding U\" y estamos en abril de 2027."
+  },
+  {
+   "quiero": "encontrar en el menú dónde se ve el dinero: comisiones, caja, facturas",
+   "esperaba": null,
+   "t": 70,
+   "segundos": 23,
+   "logrado": false,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Antes de darme por vencida abro \"Acciones · 2 urgentes\", que es lo único que promete llevarme a algo.",
+     "segundosDesdeLoAnterior": 10,
+     "t": 80
+    },
+    {
+     "texto": "En el menú no hay comisiones, pero el aviso urgente sí habla de \"socias con comisión y sin CLABE · $135.00\". Entonces las comisiones SÍ existen en algún lado, solo que no están en mi menú. Le doy a \"Ir a resolver\" del primer aviso a ver a dónde me manda.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 93
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En mi menú no aparece Comisiones, ni Caja, ni Facturas, ni Reportes. Solo Pedidos, Clientes, Cupones, Estadísticas, Cuadro de Honor, Notificaciones y Configuración. ¿Dónde cuadro el dinero?",
+     "pantalla": "#/admin",
+     "t": 80
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "llegar a las comisiones desde el aviso de CLABE faltante",
+   "esperaba": null,
+   "t": 93,
+   "segundos": 32,
+   "logrado": true,
+   "clicsBase": 2,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 4,
+   "comentario": "Llegué, pero por accidente: el botón me mandó a CLIENTES y el módulo de pagos de comisiones está hasta el fondo de esa pantalla, debajo de la ficha de un cliente. En el menú no dice \"Comisiones\" por ningún lado. Si no hubiera tenido el aviso urgente, no lo encuentro."
+  },
+  {
+   "quiero": "sacar el archivo de dispersión de comisiones de marzo 2027 para subirlo al banco",
+   "esperaba": null,
+   "t": 125,
+   "segundos": 65,
+   "logrado": false,
+   "clicsBase": 4,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Los tres contadores dicen: \"Listas para depositar 0 · $0.00\", \"Sin CLABE 1 · $135.00\", \"Pagadas 0 · $0.00\". Y arriba, en la misma pantalla, el KPI grande dice \"Comisiones por depositar $135\". Son dos cifras distintas para lo mismo en la MISMA pantalla: $135 arriba, $0.00 listas para depositar abajo.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 125
+    },
+    {
+     "texto": "El botón \"Exportar archivo de dispersión (CSV)\" está apagado y dice el motivo: \"No hay socias listas para depositar este mes\". La única comisión de marzo es de Paulina Ríos, $135.00, \"No registrada\" en CLABE. O sea: el cierre de marzo no se puede pagar hasta que ella dé su cuenta. Lo único que puedo hacer es \"Pedir CLABE\". Ya dice \"Recordatorio enviado el 10 abr 2027\" (hoy), pero no fui yo. Le doy otra vez a ver qué pasa.",
+     "segundosDesdeLoAnterior": 12,
+     "t": 136
+    },
+    {
+     "texto": "El modal me avisa \"Ya se le pidió el 10 abr 2027\". Igual lo mando: necesito dejar constancia de que YO se lo pedí hoy, porque a mí me van a preguntar por qué no salió la dispersión.",
+     "segundosDesdeLoAnterior": 13,
+     "t": 149
+    },
+    {
+     "texto": "En pantalla no salió ningún aviso de \"recordatorio enviado\". Fui a revisar el correo de Paulina y sí: hay uno de hoy 10 abr 12:04 \"Registra tu CLABE para cobrar tus comisiones\". O sea el botón sí funciona, pero la pantalla no me lo dice; me quedé sin saber si le di bien.",
+     "segundosDesdeLoAnterior": 41,
+     "t": 190
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En el correo del 20 de marzo a Paulina dice \"Tienes $259.20 en comisiones bloqueadas que se pierden el 31 de marzo\" y otro dice \"comisión de $124.20 en camino\". En el panel de pagos de marzo aparece $135.00 confirmados. Son tres cifras distintas ($259.20 / $124.20 / $135.00) y ninguna pantalla me explica cómo se llega de una a otra.",
+     "pantalla": "#/admin (Clientes · pagos del mes)",
+     "t": 190
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "No puedo generar el archivo de dispersión de marzo: la única comisión ($135.00 de Paulina Ríos) está \"Sin CLABE\" y el botón Exportar está apagado. Le mandé el recordatorio y hasta ahí llego; el pago de comisiones de marzo queda detenido."
+  },
+  {
+   "quiero": "sacar cuánto entró en marzo y por qué vía (internet / mostrador)",
+   "esperaba": null,
+   "t": 201,
+   "segundos": 184,
+   "logrado": false,
+   "clicsBase": 6,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Voy a Pedidos. Espero encontrar un filtro por fechas (del 1 al 31 de marzo), una columna que diga si fue venta por internet o de mostrador, y un total. Es lo mínimo de cualquier reporte de ventas.",
+     "segundosDesdeLoAnterior": 11,
+     "t": 201
+    },
+    {
+     "texto": "No hay ningún filtro de fechas en Pedidos. Solo pestañas por estado, un selector de sucursal y una caja de buscar por cliente/guía/teléfono. Para saber \"cuánto entró en marzo\" tengo que contar los renglones a mano y fijarme en la fecha de cada uno. Eso no es un reporte.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 221
+    },
+    {
+     "texto": "Ya recorrí las 8 pestañas. Marzo tiene 9 pedidos: 4 en Pagado y 5 en Entregado. Cancelado, Reembolsado, Por devolver, Devuelto y Dev. rechazada están todas en CERO. Sumo a mano: 960+1371+1500+1500 = 5,331 y 760+829+1350+1209+609 = 4,757. Total 10,088, que sí cuadra con el KPI de arriba \"$10,088 cobrado · 9 pedidos\". Al menos eso amarra.",
+     "segundosDesdeLoAnterior": 40,
+     "t": 261
+    },
+    {
+     "texto": "El detalle SÍ trae los datos fiscales completos: \"Factura solicitada · pedida el 04/03/2027 17:02\", RFC VEGA850312AB1, razón social Aurora Vega Morales, régimen 612, CP 44160, uso CFDI G03. Pero no hay ningún botón de \"factura emitida\" ni \"marcar facturada\". Y para encontrarlas tuve que abrir pedido por pedido. Lo que NO veo por ningún lado: con qué se pagó (tarjeta, efectivo, transferencia) ni la fecha en que entró el dinero. Solo la fecha de creación del pedido.",
+     "segundosDesdeLoAnterior": 108,
+     "t": 369
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Cómo distingo una venta de mostrador de una de internet? Lo único que veo es que una empieza con POS- y dice \"Sucursal\". No hay columna que diga la vía de venta ni la forma de pago.",
+     "pantalla": "#/admin (Pedidos)",
+     "t": 221
+    },
+    {
+     "texto": "Veo DOS pedidos idénticos de Aurora Vega el 04/03/2027, ORD-1A2D13F6 y ORD-351342D9, los dos por $1,500 y los dos con \"Factura Solicitada\". ¿Compró dos veces lo mismo el mismo día o es un cobro duplicado? Desde aquí no lo puedo saber.",
+     "pantalla": "#/admin (Pedidos · Pagado)",
+     "t": 261
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: Quise abrir el detalle del pedido de Aurora y no me deja: ni por el renglón ni por la caja de buscar. Voy a intentar de otra forma.",
+     "t": 336
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "listar las facturas pedidas y sin emitir de marzo",
+   "esperaba": null,
+   "t": 385,
+   "segundos": 123,
+   "logrado": true,
+   "clicsBase": 6,
+   "teclasBase": 0,
+   "clics": 31,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Estoy sumando los renglones de cada pedido y NO dan el total. ORD-1F950075: Colageno $700 y Total $829, sobran $129. ORD-682C1E22: $800+$280=$1,080 y Total $1,209, otra vez $129. ORD-97E56995: $480 y Total $609, $129. Los tres son los que llevan guía, así que supongo que es el envío, pero la pantalla NUNCA escribe la palabra envío ni el importe. Y el peor: ORD-7C55FDBD suma $700+$800=$1,500 y el Total dice $1,350, o sea $150 MENOS. Eso ya no es envío, es un descuento que nadie me explica.",
+     "segundosDesdeLoAnterior": 109,
+     "t": 478
+    },
+    {
+     "texto": "Otro que no cuadra: ORD-9CD8BD3D de Fabiola suma $700+$400+$280 = $1,380 y el Total dice $1,371. Nueve pesos menos, y va a domicilio a Puebla sin cobrar envío. Ya van cuatro pedidos donde el total no es la suma de los renglones: tres de más ($129 cada uno) y dos de menos ($150 y $9).",
+     "segundosDesdeLoAnterior": 30,
+     "t": 508
+    },
+    {
+     "texto": "Armo el reporte de marzo a mano, renglon por renglon, porque no hay exportar en Pedidos. Suma de productos $9,860 y suma de totales $10,088: hay $228 de diferencia neta que no puedo explicar desde ninguna pantalla. Por vía: 1 ticket de mostrador (POS-E26D95B4, $760) y 8 pedidos por internet ($9,328). Y eso lo deduzco YO porque el folio empieza con POS-, no porque la plataforma lo diga.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 508
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Los dos pedidos de Aurora Vega son EXACTAMENTE iguales: mismo Colageno Hidrolizado x1 $700 + Finding Pro 500g x1 $800, total $1,500, misma recogida en Sucursal Guadalajara, mismo día 04/03. Uno se pidió a las 11:05 y el otro a las 17:02. Como finanzas eso me huele a cobro duplicado y no tengo cómo comprobarlo desde aquí.",
+     "pantalla": "#/admin (Pedidos)",
+     "t": 385
+    },
+    {
+     "texto": "El detalle del pedido no tiene desglose: no hay subtotal, ni envío, ni descuento, ni IVA. Solo productos y un \"Total\" que no cuadra con los productos. Para el cierre necesito saber cuánto de los $10,088 es mercancía y cuánto es flete.",
+     "pantalla": "#/admin (Pedidos · detalle)",
+     "t": 478
+    },
+    {
+     "texto": "En el ticket de mostrador POS-E26D95B4 el renglón de la lista dice \"Tienda Del Valle\" pero al abrirlo dice \"Dirección de envío · Sucursal: Sin stock\". En la misma pantalla la sucursal aparece de dos formas distintas.",
+     "pantalla": "#/admin (Pedidos · POS-E26D95B4)",
+     "t": 478
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 2,
+   "comentario": "Saqué los $10,088 de marzo pero copiando 9 renglones a mano: no hay filtro de fechas, no hay columna de vía de venta ni de forma de pago, y no hay botón de exportar en Pedidos. La suma de arriba cuadra, pero el desglose no: $9,860 de producto contra $10,088 de total, $228 que nadie me explica."
+  },
+  {
+   "quiero": "cuadrar las ventas de marzo contra los cortes de caja",
+   "esperaba": null,
+   "t": 508,
+   "segundos": 24,
+   "logrado": false,
+   "clicsBase": 37,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ahora los cortes de caja. En mi menú no hay nada que diga Caja ni Corte. Voy a buscar en las tres pantallas que me quedan sin abrir: Estadísticas, Cuadro de Honor y Configuración. Empiezo por Estadísticas, que es donde uno esperaría los reportes.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 508
+    },
+    {
+     "texto": "Esto es grave para mí. En Estadísticas elijo \"Marzo de 2027\" y me dice \"Ventas del periodo $0 · 0 pedidos\", \"Ticket promedio $0\", \"Productos vendidos 0\", \"Pedidos por estado: Sin pedidos en el periodo\", \"Top clientes: Sin datos\". Y en la MISMA pantalla, arriba a la izquierda, el encabezado dice \"$10,088 cobrado · 9 pedidos\". Dos cifras del mismo mes en la misma pantalla: $0 y $10,088.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 532
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿Cuál me creo, $0 de Estadísticas o $10,088 del encabezado? Si le mando el reporte de Estadísticas al contador estoy declarando cero ventas en marzo.",
+     "pantalla": "#/admin (Estadísticas)",
+     "t": 532
+    },
+    {
+     "texto": "El selector de periodo salta de \"Marzo de 2027\" a \"Septiembre de 2026\". Faltan octubre, noviembre y diciembre de 2026 y enero y febrero de 2027. Es el mismo hueco que vi en el selector de comisiones.",
+     "pantalla": "#/admin (Estadísticas)",
+     "t": 532
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "bajar el reporte del mes en Excel",
+   "esperaba": null,
+   "t": 532,
+   "segundos": 24,
+   "logrado": false,
+   "clicsBase": 37,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Hay dos botones que suenan a lo mío: \"Resumen de turno\" y \"Reporte completo Excel\". Empiezo por Resumen de turno, que es lo más parecido a un corte de caja.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 532
+    },
+    {
+     "texto": "Aquí sí hay una sección \"Caja\". Pero el resumen es por PERSONA y por UN día (\"Un día por resumen\"), no por mes. Y ojo: el campo de fecha me llegó con \"2026-09-04\" y el texto dice \"No hay movimientos de Alma Rentería el 4 sep 2026\". Hoy es 10 de abril de 2027. La pantalla nació con una fecha de hace año y medio.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 556
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "El \"Resumen de turno\" me obliga a elegir una persona y un día. Para cuadrar el mes de marzo tendría que hacer 5 personas x 31 días = 155 consultas. No hay forma de pedir el mes completo ni todas las personas juntas.",
+     "pantalla": "#/admin/resumen-turno",
+     "t": 556
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "encontrar los cortes de caja de marzo",
+   "esperaba": null,
+   "t": 556,
+   "segundos": 45,
+   "logrado": true,
+   "clicsBase": 37,
+   "teclasBase": 0,
+   "clics": 7,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Lo encontré, pero no cuadra. El 3 de marzo, turno de Mireya Solano: \"Ventas en caja $760.00\", el ticket \"POS-E26D95B4 · Publico en General · $760.00 · mixed\" y abajo \"Corte CUT-8D11C495 · $500.00\". Vendió $760 y el corte declara $500. Faltan $260 o esos $260 se fueron en tarjeta, pero la pantalla NO me dice cuánto fue efectivo y cuánto tarjeta: solo escribe la palabra \"mixed\", en inglés, sin importes.",
+     "segundosDesdeLoAnterior": 20,
+     "t": 577
+    },
+    {
+     "texto": "Probé el 2, el 4, el 20 y el 31 de marzo con Mireya: \"Sin ventas ni cortes\" en todos. O sea que en todo marzo hubo un solo corte de caja, el del 3, y no tengo forma de comprobarlo más que picando día por día. Fueron 5 consultas para cubrir 4 días de 31.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 601
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "¿\"mixed\" quiere decir pago mixto? ¿Y de los $760 cuánto entró en efectivo? Sin ese dato no puedo decir si a la caja le faltan $260 o si todo está bien.",
+     "pantalla": "#/admin/resumen-turno",
+     "t": 577
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": 2,
+   "comentario": "Sí encontré el corte, pero escondido en \"Resumen de turno\", que es una pantalla de equipo pensada para el WhatsApp del turno, no para finanzas. Solo se puede pedir una persona y un día a la vez. Y el corte ($500.00) no cuadra con la venta en caja ($760.00) y la pantalla no me deja saber por qué."
+  },
+  {
+   "quiero": "bajar el Reporte completo Excel de marzo",
+   "esperaba": null,
+   "t": 601,
+   "segundos": 95,
+   "logrado": true,
+   "clicsBase": 44,
+   "teclasBase": 0,
+   "clics": 6,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Con \"Marzo de 2027\" puesto a mano sí salen los $10,088 y 9 pedidos, y cuadra con mi conteo. Pero en \"Pedidos por estado\" me pone \"delivered 5 $0\" y \"paid 4 $0\": los estados en inglés y los importes en CERO, cuando yo ya sumé $4,757 entregados y $5,331 pagados. Y el \"Top clientes del periodo\" no está ordenado: el #2 es Paulina con $960 y el #3 es Fabiola con $1,371. Un top que no ordena de mayor a menor no es un top.",
+     "segundosDesdeLoAnterior": 59,
+     "t": 660
+    },
+    {
+     "texto": "Abrí el Excel. Trae 5 hojas: Resumen, Pedidos, Clientes activos, Productos e Inventario. Lo bueno: la hoja Pedidos trae los 9 folios con fecha y hora y total, y la hoja Clientes SÍ viene ordenada de mayor a menor (Aurora 3000, Fabiola 1371, Ximena 1350, Julio 1209, Paulina 960, Mariana 829, Publico 760, Ernesto 609) — o sea que el desorden del \"Top clientes\" es solo de la pantalla.",
+     "segundosDesdeLoAnterior": 36,
+     "t": 696
+    },
+    {
+     "texto": "Lo malo para mí: la hoja Productos suma 3500+1920+3200+840+400 = 9,860 de ingresos, y el Resumen dice Ventas totales 10,088. Los mismos $228 que no cuadran, ahora dentro del reporte oficial. No hay renglón de envíos ni de descuentos. La hoja Inventario viene VACÍA, solo el encabezado \"Almacén | Producto | Stock actual\". Y el estado de los pedidos viene en inglés: \"paid\" y \"delivered\".",
+     "segundosDesdeLoAnterior": 0,
+     "t": 696
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "Dice \"Clientes activos 7\" pero en la pantalla de Clientes los siete aparecen como \"Inactiva\". Y en el top salen 8 renglones, porque cuenta \"Publico en General\" como cliente. Además dice \"0% recompra\" cuando Aurora Vega compró dos veces en marzo.",
+     "pantalla": "#/admin (Estadísticas)",
+     "t": 660
+    },
+    {
+     "texto": "El reporte no trae: forma de pago, si fue mostrador o internet, cortes de caja, devoluciones, facturas pedidas ni comisiones. Justo las cinco cosas que yo necesito para el cierre.",
+     "pantalla": "#/admin (Reporte completo Excel)",
+     "t": 696
+    }
+   ],
+   "atorones": [
+    {
+     "texto": "reintento: Me cayó el veinte: el Excel se bajó como \"reporte-mensual-2026-09.xlsx\". Fui a ver el selector y estaba puesto en \"Septiembre de 2026\", NO en marzo de 2027, aunque marzo de 2027 es la primera opción de la lista. Por eso me decía $0. Llevo media hora creyendo que marzo estaba en ceros y era que la pantalla abre en un mes de hace siete meses.",
+     "t": 637
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 1,
+   "facilidad": 4,
+   "confianza": 3,
+   "comentario": "El Excel sí se baja y la hoja de Pedidos me sirve. Pero la primera vez me bajé el mes equivocado sin darme cuenta porque el selector abre en septiembre de 2026, y el archivo no trae ni canal de venta, ni forma de pago, ni el desglose de los $228 que sobran."
+  },
+  {
+   "quiero": "revisar Conciliar pagos, por si ahí están las devoluciones y los cobros",
+   "esperaba": null,
+   "t": 696,
+   "segundos": 22,
+   "logrado": true,
+   "clicsBase": 50,
+   "teclasBase": 0,
+   "clics": 3,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "\"Conciliar pagos\" es solo para pedidos que quedaron en Pendiente en las últimas 72 horas. No me sirve para el cierre de marzo, que ya cerró hace diez días. Aun así lo corro para dejar constancia de que revisé.",
+     "segundosDesdeLoAnterior": 18,
+     "t": 714
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Corre y dice cuántos revisó, pero solo mira 72 horas atrás. Para cuadrar un mes cerrado no sirve."
+  },
+  {
+   "quiero": "encontrar dónde se emiten o marcan las facturas",
+   "esperaba": null,
+   "t": 718,
+   "segundos": 47,
+   "logrado": true,
+   "clicsBase": 53,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [],
+   "dudas": [],
+   "atorones": [
+    {
+     "texto": "Le di \"Revisar pagos ahora\" y la ventana no se cerró sola. Quise irme a Configuración y no me dejaba: el menú de la izquierda se ve pero no responde porque la ventana está encima. Tardé en entender que tenía que cerrarla yo.",
+     "pantalla": null,
+     "t": 756
+    }
+   ],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 5,
+   "confianza": 4,
+   "comentario": "Corrió y me dijo claro \"No hay pedidos pendientes de pago en las últimas 72 horas\". Pero solo mira 72 horas: para cuadrar un mes cerrado hace diez días no me sirve, y la ventana se queda abierta tapando todo hasta que la cierras a mano."
+  },
+  {
+   "quiero": "encontrar dónde se emiten o marcan las facturas",
+   "esperaba": null,
+   "t": 767,
+   "segundos": 35,
+   "logrado": false,
+   "clicsBase": 53,
+   "teclasBase": 0,
+   "clics": 2,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Me quedan dos pantallas sin abrir: Configuración y Cuadro de Honor. Si hay algo de facturación tiene que estar en Configuración.",
+     "segundosDesdeLoAnterior": 53,
+     "t": 767
+    },
+    {
+     "texto": "Busqué en Configuración las palabras \"factura\", \"CFDI\", \"RFC\", \"fiscal\": NINGUNA aparece. La única vez que sale \"IVA\" es en un texto de puntos: \"1 VP = X MXN netos (sin IVA ni envío)\". O sea que el sistema recoge el RFC y el uso de CFDI del cliente, pero no tiene dónde configurar los datos fiscales de la empresa ni dónde marcar una factura como emitida.",
+     "segundosDesdeLoAnterior": 35,
+     "t": 802
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 2,
+   "confianza": null,
+   "comentario": "No existe pantalla de facturación. Los datos fiscales solo se ven abriendo el pedido uno por uno, y no hay manera de marcar una factura como emitida ni de listar las pendientes. Mi lista de marzo la armé a mano: ORD-1A2D13F6 y ORD-351342D9, los dos de Aurora Vega, $1,500 cada uno, $3,000 en total, pedidas el 04/03/2027 a las 11:05 y a las 17:02."
+  },
+  {
+   "quiero": "revisar Notificaciones y Cuadro de Honor por si ahí hay algo de dinero",
+   "esperaba": null,
+   "t": 802,
+   "segundos": 22,
+   "logrado": false,
+   "clicsBase": 55,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Y algo que me interesa de verdad: hay un aviso de CLABE dirigido a Fabiola Cantú Robledo que dice \"Ya tienes comisiones a tu favor\", del 04 de marzo. Pero en el panel de pagos de marzo la ÚNICA socia con comisión es Paulina Ríos. Si Fabiola tiene comisiones, ¿por qué no aparecen en lo que voy a pagar?",
+     "segundosDesdeLoAnterior": 23,
+     "t": 824
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En Notificaciones los contadores dicen \"Total 3 · Activas 0 · Programadas 0 · Expiradas / inactivas 0\", pero la lista de abajo dice \"3 registradas\" y las tres traen la etiqueta \"Activa\", con ventanas que incluyen hoy (una del 20 mar al 04 may 2027). Otra vez dos cifras que se contradicen en la misma pantalla.",
+     "pantalla": "#/admin (Notificaciones)",
+     "t": 824
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": null,
+   "confianza": null,
+   "comentario": "empezó otra cosa sin terminar esta"
+  },
+  {
+   "quiero": "comprobar si Fabiola Cantú tiene comisiones que no salen en el pago de marzo",
+   "esperaba": null,
+   "t": 824,
+   "segundos": 52,
+   "logrado": true,
+   "clicsBase": 55,
+   "teclasBase": 0,
+   "clics": 5,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Fabiola: \"Comisiones mes actual $0 · Por confirmar $0 · Comisiones mes anterior $0 · Sin movimientos\". Pero el 4 de marzo el sistema le mandó un aviso que dice \"Ya tienes comisiones a tu favor\" y le pidió su CLABE. O el aviso estaba mal, o la comisión se le borró.",
+     "segundosDesdeLoAnterior": 28,
+     "t": 852
+    },
+    {
+     "texto": "En la ficha de Paulina sí hay dónde capturar la CLABE: dice \"CLABE: -\" y \"No se puede depositar: el socio no tiene CLABE registrada. Pídesela y captúrala aquí\" con un Guardar. Bien: cuando me la mande, la capturo yo. No me la voy a inventar.",
+     "segundosDesdeLoAnterior": 24,
+     "t": 876
+    }
+   ],
+   "dudas": [
+    {
+     "texto": "En la lista de clientes la columna \"Última compra\" dice \"02/03/2027 · 0 días\" y \"04/03/2027 · 0 días\". Hoy es 10 de abril de 2027: son 39 y 37 días, no cero. Y el filtro se llama \"Solo fríos (30+ días sin compra)\": con esos ceros ningún cliente va a salir nunca como frío.",
+     "pantalla": "#/admin (Clientes)",
+     "t": 838
+    },
+    {
+     "texto": "En \"Consumo de la red del cliente en el periodo\" me salen tres barras: \"Pauli | $0\", \"Fabio | $0\", \"Ximen | $0\". Los nombres cortados a cinco letras y todo en cero, cuando Fabiola compró $1,371 y Paulina $960 en marzo. Con esto no puedo explicarle a nadie de dónde salen los $135.",
+     "pantalla": "#/admin (Clientes · ficha de Paulina)",
+     "t": 876
+    }
+   ],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 3,
+   "confianza": 2,
+   "comentario": "Confirmé que Fabiola aparece con $0 en comisiones aunque el sistema le mandó un aviso diciendo que tenía comisiones a su favor. Y que la única comisión pagable de marzo es la de Paulina, $135, retenida por falta de CLABE."
+  },
+  {
+   "quiero": "sacar la lista de devoluciones y reembolsos de marzo",
+   "esperaba": null,
+   "t": 876,
+   "segundos": 0,
+   "logrado": true,
+   "clicsBase": 60,
+   "teclasBase": 0,
+   "clics": 0,
+   "teclas": 0,
+   "pantallasBase": 1,
+   "pantallas": 0,
+   "pensamientos": [
+    {
+     "texto": "Ya revisé las pestañas Cancelado, Reembolsado, Por devolver, Devuelto y Dev. rechazada: las cinco en cero. No hay ninguna otra pantalla que hable de devoluciones (en Configuración la palabra \"Devolución\" ni aparece). Así que mi respuesta para el cierre es: en marzo de 2027 no hubo devoluciones ni reembolsos. Pero lo firmo con la duda de que el reporte de Estadísticas tampoco los trae, o sea que no tengo un papel que lo respalde: solo cinco pestañas vacías.",
+     "segundosDesdeLoAnterior": 0,
+     "t": 876
+    }
+   ],
+   "dudas": [],
+   "atorones": [],
+   "preguntas": [],
+   "reintentos": 0,
+   "facilidad": 4,
+   "confianza": 3,
+   "comentario": "Marzo 2027: cero devoluciones y cero reembolsos, según las cinco pestañas de Pedidos. Pero no hay ningún reporte ni exportable que lo certifique; solo puedo decir \"vi las pestañas vacías\"."
+  }
+ ],
+ "emociones": [
+  {
+   "emocion": "alivio",
+   "intensidad": 3,
+   "porque": "sí existe el archivo de dispersión para el banco; pensé que iba a tener que armarlo a mano",
+   "t": 125,
+   "tarea": null
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 4,
+   "porque": "no puedo cuadrar $135 contra $259.20 ni contra $124.20 con lo que veo en pantalla",
+   "t": 190,
+   "tarea": "sacar el archivo de dispersión de comisiones de marzo 2027 para subirlo al banco"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 4,
+   "porque": "no puedo cuadrar el mes si el detalle del pedido no me dice de dónde salen $129 de más ni $150 de menos",
+   "t": 478,
+   "tarea": "listar las facturas pedidas y sin emitir de marzo"
+  },
+  {
+   "emocion": "desconfianza",
+   "intensidad": 5,
+   "porque": "la pantalla que se llama Estadísticas, que es la que yo usaría para el cierre, me da cero ventas en un mes donde sí hubo nueve pedidos",
+   "t": 532,
+   "tarea": "cuadrar las ventas de marzo contra los cortes de caja"
+  },
+  {
+   "emocion": "frustración",
+   "intensidad": 5,
+   "porque": "es exactamente el número que vine a cuadrar y la pantalla me lo esconde detrás de una palabra en inglés",
+   "t": 577,
+   "tarea": "encontrar los cortes de caja de marzo"
+  },
+  {
+   "emocion": "enojo",
+   "intensidad": 4,
+   "porque": "perdí tiempo y estuve a punto de reportar ventas cero de marzo por un selector que abre en el mes equivocado",
+   "t": 637,
+   "tarea": "bajar el Reporte completo Excel de marzo"
+  },
+  {
+   "emocion": "vergüenza",
+   "intensidad": 3,
+   "porque": "es mi primer cierre y voy a entregarlo con tres huecos: sin archivo para el banco, sin poder explicar $228 y sin papel que respalde el corte de caja",
+   "t": 900,
+   "tarea": null
+  },
+  {
+   "emocion": "orgullo",
+   "intensidad": 3,
+   "porque": "aun así saqué los $10,088 de marzo cuadrados contra el Excel y contra mi conteo a mano, y dejé por escrito cada cifra que no cuadra",
+   "t": 900,
+   "tarea": null
+  }
+ ],
+ "preguntas": [
+  {
+   "aQuien": "superior",
+   "texto": "Renata, soy Alma. Cierre de marzo: la única comisión del mes es de Paulina Ríos, $135.00, y no tiene CLABE registrada, así que el sistema no me deja exportar el archivo para el banco (el botón está apagado y dice \"No hay socias listas para depositar este mes\"). Ya le mandé recordatorio hoy. ¿La dejamos para el pago del 10 de mayo o quieres que le hable por teléfono? Otra cosa: en su correo del 20 de marzo el sistema le dijo $259.20 de comisiones bloqueadas y a mí el panel me muestra $135.00 confirmados. ¿Cuál es la buena?",
+   "t": 190,
+   "tarea": null
+  },
+  {
+   "aQuien": "superior",
+   "texto": "Renata, otras dos del cierre de marzo: 1) Hay dos pedidos de Aurora Vega, ORD-1A2D13F6 y ORD-351342D9, idénticos, mismos productos, $1,500 cada uno, el mismo 04/03, uno a las 11:05 y otro a las 17:02, los dos con factura solicitada. ¿Compró dos veces o le cobramos doble? 2) ¿Dónde se marcan las facturas ya emitidas? No encuentro ninguna pantalla de facturación y las tuve que buscar abriendo pedido por pedido.",
+   "t": 802,
+   "tarea": null
+  }
+ ],
+ "estetica": {
+  "primeraImpresion": 6,
+  "confianzaQueTransmite": 4,
+  "legibilidad": 7,
+  "coherencia": 3,
+  "sensacionMovil": null,
+  "tresAdjetivos": [
+   "ordenada",
+   "operativa",
+   "incompleta"
+  ],
+  "mejorPantalla": "el detalle del pedido con los datos fiscales: trae RFC, razón social, régimen, CP y uso de CFDI completos y bien puestos",
+  "peorPantalla": "Estadísticas, porque abre en Septiembre de 2026 y te enseña $0 de ventas sin avisarte que estás viendo otro mes",
+  "seParece": "a un sistema de almacén al que le colgaron la parte de dinero al final; se nota quién lo pensó (el que despacha) y quién no (el que cobra)",
+  "recomendarias": 5,
+  "volverias": "sí, es mi trabajo, pero el cierre lo voy a seguir armando en Excel aparte",
+  "comentario": "Se ve limpia y los textos de ayuda están bien escritos, en español y explicando el porqué (eso se agradece mucho). El problema es que a finanzas no la tomaron en cuenta: no hay menú de Comisiones, ni de Caja, ni de Facturación; el corte de caja vive escondido en una pantalla de \"Resumen de turno\" del equipo; y cada vez que dos pantallas hablan del mismo número dicen cosas distintas ($10,088 contra $0, \"Activas 0\" contra tres avisos activos, $135 contra $259.20). Un sistema de dinero que se contradice a sí mismo no me da confianza aunque se vea bonito."
+ },
+ "totales": {
+  "clics": 60,
+  "teclas": 0,
+  "envios": 0,
+  "campos": 2,
+  "pantallas": 1,
+  "recargas": 0,
+  "atrases": 0
+ },
+ "pantallas": [
+  {
+   "ruta": "#/login",
+   "desde": 1788510888385,
+   "primerClicMs": 23695,
+   "clics": 2,
+   "comoLlego": "carga"
+  }
+ ],
+ "erroresEnPantalla": [],
+ "consola": [],
+ "notas": [
+  {
+   "texto": "Ya adentro. Lo primero que hago como de finanzas es buscar en el menú las palabras que uso todos los días: \"Comisiones\", \"Caja\", \"Cortes\", \"Facturas\", \"Reportes\", \"Ventas\". Leo el menú entero: OPERACIÓN DIARIA > Pedidos. PERSONAS > Clientes. CATÁLOGO Y OFERTA > Cupones. SEGUIMIENTO > Estadísticas, Cuadro de Honor, Notificaciones. SISTEMA > Configuración. No hay ninguna de mis palabras.",
+   "segundosDesdeLoAnterior": 24,
+   "t": 70
+  },
+  {
+   "texto": "El módulo se llama \"Pagos del mes · comisiones por depositar\" y vive al final de la pantalla Clientes. ¿Por qué las comisiones cuelgan de un cliente? Yo pago a TODAS las socias, no a una.",
+   "pantalla": "#/admin (Clientes)",
+   "t": 125
+  },
+  {
+   "texto": "Leo el selector de meses porque necesito marzo 2027. Las opciones son: marzo 2027, septiembre 2026, agosto 2026, julio 2026, junio 2026, mayo 2026, abril 2026, marzo 2026, febrero 2026, enero 2026, diciembre 2025, noviembre 2025, octubre 2025. Falta octubre, noviembre y diciembre 2026 y enero y febrero 2027. Si mañana me piden el cierre de febrero 2027 no lo puedo sacar.",
+   "segundosDesdeLoAnterior": 31,
+   "t": 125
+  },
+  {
+   "texto": "Termino el turno. Dejo escrito lo que entrego y lo que no, y las cifras que no cuadran con dónde las vi.",
+   "segundosDesdeLoAnterior": 123,
+   "t": 998
+  }
+ ],
+ "fin": "2026-09-04T08:51:04.556Z",
+ "duracionMin": 17
+}

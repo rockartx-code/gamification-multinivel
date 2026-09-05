@@ -1,6 +1,6 @@
 <article
   *ngIf="mode === 'detailed'; else compactCard"
-  class="relative overflow-hidden rounded-3xl border border-olive-30 surface-soft p-4 sm:p-5">
+  class="card-lift relative overflow-hidden rounded-3xl border border-olive-30 surface-soft p-4 sm:p-5">
 
   <div class="flex flex-col gap-4">
     <div class="flex gap-3 sm:gap-4">
@@ -14,13 +14,13 @@
         <!-- Precio -->
         <div class="flex justify-end">
           <div class="text-right">
-            <div *ngIf="hasDiscount" class="text-[10px] text-gray-500 line-through">
+            <div *ngIf="hasDiscount" class="text-micro text-gray-500 line-through">
               {{ originalPriceLabel }}
             </div>
             <div class="text-sm font-extrabold leading-none">
               {{ discountedPriceLabel }}
             </div>
-            <div class="text-[10px]" [ngClass]="hasDiscount ? 'text-accent' : 'text-gray-500'">
+            <div class="text-micro" [ngClass]="hasDiscount ? 'text-accent' : 'text-gray-500'">
               {{ discountLabel }}
             </div>
           </div>
@@ -28,12 +28,18 @@
 
         <!-- Puntos Comisionables (PC) que aporta a los logros -->
         <div *ngIf="hasPc" class="mt-1 flex flex-wrap items-center justify-end gap-1.5">
-          <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent"
-                title="Puntos Comisionables que suma este producto a tus logros (PV/PG)">
+          <!-- Paquete B · ronda 26 (propuesta 23): "PC" aparece trece veces en
+               la tienda y su única definición vive en #/modo-socio. Era un
+               `title` que nadie abre; ahora es un enlace a la sección que lo
+               explica. Enlace plano: la ruta va por hash y así no hace falta
+               tocar el componente, que es de otro paquete. -->
+          <a href="#/modo-socio#unidades"
+             class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-micro font-bold text-accent underline decoration-dotted"
+             title="Qué son los PC y cómo se convierten en descuento y comisiones">
             <i class="fa-solid fa-star text-[9px]" aria-hidden="true"></i>
             {{ officialPc }} PC
-          </span>
-          <span *ngIf="hasNetPc" class="inline-flex items-center gap-1 rounded-full bg-olive-30/40 px-2 py-0.5 text-[10px] font-semibold text-gray-700"
+          </a>
+          <span *ngIf="hasNetPc" class="inline-flex items-center gap-1 rounded-full bg-olive-30/40 px-2 py-0.5 text-micro font-semibold text-gray-700"
                 title="PC netos según tu descuento vigente (proporcionales al neto pagado)">
             {{ netPc }} PC netos
           </span>
@@ -52,9 +58,9 @@
         <!-- Ver detalle -->
         <button
           type="button"
-          class="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-main"
+          class="mt-2 inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 underline-offset-2 hover:text-main hover:underline"
           (click)="viewDetails.emit()">
-          <span class="inline-block h-3 w-3 rounded-full bg-black"></span>
+          <i class="fa-solid fa-circle-info text-accent" aria-hidden="true"></i>
           Ver detalle
         </button>
       </div>
@@ -75,52 +81,59 @@
           class="flex items-center gap-1.5 text-xs font-medium"
           [ngClass]="isVariantChecked(variant.id) ? 'text-accent' : 'text-gray-600'"
           (click)="toggleVariant(variant.id)">
-          <i class="fa-solid text-[10px]"
-            [ngClass]="isVariantChecked(variant.id) ? 'fa-circle-check text-accent' : 'fa-circle text-gray-300'"
+          <i class="fa-solid text-micro"
+            [ngClass]="isVariantChecked(variant.id) ? 'fa-circle-check text-accent' : 'fa-circle text-gray-500'"
             aria-hidden="true"></i>
           {{ variant.name }}
         </button>
 
-        <!-- Qty controls (solo cuando está marcado) -->
-        <div *ngIf="isVariantChecked(variant.id)" class="flex items-center gap-1">
-          <button
-            type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5 disabled:opacity-40"
-            [disabled]="getVariantQty(variant.id) === 0"
-            (click)="changeVariantQty(variant.id, -1)">
-            <i class="fa-solid fa-minus text-[10px]" aria-hidden="true"></i>
-          </button>
-          <span class="w-6 text-center text-sm font-semibold">{{ getVariantQty(variant.id) }}</span>
-          <button
-            type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-full border border-olive-30 bg-white/70 text-gray-600 hover:bg-black/5"
-            (click)="changeVariantQty(variant.id, 1)">
-            <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
-          </button>
-        </div>
+        <!-- Qty controls (cuando ya hay unidades o está marcada) -->
+        <ui-qty-stepper *ngIf="isVariantChecked(variant.id)"
+          [qty]="getVariantQty(variant.id)"
+          [itemLabel]="variant.name"
+          (qtyChange)="variantQtyChange.emit({ variantId: variant.id, qty: $event })">
+        </ui-qty-stepper>
+
+        <!-- Agregado rápido en un tap para variantes sin seleccionar -->
+        <button *ngIf="!isVariantChecked(variant.id)"
+          type="button"
+          [attr.aria-label]="'Agregar ' + variant.name"
+          class="inline-flex items-center gap-1.5 rounded-full border border-gold-35 bg-gold-12 px-3 py-1.5 text-xs font-bold text-on-gold transition hover:bg-gold-20"
+          (click)="changeVariantQty(variant.id, 1)">
+          <i class="fa-solid fa-plus text-micro" aria-hidden="true"></i>
+          Agregar
+        </button>
       </div>
     </div>
 
     <!-- Acciones inferiores (solo para productos sin variantes) -->
-    <div *ngIf="activeVariants.length === 0" class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2 rounded-2xl border border-olive-30 px-3 py-2">
-        <span class="text-xs text-gray-600">Qty</span>
-        <ui-form-field
-          type="number"
-          [ngModel]="qty"
-          (ngModelChange)="qtyChange.emit(+$event || 0)"
-          inputClass="w-14 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main text-center">
-        </ui-form-field>
-      </div>
+    <div *ngIf="activeVariants.length === 0" class="flex flex-col gap-2">
+      <div class="flex items-center justify-between gap-3">
+        <div class="rounded-2xl border border-olive-30 px-3 py-2">
+          <!-- La cantidad es un borrador: entra al carrito al pulsar "Agregar a carrito", no al teclear. -->
+          <ui-form-field
+            type="number"
+            label="Cantidad"
+            [name]="'cantidad-' + product.id"
+            wrapperClass="flex items-center gap-2"
+            [ngModel]="qtyDraft"
+            (ngModelChange)="setQtyDraft($event)"
+            inputClass="w-14 rounded-xl border border-olive-30 bg-white/70 px-2 py-1 text-sm text-main text-center">
+          </ui-form-field>
+        </div>
 
-      <ui-button
-        size="lg"
-        variant="primary"
-        class="flex-1"
-        (pressed)="add.emit()">
-        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-        Agregar a carrito
-      </ui-button>
+        <ui-button
+          size="lg"
+          variant="primary"
+          class="flex-1"
+          (pressed)="addToCart()">
+          <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+          Agregar a carrito
+        </ui-button>
+      </div>
+      <p *ngIf="qty > 0" class="text-mini text-gray-500">
+        Ya llevas {{ qty }} en el carrito. Lo que escribas aquí se suma al pulsar "Agregar a carrito".
+      </p>
     </div>
   </div>
 </article>
@@ -145,7 +158,7 @@
 
       <div class="mt-1 flex items-center gap-2">
         <span class="text-sm font-extrabold">{{ discountedPriceLabel }}</span>
-        <span *ngIf="hasPc" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent"
+        <span *ngIf="hasPc" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-micro font-bold text-accent"
               title="Puntos Comisionables que suma a tus logros (PV/PG)">
           <i class="fa-solid fa-star text-[8px]" aria-hidden="true"></i>{{ officialPc }} PC
         </span>
@@ -157,15 +170,17 @@
       <button
         type="button"
         class="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-black/5"
+        [attr.aria-label]="'Ver detalle de ' + product.name"
         (click)="viewDetails.emit()">
-        <i class="fa-solid fa-circle-info text-xs"></i>
+        <i class="fa-solid fa-circle-info text-xs" aria-hidden="true"></i>
       </button>
 
       <button
         type="button"
         class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-white hover:opacity-90"
-        (click)="add.emit()">
-        <i class="fa-solid fa-cart-plus text-xs"></i>
+        [attr.aria-label]="'Agregar ' + product.name + ' al carrito'"
+        (click)="add.emit(1)">
+        <i class="fa-solid fa-cart-plus text-xs" aria-hidden="true"></i>
       </button>
     </div>
   </article>

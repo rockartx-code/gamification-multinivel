@@ -1,0 +1,82 @@
+<div class="rounded-2xl border border-olive-30 surface-soft" [class.p-3]="compact" [class.p-4]="!compact">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2 text-sm font-semibold text-main">
+      <i class="fa-solid fa-tags text-gold" aria-hidden="true"></i>
+      {{ titulo }}
+    </div>
+    <span *ngIf="mode === 'cliente'" class="rounded-full border border-olive-30 bg-ivory-80 px-2 py-0.5 text-micro font-semibold text-gray-600">
+      Modo cliente: hoy pagas precio de lista
+    </span>
+  </div>
+
+  <!-- Tramos -->
+  <div class="mt-3 overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-left text-gray-500">
+          <th class="py-1 pr-2 font-semibold">Compra del mes</th>
+          <th class="py-1 pr-2 font-semibold">Descuento</th>
+          <th class="py-1 font-semibold" *ngIf="context !== 'plan'"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tramo of tramos"
+          class="border-t border-olive-20"
+          [class.bg-gold-12]="esConCompra(tramo) || (!hayCompra && esActual(tramo))"
+          [class.font-semibold]="esConCompra(tramo) || (!hayCompra && esActual(tramo))">
+          <td class="py-1.5 pr-2 text-main">{{ rangoDe(tramo) }}</td>
+          <td class="py-1.5 pr-2 text-main">{{ porcentaje(tramo.rate) }}</td>
+          <td class="py-1.5 text-mini text-gray-600" *ngIf="context !== 'plan'">
+            <ng-container *ngIf="esActual(tramo) && mode === 'socio'">{{ tercera ? 'está aquí' : 'estás aquí' }}</ng-container>
+            <ng-container *ngIf="esActual(tramo) && mode === 'cliente'">{{ tercera ? 'estaría aquí' : 'estarías aquí' }}</ng-container>
+            <ng-container *ngIf="esConCompra(tramo) && !esActual(tramo)">con esta compra</ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p *ngIf="tramos.length === 0" class="mt-2 text-mini text-gray-500">Cargando la tabla de descuento…</p>
+
+  <!-- Situación (solo con tramos: sin ellos no hay «tramo más alto» que afirmar) -->
+  <div *ngIf="context !== 'plan' && tramos.length > 0" class="mt-3 space-y-1 text-xs text-main">
+    <div *ngIf="mode === 'socio'">
+      <div *ngIf="textoTramoActual">{{ textoTramoActual }}</div>
+      <div *ngIf="textoConCompra" class="font-semibold text-accent">{{ textoConCompra }}</div>
+      <div>{{ textoSiguiente }}</div>
+      <div class="mt-1 border-t border-olive-20 pt-1">{{ textoActivacion }}</div>
+      <div class="text-gray-600">{{ textoActivacionEstado }}</div>
+    </div>
+
+    <div *ngIf="mode === 'cliente'">
+      <div *ngIf="hayCompra && ahorroHipotetico > 0" class="font-semibold text-accent">
+        En modo socio habrías ahorrado {{ pesos(ahorroHipotetico) }} en esta compra ({{ porcentaje(tasaConCompra) }}).
+      </div>
+      <div *ngIf="hayCompra && ahorroHipotetico === 0 && siguiente">
+        En modo socio, con {{ pesos(siguiente.missing) }} más de compra este mes tendrías {{ porcentaje(siguiente.rate) }} de descuento.
+      </div>
+      <div *ngIf="!hayCompra && siguiente">
+        En modo socio, al llegar a {{ pesos(monthNet + siguiente.missing) }} de compra en el mes tendrías {{ porcentaje(siguiente.rate) }} de descuento.
+      </div>
+      <div *ngIf="!hayCompra && !siguiente && tasaActual > 0">
+        En modo socio, tus compras de este mes ya tendrían {{ porcentaje(tasaActual) }} de descuento.
+      </div>
+      <div class="mt-1 border-t border-olive-20 pt-1 text-gray-600">
+        {{ textoActivacion }} · Los VP se acumulan aunque estés en modo cliente.
+      </div>
+      <div class="mt-2">
+        <ui-button size="sm" variant="primary" type="button" (pressed)="pedirActivacion()">
+          <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+          Activar modo socio
+        </ui-button>
+        <span class="ml-2 text-mini text-gray-500">Es gratis y no te pide datos extra.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nota permanente -->
+  <p class="mt-3 text-mini text-gray-500" *ngIf="!compact || context === 'plan'">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    {{ tercera ? 'Los VP' : 'Tus VP' }} se cuentan sobre el precio ya con descuento<ng-container *ngIf="ejemploNota">: {{ ejemploNota }}</ng-container>.
+  </p>
+</div>

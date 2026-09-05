@@ -15,8 +15,10 @@ info:
     El API Gateway público de auth entra por `/auth/{proxy+}`.
     `POST /auth/login` devuelve el JWT de sesión y el perfil del usuario.
     `POST /auth/password/recovery` y `POST /auth/password/reset` también son públicas y no requieren JWT.
-    Las rutas protegidas aceptan los headers `x-user-id`, `x-user-name` y `x-user-role`
-    y también `Authorization: Bearer <jwt>` cuando el cliente ya tiene sesión iniciada.
+    Las rutas protegidas exigen `Authorization: Bearer <token de sesión>`: el rol y
+    los privilegios se leen de la sesión guardada. Los headers `x-user-id`,
+    `x-user-name` y `x-user-role` son informativos y el backend los ignora salvo
+    que el despliegue declare un autorizador que los inyecte (`TRUST_ACTOR_HEADERS`).
 
     ## Variables a sustituir antes de importar
     - `${AWS_REGION}` — Región AWS (ej. `us-east-1`)
@@ -102,10 +104,12 @@ x-amazon-apigateway-request-validators:
 components:
   securitySchemes:
     UserSession:
-      type: apiKey
-      in: header
-      name: x-user-id
-      description: "ID del usuario en sesión (numérico como string)"
+      type: http
+      scheme: bearer
+      description: >-
+        Token de sesión devuelto por POST /auth/login (Authorization: Bearer …).
+        El rol y los privilegios salen de la sesión guardada, nunca de un
+        encabezado que escriba quien llama.
 
   parameters:
     xUserId:
@@ -2340,6 +2344,1080 @@ paths:
         <<: *lambda-proxy-path
     options:
       <<: *cors-options
+
+  # ── Paquete A · pagos-comisiones ─────────────────────────────────────────────
+  # Rutas del módulo `pagos_handlers.py` colgadas de commissions_lambda.
+  /commissions/pagos:
+    get:
+      summary: "Pagos del mes: beneficiarias con monto confirmado, CLABE enmascarada y estado"
+      description: |
+        Privilegio `commissions_register_payment`. `?month=YYYY-MM` (por omisión el mes anterior).
+        Devuelve `{monthKey, rows:[{customerId, name, email, phone, amount, clabeMasked, bankInstitution,
+        status: listo|sin_clabe|pagado, receiptUrl, paidAt, batchId}], totals:{listo, sinClabe, pagado}}`.
+        400 si el mes no tiene la forma AAAA-MM.
+      operationId: commissionsPagosMes
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Estado de pago por beneficiaria"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/dispersion.csv:
+    get:
+      summary: "Archivo de dispersión bancaria (CSV) con las comisiones listas para depositar"
+      description: |
+        Privilegio `commissions_register_payment`. `text/csv; charset=utf-8`, columnas
+        `CLABE,Beneficiario,Monto,Concepto,Referencia,Email`; solo filas `listo`, CLABE completa.
+      operationId: commissionsDispersionCsv
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "CSV para el banco"
+          content:
+            text/csv: {}
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/lote:
+    post:
+      summary: "Registrar pago por lote: un comprobante, N beneficiarias marcadas como pagadas"
+      description: |
+        Privilegio `commissions_register_payment`. Body
+        `{monthKey, customerIds[], name, contentType, contentBase64, bankReference?}`.
+        201 `{batchId, assetUrl, paid:[{customerId, receiptId, amount}], skipped:[{customerId, code}], totalPaid}`;
+        códigos por fila: `CLABE_REQUIRED`, `ALREADY_PAID`, `NO_CONFIRMED`. 400 cuerpo incompleto o base64 inválido;
+        409 sin selección o si ninguna fila se pudo pagar.
+      operationId: commissionsPagoLote
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "Lote registrado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/pedir-clabe:
+    post:
+      summary: "Reenviar a una socia el recordatorio de registrar su CLABE (correo + aviso en el panel)"
+      description: |
+        Privilegio `commissions_register_payment`. Body `{customerId, monthKey?}`.
+        200 `{sent, channel: "email+panel"|"panel", clabeReminderAt}`; anota la bitácora de la ficha.
+        404 ficha inexistente; 409 si ya tiene CLABE.
+      operationId: commissionsPedirClabe
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Recordatorio enviado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/avisos/bloqueadas:
+    post:
+      summary: "Tarea programable: aviso de comisiones bloqueadas los días 20 y 27 con el producto que las salva"
+      description: |
+        Privilegio `commissions_register_payment` o token de superadmin (así la invoca EventBridge → API Gateway,
+        cableado documentado y no desplegado en esta ronda). Body `{force?, dryRun?}`. Idempotente por día
+        (`blockedNoticeSentDays` en el mes contable). Días configurables en `rewards.blockedNoticeDays`.
+      operationId: commissionsAvisosBloqueadas
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Resumen de socias avisadas"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete B (modo cliente y plan) ──────────────────────────────────────────
+  /catalog/plan:
+    get:
+      summary: "Plan publicado con los números reales de la configuración"
+      description: |
+        Público. Tramos de descuento, generaciones con requisitos en palabras,
+        activación con ejemplos calculados sobre el catálogo, calendario de pago,
+        datos que se piden y cuándo, rangos y bonos. Ningún número vive en el código.
+      operationId: getCatalogPlan
+      tags: [Config]
+      responses:
+        "200":
+          description: "Plan publicado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: object
+                    additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete B · ronda 26 ─────────────────────────────────────────────────────
+  /catalog/plan/simular:
+    post:
+      summary: "Simulador de ganancias con los porcentajes y requisitos reales"
+      description: |
+        Público. Recibe `directos`, `compraPorDirecto`, `compraPropia` y
+        `nivelesProfundidad` y devuelve, calculado con la configuración
+        vigente (escalera de descuento, generaciones, requisitos, activación
+        e IVA): tu tramo y tus VP, la comisión por generación con su requisito
+        cumplido o no y por qué, el gasto propio y la ganancia neta —también
+        cuando es negativa—, la base sobre la que se paga la comisión y el
+        aviso de que es una calculadora, no una promesa de ingresos.
+        No escribe nada. Topes: directos 0-100, importes 0-100000,
+        nivelesProfundidad 1-maxLevels; fuera de rango responde 400 con el
+        tope escrito.
+      operationId: postCatalogPlanSimular
+      tags: [Config]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                directos: { type: integer, minimum: 0, maximum: 100 }
+                compraPorDirecto: { type: number, minimum: 0, maximum: 100000 }
+                compraPropia: { type: number, minimum: 0, maximum: 100000 }
+                nivelesProfundidad: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: "Simulación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  simulacion:
+                    type: object
+                    additionalProperties: true
+        "400":
+          description: "Un dato fuera de los topes, con el tope escrito"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/modo:
+    get:
+      summary: "Modo de la cuenta (cliente/socio) e indicadores del mes"
+      description: |
+        Privilegio: sesión propia (Bearer). Devuelve `mode`, `modeSince`,
+        `modeActivatedAt` e `indicators` (compra del mes, ahorro como socia,
+        siguiente tramo y "qué ganarías").
+      operationId: getCustomerMode
+      tags: [Customers]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "Modo e indicadores"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/modo-socio:
+    post:
+      summary: "Activar el modo socio"
+      description: |
+        Privilegio: sesión propia (Bearer); un admin con `customer_add` puede pasar
+        `customerId` (y `mode: cliente` para regresar una ficha). Idempotente.
+      operationId: activatePartnerMode
+      tags: [Customers]
+      security:
+        - UserSession: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customerId: { type: string }
+                acceptedPlanVersion: { type: string }
+                mode: { type: string, enum: [cliente, socio] }
+      responses:
+        "200":
+          description: "Modo guardado"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/ahorro-socio:
+    post:
+      summary: "Cuánto habría ahorrado esta compra en modo socio"
+      description: |
+        Público. `items[{price, quantity}]`; con sesión propia y `customerId`
+        considera el neto ya comprado en el mes.
+      operationId: partnerSavingsQuote
+      tags: [Customers]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customerId: { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      price: { type: number }
+                      quantity: { type: integer }
+      responses:
+        "200":
+          description: "Ahorro calculado"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: "Líneas inválidas"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+
+  # ── Paquete C · checkout-y-sesion ──────────────────────────────────────────
+  /orders/checkout/envio-info:
+    get:
+      summary: "Envío visible: tarifa base, umbral de envío gratis y faltante"
+      description: "Público. `?subtotal=` (bruto del carrito). Respuesta {baseRateMxn, freeShippingMin, basis, missingForFree, freeNow, checkout:{invoiceEnabled, regimenesFiscales, usosCfdi}}."
+      operationId: checkoutEnvioInfo
+      tags: [Orders]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/checkout/sugerencia-activacion:
+    post:
+      summary: "Completa tu activación: producto más barato que cierra los VP que faltan"
+      description: "Privilegio: sesión propia (customerId del cuerpo debe ser el del actor; admin puede consultar cualquiera). Cuerpo {customerId, items:[{productId, quantity, price}], couponCode?}."
+      operationId: checkoutSugerenciaActivacion
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "OK"
+        "401":
+          description: "Sin sesión"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/checkout/sucursales-recoger:
+    post:
+      summary: "Sucursales donde se puede recoger en la ciudad/estado del cliente y con existencia"
+      description: "Público. Cuerpo {city?, state?, postalCode?, items:[{productId, quantity}]}. Respuesta {available, locationGiven, cities, stocks:[{id, name, location, city, state, inArea, canPickup, missing}]}."
+      operationId: checkoutSucursalesRecoger
+      tags: [Orders]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/{orderId}/factura:
+    post:
+      summary: "Quiero factura: guarda los datos fiscales y deja el pedido en 'solicitada'"
+      description: "Privilegio: dueño del pedido, invitado por folio, o admin. Cuerpo {rfc, razonSocial, regimenFiscal, cpFiscal, usoCfdi, email}. 400 RFC inválido; 409 pedido cancelado/reembolsado o factura ya emitida."
+      operationId: orderSolicitarFactura
+      tags: [Orders]
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /orders/{orderId}/factura/emitida:
+    post:
+      summary: "Marcar factura emitida (archivo opcional)"
+      description: "Privilegio: order_mark_paid. Cuerpo {folioFiscal?, name?, contentType?, contentBase64?}. 409 si el pedido no tiene solicitud pendiente."
+      operationId: orderFacturaEmitida
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/proxyPath'
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /auth/enlace-acceso:
+    post:
+      summary: "Enlace de acceso por correo (un solo uso, 15 minutos)"
+      description: "Pública. Cuerpo {email, rememberMe?}. Nunca revela si el correo existe."
+      operationId: authEnlaceAcceso
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  /auth/enlace-acceso/canjear:
+    post:
+      summary: "Canjear el enlace de acceso y abrir sesión"
+      description: "Pública. Cuerpo {token, rememberMe?}. Responde como /auth/login; 401 si el enlace es inválido, usado o caducado."
+      operationId: authEnlaceAccesoCanjear
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: "OK"
+        "401":
+          description: "Enlace inválido, usado o caducado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy-path
+    options:
+      <<: *cors-options
+
+  # ════════════════════════════════════════════════════════════
+  # ── Paquete D · almacén, despacho y paquetería ──
+  # Rutas atendidas por inventory_lambda (despacho_handlers.atender).
+  # ════════════════════════════════════════════════════════════
+  /inventory/despacho/pendientes:
+    get:
+      summary: "Pedidos pagados a domicilio listos para despachar y enviados sin entrega"
+      description: "Privilegio: order_mark_shipped. Query: stockId (informativo)."
+      operationId: despachoPendientes
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{orders[], staleShipped[], carrierIntegration}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/despacho/surtido:
+    post:
+      summary: "Lista de surtido consolidada por producto contra la bodega, con semáforo"
+      description: "Privilegio: order_mark_shipped. Body: {stockId, orderIds[]}. 400 sin pedidos; 404 bodega."
+      operationId: despachoSurtido
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{stockId, canDispatch, lines[], reasons[], blockedOrders[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/despacho/enviar:
+    post:
+      summary: "Despacho en bloque: marca como enviados con guía capturada, CSV o generada"
+      description: "Privilegio: order_mark_shipped. Body: {stockId, shipments[], csv?, generateLabels?}. 409 STOCK_SHORT si el surtido no alcanza."
+      operationId: despachoEnviar
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{batchId, shipped[], failed[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/despacho/preferencias:
+    get:
+      summary: "Bodega por defecto del empleado con sesión"
+      description: "Sesión de empleado. 401 sin sesión."
+      operationId: despachoPreferenciasGet
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{defaultStockId, stockName}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    put:
+      summary: "Guarda la bodega por defecto del empleado"
+      description: "Sesión de empleado. Body: {defaultStockId}. 404 bodega."
+      operationId: despachoPreferenciasPut
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{defaultStockId, stockName}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/envios/rastrear:
+    post:
+      summary: "Tarea programable: consulta la paquetería y marca entregados con fecha y firma"
+      description: "Privilegio: order_mark_delivered o token de superadmin. Body: {orderIds?, dryRun?}. Idempotente por día."
+      operationId: enviosRastrear
+      tags: [Shipping]
+      responses:
+        "200":
+          description: "{checked, delivered[], inTransit[], errors[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/envios/cerrar:
+    post:
+      summary: "Tarea programable: correo '¿te llegó?' a los askDays y cierre automático a los autoCloseDays"
+      description: "Privilegio: order_mark_delivered o token de superadmin. Body: {dryRun?}. Idempotente por día."
+      operationId: enviosCerrar
+      tags: [Shipping]
+      responses:
+        "200":
+          description: "{asked[], closed[]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/envios/{orderId}/confirmar-entrega:
+    get:
+      summary: "Enlace del correo '¿te llegó?': página con el botón 'Sí, ya llegó' (sin efectos)"
+      description: "Pública con ?token= de un solo uso. Solo muestra la página; el cambio de estado lo hace el POST del formulario (?token=&ui=1). 401 token inválido."
+      operationId: enviosConfirmarEntregaGet
+      tags: [Shipping]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Página de confirmación"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    post:
+      summary: "Confirmación de entrega por el cliente (JSON)"
+      description: "Pública con ?token= de un solo uso. 401 token inválido."
+      operationId: enviosConfirmarEntregaPost
+      tags: [Shipping]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "{status: delivered}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/turno/resumen:
+    get:
+      summary: "Resumen automático de turno por empleado y fecha, calculado desde la bitácora"
+      description: "Privilegio: access_screen_stats, o el propio usuario. Query: userId, date=YYYY-MM-DD."
+      operationId: turnoResumen
+      tags: [Inventory]
+      responses:
+        "200":
+          description: "{user, date, dispatched[], delivered[], transfers, entries[], damages[], pos, counters, text}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete E · caja-arqueo ──
+  /pos/arqueo:
+    get:
+      summary: "Arqueo de caja: efectivo esperado y movimientos desde el último corte"
+      description: "Privilegio `pos_register_sale`. Fondo del corte anterior + ventas en efectivo + abonos en efectivo + parte en efectivo de pagos mixtos − retiros sin corte. Sin `stockId` usa la sucursal ligada al usuario."
+      operationId: posArqueo
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: stockId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Arqueo calculado"
+        "400":
+          description: "Sin sucursal vinculada"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /pos/cash-cuts/{id}:
+    get:
+      summary: "Comprobante de un corte de caja"
+      description: "Privilegio `pos_register_sale`. Devuelve el corte completo (esperado, contado, diferencia, fondo, retiro, ventas y retiros)."
+      operationId: posGetCashCut
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Corte"
+        "404":
+          description: "No existe"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /pos/cash-cuts/{id}/enviar:
+    post:
+      summary: "Enviar el comprobante del corte por correo a la gerente"
+      description: "Privilegio `pos_register_sale`. Usa `email` del cuerpo o `pos.cashCutNotifyEmail` de la configuración; 400 si no hay ninguno."
+      operationId: posSendCashCut
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: "Enviado"
+        "400":
+          description: "Sin correo configurado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete F · coach-seguimiento (propuestas 15 y 19) ─────────────────────
+  /customers/seguimiento/hoy:
+    get:
+      summary: "Seguimiento de hoy: clientes priorizados por situación para la coach"
+      description: |
+        Privilegio `access_screen_customers`. Una fila por persona (clientes e invitados sin ficha)
+        con teléfono, enlace wa.me, patrocinadora, ejecutiva asignada, origen, último pedido,
+        días sin compra, días sin contacto, situación (`bienvenida|fria|clabe_pendiente|pedido_tardio|activa`)
+        y prioridad. Excluye "no contactar", bajas y, en `scope=mine`, las de otra ejecutiva.
+        Query: `scope=mine|all` (mine por omisión), `situation=`, `limit=`.
+      operationId: seguimientoHoy
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Lista priorizada"
+        "403":
+          description: "Sin el privilegio de Clientes"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/seguimiento/plantillas:
+    get:
+      summary: "Plantillas de WhatsApp por situación"
+      description: |
+        Privilegio `access_screen_customers`. Devuelve `templates` (bienvenida, fria, clabe_pendiente,
+        pedido_tardio) y `placeholders` ({nombre}, {coach}, {producto}, {monto}, {folio}). Las
+        plantillas viven en código y se sobreescriben por clave con la config `seguimiento.templates`.
+      operationId: seguimientoPlantillas
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Plantillas"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/seguimiento/ficha-invitado:
+    post:
+      summary: "Crea la ficha de un comprador invitado y le liga sus pedidos"
+      description: |
+        Privilegio `access_screen_customers`. Cuerpo `{email}`. Crea el cliente en modo cliente,
+        origen `invitado`, sin acceso; liga los pedidos hechos con ese correo y migra las notas de
+        `GUEST_CONTACT`. 409 si el correo ya tiene ficha; 404 si no hay pedidos de invitado.
+      operationId: seguimientoFichaInvitado
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "Ficha creada"
+        "409":
+          description: "El correo ya tiene ficha"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /customers/{customerId}/contacto:
+    post:
+      summary: "Anota un contacto (WhatsApp, correo o llamada) y devuelve el enlace wa.me prellenado"
+      description: |
+        Privilegio `access_screen_customers`. Cuerpo `{channel: whatsapp|email|call, templateKey?, message, guestEmail?}`.
+        Añade la nota a `contactNotes` con canal, plantilla y hora y actualiza `lastContactAt`.
+        Con `customerId = "invitado"` y `guestEmail` la nota se guarda en `GUEST_CONTACT`.
+        409 `doNotContact` si la persona pidió que no se le escriba.
+      operationId: seguimientoContacto
+      tags: [Customers]
+      security:
+        - UserSession: []
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "Nota registrada"
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: "No contactar"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete G · devoluciones ──────────────────────────────────────────────
+  /orders/{orderId}/devolucion:
+    get:
+      summary: "Solicitud de devolución de un pedido: líneas devueltas, evidencia, reembolso sugerido, política (medio y plazo) y estado"
+      description: |
+        Privilegio: dueño del pedido (sesión), invitado (pedido sin cuenta, sin sesión) o admin/empleado.
+        Responde `{request: {requestId, status, motivo, lines, evidence, refund, inspection?, refundedAt?, refundAmount?, createdAt}}`;
+        404 `RETURN_NOT_FOUND` si el pedido no tiene solicitud.
+      operationId: getOrderReturnRequest
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Solicitud de devolución del pedido"
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete H · pasarela-y-suscripcion ────────────────────────────────────────
+  # Rutas atendidas por order_lambda vía `conciliacion_handlers` y
+  # `suscripciones_handlers` (llegan por /orders/{proxy+}; se declaran aparte
+  # para el contrato y la instantánea de ruteo).
+  /orders/conciliacion:
+    post:
+      summary: "Conciliar pagos pendientes con MercadoPago (programable)"
+      description: |
+        Privilegio: `order_mark_paid` o token de superadmin. Consulta a MercadoPago los
+        pedidos `pending` con preferencia de pago de las últimas `hours` (config
+        `payments.reconciliationHours`, 72 por omisión) y acredita los aprobados con
+        `paidVia = reconciliation`. Idempotente: un pedido ya cobrado no se toca.
+        Cuerpo: `{hours?, orderIds?, dryRun?}`.
+      operationId: reconcileOrderPayments
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{runId, checked, credited:[{orderId, paymentId}], unpaid:[…], errors:[{orderId, error}]}"
+        "502":
+          description: "MercadoPago no respondió para ningún pedido consultado"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/conciliacion/ultima:
+    get:
+      summary: "Última corrida de conciliación"
+      description: "Privilegio: `access_screen_orders`. Devuelve `{run}` (null si nunca se ha corrido)."
+      operationId: lastReconciliationRun
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "OK"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/suscripciones:
+    get:
+      summary: "Suscripciones mensuales del socio con sesión"
+      description: "Sesión propia (401 sin sesión). Un admin puede consultar las de un cliente con `?customerId=`."
+      operationId: listSubscriptions
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{subscriptions:[…]}"
+    post:
+      summary: "Crear una suscripción mensual"
+      description: |
+        Sesión propia. Cuerpo: `{items:[{productId, quantity}], dayOfMonth (1–28), deliveryType,
+        shippingAddressId? | shippingAddress?, pickupStockId?}`. Manda el correo de confirmación.
+      operationId: createSubscription
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "201":
+          description: "{subscription}"
+        "400":
+          description: "Día fuera de rango, sin productos, producto inactivo o dirección/sucursal inválida"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/suscripciones/{id}:
+    patch:
+      summary: "Editar, pausar o reanudar una suscripción"
+      description: |
+        Dueño o admin. Cuerpo: `{items?, dayOfMonth?, deliveryType?, shippingAddressId?, pickupStockId?,
+        status?: active|paused, pausedUntil?}`. Al pausar sin fecha se salta el próximo pedido.
+        409 si está cancelada. Manda correo cuando cambia el estado.
+      operationId: updateSubscription
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "{subscription}"
+    delete:
+      summary: "Cancelar una suscripción"
+      description: "Dueño o admin. Deja `status = cancelled` y manda el correo de cancelación."
+      operationId: cancelSubscription
+      tags: [Orders]
+      security:
+        - UserSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "{subscription:{status:'cancelled'}}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /orders/suscripciones/generar:
+    post:
+      summary: "Generar los pedidos de suscripción del día (programable)"
+      description: |
+        Privilegio: `order_create` o token de superadmin. Cuerpo `{date?, dryRun?}`. Para cada
+        suscripción activa con `nextRunDate <= date` crea el pedido con el tramo real, genera la
+        preferencia de MercadoPago y manda el correo "Tu pedido mensual está listo: paga aquí".
+        Idempotente por día (`lastRunDate`).
+      operationId: generateSubscriptionOrders
+      tags: [Orders]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{generated:[{subscriptionId, orderId, initPoint}], skipped:[{subscriptionId, reason}]}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+# ── Paquete A · ronda 26 ──
+  /commissions/periodos:
+    get:
+      summary: "Meses contables con datos, mes por omisión y hora del servidor"
+      description: |
+        Privilegio `commissions_register_payment`. Ninguna pantalla de dinero vuelve a construir
+        los meses con el reloj del navegador (propuesta 17). Devuelve
+        `{serverNow, mesContableVigente, defaultMonth, payoutDay,
+        periodos:[{monthKey, label, beneficiarias, confirmado, porConfirmar, bloqueado, estado}]}`.
+        Recorre el índice de meses en su propio endpoint: nunca dentro de `/commissions/pagos`.
+      operationId: commissionsPeriodos
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "Periodos con datos y hora del servidor"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/pendientes.csv:
+    get:
+      summary: "Anexo de las comisiones que todavía no se pueden depositar, con su motivo"
+      description: |
+        Privilegio `commissions_register_payment`. `text/csv; charset=utf-8`, columnas
+        `Nombre,Monto,Correo,Teléfono,Motivo`; **segundo archivo**, nunca filas más en el layout
+        del banco (propuesta 35). Nunca lleva CLABE. 400 si el mes no tiene la forma AAAA-MM.
+      operationId: commissionsPendientesCsv
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "CSV de pendientes del mes"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /commissions/pagos/dia-de-pago:
+    post:
+      summary: "Tarea programable: el correo del día de pago (te depositamos / nos falta tu CLABE)"
+      description: |
+        Privilegio `commissions_register_payment` o token de superadmin. Body `{force?, dryRun?, monthKey?}`.
+        El día `rewards.payoutDay` manda una sola vez por beneficiaria y mes (marca `payoutNoticeSentAt`,
+        respeta `doNotContact`): "te depositamos $X a tu CLABE terminación 6789" si el mes está PAID **y
+        tiene comprobante**, "no te pudimos depositar porque nos falta tu CLABE" si le falta, y nada si ese
+        mes no tiene comisión confirmada (propuesta 34). Se apaga con `rewards.payoutNoticeEnabled`.
+      operationId: commissionsDiaDePago
+      tags: [Commissions]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "{day, monthKey, payoutDay, notified:[{customerId, kind, amount}], alreadyNotified}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete D · ronda 26 ──
+  /catalog/ayuda:
+    get:
+      summary: "Contacto, sucursales y política de devolución"
+      description: |
+        Pública (sin sesión). Quien ya pagó necesita saber a quién escribirle:
+        correo, WhatsApp, horario y dirección; las sucursales que reciben gente
+        (nombre, ubicación, ciudad y estado, nunca inventario); y la política de
+        devolución completa en seis puntos, leída de `returns` en configuración.
+      operationId: getCatalogAyuda
+      tags: [Config]
+      responses:
+        "200":
+          description: "{contacto, sucursales:[…], devoluciones:{motivos, pasos, …}}"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  # ── Paquete F · ronda 26 ──
+  /inventory/pos/turno/abrir:
+    post:
+      summary: "Abrir turno de caja declarando el fondo inicial"
+      description: |
+        Privilegio: `pos_register_sale`. Cuerpo `{stockId?, openingCash, note?}`. Escribe la
+        apertura del turno (quién declaró el fondo y a qué hora) y el arqueo la prefiere sobre
+        el fondo heredado del corte anterior. Con el turno ya andando (ventas o retiros) responde
+        400: el fondo se corrige cerrando el corte.
+      operationId: posAbrirTurno
+      tags: [POS]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "201":
+          description: "{opening:{openingId, openingCash, declaredBy, createdAt}, arqueo}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/turno/resumen/enviar:
+    post:
+      summary: "Entregar el turno: manda el resumen por correo a la gerente"
+      description: |
+        Privilegio: `access_screen_stats`, o el propio usuario para su turno. Cuerpo
+        `{userId?, date?, email?, reenviar?}`. Reutiliza el texto que ya arma el GET y lo manda al
+        correo de `pos.shiftSummaryNotifyEmail` (o al que se escriba). Sella `notifiedTo` y
+        `notifiedAt`: enviar dos veces responde `alreadySent` sin mandar otro correo.
+      operationId: turnoResumenEnviar
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      parameters:
+        - $ref: '#/components/parameters/xUserId'
+        - $ref: '#/components/parameters/xUserRole'
+      responses:
+        "200":
+          description: "{sent, to, sentAt, userId, date, counters} o {sent:false, alreadySent:true}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
+  /inventory/stocks/minimos:
+    get:
+      summary: "Mínimo de piezas por producto"
+      description: "Privilegio: `access_screen_stocks`. Devuelve `{minStockDefault, minimos:{productId: piezas}}`."
+      operationId: stockMinimosLeer
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{minStockDefault, minimos}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    put:
+      summary: "Guardar el mínimo de piezas de uno o varios productos"
+      description: |
+        Privilegio: `stock_add_inventory`. Cuerpo `{minimos: {productId: piezas}}` (máximo 200).
+        Guarda `minStock` en cada producto; por debajo de él la tabla de Stocks lo pinta en rojo
+        y sale en Acciones urgentes con su sucursal.
+      operationId: stockMinimosGuardar
+      tags: [Inventory]
+      security:
+        - UserSession: []
+      responses:
+        "200":
+          description: "{ok, minStockDefault, minimos}"
+      x-amazon-apigateway-integration:
+        <<: *lambda-proxy
+    options:
+      <<: *cors-options
+
 
 # ─── Tags ──────────────────────────────────────────────────────────────────────
 tags:

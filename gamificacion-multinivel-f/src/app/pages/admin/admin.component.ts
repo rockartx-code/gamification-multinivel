@@ -1,10 +1,13 @@
 import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, type Signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject, type Signal } from '@angular/core';
+import { ConciliacionService } from '../../services/conciliacion.service'; // WP-H
+import { ConciliacionCorrida, ConciliacionPayload, ConciliacionResultado } from '../../models/suscripcion.model'; // WP-H
+import { fechaEnLetras, mesEnLetras, textoEstadoPedido, textoMetodoPago } from '../../models/vocabulario.model'; // paquete G · ronda 26
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Observable, catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 
 import { AuthService, AuthUser } from '../../services/auth.service';
@@ -39,12 +42,24 @@ import {
   ProductCategory,
   ProductVariant,
   RankThreshold,
-  VpConfig
+  VpConfig,
+  UpdateCustomerPayload
 } from '../../models/admin.model';
 import { AdminEmployee } from '../../models/employee.model';
 import { PortalNotification } from '../../models/portal-notification.model';
-import { AdminViewId, AppPrivilege, normalizePrivileges, UserPrivileges } from '../../models/privileges.model';
+import {
+  ADMIN_ROUTE_BY_VIEW,
+  AdminMenuEntry,
+  adminMenuVisible,
+  AdminViewId,
+  AppPrivilege,
+  normalizePrivileges,
+  UserPrivileges
+} from '../../models/privileges.model';
+import { AccesoPantallaService } from '../../services/acceso-pantalla.service';
+import { UiAvisoSinAccesoComponent } from '../../components/ui-aviso-sin-acceso/ui-aviso-sin-acceso.component';
 import { UiButtonComponent } from '../../components/ui-button/ui-button.component';
+import { UiCheckboxComponent } from '../../components/ui-checkbox/ui-checkbox.component';
 import { UiFormFieldComponent } from '../../components/ui-form-field/ui-form-field.component';
 import { UiModalComponent } from '../../components/ui-modal/ui-modal.component';
 import { UiKpiCardComponent } from '../../components/ui-kpi-card/ui-kpi-card.component';
@@ -54,11 +69,57 @@ import { SidebarLink, UiSidebarNavComponent } from '../../components/ui-sidebar-
 import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-status-badge.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
+import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
 import { AdminControlService } from '../../services/admin-control.service';
 import { ApiService } from '../../services/api.service';
 import { AdminCampaignsComponent } from './admin-campaigns/admin-campaigns.component';
 import { AdminCategoriesComponent } from './admin-categories/admin-categories.component';
+import { PagosMesComponent } from './pagos-mes/pagos-mes.component'; // WP-A
+import { PagosService } from '../../services/pagos.service'; // WP-A · propuesta 17
+import { PagoPeriodo } from '../../models/pagos.model'; // WP-A · propuesta 17
+import { AdminArqueoComponent } from './arqueo/admin-arqueo.component'; // WP-E
+import { CajaService } from '../../services/caja.service'; // WP-E
+import { AbonoCajaRespuesta, AnulacionCajaRespuesta, VentaCajaRespuesta } from '../../models/caja.model'; // WP-E
 import { HonorBoard, HonorEntry } from '../../models/user-dashboard.model';
+import { AdminModoClienteComponent } from './modo-cliente/admin-modo-cliente.component'; // WP-B
+import { FacturaPedidoComponent } from './checkout/factura-pedido.component'; // WP-C
+import { ESTADOS_MX_OPTIONS } from '../../constants/states-mx'; // WP-C
+import { CheckoutService } from '../../services/checkout.service'; // WP-C
+import { FacturaEmitida } from '../../models/checkout.model'; // WP-C
+import { DespachoService } from '../../services/despacho.service'; // WP-D
+import { UiConfirmComponent } from '../../components/ui-confirm/ui-confirm.component'; // WP-I1
+import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component'; // WP-I1
+import { UiDesgloseIvaComponent } from '../../components/ui-desglose-iva/ui-desglose-iva.component'; // paquete B · ronda 26
+import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // paquete A · ronda 26
+import { PlanSocioService } from '../../services/plan-socio.service'; // paquete B · ronda 26 (tasa de IVA)
+
+/** Diálogo de confirmación genérico del back office (I1): un solo `ui-confirm` para todas las acciones. */
+/**
+ * Paquete E · ronda 26 · Una entrada del menú del back office: su URL propia,
+ * la vista que monta (si vive dentro del caparazón) y el privilegio que exige.
+ * Se escribe una sola vez y la reusan la barra lateral y la barra del móvil.
+ */
+/** Pestañas del bloque de reportes (guarda 14: la lista vive en el componente). */
+type StatsReportTabId = 'resumen' | 'pedidos' | 'clientes' | 'productos' | 'stocks';
+
+type ConfirmacionAdmin = {
+  title: string;
+  effect: string;
+  requireReason: boolean;
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
+  confirmLabel: string;
+  danger: boolean;
+  busy: boolean;
+  error: string;
+  result: string | null;
+  resultTitle?: string;
+  /** Recibe el motivo escrito y hace la llamada; al terminar debe llamar a `confirmacionLista`/`confirmacionFallo`. */
+  ejecutar: (motivo: string) => void;
+};
+
+/** Línea del traspaso que se está recibiendo: lo enviado y lo que realmente llegó. */
+type LineaRecepcion = { productId: number | string; name: string; sent: number; received: number };
 
 type StructureNode = {
   id: string;
@@ -84,6 +145,20 @@ type AdminStock = {
   inventory: Record<number, number>;
   allowPickup?: boolean;
   isMainWarehouse?: boolean;
+  city?: string;   // paquete C
+  state?: string;  // paquete C
+};
+
+/** Una fila de la tabla producto × sucursal de Stocks (paquete F · ronda 26). */
+type InventarioPorSucursalFila = {
+  productId: number;
+  productName: string;
+  /** Mínimo del producto (el suyo o el de la configuración). 0 = no se vigila. */
+  minStock: number;
+  /** Piezas sumando todas las sucursales. */
+  total: number;
+  porSucursal: Array<{ stockId: string; stockName: string; qty: number; bajoMinimo: boolean }>;
+  bajoMinimo: boolean;
 };
 
 type StockTransferLine = {
@@ -127,10 +202,12 @@ type PosSale = {
   total: number;
   paymentStatus: 'paid_branch' | 'partial_branch' | 'credit_branch';
   deliveryStatus: 'paid_branch' | 'delivered_branch';
-  paymentMethod?: 'cash' | 'card' | 'transfer';
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'mixed';
   createdAt: string;
   lines: AdminOrderItem[];
   cashCutId?: string;
+  status?: string;
+  voidReason?: string;
   paymentType?: 'full' | 'partial' | 'credit';
   amountPaid?: number;
   pendingAmount?: number;
@@ -150,6 +227,13 @@ type PosCashCut = {
   createdAt?: string;
   sales?: PosSale[];
   withdrawals?: PosWithdrawal[];
+  // paquete E: arqueo
+  cashExpected?: number;
+  cashCounted?: number;
+  difference?: number;
+  differenceReason?: string;
+  withdrawalReceiver?: string;
+  openingCash?: number;
 };
 
 type PosWithdrawal = {
@@ -188,6 +272,7 @@ type InventoryMovement = {
   qty: number;
   createdAt: string;
   userId: number | null;
+  userName?: string;
   paymentMethod?: 'cash' | 'card' | 'transfer';
   reason?: string;
   referenceId?: string;
@@ -196,6 +281,12 @@ type InventoryMovement = {
 type CustomerPrivilegeOption = {
   key: AppPrivilege;
   label: string;
+  /** Qué concede en la práctica. Sin esto hay que adivinar por el nombre. */
+  description: string;
+  /** Agrupa la lista por área para no leer 27 casillas seguidas. */
+  group: 'Acceso a pantallas' | 'Pedidos' | 'Catálogo' | 'Inventario' | 'Personas y dinero' | 'Sistema';
+  /** Permiso de pantalla sin el cual este no sirve de nada. */
+  requires?: AppPrivilege;
 };
 
 type SelectOption<T extends string | number> = {
@@ -217,16 +308,21 @@ type PosCustomerRecommendation = {
 type DiscountTierDraft = AppBusinessConfig['rewards']['discountTiers'][number];
 type CommissionLevelDraft = AppBusinessConfig['rewards']['commissionLevels'][number];
 
+type ReceiveReturnCheck = 'coincide_con_pedido' | 'trazabilidad_valida' | 'empaque_original' | 'sellos_intactos' | 'sin_uso' | 'danio_no_empresa';
+const RECEIVE_RETURN_CHECKLIST_DEFAULT: Record<ReceiveReturnCheck, boolean> = {
+  coincide_con_pedido: true, trazabilidad_valida: true, empaque_original: true, sellos_intactos: true, sin_uso: true, danio_no_empresa: false
+};
+
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent],
+  imports: [CommonModule, FormsModule, UiAvisoSinAccesoComponent, UiButtonComponent, UiCheckboxComponent, UiFormFieldComponent, UiModalComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiStatusBadgeComponent, UiDataTableComponent, UiNetworkGraphComponent, AdminCampaignsComponent, AdminCategoriesComponent, UiPaginationComponent, PagosMesComponent /* WP-A */, AdminModoClienteComponent /* WP-B */, FacturaPedidoComponent /* WP-C */, AdminArqueoComponent /* WP-E */, UiConfirmComponent /* WP-I1 */, UiTablaDescuentoComponent /* WP-I1 */, UiDesgloseIvaComponent /* paquete B · ronda 26 */, UiClabeFormComponent /* paquete A · ronda 26 */],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
 export class AdminComponent implements OnInit {
   private readonly adminData: Signal<AdminData | null>;
-  private adminNavLinksCache: { user: AuthUser | null; links: SidebarLink[] } | null = null;
+  private adminNavLinksCache: { user: AuthUser | null; links: SidebarLink[]; entries: AdminMenuEntry[] } | null = null;
   private customerOptionsCache: { customersRef: AdminCustomer[]; options: Array<SelectOption<number>> } | null = null;
   private employeeOptionsCache: { employeesRef: AdminEmployee[]; options: Array<SelectOption<number>> } | null = null;
   private stockOptionsCache: { stocksRef: AdminStock[]; options: Array<SelectOption<string>> } | null = null;
@@ -266,18 +362,60 @@ export class AdminComponent implements OnInit {
         >;
       }
     | null = null;
+  private inventarioPorSucursalCache:
+    | {
+        stocksRef: AdminStock[];
+        productsRef: AdminProduct[];
+        minimosRef: Record<string, number>;
+        rows: InventarioPorSucursalFila[];
+      }
+    | null = null;
   private warningsCache: { warningsRef: AdminWarning[]; warnings: AdminWarning[] } | null = null;
-  private readonly orderStatusOptionsValue: Array<SelectOption<AdminOrder['status']>> = [
-    { value: 'pending', label: 'Pendiente' },
-    { value: 'paid', label: 'Pagado' },
-    { value: 'shipped', label: 'Enviado' },
-    { value: 'delivered', label: 'Entregado' },
-    { value: 'cancelled', label: 'Cancelado' },
-    { value: 'refunded', label: 'Reembolsado' },
-    { value: 'en_devolucion', label: 'Por devolver' },
-    { value: 'devuelto_validado', label: 'Devuelto' },
-    { value: 'devolucion_rechazada', label: 'Dev. rechazada' }
+  /**
+   * Paquete G · ronda 26 (propuesta 25), montado en la integración.
+   *
+   * Los textos ya no se escriben aquí: salen de `ESTADOS_PEDIDO`, la tabla
+   * única de §3.7. Antes esta lista decía "Pendiente", "Por devolver" y
+   * "Devuelto" mientras el resto del producto decía otra cosa para el mismo
+   * pedido, y de aquí salía además el nombre de la pestaña.
+   */
+  private readonly orderStatusOptionsValue: Array<SelectOption<AdminOrder['status']>> =
+    (['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded',
+      'en_devolucion', 'devuelto_validado', 'devolucion_rechazada'] as Array<AdminOrder['status']>)
+      .map((value) => ({ value, label: textoEstadoPedido(value) }));
+
+  /**
+   * Paquete E · ronda 26 · La tira de pestañas de Pedidos, fuera de la plantilla.
+   *
+   * Estaba escrita como literal dentro de un `*ngFor`: la aplicación es zoneless
+   * y cada escucha agenda una pasada de detección, así que el arreglo se creaba
+   * de nuevo y sus nodos se recreaban en cada pasada — el clic salía del botón
+   * antes de llegar a `toggleOrderDetail()`. Ocho reproducciones entre dos
+   * empleados. Ahora es un campo `readonly` con `trackBy` por clave.
+   *
+   * "Factura solicitada" es la bandeja de la propuesta 20: filtra en memoria
+   * sobre los pedidos ya cargados (nunca con el filtro del servidor, que
+   * rompería la lógica de secciones cargadas de `admin-control.service`).
+   */
+  readonly orderTabs: ReadonlyArray<{ key: string; status?: AdminOrder['status']; label: string }> = [
+    { key: 'pending', status: 'pending', label: textoEstadoPedido('pending') },
+    { key: 'paid', status: 'paid', label: textoEstadoPedido('paid') },
+    { key: 'shipped', status: 'shipped', label: textoEstadoPedido('shipped') },
+    { key: 'delivered', status: 'delivered', label: textoEstadoPedido('delivered') },
+    { key: 'factura_solicitada', label: 'Factura solicitada' },
+    { key: 'cancelled', status: 'cancelled', label: textoEstadoPedido('cancelled') },
+    { key: 'refunded', status: 'refunded', label: textoEstadoPedido('refunded') },
+    { key: 'en_devolucion', status: 'en_devolucion', label: textoEstadoPedido('en_devolucion') },
+    { key: 'devuelto_validado', status: 'devuelto_validado', label: textoEstadoPedido('devuelto_validado') },
+    { key: 'devolucion_rechazada', status: 'devolucion_rechazada', label: textoEstadoPedido('devolucion_rechazada') }
   ];
+
+  /** Pestaña encendida: una clave de estado o la bandeja de facturas. */
+  currentOrderTab = 'pending';
+
+  trackOrderTab(_index: number, tab: { key: string }): string {
+    return tab.key;
+  }
   readonly rewardCutRuleOptions: Array<ExplainedSelectOption<string>> = [
     {
       value: 'dynamic_compression',
@@ -341,7 +479,17 @@ export class AdminComponent implements OnInit {
       description: 'Marca la orden como reembolsada.'
     }
   ];
-  readonly posOrderPaymentMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer'>> = [
+  readonly posOrderPaymentMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer' | 'mixed'>> = [
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'card', label: 'Tarjeta' },
+    { value: 'transfer', label: 'Transferencia' },
+    { value: 'mixed', label: 'Efectivo + tarjeta/transferencia' }
+  ];
+  readonly posMixedSecondMethodOptions: Array<SelectOption<'card' | 'transfer'>> = [
+    { value: 'card', label: 'Tarjeta' },
+    { value: 'transfer', label: 'Transferencia' }
+  ];
+  readonly posSettleMethodOptions: Array<SelectOption<'cash' | 'card' | 'transfer'>> = [
     { value: 'cash', label: 'Efectivo' },
     { value: 'card', label: 'Tarjeta' },
     { value: 'transfer', label: 'Transferencia' }
@@ -355,9 +503,14 @@ export class AdminComponent implements OnInit {
     private readonly adminControl: AdminControlService,
     private readonly authService: AuthService,
     private readonly router: Router,
+    private readonly route: ActivatedRoute, // paquete E · ronda 26: la vista viene de la URL
+    private readonly acceso: AccesoPantallaService, // paquete E · ronda 26: el aviso de pantalla negada
+
     private readonly cdr: ChangeDetectorRef,
     private readonly api: ApiService,
-    private readonly sanitizer: DomSanitizer
+    private readonly sanitizer: DomSanitizer,
+    private readonly checkoutService: CheckoutService, // WP-C
+    private readonly caja: CajaService // WP-E
   ) {
     this.adminData = toSignal(this.adminControl.data$, { initialValue: null });
   }
@@ -371,11 +524,19 @@ export class AdminComponent implements OnInit {
   couponFeedback = '';
   couponDraft: SaveCouponPayload = this.emptyCouponDraft();
   couponEditingCode: string | null = null;
+  readonly couponTypeOptions: ReadonlyArray<{ value: string; label: string }> = [
+    { value: 'percent', label: 'Porcentaje (%)' },
+    { value: 'fixed', label: 'Monto fijo ($)' }
+  ];
   currentOrderStatus: AdminOrder['status'] = 'pending';
+  /** Mes que abre Pagos del mes al llegar desde un aviso (WP-A). */
+  pagosMesMonth = '';
   orderStockFilter: string = '';
   expandedOrderDetailId: string | null = null;
   isActionsModalOpen = false;
   isNewOrderModalOpen = false;
+  /** Aviso dentro del modal de nuevo pedido (p. ej. fallo al cargar listas). */
+  newOrderMessage = '';
   isAddStructureModalOpen = false;
   isShippingModalOpen = false;
   isReceiptModalOpen = false;
@@ -409,6 +570,17 @@ export class AdminComponent implements OnInit {
 
   orderSearch = '';
   orderPage = 0;
+  /**
+   * Paquete F · ronda 26 (propuesta 21), montado en la integración sobre la
+   * región de Pedidos, que es de E.
+   *
+   * "1 pedido pagado sin envío · 37 días" decía el aviso, y en la tabla no
+   * había manera de saber cuál. La columna de antigüedad se puede ordenar y
+   * se pinta en rojo desde `agingRedDays` (7 por omisión). El reloj es el del
+   * servidor (§3.6): con el mundo en 2027 y el navegador en 2026, medirlo con
+   * `new Date()` daba números imposibles.
+   */
+  orderAgingSort: 'none' | 'desc' | 'asc' = 'none';
   customerSearch = '';
   customerPage = 0;
   productSearch = '';
@@ -439,33 +611,120 @@ export class AdminComponent implements OnInit {
   isSavingCustomerPrivileges = false;
   isSavingCustomerPosition = false;
   readonly customerPrivilegeOptions: CustomerPrivilegeOption[] = [
-    { key: 'access_screen_orders', label: 'Acceso pantalla: Pedidos' },
-    { key: 'access_screen_customers', label: 'Acceso pantalla: Clientes' },
-    { key: 'access_screen_products', label: 'Acceso pantalla: Productos' },
-    { key: 'access_screen_stocks', label: 'Acceso pantalla: Stocks' },
-    { key: 'access_screen_pos', label: 'Acceso pantalla: Punto de Venta' },
-    { key: 'access_screen_stats', label: 'Acceso pantalla: Estadisticas' },
-    { key: 'access_screen_settings', label: 'Acceso pantalla: Configuracion' },
-    { key: 'order_mark_paid', label: 'Cambiar orden a Pagado' },
-    { key: 'order_mark_shipped', label: 'Cambiar orden a Enviado' },
-    { key: 'order_mark_delivered', label: 'Cambiar orden a Entregado' },
-    { key: 'order_create', label: 'Registrar nueva orden' },
-    { key: 'customer_add', label: 'Agregar cliente' },
-    { key: 'commissions_register_payment', label: 'Registrar pago de comisiones' },
-    { key: 'product_add', label: 'Agregar nuevo producto' },
-    { key: 'product_update', label: 'Actualizar producto' },
-    { key: 'product_delete', label: 'Eliminar producto' },
-    { key: 'product_set_month', label: 'Establecer producto del mes' },
-    { key: 'stock_create', label: 'Crear stock' },
-    { key: 'stock_create_transfer', label: 'Crear transferencia' },
-    { key: 'stock_add_inventory', label: 'Agregar inventario a stock' },
-    { key: 'stock_mark_damaged', label: 'Marcar stock como danado' },
-    { key: 'stock_receive_transfer', label: 'Registrar transferencia como entregada' },
-    { key: 'pos_register_sale', label: 'Registrar venta' },
-    { key: 'user_mark_admin', label: 'Marcar usuario como administrador' },
-    { key: 'user_manage_privileges', label: 'Registrar privilegios' },
-    { key: 'config_manage', label: 'Gestionar configuracion de negocio' }
+    // Pantallas: sin estos, los permisos de acción de abajo no se pueden ejercer.
+    { key: 'access_screen_orders', label: 'Ver Pedidos', group: 'Acceso a pantallas',
+      description: 'Entra a la sección Pedidos. Verá el nombre del cliente y el importe.' },
+    { key: 'access_screen_customers', label: 'Ver Clientes', group: 'Acceso a pantallas',
+      description: 'Entra a la sección Clientes: datos de contacto, red y comisiones.' },
+    { key: 'access_screen_products', label: 'Ver Productos', group: 'Acceso a pantallas',
+      description: 'Entra al catálogo. Verá precios y márgenes.' },
+    { key: 'access_screen_stocks', label: 'Ver Stocks', group: 'Acceso a pantallas',
+      description: 'Entra a inventario, transferencias y daños.' },
+    { key: 'access_screen_pos', label: 'Ver Punto de Venta', group: 'Acceso a pantallas',
+      description: 'Entra al mostrador para cobrar en tienda.' },
+    { key: 'access_screen_stats', label: 'Ver Estadísticas', group: 'Acceso a pantallas',
+      description: 'Entra a los informes de ventas de todo el negocio.' },
+    { key: 'access_screen_settings', label: 'Ver Configuración', group: 'Acceso a pantallas',
+      description: 'Entra a las reglas del negocio: comisiones, rangos y bonos.' },
+    { key: 'access_screen_employees', label: 'Ver Empleados', group: 'Acceso a pantallas',
+      description: 'Entra a la sección Empleados y ve quién tiene qué acceso.' },
+    { key: 'access_screen_honor_board', label: 'Ver Cuadro de Honor', group: 'Acceso a pantallas',
+      description: 'Entra al ranking mensual de distribuidores.' },
+
+    { key: 'order_mark_paid', label: 'Marcar pedido como Pagado', group: 'Pedidos',
+      description: 'Confirma que el dinero entró. Es el paso que libera la preparación.',
+      requires: 'access_screen_orders' },
+    { key: 'order_mark_shipped', label: 'Marcar pedido como Enviado', group: 'Pedidos',
+      description: 'Registra la salida del paquete y su número de guía.',
+      requires: 'access_screen_orders' },
+    { key: 'order_mark_delivered', label: 'Marcar pedido como Entregado', group: 'Pedidos',
+      description: 'Cierra el pedido. A partir de aquí cuenta para comisiones.',
+      requires: 'access_screen_orders' },
+    { key: 'order_create', label: 'Crear pedidos a mano', group: 'Pedidos',
+      description: 'Levanta un pedido por teléfono o mostrador a nombre de un cliente.',
+      requires: 'access_screen_orders' },
+
+    { key: 'product_add', label: 'Crear productos', group: 'Catálogo',
+      description: 'Da de alta un producto nuevo, con su precio y sus puntos.',
+      requires: 'access_screen_products' },
+    { key: 'product_update', label: 'Editar productos', group: 'Catálogo',
+      description: 'Cambia precio, descripción e imágenes. El precio afecta a los puntos VP.',
+      requires: 'access_screen_products' },
+    { key: 'product_delete', label: 'Eliminar productos', group: 'Catálogo',
+      description: 'Borra un producto del catálogo. Acción destructiva.',
+      requires: 'access_screen_products' },
+    { key: 'product_set_month', label: 'Elegir el producto del mes', group: 'Catálogo',
+      description: 'Decide qué producto se destaca en la tienda del cliente.',
+      requires: 'access_screen_products' },
+
+    { key: 'stock_create', label: 'Crear almacenes', group: 'Inventario',
+      description: 'Da de alta una bodega o sucursal donde guardar mercancía.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_add_inventory', label: 'Registrar entradas de mercancía', group: 'Inventario',
+      description: 'Suma unidades cuando llega el proveedor.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_create_transfer', label: 'Crear transferencias', group: 'Inventario',
+      description: 'Mueve mercancía de un almacén a otro.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_receive_transfer', label: 'Recibir transferencias', group: 'Inventario',
+      description: 'Confirma que la mercancía llegó al almacén de destino.',
+      requires: 'access_screen_stocks' },
+    { key: 'stock_mark_damaged', label: 'Registrar mercancía dañada', group: 'Inventario',
+      description: 'Da de baja unidades rotas o caducadas. Resta del inventario.',
+      requires: 'access_screen_stocks' },
+
+    { key: 'pos_register_sale', label: 'Cobrar en el mostrador', group: 'Personas y dinero',
+      description: 'Registra una venta presencial y descuenta del inventario.',
+      requires: 'access_screen_pos' },
+    { key: 'customer_add', label: 'Dar de alta clientes', group: 'Personas y dinero',
+      description: 'Registra un cliente nuevo y lo cuelga de un patrocinador.',
+      requires: 'access_screen_customers' },
+    { key: 'commissions_register_payment', label: 'Registrar pagos de comisiones', group: 'Personas y dinero',
+      description: 'Marca como pagado el dinero que el negocio debe a un distribuidor.',
+      requires: 'access_screen_customers' },
+    { key: 'employee_add', label: 'Dar de alta empleados', group: 'Personas y dinero',
+      description: 'Crea cuentas de operador y genera su contraseña temporal.',
+      requires: 'access_screen_employees' },
+
+    { key: 'user_mark_admin', label: 'Conceder acceso al panel', group: 'Sistema',
+      description: 'Permite que un cliente entre al back office. Concédelo con cuidado.' },
+    { key: 'user_manage_privileges', label: 'Cambiar permisos de otros', group: 'Sistema',
+      description: 'Quien tenga esto puede darse a sí mismo cualquier otro permiso.' },
+    { key: 'employee_manage_privileges', label: 'Cambiar permisos de empleados', group: 'Sistema',
+      description: 'Edita el acceso de los operadores desde la sección Empleados.',
+      requires: 'access_screen_employees' },
+    { key: 'config_manage', label: 'Cambiar reglas del negocio', group: 'Sistema',
+      description: 'Toca comisiones, rangos, bonos y avisos. Afecta a lo que cobra la red.',
+      requires: 'access_screen_settings' }
   ];
+
+  /** Permisos agrupados por área: 27 casillas seguidas no se pueden revisar. */
+  get privilegeGroups(): Array<{ group: string; options: CustomerPrivilegeOption[] }> {
+    const orden = ['Acceso a pantallas', 'Pedidos', 'Catálogo', 'Inventario', 'Personas y dinero', 'Sistema'];
+    return orden
+      .map((group) => ({ group, options: this.customerPrivilegeOptions.filter((o) => o.group === group) }))
+      .filter((g) => g.options.length > 0);
+  }
+
+  /** Cuántos permisos tiene concedidos el empleado seleccionado. */
+  get selectedEmployeeGrantedCount(): number {
+    return this.customerPrivilegeOptions.filter((o) => this.employeeHasPrivilege(o.key)).length;
+  }
+
+  /**
+   * Un permiso de acción sin su permiso de pantalla no sirve de nada: el
+   * empleado no puede llegar al botón. Antes esto se concedía en silencio.
+   */
+  employeePrivilegeIsInert(option: CustomerPrivilegeOption): boolean {
+    if (!option.requires) return false;
+    return this.employeeHasPrivilege(option.key) && !this.employeeHasPrivilege(option.requires);
+  }
+
+  employeePrivilegeInertHint(option: CustomerPrivilegeOption): string {
+    const pantalla = this.customerPrivilegeOptions.find((o) => o.key === option.requires);
+    return `No tendrá efecto: falta «${pantalla?.label ?? option.requires}».`;
+  }
+
   businessConfigDraft: AppBusinessConfig = this.getDefaultBusinessConfig();
   isSavingBusinessConfig = false;
   businessConfigMessage = '';
@@ -536,6 +795,15 @@ export class AdminComponent implements OnInit {
   shippingTargetOrder: AdminOrder | null = null;
   shippingType: 'carrier' | 'personal' = 'carrier';
   shippingTrackingNumber = '';
+  shippingCarrierDraft = '';
+  readonly shippingCarrierOptions = [
+    { value: 'Estafeta', label: 'Estafeta' },
+    { value: 'DHL', label: 'DHL' },
+    { value: 'FedEx', label: 'FedEx' },
+    { value: 'Paquetexpress', label: 'Paquetexpress' },
+    { value: 'Redpack', label: 'Redpack' },
+    { value: 'Otra', label: 'Otra paquetería' }
+  ];
   shippingDeliveryPlace = '';
   shippingDeliveryDate = '';
   shippingError = '';
@@ -551,8 +819,30 @@ export class AdminComponent implements OnInit {
     location: '',
     postalCode: '',
     isMainWarehouse: false,
-    allowPickup: false
+    allowPickup: false,
+    city: '',   // paquete C
+    state: ''   // paquete C
   };
+  /** Paquete C: ciudad y estado editables del stock activo. */
+  stockUbicacionDraft = { city: '', state: '' };
+
+  // ── Paquete F · ronda 26 (propuesta 28) ─────────────────────────────────
+  // Toño: "el día que Guadalajara se quede en 1 pieza, nadie se va a enterar
+  // hasta que un cliente pague y no haya". La vista abre con el inventario de
+  // todas las sucursales, con su total y su mínimo; fundar una bodega queda
+  // detrás de un botón.
+  /** Formulario de alta de bodega, plegado por omisión. */
+  altaStockAbierta = false;
+  /** Mínimo por producto, tal como lo guardó el servidor. */
+  stockMinimos: Record<string, number> = {};
+  minStockDefault = 0;
+  /** Lo que la persona está escribiendo en la columna "Mínimo". */
+  minimoBorrador: Record<string, string> = {};
+  guardandoMinimos = false;
+  mensajeMinimos = '';
+  errorMinimos = '';
+  private minimosPedidos = false;
+  readonly estadoOptionsStock = ESTADOS_MX_OPTIONS;
   stockUserLinkDraft = new Set<number>();
   isStockEntryModalOpen = false;
   isStockDamageModalOpen = false;
@@ -587,7 +877,47 @@ export class AdminComponent implements OnInit {
 
   // --- STATS / REPORTES ---
   statsReportMonth = '';
-  statsReportTab: 'resumen' | 'pedidos' | 'clientes' | 'productos' | 'stocks' = 'resumen';
+  statsReportTab: StatsReportTabId = 'resumen';
+  /**
+   * Guarda 14 (informe 27 §4): la tira de pestañas de reportes vive aquí, no
+   * como literal dentro del `*ngFor` de la plantilla. Un literal escrito en la
+   * plantilla se vuelve a crear en **cada** ciclo de detección de cambios, así
+   * que Angular destruía y rehacía los cinco botones sin parar: es el sustrato
+   * del botón que se pulsa y no abre.
+   */
+  readonly statsReportTabs: ReadonlyArray<{ id: StatsReportTabId; label: string }> = [
+    { id: 'resumen', label: 'Resumen' },
+    { id: 'pedidos', label: 'Pedidos' },
+    { id: 'clientes', label: 'Clientes' },
+    { id: 'productos', label: 'Productos' },
+    { id: 'stocks', label: 'Stocks' }
+  ];
+
+  trackStatsReportTab(_index: number, tab: { id: StatsReportTabId }): string {
+    return tab.id;
+  }
+
+  /**
+   * Guarda 14: identidad estable de una fila de tabla. Sin `trackBy`, cambiar
+   * una celda obliga a Angular a rehacer la tabla entera (y con ella el botón
+   * que alguien tenía debajo del dedo). Se compone con los campos que
+   * identifican la fila; si no hay ninguno, la posición, que al menos no
+   * cambia mientras la lista no cambie.
+   */
+  trackFila(index: number, fila: unknown): string {
+    const f = (fila ?? {}) as Record<string, unknown>;
+    for (const campo of ['id', 'customerId', 'orderId', 'productId', 'sku', 'code', 'key', 'email', 'name']) {
+      const valor = f[campo];
+      if (valor) {
+        return `${campo}:${String(valor)}`;
+      }
+    }
+    // Renglones de informe que no traen identidad propia (sucursal + producto).
+    if (f['stock'] && f['product']) {
+      return `${String(f['stock'])}·${String(f['product'])}`;
+    }
+    return `#${index}`;
+  }
   statsData: import('../../models/admin.model').MonthlyStatsResult | null = null;
   isLoadingStats = false;
 
@@ -602,17 +932,86 @@ export class AdminComponent implements OnInit {
   posItems = new Map<number, number>();
   posSales: PosSale[] = [];
   posCashControl: PosCashControl | null = null;
-  posSalePaymentMethod: 'cash' | 'card' | 'transfer' = 'cash';
-  posCustomerSearch = 'Publico en General';
+  posSalePaymentMethod: 'cash' | 'card' | 'transfer' | 'mixed' = 'cash';
+  /** Pago mixto (paquete E): parte en efectivo; el resto va a tarjeta o transferencia. */
+  posMixedCashAmount = '';
+  posMixedSecondMethod: 'card' | 'transfer' = 'card';
+  /** Se incrementa tras cada venta, abono o anulación para que el arqueo se recargue. */
+  posCajaRefreshToken = 0;
+  /** Última venta tal como la guardó el servidor: folio y montos reales, no los del formulario. */
+  posUltimaVenta: VentaCajaRespuesta | null = null;
+  // Abono a saldo pendiente (modal en lugar de prompt)
+  isPosSettleModalOpen = false;
+  posSettleTarget: PosSale | null = null;
+  posSettleAmount = '';
+  posSettleMethod: 'cash' | 'card' | 'transfer' = 'cash';
+  posSettleError = '';
+  isSettlingPosSale = false;
+  posSettleResult: AbonoCajaRespuesta | null = null;
+  // Anulación de venta (modal en lugar de prompt)
+  isPosVoidModalOpen = false;
+  posVoidTarget: PosSale | null = null;
+  posVoidReason = '';
+  posVoidError = '';
+  isVoidingPosSale = false;
+  posVoidResult: AnulacionCajaRespuesta | null = null;
+  posCustomerSearch = 'Público en general';
   selectedPosCustomerId: number | null = null;
   posCustomerRecommendations: PosCustomerRecommendation[] = [];
   posSelectedCustomerMonth: AssociateMonth | null = null;
   isLoadingPosCustomerProjection = false;
   isRegisteringPosSale = false;
-  isCuttingPosCash = false;
-  isPosCashCutModalOpen = false;
-  posCashCutKeepAmount = '';
-  posCashCutError = '';
+  /** Efectivo que entrega el cliente en mostrador; el POS no lo pedía y el cajero sacaba el cambio de cabeza. */
+  posCashReceived = '';
+
+  get posCashReceivedNumber(): number {
+    const n = Number(String(this.posCashReceived).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /** Parte del total que se paga en efectivo (todo, la parte mixta o nada). */
+  get posCashPortion(): number {
+    if (this.posPaymentTypeMode !== 'full') {
+      return this.posSalePaymentMethod === 'cash' ? this.posAmountPaidNow : 0;
+    }
+    if (this.posSalePaymentMethod === 'cash') return this.posEffectiveTotal;
+    if (this.posSalePaymentMethod === 'mixed') return this.posMixedCashNumber;
+    return 0;
+  }
+
+  get posMixedCashNumber(): number {
+    const n = Number(String(this.posMixedCashAmount).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? this.roundMoney(n) : 0;
+  }
+
+  /** Lo que va a tarjeta o transferencia en un pago mixto: se autocompleta. */
+  get posMixedRemainder(): number {
+    return this.roundMoney(Math.max(0, this.posEffectiveTotal - this.posMixedCashNumber));
+  }
+
+  get posMixedInvalidReason(): string {
+    if (this.posSalePaymentMethod !== 'mixed') return '';
+    if (this.posPaymentTypeMode !== 'full') return 'El pago mixto solo aplica a pago completo: elige una sola forma de pago para el pago parcial o crédito.';
+    if (!String(this.posMixedCashAmount).trim()) return 'Escribe cuánto paga en efectivo; el resto se cobra con tarjeta o transferencia.';
+    if (this.posMixedCashNumber <= 0 || this.posMixedCashNumber >= this.posEffectiveTotal) {
+      return `En pago mixto la parte en efectivo debe ser mayor a $0 y menor al total (${this.formatMoney(this.posEffectiveTotal)}).`;
+    }
+    return '';
+  }
+
+  get posChangeDue(): number {
+    if (!(this.posSalePaymentMethod === 'cash' || this.posSalePaymentMethod === 'mixed') || this.posPaymentTypeMode !== 'full') {
+      return 0;
+    }
+    return this.roundMoney(Math.max(0, this.posCashReceivedNumber - this.posCashPortion));
+  }
+
+  get posCashShort(): number {
+    if (!(this.posSalePaymentMethod === 'cash' || this.posSalePaymentMethod === 'mixed') || this.posPaymentTypeMode !== 'full' || !this.posCashReceived) {
+      return 0;
+    }
+    return this.roundMoney(Math.max(0, this.posCashPortion - this.posCashReceivedNumber));
+  }
   posFeedbackMessage = '';
   posFeedbackTone: 'error' | 'success' | '' = '';
 
@@ -633,19 +1032,10 @@ export class AdminComponent implements OnInit {
   posPaymentTypeMode: 'full' | 'partial' | 'credit' = 'full';
   posPartialAmountPaid = '';
 
-  isPosWithdrawalModalOpen = false;
-  posWithdrawalAmount = '';
-  posWithdrawalReason = '';
-  posWithdrawalAuthCode = '';
-  posWithdrawalError = '';
-  isRegisteringPosWithdrawal = false;
-  posWithdrawals: PosWithdrawal[] = [];
-
   posCashCuts: PosCashCut[] = [];
   isLoadingPosCashCuts = false;
   isPosCashCutsOpen = false;
   expandedCutId: string | null = null;
-  lastCompletedCut: PosCashCut | null = null;
 
   posAuthCodeDraft = '';
   isSavingPosAuthCode = false;
@@ -683,15 +1073,97 @@ export class AdminComponent implements OnInit {
   employeeForm = {
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    jobTitle: '' // paquete E · ronda 26: el puesto que pinta la insignia
   };
 
   ngOnInit(): void {
-    this.currentView = this.getFirstAllowedView();
-    // Carga mínima: solo warnings
-    this.adminControl.load().subscribe();
-    // Cargar la vista inicial bajo demanda
-    this.loadViewData(this.currentView);
+    // Paquete E · ronda 26 · La vista la manda la URL, no un campo interno. El
+    // componente no inyectaba `ActivatedRoute`: por eso recargar `#/admin`
+    // siempre volvía a la vista por omisión y Renata no podía mandar un enlace
+    // ("tendría que contestarle: en Clientes, hasta abajo, después de los
+    // documentos"). `getFirstAllowedView()` es solo el respaldo de `#/admin`.
+    //
+    // El orden importa: los parámetros de la URL se leen ANTES de montar la
+    // vista, para que la pestaña que pidió la URL no la pise el cálculo de
+    // "la primera pestaña con trabajo".
+    this.route.queryParamMap.subscribe((params) => {
+      // `?estado=paid` (la cola de trabajo y las acciones urgentes) y `?mes=`
+      // (Comisiones y pagos) viajan en la URL para sobrevivir a la navegación.
+      const estado = params.get('estado');
+      if (estado) {
+        // "factura_solicitada" es una bandeja, no un estado guardado: se abre
+        // como pestaña y el filtro por estado se queda como estaba.
+        if (estado !== 'factura_solicitada') {
+          this.currentOrderStatus = estado as AdminOrder['status'];
+        }
+        this.currentOrderTab = estado;
+        this.orderStatusFijadoPorUrl = true;
+      }
+      const mes = params.get('mes');
+      if (mes) {
+        this.pagosMesMonth = mes;
+      }
+      // La guarda de pantalla no quita una pantalla en silencio: dice cuál era.
+      // El aviso lo pinta `ui-aviso-sin-acceso` desde `AccesoPantallaService`;
+      // aquí solo se recoge el que viene en la URL, que es el caso de la
+      // recarga completa (la guarda no corrió en esta pestaña).
+      const sinAcceso = params.get('sinAcceso') ?? '';
+      if (sinAcceso) {
+        this.acceso.anotar(sinAcceso);
+      }
+    });
+    this.route.paramMap.subscribe((params) => {
+      // `#/admin/pedido/:idPedido`: el pedido abre su detalle solo, sin buscarlo.
+      const idPedido = params.get('idPedido');
+      if (idPedido) {
+        this.expandedOrderDetailId = idPedido;
+        this.orderDeepLinkId = idPedido;
+        this.abrirPedidoDeUrl();
+      }
+    });
+    this.route.data.subscribe((data) => {
+      const vista = (data['view'] as AdminViewId | undefined) ?? this.getFirstAllowedView();
+      this.aplicarVistaDeRuta(vista, (data['panel'] as string | undefined) ?? '');
+    });
+    // Carga mínima: solo warnings (ya cacheados si se viene de otra pantalla).
+    if (!this.adminControl.hasLoadedWarnings()) {
+      this.adminControl.load().subscribe();
+    }
+    // Integración de la ronda 26 (§3.1): la tasa del IVA del resumen del POS.
+    // `plan$` está cacheado y es público; si no llega, se queda la de la
+    // configuración por omisión y el desglose sigue cuadrando al centavo.
+    this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.vatRate = plan?.iva?.tasa ?? this.vatRate;
+        this.vatLabel = plan?.iva?.etiqueta || this.vatLabel;
+        this.requestViewUpdate();
+      },
+      error: () => undefined
+    });
+  }
+
+  /** Pedido pedido por URL (`#/admin/pedido/:idPedido`), para abrirlo al llegar. */
+  orderDeepLinkId: string | null = null;
+
+  /** true cuando la pestaña de Pedidos la eligió la URL: no se recalcula sola. */
+  private orderStatusFijadoPorUrl = false;
+
+  /** Pantalla que se quiso abrir sin tener su privilegio; se dice y se puede cerrar. */
+
+  private aplicarVistaDeRuta(vista: AdminViewId, panel: string): void {
+    this.currentView = vista;
+    this.orderPage = 0;
+    this.customerPage = 0;
+    this.productPage = 0;
+    this.employeePage = 0;
+    this.notificationPage = 0;
+    this.loadViewData(vista);
+    if (panel) {
+      // Comisiones y pagos vive dentro de Clientes; al llegar por su URL la
+      // pantalla baja sola al bloque, en vez de dejarlo "hasta abajo".
+      setTimeout(() => document.getElementById(panel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
   }
 
   private loadViewData(view: AdminViewId): void {
@@ -702,9 +1174,17 @@ export class AdminComponent implements OnInit {
           this.adminControl.loadOrders().subscribe(() => {
             this.syncInitialOrderDeps();
           });
+        } else {
+          this.abrirPrimeraPestanaConTrabajo();
+          this.abrirPedidoDeUrl();
         }
         break;
       case 'customers':
+        // WP-A · 17: «Comisiones y pagos» vive en esta vista y su KPI exporta
+        // `commissionsMonthKey`. Sin pedir los periodos aquí, el mes salía de
+        // `new Date()` del navegador y la pantalla enseñaba dos meses del mismo
+        // dinero: el panel decía «abril 2027» y el botón «Exportar 2026-08».
+        this.cargarPeriodosDelServidor();
         this.adminControl.loadCustomers().subscribe(() => {
           if (!this.selectedCustomer) {
             this.selectedCustomer = this.customers[0] ?? null;
@@ -722,6 +1202,7 @@ export class AdminComponent implements OnInit {
           if (!this.selectedEmployee) {
             this.selectedEmployee = this.employees[0] ?? null;
             this.syncSelectedEmployeePrivilegeDraft();
+            this.syncEmployeeContactDraft();
           }
           this.stockEntryForm.createdByUserId ??= this.employees[0]?.id ?? null;
           this.stockTransferForm.createdByUserId ??= this.employees[0]?.id ?? null;
@@ -741,26 +1222,29 @@ export class AdminComponent implements OnInit {
       case 'stocks':
       case 'pos':
         this.loadStocksAndPosState();
+        // La tabla única de descuento del POS lee `businessConfig`, que solo se
+        // llenaba al guardar Configuración: salía sin tramos y cobraba sin descuento.
+        if (view === 'pos' && !this.businessConfig) {
+          this.adminControl.loadBusinessConfig().subscribe({ next: () => this.requestViewUpdate(), error: () => undefined });
+        }
         this.adminControl.loadCustomers().subscribe();
         if (!this.adminControl.hasLoadedOrders()) {
           this.adminControl.loadOrders().subscribe();
         }
         this.adminControl.loadEmployees().subscribe();
+        this.cargarPeriodosDelServidor();   // WP-A · 17
         break;
       case 'settings':
         this.syncBusinessConfigDraft();
         break;
       case 'stats':
         this.adminControl.loadCustomers().subscribe();
+        this.cargarPeriodosDelServidor();   // WP-A · 17
         this.loadMonthlyStats(this.activeReportMonth);
         break;
       case 'honor_board':
         if (!this.honorBoardData && !this.isLoadingHonorBoard) {
-          this.isLoadingHonorBoard = true;
-          this.api.getHonorBoard().subscribe({
-            next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; },
-            error: () => { this.isLoadingHonorBoard = false; }
-          });
+          this.loadHonorBoard();
         }
         break;
     }
@@ -769,26 +1253,176 @@ export class AdminComponent implements OnInit {
   private syncInitialOrderDeps(): void {
     this.ensureCurrentViewAllowed();
     this.selectPublicGeneralCustomer();
+    this.abrirPrimeraPestanaConTrabajo();
+    this.abrirPedidoDeUrl();
+  }
+
+  /**
+   * Paquete E · ronda 26 · propuesta 33 · Pedidos abre donde hay trabajo.
+   *
+   * Abría siempre en "Pendiente", vacía, mientras el resumen de al lado decía
+   * "Pagados 3": Toño leyó las dos cosas a la vez y anotó "si yo fuera menos
+   * necio me voy a la bodega a barrer". La cola de trabajo (`nextActions`) ya
+   * calcula cuál es la primera pestaña con algo que hacer; se usa esa. Si la
+   * pestaña la pidió la URL (`?estado=`) o se llegó a un pedido concreto, manda
+   * la URL: nunca se le mueve la pantalla a quien pidió una en particular.
+   */
+  private abrirPrimeraPestanaConTrabajo(): void {
+    if (this.orderStatusFijadoPorUrl || this.orderDeepLinkId) {
+      return;
+    }
+    const primera = this.nextActions.find((accion) => !!accion.status);
+    if (primera?.status) {
+      this.currentOrderStatus = primera.status;
+      this.currentOrderTab = primera.status;
+      this.orderPage = 0;
+    }
+  }
+
+  /**
+   * `#/admin/pedido/:idPedido`: el pedido se abre solo, en la pestaña de su
+   * estado, sin que nadie tenga que adivinar en cuál de las diez está. Antes el
+   * detalle era un acordeón dentro de una pantalla sin dirección: no había
+   * enlace que mandarle al dueño ni forma de volver a él.
+   */
+  private abrirPedidoDeUrl(): void {
+    if (!this.orderDeepLinkId) {
+      return;
+    }
+    const pedido = this.orders.find((o) => o.id === this.orderDeepLinkId);
+    if (!pedido) {
+      return;
+    }
+    this.currentOrderStatus = pedido.status;
+    this.currentOrderTab = pedido.status;
+    this.orderStatusFijadoPorUrl = true;
+    this.orderSearch = pedido.id;
+    this.orderPage = 0;
   }
 
   get orders(): AdminOrder[] {
     return this.adminData()?.orders ?? [];
   }
 
+  /**
+   * Tasa y etiqueta del IVA para el resumen del POS (§3.1), montado en la
+   * integración. Salen de `GET /catalog/plan`, que es público y ya está
+   * cacheado por `PlanSocioService`: el back office no inventa el número.
+   */
+  vatRate = 0.16;
+  vatLabel = 'IVA';
+
+  /** Umbral en días a partir del cual la antigüedad va en rojo (configuración). */
+  get agingRedDays(): number {
+    return Number(this.adminData()?.agingRedDays ?? 7) || 7;
+  }
+
+  /** El reloj del servidor: el de los avisos o, si aún no llegó, el de los periodos. */
+  private get relojDelServidorMs(): number {
+    const iso = this.adminData()?.serverNow || this.serverNow;
+    const t = iso ? Date.parse(iso) : NaN;
+    return Number.isFinite(t) ? t : Date.now();
+  }
+
+  /** Días completos que lleva el pedido desde que se creó. `null` si no se sabe. */
+  orderAgingDays(order: AdminOrder): number | null {
+    const creado = Date.parse(String(order.createdAt ?? ''));
+    if (!Number.isFinite(creado)) {
+      return null;
+    }
+    return Math.max(0, Math.floor((this.relojDelServidorMs - creado) / 86400000));
+  }
+
+  /** "37 días", "1 día", "hoy": como lo diría una persona. */
+  orderAgingLabel(order: AdminOrder): string {
+    const dias = this.orderAgingDays(order);
+    if (dias === null) {
+      return '—';
+    }
+    if (dias === 0) {
+      return 'hoy';
+    }
+    return dias === 1 ? '1 día' : `${dias} días`;
+  }
+
+  orderAgingIsRed(order: AdminOrder): boolean {
+    const dias = this.orderAgingDays(order);
+    return dias !== null && dias >= this.agingRedDays;
+  }
+
+  /** Sin ordenar → más viejos primero → más nuevos primero → sin ordenar. */
+  toggleOrderAgingSort(): void {
+    this.orderAgingSort = this.orderAgingSort === 'none' ? 'desc'
+      : this.orderAgingSort === 'desc' ? 'asc' : 'none';
+    this.orderPage = 0;
+    this.requestViewUpdate();
+  }
+
+  get orderAgingSortLabel(): string {
+    return this.orderAgingSort === 'desc' ? 'De más viejo a más nuevo'
+      : this.orderAgingSort === 'asc' ? 'De más nuevo a más viejo'
+      : 'Sin ordenar por antigüedad';
+  }
+
   get customers(): AdminCustomer[] {
     return this.adminData()?.customers ?? [];
   }
 
+  /** Filtro "fríos": sin compra en 30+ días o nunca. Antes se cruzaban siete pestañas de Pedidos a mano. */
+  customersColdOnly = false;
+
+  /**
+   * Guarda 13 (informe 27 §4): los días se cuentan con el reloj del servidor,
+   * como la antigüedad de los pedidos. Con `Date.now()` el navegador de Alma
+   * (2026-09) restaba contra compras del mundo simulado (2027-04) y toda la
+   * lista salía en "0 días", que se lee como "nadie compra".
+   */
+  daysSinceLastPurchase(customer: AdminCustomer): number | null {
+    if (!customer.lastPurchaseAt) return null;
+    const t = new Date(customer.lastPurchaseAt).getTime();
+    if (!Number.isFinite(t)) return null;
+    return Math.max(0, Math.floor((this.relojDelServidorMs - t) / 86400000));
+  }
+
+  isColdCustomer(customer: AdminCustomer): boolean {
+    if (customer.deletedAt) return false;
+    const days = this.daysSinceLastPurchase(customer);
+    return days === null || days >= 30;
+  }
+
   get filteredCustomers(): AdminCustomer[] {
     const q = this.customerSearch.trim().toLowerCase();
-    if (!q) return this.customers;
-    return this.customers.filter(
+    const base = this.customersColdOnly ? this.customers.filter((c) => this.isColdCustomer(c)) : this.customers;
+    if (!q) return base;
+    return base.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q) ||
         (c.level || '').toLowerCase().includes(q) ||
         (c.discount || '').toLowerCase().includes(q)
     );
+  }
+
+  toggleCustomersColdOnly(): void {
+    this.customersColdOnly = !this.customersColdOnly;
+    this.customerPage = 0;
+  }
+
+  /** Exportar la lista filtrada (nombre, correo, teléfono, patrocinador, última compra, mes anterior) a CSV. */
+  exportCustomersCsv(): void {
+    const rows = this.filteredCustomers.map((c) => [
+      c.name, c.email, c.phone || '', c.leaderId != null ? String(c.leaderId) : 'FindingU',
+      c.lastPurchaseAt ? c.lastPurchaseAt.slice(0, 10) : 'nunca',
+      String(this.daysSinceLastPurchase(c) ?? ''), String(c.commissionsPrevMonth ?? 0), c.doNotContact ? 'no contactar' : ''
+    ]);
+    const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [['Nombre', 'Correo', 'Teléfono', 'Patrocinador', 'Última compra', 'Días', 'Comisión mes anterior', 'Contacto'], ...rows]
+      .map((r) => r.map(esc).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `clientes-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   get pagedCustomers(): AdminCustomer[] {
@@ -951,24 +1585,6 @@ export class AdminComponent implements OnInit {
   }
 
 
-  get adminNavLinks(): SidebarLink[] {
-    const links: Array<SidebarLink & { view: AdminViewId }> = [
-      { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
-      { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
-      { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' },
-      { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-      { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
-      { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
-      { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
-      { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
-      { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
-      { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
-      { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' },
-      { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
-    ];
-    return links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
-  }
-
   get customerOptionsStable(): Array<SelectOption<number>> {
     if (this.customerOptionsCache?.customersRef === this.customers) {
       return this.customerOptionsCache.options;
@@ -1002,31 +1618,88 @@ export class AdminComponent implements OnInit {
     if (this.warningsCache?.warningsRef === warnings) {
       return this.warningsCache.warnings;
     }
-    this.warningsCache = { warningsRef: warnings, warnings };
-    return warnings;
+    // A la cajera le salía "socias sin CLABE · Ir a resolver" sin poder abrir Clientes.
+    const visibles = warnings.filter((w) => this.canAccessView(this.warningTargetView(w.type)));
+    this.warningsCache = { warningsRef: warnings, warnings: visibles };
+    return visibles;
   }
 
+  private warningTargetView(type: string): AdminViewId {
+    const map: Record<string, AdminViewId> = {
+      commissions: 'customers',
+      commissions_ready: 'customers',
+      commissions_no_clabe: 'customers',
+      shipping: 'orders',
+      pickup: 'orders',      // paquete F · ronda 26: pedidos por recoger en mostrador
+      assets: 'products',
+      stocks: 'stocks',
+      stock_min: 'stocks',   // paquete F · ronda 26: productos bajo su mínimo
+      pos: 'pos',
+      payments: 'orders',
+      refunds: 'orders',
+      // Propuesta 20: la pestaña "Factura solicitada" existía y el contador de
+      // Acciones urgentes no; sin el aviso, la bandeja dependía de que alguien
+      // abriera Pedidos y mirara la novena pestaña.
+      invoices: 'orders'
+    };
+    return map[type] ?? 'stats';
+  }
+
+  /**
+   * Paquete E · ronda 26 · El menú del back office, escrito UNA sola vez.
+   *
+   * Antes eran dos copias de doce enlaces (la barra lateral y la barra inferior
+   * del móvil), y ninguna de las dos nombraba el trabajo de tres personas:
+   * Comisiones y pagos vivía al fondo de la ficha de un cliente ("Alma buscó
+   * «Comisiones» en el menú siete veces"), Seguimiento de hoy era un botón
+   * encima de una tabla dentro de Clientes y Despacho en bloque estaba entre
+   * las pestañas de estado de Pedidos. Ahora cada entrada lleva su URL.
+   */
+  private get adminMenuGroups(): Array<{ label: string; entries: AdminMenuEntry[] }> {
+    return adminMenuVisible(this.currentUser?.privileges, this.authService.isSuperUser(this.currentUser));
+  }
+
+  /** Las entradas visibles, sin encabezados: la barra inferior del móvil las reusa. */
+  get adminMenuLinksStable(): AdminMenuEntry[] {
+    this.buildAdminMenuCache();
+    return this.adminNavLinksCache!.entries;
+  }
+
+  /** Las mismas entradas con sus encabezados de grupo, para la barra lateral. */
   get adminNavLinksStable(): SidebarLink[] {
+    this.buildAdminMenuCache();
+    return this.adminNavLinksCache!.links;
+  }
+
+  private buildAdminMenuCache(): void {
     if (this.adminNavLinksCache?.user === this.currentUser) {
-      return this.adminNavLinksCache.links;
+      return;
     }
-    const links: Array<SidebarLink & { view: AdminViewId }> = [
-      { id: 'orders', view: 'orders', icon: 'fa-receipt', label: 'Pedidos', subtitle: '' },
-      { id: 'customers', view: 'customers', icon: 'fa-users', label: 'Clientes', subtitle: '' },
-      { id: 'employees', view: 'employees', icon: 'fa-id-badge', label: 'Empleados', subtitle: '' },
-      { id: 'products', view: 'products', icon: 'fa-boxes-stacked', label: 'Productos', subtitle: '' },
-      { id: 'stocks', view: 'stocks', icon: 'fa-warehouse', label: 'Stocks', subtitle: '' },
-      { id: 'campaigns', view: 'campaigns', icon: 'fa-bullhorn', label: 'Campanas', subtitle: '' },
-      { id: 'pos', view: 'pos', icon: 'fa-cash-register', label: 'Punto de Venta', subtitle: '' },
-      { id: 'stats', view: 'stats', icon: 'fa-chart-line', label: 'Estadisticas', subtitle: '' },
-      { id: 'honor_board', view: 'honor_board', icon: 'fa-ranking-star', label: 'Cuadro de Honor', subtitle: '' },
-      { id: 'notifications', view: 'notifications', icon: 'fa-bell', label: 'Notificaciones', subtitle: '' },
-      { id: 'coupons', view: 'coupons', icon: 'fa-ticket', label: 'Cupones', subtitle: '' },
-      { id: 'settings', view: 'settings', icon: 'fa-sliders', label: 'Configuracion', subtitle: '' }
-    ];
-    const resolved = links.filter((link) => this.canAccessView(link.view)).map(({ view, ...link }) => link);
-    this.adminNavLinksCache = { user: this.currentUser, links: resolved };
-    return resolved;
+    const links: SidebarLink[] = [];
+    const entries: AdminMenuEntry[] = [];
+    for (const group of this.adminMenuGroups) {
+      links.push({ id: `heading-${group.label}`, icon: '', label: group.label, heading: true });
+      for (const entrada of group.entries) {
+        links.push({ id: entrada.id, icon: entrada.icon, label: entrada.label, subtitle: '' });
+        entries.push(entrada);
+      }
+    }
+    this.adminNavLinksCache = { user: this.currentUser, links, entries };
+  }
+
+  /** Qué entrada del menú está encendida: se lee de la URL, no de un campo suelto. */
+  get activeMenuId(): string {
+    const url = (this.router.url || '').split('?')[0];
+    if (url.startsWith('/admin/comisiones')) {
+      return 'comisiones';
+    }
+    const porRuta = this.adminMenuLinksStable.find((entrada) => url === entrada.route);
+    return porRuta?.id ?? this.currentView;
+  }
+
+  /** Traza estable de las entradas del menú: evita recrear los nodos en cada pasada. */
+  trackMenuEntry(_index: number, entrada: AdminMenuEntry): string {
+    return entrada.id;
   }
 
   get viewTitle(): string {
@@ -1043,13 +1716,13 @@ export class AdminComponent implements OnInit {
       return 'Stocks';
     }
     if (this.currentView === 'campaigns') {
-      return 'Campanas';
+      return 'Campañas';
     }
     if (this.currentView === 'pos') {
       return 'Punto de Venta';
     }
     if (this.currentView === 'stats') {
-      return 'Estadisticas';
+      return 'Estadísticas';
     }
     if (this.currentView === 'honor_board') {
       return 'Cuadro de Honor';
@@ -1057,8 +1730,11 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'notifications') {
       return 'Notificaciones';
     }
+    if (this.currentView === 'coupons') {
+      return 'Cupones';
+    }
     if (this.currentView === 'settings') {
-      return 'Configuracion';
+      return 'Configuración';
     }
     return 'Pedidos';
   }
@@ -1071,13 +1747,13 @@ export class AdminComponent implements OnInit {
       return 'Alta, acceso y privilegios de operadores.';
     }
     if (this.currentView === 'products') {
-      return 'Altas, imagenes y CTA.';
+      return 'Altas, imágenes y CTA.';
     }
     if (this.currentView === 'stocks') {
       return 'Inventario por sucursal, transferencias, recepciones y danos.';
     }
     if (this.currentView === 'campaigns') {
-      return 'Campanas, assets y copy comercial para compartir con la red.';
+      return 'Campañas, assets y copy comercial para compartir con la red.';
     }
     if (this.currentView === 'pos') {
       return 'Ventas en sucursal vinculadas a stock y operador.';
@@ -1088,10 +1764,16 @@ export class AdminComponent implements OnInit {
     if (this.currentView === 'notifications') {
       return 'Recordatorios, noticias y avisos programados para los usuarios.';
     }
+    if (this.currentView === 'coupons') {
+      return 'Crea códigos de descuento y controla su vigencia y usos.';
+    }
+    if (this.currentView === 'honor_board') {
+      return 'Top 10 del mes por volumen de red (VG) y personal (VP).';
+    }
     if (this.currentView === 'settings') {
       return 'Variables de negocio para reglas operativas.';
     }
-    return 'Cambia estado: pendiente, pagado, enviado, entregado.';
+    return 'Flujo del pedido: Pendiente → Pagado → Enviado → Entregado. Cancelaciones y devoluciones se atienden en sus propias pestañas.';
   }
 
   get stockOptions(): { value: string; label: string }[] {
@@ -1103,6 +1785,11 @@ export class AdminComponent implements OnInit {
 
   get selectedStock(): AdminStock | null {
     return this.stocks.find((stock) => stock.id === this.selectedStockId) ?? null;
+  }
+
+  /** Opciones del filtro por stock de la lista de pedidos (solo el nombre). */
+  get stockFilterOptions(): Array<SelectOption<string>> {
+    return this.stocks.map((stock) => ({ value: stock.id, label: stock.name }));
   }
 
   get stockOptionsStable(): Array<SelectOption<string>> {
@@ -1167,6 +1854,143 @@ export class AdminComponent implements OnInit {
     return rows;
   }
 
+  /**
+   * Inventario producto × sucursal, con el total de cada producto y su mínimo.
+   * Sale del estado que la pantalla ya tiene (`stocks[].inventory`): ni una
+   * consulta más al servidor.
+   */
+  get inventarioPorSucursalStable(): InventarioPorSucursalFila[] {
+    if (
+      this.inventarioPorSucursalCache?.stocksRef === this.stocks &&
+      this.inventarioPorSucursalCache.productsRef === this.products &&
+      this.inventarioPorSucursalCache.minimosRef === this.stockMinimos
+    ) {
+      return this.inventarioPorSucursalCache.rows;
+    }
+    const rows: InventarioPorSucursalFila[] = this.products.map((product) => {
+      const minimo = this.minimoDe(product.id);
+      const porSucursal = this.stocks.map((stock) => {
+        const qty = Number((stock.inventory as Record<string, number>)[String(product.id)] ?? 0);
+        return { stockId: stock.id, stockName: stock.name, qty, bajoMinimo: minimo > 0 && qty < minimo };
+      });
+      return {
+        productId: product.id,
+        productName: product.name,
+        minStock: minimo,
+        total: porSucursal.reduce((suma, celda) => suma + celda.qty, 0),
+        porSucursal,
+        bajoMinimo: porSucursal.some((celda) => celda.bajoMinimo)
+      };
+    });
+    this.inventarioPorSucursalCache = {
+      stocksRef: this.stocks,
+      productsRef: this.products,
+      minimosRef: this.stockMinimos,
+      rows
+    };
+    return rows;
+  }
+
+  /** Totales por sucursal (el renglón de abajo de la tabla). */
+  get totalesPorSucursalStable(): Array<{ stockId: string; stockName: string; total: number }> {
+    return this.stocks.map((stock) => ({
+      stockId: stock.id,
+      stockName: stock.name,
+      total: Object.values((stock.inventory as Record<string, number>) ?? {}).reduce((a, b) => a + Number(b ?? 0), 0)
+    }));
+  }
+
+  get totalDeTodoElInventario(): number {
+    return this.totalesPorSucursalStable.reduce((suma, s) => suma + s.total, 0);
+  }
+
+  /** Cuántos productos están por debajo de su mínimo en alguna sucursal. */
+  get productosBajoMinimo(): number {
+    return this.inventarioPorSucursalStable.filter((fila) => fila.bajoMinimo).length;
+  }
+
+  minimoDe(productId: number): number {
+    const propio = this.stockMinimos[String(productId)];
+    return Number.isFinite(propio) ? Number(propio) : this.minStockDefault;
+  }
+
+  /** Trae los mínimos guardados; sin permiso de almacén, la tabla no los pinta. */
+  private cargarMinimosDeStock(): void {
+    if (this.minimosPedidos || !this.hasPermission('access_screen_stocks')) {
+      return;
+    }
+    this.minimosPedidos = true;
+    this.despachoService.minimosDeStock().subscribe({
+      next: (res) => {
+        this.minStockDefault = Number(res.minStockDefault ?? 0);
+        this.stockMinimos = { ...(res.minimos ?? {}) };
+        this.minimoBorrador = {};
+        this.requestViewUpdate();
+      },
+      error: () => { this.minimosPedidos = false; }
+    });
+  }
+
+  cambiarMinimo(productId: number, valor: string): void {
+    this.minimoBorrador = { ...this.minimoBorrador, [String(productId)]: valor };
+    this.mensajeMinimos = '';
+    this.errorMinimos = '';
+  }
+
+  minimoEnPantalla(productId: number): string {
+    const borrador = this.minimoBorrador[String(productId)];
+    return borrador !== undefined ? borrador : String(this.minimoDe(productId));
+  }
+
+  get hayMinimosSinGuardar(): boolean {
+    return Object.keys(this.minimoBorrador).some(
+      (pid) => Number(this.minimoBorrador[pid]) !== this.minimoDe(Number(pid))
+    );
+  }
+
+  /** Guarda de un golpe los mínimos que se cambiaron. */
+  guardarMinimos(): void {
+    if (this.guardandoMinimos || !this.hayMinimosSinGuardar) {
+      return;
+    }
+    const cambios: Record<string, number> = {};
+    for (const [pid, valor] of Object.entries(this.minimoBorrador)) {
+      const piezas = Number(valor);
+      if (!Number.isFinite(piezas) || piezas < 0) {
+        this.errorMinimos = 'Un mínimo tiene que ser un número de piezas de 0 en adelante.';
+        this.requestViewUpdate();
+        return;
+      }
+      if (piezas !== this.minimoDe(Number(pid))) {
+        cambios[pid] = Math.round(piezas);
+      }
+    }
+    this.guardandoMinimos = true;
+    this.errorMinimos = '';
+    this.mensajeMinimos = '';
+    this.despachoService.guardarMinimosDeStock(cambios).subscribe({
+      next: () => {
+        this.stockMinimos = { ...this.stockMinimos, ...cambios };
+        this.minimoBorrador = {};
+        this.guardandoMinimos = false;
+        const cuantos = Object.keys(cambios).length;
+        this.mensajeMinimos = `Mínimo guardado en ${cuantos} producto${cuantos === 1 ? '' : 's'}. `
+          + 'Por debajo de él, la existencia se pinta en rojo y sale en Acciones urgentes.';
+        this.requestViewUpdate();
+      },
+      error: (err: unknown) => {
+        this.guardandoMinimos = false;
+        this.errorMinimos = this.mensajeDeErrorStock(err, 'No se pudieron guardar los mínimos.');
+        this.requestViewUpdate();
+      }
+    });
+  }
+
+  private mensajeDeErrorStock(err: unknown, porOmision: string): string {
+    const e = err as { error?: { message?: string }; message?: string } | null;
+    return e?.error?.message || e?.message || porOmision;
+  }
+
   get stockTransferRowsStable(): Array<StockTransfer & { sourceName: string; destinationName: string; productSummary: string }> {
     if (
       this.stockTransferRowsCache?.transfersRef === this.transfers &&
@@ -1215,7 +2039,7 @@ export class AdminComponent implements OnInit {
         ...movement,
         stockName: this.stockName(movement.stockId),
         productName: this.productName(movement.productId),
-        userName: this.employeeName(movement.userId),
+        userName: movement.userName || this.employeeName(movement.userId),
         typeLabel: this.movementTypeLabel(movement.type),
         signedQty: this.movementSignedQty(movement)
       }));
@@ -1231,16 +2055,23 @@ export class AdminComponent implements OnInit {
   }
 
   get filteredOrdersStable(): AdminOrder[] {
-    let byStatus = this.orders.filter((o) => o.status === this.currentOrderStatus);
+    const q = this.orderSearch.trim().toLowerCase();
+    // Paquete E · ronda 26 · propuesta 33 · Buscar cruza estados: se busca sobre
+    // todos los pedidos cargados, no solo sobre la pestaña abierta. Cada fila
+    // muestra su estado, así que no hay dónde perderse. Antes había que adivinar
+    // en cuál de las diez pestañas estaba "Ximena" antes de poder encontrarla.
+    let byStatus = q
+      ? this.orders
+      : this.currentOrderTab === 'factura_solicitada'
+        ? this.orders.filter((o) => o.invoiceStatus === 'solicitada')
+        : this.orders.filter((o) => o.status === this.currentOrderStatus);
     // Stock filter (applies to all statuses when a stock is selected)
     if (this.orderStockFilter) {
       byStatus = byStatus.filter(
         (o) => o.stockId === this.orderStockFilter || o.pickupStockId === this.orderStockFilter
       );
     }
-    const q = this.orderSearch.trim().toLowerCase();
-    if (!q) return byStatus;
-    return byStatus.filter((o) =>
+    const filtradas = !q ? byStatus : byStatus.filter((o) =>
       (o.customer || '').toLowerCase().includes(q) ||
       (o.id || '').toLowerCase().includes(q) ||
       (o.trackingNumber || '').toLowerCase().includes(q) ||
@@ -1249,6 +2080,18 @@ export class AdminComponent implements OnInit {
       (o.recipientName || '').toLowerCase().includes(q) ||
       (o.cancelReason || '').toLowerCase().includes(q)
     );
+    if (this.orderAgingSort === 'none') {
+      return filtradas;
+    }
+    // Copia antes de ordenar: `orders` es el arreglo del servicio.
+    const signo = this.orderAgingSort === 'desc' ? -1 : 1;
+    return [...filtradas].sort((a, b) => {
+      const ta = Date.parse(String(a.createdAt ?? ''));
+      const tb = Date.parse(String(b.createdAt ?? ''));
+      const va = Number.isFinite(ta) ? ta : Number.MAX_SAFE_INTEGER;
+      const vb = Number.isFinite(tb) ? tb : Number.MAX_SAFE_INTEGER;
+      return (va - vb) * signo;
+    });
   }
 
   get pagedOrders(): AdminOrder[] {
@@ -1297,7 +2140,7 @@ export class AdminComponent implements OnInit {
         ...movement,
         stockName: this.stockName(movement.stockId),
         productName: this.productName(movement.productId),
-        userName: this.employeeName(movement.userId),
+        userName: movement.userName || this.employeeName(movement.userId),
         typeLabel: this.movementTypeLabel(movement.type),
         signedQty: this.movementSignedQty(movement)
       }));
@@ -1358,13 +2201,22 @@ export class AdminComponent implements OnInit {
       this.hasPermission('customer_add') &&
       this.posCustomerForm.firstName.trim() &&
       this.posCustomerForm.apellidoPaterno.trim() &&
-      this.posCustomerForm.apellidoMaterno.trim() &&
+
       !this.isSavingPosCustomer
     );
   }
 
   get selectedPosCustomer(): AdminCustomer | null {
     return this.customers.find((customer) => customer.id === this.selectedPosCustomerId) ?? null;
+  }
+
+  /** Ventas con saldo pendiente de esta sucursal, estén o no en un corte cerrado:
+   *  la cajera encontró la venta parcial dentro del historial de cortes, en texto plano. */
+  get posSalesWithBalance(): PosSale[] {
+    const stockId = this.currentPosStock?.id;
+    return this.posSales.filter(
+      (sale) => (!stockId || sale.stockId === stockId) && sale.status !== 'voided' && Number(sale.pendingAmount || 0) > 0
+    );
   }
 
   get visiblePosSales(): PosSale[] {
@@ -1388,6 +2240,11 @@ export class AdminComponent implements OnInit {
 
   get visibleTransferPosSales(): PosSale[] {
     return this.visiblePosSales.filter((sale) => sale.paymentMethod === 'transfer');
+  }
+
+  /** Pagos mixtos (paquete E): efectivo + tarjeta/transferencia. */
+  get visibleMixedPosSales(): PosSale[] {
+    return this.visiblePosSales.filter((sale) => sale.paymentMethod === 'mixed');
   }
 
   get posSubtotal(): number {
@@ -1416,6 +2273,10 @@ export class AdminComponent implements OnInit {
   get posProjectedDiscountRate(): number {
     const customer = this.selectedPosCustomer;
     if (!customer) {
+      return 0;
+    }
+    // Modo cliente (paquete B): no aplica la escalera de descuento de socio.
+    if (this.posCustomerIsClientMode) {
       return 0;
     }
     return Math.max(this.parseCustomerDiscountRate(customer), this.calculateDiscountTierRate(this.posProjectedMonthNet));
@@ -1501,22 +2362,45 @@ export class AdminComponent implements OnInit {
   }
 
   get canRegisterPosSale(): boolean {
-    return Boolean(
-      this.hasPermission('pos_register_sale') &&
-        this.hasLinkedPosStock &&
-        this.currentPosStock &&
-        this.posItems.size > 0 &&
-        !this.isRegisteringPosSale
-    );
+    return this.posDisabledReason('cobrar') === '';
   }
 
-  get canCreatePosCashCut(): boolean {
-    return Boolean(
-      this.hasPermission('pos_register_sale') &&
-        this.currentPosStock &&
-        (this.posCashControl?.salesCount ?? 0) > 0 &&
-        !this.isCuttingPosCash
-    );
+  /** El cliente seleccionado está en modo cliente (paquete B): paga precio de lista, sin descuento de socio. */
+  get posCustomerIsClientMode(): boolean {
+    const modo = (this.selectedPosCustomer as { mode?: string } | null)?.mode;
+    return String(modo || '').toLowerCase() === 'cliente';
+  }
+
+  /**
+   * Por qué un botón del POS está deshabilitado, en una línea para alguien sin
+   * capacitación (Nadia: el corte "deshabilitado sin ningún tooltip o mensaje").
+   * Devuelve '' cuando el botón está habilitado.
+   */
+  posDisabledReason(accion: 'cobrar' | 'parcial' | 'descuento'): string {
+    if (!this.hasPermission('pos_register_sale')) {
+      return 'No tienes el permiso "Ventas en caja": pídeselo a tu gerente.';
+    }
+    if (!this.hasLinkedPosStock || !this.currentPosStock) {
+      return 'Sin sucursal vinculada: pide a tu gerente que te agregue en Stocks → tu sucursal → "Empleados vinculados".';
+    }
+    if (accion === 'descuento') {
+      if (this.posSubtotal <= 0) return 'Elige al menos un producto para aplicar un descuento.';
+      return '';
+    }
+    if (accion === 'parcial') {
+      if (this.posSalePaymentMethod === 'mixed') return 'El pago mixto solo aplica a pago completo. Cambia la forma de pago para cobrar en parcial o a crédito.';
+      return '';
+    }
+    if (this.isRegisteringPosSale) return 'Registrando la venta…';
+    if (this.posItems.size === 0) return 'Elige al menos un producto.';
+    if (this.posMixedInvalidReason) return this.posMixedInvalidReason;
+    if (this.posPaymentTypeMode === 'partial' && (this.posAmountPaidNow <= 0 || this.posAmountPaidNow >= this.posEffectiveTotal)) {
+      return `Escribe cuánto paga ahora el cliente: mayor a $0 y menor al total (${this.formatMoney(this.posEffectiveTotal)}).`;
+    }
+    if (this.posCashShort > 0) {
+      return `Faltan ${this.formatMoney(this.posCashShort)} de efectivo para cubrir la parte en efectivo (${this.formatMoney(this.posCashPortion)}).`;
+    }
+    return '';
   }
 
   get filteredOrders(): AdminOrder[] {
@@ -1539,6 +2423,42 @@ export class AdminComponent implements OnInit {
     return this.orders.filter((order) => order.status === 'delivered').length;
   }
 
+  /** Pedidos en un estado dado; alimenta los contadores de las pestañas. */
+  orderCountByStatus(status: AdminOrder['status']): number {
+    return this.orders.filter((order) => order.status === status).length;
+  }
+
+  /** Productos activos sin ninguna imagen cargada (KPI "Assets faltantes"). */
+  get productsMissingAssetsCount(): number {
+    return this.products.filter((p) => p.active && !(p.images ?? []).some((img) => (img.url ?? '').trim())).length;
+  }
+
+  /**
+   * Cola de trabajo derivada de los datos reales: le dice al operador qué es
+   * lo siguiente que hay que hacer, en orden del flujo del pedido. Vacía = al día.
+   */
+  get nextActions(): Array<{ icon: string; label: string; count: number; view: AdminViewId; status?: AdminOrder['status'] }> {
+    const actions: Array<{ icon: string; label: string; count: number; view: AdminViewId; status?: AdminOrder['status'] }> = [];
+    const push = (icon: string, label: string, count: number, status: AdminOrder['status']) => {
+      if (count > 0) {
+        actions.push({ icon, label, count, view: 'orders', status });
+      }
+    };
+    push('fa-hourglass-half', 'Confirmar pagos', this.orderCountByStatus('pending'), 'pending');
+    push('fa-box', 'Preparar envíos', this.orderCountByStatus('paid'), 'paid');
+    push('fa-truck', 'Confirmar entregas', this.orderCountByStatus('shipped'), 'shipped');
+    push('fa-rotate-left', 'Recibir devoluciones', this.orderCountByStatus('en_devolucion'), 'en_devolucion');
+    push('fa-money-bill-transfer', 'Resolver devoluciones validadas', this.orderCountByStatus('devuelto_validado'), 'devuelto_validado');
+    return actions.slice(0, 4);
+  }
+
+  runNextAction(action: { view: AdminViewId; status?: AdminOrder['status'] }): void {
+    // El estado viaja en la URL: al navegar, el caparazón se vuelve a montar y
+    // un campo asignado aquí se perdería por el camino.
+    this.router.navigate([ADMIN_ROUTE_BY_VIEW[action.view]],
+                         action.status ? { queryParams: { estado: action.status } } : {});
+  }
+
 
   get ordersCount(): number {
     return this.orders.length;
@@ -1546,6 +2466,20 @@ export class AdminComponent implements OnInit {
 
   get ordersTotal(): number {
     return this.orders.reduce((acc, order) => acc + (order.total || 0), 0);
+  }
+
+  /** Dinero ya cobrado: excluye los pedidos que siguen pendientes de pago. */
+  get ordersCollectedTotal(): number {
+    return this.orders
+      .filter((order) => order.status !== 'pending' && order.status !== 'cancelled')
+      .reduce((acc, order) => acc + (order.total || 0), 0);
+  }
+
+  /** Dinero comprometido pero aún no cobrado. */
+  get ordersPendingTotal(): number {
+    return this.orders
+      .filter((order) => order.status === 'pending')
+      .reduce((acc, order) => acc + (order.total || 0), 0);
   }
 
   get pendingShippingCount(): number {
@@ -1578,11 +2512,27 @@ export class AdminComponent implements OnInit {
   }
 
   get commissionsTotal(): number {
-    return this.customers.reduce((acc, customer) => acc + customer.commissions, 0);
+    // `commissions` es un campo histórico de la ficha que nadie actualiza; el
+    // tablero decía "$0" con $126 confirmados por pagar este mes.
+    // "Por depositar" = lo del mes anterior que sigue pendiente de pago (el día
+    // 10 se paga el mes anterior), más lo ya confirmado del mes en curso.
+    return this.customers.reduce((acc, customer) => {
+      const prev = customer.commissionsPrevStatus === 'pending' ? (customer.commissionsPrevMonth ?? 0) : 0;
+      return acc + prev + (customer.commissionsCurrentConfirmed ?? 0);
+    }, 0);
   }
 
   get customersCount(): number {
     return this.customers.length;
+  }
+
+  /** Promedio del descuento vigente de los clientes (antes valor fijo en la vista). */
+  get averageDiscountLabel(): string {
+    if (!this.customers.length) {
+      return '—';
+    }
+    const total = this.customers.reduce((sum, c) => sum + (parseFloat(c.discount) || 0), 0);
+    return `${Math.round(total / this.customers.length)}%`;
   }
 
   get productsCount(): number {
@@ -1596,17 +2546,70 @@ export class AdminComponent implements OnInit {
     this.isLoadingStats = true;
     this.statsData = null;
     this.adminControl.getMonthlyStats(month).subscribe({
-      next: (data) => { this.statsData = data; this.isLoadingStats = false; },
-      error: () => { this.isLoadingStats = false; }
+      next: (data) => { this.statsData = data; this.isLoadingStats = false; this.requestViewUpdate(); },
+      error: () => { this.isLoadingStats = false; this.requestViewUpdate(); }
     });
   }
 
+  // ── WP-A · ronda 26 · propuesta 17: el mes lo manda el servidor ──────────
+  /** Meses contables con datos, tal como los publica `GET /commissions/periodos`. */
+  serverPeriodos: PagoPeriodo[] = [];
+  /** Mes por omisión del servidor; nunca se calcula con el reloj del navegador. */
+  serverDefaultMonth = '';
+  /** Hora del servidor en el momento de cargar los periodos (§3.6). */
+  serverNow = '';
+  private readonly pagosService = inject(PagosService);
+  private readonly planSocio = inject(PlanSocioService);
+
+  /**
+   * Alma estuvo media hora creyendo que marzo había cerrado en ceros y se bajó
+   * un `reporte-mensual-2026-09.xlsx`: el navegador iba en 2026-09 y el mundo
+   * en 2027-04. Los meses del dinero salen del servidor.
+   */
+  private cargarPeriodosDelServidor(): void {
+    if (this.serverPeriodos.length || !this.hasPermission('commissions_register_payment')) {
+      return;
+    }
+    this.pagosService.getPeriodos().subscribe({
+      next: (datos) => {
+        this.serverPeriodos = datos.periodos ?? [];
+        this.serverDefaultMonth = datos.defaultMonth || '';
+        this.serverNow = datos.serverNow || '';
+        this.reportMonthsCache = null;
+        if (!this.pagosMesMonth) {
+          this.pagosMesMonth = this.serverDefaultMonth;
+        }
+        this.requestViewUpdate();
+      },
+      error: () => undefined
+    });
+  }
+
+  /** El mes de las comisiones que se está viendo (17): del servidor, no del reloj. */
+  get commissionsMonthKey(): string {
+    return this.pagosMesMonth || this.serverDefaultMonth || this.getPrevMonthKey();
+  }
+
+  /** El mismo mes, en letras (§3.7): «marzo de 2027», nunca la clave cruda. */
+  get commissionsMonthLabel(): string {
+    return mesEnLetras(this.commissionsMonthKey);
+  }
+
+  private reportMonthsCache: { ordersRef: AdminOrder[]; months: { value: string; label: string }[] } | null = null;
+
   get availableReportMonths(): { value: string; label: string }[] {
+    // Cachear por referencia de orders: un array nuevo en cada ciclo de
+    // detección de cambios re-renderizaba el select en bucle (NG0103).
+    if (this.reportMonthsCache?.ordersRef === this.orders) {
+      return this.reportMonthsCache.months;
+    }
     const monthSet = new Set<string>();
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    // WP-A · 17: primero los meses que el servidor dice que tienen dinero.
+    for (const periodo of this.serverPeriodos) {
+      monthSet.add(periodo.monthKey);
+    }
+    if (this.serverNow) {
+      monthSet.add(this.serverNow.slice(0, 7));
     }
     for (const order of this.orders) {
       if (order.createdAt) {
@@ -1616,19 +2619,36 @@ export class AdminComponent implements OnInit {
         }
       }
     }
-    return [...monthSet]
+    const months = [...monthSet]
       .sort((a, b) => b.localeCompare(a))
       .map((mk) => {
         const [y, m] = mk.split('-');
         const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-MX', { year: 'numeric', month: 'long' });
         return { value: mk, label: label.charAt(0).toUpperCase() + label.slice(1) };
       });
+    this.reportMonthsCache = { ordersRef: this.orders, months };
+    return months;
   }
 
   get activeReportMonth(): string {
     if (this.statsReportMonth) return this.statsReportMonth;
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // WP-A · 17: el mes vigente del servidor, no el del navegador; si todavía
+    // no llegó, el primero de la lista, que sí tiene pedidos.
+    if (this.serverNow) return this.serverNow.slice(0, 7);
+    return this.availableReportMonths[0]?.value ?? '';
+  }
+
+  /** WP-A · 17: se dice cuando el mes que se está viendo no tiene movimientos. */
+  get avisoMesEstadisticasSinDatos(): string {
+    const mes = this.activeReportMonth;
+    if (!mes || this.isLoadingStats || this.reportOrders.length) {
+      return '';
+    }
+    const conDatos = this.availableReportMonths.filter((m) => m.value !== mes);
+    const nombre = this.availableReportMonths.find((m) => m.value === mes)?.label ?? mes;
+    return conDatos.length
+      ? `${nombre} no tiene pedidos registrados. Elige otro mes: ${conDatos.slice(0, 6).map((m) => m.label).join(', ')}.`
+      : `${nombre} no tiene pedidos registrados.`;
   }
 
   private isInReportMonth(isoDate?: string): boolean {
@@ -1697,7 +2717,8 @@ export class AdminComponent implements OnInit {
 
   get reportTopCustomersByOrders(): Array<{ name: string; count: number; total: number }> {
     if (this.statsData) {
-      return this.statsData.orders.topCustomers.map((c) => ({ name: c.customerId, count: c.orders, total: c.total }));
+      // Pintaba el ID como nombre; el resumen ya trae el nombre del cliente.
+      return this.statsData.orders.topCustomers.map((c) => ({ name: (c as { name?: string }).name || String(c.customerId), count: c.orders, total: c.total }));
     }
     const map = new Map<string, { count: number; total: number }>();
     for (const o of this.reportOrders) {
@@ -1847,6 +2868,150 @@ export class AdminComponent implements OnInit {
     ws3['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Top clientes');
     XLSX.writeFile(wb, `pedidos-${month}.xlsx`);
+  }
+
+  // ── WP-H · Conciliar pagos con MercadoPago ────────────────────────────────
+  // Para cuando alguien pagó y el webhook se perdió: el pedido sigue en
+  // "Pendiente" aunque el dinero ya salió (rodrigo-dia3).
+  private readonly conciliacion = inject(ConciliacionService);
+  isConciliacionModalOpen = false;
+  isConciliando = false;
+  conciliacionResultado: ConciliacionResultado | null = null;
+  conciliacionUltima: ConciliacionCorrida | null = null;
+  conciliacionError = '';
+
+  // ── Paquete G · ronda 26 · propuesta 26: la conciliación con rango ─────────
+  // El endpoint acepta hasta 90 días y la pantalla la dejaba clavada en 72 h:
+  // a Renata le encargaron revisar **todo marzo** y obtuvo "Revisados 0".
+  readonly conciliacionRangos: Array<{ value: string; label: string; hours: number }> = [
+    { value: '72', label: 'Últimas 72 horas', hours: 72 },
+    { value: '168', label: 'Últimos 7 días', hours: 168 },
+    { value: '720', label: 'Últimos 30 días', hours: 720 },
+    { value: '2160', label: 'Últimos 90 días (lo máximo)', hours: 2160 },
+    { value: 'desde', label: 'Desde una fecha…', hours: 0 }
+  ];
+  conciliacionRango = '72';
+  /** Fecha de inicio en AAAA-MM-DD; la traduce a horas **el servidor**. */
+  conciliacionDesde = '';
+  /** Cada pedido revisado dispara una consulta a MercadoPago: se revisa por lotes. */
+  conciliacionTope = 50;
+
+  get conciliacionRangoEsFecha(): boolean {
+    return this.conciliacionRango === 'desde';
+  }
+
+  get conciliacionRangoTexto(): string {
+    const elegido = this.conciliacionRangos.find((r) => r.value === this.conciliacionRango);
+    if (this.conciliacionRangoEsFecha) {
+      return this.conciliacionDesde ? `desde el ${this.conciliacionDesde}` : 'desde la fecha que elijas';
+    }
+    return (elegido?.label ?? 'las últimas 72 horas').toLowerCase();
+  }
+
+  /** ¿Ya se está usando el periodo más largo que ofrece la pantalla? */
+  get conciliacionEnElMaximo(): boolean {
+    if (this.conciliacionRangoEsFecha) {
+      return false;
+    }
+    const horas = this.conciliacionRangos.find((r) => r.value === this.conciliacionRango)?.hours ?? 0;
+    return horas >= Math.max(...this.conciliacionRangos.map((r) => r.hours));
+  }
+
+  /**
+   * Qué decir cuando la corrida no revisó nada.
+   *
+   * Ronda 7 · Marisol (crítica): con cuatro pedidos "Pendiente de pago" en esa
+   * misma pantalla, la conciliación contestaba «no había nada que revisar.
+   * Prueba con un periodo más largo» en los cuatro periodos, incluido el máximo
+   * de 90 días: un consejo imposible de seguir y una respuesta falsa. Los
+   * pendientes existen; lo que pasa es que no se pagan por MercadoPago.
+   */
+  get textoConciliacionSinRevisar(): string {
+    const sinReferencia = this.conciliacionResultado?.withoutReference ?? 0;
+    if (sinReferencia > 0) {
+      const folios = (this.conciliacionResultado?.withoutReferenceOrderIds ?? []).join(', ');
+      return (
+        `En ${this.conciliacionRangoTexto} hay ${sinReferencia} ` +
+        `${sinReferencia === 1 ? 'pedido pendiente que no tiene' : 'pedidos pendientes que no tienen'} ` +
+        'pago en línea que consultar (se cobran en sucursal, por transferencia o se capturaron a mano), ' +
+        'así que la conciliación no puede resolverlos: hay que darlos por cobrado uno por uno desde su pedido' +
+        (folios ? `. Son: ${folios}.` : '.')
+      );
+    }
+    if (this.conciliacionEnElMaximo) {
+      return `No hay ningún pedido pendiente de pago en ${this.conciliacionRangoTexto}, que es el periodo más largo que se puede revisar: no quedó nada por conciliar.`;
+    }
+    return `No hay pedidos pendientes de pago en el periodo que elegiste (${this.conciliacionRangoTexto}): no había nada que revisar. Puedes probar con un periodo más largo.`;
+  }
+
+  get conciliacionBloqueada(): string {
+    if (this.isConciliando) {
+      return 'Consultando a MercadoPago…';
+    }
+    if (this.conciliacionRangoEsFecha && !this.conciliacionDesde) {
+      return 'Elige desde qué fecha quieres revisar';
+    }
+    return '';
+  }
+
+  cambiarRangoConciliacion(value: string): void {
+    this.conciliacionRango = value || '72';
+    this.requestViewUpdate();
+  }
+
+  abrirConciliacion(): void {
+    this.conciliacionResultado = null;
+    this.conciliacionError = '';
+    this.isConciliacionModalOpen = true;
+    this.conciliacion.ultimaCorrida().subscribe({
+      next: (run) => { this.conciliacionUltima = run; this.requestViewUpdate(); },
+      error: () => { this.conciliacionUltima = null; this.requestViewUpdate(); }
+    });
+  }
+
+  cerrarConciliacion(): void {
+    this.isConciliacionModalOpen = false;
+  }
+
+  conciliarPagos(): void {
+    if (this.isConciliando || this.conciliacionBloqueada) {
+      return;
+    }
+    this.isConciliando = true;
+    this.conciliacionError = '';
+    const rango = this.conciliacionRangos.find((r) => r.value === this.conciliacionRango);
+    const payload: ConciliacionPayload = this.conciliacionRangoEsFecha
+      ? { since: this.conciliacionDesde, limit: this.conciliacionTope }
+      : { hours: rango?.hours ?? 72, limit: this.conciliacionTope };
+    this.conciliacion.conciliar(payload).pipe(
+      finalize(() => { this.isConciliando = false; this.requestViewUpdate(); })
+    ).subscribe({
+      next: (resultado) => {
+        // Lo que se muestra es lo que el servidor hizo, no lo que se pidió; y la
+        // hora es la suya: escribirle encima `new Date()` dejaba la corrida
+        // fechada en 2026-09 con el mundo en 2027-04.
+        this.conciliacionResultado = resultado;
+        this.conciliacionUltima = { ...resultado };
+        if (resultado.credited.length) {
+          this.adminControl.loadOrders().subscribe();
+        }
+        this.showSnackbar(this.resumenConciliacion(resultado));
+      },
+      error: (err: unknown) => {
+        const cuerpo = (err as { error?: ConciliacionResultado } | null)?.error;
+        if (cuerpo && Array.isArray(cuerpo.errors)) {
+          this.conciliacionResultado = cuerpo;
+        }
+        this.conciliacionError = this.resolveUiErrorMessage(err, 'No se pudo consultar a MercadoPago. Inténtalo de nuevo en unos minutos.');
+      }
+    });
+  }
+
+  resumenConciliacion(r: ConciliacionResultado): string {
+    const folios = r.credited.map((c) => c.orderId).join(', ');
+    const base = `Revisados ${r.checked} · Acreditados ${r.credited.length}${folios ? ` (${folios})` : ''} · Sin pago ${r.unpaid.length}`;
+    const conErrores = r.errors.length ? `${base} · Sin respuesta ${r.errors.length}` : base;
+    return r.pending ? `${conErrores} · Faltan ${r.pending} por revisar` : conErrores;
   }
 
   downloadCustomersReport(): void {
@@ -2019,6 +3184,16 @@ export class AdminComponent implements OnInit {
 
   get currentUser(): AuthUser | null {
     return this.authService.currentUser;
+  }
+
+  /**
+   * Paquete E · ronda 26 · propuesta 27c · El puesto que pinta la insignia.
+   * Decía ADMIN sobre el nombre de la cajera de tercer día, igual que sobre el
+   * de la gerente de operaciones, y es lo primero que ve el cliente que se
+   * asoma al mostrador. `role` sigue siendo `admin`: es la llave de las guardas.
+   */
+  get puestoDelUsuario(): string {
+    return this.authService.jobTitleLabel(this.currentUser);
   }
 
 
@@ -2319,7 +3494,7 @@ export class AdminComponent implements OnInit {
   }
 
   get isStructureFormValid(): boolean {
-    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim() && this.structureForm.apellidoMaterno.trim());
+    return Boolean(this.structureForm.firstName.trim() && this.structureForm.apellidoPaterno.trim());
   }
 
   get isProductFormValid(): boolean {
@@ -2470,7 +3645,10 @@ export class AdminComponent implements OnInit {
   }
 
   downloadCommissionsReport(): void {
-    const prevMonthKey = this.getPrevMonthKey();
+    // WP-A · 17: el archivo se llama y trae los datos del mes **seleccionado**.
+    // Renata mandó como constancia del cierre de marzo un archivo que se
+    // llamaba agosto de 2026 y se contradecía entre sus dos hojas.
+    const prevMonthKey = this.commissionsMonthKey;
     // First fetch commission summary for prev month, then generate report
     this.adminControl.getCommissionsSummary(prevMonthKey).subscribe({
       next: (summary) => this._buildAndDownloadCommissionsReport(prevMonthKey, summary),
@@ -2767,24 +3945,34 @@ export class AdminComponent implements OnInit {
   }
 
 
-  onAdminNavSelect(viewId: string): void {
-    this.setView(viewId as AdminViewId);
+  onAdminNavSelect(entryId: string): void {
+    const entrada = this.adminMenuLinksStable.find((e) => e.id === entryId);
+    if (entrada) {
+      this.irAEntradaDeMenu(entrada);
+    }
   }
 
+  /**
+   * Paquete E · ronda 26 · Cambiar de vista NAVEGA, ya no asigna un campo: así
+   * la URL siempre dice en qué pantalla estás, se puede mandar por correo y
+   * recargar te devuelve al mismo sitio.
+   */
   setView(view: AdminViewId): void {
     if (!this.canAccessView(view)) {
       return;
     }
-    this.currentView = view;
-    this.orderPage = 0; this.orderSearch = '';
-    this.customerPage = 0; this.customerSearch = '';
-    this.productPage = 0; this.productSearch = '';
-    this.employeePage = 0; this.employeeSearch = '';
-    this.notificationPage = 0; this.notificationSearch = '';
-    this.loadViewData(view);
+    this.router.navigateByUrl(ADMIN_ROUTE_BY_VIEW[view]);
+  }
+
+  /** Abre una pantalla del back office por su URL (menú lateral y barra móvil). */
+  irAEntradaDeMenu(entrada: AdminMenuEntry): void {
+    this.router.navigateByUrl(entrada.route);
   }
 
   private loadStocksAndPosState(): void {
+    // Los mínimos por producto (paquete F) viajan aparte y una sola vez: la
+    // tabla los necesita para pintar en rojo lo que está por debajo.
+    this.cargarMinimosDeStock();
     this.adminControl.loadStocksAndPosState().subscribe({
       next: (state) => {
         this.stocks = (state.stocks ?? []).map((stock) => ({
@@ -2794,7 +3982,9 @@ export class AdminComponent implements OnInit {
           linkedUserIds: stock.linkedUserIds ?? [],
           inventory: this.normalizeInventoryRecord(stock.inventory as Record<number, number> | Record<string, number>),
           allowPickup: Boolean((stock as { allowPickup?: boolean }).allowPickup),
-          isMainWarehouse: Boolean((stock as { isMainWarehouse?: boolean }).isMainWarehouse)
+          isMainWarehouse: Boolean((stock as { isMainWarehouse?: boolean }).isMainWarehouse),
+          city: (stock as { city?: string }).city || undefined,     // paquete C
+          state: (stock as { state?: string }).state || undefined   // paquete C
         }));
 
         this.transfers = (state.transfers ?? []).map((transfer) => ({
@@ -2843,6 +4033,8 @@ export class AdminComponent implements OnInit {
           customerName: sale.customerName,
           grossSubtotal: Number(sale.grossSubtotal ?? sale.total ?? 0),
           discountRate: Number(sale.discountRate ?? 0),
+          status: sale.status ? String(sale.status) : undefined,
+          voidReason: sale.voidReason ? String(sale.voidReason) : undefined,
           discountAmount: Number(sale.discountAmount ?? 0),
           cashierDiscountAmount: sale.cashierDiscountAmount != null ? Number(sale.cashierDiscountAmount) : undefined,
           total: Number(sale.total),
@@ -2862,11 +4054,28 @@ export class AdminComponent implements OnInit {
         } else if (this.selectedStockId && !this.stocks.some((stock) => stock.id === this.selectedStockId)) {
           this.selectStock(this.stocks[0]?.id ?? '');
         }
+        // Ronda 7 · Rubén: una sección que el rol no puede leer se queda vacía,
+        // pero se dice con esas palabras. Antes el 403 se convertía en «no hay
+        // ninguna bodega dada de alta» y el cajero pasaba el turno buscando un
+        // alta que no le tocaba hacer.
+        this.seccionesSinAcceso = state.sinAcceso ?? [];
         this.syncPosOperatorContext();
         this.refreshPosCashControl();
+        this.applyEmployeeDefaultStock(); // WP-D
         this.requestViewUpdate();
       }
     });
+  }
+
+  /** Secciones que el rol no puede leer (403), para no fingir que están vacías. */
+  seccionesSinAcceso: string[] = [];
+
+  get avisoSeccionesSinAcceso(): string {
+    if (!this.seccionesSinAcceso.length) {
+      return '';
+    }
+    const lista = this.seccionesSinAcceso.join(', ');
+    return `No tienes permiso para ver ${lista}. No es que esté vacío: pídele a quien administra los permisos que te lo conceda.`;
   }
 
   private normalizeInventoryRecord(raw: Record<number, number> | Record<string, number> | undefined): Record<number, number> {
@@ -2883,12 +4092,37 @@ export class AdminComponent implements OnInit {
 
   setOrderStatus(status: AdminOrder['status']): void {
     this.currentOrderStatus = status;
+    this.currentOrderTab = status;
     this.orderPage = 0;
-    this.orderSearch = '';
+    // El buscador YA NO se borra al cambiar de pestaña: se escribía "Ximena",
+    // se cambiaba de estado para encontrarla y la búsqueda desaparecía sola.
     // Si no hay carga inicial completa, cargar el status específico
     if (!this.adminControl.hasLoadedOrders()) {
       this.adminControl.loadOrders(status).subscribe();
     }
+  }
+
+  /** Cambia de pestaña en Pedidos: un estado o la bandeja de facturas (propuesta 20). */
+  setOrderTab(tab: { key: string; status?: AdminOrder['status'] }): void {
+    this.orderStatusFijadoPorUrl = true;
+    if (tab.status) {
+      this.setOrderStatus(tab.status);
+      return;
+    }
+    this.currentOrderTab = tab.key;
+    this.orderPage = 0;
+  }
+
+  /**
+   * Contador de cada pestaña. La bandeja de facturas cuenta las solicitadas
+   * sobre los pedidos ya cargados: dos del 4 de marzo con 37 días encima, que
+   * Alma armó abriendo pedido por pedido.
+   */
+  orderTabCount(tab: { key: string; status?: AdminOrder['status'] }): number {
+    if (tab.status) {
+      return this.orderCountByStatus(tab.status);
+    }
+    return this.orders.filter((order) => order.invoiceStatus === 'solicitada').length;
   }
 
   pageRange(totalPages: number, current: number): number[] {
@@ -2918,23 +4152,24 @@ export class AdminComponent implements OnInit {
     this.isActionsModalOpen = true;
   }
 
-  resolveWarning(warning: { type: string }): void {
+  resolveWarning(warning: { type: string; monthKey?: string }): void {
     this.isActionsModalOpen = false;
-    const map: Record<string, AdminViewId> = {
-      commissions: 'customers',
-      shipping: 'orders',
-      assets: 'products',
-      stocks: 'stocks',
-      pos: 'pos',
-      payments: 'orders'
-    };
-    const target: AdminViewId = map[warning.type] ?? 'stats';
-    if (warning.type === 'shipping') {
-      this.currentOrderStatus = 'paid';
-    } else if (warning.type === 'payments') {
-      this.currentOrderStatus = 'pending';
+    if (warning.type === 'commissions_ready' || warning.type === 'commissions_no_clabe') { // WP-A
+      // Comisiones y pagos ya tiene URL propia: se llega por ella, no bajando
+      // hasta el fondo de la ficha de un cliente sin comisiones.
+      this.router.navigate(['/admin/comisiones'],
+                           warning.monthKey ? { queryParams: { mes: warning.monthKey } } : {});
+      return;
     }
-    this.setView(target);
+    const target: AdminViewId = this.warningTargetView(warning.type);
+    // 'pickup' entra aquí por el paquete F (propuesta 21): los pedidos por
+    // recoger en mostrador también están pagados y esperando trabajo.
+    const estado = warning.type === 'shipping' || warning.type === 'pickup' ? 'paid'
+      : warning.type === 'payments' ? 'pending'
+      : warning.type === 'refunds' ? 'cancelled'
+      : warning.type === 'invoices' ? 'factura_solicitada'
+      : '';
+    this.router.navigate([ADMIN_ROUTE_BY_VIEW[target]], estado ? { queryParams: { estado } } : {});
   }
 
   openNewOrderModal(): void {
@@ -2942,7 +4177,26 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.resetNewOrderForm();
+    this.newOrderMessage = '';
     this.isNewOrderModalOpen = true;
+    // El modal necesita clientes y productos, pero esas listas solo se cargaban
+    // al ENTRAR en sus respectivas secciones. Abriéndolo desde Pedidos —que es
+    // la pantalla de inicio— salía con el desplegable de clientes vacío y la
+    // caja de productos en blanco, sin explicar por qué. Ambos cargadores
+    // devuelven la caché si ya se pidieron, así que esto no repite trabajo.
+    forkJoin({
+      customers: this.adminControl.loadCustomers(),
+      products: this.adminControl.loadProducts()
+    }).subscribe({
+      next: () => {
+        this.newOrderCustomerId ??= this.customers[0]?.id ?? null;
+        this.requestViewUpdate();
+      },
+      error: () => {
+        this.newOrderMessage = 'No se pudieron cargar clientes y productos. Reintenta en unos segundos.';
+        this.requestViewUpdate();
+      }
+    });
   }
 
   openAddStructureModal(): void {
@@ -3004,6 +4258,10 @@ export class AdminComponent implements OnInit {
     this.receiptFile = file;
   }
 
+  /**
+   * Último recurso mientras `GET /commissions/periodos` no ha respondido.
+   * Quien decide el mes es el servidor (`commissionsMonthKey`).
+   */
   private getPrevMonthKey(date = new Date()): string {
     const year = date.getUTCFullYear();
     const month = date.getUTCMonth();
@@ -3026,7 +4284,7 @@ export class AdminComponent implements OnInit {
     this.isUploadingReceipt = true;
     const file = this.receiptFile;
     const customerId = this.receiptTargetCustomer.id;
-    const monthKey = this.receiptTargetCustomer.commissionsPrevMonthKey || this.getPrevMonthKey();
+    const monthKey = this.receiptTargetCustomer.commissionsPrevMonthKey || this.commissionsMonthKey;
     this.readFileAsDataUrl(file)
       .pipe(
         switchMap((dataUrl) => {
@@ -3042,14 +4300,19 @@ export class AdminComponent implements OnInit {
             contentType: file.type || 'application/octet-stream'
           });
         }),
-        switchMap(() => this.adminControl.load()),
+        switchMap((respuesta) => this.adminControl.load().pipe(map(() => respuesta))),
         finalize(() => {
           this.isUploadingReceipt = false;
           this.closeReceiptModal();
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Comprobante cargado.'),
+        next: (respuesta) => {
+          const recibo = (respuesta as { receipt?: { receiptId?: string; monthKey?: string; status?: string } })?.receipt;
+          this.showSnackbar(recibo?.receiptId
+            ? `Comprobante ${recibo.receiptId} guardado para ${recibo.monthKey || monthKey}: el mes quedó ${recibo.status === 'paid' ? 'pagado' : (recibo.status || 'registrado')}.`
+            : 'Comprobante cargado.');
+        },
         error: () => {
           this.receiptError = 'No se pudo cargar el comprobante.';
         }
@@ -3059,6 +4322,33 @@ export class AdminComponent implements OnInit {
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  /** Último pedido cuyo enlace se copió; el botón lo dice sin abrir un toast. */
+  enlacePedidoCopiadoId: string | null = null; // paquete E · ronda 26
+
+  /**
+   * Copia la dirección de este pedido. El detalle era un acordeón dentro de una
+   * pantalla sin dirección: "Si alguien me pregunta dónde se pagan las
+   * comisiones tendría que contestarle: en Clientes, hasta abajo" era el mismo
+   * problema una pantalla más allá.
+   */
+  copiarEnlaceDePedido(order: AdminOrder): void {
+    const base = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+    const enlace = `${base}#/admin/pedido/${order.id}`;
+    const portapapeles = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (!portapapeles?.writeText) {
+      this.showSnackbar('Tu navegador no deja copiar solo; selecciona el enlace y cópialo a mano.', 'error');
+      return;
+    }
+    portapapeles.writeText(enlace).then(
+      () => {
+        this.enlacePedidoCopiadoId = order.id;
+        this.showSnackbar('Enlace del pedido copiado. Ya se puede mandar por correo o WhatsApp.');
+        this.cdr.detectChanges();
+      },
+      () => this.showSnackbar('No se pudo copiar; selecciona el enlace y cópialo a mano.', 'error')
+    );
   }
 
   toggleOrderDetail(orderId: string): void {
@@ -3085,6 +4375,57 @@ export class AdminComponent implements OnInit {
     if (nextStatus === order.status) {
       return;
     }
+    // Ronda 7 · Marisol (crítica): «"Marcar como pagado" mueve dinero de un
+    // clic: sin confirmación, sin referencia y sin deshacer». Dar por cobrado
+    // un pedido dispara comisiones y no hay acción para revertirlo; borrar los
+    // datos de un cliente sí avisaba con tres renglones. El acto que toca el
+    // dinero es el que ahora pregunta, y pide la referencia del depósito.
+    if (nextStatus === 'paid') {
+      this.abrirConfirmacion({
+        title: `Dar por pagado ${order.id}`,
+        effect:
+          `Vas a registrar el cobro de ${this.formatMoney(order.total ?? 0)} de ${order.customer}. ` +
+          'El pedido pasa a Pagado, se dispara el cálculo de comisiones y se avisa por correo. ' +
+          'No hay forma de revertirlo desde esta pantalla: si te equivocas, tendrás que cancelar el pedido.',
+        requireReason: true,
+        reasonLabel: 'Referencia del depósito o del pago',
+        reasonPlaceholder: 'Folio de la transferencia, terminal o "efectivo en mostrador"',
+        confirmLabel: 'Sí, ya se cobró',
+        danger: true,
+        ejecutar: (referencia: string) => this.marcarPedidoPagado(order, referencia)
+      });
+      return;
+    }
+    this.cambiarEstadoPedido(order, nextStatus);
+  }
+
+  /** Registra el cobro con su referencia; la confirmación muestra lo que guardó el servidor. */
+  private marcarPedidoPagado(order: AdminOrder, referencia: string): void {
+    this.updatingOrderIds.add(order.id);
+    this.adminControl
+      .updateOrderStatus(order.id, { status: 'paid', paymentReference: referencia.trim() })
+      .pipe(
+        finalize(() => {
+          this.updatingOrderIds.delete(order.id);
+          this.requestViewUpdate();
+        })
+      )
+      .subscribe({
+        next: (guardado) => {
+          const texto = `Pedido ${guardado?.id || order.id} de ${order.customer}: quedó ${this.orderStatusLabel(guardado?.status || 'paid')}` +
+            (referencia.trim() ? ` con la referencia ${referencia.trim()}.` : '.');
+          this.confirmacionLista(texto, 'Cobro registrado');
+          this.showSnackbar(texto);
+        },
+        error: (error: unknown) => {
+          const mensaje = this.resolveUiErrorMessage(error, 'No se pudo registrar el cobro.');
+          this.confirmacionFallo(mensaje);
+          this.showSnackbar(mensaje, 'error');
+        }
+      });
+  }
+
+  private cambiarEstadoPedido(order: AdminOrder, nextStatus: AdminOrder['status']): void {
     this.updatingOrderIds.add(order.id);
     this.adminControl
       .updateOrderStatus(order.id, { status: nextStatus })
@@ -3095,20 +4436,139 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Orden actualizada.'),
+        next: (guardado) =>
+          // El estado que se anuncia es el que devolvió el servidor, no el que se pidió.
+          this.showSnackbar(
+            `Pedido ${guardado?.id || order.id} de ${order.customer}: quedó ${this.orderStatusLabel(guardado?.status || nextStatus)}.`
+          ),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo actualizar la orden.'), 'error');
         }
       });
   }
 
+  orderNoteDrafts: Record<string, string> = {};
+
+  isChangePasswordModalOpen = false;
+  isSavingPassword = false;
+  passwordError = '';
+  passwordForm = { current: '', next: '', confirm: '' };
+
+  openChangePasswordModal(): void {
+    this.passwordForm = { current: '', next: '', confirm: '' };
+    this.passwordError = '';
+    this.isChangePasswordModalOpen = true;
+  }
+
+  closeChangePasswordModal(): void {
+    this.isChangePasswordModalOpen = false;
+  }
+
+  submitChangePassword(): void {
+    const { current, next, confirm } = this.passwordForm;
+    if (!current || !next) {
+      this.passwordError = 'Escribe tu contraseña actual y la nueva.';
+      return;
+    }
+    if (next.length < 8) {
+      this.passwordError = 'La nueva contraseña debe tener al menos 8 caracteres.';
+      return;
+    }
+    if (next !== confirm) {
+      this.passwordError = 'Las contraseñas no coinciden.';
+      return;
+    }
+    this.passwordError = '';
+    this.isSavingPassword = true;
+    this.api
+      .changePassword(String(this.currentUser?.userId ?? ''), { currentPassword: current, newPassword: next })
+      .pipe(finalize(() => { this.isSavingPassword = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: () => {
+          this.closeChangePasswordModal();
+          this.showSnackbar('Contraseña actualizada. Te llegará un correo de confirmación.');
+        },
+        error: (error: unknown) => {
+          this.passwordError = this.resolveUiErrorMessage(error, 'No se pudo cambiar la contraseña.');
+        }
+      });
+  }
+
+  addOrderNote(order: AdminOrder): void {
+    const text = (this.orderNoteDrafts[order.id] || '').trim();
+    if (!text) {
+      return;
+    }
+    this.adminControl.addOrderNote(order.id, text).subscribe({
+      next: (guardado) => {
+        this.orderNoteDrafts[order.id] = '';
+        const total = guardado?.adminNotes?.length ?? 0;
+        this.showSnackbar(`Nota guardada: el pedido ${guardado?.id || order.id} tiene ${total} nota${total === 1 ? '' : 's'} interna${total === 1 ? '' : 's'}.`);
+        this.requestViewUpdate();
+      },
+      error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la nota.'), 'error')
+    });
+  }
+
+  canCancelOrder(order: AdminOrder): boolean {
+    return (order.status === 'pending' || order.status === 'paid') && this.hasPermission('order_mark_paid');
+  }
+
+  cancelOrderFromAdmin(order: AdminOrder): void {
+    if (!this.canCancelOrder(order) || this.updatingOrderIds.has(order.id)) {
+      return;
+    }
+    const aviso = order.status === 'paid'
+      ? `El pedido ya está pagado: quedará cancelado con el pago pendiente de reembolso (${this.formatMoney(order.total)}) y se le avisará al cliente por correo.`
+      : 'Este pedido no se ha pagado: quedará cancelado y se le avisará al cliente por correo.';
+    // Antes era un prompt del navegador sin efecto escrito (Sofía).
+    this.abrirConfirmacion({
+      title: `Cancelar el pedido ${order.id} de ${order.customer}`,
+      effect: `${aviso} El motivo queda en el pedido y en el aviso al cliente.`,
+      requireReason: true,
+      reasonLabel: 'Motivo de la cancelación',
+      confirmLabel: 'Cancelar el pedido',
+      danger: true,
+      ejecutar: (motivo) => {
+        this.updatingOrderIds.add(order.id);
+        this.adminControl
+          .cancelOrder(order.id, motivo || 'admin_request')
+          .pipe(
+            finalize(() => {
+              this.updatingOrderIds.delete(order.id);
+              this.requestViewUpdate();
+            })
+          )
+          .subscribe({
+            next: (respuesta) => {
+              // Lo que quedó guardado, leído de la respuesta (no del formulario).
+              const estado = this.orderStatusLabel((respuesta?.status || 'cancelled') as AdminOrder['status']);
+              const reembolso = respuesta?.pendingRefund ? ' Queda un reembolso pendiente: hazlo desde "Reembolsar".' : ' No hay reembolso pendiente.';
+              this.confirmacionLista(`El servidor dejó el pedido ${respuesta?.orderId || order.id} en estado "${estado}".${reembolso}`, 'Pedido cancelado');
+              this.showSnackbar(`Pedido ${respuesta?.orderId || order.id}: ahora está ${estado}.`);
+            },
+            error: (error: unknown) => {
+              this.confirmacionFallo(this.resolveUiErrorMessage(error, 'No se pudo cancelar el pedido.'));
+            }
+          });
+      }
+    });
+  }
+
   openShippingModal(order: AdminOrder): void {
     this.shippingTargetOrder = order;
+    this.shippingCarrierDraft = order.shippingCarrier || 'Estafeta';
     this.shippingType = 'carrier';
     this.shippingTrackingNumber = '';
     this.shippingDeliveryPlace = '';
     this.shippingDeliveryDate = '';
     this.shippingStockId = order.stockId ?? this.selectedStockId;
+    // Los almacenes solo se cargaban al entrar en Stocks: desde Pedidos el
+    // desplegable "Stock origen" salía vacío y el operador tenía que
+    // adivinar que había que visitar otra sección primero.
+    if (!this.stocks.length) {
+      this.loadStocksAndPosState();
+    }
     this.shippingFallbackProductId = this.products[0]?.id ?? null;
     this.shippingFallbackQty = 1;
     this.shippingError = '';
@@ -3156,6 +4616,7 @@ export class AdminComponent implements OnInit {
       status: 'shipped' as const,
       shippingType: this.shippingType,
       trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
+      shippingCarrier: this.shippingType === 'carrier' ? (this.shippingCarrierDraft || undefined) : undefined,
       deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
       deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined,
       stockId: this.shippingStockId,
@@ -3171,9 +4632,9 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (guardado) => {
           this.closeShippingModal();
-          this.showSnackbar('Envio registrado.');
+          this.showSnackbar(this.resumenEnvioGuardado(guardado, orderId));
         },
         error: (error: unknown) => {
           this.shippingError = this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.');
@@ -3215,6 +4676,7 @@ export class AdminComponent implements OnInit {
       status: 'shipped' as const,
       shippingType: this.shippingType,
       trackingNumber: this.shippingType === 'carrier' ? this.shippingTrackingNumber.trim() : undefined,
+      shippingCarrier: this.shippingType === 'carrier' ? (this.shippingCarrierDraft || undefined) : undefined,
       deliveryPlace: this.shippingType === 'personal' ? this.shippingDeliveryPlace.trim() : undefined,
       deliveryDate: this.shippingType === 'personal' ? this.shippingDeliveryDate.trim() : undefined,
       stockId: this.shippingStockId,
@@ -3233,10 +4695,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (guardado) => {
           this.closeShippingModal();
           this.requestViewUpdate();
-          this.showSnackbar('Envio registrado.');
+          this.showSnackbar(this.resumenEnvioGuardado(guardado, orderId));
         },
         error: (error: unknown) => {
           this.setShippingError(this.resolveUiErrorMessage(error, 'No se pudo actualizar el envio.'));
@@ -3246,6 +4708,21 @@ export class AdminComponent implements OnInit {
 
   isUpdatingOrder(orderId: string): boolean {
     return this.updatingOrderIds.has(orderId);
+  }
+
+  /** Etiqueta legible de un estado de pedido, para avisos y botones. */
+  orderStatusLabel(status: AdminOrder['status']): string {
+    return this.orderStatusOptionsValue.find((o) => o.value === status)?.label ?? String(status);
+  }
+
+  /** Nombra el paso concreto que dará el botón, en vez de "Cambiar estado". */
+  advanceOrderLabel(order: AdminOrder): string {
+    switch (order.status) {
+      case 'pending': return 'Marcar como pagado';
+      case 'paid': return 'Registrar envío';
+      case 'shipped': return 'Marcar como entregado';
+      default: return 'Cambiar estado';
+    }
   }
 
   canAdvanceOrder(order: AdminOrder): boolean {
@@ -3309,6 +4786,27 @@ export class AdminComponent implements OnInit {
     this.posPaymentTargetOrder = null;
     this.posPaymentMethod = 'cash';
     this.posPaymentError = '';
+    this.pickupCashReceived = '';
+  }
+
+  /** Efectivo que entregó el cliente al recoger; la cajera lo calculaba de cabeza. */
+  pickupCashReceived = '';
+
+  get pickupCashReceivedNumber(): number {
+    const n = Number(String(this.pickupCashReceived).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  get pickupChangeDue(): number {
+    const total = this.posPaymentTargetOrder?.total ?? 0;
+    if (this.posPaymentMethod !== 'cash' || !this.pickupCashReceived) return 0;
+    return this.roundMoney(Math.max(0, this.pickupCashReceivedNumber - total));
+  }
+
+  get pickupCashShortfall(): number {
+    const total = this.posPaymentTargetOrder?.total ?? 0;
+    if (this.posPaymentMethod !== 'cash' || !this.pickupCashReceived) return 0;
+    return this.roundMoney(Math.max(0, total - this.pickupCashReceivedNumber));
   }
 
   confirmReceivePickupPayment(): void {
@@ -3316,11 +4814,20 @@ export class AdminComponent implements OnInit {
     if (!order || !this.canReceivePickupPayment(order) || this.isSubmittingPosPayment) {
       return;
     }
+    if (this.posPaymentMethod === 'cash' && this.pickupCashReceived && this.pickupCashShortfall > 0) {
+      this.posPaymentError = `Faltan ${this.formatMoney(this.pickupCashShortfall)}: el efectivo recibido es menor al total.`;
+      return;
+    }
     this.isSubmittingPosPayment = true;
     this.posPaymentError = '';
     this.updatingOrderIds.add(order.id);
+    const changeDue = this.pickupChangeDue;
     this.adminControl
-      .updateOrderStatus(order.id, { status: 'paid', paymentMethod: this.posPaymentMethod })
+      .updateOrderStatus(order.id, {
+        status: 'paid',
+        paymentMethod: this.posPaymentMethod,
+        cashReceived: this.posPaymentMethod === 'cash' && this.pickupCashReceivedNumber > 0 ? this.pickupCashReceivedNumber : undefined
+      })
       .pipe(
         finalize(() => {
           this.isSubmittingPosPayment = false;
@@ -3332,7 +4839,7 @@ export class AdminComponent implements OnInit {
         next: () => {
           const successMessage =
             this.posPaymentMethod === 'cash'
-              ? 'Pago recibido y registrado en caja.'
+              ? (changeDue > 0 ? `Pago recibido y registrado en caja. Cambio a entregar: ${this.formatMoney(changeDue)}.` : 'Pago recibido y registrado en caja.')
               : 'Pago recibido correctamente.';
           this.closeReceivePickupPaymentModal();
           this.showSnackbar(successMessage);
@@ -3361,7 +4868,7 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => this.showSnackbar('Orden entregada en sucursal.'),
+        next: (guardado) => this.showSnackbar(`Pedido ${guardado?.id || order.id}: el servidor lo dejó ${this.orderStatusLabel(guardado?.status || 'delivered')}.`),
         error: (error: unknown) => {
           this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo registrar la entrega.'), 'error');
         }
@@ -3370,11 +4877,71 @@ export class AdminComponent implements OnInit {
 
   // ── Refund modal ──────────────────────────────────────────────────────────
 
+  refundAmount = '';
+
+  /** Monto sugerido: el calculado por líneas en la solicitud (productos con descuento + envíos según el motivo);
+   *  si la solicitud es anterior a esa regla, la de la ronda 4 (en arrepentimiento no se devuelve el envío). */
+  private suggestedRefundFor(o: AdminOrder): number {
+    const porLineas = o.returnInspection?.refundSuggested;
+    if (porLineas != null && Number.isFinite(Number(porLineas))) {
+      return this.roundMoney(Math.max(0, Number(porLineas)));
+    }
+    const arrepentimiento = (o.returnInspection?.motivo || '').toUpperCase() === 'DESISTIMIENTO';
+    const base = arrepentimiento ? (o.total || 0) - (o.shippingCost || 0) : (o.total || 0) + (o.returnShippingCost || 0);
+    return this.roundMoney(Math.max(0, base));
+  }
+
+  /** Desglose del sugerido por líneas, para mostrarlo en el modal (paquete G). */
+  get refundBreakdown(): { products: number; returnShipping: number; originalShipping: number } | null {
+    const b = this.refundTargetOrder?.returnInspection?.refundBreakdown;
+    if (!b) return null;
+    return { products: Number(b.products ?? 0), returnShipping: Number(b.returnShipping ?? 0), originalShipping: Number(b.originalShipping ?? 0) };
+  }
+
+  get refundReturnedLines(): Array<{ name: string; quantity: number; unitNet?: number }> {
+    return this.refundTargetOrder?.returnInspection?.lines ?? [];
+  }
+
+  /** Importe escrito en el modal, como número (NaN si no es válido). */
+  get refundAmountNumber(): number {
+    return Number(String(this.refundAmount).replace(/[^0-9.]/g, ''));
+  }
+
+  /** Apartarse del sugerido por líneas exige motivo (la clienta lo verá en su página). */
+  get refundNeedsAdjustmentReason(): boolean {
+    const o = this.refundTargetOrder;
+    if (!o || o.returnInspection?.refundSuggested == null) return false;
+    const importe = this.refundAmountNumber;
+    return Number.isFinite(importe) && this.roundMoney(importe) !== this.refundSuggestedAmount;
+  }
+
+  get refundSuggestedAmount(): number {
+    const o = this.refundTargetOrder;
+    return o ? this.suggestedRefundFor(o) : 0;
+  }
+
+  get refundSuggestedHint(): string {
+    const o = this.refundTargetOrder;
+    if (!o) return '';
+    if (o.returnInspection?.refundSuggested != null) {
+      return o.returnInspection.partial
+        ? 'Calculado por las líneas que devolvió, con su descuento. Si cambias el importe, escribe por qué.'
+        : 'Calculado por el pedido completo, con su descuento. Si cambias el importe, escribe por qué.';
+    }
+    return (o.returnInspection?.motivo || '').toUpperCase() === 'DESISTIMIENTO'
+      ? 'Arrepentimiento: se sugiere solo el producto; el envío no se reembolsa.'
+      : 'Se sugiere el total cobrado más el envío de regreso si el cliente lo pagó.';
+  }
+
+  refundAdjustmentReason = '';
+
   openRefundModal(order: AdminOrder): void {
     this.refundTargetOrder = order;
+    this.refundAmount = String(this.suggestedRefundFor(order));
     this.refundReceiptBase64 = '';
     this.refundReceiptName = '';
     this.refundReason = '';
+    this.refundAdjustmentReason = '';
     this.refundError = '';
     this.isRefundModalOpen = true;
   }
@@ -3407,19 +4974,34 @@ export class AdminComponent implements OnInit {
     this.refundError = '';
     this.isSavingRefund = true;
     const orderId = this.refundTargetOrder.id;
+    const importe = this.refundAmountNumber;
+    if (!Number.isFinite(importe) || importe < 0) {
+      this.isSavingRefund = false;
+      this.refundError = 'Escribe un importe válido.';
+      return;
+    }
+    if (this.refundNeedsAdjustmentReason && !this.refundAdjustmentReason.trim()) {
+      this.isSavingRefund = false;
+      this.refundError = `El importe (${this.formatMoney(importe)}) es distinto al sugerido (${this.formatMoney(this.refundSuggestedAmount)}). Escribe el motivo del ajuste: el cliente lo verá.`;
+      return;
+    }
     const payload: AdminRefundPayload = {
       reason: this.refundReason || 'refund',
+      amount: importe,
       receiptBase64: this.refundReceiptBase64,
       receiptName: this.refundReceiptName || 'comprobante.jpg',
       receiptContentType: this.refundReceiptName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+      adjustmentReason: this.refundNeedsAdjustmentReason ? this.refundAdjustmentReason.trim() : undefined,
     };
     this.api.refundOrder(orderId, payload).pipe(
       finalize(() => { this.isSavingRefund = false; this.requestViewUpdate(); })
     ).subscribe({
-      next: () => {
+      next: (res) => {
         this.closeRefundModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar('Reembolso registrado correctamente.');
+        // La confirmación dice lo que quedó guardado (respuesta del servidor), no lo del formulario.
+        const monto = res?.refundAmount != null ? this.formatMoney(Number(res.refundAmount)) : this.formatMoney(importe);
+        this.showSnackbar(`Reembolso de ${monto} registrado para el pedido ${res?.orderId || orderId}; se avisó al cliente por correo.`);
       },
       error: (err: unknown) => {
         this.refundError = this.resolveUiErrorMessage(err, 'No se pudo registrar el reembolso.');
@@ -3433,7 +5015,49 @@ export class AdminComponent implements OnInit {
     this.receiveReturnOrder = order;
     this.receiveReturnImages = [];
     this.receiveReturnError = '';
+    this.receiveReturnChecklist = { ...RECEIVE_RETURN_CHECKLIST_DEFAULT };
+    this.receiveReturnNotes = '';
+    const coincidencias: Record<string, boolean> = {};
+    for (const l of order.returnInspection?.lines ?? []) { coincidencias[String(l.productId)] = true; }
+    this.receiveReturnLineMatches = coincidencias;
     this.isReceiveReturnModalOpen = true;
+  }
+
+  /** Líneas que la clienta dijo que devolvía (paquete G); la bodega marca si cada una coincide. */
+  receiveReturnLineMatches: Record<string, boolean> = {};
+
+  get receiveReturnLines(): Array<{ productId: number | string; name: string; quantity: number; unitNet?: number }> {
+    return this.receiveReturnOrder?.returnInspection?.lines ?? [];
+  }
+
+  toggleReceiveReturnLine(productId: number | string, value: boolean): void {
+    this.receiveReturnLineMatches = { ...this.receiveReturnLineMatches, [String(productId)]: value };
+  }
+
+  get receiveReturnAllLinesMatch(): boolean {
+    return this.receiveReturnLines.every((l) => this.receiveReturnLineMatches[String(l.productId)] !== false);
+  }
+
+  /** Checklist de inspección (reglas 3.2 y 5): antes se mandaba todo en verde y recibir era aprobar. */
+  receiveReturnChecklist: Record<ReceiveReturnCheck, boolean> = { ...RECEIVE_RETURN_CHECKLIST_DEFAULT };
+  receiveReturnNotes = '';
+  readonly receiveReturnChecks: Array<{ key: ReceiveReturnCheck; label: string; hint: string }> = [
+    { key: 'coincide_con_pedido', label: 'Lo recibido coincide con el pedido', hint: 'Producto y cantidad que reportó el cliente.' },
+    { key: 'trazabilidad_valida', label: 'Trae folio o guía identificable', hint: 'Folio RET en el paquete o guía de retorno.' },
+    { key: 'empaque_original', label: 'Empaque original', hint: 'Caja o bote original, aunque venga golpeado.' },
+    { key: 'sellos_intactos', label: 'Sello de seguridad intacto', hint: 'Si el sello ya estaba abierto, la devolución no procede.' },
+    { key: 'sin_uso', label: 'Sin señales de uso', hint: 'Contenido completo, sin consumo.' },
+    { key: 'danio_no_empresa', label: 'El daño lo causó el cliente o la paquetería', hint: 'Márcalo solo si el daño no es de fábrica ni de nuestro empaque.' }
+  ];
+
+  toggleReceiveReturnCheck(key: ReceiveReturnCheck, value: boolean): void {
+    this.receiveReturnChecklist = { ...this.receiveReturnChecklist, [key]: value };
+  }
+
+  get receiveReturnWouldApprove(): boolean {
+    const c = this.receiveReturnChecklist;
+    const coincide = this.receiveReturnLines.length ? this.receiveReturnAllLinesMatch : c.coincide_con_pedido;
+    return coincide && c.trazabilidad_valida && c.empaque_original && c.sellos_intactos && c.sin_uso && !c.danio_no_empresa;
   }
 
   closeReceiveReturnModal(): void {
@@ -3472,25 +5096,39 @@ export class AdminComponent implements OnInit {
     this.receiveReturnError = '';
     this.isSavingReceiveReturn = true;
     const orderId = this.receiveReturnOrder.id;
+    const c = this.receiveReturnChecklist;
+    const aprobada = this.receiveReturnWouldApprove;
     const payload: AdminReturnInspectPayload = {
       inspection: {
-        empaque_original: true,
-        sellos_intactos: true,
-        sin_uso: true,
-        producto_abierto: false,
-        danio_no_empresa: false,
-        coincide_con_pedido: true,
-        trazabilidad_valida: true,
+        empaque_original: c.empaque_original,
+        sellos_intactos: c.sellos_intactos,
+        sin_uso: c.sin_uso,
+        producto_abierto: !c.sellos_intactos,
+        danio_no_empresa: c.danio_no_empresa,
+        coincide_con_pedido: this.receiveReturnLines.length ? this.receiveReturnAllLinesMatch : c.coincide_con_pedido,
+        trazabilidad_valida: c.trazabilidad_valida,
       },
       packageImages: this.receiveReturnImages,
+      notes: this.receiveReturnNotes.trim() || undefined,
+      rejectionReason: aprobada ? undefined : (this.receiveReturnNotes.trim() || (this.receiveReturnLines.length && !this.receiveReturnAllLinesMatch ? 'Lo recibido no coincide con lo que se declaró devolver' : 'No pasó la inspección física del paquete')),
+      lines: this.receiveReturnLines.length
+        ? this.receiveReturnLines.map((l) => ({ productId: l.productId, quantity: l.quantity, matches: this.receiveReturnLineMatches[String(l.productId)] !== false }))
+        : undefined,
     };
     this.api.inspectReturn(orderId, payload).pipe(
       finalize(() => { this.isSavingReceiveReturn = false; this.requestViewUpdate(); })
     ).subscribe({
-      next: () => {
+      next: (res) => {
         this.closeReceiveReturnModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar('Paquete recibido. Devolución validada.');
+        // Confirmación con lo guardado: folio, resultado y reembolso sugerido que devuelve el servidor.
+        const folio = res?.requestId ? ` ${res.requestId}` : '';
+        if (res?.approved ?? aprobada) {
+          const sugerido = res?.refundSuggested != null ? ` Reembolso sugerido: ${this.formatMoney(Number(res.refundSuggested))}.` : '';
+          this.showSnackbar(`Paquete recibido. Devolución${folio} validada.${sugerido}`);
+        } else {
+          this.showSnackbar(`Paquete recibido. Devolución${folio} rechazada por la inspección; se avisó al cliente.`);
+        }
       },
       error: (err: unknown) => {
         this.receiveReturnError = this.resolveUiErrorMessage(err, 'No se pudo registrar la recepción del paquete.');
@@ -3503,6 +5141,7 @@ export class AdminComponent implements OnInit {
   openRejectReturnModal(order: AdminOrder): void {
     this.rejectReturnOrder = order;
     this.rejectReturnReason = '';
+    this.rejectReturnCourtesy = '';
     this.rejectReturnError = '';
     this.isRejectReturnModalOpen = true;
   }
@@ -3511,6 +5150,9 @@ export class AdminComponent implements OnInit {
     this.isRejectReturnModalOpen = false;
     this.rejectReturnOrder = null;
   }
+
+  /** Cortesía al rechazar: % en la próxima compra, emitido como cupón personal (antes solo se prometía en el texto). */
+  rejectReturnCourtesy = '';
 
   confirmRejectReturn(): void {
     if (!this.rejectReturnOrder) return;
@@ -3532,14 +5174,16 @@ export class AdminComponent implements OnInit {
         trazabilidad_valida: true,
       },
       rejectionReason: this.rejectReturnReason.trim(),
+      courtesyPercent: Number(this.rejectReturnCourtesy) > 0 ? Math.min(100, Math.floor(Number(this.rejectReturnCourtesy))) : undefined,
     };
     this.api.inspectReturn(orderId, payload).pipe(
       finalize(() => { this.isSavingRejectReturn = false; this.requestViewUpdate(); })
     ).subscribe({
-      next: () => {
+      next: (res) => {
         this.closeRejectReturnModal();
         this.adminControl.loadOrders().subscribe();
-        this.showSnackbar('Devolución rechazada.');
+        const cortesia = payload.courtesyPercent ? ` con ${payload.courtesyPercent}% de cortesía` : '';
+        this.showSnackbar(`Devolución ${res?.requestId || orderId} rechazada; se avisó al cliente${cortesia}.`);
       },
       error: (err: unknown) => {
         this.rejectReturnError = this.resolveUiErrorMessage(err, 'No se pudo rechazar la devolución.');
@@ -3632,9 +5276,9 @@ export class AdminComponent implements OnInit {
     this.adminControl
       .createOrder(payload)
       .pipe(
-        switchMap(() => {
+        switchMap((creado) => {
           console.log('[Admin] saveNewOrder() createOrder next -> load()');
-          return this.adminControl.load();
+          return this.adminControl.load().pipe(map(() => creado));
         }),
         finalize(() => {
           console.log('[Admin] saveNewOrder() finalize');
@@ -3642,9 +5286,10 @@ export class AdminComponent implements OnInit {
         })
       )
       .subscribe({
-        next: () => {
+        next: (creado) => {
           console.log('[Admin] saveNewOrder() load next -> closeModals()');
           this.closeModals();
+          this.showSnackbar(`Pedido ${creado?.id} creado para ${creado?.customer || customer.name}: ${this.orderStatusLabel(creado?.status || this.newOrderStatus)} por ${this.formatMoney(creado?.total ?? 0)}.`);
         },
         error: () => {
           console.log('[Admin] saveNewOrder() error -> closeModals()');
@@ -3738,11 +5383,11 @@ export class AdminComponent implements OnInit {
     };
     this.isSavingStructure = true;
     this.adminControl.createStructureCustomer(payload).subscribe({
-      next: () => {
+      next: (creado) => {
         this.isSavingStructure = false;
         this.adminControl.load().subscribe();
         this.closeModals();
-        this.showSnackbar('Miembro creado.');
+        this.showSnackbar(`Miembro creado: ${creado?.name || fullName} (ficha ${creado?.id}).`);
       },
       error: () => {
         this.isSavingStructure = false;
@@ -3770,7 +5415,7 @@ export class AdminComponent implements OnInit {
         this.isSavingPosCustomer = false;
         this.closePosCustomerModal();
         this.selectPosCustomerRecommendation(customer.id);
-        this.showSnackbar('Cliente creado y seleccionado en POS.');
+        this.showSnackbar(`Cliente ${customer?.name} creado (ficha ${customer?.id}) y seleccionado en la venta.`);
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.isSavingPosCustomer = false;
@@ -3782,6 +5427,7 @@ export class AdminComponent implements OnInit {
   selectCustomer(customerId: number): void {
     const selected = this.customers.find((customer) => customer.id === customerId) ?? null;
     this.selectedCustomer = selected;
+    this.customerEmailDraft = selected?.email && !selected.email.endsWith('@anonimizado.local') ? selected.email : '';
     this.isChangingSponsor = false;
     this.syncSelectedCustomerAccessDraft();
     this.resetCustomerDocumentDraft();
@@ -3917,6 +5563,185 @@ export class AdminComponent implements OnInit {
     this.refreshSelectedCustomerSponsorState();
   }
 
+  customerNoteDraft = '';
+  customerEmailDraft = '';
+  isSavingCustomerFollowUp = false;
+  readonly customerOriginOptions = [
+    { value: '', label: 'Sin registrar' },
+    { value: 'organico', label: 'Búsqueda orgánica' },
+    { value: 'referido', label: 'Referido por un socio' },
+    { value: 'red_social', label: 'Red social de un socio (TikTok, Instagram, YouTube)' },
+    { value: 'anuncio_google', label: 'Anuncio en Google' },
+    { value: 'anuncio_facebook', label: 'Anuncio en Facebook' },
+    { value: 'anuncio_instagram', label: 'Anuncio en Instagram' },
+    { value: 'anuncio_youtube', label: 'Anuncio en YouTube' },
+    { value: 'tienda_fisica', label: 'Tienda física' }
+  ];
+
+  /**
+   * Paquete A · propuesta 1, montado en la integración.
+   *
+   * El formulario ya no vive aquí: lo guarda `ui-clabe-form` (el mismo del
+   * panel y del perfil) y esto solo refresca la ficha abierta con lo que el
+   * servidor confirmó, para que "No se puede depositar" desaparezca sin
+   * recargar la pantalla.
+   */
+  onClabeGuardadaDesdeFicha(customer: AdminCustomer | null | undefined,
+                            evento: { clabeLast4: string; bankInstitution: string; removed: boolean }): void {
+    if (!customer) {
+      return;
+    }
+    const patch = {
+      clabeInterbancaria: evento.removed ? '' : `********${evento.clabeLast4}`,
+      clabeLast4: evento.removed ? '' : evento.clabeLast4,
+      bankInstitution: evento.bankInstitution || ''
+    };
+    this.adminControl.patchCustomer(customer.id, patch);
+    if (this.selectedCustomer?.id === customer.id) {
+      this.selectedCustomer = { ...this.selectedCustomer, ...patch };
+    }
+    this.showSnackbar(evento.removed
+      ? `Se quitó la CLABE de ${customer.name}.`
+      : `CLABE guardada (termina en ${evento.clabeLast4}). Ya puedes registrar el depósito de ${customer.name}.`);
+    this.requestViewUpdate();
+  }
+
+  // ── Paquete G · ronda 26 · propuesta 25: un solo vocabulario ──────────────
+  // Julio contó cuatro nombres para el mismo estado en cuatro pantallas y el
+  // cuarto era `paid` crudo, en inglés, aquí en Estadísticas. Alma se topó con
+  // `mixed`, también en inglés, en el número que venía a cuadrar.
+
+  /** Estado del pedido en español, con el matiz de recolección si aplica. */
+  estadoTexto(status?: string | null, deliveryType?: string | null): string {
+    return textoEstadoPedido(status, deliveryType) || '—';
+  }
+
+  /** Método de pago en español; `mixed` con su desglose cuando se conoce. */
+  metodoPagoTexto(method?: string | null, efectivo?: number | null, noEfectivo?: number | null): string {
+    return textoMetodoPago(method, efectivo, noEfectivo) || '—';
+  }
+
+  /** «2 de marzo de 2027, 11:18»: nunca un ISO crudo. */
+  fechaTexto(value?: string | null): string {
+    return fechaEnLetras(value ?? '');
+  }
+
+  /** Nombre de quien escribió la nota; el id solo si no hay nada mejor. */
+  noteAuthor(note: { by?: string; byName?: string }): string {
+    if (note.byName?.trim()) {
+      return note.byName.trim();
+    }
+    const id = Number(note.by);
+    return Number.isFinite(id) && id > 0 ? this.employeeName(id) : (note.by || 'sistema');
+  }
+
+  private saveCustomerFollowUp(customer: AdminCustomer, payload: UpdateCustomerPayload, ok: string): void {
+    this.isSavingCustomerFollowUp = true;
+    this.adminControl
+      .updateCustomer(customer.id, payload)
+      .pipe(finalize(() => { this.isSavingCustomerFollowUp = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+          this.showSnackbar(ok);
+        },
+        error: (error: unknown) => this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar el seguimiento.'), 'error')
+      });
+  }
+
+  toggleDoNotContact(customer: AdminCustomer): void {
+    const next = !customer.doNotContact;
+    this.saveCustomerFollowUp(customer, { doNotContact: next }, next ? 'Marcado como "no contactar".' : 'Se puede volver a contactar.');
+  }
+
+  saveCustomerOrigin(customer: AdminCustomer, origin: string): void {
+    if ((customer.origin || '') === (origin || '')) {
+      return;
+    }
+    this.saveCustomerFollowUp(customer, { origin }, 'Origen guardado.');
+  }
+
+  /** Deshacer un pago de comisiones registrado por error (se marcó "Pagada" sin CLABE). */
+  revertCommissionPayment(customer: AdminCustomer): void {
+    const mes = customer.commissionsPrevMonthKey;
+    if (!mes || !this.hasPermission('commissions_register_payment')) return;
+    this.abrirConfirmacion({
+      title: `Deshacer el pago de ${mes} de ${customer.name}`,
+      effect: 'El mes vuelve a "pendiente de depósito" y el comprobante queda anulado (se conserva con el motivo). Si el dinero ya salió del banco, tendrás que registrar el pago otra vez con el comprobante correcto.',
+      requireReason: true,
+      reasonLabel: 'Motivo de la reversa',
+      confirmLabel: 'Deshacer el pago',
+      danger: true,
+      ejecutar: (motivo) => {
+        this.adminControl.revertCommissionPayment(customer.id, mes, motivo).subscribe({
+          next: (respuesta) => {
+            const r = respuesta as { status?: string; receiptsVoided?: number; monthKey?: string };
+            const comprobantes = Number(r?.receiptsVoided ?? 0);
+            this.confirmacionLista(
+              `El servidor dejó el mes ${r?.monthKey || mes} en estado "${r?.status === 'pending' ? 'pendiente de depósito' : r?.status || 'pendiente'}" y anuló ${comprobantes} comprobante${comprobantes === 1 ? '' : 's'}.`,
+              'Pago deshecho'
+            );
+            this.showSnackbar(`Pago de ${r?.monthKey || mes} deshecho: el mes volvió a pendiente de depósito.`);
+            this.adminControl.loadCustomers().subscribe(() => {
+              this.selectedCustomer = this.customers.find((c) => c.id === customer.id) ?? this.selectedCustomer;
+              this.requestViewUpdate();
+            });
+          },
+          error: (err: unknown) => this.confirmacionFallo(this.resolveUiErrorMessage(err, 'No se pudo deshacer el pago.'))
+        });
+      }
+    });
+  }
+
+  saveCustomerEmail(customer: AdminCustomer): void {
+    const email = this.customerEmailDraft.trim().toLowerCase();
+    if (!email || email === (customer.email || '').toLowerCase()) {
+      return;
+    }
+    this.saveCustomerFollowUp(customer, { email }, 'Correo guardado. Si no tenía acceso, ya se le envió su contraseña temporal.');
+  }
+
+  addCustomerNote(customer: AdminCustomer): void {
+    const note = this.customerNoteDraft.trim();
+    if (!note) {
+      return;
+    }
+    this.customerNoteDraft = '';
+    this.saveCustomerFollowUp(customer, { note }, 'Nota agregada.');
+  }
+
+  deleteCustomerData(customer: AdminCustomer): void {
+    if (!this.hasPermission('user_manage_privileges') || this.isSavingCustomerFollowUp) {
+      return;
+    }
+    this.abrirConfirmacion({
+      title: `Baja de datos de ${customer.name}`,
+      effect: 'Se borran nombre, correo, teléfono, direcciones, documentos, CLABE y acceso; queda marcado "no contactar" y se le manda un correo de confirmación antes de perder la dirección. Sus pedidos y comisiones se conservan sin datos que lo identifiquen. No se puede deshacer.',
+      requireReason: true,
+      reasonLabel: 'Motivo de la baja (queda en la bitácora)',
+      confirmLabel: 'Dar de baja los datos',
+      danger: true,
+      ejecutar: (motivo) => {
+        this.isSavingCustomerFollowUp = true;
+        this.adminControl
+          .deleteCustomerData(customer.id, motivo)
+          .pipe(finalize(() => { this.isSavingCustomerFollowUp = false; this.requestViewUpdate(); }))
+          .subscribe({
+            next: (updated) => {
+              this.selectedCustomer = { ...this.selectedCustomer, ...updated };
+              const cuando = updated?.deletedAt ? ` el ${this.formatDateTime(updated.deletedAt)}` : '';
+              this.confirmacionLista(
+                `El servidor guardó la ficha como "${updated?.name || 'Cliente eliminado'}"${cuando}, sin correo ni teléfono y marcada "no contactar". La confirmación se envió al correo anterior.`,
+                'Datos dados de baja'
+              );
+              this.showSnackbar(`Ficha ${updated?.name || 'Cliente eliminado'}: datos eliminados.`);
+            },
+            error: (error: unknown) => this.confirmacionFallo(this.resolveUiErrorMessage(error, 'No se pudo dar de baja.'))
+          });
+      }
+    });
+  }
+
   saveSelectedCustomerPosition(): void {
     if (!this.selectedCustomer || !this.canSaveSelectedCustomerPosition) {
       return;
@@ -3937,7 +5762,8 @@ export class AdminComponent implements OnInit {
           this.selectedCustomer = { ...this.selectedCustomer, ...updated };
           this.isChangingSponsor = false;
           this.syncSelectedCustomerAccessDraft();
-          this.showSnackbar('Posicion actualizada.');
+          const patrocinador = this.customers.find((c) => c.id === (updated?.leaderId ?? null));
+          this.showSnackbar(`Posición guardada: el patrocinador de ${updated?.name || this.selectedCustomer?.name} ahora es ${patrocinador?.name || 'nadie (sin patrocinador)'}.`);
         }
       });
   }
@@ -3972,9 +5798,104 @@ export class AdminComponent implements OnInit {
       });
   }
 
+  /** Mes consultado en el Cuadro de Honor (vacío = mes en curso). En diciembre no se podía ver el de noviembre. */
+  honorBoardMonth = '';
+
+  loadHonorBoard(month?: string): void {
+    if (month !== undefined) {
+      this.honorBoardMonth = month;
+    }
+    this.isLoadingHonorBoard = true;
+    this.api.getHonorBoard(this.honorBoardMonth || undefined).subscribe({
+      next: (board) => { this.honorBoardData = board; this.isLoadingHonorBoard = false; this.requestViewUpdate(); },
+      error: () => { this.isLoadingHonorBoard = false; this.requestViewUpdate(); }
+    });
+  }
+
+  isSavingEmployeeActive = false;
+
+  /** Desactivar o reactivar al empleado seleccionado (no se borra: se conserva su historial). */
+  toggleSelectedEmployeeActive(): void {
+    const emp = this.selectedEmployee;
+    if (!emp || this.isSavingEmployeeActive) return;
+    const next = !emp.active;
+    const guardar = (): void => {
+      this.isSavingEmployeeActive = true;
+      this.adminControl
+        .updateEmployee(emp.id, { active: next, canAccessAdmin: next })
+        .pipe(finalize(() => { this.isSavingEmployeeActive = false; this.requestViewUpdate(); }))
+        .subscribe({
+          next: (updated) => {
+            this.selectedEmployee = { ...emp, ...updated };
+            // El estado que se muestra es el que respondió el servidor, no el que se pidió.
+            const activo = updated?.active ?? next;
+            const texto = `El servidor dejó a ${updated?.name || emp.name} como ${activo ? 'activo (puede entrar al back office)' : 'inactivo (sin acceso al back office ni al POS)'}.`;
+            this.confirmacionLista(texto, activo ? 'Empleado reactivado' : 'Empleado desactivado');
+            this.showSnackbar(texto);
+          },
+          error: (error: unknown) => {
+            const mensaje = this.resolveUiErrorMessage(error, 'No se pudo cambiar el estado del empleado.');
+            this.confirmacionFallo(mensaje);
+            this.showSnackbar(mensaje, 'error');
+          }
+        });
+    };
+    if (next) {
+      guardar();
+      return;
+    }
+    // Antes era un confirm del navegador; ahora se lee el efecto antes de confirmar.
+    this.abrirConfirmacion({
+      title: `Desactivar a ${emp.name}`,
+      effect: 'Ya no podrá entrar al back office ni cobrar en el POS. No se borra: su historial de ventas y movimientos se conserva y puedes reactivarlo cuando quieras.',
+      requireReason: false,
+      confirmLabel: 'Desactivar',
+      danger: true,
+      ejecutar: () => guardar()
+    });
+  }
+
   selectEmployee(employeeId: number): void {
     this.selectedEmployee = this.employees.find((emp) => emp.id === employeeId) ?? null;
     this.syncSelectedEmployeePrivilegeDraft();
+    this.syncEmployeeContactDraft();
+  }
+
+  employeeNameDraft = '';
+  employeePhoneDraft = '';
+  isSavingEmployeeContact = false;
+
+  private syncEmployeeContactDraft(): void {
+    this.employeeNameDraft = this.selectedEmployee?.name ?? '';
+    this.employeePhoneDraft = this.selectedEmployee?.phone ?? '';
+  }
+
+  get employeeContactDirty(): boolean {
+    const emp = this.selectedEmployee;
+    if (!emp) return false;
+    return this.employeeNameDraft.trim() !== (emp.name ?? '') || this.employeePhoneDraft.trim() !== (emp.phone ?? '');
+  }
+
+  saveEmployeeContact(): void {
+    const emp = this.selectedEmployee;
+    if (!emp || this.isSavingEmployeeContact || !this.employeeContactDirty) return;
+    const name = this.employeeNameDraft.trim();
+    if (!name) {
+      this.showSnackbar('El nombre no puede quedar vacío.');
+      return;
+    }
+    this.isSavingEmployeeContact = true;
+    this.adminControl
+      .updateEmployee(emp.id, { name, phone: this.employeePhoneDraft.trim() })
+      .pipe(finalize(() => { this.isSavingEmployeeContact = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (updated) => {
+          this.selectedEmployee = { ...emp, ...updated };
+          this.syncEmployeeContactDraft();
+          this.showSnackbar(`Empleado guardado como "${updated?.name || emp.name}"${updated?.phone ? ` · tel. ${updated.phone}` : ''}.`);
+        },
+        error: () => this.showSnackbar('No se pudieron guardar los datos del empleado.')
+      });
   }
 
   updateSelectedEmployeeAdminAccess(enabled: boolean): void {
@@ -4025,6 +5946,7 @@ export class AdminComponent implements OnInit {
         name: this.employeeForm.name.trim(),
         email: this.employeeForm.email.trim(),
         phone: this.employeeForm.phone.trim() || undefined,
+        jobTitle: this.employeeForm.jobTitle.trim() || undefined,
         canAccessAdmin: true,
         privileges: normalizePrivileges(null)
       })
@@ -4035,7 +5957,7 @@ export class AdminComponent implements OnInit {
           this.employeeMessage = `Empleado creado: ${emp.name}.`;
           this.employeeMessageIsError = false;
           this.showSnackbar(`Empleado creado: ${emp.name}.`);
-          this.employeeForm = { name: '', email: '', phone: '' };
+          this.employeeForm = { name: '', email: '', phone: '', jobTitle: '' };
           this.selectedEmployee = emp;
           this.syncSelectedEmployeePrivilegeDraft();
           this.cdr.detectChanges();
@@ -4057,8 +5979,16 @@ export class AdminComponent implements OnInit {
     this.syncSelectedCustomerAccessDraft();
   }
 
+  isCustomerAccessOpen = false;
+
+  get selectedCustomerGrantedCount(): number {
+    return Object.values(this.selectedCustomerPrivilegeDraft ?? {}).filter(Boolean).length;
+  }
+
   private syncSelectedCustomerAccessDraft(): void {
     const selected = this.selectedCustomer;
+    this.selectedCustomerAdminAccess = Boolean(selected?.canAccessAdmin);
+    this.selectedCustomerPrivilegeDraft = { ...(selected?.privileges ?? {}) };
     this.selectedCustomerLeaderId = selected?.leaderId != null ? String(selected.leaderId) : '';
     if (selected?.leaderId != null) {
       const sponsor = this.customers.find((customer) => customer.id === selected.leaderId);
@@ -4889,12 +6819,23 @@ export class AdminComponent implements OnInit {
     const postalCode = this.stockForm.postalCode.trim();
     const isMainWarehouse = this.stockForm.isMainWarehouse;
     const allowPickup = this.stockForm.allowPickup;
-    this.adminControl.createStock({ name, location, postalCode: postalCode || undefined, isMainWarehouse, allowPickup }).subscribe({
+    // Paquete C: ciudad y estado del almacén (recoger en sucursal solo en tu zona).
+    const city = this.stockForm.city.trim();
+    const state = this.stockForm.state.trim();
+    if (allowPickup && (!city || !state)) {
+      this.showSnackbar('Para permitir recoger en esta sucursal escribe su ciudad y elige su estado: así solo se ofrece a clientes de esa zona.', 'error');
+      return;
+    }
+    const payload = { name, location, postalCode: postalCode || undefined, isMainWarehouse, allowPickup, city: city || undefined, state: state || undefined };
+    this.adminControl.createStock(payload).subscribe({
       next: (stock) => {
-        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false, allowPickup: false };
+        this.stockForm = { name: '', location: '', postalCode: '', isMainWarehouse: false, allowPickup: false, city: '', state: '' };
         this.selectedStockId = stock.id;
         this.loadStocksAndPosState();
-        this.showSnackbar(`Stock creado: ${stock.name}.`);
+        const zona = (stock as { city?: string; state?: string }).city
+          ? ` · ${(stock as { city?: string }).city}, ${(stock as { state?: string }).state ?? ''}`
+          : '';
+        this.showSnackbar(`Stock creado: ${stock.name}${zona}.`);
       }
     });
   }
@@ -4905,6 +6846,7 @@ export class AdminComponent implements OnInit {
     if (!selected) {
       return;
     }
+    this.stockUbicacionDraft = { city: selected.city ?? '', state: selected.state ?? '' }; // paquete C
     this.stockDamageForm.stockId = selected.id;
     this.stockEntryForm.stockId = selected.id;
     this.stockTransferForm.sourceStockId = this.stockTransferForm.sourceStockId || selected.id;
@@ -4984,11 +6926,15 @@ export class AdminComponent implements OnInit {
       note: note.trim() || undefined,
       userId: createdByUserId
     }).subscribe({
-      next: () => {
-        this.setStockFeedback('Entrada de inventario registrada.', 'success');
+      next: (respuesta) => {
+        const existencia = productId != null ? (respuesta?.stock?.inventory as Record<string, number> | undefined)?.[String(productId)] : undefined;
+        const texto = existencia != null
+          ? `Entrada registrada: ${this.productName(Number(productId))} ahora tiene ${existencia} en ${this.stockName(stockId)}.`
+          : 'Entrada de inventario registrada.';
+        this.setStockFeedback(texto, 'success');
         this.closeStockEntryModal();
         this.loadStocksAndPosState();
-        this.showSnackbar('Entrada de inventario registrada.');
+        this.showSnackbar(texto);
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.setStockFeedback(
@@ -5136,11 +7082,15 @@ export class AdminComponent implements OnInit {
     this.adminControl
       .createStockTransfer({ sourceStockId, destinationStockId, lines: normalizedLines, createdByUserId })
       .subscribe({
-        next: () => {
-          this.setStockFeedback('Transferencia creada.', 'success');
+        next: (respuesta) => {
+          const creada = respuesta?.transfer;
+          const texto = creada?.id
+            ? `Traspaso ${creada.id} creado (${creada.status === 'pending' ? 'pendiente de recibir' : creada.status}): ya salió de ${this.stockName(creada.sourceStockId)}.`
+            : 'Transferencia creada.';
+          this.setStockFeedback(texto, 'success');
           this.stockTransferForm.lines = [{ productId: this.products[0]?.id ?? null, qty: 1 }];
           this.loadStocksAndPosState();
-          this.showSnackbar('Transferencia creada.');
+          this.showSnackbar(texto);
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
           const msg = error?.error?.message || error?.message || 'No se pudo crear la transferencia.';
@@ -5168,20 +7118,106 @@ export class AdminComponent implements OnInit {
       return;
     }
 
+    // Cantidades reales en un modal (antes: un prompt por producto y "el clic
+    // en Recibir no hizo nada visible", Beto). El almacén contó 4 de 5 y solo
+    // podía confirmar 5 o nada.
     this.setStockFeedback('', '');
+    this.recepcionTraspaso = {
+      transfer,
+      lines: transfer.lines.map((line) => ({
+        productId: line.productId,
+        name: this.productName(line.productId),
+        sent: Number(line.qty || 0),
+        received: Number(line.qty || 0)
+      })),
+      busy: false,
+      error: '',
+      result: null
+    };
+  }
+
+  /** Modal de recepción de traspaso con cantidades reales (I1). */
+  recepcionTraspaso: { transfer: StockTransfer; lines: LineaRecepcion[]; busy: boolean; error: string; result: string | null } | null = null;
+
+  cerrarRecepcionTraspaso(): void {
+    if (this.recepcionTraspaso?.busy) {
+      return;
+    }
+    this.recepcionTraspaso = null;
+  }
+
+  actualizarCantidadRecibida(linea: LineaRecepcion, valor: unknown): void {
+    const n = Math.floor(Number(valor));
+    linea.received = Number.isFinite(n) ? Math.max(0, Math.min(linea.sent, n)) : 0;
+  }
+
+  get faltantesRecepcion(): LineaRecepcion[] {
+    return (this.recepcionTraspaso?.lines ?? []).filter((l) => l.received < l.sent);
+  }
+
+  /** Qué va a pasar al confirmar, con las mermas ya calculadas. */
+  get efectoRecepcionTraspaso(): string {
+    const r = this.recepcionTraspaso;
+    if (!r) {
+      return '';
+    }
+    const destino = this.stockName(r.transfer.destinationStockId);
+    const faltantes = this.faltantesRecepcion;
+    if (!faltantes.length) {
+      return `Las cantidades entran al inventario de ${destino} y el traspaso ${r.transfer.id} queda como "Recibida".`;
+    }
+    const detalle = faltantes.map((l) => `${l.sent - l.received} ${l.name}`).join(', ');
+    return `Entra al inventario de ${destino} solo lo que llegó. Faltan ${detalle}: se registran como merma en el origen (${this.stockName(r.transfer.sourceStockId)}) y quedan anotados en el traspaso.`;
+  }
+
+  get motivoBloqueoRecepcion(): string {
+    const r = this.recepcionTraspaso;
+    if (!r) {
+      return '';
+    }
+    if (r.busy) {
+      return 'Recibiendo…';
+    }
+    if (r.lines.some((l) => !Number.isFinite(l.received))) {
+      return 'Escribe una cantidad válida en cada producto.';
+    }
+    if (!this.transferReceiverUserId) {
+      return 'Elige quién recibe el traspaso.';
+    }
+    return '';
+  }
+
+  confirmarRecepcionTraspaso(): void {
+    const r = this.recepcionTraspaso;
+    if (!r || this.motivoBloqueoRecepcion) {
+      return;
+    }
+    const received: Record<string, number> = {};
+    for (const linea of r.lines) {
+      received[String(linea.productId)] = linea.received;
+    }
+    const faltantes = this.faltantesRecepcion.length;
+    r.busy = true;
+    r.error = '';
     this.adminControl
-      .receiveStockTransfer(transferId, { receivedByUserId: this.transferReceiverUserId })
+      .receiveStockTransfer(r.transfer.id, { receivedByUserId: this.transferReceiverUserId, received })
+      .pipe(finalize(() => { r.busy = false; this.requestViewUpdate(); }))
       .subscribe({
-        next: () => {
-          this.setStockFeedback('Transferencia recibida.', 'success');
+        next: (respuesta) => {
+          const guardado = respuesta?.transfer;
+          const discrepancias = (respuesta as { discrepancies?: Array<{ productId: string; missing: number }> })?.discrepancies ?? [];
+          const estado = guardado?.status === 'received' ? 'Recibida' : String(guardado?.status || 'Recibida');
+          const merma = discrepancias.length
+            ? ` Mermas registradas en el origen: ${discrepancias.map((d) => `${d.missing} ${this.productName(Number(d.productId))}`).join(', ')}.`
+            : ' Sin faltantes.';
+          r.result = `El servidor dejó el traspaso ${guardado?.id || r.transfer.id} como "${estado}"${guardado?.receivedAt ? ` el ${this.formatDateTime(guardado.receivedAt)}` : ''}.${merma}`;
+          this.setStockFeedback(faltantes ? 'Traspaso recibido con faltantes registrados.' : 'Traspaso recibido.', 'success');
           this.loadStocksAndPosState();
-          this.showSnackbar('Transferencia recibida.');
+          this.showSnackbar(`Traspaso ${guardado?.id || r.transfer.id}: ${estado}.`);
         },
         error: (error: { error?: { message?: string }; message?: string }) => {
-          this.setStockFeedback(
-            error?.error?.message || error?.message || 'No se pudo recibir la transferencia.',
-            'error'
-          );
+          r.error = error?.error?.message || error?.message || 'No se pudo recibir el traspaso.';
+          this.setStockFeedback(r.error, 'error');
         }
       });
   }
@@ -5232,13 +7268,17 @@ export class AdminComponent implements OnInit {
       reason: reason.trim(),
       userId: reportedByUserId
     }).subscribe({
-      next: () => {
-        this.setStockFeedback('Dano registrado en inventario.', 'success');
+      next: (respuesta) => {
+        const existencia = productId != null ? (respuesta?.stock?.inventory as Record<string, number> | undefined)?.[String(productId)] : undefined;
+        const texto = existencia != null
+          ? `Daño registrado: ${this.productName(Number(productId))} queda con ${existencia} en ${this.stockName(stockId)}.`
+          : 'Daño registrado en inventario.';
+        this.setStockFeedback(texto, 'success');
         this.stockDamageForm.qty = 1;
         this.stockDamageForm.reason = '';
         this.closeDamageModal();
         this.loadStocksAndPosState();
-        this.showSnackbar('Dano registrado.');
+        this.showSnackbar(texto);
       },
       error: (error: { error?: { message?: string }; message?: string }) => {
         this.setStockFeedback(
@@ -5274,7 +7314,16 @@ export class AdminComponent implements OnInit {
   }
 
   stockName(stockId: string): string {
-    return this.stocks.find((stock) => stock.id === stockId)?.name ?? 'Sin stock';
+    // Devolvía "Sin stock" cuando la lista de almacenes aún no se había
+    // cargado (solo se carga al entrar en Stocks): el detalle de un pedido
+    // recién enviado decía "Stock origen: Sin stock" y alarmaba a la gerente.
+    const nombre = this.stocks.find((stock) => stock.id === stockId)?.name;
+    if (nombre) return nombre;
+    if (!this.stocks.length && stockId) {
+      this.loadStocksAndPosState();
+      return stockId;
+    }
+    return stockId || 'Sin stock';
   }
 
   customerName(customerId: number | null | undefined): string {
@@ -5287,6 +7336,10 @@ export class AdminComponent implements OnInit {
   employeeName(employeeId: number | null | undefined): string {
     if (!employeeId) {
       return '-';
+    }
+    // Quien no puede listar empleados (almacén) al menos se ve a sí mismo por su nombre.
+    if (String(this.currentUser?.userId ?? '') === String(employeeId) && this.currentUser?.name) {
+      return this.currentUser.name;
     }
     return this.employees.find((emp) => emp.id === employeeId)?.name ?? `Empleado ${employeeId}`;
   }
@@ -5323,7 +7376,7 @@ export class AdminComponent implements OnInit {
 
   selectPublicGeneralCustomer(): void {
     this.selectedPosCustomerId = null;
-    this.posCustomerSearch = 'Publico en General';
+    this.posCustomerSearch = 'Público en general';
     this.posSelectedCustomerMonth = null;
     this.isLoadingPosCustomerProjection = false;
     this.refreshPosCustomerRecommendations();
@@ -5402,9 +7455,14 @@ export class AdminComponent implements OnInit {
         const cb = this.posAuthPendingCallback;
         this.closePosAuthModal();
         if (cb) cb();
+        // El código validaba (200) y el diálogo de descuento no aparecía: la
+        // vista no se refrescaba tras la respuesta y el cajero pulsó Cobrar
+        // tres veces, dejando tres ventas.
+        this.requestViewUpdate();
       },
       error: (err: { error?: { message?: string }; message?: string }) => {
         this.posAuthError = err?.error?.message || 'Codigo incorrecto.';
+        this.requestViewUpdate();
       }
     });
   }
@@ -5421,6 +7479,7 @@ export class AdminComponent implements OnInit {
   closePosDiscountModal(): void {
     this.isPosDiscountModalOpen = false;
     this.posDiscountError = '';
+    this.requestViewUpdate();
   }
 
   applyPosDiscount(): void {
@@ -5440,10 +7499,14 @@ export class AdminComponent implements OnInit {
     const displayLabel = this.posDiscountMode === 'percent' ? `${val}%` : this.formatMoney(val);
     this.posAppliedCashierDiscount = { mode: this.posDiscountMode, value: val, displayLabel };
     this.closePosDiscountModal();
+    // 'Aplicar descuento' no procesaba nada: el diálogo seguía abierto y el
+    // total intacto hasta el siguiente evento que refrescara la vista.
+    this.requestViewUpdate();
   }
 
   removePosDiscount(): void {
     this.posAppliedCashierDiscount = null;
+    this.requestViewUpdate();
   }
 
   enablePosPartialPayment(mode: 'full' | 'partial' | 'credit'): void {
@@ -5459,51 +7522,6 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  openPosWithdrawalModal(): void {
-    this.posWithdrawalAmount = '';
-    this.posWithdrawalReason = '';
-    this.posWithdrawalAuthCode = '';
-    this.posWithdrawalError = '';
-    this.isPosWithdrawalModalOpen = true;
-  }
-
-  closePosWithdrawalModal(): void {
-    this.isPosWithdrawalModalOpen = false;
-  }
-
-  confirmPosWithdrawal(): void {
-    if (!this.currentPosStock || this.isRegisteringPosWithdrawal) return;
-    const amount = Number(this.posWithdrawalAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      this.posWithdrawalError = 'Ingresa un monto valido.';
-      return;
-    }
-    if (!this.posWithdrawalReason.trim()) {
-      this.posWithdrawalError = 'El motivo es requerido.';
-      return;
-    }
-    if (!this.posWithdrawalAuthCode.trim()) {
-      this.posWithdrawalError = 'Se requiere el codigo de autorizacion.';
-      return;
-    }
-    this.isRegisteringPosWithdrawal = true;
-    this.adminControl.registerPosWithdrawal({
-      stockId: this.currentPosStock.id,
-      amount,
-      reason: this.posWithdrawalReason.trim(),
-      authCode: this.posWithdrawalAuthCode.trim()
-    }).pipe(finalize(() => (this.isRegisteringPosWithdrawal = false))).subscribe({
-      next: ({ control }) => {
-        this.posCashControl = { ...this.posCashControl!, ...control };
-        this.closePosWithdrawalModal();
-        this.showSnackbar('Retiro registrado.');
-      },
-      error: (err: { error?: { message?: string }; message?: string }) => {
-        this.posWithdrawalError = err?.error?.message || 'No se pudo registrar el retiro.';
-      }
-    });
-  }
-
   loadPosCashCuts(): void {
     if (!this.currentPosStock) return;
     this.isLoadingPosCashCuts = true;
@@ -5513,6 +7531,7 @@ export class AdminComponent implements OnInit {
       next: (cuts) => {
         this.posCashCuts = (cuts as unknown as PosCashCut[]);
         this.isPosCashCutsOpen = true;
+        this.requestViewUpdate();
       }
     });
   }
@@ -5531,7 +7550,7 @@ export class AdminComponent implements OnInit {
       rows.push([
         'Venta',
         sale.createdAt ? new Date(sale.createdAt).toLocaleString('es-MX') : '',
-        sale.customerName || 'Publico en General',
+        sale.customerName || 'Público en general',
         sale.paymentMethod || 'cash',
         (sale.grossSubtotal ?? sale.total).toFixed(2),
         ((sale.discountAmount ?? 0) + (sale.cashierDiscountAmount ?? 0)).toFixed(2),
@@ -5565,6 +7584,131 @@ export class AdminComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 
+  canVoidPosSale(sale: PosSale): boolean {
+    return sale.status !== 'voided' && this.hasPermission('order_mark_paid');
+  }
+
+  canSettlePosSale(sale: PosSale): boolean {
+    return sale.status !== 'voided' && Number(sale.pendingAmount || 0) > 0 && this.hasPermission('pos_register_sale');
+  }
+
+  /** Abono al saldo de una venta con pago parcial: abre el modal (antes era un prompt del navegador). */
+  settlePosSale(sale: PosSale): void {
+    if (!this.canSettlePosSale(sale)) {
+      return;
+    }
+    this.posSettleTarget = sale;
+    this.posSettleAmount = String(this.roundMoney(Number(sale.pendingAmount || 0)));
+    this.posSettleMethod = 'cash';
+    this.posSettleError = '';
+    this.posSettleResult = null;
+    this.isPosSettleModalOpen = true;
+    this.requestViewUpdate();
+  }
+
+  closePosSettleModal(): void {
+    if (this.isSettlingPosSale) return;
+    this.isPosSettleModalOpen = false;
+    this.posSettleTarget = null;
+    this.posSettleResult = null;
+    this.requestViewUpdate();
+  }
+
+  get posSettleAmountNumber(): number {
+    const n = Number(String(this.posSettleAmount).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? this.roundMoney(n) : 0;
+  }
+
+  /** Por qué no se puede confirmar el abono todavía ('' si se puede). */
+  get posSettleBlockReason(): string {
+    const pendiente = this.roundMoney(Number(this.posSettleTarget?.pendingAmount || 0));
+    if (!this.posSettleTarget) return 'Elige una venta con saldo pendiente.';
+    if (this.isSettlingPosSale) return 'Registrando el abono…';
+    if (!String(this.posSettleAmount).trim() || this.posSettleAmountNumber <= 0) return 'Escribe cuánto abona el cliente (mayor a $0).';
+    if (this.posSettleAmountNumber > pendiente + 0.001) return `El abono no puede ser mayor al saldo pendiente (${this.formatMoney(pendiente)}).`;
+    return '';
+  }
+
+  confirmPosSettle(): void {
+    const sale = this.posSettleTarget;
+    if (!sale || this.posSettleBlockReason) {
+      this.posSettleError = this.posSettleBlockReason;
+      this.requestViewUpdate();
+      return;
+    }
+    this.isSettlingPosSale = true;
+    this.posSettleError = '';
+    this.caja
+      .abonar(sale.id, { amount: this.posSettleAmountNumber, paymentMethod: this.posSettleMethod })
+      .pipe(finalize(() => { this.isSettlingPosSale = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (respuesta) => {
+          // Confirmación con lo que el servidor guardó: folio del abono, monto y saldo que queda.
+          this.posSettleResult = respuesta;
+          const restante = Number(respuesta.pendingAmount || 0);
+          this.showSnackbar(restante > 0
+            ? `Abono ${respuesta.payment?.saleId || ''} registrado por ${this.formatMoney(Number(respuesta.payment?.total || 0))}. Saldo pendiente: ${this.formatMoney(restante)}.`
+            : `Abono ${respuesta.payment?.saleId || ''} registrado. La venta ${sale.orderId} quedó liquidada.`);
+          this.posCajaRefreshToken++;
+          this.refreshPosCashControl();
+          this.loadStocksAndPosState();
+        },
+        error: (err: unknown) => {
+          this.posSettleError = this.resolveUiErrorMessage(err, 'No se pudo registrar el abono.');
+        }
+      });
+  }
+
+  /** Anular una venta: abre el modal con el efecto escrito (antes era un prompt del navegador). */
+  voidPosSale(sale: PosSale): void {
+    if (!this.canVoidPosSale(sale)) {
+      return;
+    }
+    this.posVoidTarget = sale;
+    this.posVoidReason = '';
+    this.posVoidError = '';
+    this.posVoidResult = null;
+    this.isPosVoidModalOpen = true;
+    this.requestViewUpdate();
+  }
+
+  closePosVoidModal(): void {
+    if (this.isVoidingPosSale) return;
+    this.isPosVoidModalOpen = false;
+    this.posVoidTarget = null;
+    this.posVoidResult = null;
+    this.requestViewUpdate();
+  }
+
+  confirmPosVoid(): void {
+    const sale = this.posVoidTarget;
+    if (!sale || this.isVoidingPosSale) return;
+    const reason = this.posVoidReason.trim();
+    if (!reason) {
+      this.posVoidError = 'Escribe el motivo de la anulación: queda en el pedido y en el aviso al cliente.';
+      this.requestViewUpdate();
+      return;
+    }
+    this.isVoidingPosSale = true;
+    this.posVoidError = '';
+    this.caja
+      .anular(sale.id, reason)
+      .pipe(finalize(() => { this.isVoidingPosSale = false; this.requestViewUpdate(); }))
+      .subscribe({
+        next: (respuesta) => {
+          this.posVoidResult = respuesta;
+          this.posSales = this.posSales.map((s) => (s.id === sale.id ? { ...s, status: respuesta.status || 'voided', voidReason: reason } : s));
+          this.adminControl.loadOrders().subscribe();
+          this.showSnackbar(`Venta ${respuesta.orderId || sale.orderId} anulada (estado: ${respuesta.status || 'voided'}).`);
+          this.posCajaRefreshToken++;
+          this.refreshPosCashControl();
+        },
+        error: (error: unknown) => {
+          this.posVoidError = this.resolveUiErrorMessage(error, 'No se pudo anular la venta.');
+        }
+      });
+  }
+
   registerPosSale(): void {
     if (!this.canRegisterPosSale || !this.currentPosStock) {
       return;
@@ -5578,36 +7722,57 @@ export class AdminComponent implements OnInit {
       this.setPosFeedback(stockError, 'error');
       return;
     }
+    const esMixto = this.posSalePaymentMethod === 'mixed';
+    const cobraEfectivo = this.posSalePaymentMethod === 'cash' || esMixto;
     this.isRegisteringPosSale = true;
     this.setPosFeedback('', '');
-    this.adminControl
-      .registerPosSale({
+    this.caja
+      .registrarVenta({
         stockId: this.currentPosStock.id,
         customerId: this.selectedPosCustomer?.id,
-        customerName: this.selectedPosCustomer?.name || 'Publico en General',
-        paymentMethod: this.posSalePaymentMethod,
+        customerName: this.selectedPosCustomer?.name || 'Público en general',
+        paymentMethod: esMixto ? undefined : this.posSalePaymentMethod,
+        // Pago mixto (paquete E): dos partes que suman el total; el servidor lo comprueba centavo a centavo.
+        payments: esMixto
+          ? [
+              { method: 'cash', amount: this.posMixedCashNumber },
+              { method: this.posMixedSecondMethod, amount: this.posMixedRemainder }
+            ]
+          : undefined,
         paymentStatus: 'paid_branch',
         deliveryStatus: 'delivered_branch',
         items: lineItems,
+        // El escalón de descuento se mostraba en pantalla ("alcanzó meta 10%") pero
+        // no viajaba en la venta: el backend aplicaba 0% y el socio pagaba de más.
+        discountAmount: this.posProjectedDiscountAmount,
+        discountRate: this.posProjectedDiscountRate,
+        cashReceived: cobraEfectivo && this.posCashReceivedNumber > 0 ? this.posCashReceivedNumber : undefined,
         cashierDiscountMode: this.posAppliedCashierDiscount?.mode,
         cashierDiscountValue: this.posAppliedCashierDiscount?.value,
         paymentType: this.posPaymentTypeMode,
         amountPaid: this.posPaymentTypeMode !== 'full' ? this.posAmountPaidNow : undefined,
         authCode: this.posValidatedAuthCode || undefined
       })
-      .pipe(finalize(() => (this.isRegisteringPosSale = false)))
+      .pipe(finalize(() => { this.isRegisteringPosSale = false; this.requestViewUpdate(); }))
       .subscribe({
-        next: () => {
+        next: (venta) => {
+          this.posUltimaVenta = venta;
           this.posItems.clear();
           this.posForm.status = 'delivered';
           this.posSalePaymentMethod = 'cash';
+          this.posMixedCashAmount = '';
+          this.posMixedSecondMethod = 'card';
+          this.posCashReceived = '';
           this.posAppliedCashierDiscount = null;
           this.posPaymentTypeMode = 'full';
           this.posPartialAmountPaid = '';
           this.posValidatedAuthCode = '';
           this.selectPublicGeneralCustomer();
-          this.setPosFeedback('Venta registrada en caja.', 'success');
-          this.showSnackbar('Venta registrada en caja.');
+          // La confirmación dice lo que el servidor guardó, no lo que decía el formulario.
+          const mensaje = this.describirVentaGuardada(venta);
+          this.setPosFeedback(mensaje, 'success');
+          this.showSnackbar(`Venta ${venta.orderId} registrada por ${this.formatMoney(Number(venta.total || 0))}.`);
+          this.posCajaRefreshToken++;
           this.adminControl.load().subscribe({
             next: () => this.loadStocksAndPosState(),
             error: () => this.loadStocksAndPosState()
@@ -5619,72 +7784,42 @@ export class AdminComponent implements OnInit {
       });
   }
 
-  createPosCashCut(): void {
-    if (!this.canCreatePosCashCut) {
-      return;
+  /** Texto de confirmación de una venta con los datos devueltos por el servidor. */
+  describirVentaGuardada(venta: VentaCajaRespuesta): string {
+    const partes = [`Venta ${venta.orderId} registrada por ${this.formatMoney(Number(venta.total || 0))}.`];
+    const metodo = venta.sale?.paymentMethod;
+    if (metodo === 'mixed' && venta.payments?.length) {
+      partes.push('Pago: ' + venta.payments.map((p) => `${this.posMethodLabel(p.method)} ${this.formatMoney(Number(p.amount || 0))}`).join(' + ') + '.');
+    } else if (metodo) {
+      partes.push(`Pago: ${this.posMethodLabel(metodo)}.`);
     }
-    this.posCashCutKeepAmount = String(this.roundMoney(this.posCashControl?.currentTotal ?? 0));
-    this.posCashCutError = '';
-    this.isPosCashCutModalOpen = true;
+    if (Number(venta.pendingAmount || 0) > 0) {
+      partes.push(`Pagó ahora ${this.formatMoney(Number(venta.amountPaid || 0))}; saldo pendiente ${this.formatMoney(Number(venta.pendingAmount || 0))}.`);
+    }
+    if (venta.change != null && Number(venta.cashPortion || 0) > 0) {
+      partes.push(`Cambio a entregar: ${this.formatMoney(Number(venta.change || 0))}.`);
+    }
+    return partes.join(' ');
   }
 
-  closePosCashCutModal(): void {
-    this.isPosCashCutModalOpen = false;
-    this.posCashCutKeepAmount = '';
-    this.posCashCutError = '';
+  /**
+   * Paquete G · propuesta 25 (§3.7), montado en la integración.
+   *
+   * Alma se topó con `mixed` en inglés justo en el número que venía a cuadrar.
+   * El texto sale del vocabulario único; ninguna pantalla escribe el suyo.
+   */
+  posMethodLabel(metodo: string | undefined): string {
+    return textoMetodoPago(metodo);
   }
 
-  confirmPosCashCut(): void {
-    if (!this.canCreatePosCashCut || !this.currentPosStock || this.isCuttingPosCash) {
-      return;
+  /** Tras un corte o un retiro en <app-admin-arqueo>: refresca caja, ventas e historial. */
+  onCajaCambio(): void {
+    this.refreshPosCashControl();
+    this.loadStocksAndPosState();
+    if (this.isPosCashCutsOpen) {
+      this.loadPosCashCuts();
     }
-    const currentTotal = Number(this.posCashControl?.currentTotal ?? 0);
-    const cashToKeep = this.roundMoney(Number(this.posCashCutKeepAmount));
-    if (!Number.isFinite(cashToKeep) || cashToKeep < 0) {
-      this.posCashCutError = 'Ingresa un monto valido para dejar en caja.';
-      return;
-    }
-    if (cashToKeep > currentTotal) {
-      this.posCashCutError = 'El monto a dejar en caja no puede ser mayor al disponible.';
-      return;
-    }
-    this.isCuttingPosCash = true;
-    this.setPosFeedback('', '');
-    this.posCashCutError = '';
-    this.adminControl
-      .createPosCashCut({ stockId: this.currentPosStock.id, cashToKeep })
-      .pipe(finalize(() => (this.isCuttingPosCash = false)))
-      .subscribe({
-        next: ({ cut, control }) => {
-          this.posCashControl = {
-            stockId: control.stockId,
-            attendantUserId: control.attendantUserId ?? null,
-            currentTotal: Number(control.currentTotal ?? 0),
-            salesCount: Number(control.salesCount ?? 0),
-            cashToKeepSuggested: Number(control.cashToKeepSuggested ?? 0),
-            startedAt: control.startedAt,
-            lastCutAt: control.lastCutAt,
-            lastCutTotal: Number(control.lastCutTotal ?? 0),
-            lastCutSalesCount: Number(control.lastCutSalesCount ?? 0),
-            lastCutCashToKeep: Number(control.lastCutCashToKeep ?? 0),
-            lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
-            lastSaleAt: control.lastSaleAt
-          };
-          this.posSales = this.posSales.map((s) =>
-            (cut.sales ?? []).some((cs) => cs.id === s.id) ? { ...s, cashCutId: cut.id } : s
-          );
-          this.lastCompletedCut = cut as unknown as PosCashCut;
-          this.closePosCashCutModal();
-          this.setPosFeedback('Corte de caja registrado.', 'success');
-          this.showSnackbar('Corte de caja registrado.');
-          if (this.isPosCashCutsOpen) {
-            this.loadPosCashCuts();
-          }
-        },
-        error: (error: { error?: { message?: string }; message?: string }) => {
-          this.posCashCutError = error?.error?.message || error?.message || 'No se pudo registrar el corte.';
-        }
-      });
+    this.requestViewUpdate();
   }
 
   private syncPosOperatorContext(): void {
@@ -5733,7 +7868,7 @@ export class AdminComponent implements OnInit {
       email: customer.email,
       label: `${customer.name} · ${customer.email}`
     }));
-    this.posCustomerRecommendations = (!query || query === this.normalizePosCustomerSearch('Publico en General')
+    this.posCustomerRecommendations = (!query || query === this.normalizePosCustomerSearch('Público en general')
       ? base
       : base.filter((candidate) => this.normalizePosCustomerSearch(`${candidate.name} ${candidate.email}`).includes(query))
     ).slice(0, 8);
@@ -5786,6 +7921,7 @@ export class AdminComponent implements OnInit {
       .subscribe((control) => {
         if (!control) {
           this.posCashControl = null;
+          this.requestViewUpdate();
           return;
         }
         this.posCashControl = {
@@ -5802,6 +7938,7 @@ export class AdminComponent implements OnInit {
           lastCutWithdrawnAmount: Number(control.lastCutWithdrawnAmount ?? 0),
           lastSaleAt: control.lastSaleAt
         };
+        this.requestViewUpdate();
       });
   }
 
@@ -6024,18 +8161,60 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  /** Encender un cupón apagado no tenía botón propio: había que editarlo. */
+  activateCoupon(c: Coupon): void {
+    const restantes = c.maxRedemptions != null ? c.maxRedemptions - (c.redemptions ?? 0) : null;
+    const aviso = restantes != null && restantes <= 0
+      ? ` Atención: ya se agotaron sus ${c.maxRedemptions} usos, así que no lo podrá canjear nadie hasta que subas el límite.`
+      : restantes != null
+        ? ` Quedan ${restantes} de ${c.maxRedemptions} usos.`
+        : '';
+    this.abrirConfirmacion({
+      title: `Activar el cupón ${c.code}`,
+      effect: `Desde ahora cualquier cliente podrá canjearlo en el carrito.${aviso}`,
+      requireReason: false,
+      confirmLabel: 'Activar el cupón',
+      danger: false,
+      ejecutar: () => {
+        this.api.saveCoupon({ ...c, active: true } as SaveCouponPayload).subscribe({
+          next: (guardado) => {
+            const activo = guardado?.active ?? true;
+            this.couponFeedback = `Cupón ${guardado?.code || c.code}: el servidor lo dejó ${activo ? 'activo' : 'inactivo'}.`;
+            this.confirmacionLista(this.couponFeedback, 'Cupón activado');
+            this.loadCoupons();
+          },
+          error: (error: unknown) => {
+            this.couponFeedback = `No se pudo activar el cupón ${c.code}.`;
+            this.confirmacionFallo(this.resolveUiErrorMessage(error, this.couponFeedback));
+            this.cdr.markForCheck();
+          }
+        });
+      }
+    });
+  }
+
   deleteCoupon(c: Coupon): void {
-    if (!confirm(`¿Desactivar el cupón ${c.code}?`)) {
-      return;
-    }
-    this.api.deleteCoupon(c.code).subscribe({
-      next: () => {
-        this.couponFeedback = `Cupón ${c.code} desactivado.`;
-        this.loadCoupons();
-      },
-      error: () => {
-        this.couponFeedback = 'No se pudo desactivar el cupón.';
-        this.cdr.markForCheck();
+    this.abrirConfirmacion({
+      title: `Desactivar el cupón ${c.code}`,
+      effect: 'Deja de aceptarse en el carrito desde ahora; los pedidos que ya lo usaron no cambian. No se borra: puedes volver a activarlo cuando quieras.',
+      requireReason: false,
+      confirmLabel: 'Desactivar el cupón',
+      danger: true,
+      ejecutar: () => {
+        this.api.deleteCoupon(c.code).subscribe({
+          next: (respuesta) => {
+            const guardado = (respuesta as { coupon?: Coupon })?.coupon;
+            const activo = guardado?.active ?? false;
+            this.couponFeedback = `Cupón ${respuesta?.code || c.code}: el servidor lo dejó ${activo ? 'activo' : 'inactivo'}.`;
+            this.confirmacionLista(this.couponFeedback, 'Cupón desactivado');
+            this.loadCoupons();
+          },
+          error: (error: unknown) => {
+            this.couponFeedback = 'No se pudo desactivar el cupón.';
+            this.confirmacionFallo(this.resolveUiErrorMessage(error, this.couponFeedback));
+            this.cdr.markForCheck();
+          }
+        });
       }
     });
   }
@@ -6155,8 +8334,22 @@ export class AdminComponent implements OnInit {
       : [...(this.honorBoardData?.byVg ?? [])];
     if (this.honorBoardSort === 'alpha') {
       list.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      return list;
     }
+    // Ordenar aquí y no confiar en el orden de llegada: la tabla afirma estar
+    // ordenada por una columna concreta y tiene que cumplirlo pase lo que pase.
+    const campo = this.honorBoardSort === 'vp' ? 'vp' : 'vg';
+    list.sort((a, b) => (b[campo] ?? 0) - (a[campo] ?? 0));
     return list;
+  }
+
+  /** Cuánto le falta a esta persona para alcanzar a la de arriba. */
+  honorGapToPrevious(entry: HonorEntry): number | null {
+    const list = this.sortedHonorEntries;
+    const i = list.indexOf(entry);
+    if (i <= 0) return null;
+    const campo = this.honorBoardSort === 'vp' ? 'vp' : 'vg';
+    return (list[i - 1][campo] ?? 0) - (entry[campo] ?? 0);
   }
 
   honorPositionDeltaLabel(entry: HonorEntry): string {
@@ -6208,8 +8401,10 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: (config) => {
           this.businessConfigDraft = this.normalizeBusinessConfigDraft(config);
-          this.businessConfigMessage = 'Configuracion guardada.';
-          this.showSnackbar('Configuracion guardada.');
+          const tramos = config?.rewards?.discountTiers?.length ?? 0;
+          const generaciones = config?.rewards?.commissionLevels?.length ?? 0;
+          this.businessConfigMessage = `Configuración guardada: activación ${config?.rewards?.activationNetMin ?? '?'} VP, ${tramos} tramo${tramos === 1 ? '' : 's'} de descuento, ${generaciones} generaci${generaciones === 1 ? 'ón' : 'ones'} de comisión.`;
+          this.showSnackbar(this.businessConfigMessage);
         },
         error: () => {
           this.businessConfigMessage = 'No se pudo guardar la configuracion.';
@@ -6370,7 +8565,7 @@ export class AdminComponent implements OnInit {
         requireDispatchLinesOnShipped: true
       },
       pos: {
-        defaultCustomerName: 'Publico en General',
+        defaultCustomerName: 'Público en general',
         defaultPaymentStatus: 'paid_branch',
         defaultDeliveryStatus: 'delivered_branch',
         orderStatusByDeliveryStatus: {
@@ -6547,14 +8742,9 @@ export class AdminComponent implements OnInit {
     return 'Salida por venta POS';
   }
 
+  /** El mismo vocabulario único de §3.7, también en la bitácora de movimientos. */
   posPaymentMethodLabel(method?: PosSale['paymentMethod'] | InventoryMovement['paymentMethod']): string {
-    if (method === 'card') {
-      return 'Tarjeta';
-    }
-    if (method === 'transfer') {
-      return 'Transferencia';
-    }
-    return 'Efectivo';
+    return textoMetodoPago(method ?? 'cash');
   }
 
   private movementSignedQty(movement: InventoryMovement): number {
@@ -6631,6 +8821,230 @@ export class AdminComponent implements OnInit {
     return (name ?? '').trim().toLowerCase();
   }
 
+  // ── Paquete C · factura y ubicación de sucursal ──
+
+  /** El bloque de factura ya guardó en el servidor; aquí se refleja en la fila y se avisa con el dato guardado. */
+  markInvoiceIssued(order: AdminOrder, respuesta: FacturaEmitida): void {
+    order.invoiceStatus = respuesta.invoiceStatus;
+    order.invoiceIssuedAt = respuesta.invoiceIssuedAt;
+    order.invoiceFolio = respuesta.invoiceFolio ?? undefined;
+    order.invoiceFileUrl = respuesta.invoiceFileUrl ?? undefined;
+    this.showSnackbar(
+      `Pedido ${order.id}: factura ${respuesta.invoiceStatus}` +
+      (respuesta.invoiceFolio ? ` · folio ${respuesta.invoiceFolio}` : '') +
+      '. Se avisó al cliente por correo.'
+    );
+    this.requestViewUpdate();
+  }
+
+  guardarUbicacionSucursal(stock: AdminStock): void {
+    const city = this.stockUbicacionDraft.city.trim();
+    const state = this.stockUbicacionDraft.state.trim();
+    if (!city || !state) {
+      this.showSnackbar('Escribe la ciudad y elige el estado de la sucursal.', 'error');
+      return;
+    }
+    this.checkoutService.actualizarUbicacionSucursal(stock.id, { city, state }).subscribe({
+      next: (respuesta) => {
+        const guardado = (respuesta?.stock ?? {}) as { city?: string; state?: string };
+        stock.city = guardado.city ?? city;
+        stock.state = guardado.state ?? state;
+        this.showSnackbar(`Ubicación guardada: ${stock.name} · ${stock.city}, ${stock.state}. Recoger en sucursal se ofrecerá a clientes de esa zona.`);
+        this.requestViewUpdate();
+      },
+      error: (error: unknown) => {
+        this.showSnackbar(this.resolveUiErrorMessage(error, 'No se pudo guardar la ubicación de la sucursal.'), 'error');
+      }
+    });
+  }
+
+  // ── WP-D · bodega por defecto del empleado (paquete D) ──────────────────
+  private readonly despachoService = inject(DespachoService);
+  private employeeDefaultStockApplied = false;
+
+  /** Aplica una sola vez la bodega guardada en el perfil: Stocks y POS arrancan con ella. */
+  private applyEmployeeDefaultStock(): void {
+    if (this.employeeDefaultStockApplied || !this.stocks.length) {
+      return;
+    }
+    this.employeeDefaultStockApplied = true;
+    this.despachoService.preferencias().subscribe({
+      next: (prefs) => {
+        const stockId = prefs.defaultStockId ?? '';
+        if (!stockId || !this.stocks.some((stock) => stock.id === stockId)) {
+          return;
+        }
+        this.selectStock(stockId);
+        if (this.linkedPosStocks.some((stock) => stock.id === stockId)) {
+          this.posForm.stockId = stockId;
+          this.syncPosSelectedItems();
+          this.refreshPosCashControl();
+        }
+        this.requestViewUpdate();
+      },
+      error: () => undefined
+    });
+  }
+
+  // ───────────────────────── I1 · transversal-admin ─────────────────────────
+
+  /** Diálogo de confirmación abierto (uno solo para todo el back office). */
+  confirmacion: ConfirmacionAdmin | null = null;
+
+  abrirConfirmacion(cfg: Omit<ConfirmacionAdmin, 'busy' | 'error' | 'result'>): void {
+    this.confirmacion = { ...cfg, busy: false, error: '', result: null };
+    this.requestViewUpdate();
+  }
+
+  cerrarConfirmacion(): void {
+    if (this.confirmacion?.busy) {
+      return;
+    }
+    this.confirmacion = null;
+    this.requestViewUpdate();
+  }
+
+  ejecutarConfirmacion(motivo: string): void {
+    const c = this.confirmacion;
+    if (!c || c.busy) {
+      return;
+    }
+    c.busy = true;
+    c.error = '';
+    this.requestViewUpdate();
+    c.ejecutar(motivo);
+  }
+
+  /** La acción terminó: se muestra lo que el servidor guardó y un botón "Listo". */
+  confirmacionLista(resultado: string, titulo = 'Listo'): void {
+    if (this.confirmacion) {
+      this.confirmacion.busy = false;
+      this.confirmacion.result = resultado;
+      this.confirmacion.resultTitle = titulo;
+    }
+    this.requestViewUpdate();
+  }
+
+  confirmacionFallo(mensaje: string): void {
+    if (this.confirmacion) {
+      this.confirmacion.busy = false;
+      this.confirmacion.error = mensaje;
+    }
+    this.requestViewUpdate();
+  }
+
+  /** Motivo de "Guardando…" para los botones de un pedido mientras hay una llamada en curso. */
+  motivoPedidoOcupado(orderId: string): string {
+    return this.isUpdatingOrder(orderId) ? 'Guardando el cambio de este pedido…' : '';
+  }
+
+  /** Motivo por el que no se puede guardar el correo del cliente. */
+  get motivoGuardarCorreoCliente(): string {
+    if (this.isSavingCustomerFollowUp) return 'Guardando…';
+    const draft = this.customerEmailDraft.trim();
+    if (!draft) return 'Escribe el correo nuevo.';
+    if (draft === (this.selectedCustomer?.email || '')) return 'Es el mismo correo que ya tiene.';
+    return '';
+  }
+
+  get motivoGuardarEmpleado(): string {
+    if (this.isSavingEmployee) return 'Guardando…';
+    if (!this.employeeForm.name.trim()) return 'Escribe el nombre del empleado.';
+    if (!this.employeeForm.email.trim()) return 'Escribe el correo: ahí le llega su contraseña temporal.';
+    return '';
+  }
+
+  get motivoGuardarProducto(): string {
+    if (this.isSavingProduct) return 'Guardando…';
+    if (!this.productForm.name.trim()) return 'Escribe el nombre del producto.';
+    if (!Number(this.productForm.price)) return 'Escribe un precio mayor a $0.';
+    return '';
+  }
+
+  get motivoGuardarPedidoNuevo(): string {
+    if (this.isSavingOrder) return 'Guardando el pedido…';
+    if (!this.newOrderCustomerId) return 'Elige el cliente del pedido.';
+    if (this.newOrderItems.size === 0) return 'Agrega al menos un producto.';
+    return '';
+  }
+
+  get motivoGuardarPosicionCliente(): string {
+    if (this.isSavingCustomerPosition) return 'Guardando…';
+    if (!this.selectedCustomer) return 'Elige un cliente.';
+    if (!this.hasValidSelectedSponsorId) return 'Elige un patrocinador válido (no puede ser el mismo cliente).';
+    const nextLeaderId = this.selectedCustomerLeaderId ? Number(this.selectedCustomerLeaderId) : null;
+    if ((this.selectedCustomer.leaderId ?? null) === nextLeaderId) return 'Es el mismo patrocinador que ya tiene.';
+    return '';
+  }
+
+  motivoRecibirTraspaso(transfer: StockTransfer): string {
+    if (transfer.status === 'received') return 'Este traspaso ya se recibió.';
+    if (!this.transferReceiverUserId) return 'Elige arriba quién recibe.';
+    if (!this.isReceiverEligible(transfer)) {
+      return `Quien recibe debe estar ligado al almacén destino (${this.stockName(transfer.destinationStockId)}). Se liga en Stocks → esa sucursal → "Empleados vinculados".`;
+    }
+    return '';
+  }
+
+  motivoProductoDelMes(product: AdminProduct): string {
+    if (this.isSettingProductOfMonth) return 'Guardando…';
+    if (!product.active) return 'Reactiva el producto para poder destacarlo como producto del mes.';
+    return '';
+  }
+
+  get motivoCrearClientePos(): string {
+    if (!this.hasPermission('customer_add')) return 'No tienes el permiso "Agregar clientes": pídeselo a tu gerente.';
+    if (this.isSavingPosCustomer) return 'Guardando…';
+    if (!this.posCustomerForm.firstName.trim()) return 'Escribe el nombre.';
+    if (!this.posCustomerForm.apellidoPaterno.trim()) return 'Escribe el apellido paterno.';
+    return '';
+  }
+
+  // Tabla única de descuento en el POS (construida por B, montada por I1)
+
+  get posTablaTiers(): Array<{ min: number; max: number | null; rate: number }> {
+    const tiers = this.businessConfig?.rewards?.discountTiers ?? [];
+    return tiers.map((t) => ({ min: Number(t.min) || 0, max: t.max == null ? null : Number(t.max), rate: Number(t.rate) || 0 }));
+  }
+
+  get posMxnPerVp(): number {
+    return Number(this.businessConfig?.bonuses?.vpConfig?.mxnPerVp ?? 50) || 50;
+  }
+
+  get posActivationVp(): number {
+    return Number(this.businessConfig?.rewards?.activationNetMin ?? 20) || 20;
+  }
+
+  /** VP netos del mes según el servidor; sin dato, se estiman desde el neto. */
+  get posCustomerMonthVp(): number {
+    const vp = this.posSelectedCustomerMonth?.vp;
+    if (vp != null && Number.isFinite(Number(vp))) {
+      return Number(vp);
+    }
+    return Math.round((this.posCustomerMonthNet / this.posMxnPerVp) * 10) / 10;
+  }
+
+  /** PC de lista de la venta en curso: puntos del producto si los tiene, o precio ÷ pesos por VP. */
+  get posCartPc(): number {
+    const total = this.availablePosProducts
+      .filter((product) => this.posItems.has(product.id))
+      .reduce((acc, product) => {
+        const qty = this.posItems.get(product.id) ?? 1;
+        const pcUnidad = product.vpPoints != null ? Number(product.vpPoints) : Number(product.price) / this.posMxnPerVp;
+        return acc + pcUnidad * qty;
+      }, 0);
+    return Math.round(total * 10) / 10;
+  }
+
+  /** Resumen del envío tal como quedó guardado en el servidor. */
+  private resumenEnvioGuardado(guardado: AdminOrder | null | undefined, orderId: string): string {
+    if (!guardado) {
+      return 'Envío registrado.';
+    }
+    const guia = guardado.trackingNumber ? ` · guía ${guardado.trackingNumber}` : '';
+    const paqueteria = guardado.shippingCarrier ? ` (${guardado.shippingCarrier})` : '';
+    return `Pedido ${guardado.id || orderId}: el servidor lo dejó ${this.orderStatusLabel(guardado.status)}${guia}${paqueteria}.`;
+  }
 }
 
 

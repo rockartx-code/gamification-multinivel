@@ -1,0 +1,198 @@
+"""Un socio que compra en la tienda tiene que activarse y acumular descuento."""
+import json
+from decimal import Decimal
+
+import pytest
+
+
+@pytest.fixture
+def modulos(utils):
+    import order_lambda, commissions_lambda
+    return order_lambda, commissions_lambda
+
+
+def _socio(utils, cid=555):
+    utils._put_entity("CUSTOMER", cid, {"entityType": "customer", "customerId": cid, "name": "Rodrigo", "email": "r@test.com"})
+    return cid
+
+
+def _producto(utils, pid=9):
+    utils._put_entity("PRODUCT", pid, {"entityType": "product", "productId": pid, "name": "Klinhart", "price": 480, "vpPoints": 10, "active": True})
+    return pid
+
+
+def _pedido(cid, pid, qty=2):
+    # Lo que manda el frontend: customerId sí, buyerType NO.
+    return {"customerId": cid, "customerName": "Rodrigo", "items": [{"productId": pid, "name": "Klinhart", "price": 480, "quantity": qty}],
+            "recipientName": "Rodrigo", "deliveryType": "shipping",
+            "shippingAddress": {"street": "x", "number": "1", "city": "Qro", "state": "Qro", "postalCode": "76000", "country": "MX"}}
+
+
+def test_el_pedido_de_un_socio_no_es_de_invitado(modulos, utils):
+    """Regresión: sin buyerType en el cuerpo, el pedido se guardaba como guest
+    aunque llevara customerId de un socio con ficha."""
+    order_lambda, _ = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    r = order_lambda.handle_create_order(_pedido(cid, pid), {})
+    assert r["statusCode"] in (200, 201), r["body"]
+    pedido = json.loads(r["body"]); pedido = pedido.get("order") or pedido
+    assert pedido["buyerType"] == "associate"
+
+
+def test_el_pago_acredita_volumen_personal_al_socio(modulos, utils):
+    """Regresión: el socio pagaba 20 puntos exactos y su panel seguía en 0%."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert estado, "tras pagar debe existir el estado mensual del socio"
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("960")
+
+
+def test_un_pedido_viejo_marcado_guest_con_ficha_tambien_se_acredita(modulos, utils):
+    """Los pedidos creados antes de la corrección quedaron como guest con
+    customerId; al reprocesarlos deben acreditar igual."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    utils._put_entity("ORDER", "ORD-VIEJO", {"entityType": "order", "orderId": "ORD-VIEJO", "customerId": cid, "buyerType": "guest",
+                                             "status": "paid", "netTotal": Decimal("960"), "grossSubtotal": Decimal("960"),
+                                             "items": [{"productId": pid, "price": 480, "quantity": 2, "vpPoints": Decimal("10"), "commissionable": True}]})
+    commissions_lambda.lambda_handler({"orderId": "ORD-VIEJO", "action": "ORDER_PAID"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert estado and Decimal(str(estado.get("netVolume", 0))) == Decimal("960")
+
+
+def test_un_invitado_de_verdad_sigue_sin_acreditar(modulos, utils):
+    order_lambda, commissions_lambda = modulos
+    pid = _producto(utils)
+    cuerpo = {**_pedido(None, pid), "customerId": None, "guest": True, "email": "x@test.com"}
+    pedido = json.loads(order_lambda.handle_create_order(cuerpo, {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    assert not [k for k in utils._table.store if k[0].startswith("ASSOCIATE_MONTH")]
+
+
+def test_cancelar_o_reembolsar_resta_el_volumen_acreditado(modulos, utils):
+    """Regresión: un pedido cancelado o reembolsado dejaba al socio con el
+    volumen y los VP de esa compra (seguía "activo" con un pedido devuelto)."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("960")
+
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_REFUNDED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+    assert Decimal(str(estado.get("netVP", 0))) == Decimal("0")
+    # Una segunda anulación no resta dos veces.
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_CANCELLED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+
+def test_cancelar_un_pedido_nunca_pagado_no_resta_volumen(modulos, utils):
+    """Regresión: Verónica canceló un carrito de $1,952 que nunca pagó y quedó
+    con -14.6 VP; el motor restaba el volumen aunque jamás se hubiera sumado."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pendiente = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid_pendiente = (pendiente.get("order") or pendiente)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid_pendiente, "action": "ORDER_CANCELLED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert not estado or Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+    pagado = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid_pagado = (pagado.get("order") or pagado)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid_pagado, "action": "ORDER_PAID"}, None)
+    assert utils._get_by_id("ORDER", oid_pagado).get("rewardsAppliedAt")
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("960")
+    # El pedido pagado sí se resta al cancelarse.
+    commissions_lambda.lambda_handler({"orderId": oid_pagado, "action": "ORDER_CANCELLED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+
+def test_una_devolucion_de_un_pedido_viejo_sin_marcas_si_resta_volumen(modulos, utils):
+    """Pedidos pagados antes de que existiera rewardsAppliedAt/paidAt: una
+    devolución validada debe restar el volumen igual (no es una cancelación)."""
+    order_lambda, commissions_lambda = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid), {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    utils._update_by_id("ORDER", oid, "REMOVE rewardsAppliedAt, paidAt", {})
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_RETURNED"}, None)
+    estado = utils._get_by_id("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()))
+    assert Decimal(str(estado.get("netVolume", 0))) == Decimal("0")
+
+
+def test_la_pasarela_cobra_el_total_con_descuento(modulos, utils, monkeypatch):
+    """Regresión: la preferencia de MercadoPago llevaba precios de lista; el
+    socio veía Total $1,137 y pagaba $1,249."""
+    order_lambda, _ = modulos
+    cid, pid = _socio(utils), _producto(utils)
+    utils._put_entity("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()),
+                      {"entityType": "associateMonth", "associateId": cid, "monthKey": utils._month_key(), "netVolume": Decimal("1000")})
+    pedido = json.loads(order_lambda.handle_create_order({**_pedido(cid, pid, qty=1), "shippingCarrier": "Estafeta", "shippingService": "Terrestre", "shippingCost": 129}, {})["body"])
+    o = pedido.get("order") or pedido
+    assert float(o["discountRate"]) == 0.1 and float(o["netTotal"]) == 432.0 and float(o["total"]) == 561.0
+    capturado = {}
+    class _Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return json.dumps({"id": "pref-1", "init_point": "https://mp/x"}).encode()
+    def _urlopen(req, *a, **k):
+        capturado["pref"] = json.loads(req.data.decode()); return _Resp()
+    monkeypatch.setattr(order_lambda.urllib.request, "urlopen", _urlopen)
+    r = order_lambda.handle_mercadopago_checkout(o["orderId"], {})
+    assert r["statusCode"] == 200, r["body"]
+    cobrado = sum(it["unit_price"] * it["quantity"] for it in capturado["pref"]["items"])
+    assert abs(cobrado - 561.0) < 0.01, capturado["pref"]["items"]
+
+
+def test_si_se_anula_una_comision_avisada_se_avisa_la_anulacion(modulos, utils, monkeypatch):
+    """La patrocinadora recibía 'comisión de $60 en camino' y, al cancelarse el
+    pedido, la comisión desaparecía del panel sin ningún aviso."""
+    order_lambda, commissions_lambda = modulos
+    correos = []
+    monkeypatch.setattr(utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto)))
+    monkeypatch.setattr(commissions_lambda.utils, "_send_ses_email", lambda para, asunto, texto, html: correos.append((para, asunto)), raising=False)
+    utils._put_entity("CUSTOMER", 700, {"entityType": "customer", "customerId": 700, "name": "Verónica", "email": "vero@test.com"})
+    utils._put_entity("ASSOCIATE_MONTH", utils._associate_month_entity_id(700, utils._month_key()),
+                      {"entityType": "associateMonth", "associateId": 700, "monthKey": utils._month_key(), "netVolume": Decimal("2000"), "netVP": Decimal("40"), "isActive": True})
+    utils._put_entity("CUSTOMER", 701, {"entityType": "customer", "customerId": 701, "name": "Memo", "email": "memo@test.com", "leaderId": 700})
+    pid = _producto(utils)
+    pedido = json.loads(order_lambda.handle_create_order({**_pedido(701, pid), "customerName": "Memo"}, {})["body"])
+    oid = (pedido.get("order") or pedido)["orderId"]
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_PAID"}, None)
+    assert any(p == "vero@test.com" and "en camino" in a for p, a in correos), correos
+    commissions_lambda.lambda_handler({"orderId": oid, "action": "ORDER_CANCELLED"}, None)
+    anulados = [a for p, a in correos if p == "vero@test.com" and "anulada" in a]
+    assert anulados and oid in anulados[0], correos
+
+
+def test_no_se_paga_sin_clabe_y_el_pago_se_puede_deshacer(modulos, utils, monkeypatch):
+    """Regresión: la gerente marcó 'Pagada' la comisión de una socia sin CLABE
+    (sin transferencia real) y no había forma de deshacerlo."""
+    _, commissions_lambda = modulos
+    monkeypatch.setattr(commissions_lambda, "_upload_receipt_s3", lambda *a, **k: {"assetId": "A1", "url": "https://s3/x.png"})
+    monkeypatch.setattr(commissions_lambda.utils, "_send_ses_email", lambda *a, **k: None, raising=False)
+    utils._put_entity("CUSTOMER", 810, {"entityType": "customer", "customerId": 810, "name": "Bety", "email": "b@test.com"})
+    mk = "2026-12"
+    ledger = commissions_lambda._get_ledger_month(810, mk); ledger["totalConfirmed"] = Decimal("99"); utils._save_ledger_month(ledger)
+    r = commissions_lambda.handle_admin_receipt({"customerId": 810, "monthKey": mk, "name": "c.png", "contentBase64": "aGk="})
+    assert r["statusCode"] == 409 and "CLABE" in r["body"]
+    utils._update_by_id("CUSTOMER", 810, "SET clabeInterbancaria = :c", {":c": "012180000000000001"})
+    r = commissions_lambda.handle_admin_receipt({"customerId": 810, "monthKey": mk, "name": "c.png", "contentBase64": "aGk="})
+    assert r["statusCode"] == 201, r["body"]
+    assert commissions_lambda._get_ledger_month(810, mk)["status"] == "PAID"
+    assert commissions_lambda.handle_admin_receipt({"customerId": 810, "monthKey": mk, "name": "c.png", "contentBase64": "aGk="})["statusCode"] == 409
+    r = commissions_lambda.handle_admin_receipt_revert({"customerId": 810, "monthKey": mk, "reason": "registrado por error"})
+    assert r["statusCode"] == 200, r["body"]
+    assert commissions_lambda._get_ledger_month(810, mk)["status"] != "PAID"

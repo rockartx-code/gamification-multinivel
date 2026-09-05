@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -37,6 +37,14 @@ import { UiStatusBadgeComponent } from '../../components/ui-status-badge/ui-stat
 import { UiGoalProgressComponent } from '../../components/ui-goal-progress/ui-goal-progress.component';
 import { UiDataTableComponent } from '../../components/ui-data-table/ui-data-table.component';
 import { UiNetworkGraphComponent } from '../../components/ui-networkgraph/ui-networkgraph.component';
+import { UiPaginationComponent } from '../../components/ui-pagination/ui-pagination.component';
+import { UiTablaDescuentoComponent } from '../../components/ui-tabla-descuento/ui-tabla-descuento.component';
+import { UiClabeFormComponent } from '../../components/ui-clabe-form/ui-clabe-form.component'; // WP-A · propuesta 1
+import { IndicadoresCliente, PlanSocio, formatoPorcentaje } from '../../models/plan-socio.model';
+import { textoBaseComision } from '../../models/pagos.model'; // WP-A · propuesta 37
+import { PlanSocioService } from '../../services/plan-socio.service';
+import { CustomerShippingAddress } from '../../models/admin.model';
+import { SuscripcionComponent } from './suscripcion/suscripcion.component'; // WP-I2 · suscripción mensual (paquete H) en #ordenes
 
 type GraphNode = {
   id: string;
@@ -58,7 +66,7 @@ type GraphLayout = {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UiButtonComponent, UiFormFieldComponent, UiModalComponent, UiTableComponent, UiKpiCardComponent, UiHeaderComponent, UiFooterComponent, UiSidebarNavComponent, UiProductCardComponent, UiStatusBadgeComponent, UiGoalProgressComponent, UiDataTableComponent, UiNetworkGraphComponent, UiPaginationComponent, UiTablaDescuentoComponent, UiClabeFormComponent /* WP-A */, SuscripcionComponent /* WP-I2 */],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.css'
 })
@@ -70,8 +78,45 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     private readonly goalControl: GoalControlService,
     private readonly router: Router,
     private readonly api: ApiService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly planSocio: PlanSocioService
   ) { }
+
+  /** Plan publicado (tramos, activación) para la tabla única de descuento. */
+  plan: PlanSocio | null = null;
+
+  // ── Ola B · I2: suscripción mensual (paquete H) montada en #ordenes ──
+  /** Sucursales con recoger en tienda, para la suscripción "recoger en sucursal". */
+  pickupStocks: Array<{ id: string; name: string; location: string }> = [];
+
+  get shippingAddresses(): CustomerShippingAddress[] {
+    return this.dashboardControl.shippingAddresses;
+  }
+
+  get defaultShippingAddressId(): string {
+    return this.dashboardControl.defaultShippingAddressId;
+  }
+
+  /** Tras crear, editar, pausar o cancelar la suscripción: la lista de pedidos puede tener uno nuevo. */
+  onSuscripcionCambiada(): void {
+    this.ordersCache.clear();
+    this.ordersPageTokens.clear();
+    this.ordersPageTokens.set(0, null);
+    this.ordersLastPageIndex = null;
+    this.loadOrders(0);
+    this.cdr.markForCheck();
+  }
+
+  private loadPickupStocks(): void {
+    this.api.listPickupStocks().subscribe({
+      next: (stocks) => {
+        this.pickupStocks = stocks ?? [];
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
+  }
+  readonly porcentaje = formatoPorcentaje;
 
   readonly countdownLabel = signal('');
   activeFeaturedId = '';
@@ -82,6 +127,14 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   secondaryGoalsVisible = false;
   toastMessage = 'Actualizado.';
   isToastVisible = false;
+  /** 'logro' pinta el toast como celebración (medallón + detalle dorado). */
+  toastKind: 'info' | 'logro' = 'info';
+  toastDetail = '';
+  /** Ráfagas de partículas ancladas al carrito; cada id monta un burst nuevo. */
+  cartBursts: number[] = [];
+  isCartBumping = false;
+  private burstSeq = 0;
+  private cartBumpTimeout: number | null = null;
   captionText = '';
   hasCopiedLink = false;
   hasCopiedCopy = false;
@@ -165,15 +218,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private lastActiveGoalKey = '';
   private lastActiveGoalBase = -1;
   private lastActiveGoalCart = -1;
-  commissionClabe = '';
   commissionUploadName = '';
   showCommissionLedger = false;
   showBlockedTooltip = false;
   showOrdersHelp = false;
-  clabeDraft = '';
-  clabePending = '';
-  isClabeConfirmOpen = false;
-  isClabeSaving = false;
   isGoalsModalOpen = false;
   isProductDetailsOpen = false;
   selectedProduct: DashboardProduct | null = null;
@@ -208,6 +256,42 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.currentUser?.role === 'cliente';
   }
 
+  // ── Paquete B: modo cliente / modo socio ─────────────────────────────────
+  get accountMode(): 'cliente' | 'socio' {
+    return this.dashboardControl.data?.mode === 'cliente' ? 'cliente' : 'socio';
+  }
+
+  /** En modo cliente se ocultan red, VP, comisiones, CLABE y enlaces de referido. */
+  get isClientMode(): boolean {
+    return !this.isGuest && this.accountMode === 'cliente';
+  }
+
+  get clientIndicators(): IndicadoresCliente | null {
+    return this.dashboardControl.data?.clientIndicators ?? null;
+  }
+
+  get myNetSpend(): number {
+    return this.dashboardControl.data?.myNetSpend ?? 0;
+  }
+
+  /** PC de lista del carrito actual (para la tabla única de descuento). */
+  get cartPc(): number {
+    const puntos = new Map(this.products.map((p) => [p.id, Number(p.vpPoints ?? 0) || 0]));
+    return this.cartControl.cartItems.reduce((acc, item) => acc + (puntos.get(item.id) ?? 0) * item.qty, 0);
+  }
+
+  get queGanarias(): string {
+    const ejemplo = this.clientIndicators?.exampleEarnings;
+    if (!ejemplo) {
+      return '';
+    }
+    return `Si ${ejemplo.friends} amigas compraran ${this.formatMoney(ejemplo.purchaseEach)} cada una, ganarías ${this.formatMoney(ejemplo.total)} al mes (${this.porcentaje(ejemplo.rate)} de lo que compra cada una).`;
+  }
+
+  goToModoSocio(): void {
+    void this.router.navigate(['/modo-socio']);
+  }
+
   private get dashboardUser(): UserDashboardData['user'] | null {
     return this.dashboardControl.data?.user ?? null;
   }
@@ -238,28 +322,60 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get dashboardNavLinks(): SidebarLink[] {
-    const key = `${this.isGuest ? 'guest' : 'user'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|honor`;
+    const key = `${this.isGuest ? 'guest' : 'user'}|${this.isClientMode ? 'cliente' : 'socio'}|${this.commissionSummary ? 'with-commissions' : 'no-commissions'}|${this.honorBoard ? 'honor' : 'sin-honor'}`;
     if (key === this.dashboardNavLinksKey) {
       return this.dashboardNavLinksCache;
     }
 
     const links: SidebarLink[] = [{ id: 'merchant', icon: 'fa-store', label: 'Tienda' }];
-    if (!this.isGuest) {
+    if (!this.isGuest && this.isClientMode) {
+      // Paquete B: en modo cliente no hay red, enlaces ni comisiones que mostrar.
+      links.push(
+        { id: 'modo-cliente', icon: 'fa-bag-shopping', label: 'Mi cuenta' },
+        { id: 'ordenes', icon: 'fa-receipt', label: 'Órdenes' }
+      );
+    }
+    if (!this.isGuest && !this.isClientMode) {
       links.push(
         { id: 'red', icon: 'fa-users', label: 'Red' },
         { id: 'links', icon: 'fa-link', label: 'Links' },
-        { id: 'ordenes', icon: 'fa-receipt', label: 'Ordenes' }
+        { id: 'ordenes', icon: 'fa-receipt', label: 'Órdenes' }
       );
       if (this.commissionSummary) {
         links.push({ id: 'comisiones', icon: 'fa-wallet', label: 'Comisiones' });
       }
-      links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
+    }
+    if (!this.isGuest) {
+      // §2.2: en modo cliente no se ve red ni VP; el ranking es por VG y VP.
+      // Ronda 7 · Gerardo: el enlace se pintaba siempre y la sección solo existe
+      // cuando hay tabla del mes, así que en un socio recién activado era un
+      // botón muerto —igual que Comisiones, que sí se condiciona—.
+      if (!this.isClientMode && this.honorBoard) {
+        links.push({ id: 'honor', icon: 'fa-ranking-star', label: 'Cuadro de Honor' });
+      }
       links.push({ id: 'perfil', icon: 'fa-circle-user', label: 'Mi perfil' });
     }
 
     this.dashboardNavLinksKey = key;
     this.dashboardNavLinksCache = links;
     return this.dashboardNavLinksCache;
+  }
+
+  /**
+   * ¿Hay una ventana modal abierta? El fondo oscuro cubre toda la pantalla y se
+   * traga cualquier toque, así que nada que quede debajo debe seguir pintado
+   * como si se pudiera usar (ronda 7 · Valeria).
+   */
+  get hayModalAbierto(): boolean {
+    return (
+      this.isProductDetailsOpen ||
+      this.isGoalsModalOpen ||
+      this.isHonorBoardModalOpen ||
+      this.isNotificationsCenterOpen ||
+      this.isNotificationModalOpen ||
+      this.isCommissionModalOpen ||
+      this.showGuestRegisterModal
+    );
   }
 
   handleDashboardNavSelect(sectionId: string): void {
@@ -351,7 +467,66 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.dashboardControl.networkMembers;
   }
 
+  /** Historial: el 1 de octubre "septiembre desapareció" del panel; ahora se puede elegir el mes. */
+  commissionMonthOverride: UserDashboardData['commissions'] | null = null;
+  selectedCommissionMonth = '';
+  isLoadingCommissionMonth = false;
+
+  get commissionMonthOptions(): Array<{ value: string; label: string }> {
+    const base = this.dashboardControl.data?.commissions?.monthKey || this.currentMonthKey();
+    const [y, m] = base.split('-').map(Number);
+    const out: Array<{ value: string; label: string }> = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(Date.UTC(y, m - 1 - i, 1));
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      out.push({ value: key, label: i === 0 ? `${label} (actual)` : label });
+    }
+    return out;
+  }
+
+  private currentMonthKey(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  selectCommissionMonth(monthKey: string): void {
+    const current = this.dashboardControl.data?.commissions;
+    this.selectedCommissionMonth = monthKey;
+    if (!current || !monthKey || monthKey === current.monthKey) {
+      this.commissionMonthOverride = null;
+      return;
+    }
+    const id = String(this.authService.currentUser?.userId ?? '');
+    if (!id) {
+      return;
+    }
+    this.isLoadingCommissionMonth = true;
+    this.api.getCommissionsLedgerMonth(id, monthKey).subscribe({
+      next: (raw) => {
+        const r = raw as Record<string, number | unknown[] | string>;
+        this.commissionMonthOverride = {
+          ...current,
+          monthKey,
+          pendingTotal: Number(r['totalPending'] ?? 0),
+          monthTotal: Number(r['totalConfirmed'] ?? 0),
+          blockedTotal: Number(r['totalBlocked'] ?? 0),
+          ledger: Array.isArray(r['ledger']) ? (r['ledger'] as NonNullable<UserDashboardData['commissions']>['ledger']) : [],
+          hasPending: Number(r['totalPending'] ?? 0) > 0,
+          hasConfirmed: Number(r['totalConfirmed'] ?? 0) > 0
+        };
+        this.isLoadingCommissionMonth = false;
+      },
+      error: () => {
+        this.isLoadingCommissionMonth = false;
+      }
+    });
+  }
+
   get commissionSummary(): UserDashboardData['commissions'] {
+    if (this.commissionMonthOverride) {
+      return this.commissionMonthOverride;
+    }
     return this.dashboardControl.data?.commissions ?? null;
   }
 
@@ -365,6 +540,19 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   get currentRank(): string {
     return this.dashboardControl.data?.rank ?? '';
+  }
+
+  /** Nombre de pila e inicial para los demás: el ranking mostraba nombres completos de otras líneas. */
+  honorDisplayName(entry: { customerId?: string | number; name?: string }): string {
+    const name = String(entry?.name || '').trim();
+    if (!name) {
+      return 'Socio';
+    }
+    if (String(entry?.customerId ?? '') === String(this.currentUserId ?? '')) {
+      return name;
+    }
+    const parts = name.split(/\s+/);
+    return parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
   }
 
   get honorBoard(): HonorBoard | null {
@@ -537,7 +725,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   get heroTags(): string[] {
     return this.productOfMonth?.tags?.length
       ? this.productOfMonth.tags
-      : ['10g por porci?n', 'Vitamina C + AH', 'Alta absorci?n'];
+      : ['10g por porción', 'Vitamina C + AH', 'Alta absorción'];
   }
 
   get heroGoalHint(): string {
@@ -547,25 +735,26 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return `Este producto te acerca a: ${this.activeGoal.title}`;
   }
 
+  // ── Paquete G · ronda 26 · propuesta 29 ──
+  // El componente tenía una copia calcada del cálculo del corte que vivía en el
+  // servicio. Ahora solo pregunta: un único origen, el del servidor.
+
   get cutoffRemainingSeconds(): number {
-    const settings = this.dashboardControl.data?.settings;
-    if (!settings) {
-      return 0;
-    }
-    const next = this.getNextCutoffDate(settings);
-    return Math.max(0, Math.floor((next.getTime() - Date.now()) / 1000));
+    return this.dashboardControl.getCutoffRemainingSeconds();
   }
 
   get cutoffTotalSeconds(): number {
-    const settings = this.dashboardControl.data?.settings;
-    if (!settings) {
-      return 1;
-    }
-    const next = this.getNextCutoffDate(settings);
-    const prev = new Date(next);
-    prev.setMonth(prev.getMonth() - 1);
-    const total = Math.max(1, Math.floor((next.getTime() - prev.getTime()) / 1000));
-    return total;
+    return this.dashboardControl.getCutoffTotalSeconds();
+  }
+
+  /** De qué es el corte: ninguna de las siete personas que lo vieron lo entendió. */
+  get cutoffLabel(): string {
+    return this.dashboardControl.getCutoffLabel();
+  }
+
+  /** La fecha en letras junto al reloj: "lunes 25 de marzo de 2027, 23:59". */
+  get cutoffDateText(): string {
+    return this.dashboardControl.getCutoffDateText();
   }
 
   private readonly emptyFeatured: FeaturedItem = {
@@ -775,6 +964,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isUserDetailsOpen = !this.isUserDetailsOpen;
   }
 
+  /** Escape cierra el cuadro de cuenta y el menú móvil (en móvil quedaban uno sobre otro). */
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (!this.isUserDetailsOpen && !this.isMobileNavOpen) {
+      return;
+    }
+    this.isUserDetailsOpen = false;
+    this.isMobileNavOpen = false;
+    this.cdr.markForCheck();
+  }
+
   closeNotificationModal(): void {
     this.isNotificationModalOpen = false;
     this.activeNotification = null;
@@ -788,6 +988,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
     this.isNotificationsCenterOpen = true;
+    // El contador se quedaba en "1" aunque la persona ya hubiera visto la lista:
+    // solo se marcaba al abrir cada aviso por separado.
+    for (const notification of this.dashboardControl.data?.notifications ?? []) {
+      if (!notification.isRead) {
+        this.markNotificationAsRead(notification);
+      }
+    }
   }
 
   closeNotificationsCenter(): void {
@@ -894,7 +1101,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       y: rootY,
       label: this.nodeLabel(rootName),
       name: rootName,
-      meta: { spend: 0 }
+      // Estaba fijo en 0: el socio veía "$0" en su propio nodo con la compra ya acreditada.
+      meta: { spend: this.dashboardControl.data?.myNetSpend ?? 0 }
     };
 
     const l1Nodes = l1Members.map((member, idx) => ({
@@ -1045,8 +1253,22 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     return `M ${link.x1} ${link.y1} Q ${midX} ${midY}, ${link.x2} ${link.y2}`;
   }
   ngOnInit(): void {
+    // Un empleado con sesión guardada caía en la tienda de socios al abrir #/.
+    const sesion = this.authService.currentUser;
+    if (sesion && sesion.role !== 'cliente' && this.authService.hasAdminPanelAccess(sesion)) {
+      void this.router.navigate(['/admin']);
+      return;
+    }
     this.isLoading = true;
     this.cartControl.load().subscribe();
+    // Paquete B: la tabla única de descuento usa los tramos reales del plan.
+    this.planSocio.plan$.subscribe({
+      next: (plan) => {
+        this.plan = plan;
+        this.cdr.markForCheck();
+      },
+      error: () => this.cdr.markForCheck()
+    });
     this.restoreSelectedVariantsFromCart();
     this.goalsSub = this.goalControl.goals$.subscribe((goals) => {
       if (goals) {
@@ -1087,6 +1309,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.countdownInterval = window.setInterval(() => this.updateCountdown(), 1000);
     if (!this.isGuest && this.currentUser?.userId) {
       void this.loadOrders();
+      this.loadPickupStocks();
     }
   }
 
@@ -1130,8 +1353,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       }, 6000);
     }
     // Show honor board modal once per session if in top 10
-    if (this.isInTop10 && !this.honorBoardModalShown) {
+    // Una vez por mes y por navegador: el modal volvía a saltar en cada recarga.
+    const monthKey = this.honorBoard?.monthKey || '';
+    let yaMostrado = false;
+    try { yaMostrado = localStorage.getItem(`honorBoardModalShown:${monthKey}`) === '1'; } catch { yaMostrado = false; }
+    if (this.isInTop10 && !this.isClientMode && !this.honorBoardModalShown && !yaMostrado) {
       this.honorBoardModalShown = true;
+      try { localStorage.setItem(`honorBoardModalShown:${monthKey}`, '1'); } catch { /* sin almacenamiento */ }
       setTimeout(() => {
         this.isHonorBoardModalOpen = true;
         this.cdr.markForCheck();
@@ -1177,7 +1405,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isGuestRegisterSubmitting) {
       return;
     }
-    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.apellidoMaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
+    if (!this.guestRegisterForm.firstName.trim() || !this.guestRegisterForm.apellidoPaterno.trim() || !this.guestRegisterForm.email || !this.guestRegisterForm.password) {
       this.guestRegisterFeedback = 'Completa los campos obligatorios.';
       this.guestRegisterFeedbackType = 'error';
       return;
@@ -1310,6 +1538,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   toggleMobileNav(): void {
     this.isMobileNavOpen = !this.isMobileNavOpen;
+    this.isUserDetailsOpen = false;
   }
 
   closeMobileNav(): void {
@@ -1392,7 +1621,21 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (normalized.includes('block') || normalized.includes('bloque')) {
       return 'badge badge-compact level-5 status-inactive';
     }
+    if (normalized.includes('void') || normalized.includes('anul')) {
+      return 'badge badge-compact level-5 status-inactive line-through';
+    }
     return 'badge badge-compact level-4';
+  }
+
+  /** Estado del ledger en palabras: la tabla mostraba "pending"/"blocked"/"voided" tal cual. */
+  commissionLedgerStatusLabel(status?: string): string {
+    const normalized = (status ?? '').toLowerCase();
+    if (normalized.includes('confirm')) return 'Confirmada';
+    if (normalized.includes('pending') || normalized.includes('pendient')) return 'Por confirmar';
+    if (normalized.includes('block') || normalized.includes('bloque')) return 'Bloqueada';
+    if (normalized.includes('void') || normalized.includes('anul')) return 'Anulada';
+    if (normalized.includes('paid') || normalized.includes('pagad')) return 'Pagada';
+    return status || '-';
   }
 
   commissionPrevStatusClass(status?: string): string {
@@ -1419,31 +1662,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.canPrevFeatured) {
       this.featuredPage -= 1;
     }
-  }
-
-  private getNextCutoffDate(settings: UserDashboardData['settings']): Date {
-    const now = new Date();
-    let cutoff = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      settings.cutoffDay,
-      settings.cutoffHour,
-      settings.cutoffMinute,
-      59,
-      999
-    );
-    if (cutoff.getTime() <= now.getTime()) {
-      cutoff = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        settings.cutoffDay,
-        settings.cutoffHour,
-        settings.cutoffMinute,
-        59,
-        999
-      );
-    }
-    return cutoff;
   }
 
   setChannel(channel: 'whatsapp' | 'instagram' | 'facebook'): void {
@@ -1586,19 +1804,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     window.open(this.referralLink, '_blank', 'noopener');
   }
 
-  updateCart(productId: string, qty: number): void {
-    const product = this.resolveProduct(productId);
-    if (product) {
-      const variantId = this.selectedVariantIds.get(productId);
-      this.cartControl.upsertItem(this.buildCartItem(product, variantId), qty);
-    }
-    this.logGoalProgress();
-    if (this.cartTotal > 0) {
-      this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
-    }
-    this.maybeShowGoalProgressToast();
-  }
-
   getVariantQtys(productId: string): Record<string, number> {
     const result: Record<string, number> = {};
     for (const item of this.cartControl.cartItems) {
@@ -1618,10 +1823,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!product) {
       return;
     }
+    const previousQty = this.cartControl.getQty(`${productId}::${event.variantId}`);
     const cartItem = this.buildCartItem(product, event.variantId);
     this.cartControl.upsertItem(cartItem, event.qty);
     this.logGoalProgress();
-    if (this.cartTotal > 0) {
+    if (event.qty > previousQty) {
+      this.celebrateAdd(product, event.qty - previousQty);
+    } else if (this.cartTotal > 0) {
       this.showToast(`En carrito: ${this.formatMoney(this.cartTotal)} (pendiente de pago)`);
     }
     this.maybeShowGoalProgressToast();
@@ -1645,25 +1853,27 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
+  /** Agrega al carrito la cantidad tecleada en la tarjeta (borrador de `ui-product-card`, propuesta 10). */
   addQuick(productId: string, addQty: number): void {
     const product = this.resolveProduct(productId);
     if (product) {
       const variantId = this.selectedVariantIds.get(productId);
       this.cartControl.addItem(this.buildCartItem(product, variantId), addQty);
+      if (addQty > 0) {
+        this.celebrateAdd(product, addQty);
+      }
     }
     this.logGoalProgress();
     this.maybeShowGoalProgressToast();
   }
 
+  /** Cantidad tecleada junto a "Agregar a carrito". Antes el campo escribía
+   *  directo en el carrito y el botón sumaba 1 más: 2 → 3, 1 → 2. */
+  heroQtyDraft = 1;
+
   setHeroQty(value: number): void {
-    const productId = this.productOfMonth?.id;
-    if (!productId) {
-      return;
-    }
-    const product = this.resolveProduct(productId);
-    if (product) {
-      this.cartControl.upsertItem(this.buildCartItem(product), value);
-    }
+    const n = Math.floor(Number(value));
+    this.heroQtyDraft = Number.isFinite(n) && n > 0 ? n : 1;
   }
 
   addHeroToCart(): void {
@@ -1673,7 +1883,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     const product = this.resolveProduct(productId);
     if (product) {
-      this.cartControl.addItem(this.buildCartItem(product), 1);
+      const qty = this.heroQtyDraft;
+      this.cartControl.addItem(this.buildCartItem(product), qty);
+      this.celebrateAdd(product, qty);
+      this.heroQtyDraft = 1;
     }
     this.logGoalProgress();
     this.maybeShowGoalProgressToast();
@@ -1692,7 +1905,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   openCommissionModal(): void {
-    this.commissionClabe = '';
     this.isCommissionModalOpen = true;
   }
 
@@ -1700,23 +1912,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isCommissionModalOpen = false;
   }
 
-  openClabeConfirm(): void {
-    const clabe = this.clabeDraft.trim();
-    if (!clabe) {
-      this.showToast('Ingresa tu CLABE interbancaria.');
-      return;
+  /**
+   * WP-A · propuesta 1: la CLABE la guarda `ui-clabe-form` de un tirón y
+   * pinta su estado en el propio campo. Aquí solo se refresca el panel para
+   * que el resto de la pantalla (avisos, "sin CLABE") deje de mentir.
+   */
+  onClabeSaved(evento: { clabeLast4: string; removed: boolean }): void {
+    if (this.commissionSummary) {
+      this.commissionSummary.clabeOnFile = !evento.removed;
+      this.commissionSummary.clabeLast4 = evento.clabeLast4;
     }
-    if (!/^\d{18}$/.test(clabe)) {
-      this.showToast('La CLABE debe tener 18 digitos.');
-      return;
-    }
-    this.clabePending = clabe;
-    this.isClabeConfirmOpen = true;
-  }
-
-  closeClabeConfirm(): void {
-    this.isClabeConfirmOpen = false;
-    this.clabePending = '';
+    this.dashboardControl.load({ force: true }).subscribe();
   }
 
   toggleCommissionLedger(): void {
@@ -1752,6 +1958,34 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       return value;
     }
     return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /**
+   * WP-A · propuesta 32: la fila muestra la fecha del **pedido**, que es la
+   * que la socia reconoce ("le movieron la fecha a mis comisiones").
+   */
+  ledgerRowDate(row: { orderCreatedAt?: string; createdAt?: string }): string {
+    return this.formatLedgerDate(row.orderCreatedAt || row.createdAt);
+  }
+
+  /**
+   * WP-A · propuesta 37: sobre qué base se pagó esta comisión, con sus números.
+   * *"10 % de $1,350.00 netos, sin envío = $135.00"*.
+   */
+  ledgerRowBase(row: { commissionRate?: number; commissionBaseNet?: number; amount?: number }): string {
+    if (!row.commissionRate || !row.commissionBaseNet) {
+      return '';
+    }
+    return textoBaseComision(row.commissionBaseNet, row.commissionRate, row.amount || 0);
+  }
+
+  /** WP-A · propuesta 32: por qué cambió una comisión, si cambió. */
+  ledgerRowRecalculo(row: { recalculatedAt?: string; recalculatedReason?: string }): string {
+    if (!row.recalculatedAt) {
+      return '';
+    }
+    const motivo = row.recalculatedReason ? ` porque ${row.recalculatedReason}` : '';
+    return `Recalculada el ${this.formatLedgerDate(row.recalculatedAt)}${motivo}.`;
   }
 
   closeGoalsModal(): void {
@@ -1814,16 +2048,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isCommissionSubmitting || !this.currentUser?.userId) {
       return;
     }
-    const clabe = this.commissionClabe.trim();
-    if (!clabe && !this.commissionSummary?.clabeOnFile) {
-      this.showToast('Ingresa tu CLABE interbancaria.');
+    // WP-A · propuesta 1 (guarda 11): la CLABE se captura en un solo
+    // formulario (`ui-clabe-form`). Aquí se pide el depósito a la que ya está
+    // registrada; sin ella no hay a dónde depositar y se dice dónde ponerla.
+    if (!this.commissionSummary?.clabeOnFile) {
+      this.showToast('Registra tu CLABE en "CLABE interbancaria" para pedir el depósito.');
       return;
     }
     this.isCommissionSubmitting = true;
     this.api
       .requestCommissionPayout({
-        customerId: Number(this.currentUser.userId),
-        clabe
+        customerId: Number(this.currentUser.userId)
       })
       .pipe(
         finalize(() => {
@@ -1831,40 +2066,18 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         })
       )
       .subscribe({
-        next: () => {
-          this.showToast('Solicitud enviada. Te contactaremos por el deposito.');
+        next: (respuesta) => {
+          // Lo que quedó guardado en el servidor (folio y monto de la solicitud), no lo tecleado.
+          const guardada = (respuesta as { request?: { requestId?: string; amount?: number; status?: string } } | null)?.request;
+          const folio = guardada?.requestId ? ` ${guardada.requestId}` : '';
+          const monto = Number(guardada?.amount ?? 0);
+          const montoTexto = Number.isFinite(monto) && monto > 0 ? ` por ${this.formatMoney(monto)}` : '';
+          this.showToast(`Solicitud de pago${folio} registrada${montoTexto}. Te avisamos por correo cuando se haga el depósito.`);
           this.closeCommissionModal();
           this.dashboardControl.load({ force: true }).subscribe();
         },
         error: () => {
           this.showToast('No se pudo solicitar el pago.');
-        }
-      });
-  }
-
-  saveCustomerClabe(): void {
-    if (this.isClabeSaving || !this.currentUser?.userId || !this.clabePending) {
-      return;
-    }
-    this.isClabeSaving = true;
-    this.api
-      .saveCustomerClabe({
-        customerId: Number(this.currentUser.userId),
-        clabe: this.clabePending
-      })
-      .pipe(
-        finalize(() => {
-          this.isClabeSaving = false;
-        })
-      )
-      .subscribe({
-        next: () => {
-          this.showToast('CLABE actualizada.');
-          this.closeClabeConfirm();
-          this.dashboardControl.load({ force: true }).subscribe();
-        },
-        error: () => {
-          this.showToast('No se pudo actualizar la CLABE.');
         }
       });
   }
@@ -1929,9 +2142,17 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   scrollToSection(sectionId: string): void {
     const node = document.getElementById(sectionId);
     if (!node) {
+      // Ronda 7 · Gerardo: «los botones del menú no navegan: la URL se queda en
+      // #/dashboard, no sale error, no hay mensaje, la consola está limpia».
+      // Si la sección todavía no existe se dice, en vez de no hacer nada.
+      this.showToast(`Todavía no hay nada que mostrar en ${this.nombreDeSeccion(sectionId)} este mes.`);
       return;
     }
     node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  private nombreDeSeccion(sectionId: string): string {
+    return this.dashboardNavLinks.find((link) => link.id === sectionId)?.label ?? sectionId;
   }
 
   notifyAction(message: string): void {
@@ -2084,6 +2305,10 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     if (goal.isCountGoal) {
       return `${remaining}`;
     }
+    if (goal.unit === 'vp') {
+      // La meta de activación se mide en VP, no en pesos: "Te faltan $20" confundía.
+      return `${Number.isInteger(remaining) ? remaining : remaining.toFixed(1)} VP`;
+    }
     return this.formatMoney(remaining);
   }
 
@@ -2094,12 +2319,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     const progress = this.goalBasePercent(this.activeGoal);
     if (progress >= 100 && this.goalToastState !== 'done') {
       this.goalToastState = 'done';
-      this.showToast('?? Meta alcanzada');
+      this.presentToast('¡Meta alcanzada!', 'logro', 'Lo lograste con tu constancia');
       return;
     }
     if (progress > 90 && this.goalToastState !== 'near') {
       this.goalToastState = 'near';
-      this.showToast('?? Estás a punto de lograr tu meta');
+      this.presentToast('¡Ya casi!', 'logro', 'Estás a un paso de tu meta del mes');
     }
   }
 
@@ -2174,14 +2399,49 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private showToast(message: string): void {
+    this.presentToast(message, 'info', '');
+  }
+
+  /**
+   * Celebra un agregado al carrito: ráfaga dorada en el icono del carrito,
+   * rebote del badge y toast de logro con los PC que suma la compra.
+   */
+  private celebrateAdd(product: { vpPoints?: number } | null | undefined, qty: number): void {
+    const pc = Math.round(Number(product?.vpPoints ?? 0) * Math.max(qty, 0) * 10) / 10;
+    this.cartBursts = [...this.cartBursts, ++this.burstSeq];
+    this.isCartBumping = false;
+    if (this.cartBumpTimeout) {
+      window.clearTimeout(this.cartBumpTimeout);
+    }
+    // Reinicia la animación de rebote aunque haya otra en curso.
+    window.setTimeout(() => (this.isCartBumping = true), 0);
+    this.cartBumpTimeout = window.setTimeout(() => {
+      this.isCartBumping = false;
+      this.cartBursts = [];
+    }, 1200);
+
+    const detail = pc > 0
+      ? `+${pc} PC hacia tu meta`
+      : this.hasDiscount
+        ? `Tu ${this.discountPercent}% de descuento aplicado`
+        : `Total: ${this.formatMoney(this.cartTotal)}`;
+    this.presentToast('Agregado al carrito', 'logro', detail);
+  }
+
+  private presentToast(message: string, kind: 'info' | 'logro', detail: string): void {
     this.toastMessage = message;
+    this.toastKind = kind;
+    this.toastDetail = detail;
     this.isToastVisible = true;
     if (this.toastTimeout) {
       window.clearTimeout(this.toastTimeout);
     }
+    // OnPush: el toast ("CLABE guardada") no se pintaba al llegar desde una respuesta HTTP.
+    this.cdr.markForCheck();
     this.toastTimeout = window.setTimeout(() => {
       this.isToastVisible = false;
-    }, 2200);
+      this.cdr.markForCheck();
+    }, kind === 'logro' ? 2600 : 2200);
   }
 
   loadOrders(page = 0): void {

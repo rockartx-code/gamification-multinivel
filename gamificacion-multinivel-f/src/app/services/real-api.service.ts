@@ -7,6 +7,8 @@ import {
   AdminCustomer,
   AdminData,
   AdminCampaign,
+  AdminWarning,
+  AdminWarningsRespuesta,
   AppBusinessConfig,
   AdminOrder,
   CustomerOrdersPage,
@@ -77,6 +79,7 @@ import {
   CommissionReceiptPayload,
   CommissionRequestPayload,
   CustomerClabePayload,
+  DashboardCampaign,
   DashboardData,
   DashboardProduct,
   HonorBoard,
@@ -84,6 +87,12 @@ import {
   UserDashboardData
 } from '../models/user-dashboard.model';
 import type { AuthUser } from './auth.service';
+
+function normalizeMovementType(raw: string | undefined): InventoryMovement['type'] {
+  const t = (raw || 'entry').toLowerCase();
+  if (t === 'damage' || t === 'damaged' || t === 'merma') return 'damaged';
+  return t as InventoryMovement['type'];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -174,17 +183,10 @@ export class RealApiService {
   }
 
   verifyEmail(token: string): Observable<VerifyEmailResponse> {
-    return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/auth/verify-email`, { token }).pipe(
-      catchError((error) => {
-        const message = String(error?.error?.message ?? '');
-        if (error?.status === 404 && /ruta.*no encontrada/i.test(message)) {
-          return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/verify-email`, { token });
-        }
-
-        return throwError(() => error);
-      })
-    );
+    // Solo /auth/verify-email: el respaldo a /verify-email no tiene ruta en API Gateway.
+    return this.http.post<VerifyEmailResponse>(`${this.baseUrl}/auth/verify-email`, { token });
   }
+
 
   resendEmailConfirmation(payload: ResendEmailConfirmationPayload): Observable<ResendEmailConfirmationResponse> {
     return this.http
@@ -250,9 +252,22 @@ export class RealApiService {
       );
   }
 
-  getAdminWarnings(): Observable<{ type: string; text: string; severity: string }[]> {
-    return this.http.get<{ warnings: { type: string; text: string; severity: string }[] }>(`${this.baseUrl}/dashboard/admin/warnings`, { headers: this.actorHeaders() })
-      .pipe(map((r) => r.warnings ?? []));
+  /**
+   * Avisos del back office con el reloj del servidor.
+   *
+   * Integración de la ronda 26 (propuesta 21): el servidor ya mandaba
+   * `serverNow` y `agingRedDays` y aquí se tiraban al quedarse solo con
+   * `r.warnings`. La antigüedad de un pedido se mide contra ese reloj, nunca
+   * contra el del navegador (§3.6).
+   */
+  getAdminWarnings(): Observable<AdminWarningsRespuesta> {
+    return this.http.get<{ warnings?: AdminWarning[]; serverNow?: string; agingRedDays?: number }>(
+      `${this.baseUrl}/dashboard/admin/warnings`, { headers: this.actorHeaders() })
+      .pipe(map((r) => ({
+        warnings: r.warnings ?? [],
+        serverNow: r.serverNow ?? '',
+        agingRedDays: Number(r.agingRedDays ?? 7) || 7
+      })));
   }
 
   private normalizeAdminCustomer(raw: Record<string, unknown>): AdminCustomer {
@@ -260,6 +275,7 @@ export class RealApiService {
       id: Number(raw['customerId'] ?? raw['id'] ?? 0),
       name: String(raw['name'] ?? ''),
       email: String(raw['email'] ?? ''),
+      phone: raw['phone'] != null && String(raw['phone']).trim() ? String(raw['phone']).trim() : undefined,
       isSuperUser: Boolean(raw['isSuperUser'] ?? false),
       leaderId: raw['leaderId'] != null ? Number(raw['leaderId']) : null,
       level: String(raw['level'] ?? ''),
@@ -272,9 +288,36 @@ export class RealApiService {
       commissionsPrevStatus: raw['commissionsPrevStatus'] as AdminCustomer['commissionsPrevStatus'],
       commissionsPrevReceiptUrl: raw['commissionsPrevReceiptUrl'] != null ? String(raw['commissionsPrevReceiptUrl']) : undefined,
       clabeInterbancaria: raw['clabeInterbancaria'] != null ? String(raw['clabeInterbancaria']) : undefined,
+      // Integración de la ronda 26: la ficha monta `ui-clabe-form` y este es el
+      // dato que necesita ("guardada, termina en 6789"). El servidor manda la
+      // CLABE enmascarada, así que la terminación se saca de ahí cuando no
+      // viene suelta; los 18 dígitos no salen nunca del backend.
+      clabeLast4: raw['clabeLast4'] != null
+        ? String(raw['clabeLast4'])
+        : (raw['clabeInterbancaria'] != null
+            ? String(raw['clabeInterbancaria']).replace(/\D/g, '').slice(-4) || undefined
+            : undefined),
       bankInstitution: raw['bankInstitution'] != null ? String(raw['bankInstitution']) : undefined,
       documents: raw['documents'] as AdminCustomer['documents'],
+      lastPurchaseAt: this.readString(raw, ['lastPurchaseAt']) || undefined,
+      canAccessAdmin: Boolean(raw['canAccessAdmin']),
+      privileges: (raw['privileges'] as AdminCustomer['privileges']) ?? {},
+      doNotContact: Boolean(raw['doNotContact'] ?? false),
+      contactNotes: Array.isArray(raw['contactNotes']) ? (raw['contactNotes'] as AdminCustomer['contactNotes']) : [],
+      origin: raw['origin'] != null ? String(raw['origin']) : undefined,
+      deletedAt: raw['deletedAt'] != null ? String(raw['deletedAt']) : undefined,
+      mode: raw['mode'] === 'cliente' ? 'cliente' : 'socio', // paquete B
+      modeActivatedAt: raw['modeActivatedAt'] != null ? String(raw['modeActivatedAt']) : undefined, // paquete B
     };
+  }
+
+  deleteCustomerData(customerId: number, reason: string): Observable<AdminCustomer> {
+    return this.http
+      .request<{ customer: Record<string, unknown> }>('DELETE', `${this.baseUrl}/customers/${encodeURIComponent(String(customerId))}`, {
+        body: { reason },
+        headers: this.actorHeaders()
+      })
+      .pipe(map((response) => this.normalizeAdminCustomer(response.customer)));
   }
 
   listCustomers(): Observable<AdminCustomer[]> {
@@ -393,12 +436,19 @@ export class RealApiService {
   }
 
   getCatalogData(): Observable<CatalogData> {
-    return this.http.get<{ products: Record<string, unknown>[]; productOfMonth?: Record<string, unknown> | null }>(
+    return this.http.get<{
+      products: Record<string, unknown>[];
+      productOfMonth?: Record<string, unknown> | null;
+      categories?: ProductCategory[];
+      campaigns?: DashboardCampaign[];
+    }>(
       `${this.baseUrl}/catalog/catalog`
     ).pipe(
       map((raw) => ({
         products: (raw.products ?? []).map((p) => this.normalizeDashboardProduct(p)),
         productOfMonth: raw.productOfMonth ? this.normalizeDashboardProduct(raw.productOfMonth) : null,
+        categories: raw.categories ?? [],
+        campaigns: raw.campaigns ?? [],
       } as CatalogData))
     );
   }
@@ -440,14 +490,22 @@ export class RealApiService {
     return this.http.get<DashboardData>(`${this.baseUrl}/customers/dashboard`, { headers: this.actorHeaders() });
   }
 
-  /** @deprecated Usar getCatalogData() + getDashboardData() en su lugar */
+  /**
+   * @deprecated Endpoint obsoleto: usar `getCatalogData()` + `getDashboardData()`.
+   *
+   * El backend responde con cabeceras `Deprecation`/`Sunset` y registra cada
+   * uso (`legacy_user_dashboard_hit`) para poder retirarlo con datos. Ningún
+   * componente de la app lo llama ya; se conserva solo por si algún cliente
+   * cacheado sigue vivo.
+   */
   getUserDashboardData(userId?: string): Observable<UserDashboardData> {
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
     return this.http.get<UserDashboardData>(`${this.baseUrl}/user-dashboard${query}`);
   }
 
-  getHonorBoard(): Observable<HonorBoard> {
-    return this.http.get<HonorBoard>(`${this.baseUrl}/dashboard/honor-board`, { headers: this.actorHeaders() });
+  getHonorBoard(month?: string): Observable<HonorBoard> {
+    const qs = month ? `?month=${encodeURIComponent(month)}` : '';
+    return this.http.get<HonorBoard>(`${this.baseUrl}/dashboard/honor-board${qs}`, { headers: this.actorHeaders() });
   }
 
   requestCommissionPayout(payload: CommissionRequestPayload): Observable<{ request: unknown; summary?: unknown }> {
@@ -462,6 +520,10 @@ export class RealApiService {
     return this.http.post<{ receipt: unknown; asset?: unknown }>(`${this.baseUrl}/commissions/admin/receipt`, payload, {
       headers: this.actorHeaders()
     });
+  }
+
+  revertCommissionPayment(customerId: number, monthKey: string, reason: string): Observable<{ ok: boolean; status: string }> {
+    return this.http.post<{ ok: boolean; status: string }>(`${this.baseUrl}/commissions/admin/receipt/revert`, { customerId, monthKey, reason }, { headers: this.actorHeaders() });
   }
 
   saveCustomerClabe(payload: CustomerClabePayload): Observable<{ ok: boolean; clabeLast4?: string }> {
@@ -528,6 +590,14 @@ export class RealApiService {
         { headers: this.actorHeaders() }
       )
       .pipe(map((r) => (r.summary ?? {}) as Record<string, { customerId: string; monthKey: string; paidTotal: number; status: string; receiptUrl: string }>));
+  }
+
+  /** Mes contable del socio (ledger de comisiones) para el historial del panel. */
+  getCommissionsLedgerMonth(associateId: string, monthKey: string): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(
+      `${this.baseUrl}/commissions/associates/${encodeURIComponent(associateId)}/commissions?month=${encodeURIComponent(monthKey)}`,
+      { headers: this.actorHeaders() }
+    );
   }
 
   getAssociateMonth(associateId: string, monthKey: string): Observable<AssociateMonth> {
@@ -737,7 +807,7 @@ export class RealApiService {
       );
   }
 
-  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null }): Observable<{ transfer: StockTransfer }> {
+  receiveStockTransfer(transferId: string, payload: { receivedByUserId?: number | null; received?: Record<string, number> }): Observable<{ transfer: StockTransfer }> {
     return this.http
       .post<{ transfer?: StockTransfer; message?: string; Error?: string }>(
         `${this.baseUrl}/inventory/stocks/transfers/${encodeURIComponent(transferId)}/receive`,
@@ -757,16 +827,31 @@ export class RealApiService {
       .get<{ movements: Record<string, unknown>[] }>(`${this.baseUrl}/inventory/stocks/movements${query}`, { headers: this.actorHeaders() })
       .pipe(map((response) => (response.movements ?? []).map((m) => ({
         id: String(m['movementId'] ?? m['id'] ?? ''),
-        type: (m['type'] as InventoryMovement['type']) ?? (m['movementType'] as InventoryMovement['type']) ?? 'entry',
+        // El backend registra las mermas como `damage`; el back office las lee como `damaged`.
+        type: normalizeMovementType((m['type'] as string) ?? (m['movementType'] as string)),
         stockId: String(m['stockId'] ?? ''),
         productId: Number(m['productId'] ?? 0),
         qty: Number(m['qty'] ?? 0),
         userId: (m['userId'] as number | null) ?? null,
+        userName: m['userName'] != null ? String(m['userName']) : undefined,
         paymentMethod: m['paymentMethod'] != null ? (String(m['paymentMethod']) as InventoryMovement['paymentMethod']) : undefined,
         reason: m['reason'] != null ? String(m['reason']) : undefined,
         referenceId: m['referenceId'] != null ? String(m['referenceId']) : undefined,
         createdAt: m['createdAt'] != null ? String(m['createdAt']) : undefined,
       } as InventoryMovement))));
+  }
+
+  settlePosSale(saleId: string, payload: { amount?: number; paymentMethod: 'cash' | 'card' | 'transfer' }): Observable<{ pendingAmount: number }> {
+    return this.http
+      .post<{ pendingAmount: number }>(`${this.baseUrl}/inventory/pos/sales/${encodeURIComponent(saleId)}/payments`, payload, { headers: this.actorHeaders() });
+  }
+
+  voidPosSale(saleId: string, reason: string): Observable<{ ok: boolean; saleId: string; orderId?: string }> {
+    return this.http.post<{ ok: boolean; saleId: string; orderId?: string }>(
+      `${this.baseUrl}/inventory/pos/sales/${encodeURIComponent(saleId)}/void`,
+      { reason },
+      { headers: this.actorHeaders() }
+    );
   }
 
   listPosSales(stockId?: string): Observable<PosSale[]> {
@@ -789,6 +874,11 @@ export class RealApiService {
     paymentType?: 'full' | 'partial' | 'credit';
     amountPaid?: number;
     authCode?: string;
+    /** Descuento por escalón del socio, calculado igual que en la tienda en línea. */
+    discountAmount?: number;
+    discountRate?: number;
+    /** Efectivo recibido en mostrador, solo para calcular el cambio. */
+    cashReceived?: number;
   }): Observable<{ sale: PosSale }> {
     return this.http
       .post<{ sale?: Record<string, unknown>; saleId?: string; orderId?: string; message?: string; Error?: string }>(`${this.baseUrl}/inventory/pos/sales`, payload, {
@@ -937,7 +1027,7 @@ export class RealApiService {
       stockId: payload.stockId,
       attendantUserId: null,
       customerId: payload.customerId ?? null,
-      customerName: payload.customerName ?? 'Publico en General',
+      customerName: payload.customerName ?? 'Público en general',
       paymentStatus: payload.paymentStatus ?? 'paid_branch',
       deliveryStatus: payload.deliveryStatus ?? 'delivered_branch',
       paymentMethod: payload.paymentMethod,
@@ -956,7 +1046,7 @@ export class RealApiService {
       stockId: String(sale['stockId'] ?? ''),
       attendantUserId: sale['attendantUserId'] != null ? Number(sale['attendantUserId']) : null,
       customerId: sale['customerId'] != null ? Number(sale['customerId']) : null,
-      customerName: String(sale['customerName'] ?? 'Publico en General'),
+      customerName: String(sale['customerName'] ?? 'Público en general'),
       paymentStatus: (sale['paymentStatus'] as PosSale['paymentStatus']) ?? 'paid_branch',
       deliveryStatus: (sale['deliveryStatus'] as PosSale['deliveryStatus']) ?? 'delivered_branch',
       paymentMethod: sale['paymentMethod'] != null ? (String(sale['paymentMethod']) as PosSale['paymentMethod']) : undefined,
@@ -967,6 +1057,9 @@ export class RealApiService {
       lines: Array.isArray(sale['lines']) ? (sale['lines'] as AdminOrderItem[]) : [],
       createdAt: sale['createdAt'] != null ? String(sale['createdAt']) : undefined,
       cashCutId: sale['cashCutId'] != null ? String(sale['cashCutId']) : undefined,
+      // Sin esto la caja seguía viendo como normales las ventas anuladas.
+      status: sale['status'] != null ? String(sale['status']) : undefined,
+      voidReason: sale['voidReason'] != null ? String(sale['voidReason']) : undefined,
       paymentType: sale['paymentType'] != null ? (String(sale['paymentType']) as PosSale['paymentType']) : undefined,
       amountPaid: sale['amountPaid'] != null ? Number(sale['amountPaid']) : undefined,
       pendingAmount: sale['pendingAmount'] != null ? Number(sale['pendingAmount']) : undefined,
@@ -1026,6 +1119,7 @@ export class RealApiService {
         privileges: (e['privileges'] as AdminEmployee['privileges']) ?? {},
         active: e['active'] !== false,
         createdAt: e['createdAt'] != null ? String(e['createdAt']) : undefined,
+        jobTitle: e['jobTitle'] != null ? String(e['jobTitle']) : undefined, // paquete E · ronda 26
       } as AdminEmployee))));
   }
 
@@ -1044,7 +1138,7 @@ export class RealApiService {
       );
   }
 
-  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active'>>): Observable<AdminEmployee> {
+  updateEmployee(employeeId: number, payload: Partial<Pick<AdminEmployee, 'name' | 'phone' | 'active' | 'canAccessAdmin'>>): Observable<AdminEmployee> {
     return this.http
       .patch<{ employee: AdminEmployee }>(
         `${this.baseUrl}/auth/employees/${encodeURIComponent(String(employeeId))}`,
@@ -1156,7 +1250,7 @@ export class RealApiService {
 
   validateCoupon(code: string, subtotal: number, customerId?: string | number): Observable<CouponValidation> {
     return this.http.post<CouponValidation>(
-      `${this.baseUrl}/coupons/validate`,
+      `${this.baseUrl}/orders/coupons/validate`,
       { code, subtotal, customerId },
       { headers: this.actorHeaders() }
     );
@@ -1164,19 +1258,19 @@ export class RealApiService {
 
   listCoupons(): Observable<Coupon[]> {
     return this.http
-      .get<{ coupons: Coupon[] }>(`${this.baseUrl}/coupons`, { headers: this.actorHeaders() })
+      .get<{ coupons: Coupon[] }>(`${this.baseUrl}/orders/coupons`, { headers: this.actorHeaders() })
       .pipe(map((r) => r.coupons ?? []));
   }
 
   saveCoupon(payload: SaveCouponPayload): Observable<Coupon> {
     return this.http
-      .post<{ coupon: Coupon }>(`${this.baseUrl}/coupons`, payload, { headers: this.actorHeaders() })
+      .post<{ coupon: Coupon }>(`${this.baseUrl}/orders/coupons`, payload, { headers: this.actorHeaders() })
       .pipe(map((r) => r.coupon));
   }
 
   deleteCoupon(code: string): Observable<{ message: string; code: string }> {
     return this.http.delete<{ message: string; code: string }>(
-      `${this.baseUrl}/coupons/${encodeURIComponent(code)}`,
+      `${this.baseUrl}/orders/coupons/${encodeURIComponent(code)}`,
       { headers: this.actorHeaders() }
     );
   }
@@ -1186,6 +1280,12 @@ export class RealApiService {
     return this.http
       .post<{ rates: ShippingRate[] }>(`${this.baseUrl}/shipping/quote`, normalizedPayload)
       .pipe(map((res) => res.rates ?? []));
+  }
+
+  addOrderNote(orderId: string, text: string): Observable<AdminOrder> {
+    return this.http
+      .post<{ order: Record<string, unknown> }>(`${this.baseUrl}/orders/${encodeURIComponent(orderId)}/notes`, { text }, { headers: this.actorHeaders() })
+      .pipe(map((r) => this.normalizeAdminOrder(r.order)));
   }
 
   cancelOrder(orderId: string, reason: string): Observable<OrderCancelResponse> {
@@ -1220,9 +1320,10 @@ export class RealApiService {
     );
   }
 
-  private actorHeaders(): HttpHeaders {
+  public actorHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    const raw = localStorage.getItem('auth-user');
+    // paquete C: sin "Recordarme" la sesión vive en sessionStorage.
+    const raw = sessionStorage.getItem('auth-user') ?? localStorage.getItem('auth-user');
     if (!raw) {
       return headers;
     }
@@ -1296,6 +1397,12 @@ export class RealApiService {
       grossSubtotal: this.readNumber(order, ['grossSubtotal']) || 0,
       discountRate: this.readNumber(order, ['discountRate']) || 0,
       discountAmount: this.readNumber(order, ['discountAmount']) || 0,
+      // paquete B: ahorro como socia guardado en el pedido
+      partnerMode: (this.readString(order, ['partnerMode']) || undefined) as AdminOrder['partnerMode'],
+      partnerSavings: this.readNumber(order, ['partnerSavings']) || 0,
+      partnerSavingsRate: this.readNumber(order, ['partnerSavingsRate']) || 0,
+      partnerSavingsNextRate: this.readNumber(order, ['partnerSavingsNextRate']) || 0,
+      partnerSavingsNextMissing: this.readNumber(order, ['partnerSavingsNextMissing']) || 0,
       netTotal: this.readNumber(order, ['netTotal']) || total,
       total,
       status,
@@ -1337,13 +1444,34 @@ export class RealApiService {
       deliveryType: this.readString(order, ['deliveryType']) as AdminOrder['deliveryType'] | undefined,
       pickupStockId: this.readString(order, ['pickupStockId']) || undefined,
       pickupPaymentMethod: this.readString(order, ['pickupPaymentMethod']) as AdminOrder['pickupPaymentMethod'] | undefined,
+      shippingCost: Number(order['shippingCost'] ?? 0) > 0 ? Number(order['shippingCost']) : undefined,
+      shippingCarrier: this.readString(order, ['shippingCarrier']) || undefined,
+      returnShippingCost: Number(order['returnShippingCost'] ?? 0) > 0 ? Number(order['returnShippingCost']) : undefined,
+      refundAmount: order['refundAmount'] != null ? Number(order['refundAmount']) : undefined,
+      refundReason: this.readString(order, ['refundReason']) || undefined,
+      adminNotes: Array.isArray(order['adminNotes']) ? (order['adminNotes'] as AdminOrder['adminNotes']) : [],
       cancelReason: this.readString(order, ['cancelReason']) || undefined,
       cancelledAt: this.readString(order, ['cancelledAt']) || undefined,
       returnRequestId: this.readString(order, ['returnRequestId']) || undefined,
+      returnInspection: (order['returnInspection'] as AdminOrder['returnInspection']) || undefined,
+      // paquete D · ronda 26 (propuesta 24)
+      devolucion: (order['devolucion'] as AdminOrder['devolucion']) || undefined,
       rejectionReason: this.readString(order, ['rejectionReason']) || undefined,
       rejectedAt: this.readString(order, ['rejectedAt']) || undefined,
       refundReceiptUrl: this.readString(order, ['refundReceiptUrl']) || undefined,
       refundedAt: this.readString(order, ['refundedAt']) || undefined,
+      // paquete C · factura
+      invoiceRequested: Boolean(order['invoiceRequested']),
+      invoiceStatus: (this.readString(order, ['invoiceStatus']) || undefined) as AdminOrder['invoiceStatus'],
+      invoiceData: (order['invoiceData'] as AdminOrder['invoiceData']) || undefined,
+      invoiceRequestedAt: this.readString(order, ['invoiceRequestedAt']) || undefined,
+      invoiceIssuedAt: this.readString(order, ['invoiceIssuedAt']) || undefined,
+      invoiceFolio: this.readString(order, ['invoiceFolio']) || undefined,
+      invoiceFileUrl: this.readString(order, ['invoiceFileUrl']) || undefined,
+      // ── Paquete C · ronda 26 ── desglose de IVA guardado en el pedido (§38)
+      vatRate: order['vatRate'] != null ? Number(order['vatRate']) : undefined,
+      taxBase: order['taxBase'] != null ? Number(order['taxBase']) : undefined,
+      taxAmount: order['taxAmount'] != null ? Number(order['taxAmount']) : undefined,
     };
   }
 

@@ -14,7 +14,7 @@
 
   <main class="mx-auto max-w-3xl px-4 py-10">
     <div
-      class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+      class="grain relative overflow-hidden rounded-3xl border border-olive-30 bg-ivory-80 p-6 elev-float">
       <!-- Ambient glow -->
       <div
         class="pointer-events-none absolute inset-0 bg-olive-10">
@@ -34,7 +34,7 @@
               Orden {{ displayOrderRef }}
             </h1>
             <div *ngIf="order?.createdAt" class="mt-1 text-xs text-gray-500">
-              Creada: {{ order?.createdAt }}
+              Creada el {{ formatDate(order?.createdAt) }}
             </div>
           </div>
 
@@ -46,8 +46,27 @@
           </span>
         </div>
 
+        <!-- Paquete C · propuesta 13: mientras se confirma el pago no se pinta un resumen en $0 -->
+        <div *ngIf="isConfirmingPayment" class="mt-5 rounded-2xl border border-gold-35 bg-gold-12 p-5">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-circle-notch fa-spin mt-1 text-gold" aria-hidden="true"></i>
+            <div>
+              <div class="text-lg font-extrabold text-main">Estamos confirmando tu pago</div>
+              <p class="mt-1 text-sm text-gray-700">
+                Tu banco ya recibió la operación y estamos esperando la confirmación. No cierres esta página
+                y <strong>no vuelvas a pagar</strong>: en cuanto se confirme, esta pantalla cambia sola y te
+                llega un correo.
+              </p>
+              <p *ngIf="paymentConfirmTimedOut" class="mt-2 text-sm text-amber-800">
+                Sigue en validación. Actualiza esta página en unos minutos; si tu banco ya te cobró y el pedido
+                no cambia, escríbenos con tu folio <strong>{{ displayOrderRef }}</strong> y lo revisamos.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Order summary -->
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <div *ngIf="isSummaryVisible" class="mt-5 grid gap-4 sm:grid-cols-2">
           <div class="rounded-2xl border border-olive-30 bg-white/70 p-4">
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               Detalle
@@ -55,13 +74,22 @@
 
             <div class="mt-2 space-y-2 text-sm text-muted">
               <div class="flex justify-between gap-4">
-                <span class="text-gray-600">ID</span>
+                <span class="text-gray-600">Folio</span>
                 <span class="font-medium text-main">{{ displayOrderRef }}</span>
               </div>
 
               <div class="flex justify-between gap-4">
                 <span class="text-gray-600">Estatus</span>
                 <span class="font-medium text-main">{{ statusLabel }}</span>
+              </div>
+
+              <!-- Paquete C · propuesta 7: lo que compraste, producto por producto -->
+              <div *ngIf="orderItems.length" class="rounded-xl border border-olive-20 bg-ivory-80 p-3">
+                <div class="text-mini font-semibold uppercase tracking-wide text-gray-600">Lo que compraste</div>
+                <div *ngFor="let item of orderItems" class="mt-1 flex justify-between gap-3">
+                  <span class="text-gray-700">{{ item.quantity }} × {{ item.name }}</span>
+                  <span class="whitespace-nowrap font-medium text-main">{{ formatMoney(item.price * item.quantity) }}</span>
+                </div>
               </div>
 
               <div class="flex justify-between gap-4" *ngIf="orderSubtotal">
@@ -83,11 +111,70 @@
                 </span>
               </div>
 
-              <div class="flex justify-between gap-4">
-                <span class="text-gray-600">Total</span>
-                <span class="font-semibold text-gold">
-                  {{ formatMoney(orderTotal) }}
-                </span>
+              <div class="flex justify-between gap-4" *ngIf="orderShipping > 0">
+                <span class="text-gray-600">Envío{{ orderShippingCarrier ? ' (' + orderShippingCarrier + ')' : '' }}</span>
+                <span class="text-gray-700">{{ formatMoney(orderShipping) }}</span>
+              </div>
+
+              <!-- Paquete C · §38: el IVA es desglose de un total que no cambia.
+                   El componente es de B (§3.1) y en la integración sustituye al
+                   marcado propio, sin cambiar una sola palabra. Un pedido de
+                   antes de esta ronda no trae `vatRate`: entonces no se inventa
+                   ningún desglose y solo se pinta el total. -->
+              <ui-desglose-iva *ngIf="hasVatBreakdown; else soloTotal"
+                [total]="orderTotal" [shipping]="orderShipping" [rate]="orderVatRate"></ui-desglose-iva>
+              <ng-template #soloTotal>
+                <div class="flex justify-between gap-4">
+                  <span class="text-gray-600">Total</span>
+                  <span class="font-semibold text-gold">
+                    {{ formatMoney(orderTotal) }}
+                  </span>
+                </div>
+              </ng-template>
+
+              <!-- Cómo se entrega: con las mismas palabras que se eligieron en el carrito -->
+              <div *ngIf="isPickup" class="rounded-xl border border-olive-20 bg-ivory-80 p-3">
+                <div class="text-mini font-semibold uppercase tracking-wide text-gray-600">Entrega</div>
+                <div class="mt-1 font-medium text-main">{{ pickupText }}</div>
+                <div class="mt-1 text-xs text-gray-600">Lleva tu folio {{ displayOrderRef }} y una identificación.</div>
+                <div *ngIf="paysAtStore" class="mt-1 text-xs text-gray-600">Pagas al recoger, en la caja de la sucursal.</div>
+              </div>
+              <div *ngIf="hasShippingAddress" class="rounded-xl border border-olive-20 bg-ivory-80 p-3">
+                <div class="text-mini font-semibold uppercase tracking-wide text-gray-600">Enviamos a</div>
+                <div class="mt-1 font-medium text-main">{{ order?.recipientName || order?.customer }}</div>
+                <div class="text-xs text-gray-600">{{ shippingAddressLine }}</div>
+                <div *ngIf="order?.phone" class="text-xs text-gray-500">Tel: {{ order?.phone }}</div>
+                <!-- Ronda 7 · Valeria: el plazo que prometió el carrito, repetido donde se pregunta. -->
+                <div *ngIf="plazoDeEntrega" class="mt-2 text-xs font-semibold text-main">Llega en {{ plazoDeEntrega }}</div>
+                <div *ngIf="plazoDeEntrega" class="text-xs text-gray-500">Los días hábiles se cuentan desde que sale del almacén, de lunes a viernes.</div>
+              </div>
+
+              <!-- Paquete C · propuesta 7: Aurora abandonó buscando dónde releer su RFC -->
+              <div *ngIf="invoiceVisible" class="rounded-xl border border-olive-20 bg-ivory-80 p-3">
+                <div class="text-mini font-semibold uppercase tracking-wide text-gray-600">Factura</div>
+                <div class="mt-1 font-medium text-main">{{ invoiceText }}</div>
+                <div *ngIf="order?.invoiceData?.email" class="text-xs text-gray-600">
+                  Te la mandamos a {{ order?.invoiceData?.email }}.
+                </div>
+                <div *ngIf="order?.invoiceFolio" class="text-xs text-gray-600">Folio fiscal {{ order?.invoiceFolio }}.</div>
+                <div *ngIf="!order?.invoiceFolio" class="text-xs text-gray-500">
+                  Si algún dato está mal, escríbenos con tu folio y la corregimos antes de emitirla.
+                </div>
+              </div>
+
+              <!-- Paquete B: como socia habrías ahorrado (dato guardado en el pedido) -->
+              <div *ngIf="partnerSavingsVisible" class="mt-3 space-y-3">
+                <ui-ahorro-socio
+                  [gross]="orderSubtotal"
+                  [mode]="partnerSavingsMode"
+                  variant="card"
+                  [orderId]="order?.id"
+                  [savedSavings]="order?.partnerSavings"
+                  [savedNextRate]="order?.partnerSavingsNextRate"
+                  [savedNextMissing]="order?.partnerSavingsNextMissing"></ui-ahorro-socio>
+                <ui-button size="md" variant="primary" type="button" iconClass="fa-solid fa-handshake" (pressed)="goToModoSocio()">
+                  Activar modo socio
+                </ui-button>
               </div>
             </div>
           </div>
@@ -96,37 +183,51 @@
           <div class="rounded-2xl border border-olive-30 bg-white/70 p-4">
             <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Progreso</div>
             <div class="mt-3">
-              <ui-order-timeline [status]="statusValue"></ui-order-timeline>
+              <ui-order-timeline [status]="statusValue" [deliveryType]="isPickup ? 'pickup' : 'delivery'"></ui-order-timeline>
             </div>
           </div>
         </div>
 
-        <div *ngIf="redirectMessage" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-main">
+        <!-- Mientras se confirma, el aviso ya lo da la tarjeta de arriba: no se repite. -->
+        <div *ngIf="redirectMessage && !isConfirmingPayment" class="mt-4 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-main">
           {{ redirectMessage }}
         </div>
         <div *ngIf="cutoffCountdownMessage" class="mt-3 rounded-2xl border border-olive-30 bg-ivory-80 p-4 text-sm text-main">
           {{ cutoffCountdownMessage }}
         </div>
 
-        <!-- Envio card -->
+        <!-- Paquete C · propuesta 7: en recolección no se habla de rutas ni de guías -->
+        <div *ngIf="statusValue === 'shipped' && isPickup" class="mt-4 rounded-2xl border border-forest-20 bg-forest-10 p-5">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-store mt-1 text-forest" aria-hidden="true"></i>
+            <div>
+              <div class="text-lg font-extrabold text-main">Listo para recoger</div>
+              <p class="mt-1 text-sm text-gray-700">{{ pickupText }}.</p>
+              <p class="mt-1 text-xs text-gray-600">
+                Lleva tu folio <span class="font-semibold text-main">{{ displayOrderRef }}</span> y una identificación.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Envio card (pro, consistente) -->
-        <div *ngIf="statusValue === 'shipped'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
+        <div *ngIf="statusValue === 'shipped' && !isPickup" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
           <div class="flex items-start justify-between gap-4">
             <div class="flex items-start gap-3">
               <!-- Icono -->
               <div
-                class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-main">
+                class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-sage-30 bg-sage-10 text-sage">
                 <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
               </div>
 
               <!-- Header -->
               <div>
-                <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Envio</div>
+                <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Envío</div>
 
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                   <span
-                    class="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-semibold text-main">
-                    <span class="h-1.5 w-1.5 rounded-full bg-sky-200/80"></span>
+                    class="inline-flex items-center gap-2 rounded-full border border-sage-30 bg-sage-10 px-2.5 py-1 text-mini font-semibold text-sage">
+                    <span class="h-1.5 w-1.5 rounded-full bg-current opacity-80"></span>
                     En camino
                   </span>
 
@@ -140,7 +241,7 @@
 
             <!-- Total mini, opcional (si quieres reforzar confianza visual) -->
             <div class="text-right">
-              <div class="text-[11px] text-gray-500">Total</div>
+              <div class="text-mini text-gray-500">Total</div>
               <div class="text-sm font-semibold text-gold">{{ formatMoney(orderTotal) }}</div>
             </div>
           </div>
@@ -151,8 +252,8 @@
             <ng-container *ngIf="order?.shippingType === 'carrier'">
               <!-- Guia -->
               <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
-                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
-                  Numero de guia
+                <div class="text-mini font-semibold text-gray-600 uppercase tracking-wide">
+                  Número de guía
                 </div>
 
                 <div class="mt-1 flex items-center justify-between gap-3">
@@ -168,8 +269,8 @@
 
               <!-- Direccion -->
               <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
-                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
-                  Direccion de entrega
+                <div class="text-mini font-semibold text-gray-600 uppercase tracking-wide">
+                  Dirección de entrega
                 </div>
 
                 <div class="mt-1 space-y-0.5 text-sm text-main">
@@ -204,12 +305,12 @@
 
               <!-- Estado -->
               <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3 sm:col-span-2">
-                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
-                  Estado del envio
+                <div class="text-mini font-semibold text-gray-600 uppercase tracking-wide">
+                  Estado del envío
                 </div>
 
                 <div class="mt-1 text-sm text-main">
-                  En transito - rumbo a la direccion registrada.
+                  En tránsito - rumbo a la dirección registrada.
                 </div>
               </div>
             </ng-container>
@@ -217,14 +318,14 @@
             <!-- Personal -->
             <ng-container *ngIf="order?.shippingType === 'personal'">
               <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
-                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Lugar</div>
+                <div class="text-mini font-semibold text-gray-600 uppercase tracking-wide">Lugar</div>
                 <div class="mt-1 text-sm font-semibold text-gold">
                   {{ order?.deliveryPlace || '-' }}
                 </div>
               </div>
 
               <div class="rounded-xl border border-olive-30 bg-ivory-80 p-3">
-                <div class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Fecha</div>
+                <div class="text-mini font-semibold text-gray-600 uppercase tracking-wide">Fecha</div>
                 <div class="mt-1 text-sm font-semibold text-gold">
                   {{ order?.deliveryDate || '-' }}
                 </div>
@@ -241,13 +342,19 @@
 
 
         <!-- MercadoPago card -->
-        <div *ngIf="statusValue === 'pending'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
+        <!-- Quien eligió pagar en sucursal veía aquí "Pagar con MercadoPago" -->
+        <div *ngIf="statusValue === 'pending' && order?.deliveryType === 'pickup' && order?.pickupPaymentMethod === 'at_store'" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
+          <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Pago</div>
+          <div class="mt-1 text-lg font-extrabold text-main">Pagas al recoger en sucursal</div>
+          <div class="mt-1 text-xs text-gray-500">Tu pedido está reservado. Pasa a la sucursal, paga en caja y ahí mismo te lo entregan.</div>
+        </div>
+        <div *ngIf="statusValue === 'pending' && !isConfirmingPayment && !(order?.deliveryType === 'pickup' && order?.pickupPaymentMethod === 'at_store')" class="mt-4 rounded-2xl border border-olive-30 bg-white/70 p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Pago</div>
               <div class="mt-1 text-lg font-extrabold text-main">MercadoPago</div>
               <div class="mt-1 text-xs text-gray-500">
-                Realiza tu pago en linea de forma segura.
+                Realiza tu pago en línea de forma segura.
               </div>
             </div>
 
@@ -263,7 +370,7 @@
               size="md"
               [disabled]="isCheckoutLoading"
               (pressed)="payWithMercadoPago()">
-              {{ isCheckoutLoading ? 'Redirigiendo...' : 'Pagar con MercadoPago' }}
+              {{ isCheckoutLoading ? 'Te llevamos a la pasarela...' : 'Pagar con MercadoPago' }}
             </ui-button>
             <div *ngIf="checkoutError" class="mt-2 text-xs text-red-600">
               {{ checkoutError }}
@@ -284,24 +391,26 @@
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
               Cancelar orden
             </ui-button>
+            <span *ngIf="statusValue === 'paid'" class="text-xs text-gray-500">
+              Si cancelas un pedido ya pagado, administración te reembolsa {{ formatMoney(order.total) }} y te avisa por correo.
+            </span>
           </ng-container>
 
           <!-- Cancelar bloqueado - en proceso logístico -->
-          <div *ngIf="cancelBlocked && !canRequestReturn && order.status !== 'cancelled'"
+          <div *ngIf="cancelBlocked && !canRequestReturn && order.status !== 'cancelled' && !inReturnFlow"
             class="flex items-center gap-2 rounded-xl border border-olive-20 bg-sand-200-90 px-4 py-2.5 text-xs text-gray-500">
             <i class="fa-solid fa-lock text-gray-400" aria-hidden="true"></i>
-            Pedido en proceso logístico — solicita una devolución si aplica
+            Pedido en proceso logístico — abajo dice si ya puedes pedir la devolución
           </div>
 
-          <!-- Solicitar devolución (solo si entregado) -->
-          <ui-button
-            *ngIf="canRequestReturn"
-            variant="primary"
-            size="md"
-            (pressed)="navigateToReturn()">
-            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-            Solicitar devolución
-          </ui-button>
+          <!-- Paquete D · propuesta 24: el botón se pinta SIEMPRE, apagado con
+               su motivo. Antes solo existía con el pedido entregado, y Julio,
+               con el pedido en `paid` y la proteína rota, no lo vio nunca. -->
+          <ui-devolucion-boton
+            [devolucion]="estadoDevolucion"
+            [orderId]="orderId"
+            [enCurso]="inReturnFlow"
+            (solicitar)="navigateToReturn()" />
 
           <!-- Estado cancelado -->
           <div *ngIf="order.status === 'cancelled'"
@@ -319,8 +428,8 @@
         </div>
 
         <!-- States -->
-        <div *ngIf="isLoading" class="mt-4 text-xs text-gray-600">
-          Cargando estado de la orden...
+        <div *ngIf="isLoading && !isConfirmingPayment" class="mt-4 text-xs text-gray-600">
+          Cargando el estado de tu pedido...
         </div>
 
         <div *ngIf="!isLoading && !order && redirectStatus !== 'success'"
@@ -328,10 +437,13 @@
           <div class="text-xs font-semibold tracking-wide text-gray-600 uppercase">
             Sin resultados
           </div>
-          <div class="mt-2 font-medium text-main">No se encontro la orden.</div>
-          <div class="mt-1 text-xs text-gray-500">Verifica el ID o intenta nuevamente.</div>
+          <div class="mt-2 font-medium text-main">No encontramos la orden.</div>
+          <div class="mt-1 text-xs text-gray-500">Revisa el folio o vuelve a intentarlo.</div>
         </div>
       </div>
     </div>
   </main>
 </section>
+
+<!-- Paquete D · ronda 26: el pie con contacto, horario y los enlaces de ayuda. -->
+<ui-footer />
