@@ -54,7 +54,7 @@ def _pagar(order_lambda, commissions_lambda, cid, items):
 
 def _bloqueada(utils, cid, monto, mes):
     item = utils._get_ledger_month(cid, mes)
-    item["ledger"].append({"rowId": f"ORD-X#G1", "orderId": "ORD-X", "amount": Decimal(str(monto)), "level": 1, "generation": 1,
+    item["ledger"].append({"rowId": "ORD-X#G1", "orderId": "ORD-X", "amount": Decimal(str(monto)), "level": 1, "generation": 1,
                            "status": "blocked", "reason": "no_califica_gen", "createdAt": utils._now_iso()})
     utils._save_ledger_month(item)
 

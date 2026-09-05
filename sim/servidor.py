@@ -12,6 +12,12 @@ Ejecuta las 8 Lambdas tal cual, sin AWS:
   - S3 → carpeta sim/s3. Athena → sin datos (Estadísticas queda vacía: limitación conocida).
 """
 import json, os, sys, threading, pickle, atexit, base64, time, re
+
+# La consola de Windows es cp1252 por defecto y estos scripts imprimen
+# flechas y acentos: sin esto, la siembra revienta a media corrida con
+# UnicodeEncodeError y deja el mundo a medio construir.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from decimal import Decimal
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, unquote
@@ -20,6 +26,9 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = os.path.join(RAIZ, "Micro-lambda-GMF", "python")
 SIM = os.path.dirname(os.path.abspath(__file__))
 BUZON = os.path.join(SIM, "buzon"); S3DIR = os.path.join(SIM, "s3")
+# Ninguno de los dos está versionado. Sin esto, en un clon limpio la
+# siembra muere al mandar el primer correo: "No such file or directory".
+os.makedirs(BUZON, exist_ok=True); os.makedirs(S3DIR, exist_ok=True)
 ESTADO = os.path.join(SIM, "estado.pkl")
 PUERTO = int(os.environ.get("SIM_PUERTO", "4400"))
 FRONT = os.environ.get("SIM_FRONT", "http://localhost:4321")
@@ -101,20 +110,55 @@ core_utils._invalidate_app_config_cache()
 
 import auth_utils, catalog_lambda, customer_lambda, commissions_lambda  # noqa: E402
 import order_lambda, inventory_lambda, dashboard_lambda, shipping_lambda  # noqa: E402
-LAMBDAS = {"auth": auth_utils, "catalog": catalog_lambda, "customers": customer_lambda,
-           "commissions": commissions_lambda, "orders": order_lambda, "inventory": inventory_lambda,
-           "dashboard": dashboard_lambda, "shipping": shipping_lambda,
-           "verify-email": auth_utils, "user-dashboard": customer_lambda}
+# El mapa tiene que decir lo MISMO que el API Gateway de la cuenta, o el arnés
+# inventa defectos. Sacado de las 24 integraciones reales de ge2omdgk33
+# ("FindingU Multi-Level API Proxy"), recurso por recurso, no de memoria:
+#
+#   /user-dashboard -> Multinivel-Dashboard. Aquí decía customer_lambda y el
+#     simulador respondía "Ruta no encontrada en Customer Service": cualquier
+#     ronda lo habría anotado como «el tablero de la clienta no carga».
+#   /notifications -> Multinivel-catalog (no Dashboard) y /network ->
+#     Multinivel-costumer (no Dashboard): dos que sorprenden y que hay que
+#     copiar tal cual, no deducir.
+#   Faltaban además /admin, /user, /products, /assets, /coupons, /pos, /stocks,
+#     /employees, /password, /login, /crearcuenta y /webhooks.
+LAMBDAS = {
+    # prefijo           función           # recurso del API Gateway
+    "auth": auth_utils,                   # /auth/{proxy+}
+    "employees": auth_utils,              # /employees/{proxy+}
+    "password": auth_utils,               # /password/{proxy+}
+    "login": auth_utils,                  # /login
+    "crearcuenta": auth_utils,            # /crearcuenta
+    "verify-email": auth_utils,           # (atajo del arnés, no está en el API)
+    "catalog": catalog_lambda,            # /catalog/{proxy+}
+    "products": catalog_lambda,           # /products/{proxy+}
+    "assets": catalog_lambda,             # /assets/{proxy+}
+    "notifications": catalog_lambda,      # /notifications/{proxy+}
+    "customers": customer_lambda,         # /customers/{proxy+}
+    "network": customer_lambda,           # /network/{proxy+}   (GET únicamente)
+    "commissions": commissions_lambda,    # /commissions/{proxy+}
+    "orders": order_lambda,               # /orders/{proxy+}
+    "coupons": order_lambda,              # /coupons y /coupons/{proxy+}
+    "webhooks": order_lambda,             # /webhooks/{proxy+}
+    "inventory": inventory_lambda,        # /inventory/{proxy+}
+    "pos": inventory_lambda,              # /pos/{proxy+}
+    "stocks": inventory_lambda,           # /stocks/{proxy+}
+    "dashboard": dashboard_lambda,        # /dashboard/{proxy+}
+    "admin": dashboard_lambda,            # /admin/{proxy+}     (GET únicamente)
+    "user": dashboard_lambda,             # /user/{proxy+}      (GET únicamente)
+    "user-dashboard": dashboard_lambda,   # /user-dashboard
+    "shipping": shipping_lambda,          # /shipping/{proxy+}
+}
 
 # ── correo → buzón ────────────────────────────────────────────────────
 def enviar_correo(to_email, subject, text, html):
     to_email = str(to_email or "").strip().lower()
     ruta = os.path.join(BUZON, re.sub(r"[^a-z0-9@._-]", "_", to_email) + ".json")
-    lista = json.load(open(ruta)) if os.path.exists(ruta) else []
+    lista = json.load(open(ruta, encoding="utf-8")) if os.path.exists(ruta) else []
     enlaces = re.findall(r"https?://[^\s\"'<>]+", text or "") + re.findall(r"href=\"([^\"]+)\"", html or "")
     lista.append({"n": len(lista) + 1, "fecha": ahora_iso(), "para": to_email, "asunto": subject,
                   "texto": text, "enlaces": sorted(set(enlaces)), "leido": False})
-    json.dump(lista, open(ruta, "w"), ensure_ascii=False, indent=1)
+    json.dump(lista, open(ruta, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"[correo] → {to_email}: {subject}")
 for nombre, mod in list(sys.modules.items()):
     if hasattr(mod, "_send_ses_email"):
@@ -280,7 +324,7 @@ class Manejador(BaseHTTPRequestHandler):
         if ruta.startswith("/__sim/buzon/"):
             correo = ruta.split("/__sim/buzon/", 1)[1].lower()
             f = os.path.join(BUZON, re.sub(r"[^a-z0-9@._-]", "_", correo) + ".json")
-            return self._responder(200, json.dumps(json.load(open(f)) if os.path.exists(f) else [], ensure_ascii=False))
+            return self._responder(200, json.dumps(json.load(open(f, encoding="utf-8")) if os.path.exists(f) else [], ensure_ascii=False))
         if ruta == "/__sim/estado":
             tipos = {}
             for (pk, sk) in store: tipos[pk.split("#")[0]] = tipos.get(pk.split("#")[0], 0) + 1

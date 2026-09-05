@@ -92,7 +92,7 @@ def test_una_socia_con_acceso_al_back_office_pasa_los_privilegios(auth, utils):
     assert utils._require_admin(headers, "access_screen_customers") is None
     assert utils._require_admin(headers, "customer_add") is not None  # sin ese privilegio sigue negado
     # Un cliente sin la marca sigue fuera del back office.
-    cid2 = _alta(auth, "Otro Cliente", "otro@test.com")
+    _alta(auth, "Otro Cliente", "otro@test.com")
     utils._update_by_id("AUTH", "otro@test.com", "SET emailVerified = :v", {":v": True})
     r2 = auth.handle_login({"email": "otro@test.com", "password": "Secreta123!"})
     token2 = json.loads(r2["body"])["token"]

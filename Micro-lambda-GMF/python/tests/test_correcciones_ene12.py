@@ -3,7 +3,6 @@ import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-import pytest
 
 CAJERA = {"x-user-id": "paco"}
 

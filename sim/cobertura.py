@@ -5,7 +5,7 @@ Lee `servidor.log` (cada petición HTTP real) y las cruza con los patrones que
 usa real-api.service.ts. Lo que nunca aparece en el log es capacidad del
 sistema que ningún usuario encontró o necesitó.
 """
-import re, sys, os, collections
+import re, os, collections
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 svc = open(os.path.join(RAIZ, "gamificacion-multinivel-f/src/app/services/real-api.service.ts"), encoding="utf-8").read()
 

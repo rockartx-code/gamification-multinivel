@@ -15,7 +15,6 @@ from dashboard_common import (
     _find_effective_sponsor,
     _get_month_state,
     _get_rank_dash,
-    _mxn_to_vp_dash,
     _network_members_from_tree,
     _prev_month_key,
 )

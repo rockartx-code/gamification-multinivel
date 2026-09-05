@@ -36,7 +36,15 @@ jobs:
         # `sam validate` requiere credenciales; aquí basta con comprobar que el
         # YAML es válido. Las pruebas de tests/test_infraestructura.py son las
         # que verifican que la plantilla concuerde con el código.
-        run: python -c "import yaml,sys; L=type('L',(yaml.SafeLoader,),{}); L.add_multi_constructor('!', lambda *a: None); yaml.load(open('../template.yaml'), Loader=L); print('template.yaml válido')"
+        run: |
+          python - <<'EOF'
+          import yaml
+          L = type('L', (yaml.SafeLoader,), {})
+          L.add_multi_constructor('!', lambda *a: None)
+          with open('../template.yaml', encoding='utf-8') as f:
+              yaml.load(f, Loader=L)
+          print('template.yaml valido')
+          EOF
 
       - name: Presupuesto de consultas a DynamoDB
         # El coste de los endpoints no debe crecer con el tamaño del dataset.

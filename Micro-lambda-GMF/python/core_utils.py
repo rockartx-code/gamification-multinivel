@@ -309,6 +309,7 @@ __all__ = [
     "_json_default",
     "_json_response",
     "_ledger_sk",
+    "_listar_meses_contables",
     "_load_app_config",
     "_load_month_states",
     "_load_network_scope",

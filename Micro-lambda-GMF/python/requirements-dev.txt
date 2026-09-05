@@ -4,3 +4,7 @@
 pyflakes==3.2.*
 pytest==8.3.*
 pyyaml==6.*
+
+# Congela el reloj: cinco modulos de prueba fijan el dia del mes para medir
+# comisiones, cortes y dia de pago. Sin esto pytest ni siquiera colecciona.
+freezegun==1.5.*

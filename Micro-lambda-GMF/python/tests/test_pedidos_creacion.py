@@ -116,7 +116,6 @@ def test_el_envio_se_guarda_y_se_cobra(order_lambda, utils, monkeypatch):
 def test_el_invitado_puede_solicitar_devolucion_sin_sesion(order_lambda, utils):
     """Regresión: el asistente de devolución dejaba completar los tres pasos y
     en "Enviar solicitud" respondía "No autenticado"."""
-    import json
     oid = _crear_pedido_invitado(order_lambda, utils)
     utils._update_by_id("ORDER", oid, "SET #s = :s, deliveredAt = :d", {":s": "delivered", ":d": utils._now_iso()}, {"#s": "status"}) if False else None
     pedido = utils._get_by_id("ORDER", oid); pedido["status"] = "delivered"; pedido["deliveredAt"] = utils._now_iso()
@@ -220,7 +219,6 @@ def test_la_pasarela_puede_marcar_pagado_un_pickup_con_pago_en_linea(order_lambd
     """Regresión: el webhook de MercadoPago (sin usuario) recibía 403 'no
     vinculado a la sucursal' en pedidos de recoger en tienda pagados en línea,
     y el pedido se quedaba pendiente aunque el cliente ya hubiera pagado."""
-    import json as _json
     utils._put_entity("STOCK", "STK-T1", {"entityType": "stock", "stockId": "STK-T1", "name": "Tienda", "allowPickup": True, "linkedUserIds": [], "inventory": {}})
     utils._put_entity("ORDER", "ORD-PK1", {"entityType": "order", "orderId": "ORD-PK1", "customerId": 1, "status": "pending",
                                             "deliveryType": "pickup", "pickupStockId": "STK-T1", "pickupPaymentMethod": "online",
@@ -254,7 +252,6 @@ def test_no_se_puede_recoger_en_una_sucursal_sin_existencia(order_lambda, utils)
 def test_rechazar_con_cortesia_emite_un_cupon_personal(order_lambda, utils, monkeypatch):
     """Regresión: 'se le ofrece 20% en su próximo bote' vivía solo en el correo;
     la clienta compró y no hubo descuento. Ahora se emite un cupón personal."""
-    import json as _json
     enviados = []
     monkeypatch.setattr(order_lambda.utils, "_send_ses_email", lambda para, asunto, texto, html: enviados.append((para, asunto, texto)), raising=False)
     from core import order_emails as _oe
@@ -336,7 +333,7 @@ def test_dar_por_cobrado_a_mano_guarda_la_referencia_del_deposito(order_lambda, 
     servidor guarda con qué se dio por cobrado, que es lo que después permite
     cuadrar el banco."""
     _producto(utils)
-    respuesta = order_lambda.handle_create_order(_pedido_invitado(), {})
+    order_lambda.handle_create_order(_pedido_invitado(), {})
     oid = next(v for (pk, sk), v in utils._table.store.items() if pk == "ORDER" and sk != "REF")["orderId"]
 
     admin = {"x-user-id": "1", "x-user-role": "admin"}

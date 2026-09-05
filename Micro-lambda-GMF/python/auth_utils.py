@@ -8,7 +8,7 @@ import modo_handlers  # paquete B
 
 FRONTEND_URL = utils.os.getenv("FRONTEND_BASE_URL", "https://www.findingu.com.mx")
 
-from core.email import _EMAIL_BASE_CSS, _email_shell  # plantilla compartida con los correos del pedido
+from core.email import _email_shell  # plantilla compartida con los correos del pedido
 
 
 

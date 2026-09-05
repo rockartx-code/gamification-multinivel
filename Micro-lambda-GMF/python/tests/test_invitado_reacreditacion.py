@@ -120,7 +120,7 @@ def test_la_reacreditacion_no_reparte_comision_a_la_linea_ascendente(mundo, util
 
 def test_un_pedido_no_pagado_no_se_acredita(mundo, utils):
     auth_utils, commissions_lambda, _ = mundo
-    pedido = _pedido_invitado(utils, "ORD-PEND", "pendiente@test.com", 900, nombre="Sin pagar")
+    _pedido_invitado(utils, "ORD-PEND", "pendiente@test.com", 900, nombre="Sin pagar")
     utils._update_by_id("ORDER", "ORD-PEND", "SET #s = :s", {":s": "pending"}, {"#s": "status"})
 
     auth_utils.handle_create_account({"email": "pendiente@test.com", "password": "Secreta123",

@@ -9,6 +9,12 @@ una socia con red vacía que invitará a los prospectos.
 """
 import json, os, re, sys, urllib.request, time, base64
 
+# La consola de Windows es cp1252 por defecto y estos scripts imprimen
+# flechas y acentos: sin esto, la siembra revienta a media corrida con
+# UnicodeEncodeError y deja el mundo a medio construir.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 API = os.environ.get("SIM_API", "http://localhost:4400")
 SUPER = os.environ.get("SUPERADMIN_TOKEN", "sim-superadmin-token")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -180,7 +186,7 @@ def main():
         print("empleado", e["name"], "→", r["tempPassword"])
 
     # 2. catálogo con fichas completas
-    seed = json.load(open(os.path.join(RAIZ, "Micro-lambda-GMF", "python", "seed", "product_pc_seed.json")))
+    seed = json.load(open(os.path.join(RAIZ, "Micro-lambda-GMF", "python", "seed", "product_pc_seed.json"), encoding="utf-8"))
     for i, p in enumerate(seed["products"], start=1):
         clave = next((k for k in FICHAS if k in p["name"].lower() or any(k in a for a in p.get("aliases", []))), None)
         ficha = FICHAS.get(clave, {"hook": "Suplemento Finding'U de uso diario",
@@ -259,7 +265,7 @@ def main():
                              "link": f"{os.environ.get('SIM_FRONT', 'http://localhost:4321')}/#/landing/{code}"}
     print("patrocinadora", correo, "código", code)
 
-    json.dump(cred, open(os.path.join(os.path.dirname(__file__), "credenciales.json"), "w"),
+    json.dump(cred, open(os.path.join(os.path.dirname(__file__), "credenciales.json"), "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
     llamar("POST", "/__sim/guardar")
     print("OK → sim/credenciales.json")

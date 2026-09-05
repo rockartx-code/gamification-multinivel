@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from test_despacho_bloque import _bodegas, _empleado, _pedido, _llamar, BETO
+from test_despacho_bloque import _bodegas, _empleado, _pedido, _llamar
 
 
 @pytest.fixture

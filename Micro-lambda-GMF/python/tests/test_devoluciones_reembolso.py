@@ -8,7 +8,7 @@ from decimal import Decimal
 
 import pytest
 
-from test_devoluciones_parciales import EVIDENCIA_COMPLETA, evento, pedido_lupita, solicitar
+from test_devoluciones_parciales import EVIDENCIA_COMPLETA, pedido_lupita, solicitar
 from test_pedidos_creacion import _crear_pedido_invitado
 
 

@@ -12,7 +12,6 @@ frontend deja de fechar el negocio con el reloj del navegador.
 import json
 from datetime import datetime, timezone
 
-import pytest
 
 import corte_mes
 

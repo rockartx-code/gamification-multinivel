@@ -4,7 +4,6 @@ docs/qa/22 §6 tarea 12: Beto (9 turnos) y Nadia (6) redactaban a mano el
 mensaje de cierre con folios, guías y contadores. El resumen se calcula al
 vuelo desde la bitácora y el `text` es ese mensaje, listo para WhatsApp.
 """
-import json
 
 import pytest
 

@@ -845,6 +845,14 @@ def _handle_notifications(method, body, segments):
                 "PK": pk, "SK": ntf_id, "readAt": utils._now_iso(), "entityType": "notificationRead"
             })
             return utils._json_response(200, {"ok": True})
+        # Crear es `POST /notifications` a secas. Cualquier otro sub-path caía
+        # aquí y creaba una notificación ignorando el id de la URL: `POST
+        # /dashboard/notifications/999` respondía 201 con una notificación
+        # nueva. Es el mismo agujero que `tests/rutas/CAMBIOS-ACEPTADOS.md`
+        # cerró en catalog_lambda al pasar a tabla declarativa; este módulo
+        # sigue con cascada de `if`, así que hay que cerrarlo a mano.
+        if len(segments) != 1:
+            return utils._json_response(404, {"message": "Ruta no encontrada"})
         nid = body.get("id") or f"NTF-{utils.uuid.uuid4().hex[:8].upper()}"
         ntf = {
             "entityType": "notification", "notificationId": nid,

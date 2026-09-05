@@ -20,7 +20,6 @@ import json
 
 from decimal import Decimal
 
-import pytest
 
 SUPER = {"x-user-id": "1", "x-user-role": "admin"}
 

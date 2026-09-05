@@ -12,7 +12,7 @@ RAIZ = os.path.dirname(os.path.abspath(__file__))
 def cargar():
     datos = []
     for ruta in sorted(glob.glob(os.path.join(RAIZ, "metricas", "*.json"))):
-        with open(ruta) as f:
+        with open(ruta, encoding="utf-8") as f:
             d = json.load(f)
         d["_archivo"] = os.path.basename(ruta)
         datos.append(d)

@@ -28,11 +28,17 @@ import { UserProfileComponent } from './user-profile.component';
 const RAIZ_APP = 'src/app';
 const PLANTILLA_UNICA = 'src/app/components/ui-clabe-form/ui-clabe-form.component.html';
 
-/** Todas las plantillas de la aplicación, en orden. */
+/**
+ * Todas las plantillas de la aplicación, en orden.
+ *
+ * Las rutas salen siempre con `/`: `join` usa `\` en Windows y la guarda
+ * comparaba contra una constante con `/`, así que fallaba fuera de Linux
+ * sin que nada estuviera mal en el producto.
+ */
 function plantillas(dir: string = RAIZ_APP): string[] {
   const encontradas: string[] = [];
   for (const entrada of readdirSync(dir, { withFileTypes: true })) {
-    const ruta = join(dir, entrada.name);
+    const ruta = join(dir, entrada.name).split('\\').join('/');
     if (entrada.isDirectory()) {
       encontradas.push(...plantillas(ruta));
     } else if (entrada.name.endsWith('.html')) {

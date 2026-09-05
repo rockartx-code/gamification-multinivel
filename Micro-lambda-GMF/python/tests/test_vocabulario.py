@@ -16,7 +16,6 @@ nombre en cualquiera de las dos, aquí se cae.
 import re
 from pathlib import Path
 
-import pytest
 
 import vocabulario
 
