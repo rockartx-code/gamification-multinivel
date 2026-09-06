@@ -5,7 +5,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import core_utils as utils  # Importado desde la Layer
-from core import order_emails
+from core import catalogo, order_emails
 import modo_handlers  # paquete B
 import impuestos  # paquete B · ronda 26 (IVA, §38)
 import checkout_handlers  # paquete C
@@ -52,30 +52,16 @@ MAX_ADMIN_ORDER_PAGE_SIZE = 500         # admins
 # HELPERS DE LÓGICA DE NEGOCIO
 # ---------------------------------------------------------------------------
 
-def _enrich_items_commissionable(items: list) -> list:
+def _enrich_items_commissionable(items: list):
+    """Completa cada línea con los datos del catálogo. Ver `core/catalogo.py`.
+
+    Devuelve `(líneas, error)`. El **precio sale del catálogo**: antes se
+    copiaban de ahí el nombre, los puntos y `commissionable` pero no el importe,
+    y `_calculate_totals` leía el `price` del cuerpo de la petición. Un pedido
+    de dos unidades de un producto de $650 con `"price": 1` se creaba por $2.00,
+    y sin `price` se creaba por $0.00.
     """
-    Añade commissionable y vpPoints a cada ítem según el catálogo de productos.
-    Si el producto no se encuentra, se asume commissionable=True y vpPoints=None.
-    """
-    enriched = []
-    for it in items:
-        item = dict(it) if isinstance(it, dict) else {}
-        pid = item.get("productId")
-        if pid is not None:
-            product = utils._get_by_id("PRODUCT", pid)
-            if product:
-                # Sin nombre el back office mostraba "Producto x1".
-                if not item.get("name") and product.get("name"):
-                    item["name"] = product.get("name")
-                if "commissionable" not in item:
-                    item["commissionable"] = bool(product.get("commissionable", True))
-                if "vpPoints" not in item and product.get("vpPoints") is not None:
-                    # Decimal, no float: el serializador de DynamoDB rechaza floats y
-                    # el pedido entero fallaba con "Float types are not supported"
-                    # para cualquier producto con puntos, sea invitado o socio.
-                    item["vpPoints"] = utils._to_decimal(product["vpPoints"])
-        enriched.append(item)
-    return enriched
+    return catalogo.resolver_lineas(items)
 
 
 def _resolve_discount_rate(discount_tiers, basis) -> utils.Decimal:
@@ -614,8 +600,10 @@ def handle_create_order(body, headers):
                 break
 
     raw_items = body.get("items", [])
-    # Enriquecer ítems con la bandera commissionable del catálogo
-    enriched_items = _enrich_items_commissionable(raw_items)
+    # Precio, puntos y nombre salen del catálogo; el cuerpo no decide importes.
+    enriched_items, error_items = _enrich_items_commissionable(raw_items)
+    if error_items:
+        return utils._json_response(400, {"message": error_items, "code": "INVALID_ITEMS"})
     totals = _calculate_totals(enriched_items, customer_id, buyer_type)
     # Cupón / código de descuento (H7): reduce el neto pagado (y por tanto PC/comisiones).
     coupon_fields = _apply_coupon_to_totals(body.get("couponCode"), totals, customer_id)

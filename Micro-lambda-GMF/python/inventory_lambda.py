@@ -1,7 +1,7 @@
 import json
 import boto3
 import core_utils as utils
-from core import order_emails # Importado desde la Lambda Layer
+from core import catalogo, order_emails # Importado desde la Lambda Layer
 import despacho_handlers  # paquete D
 import caja_handlers  # paquete E: arqueo, comprobante y correo del corte
 import impuestos  # paquete B · ronda 26: el desglose de IVA (§38)
@@ -320,16 +320,13 @@ def handle_pos_sale(body, headers):
     cashier_discount_value = utils._to_decimal(body.get("cashierDiscountValue") or 0)
     auth_code = str(body.get("authCode") or "").strip()
 
-    # 1. Puntos del catálogo en cada línea, como hace la tienda en línea: sin
-    # vpPoints el motor de comisiones convertía pesos ÷ tarifa y el socio que
-    # compraba en mostrador recibía otros puntos que en la web.
-    for it in items:
-        if it.get("vpPoints") is None:
-            producto = utils._get_by_id("PRODUCT", it.get("productId")) or {}
-            if producto.get("vpPoints") is not None:
-                it["vpPoints"] = producto.get("vpPoints")
-            if producto.get("commissionable") is False:
-                it["commissionable"] = False
+    # 1. Precio, puntos y nombre salen del catálogo, igual que en la tienda en
+    # línea. El precio no puede venir en el cuerpo: cobrar distinto en el
+    # mostrador tiene su propio camino, el descuento de cajera con código de
+    # autorización que se aplica más abajo.
+    items, error_items = catalogo.resolver_lineas(items)
+    if error_items:
+        return utils._json_response(400, {"message": error_items})
 
     # 2. Totales
     gross_subtotal = sum([utils._to_decimal(it['price']) * int(it['quantity']) for it in items])

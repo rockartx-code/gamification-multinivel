@@ -34,8 +34,27 @@ def _mostrador(utils, pid=201, stock="STK-1"):
     return pid, stock
 
 
+def _articulo(utils, stock, precio, qty=1):
+    """Una línea de venta por el importe que la prueba necesita.
+
+    El precio ya no viaja en el cuerpo: `core/catalogo.py` lo resuelve del
+    catálogo, así que para cobrar $40 hay que tener un producto de $40. Cada
+    importe usa su propio producto para no alterar el de $480 que otras
+    aserciones dan por sentado.
+    """
+    pid = f"P{precio}"
+    utils._put_entity("PRODUCT", pid, {"entityType": "product", "productId": pid,
+                                       "name": f"Articulo {precio}", "price": precio,
+                                       "vpPoints": 1, "active": True})
+    ficha = utils._get_by_id("STOCK", stock) or {}
+    inv = dict(ficha.get("inventory") or {})
+    inv[str(pid)] = 40
+    utils._update_by_id("STOCK", stock, "SET inventory = :i", {":i": inv})
+    return [{"productId": pid, "quantity": qty}]
+
+
 def _venta(inventory_lambda, pid, stock, **extra):
-    cuerpo = {"stockId": stock, "items": [{"productId": pid, "name": "Klinhart", "price": 480, "quantity": 1}],
+    cuerpo = {"stockId": stock, "items": [{"productId": pid, "quantity": 1}],
               "paymentMethod": "cash", **extra}
     r = inventory_lambda.handle_pos_sale(cuerpo, CAJERA)
     assert r["statusCode"] == 201, r["body"]
@@ -58,7 +77,7 @@ def _turno_completo(inventory_lambda, utils):
         "createdAt": "2026-09-01T20:00:00Z"})
     _venta(inventory_lambda, pid, stock)                                           # 480 efectivo
     parcial = _venta(inventory_lambda, pid, stock, paymentType="partial", amountPaid=500, authCode="2468",
-                     items=[{"productId": pid, "name": "Klinhart", "price": 840, "quantity": 1}])  # 500 ahora
+                     items=_articulo(utils, stock, 840))  # 500 ahora
     r = inventory_lambda.handle_settle_pos_sale(parcial["saleId"], {"amount": 100, "paymentMethod": "cash"}, CAJERA)
     assert r["statusCode"] == 200, r["body"]                                         # abono 100
     _venta(inventory_lambda, pid, stock, paymentMethod="card")                       # tarjeta: no entra
@@ -261,7 +280,7 @@ def test_con_el_fondo_declarado_el_corte_cuadra_en_vez_de_sobrar_540(inventory_l
     pid, stock = _mostrador(utils)
     _peticion(inventory_lambda, "POST", "/inventory/pos/turno/abrir",
               cuerpo={"stockId": stock, "openingCash": 500}, headers=ADMIN | CAJERA)
-    _venta(inventory_lambda, pid, stock, items=[{"productId": pid, "name": "Klinhart", "price": 40, "quantity": 1}])
+    _venta(inventory_lambda, pid, stock, items=_articulo(utils, stock, 40))
 
     r = inventory_lambda.handle_cash_cut({"stockId": stock, "cashCounted": 540, "cashToKeep": 540,
                                           "withdrawalAmount": 0}, CAJERA)
@@ -355,7 +374,7 @@ def test_fondo_inicial_declarable(inventory_lambda, utils):
     assert declarado["needsOpening"] is False and declarado["openingDeclaredAt"]
 
     # 3. Con $40 en efectivo el esperado es $540…
-    _venta(inventory_lambda, pid, stock, items=[{"productId": pid, "name": "Klinhart", "price": 40, "quantity": 1}])
+    _venta(inventory_lambda, pid, stock, items=_articulo(utils, stock, 40))
     assert _arqueo()["expectedCash"] == 540
 
     # 4. …y contar $540 cierra con diferencia 0, sin motivo que inventar.
@@ -455,7 +474,7 @@ def test_el_corte_declara_lo_vendido_no_el_movimiento_del_cajon(inventory_lambda
     # Una sola venta de $980: $500 en efectivo y $480 con tarjeta.
     r = inventory_lambda.handle_pos_sale({
         "stockId": stock,
-        "items": [{"productId": pid, "name": "Klinhart", "price": 980, "quantity": 1}],
+        "items": _articulo(utils, stock, 980),
         "payments": [{"method": "cash", "amount": 500}, {"method": "card", "amount": 480}],
     }, CAJERA)
     assert r["statusCode"] == 201, r["body"]

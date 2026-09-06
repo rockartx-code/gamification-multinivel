@@ -55,8 +55,20 @@ def _producto(utils, pid=9, precio=480, pc=10, nombre="Klinhart"):
     return pid
 
 
-def _pedido(cid, pid, qty=2, precio=480):
-    return {"customerId": cid, "customerName": "Karla", "items": [{"productId": pid, "name": "Klinhart", "price": precio, "quantity": qty}],
+def _pedido(cid, pid, qty=2, precio=480, utils=None):
+    """Cuerpo de un pedido. El precio ya NO viaja en la línea.
+
+    Desde `core/catalogo.py` el importe sale del catálogo y se ignora lo que
+    mande la petición, así que para probar un total distinto hay que cambiar la
+    ficha del producto: por eso `precio` re-siembra el producto cuando se pasa
+    `utils`. Antes bastaba con escribir otro número en el cuerpo, que era
+    justamente el agujero que se cerró.
+    """
+    if utils is not None and precio != 480:
+        # Un producto APARTE, no re-sembrar Klinhart: hay aserciones que dependen
+        # de su precio de lista ($480) para calcular la canasta de ejemplo.
+        pid = _producto(utils, pid=f"P{precio}", precio=precio, nombre=f"Canasta {precio}")
+    return {"customerId": cid, "customerName": "Karla", "items": [{"productId": pid, "quantity": qty}],
             "recipientName": "Karla", "deliveryType": "shipping",
             "shippingAddress": {"street": "x", "number": "1", "city": "Qro", "state": "Qro", "postalCode": "76000", "country": "MX"}}
 
@@ -208,7 +220,7 @@ def test_en_modo_cliente_se_paga_precio_de_lista_y_se_guarda_el_ahorro(modulos, 
     assert Decimal(str(pedido["partnerSavingsNextMissing"])) == Decimal("40")
     assert Decimal(str(pedido["partnerSavingsNextRate"])) == Decimal("0.10")
 
-    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=1, precio=1200), {})["body"])["order"]
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=1, precio=1200, utils=utils), {})["body"])["order"]
     assert Decimal(str(pedido["discountRate"])) == 0 and Decimal(str(pedido["netTotal"])) == Decimal("1200")
     assert Decimal(str(pedido["partnerSavings"])) == Decimal("120")
     assert Decimal(str(pedido["partnerSavingsRate"])) == Decimal("0.10")
@@ -221,7 +233,7 @@ def test_el_ahorro_cuenta_el_acumulado_del_mes(modulos, utils):
     utils._put_entity("ASSOCIATE_MONTH", utils._associate_month_entity_id(cid, utils._month_key()),
                       {"entityType": "associateMonth", "associateId": str(cid), "monthKey": utils._month_key(), "netVolume": Decimal("900")})
     pid = _producto(utils)
-    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=1, precio=300), {})["body"])["order"]
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=1, precio=300, utils=utils), {})["body"])["order"]
     assert Decimal(str(pedido["discountRate"])) == 0
     assert Decimal(str(pedido["partnerSavings"])) == Decimal("30")
     assert Decimal(str(pedido["partnerSavingsProjected"])) == Decimal("1200")
@@ -231,7 +243,7 @@ def test_en_modo_socio_la_escalera_aplica_y_el_ahorro_es_cero(modulos, utils):
     _, _, order_lambda, _, _ = modulos
     utils._put_entity("CUSTOMER", 555, {"entityType": "customer", "customerId": 555, "name": "Rodrigo", "email": "r@test.com"})
     pid = _producto(utils)
-    pedido = json.loads(order_lambda.handle_create_order(_pedido(555, pid, qty=1, precio=1200), {})["body"])["order"]
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(555, pid, qty=1, precio=1200, utils=utils), {})["body"])["order"]
     assert Decimal(str(pedido["discountRate"])) == Decimal("0.10")
     assert Decimal(str(pedido["netTotal"])) == Decimal("1080")
     assert pedido["partnerMode"] == "socio" and Decimal(str(pedido["partnerSavings"])) == 0
@@ -240,7 +252,7 @@ def test_en_modo_socio_la_escalera_aplica_y_el_ahorro_es_cero(modulos, utils):
 def test_el_invitado_tambien_ve_su_ahorro(modulos, utils):
     _, _, order_lambda, _, _ = modulos
     pid = _producto(utils)
-    cuerpo = {**_pedido(None, pid, qty=1, precio=1200), "customerId": None, "guest": True, "email": "x@test.com"}
+    cuerpo = {**_pedido(None, pid, qty=1, precio=1200, utils=utils), "customerId": None, "guest": True, "email": "x@test.com"}
     pedido = json.loads(order_lambda.handle_create_order(cuerpo, {})["body"])["order"]
     assert pedido["partnerMode"] == "invitado" and Decimal(str(pedido["partnerSavings"])) == Decimal("120")
 
@@ -268,7 +280,7 @@ def test_el_correo_de_pago_de_una_clienta_lleva_el_ahorro_y_el_de_un_socio_no(mo
     pid = _producto(utils)
     buzon.clear()
 
-    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=1, precio=1200), {})["body"])["order"]
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(cid, pid, qty=1, precio=1200, utils=utils), {})["body"])["order"]
     order_lambda.handle_update_status(pedido["orderId"], {"status": "paid"}, {})
     para, asunto, html = buzon[-1]
     assert para == "karla@test.com" and "Recibimos tu pago" in asunto
@@ -279,7 +291,7 @@ def test_el_correo_de_pago_de_una_clienta_lleva_el_ahorro_y_el_de_un_socio_no(mo
     order_lambda.handle_update_status(pedido["orderId"], {"status": "paid"}, {})
     assert "con <strong>$40.00</strong> más de compra este mes tendrías 10 % de descuento" in buzon[-1][2]
 
-    pedido = json.loads(order_lambda.handle_create_order(_pedido(555, pid, qty=1, precio=1200), {})["body"])["order"]
+    pedido = json.loads(order_lambda.handle_create_order(_pedido(555, pid, qty=1, precio=1200, utils=utils), {})["body"])["order"]
     order_lambda.handle_update_status(pedido["orderId"], {"status": "paid"}, {})
     assert buzon[-1][0] == "r@test.com" and "modo socio habrías" not in buzon[-1][2] and "modo-socio" not in buzon[-1][2]
 
@@ -290,7 +302,7 @@ def test_el_panel_en_modo_cliente_no_trae_red_ni_comisiones_y_si_indicadores(mod
     auth, customer_lambda, order_lambda, commissions_lambda, _ = modulos
     cid = _alta(auth, "Karla Méndez", "karla@test.com")
     pid = _producto(utils)
-    _crear_y_pagar(order_lambda, commissions_lambda, _pedido(cid, pid, qty=1, precio=1200))
+    _crear_y_pagar(order_lambda, commissions_lambda, _pedido(cid, pid, qty=1, precio=1200, utils=utils))
 
     r = customer_lambda.lambda_handler(_evento("GET", "/customers/dashboard", None, _sesion(utils, cid)), None)
     assert r["statusCode"] == 200, r["body"]
